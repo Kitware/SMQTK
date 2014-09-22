@@ -1,0 +1,19 @@
+#!/bin/env bash
+
+#
+#LICENCE
+#-------
+#Copyright 2013 by Kitware, Inc. All Rights Reserved. Please refer to
+#KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
+#Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
+#
+
+#
+# Set up the environment for the use of the SMQTK SDK components.
+#
+export PATH="@BACKEND_SOURCE_DIR@/bin:@TPL_LOCAL_INSTALL_PREFIX@/bin:$PATH"
+export PYTHONPATH="@BACKEND_SOURCE_DIR@:@TPL_PYTHON_SP@:$PYTHONPATH"
+export LD_LIBRARY_PATH="@TPL_LOCAL_INSTALL_PREFIX@/lib:$LD_LIBRARY_PATH"
+
+# Setting flag that environment has already been setup
+export SMQTK_BACKEND_SETUP=1

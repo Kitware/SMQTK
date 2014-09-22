@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block head_bootstrap %}    
+   {{ super() }}
+
+{% endblock head_bootstrap %}    
+
+{% block head_scripts %}
+
+<!-- Add code to initialize the tree when the document is loaded: -->
+<script type="text/javascript">
+$(function(){
+    
+        $("#tree").dynatree(
+        {
+        debugLevel : 0,
+        onActivate: function(node) 
+            {
+            // A DynaTreeNode object is passed to the activation handler
+            // Note: we also get this event, if persistence is on, and the page is reloaded.
+            // alert("You activated " + node.data.title);
+            // alert("You activated ME");
+           },
+        });
+
+    trees = add_sample_tree(); 
+
+   $("#results").html(tree_json(trees.test));
+
+   $("#results").append("</br>");
+   $("#results").append("</br>");
+   $("#results").append(tree_json(trees.trick));
+  
+   $("#results").append("</br>");
+   $("#results").append("</br>");
+   $("#results").append(tree_json(trees.woodworking));
+
+    //var node = $("#attributes").dynatree("getTree").getNodeByKey("labels");
+    //node.expand(true);
+});
+</script>
+
+{% endblock head_scripts %}
+node.
+{% block body_content %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span8"> <!-- Rest of it-->
+            <h3> Expression trees </h3>
+            <div id="tree" style="height:250px;overflow:visible;"> </div>
+            <h3> Results </h3>
+            <div id="results"> </div>
+        </div>
+    </div>
+</div>
+
+{% endblock body_content %}

@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% set active_page = "vcdi" %}
+
+{% block head_scripts %}
+{{super()}}
+<!-- to convert query into a tree -->
+<script src="/js/lib/simpleSqlParser.js"></script>
+
+<!-- tags manager  -->
+<script src="/js/clip.results.js" type="text/javascript"></script>
+<script src="/js/vcd.clip.results.js" type="text/javascript"></script>
+<script src="/js/random.clip.results.js" type="text/javascript"></script>
+
+
+<style type="text/css">
+    *.highlight {
+        background-color: yellow;
+    }
+    .ui-autocomplete-category {
+        font-weight: bold;
+        padding: .2em .4em;
+        margin: .8em 0 .2em;
+        line-height: 1.5;
+    }
+    .ui-autocomplete {
+        max-height: 600px;
+        overflow-y: auto;
+        /* prevent horizontal scrollbar */
+        overflow-x: hidden;
+    }
+</style>
+
+<script>
+
+     (function($) {
+        $.fn.getCursorPosition = function() {
+            var input = this.get(0);
+            if (!input) return; // No (input) element found
+            if (document.selection) {
+                // IE
+               input.focus();
+            }
+            return 'selectionStart' in input ? input.selectionStart:'' || Math.abs(document.selection.createRange().moveStart('character', -input.value.length));
+         }
+       })(jQuery);
+
+     (function($) {
+        $.fn.setCursorPosition = function(caretPos) {
+            var range;
+            var elem = this.get(0);
+            if (!elem) return; // No element found
+
+            if (elem.createTextRange) {
+                range = elem.createTextRange();
+                range.move('character', caretPos);
+                range.select();
+            } else {
+                elem.focus();
+                if (elem.selectionStart !== undefined) {
+                    elem.setSelectionRange(caretPos, caretPos);
+                }
+            }
+        }
+     })(jQuery);
+
+    $(document).ready(function() {
+
+
+        $("#show-random").on("click", function () {
+//            console.log("Event kit view");
+            if($('#random-results').hasClass("span0")) {
+            }
+
+            if($('#random-results').hasClass("span6")) {
+                $('#random-results').empty();
+            }
+
+            $('#clip-results').toggleClass('span12 span6', 500).promise().done(function() {
+                if($('#clip-results').hasClass("span6")){
+                var randomresults = new RandomClipResults($("#random-results"));
+                randomresults.limit=30;
+                randomresults.Submit();
+                }
+                $('#random-results').toggleClass('span0 span6');
+            });
+
+        });
+
+
+        var get_terms = function (input) {
+            input = input.replace("(", " ( ").replace(")", " ) ");
+            console.log(JSON.stringify(input))
+            return input.match(/[^ ]+/g);
+        };
+
+        var format_string = function (input) {
+//            console.log("input: ", JSON.stringify(input));
+            var terms = get_terms(input);
+//            console.log("output", JSON.stringify(terms.join(" ")));
+            return terms.join(" ");
+        };
+
+        var test_format_string =function (){
+            format_string(" and some other ");
+            format_string("(and)");
+            format_string("( and)");
+        };
+
+        var m = simpleSqlParser;
+
+        function split( val ) {
+            return val.replace("(", " ( ").replace(")", " ) ").trim().match(/[^ ]+/g);
+        }
+
+        function extractLast( term ) {
+            // split brackets
+            var terms = split( term )
+            if (terms == null) {
+                terms = [];
+            }
+            console.log(terms.slice(-1));
+            return terms.pop();
+        }
+
+        $.widget( "custom.catcomplete", $.ui.autocomplete, {
+            _renderMenu: function( ul, items ) {
+                var that = this,
+                currentCategory = "";
+                $.each( items, function( index, item ) {
+                    if ( item.category != currentCategory ) {
+                        ul.append( "<li class='ui-autocomplete-category'>" + item.category + "</li>" );
+                        currentCategory = item.category;
+                    }
+                    that._renderItemData( ul, item );
+                });
+            }
+        });
+
+          // Don't really need to save the old fn,
+          // but I could chain if I wanted to
+          var oldFn = $.ui.autocomplete.prototype._renderItem;
+
+          $.ui.autocomplete.prototype._renderItem = function( ul, item) {
+              //
+              var pos = $("#query").getCursorPosition();
+              var lastterm = extractLast(this.term.substring(0, pos)) || "";
+              var newterm = lastterm.replace(/\(/g,"\\(" );
+              newterm = newterm.replace(/\)/g, "\\)");
+              var re = new RegExp(newterm, "i") ;
+              var t = item.label.replace(re,"<span style='font-weight:bold;color:Blue;'>" + lastterm + "</span>");
+              return $( "<li></li>" )
+                  .data( "item.autocomplete", item )
+                  .append( "<a>" + t + "</a>" )
+                  .appendTo( ul );
+          };
+
+        var operator = "and";
+        var curtag = null;
+
+        var is_operator = function(word) {
+            if (word === "(" || word === ")" || word === "and" || word === "or") {
+                return true;
+            }
+            return false;
+        };
+
+        var refreshQuery = function(input){
+            // Show the query
+            var query = input || $("#query").val().trim();
+            terms = get_terms(query);
+            if(input === undefined) {
+                if(terms === null){
+                    terms = [];
+                }
+                $("#query").data("terms", terms.slice(0));
+                $("#query").val(terms.join(" ") + " ");
+            }
+
+            // Now add operators where expected
+            if(terms.length > 1){
+                var i = 1;
+                while(true){
+                    if(! is_operator(terms[i]) && ! is_operator(terms[i-1])) {
+                        terms.splice(i,0,"and")
+                        i = i + 1;
+                    }
+
+                    if( terms[i] === "(" && ! is_operator(terms[i-1])) {
+                        terms.splice(i,0,"and")
+                        i = i + 1;
+                    }
+
+                    if( terms[i-1] === ")" && ! is_operator(terms[i])) {
+                        terms.splice(i,0,"and")
+                        i = i + 1;
+                    }
+
+                    if( terms[i-1] === ")" && terms[i] === "(") {
+                        terms.splice(i,0,"and")
+                        i = i + 1;
+                    }
+
+                    i ++;
+                    if(i === terms.length) {
+                        break;
+                    }
+                }
+            }
+
+            if(input === undefined) {
+//                $("#info0").html("data: " + JSON.stringify($("#query").data("terms")));
+//                $("#info1").html(JSON.stringify(terms));
+                $("#info2").html(JSON.stringify(simpleSqlParser.CondParser.parse(terms.join(" "))));
+            }
+
+
+            return terms;
+
+//            var clsname = "tm-tag-error";
+//
+//            if(ui.item.category == "Audio"){
+//               clsname = "";
+//            }
+//            if(ui.item.category == "Scenes"){
+//               clsname = "tm-tag-info";
+//            }
+//
+//            $("#query-tags").tagit("createTag", ui.item.value, "tm-tag " + clsname);
+
+        };
+
+        var testRefreshQuery = function (){
+            var assert = function (condition, message) {
+                if (!condition) {
+                throw message || "Assertion failed";
+            }
+        }
+
+        assert(arrays_equal(refreshQuery("( socializing ) dirt_or_soil"),["(","socializing",")","and","dirt_or_soil"]), "Test1 failed");
+        assert(arrays_equal(refreshQuery("sailing_or_boating reading"),["sailing_or_boating","and","reading"]), "Test2 failed");
+        assert(arrays_equal(refreshQuery("( socializing ) ( sailing_or_boating )"),["(","socializing",")","and","(","sailing_or_boating",")"]),"Test3 failed");
+        assert(arrays_equal(refreshQuery("socializing ( sailing_or_boating or trees tree )"),["socializing","and","(","sailing_or_boating","or","trees","and","tree",")"]), "test4 failed");
+        assert(arrays_equal(refreshQuery("socializing ( socializing ( sailing_or_boating and light_source ) ( soothing ")), ["socializing","and","(","socializing","and","(","sailing_or_boating","and","light_source",")","and","(","soothing"]);
+        console.log("All tests passed ...");
+
+        };
+
+        var arrays_equal = function (a,b) { return !(a<b || b<a); };
+        var clipresults = new VCDClipResults($("#clip-results"));
+
+        $("#query").catcomplete({
+            selectFirst: true,
+            autoFocus:true,
+            delay: 0,
+            source: function( request, response ) {
+                var el = $("#query");
+                // Find out if the position is outside the string
+                var value = $(el).val();
+                var split =  $(el).getCursorPosition();
+                var lastchar = value.slice(split-1,split);
+                if(lastchar == " "){
+                    //console.log("Taking it down: " + JSON.stringify(lastchar));
+                    //$(el).val(format_string(value) + " ");
+                    //$(el).setCursorPosition(split-1);
+                    response([]);
+                    return
+                }
+
+                var term = value;
+
+                var a = value;
+                var b = "";
+                if(value.length == split) {
+                    console.log("At the end");
+                }
+                else{
+                    console.log("In the middle");
+                    var a = value.substring(0, split);
+                    var b = value.substring(split);
+                    var aa = a.split(" ").splice(-1)[0];
+                    var bb = b.split(" ").splice(0,1)[0];
+                    console.log(aa.length, b.length);
+                    if(aa.length == 1) {
+                        console.log("New Word before" + b)
+                    }
+                    else if(bb.length == 0) {
+                        console.log(a + " Word extended")
+                    }
+                    else {
+                        console.log("In the middle of ", JSON.stringify(aa), "&", JSON.stringify(bb));
+                        // Need to remove b
+                        var words = b.split(" ");
+                        b = words.slice(1).join(" ")
+
+                    }
+                    var term = a;
+                    $(el).val(a + " " + b);
+                    $(el).setCursorPosition(split);
+                }
+                // continue as usual
+
+                if(term.length === 0) {
+                    response([]);
+                }
+
+                $.getJSON( "/vcdi/suggest", {
+                    term: extractLast( term)
+                }, function(data) {
+//                    console.log("data", data);
+//                    if(data.length === 0)
+//                    {
+//                        var pos = $("#query").getCursorPosition();
+//                        var val = $("#query").val();
+//                        var newval = val.slice(0,pos-1)+val.slice(pos);
+//                        $('#query').val(newval);
+//                        //$('#query').setCursorPosition(pos-1);
+//                    }
+
+                    response(data);
+                } );
+            },
+//            response : function (event, ui) {
+//                console.log("Response")
+//                return true;
+//            },
+//            search: function() {
+//                console.log("Search");
+//                return true;
+//            },
+            focus: function() {
+//                console.log("Focus");
+                // prevent value inserted on focus
+                return false;
+            },
+            select: function( event, ui ) {
+                console.log("Select:" + ui.item.label);
+
+                // any text beyond cursor position is to be untouched
+                var pos = $("#query").getCursorPosition();
+
+                // Get access to current lists
+                // Which should be in sync
+                var ids = $(this).data("ids") || [];
+
+                // Save the string not to touch
+                var remaining = this.value.substr(pos).trim();
+                console.log("Remaining", JSON.stringify(remaining));
+
+                var terms = this.value.substr(0,pos).replace(/\(/g, " ( ").replace(/\)/g," ) ").trim().split(/[ ,]+/);
+
+                // remove the current input
+                terms.pop();
+
+                // add the selected item to the lists
+                terms.push( ui.item.label);
+                ids.push(ui.item.value);
+
+                // add placeholder to get the comma-and-space at the end
+                var termstr = terms.join(" ") + " " + remaining;
+                terms = termstr.split(" ");
+                $(this).data("terms",terms);
+
+                // Make sure there is space at the end
+                terms.push("");
+                this.value = terms.join(" ");
+                $("#info0").text(JSON.stringify(terms));
+
+                $(this).data("ids",ids);
+
+                refreshQuery();
+
+                return false;
+            },
+            close: function(event, ui){
+//                console.log("Close");
+                if(event.originalEvent) {
+                    if(event.originalEvent.type === "menuselect") {
+//                        console.log("Valid ..");
+//                        var terms = this.value.trim().split(/[ ,]+/);
+//                        $("#query").data("terms", terms);
+//                        var oldterms = $("#query").data("terms") || [];
+//                        console.log("oldterms", oldterms);
+                        return;
+                    }
+                }
+
+                console.log("Invalid ..");
+                var terms = this.value.replace("(", "( ").replace(")",") ").trim().match(/[^ ]+/g) || [];
+                var oldterms = $("#query").data("terms") || [];
+
+                console.log("invterms", terms);
+                console.log("involdterms", oldterms);
+
+                if(terms.length === oldterms.length -1) {
+                    console.log("Deleting term");
+                    $("#query").data("terms", terms);
+                    // this.value = terms.join(" ") + " ";
+                }
+                else {
+                    // Check if the last query
+                    this.value = oldterms.join(" ") + " ";
+                }
+//
+//                // Check if last term is valid typing
+//                if(! arrays_equal(terms,oldterms) ){
+//                    console.log(terms);
+//                    // Pop the term where the cursor was
+//
+//                    terms.pop();
+//                    terms.push("");
+//                    this.value = terms.join(" ");
+//                 }
+
+            }
+//            change: function(event, ui){
+//                console.log(event.originalEvent.type);
+//                console.log(ui.item);
+//                //refreshQuery();
+//            }
+        });
+
+//        $("#query").keydown(function(event){
+////            console.log("Keydown");
+////            $("#query").catcomplete("search");
+//        });
+
+        $("#search").submit(function(event){
+            event.preventDefault();
+            refreshQuery();
+            testRefreshQuery();
+            console.log("Ready to submit query" + $("#info2").text());
+            clipresults.Submit(simpleSqlParser.CondParser.parse(refreshQuery().join(" ")));
+        });
+
+//        jQuery(".tm-input").tagsManager();
+//        $("#query-tags").tagit({
+//        });
+    });
+</script>
+
+{% endblock head_scripts %}
+
+{% block body_content %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <h1> Video Content Descriptors Exploration </h1>
+        <pre id="help"> Type few letters to open matching attributes and operators available and press enter to select building the search key. The attributes can be combined with boolean operators "and" and "or" and grouping with "(" ")" is supported. </pre>
+        </br>
+    </div>
+    <div class="row-fluid">
+        <form class="form" id="search">
+              <!--ul id="query-tags" style="float:left display:none"></ul-->
+            <input id="query" name="search" class="input input-large span7" style="float:left" type="text" />
+            <button class="btn span1" style="float:left" > Search <i class="icon-search"></i> </button>
+            <div class="span2"> </div> <button id="show-random" class='btn span2 offset2' type="button"> Toggle Random </button>
+        </form>
+        <!--<pre id="info0"> </pre>-->
+        <!--<pre id="info2"> </pre>-->
+    </div>
+
+    <br/>
+    <div class="row-fluid">
+        <div id="clip-results" class="span12 clip-results">    </div>
+        <div id="random-results" class="span0 clip-results">     </div>
+    </div>
+
+</div>
+
+{% endblock %}

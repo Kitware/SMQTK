@@ -1,0 +1,41 @@
+Event Name: Renovating a home
+
+Definition: One or more people work to improve a home by rebuilding,
+finishing, and/or destroying parts of the structure.
+
+Explication: Home renovations include altering, installing, or
+destroying parts of a home structure and then improving the area. Home
+renovations may be done by one or many people, depending on the scale
+of the project and whether it involves alterations to electrical or
+plumbing structures, which may require a licensed contractor. Some
+common home renovation projects include: knocking down walls to
+connect two previously separate rooms, adding a wall to divide a room
+into two, adding a door or door opening to a wall (by knocking down
+part of a wall and installing a door frame and optionally adding a
+door), replacing cabinetry in kitchen or bathroom, replacing sinks in
+kitchen or bathroom, adding/altering flooring material, roofing, or
+wall coverings, adding insulation material inside a wall, replacing
+windows, adding a new structure for walls, floor and roof structure to
+the side of a home in order to create one or more new rooms, or adding
+a new structure for floor and a railing to the exterior side of a home
+to create a deck. Work is done with a number of specialized tools, and
+participants often wear protective gear (e.g. hard hats, safety
+glasses, face masks, gloves) particularly for tasks where a large
+amount of dust or debris is likely to fly into the air (e.g. sawing
+with an electric saw blade, removing drywall).
+
+Evidential Description:
+
+ scene: indoors (inside of a home, basement, garage) or outdoors
+ (outside of a home, roof)
+
+ objects/people: tools (hammer, wrench, drill, screwdriver, etc.),
+ construction materials (wood, cement, metal sheets, drywall),
+ repairpeople, ladders, saws, paint, mask, gloves, hard hat, shovels,
+ glasses
+
+ activities: hammering a nail, drilling, climbing a ladder, painting,
+ removing debris
+
+ audio: hammering, saws buzzing, narration of process, sounds of
+ lumber falling to ground, various construction sounds

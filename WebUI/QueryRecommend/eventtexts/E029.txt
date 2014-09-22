@@ -1,0 +1,65 @@
+Event Name: Winning a race without a vehicle
+
+Definition: An individual (or more) succeeds in reaching a
+pre-determined destination before all other individuals, without
+vehicle assistance or assistance of a horse or other animal.
+
+Explication: Racing generally involves accomplishing a task in less
+time than other competitors. The only type of racing considered
+relevant for the purposes of this event is the type where the task is
+traveling to a destination, completed by a person(s) without
+assistance of a vehicle or animal. Different types of races involve
+different types of human locomotion, such as running, jumping,
+crawling, swimming, and the competitors may additionally be
+handicapped in some way or have to perform some kind of task during
+the race such as jumping over obstacles or running while holding an
+object. For most race types, competitors are lined up side-by-side to
+begin the race. In relay races, the race distance is divided up
+between members of a team, and so when racers reach a certain point in
+the race, they switch with another racer to continue the race. Racing
+competitions can be amateur and spontaneous, or planned and
+professional. In professional-style competitions, the competitors
+usually wear armbands or stickers on their shirts with an assigned
+number on them, and there may be many spectators. For most types of
+racing, excluding long distance races such as marathons or
+cross-country running, professional style races will have visibly
+designated lanes for the racers that will keep them in a straight
+line, parallel to each other. Many races may end with the winner
+running through a piece of tape stretched across the finish line. In
+races where the full competition or the full set of competitors is
+visible, evidence of winning would be seeing a person reaching the
+destination point first. In races such as marathon-style races where
+the distance traveled is very long, and competitors are often spread
+out far apart from each other, or races where the same distance is
+traveled multiple times (e.g. a track race where the track is circled
+a set number of times by the competitors), there must be additional
+evidence of winning beyond the person reaching the finish line. In the
+marathon race case, a person reaching the finish line may be reaching
+it after another individual already won, and in the track case, the
+same location is reached multiple times, but only counts as the final
+racing destination after the length of the track has been traveled a
+number of times. Additional evidence for winning the race can include:
+running through tape at the finish line, verbal acknowledgement
+(e.g. by an announcer saying "(person's name) wins!"), gestures of
+celebration by the winner (e.g. throwing their arms in the air),
+onlookers excitedly rushing to congratulate them, and receiving of a
+prize such as a medal or trophy.
+
+Evidential Description:
+
+ scene: outdoors (park, field, track, road, or stadium) or indoors
+ (indoor track, pool, or large gymnasium)
+
+ objects/people: runner, number worn on runner's back/front/arm,
+ potato sack, marker for finish line (tape stretched across road,
+ potato sacks lying on ground), running shoes, baton, spectators,
+ boundary markers/signs, signs supporting/encouraging a particular
+ runner, water bottles, first aid tent
+
+ activities: running, swimming, hopping, climbing, jumping, breaking
+ through tape, passing a baton, spectators running a short distance
+ with the runner, passing out water bottles to the runners
+
+ audio: onlookers cheering, verbal or other indication of starting the
+ race (yelling "Go!", gun shooting), narration of the race (speaking
+ through a microphone)

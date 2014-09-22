@@ -1,0 +1,45 @@
+Event Name: Giving directions to a location
+
+Definition: One or more people give directions to one or more other
+people, either in person or over the phone, by explaining verbally
+and/or with gestures how to get to a particular location.
+
+Explication: People may give directions in response to being asked for
+them, or they may give them without being asked as a part of a normal
+conversation if the topic of conversation is a location (e.g. telling
+a friend how to get to a new restaurant that just opened that she may
+be interested in eating at). People may ask for directions from
+strangers they see on the street or in a store, or call an information
+service or someone they know to ask for directions over the phone. Or,
+the person giving directions and the one getting directions may be
+traveling together, and one person is serving as the navigator while
+the other(s) follow the directions, such as commonly happens when the
+person getting the directions is driving and the person giving
+directions is reading them from a map, printout, or smart phone. Note
+that a GPS giving directions is not relevant for this event, and that
+the person giving directions must be visible. If people are visiting a
+new city or country, they will often have a map or guidebook with them
+to reference when asking for directions from a person on the
+street. Depending on whether the people asking for directions are/will
+be walking, driving, taking a subway, train, or bus, the directions
+given may reference city blocks, highways, or subway/train/bus
+routes. People giving directions often gesture along with their
+directions, for example pointing their arm to the right and turning
+their head to the right as they explain to go right, and this could be
+done even if giving them on the phone. People giving directions on the
+phone may stay on the line with the person they are helping while they
+reach their destination, giving them the directions step by step in
+real time.
+
+Evidential Description:
+
+ scene: outdoors, indoors
+
+ objects/people: map, driver, car, bicycle, subway, train, bus,
+ pedestrian, car passenger, guidebook, portable telephone
+
+ activities: gestures indicating directions (e.g. pointing or
+ extending arm straight/to right or left of speaker), person pointing
+ out location on a map, head movement indicating direction
+
+ audio: narration of directions

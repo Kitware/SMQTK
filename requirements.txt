@@ -1,0 +1,11 @@
+flask
+flask-login
+gevent
+pillow
+pymongo
+sphinx
+numpy
+scipy
+nltk
+celery
+Cheetah

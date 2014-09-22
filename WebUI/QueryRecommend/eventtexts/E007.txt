@@ -1,0 +1,30 @@
+Event name: Changing a vehicle tire
+
+Definition: One or more people work to replace a tire on a vehicle
+
+Explication: A vehicle is any device, motorized or not, used to transport
+people and/or other items. Tires are ring-shaped inflated objects, usually
+made of rubber, that fit over the wheel of a vehicle. The process for
+replacing a tire includes removing the existing tire and installing the new
+tire onto the wheel of the vehicle.  Tires typically are replaced because
+they are damaged or worn down. If a tire is damaged and loses air pressure
+as a result, it is called a "flat tire". Generally the driver of the
+vehicle with a flat tire will stop the vehicle as soon as possible and
+replace the affected tire with a temporary tire called a "spare tire",
+which may be stored elsewhere on/in the vehicle. In other cases, the tire
+may be changed not by the vehicle operator, but by a professional (e.g. a
+mechanic) who may use dedicated tools and work in a repair shop or similar
+setting.
+
+Evidential description:
+
+ scene: garage, outdoors, street, parking lot
+
+ objects/people: tire, lug wrench, hubcap, vehicle (car, bike, lawnmower,
+ etc), tire jack
+
+ activities: removing hubcap, turning lugwrench, unscrewing bolts, pulling
+ rim out of tire
+
+ audio: narration of the process; sounds of tools being used;
+ street/traffic noise; background noises from repair shop

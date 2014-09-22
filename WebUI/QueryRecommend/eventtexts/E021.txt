@@ -1,0 +1,33 @@
+Event Name: Attempting a bike trick
+
+Definition: One or more people attempt to do a trick on a bicycle,
+motorcycle, or other type of motorized bike. To count as a bike for
+purposes of this event, the vehicle must have two wheels (excludes
+unicycles, ATVs, etc.).
+ 
+Explication: Bikes are normally ridden with a person sitting down on
+seat and holding onto the handlebars and steering with their
+hands. Tricks consist of difficult ways of riding the bike, such as on
+one wheel, steering with feet or standing on the seat; or intentional
+motions made with the bike that are not simply slowing down/stopping
+the bike, propelling it forward, or steering the bike as it
+moves. Steering around obstacles or steering a bike off of a jump and
+landing on the ground are generally not considered tricks in and of
+themselves, however if the bike jump is set up so that the person is
+jumping over something, (e.g. jumping over people or vehicles or over
+a river), or if the person does a flip or other trick in the air, that
+would be considered a trick.
+
+Evidential Description:
+
+ scene: outdoors, often in skate park, parking lot or street
+
+ objects/people: person riding a bike, bike, ramps, helmet, concrete
+ floor, audience
+
+ activities: riding bike on one wheel, standing on top of bike,
+ jumping with the bike (especially over or onto objects), spinning or
+ flipping bike
+
+ audio: sounds of bike hitting surface during the trick, audience
+ cheering

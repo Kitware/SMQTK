@@ -1,0 +1,44 @@
+Event name: Birthday party
+
+Definition: An individual celebrates a birthday with other people
+
+Explication: A birthday in this context is the anniversary of a person's
+birth. Less commonly, the term "birthday" can be used to refer to the
+anniversary of an organization's establishment, but a celebration for an
+organization does not satisfy the event definition.  
+
+A birthday celebration is a gathering of people who have been invited by
+the host or hosts to come to a set location (often a private home,
+sometimes a restaurant, bar, nightclub, park, or other public venue) to
+socialize in honor of the person(s) whose birthday it is (the birthday
+celebrant(s)).  
+
+Birthday parties, as with other parties/celebrations, will typically
+feature an assortment of food and beverages. Birthday parties are often
+accompanied by colorful decorations, such as balloons and streamers, and
+some people may wear cone-shaped "birthday hats". The decorations may
+include signs or banners displaying a message for the birthday
+celebrant. Often, especially for children's parties, guests will bring
+cards and/or gifts wrapped in shiny/colorful paper or bags, which will be
+opened by the birthday celebrant(s), or by their parents/siblings if the
+birthday celebrants are too young to open the gifts by themselves. A cake
+(or sometimes cupcake or other food item) with lit candles, called the
+"birthday cake", is often served. The song "Happy Birthday to You" may sung
+by the guests while the birthday cake with lit candles is carried to a
+table or counter where the birthday celebrant(s) are seated. The birthday
+celebrant(s) then blow out the candles, usually after the song is finished,
+and the guests then clap and cheer. Birthday parties may also involve games
+or other organized group activities.
+
+Evidential description:
+
+ scene: indoors (a home, a restaurant) or outdoors (backyard, park); day or night
+
+ objects/people: decorations (balloons, streamers, conical hats, etc),
+ birthday cake (often with candles), birthday celebrant, guests, gifts
+
+ activities: singing, blowing out candles on cake, playing games, eating,
+ opening gifts
+
+ audio: singing "Happy Birthday to You"; saying happy birthday; laughing;
+ sounds of games being played 

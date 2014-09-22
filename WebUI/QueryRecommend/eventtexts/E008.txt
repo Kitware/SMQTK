@@ -1,0 +1,38 @@
+Event name: Flash mob gathering
+
+Definition: A coordinated large group of people assemble suddenly in a
+public place, perform a predetermined act to a surprised public, then
+disperse quickly
+
+Explication: A flash mob is a group of people in a public place surprising
+the public by doing something unusual in a coordinated fashion. Flash mobs
+usually consist of people either suddenly starting to perform a coordinated
+activity (e.g. dancing, freezing in place, pretending to fight each other,
+re-enacting a movie scene), or performing normal activities but with
+coordinated appearance/clothing or holding a coordinated prop object.  In
+coordinated activity flash mobs, participants (known as "flashmobbers")
+start out by engaging in routine activities in a public place, and are
+initially indistinguishable from people who are not part of the flash mob
+-- until they begin performing the pre-determined coordinated activity. A
+flash mob typically ends with all of the flash mobbers suddenly going back
+to normal activities at the same time. Often flash mobs begin with one or
+two people and then more and more flash mobbers join. Sometimes flash mobs
+(particularly ones where dancing is the activity) are accompanied by
+background music. A previously-designated sound such as a clock tower
+chiming, a whistle being blown, or music beginning/ending may be used to
+signal the start or end of the flash mob. In some cases a clip may show the
+flash mob group assembling prior to the flash mob activity starting; this
+may consist the flash mob leader/leaders speaking to the group using a
+megaphone.
+
+Evidential description:
+
+ scene: indoor our outdoor, public place
+
+ objects/people: a very large group of people, typically no objects involved
+
+ activities: a wide range of activities can be performed, including dancing
+ or singing in unison, moving in a coordinated fashion, or simply milling around
+
+ audio: background music; sound that designates start/end of the flash mob
+ activity; leader speaking to group of assembled flash mobbers

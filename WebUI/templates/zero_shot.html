@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block head_bootstrap %}
+   {{ super() }}
+
+{% endblock head_bootstrap %}
+
+{% block head_scripts %}
+
+<style type="text/css">
+
+.row-fluid div {
+    -webkit-transition: width 0.3s ease, margin 0.3s ease;
+    -moz-transition: width 0.3s ease, margin 0.3s ease;
+    -o-transition: width 0.3s ease, margin 0.3s ease;
+    transition: width 0.3s ease, margin 0.3s ease;
+}
+
+.row-fluid .span0 {
+    width: 0%;
+}
+
+ul.ui-autocomplete {
+    z-index: 1100;
+}
+.row-fluid .span0 div {
+    width: 0%;
+}
+.row-fluid .span0 + [class*="span"]{
+    margin-left: 0;
+}
+</style>
+
+<!-- Add code to initialize the tree when the document is loaded: -->
+<script type="text/javascript">
+$(function() {
+
+    // Attach the dynatree widget to an existing <div id="tree"> element
+    // and pass the tree options as an argument to the dynatree() function:
+    var traverse = function (node)
+        {
+        var string = node.data.title;
+
+        var children = node.getChildren();
+        if(children === null)
+            {
+            return string;
+            }
+        else
+            {
+            for(var i=0; i < children.length; i ++)
+                {
+                string = string + traverse(children[i])
+                }
+            }
+        return string;
+        };
+
+    // Attach the dynatree widget to an existing <div id="tree"> element
+    // and pass the tree options as an argument to the dynatree() function:
+
+
+    function AddQueyFromNode(node, algo){
+        // Assemble the query
+        var query = {};
+        query.algo  = algo;
+        query.root = node.data.title;
+        query.node = node;
+        var edit = resultContainer.AddQuery(query)
+        node.data.editCtrl = edit;
+    }
+
+
+    // --- Contextmenu helper --------------------------------------------------
+    function bindContextMenu(span)
+        {
+
+
+
+
+
+        // Add context menu to this node:
+        $(span).contextMenu({menu: "myMenu"}, function(action, el, pos)
+            {
+            // The event was bound to the <span> tag, but the node object
+            // is stored in the parent <li> tag
+            var node = $.ui.dynatree.getNode(el);
+            $("#ae-label").text(node.data.title)
+            //console.log(node);
+            switch( action )
+                {
+                case 'configure':
+                    // Prepare the dialog
+                    $("#ae-label").val(node.data.title);
+
+                    $("#attribute-edit").dialog(
+                        {
+                        resizable: false,
+                        modal: false,
+                        title: node.data.title,
+                        buttons:
+                            {
+                            "Ok": function()
+                                {
+                                $( this ).dialog( "close" );
+                                // Update the node object
+                                node.data.title = $("#ae-label").val();
+                                node.render();
+                                // Also delete associated edit
+                                // resultContainer.Remove(node, true, true);
+                                },
+                            Cancel: function()
+                                {
+                                $( this ).dialog( "close" );
+                                },
+                            },
+                        });
+
+                    $("#attribute-edit").dialog("open");
+                    break;
+
+                    break;
+                case 'query':
+                    // Compute the query parameters
+                    var query = {};
+                    query.root = node.data.title;
+                    query.node = node;
+                    var edit = resultContainer.AddQuery(query)
+                    node.data.editCtrl = edit;
+                    //console.log("Before");
+                    //console.log(node.data);
+                    break;
+                case 'query-rank-fusion':
+                    AddQueyFromNode(node, "rankfusion");
+                    break;
+                case 'query-score-fusion':
+                    // Compute the query parameters
+                    AddQueyFromNode(node, "scorefusion");
+                    break;
+                case 'delete':
+                    // Confirm
+                    //bootbox.animate(false);
+                    $("#confirm-dialog").dialog(
+                        {
+                        resizable: false,
+                        height:140,
+                        modal: false,
+                        buttons:
+                            {
+                            "Delete all items": function()
+                                {
+                                $( this ).dialog( "close" );
+                                console.log("deleting " + node.data.title );
+                                console.log("After");
+                                console.log(node.data);
+                                // Also delete associated edit
+                                resultContainer.Remove(node, true, true);
+                                },
+                            Cancel: function()
+                                {
+                                $( this ).dialog( "close" );
+                                },
+                            },
+                        });
+
+                    $("#confirm-dialog").dialog("open");
+                    break;
+                    //bootbox.backdrop(false);
+                    //bootbox.confirm("Are you sure, you want to delete " + node.data.title + " ?", function(result)
+                    //    {
+                    //    if(result == 1)
+                    //        {
+                    //        }
+                    //    });
+                    //// delete this node and all predecessors
+                    //
+                    //break;
+                default:
+                    alert("Todo: appply action '" + action + "' to node " + node);
+                }
+            });
+        };
+
+    $("#tree").dynatree(
+        {
+        debugLevel : 0,
+        dnd:
+            {
+            autoExpandMS: 500,
+            preventVoidMoves: false, // Prevent dropping nodes 'before self', etc.
+            onDragEnter: function(node, sourceNode)
+                {
+                // Allow drop only on folders (Root node and operators are folders)
+                console.log("entered, ");
+                console.log(sourceNode);
+
+                if(node.data.isFolder === false)
+                    {
+                    return false;
+                    }
+                // operators dropped to root node
+                if(sourceNode.data.isOperator === true)
+                    {
+                    // Operators need to be single
+                    children = node.getChildren();
+                    if(children)
+                        {
+                        for(var i = 0; i < children.length; i++)
+                            {
+                                if(children[i].data.isFolder === true)
+                                    {
+                                    return false;
+                                    }
+                            }
+                        }
+                    return true;
+                     }
+                else if(sourceNode.data.isFolder === false)
+                    {
+                    return true;
+                     }
+                },
+            onDragOver: function(node, sourceNode, hitMode)
+                {
+                console.log("over " + hitMode);
+                console.log(node);
+                // If operator and operator sibling return false
+                //  Return false to disallow dropping this node.
+                if(hitMode !== "over") {
+                    return false;
+                }
+                },
+            onDrop: function(node, sourceNode, hitMode, ui, draggable)
+                {
+                /**This function MUST be defined to enable dropping of items on the tree.
+                 * sourceNode may be null, if it is a non-Dynatree droppable.
+                 */
+                logMsg("tree.onDrop(%o, %o)", node, sourceNode);
+                var copynode;
+                if(sourceNode)
+                    {
+                    copynode = sourceNode.toDict(true, function(dict)
+                        {
+                        // dict.title = "Copy of " + dict.title;
+                        dict.title = dict.title;
+                        dict.isFolder = dict.isOperator;
+                        delete dict.key; // Remove key, so a new one will be created
+                        });
+                    }
+                else
+                    {
+                    copynode = {title: "This node was dropped here (" + ui.helper + ")."};
+                    }
+                if(hitMode == "over")
+                    {
+                    // Append as child node
+                    node.addChild(copynode);
+                    // expand the drop target
+                    node.expand(true);
+                    }
+                else
+                    if(hitMode == "before")
+                        {
+                        // Add before this, i.e. as child of current parent
+                        node.parent.addChild(copynode, node);
+                        }
+                else
+                    if(hitMode == "after")
+                        {
+                        // Add after this, i.e. as child of current parent
+                        node.parent.addChild(copynode, node.getNextSibling());
+                        }
+                },
+            }, // Ends dnd
+        onCreate: function(node, span)
+            {
+            console.log("Create Context" + node.data.title);
+            bindContextMenu(span);
+            },
+        onClick: function(node, event) {
+            // alert("You selected " + node.data.title + " with " + event.type);
+            console.log("You selected " + node.data.title + " with " + event.type);
+            // Display an input box with auto-complete
+        },
+        onKeydown: function(node, event){
+            console.log(event.which);
+            if(event.which === 107 ) {
+
+                $("#ae-label").tagit( {
+                    availableTags: ["scary", "simple" , "scene"],
+                });
+
+                $("#attribute-edit").dialog({
+                    resizable: false,
+                    modal: false,
+                    title: node.data.title,
+                    buttons: {
+
+                        "Ok": function() {
+                            $( this ).dialog( "close" );
+                            // Update the node object
+                            var childNode = node.addChild({
+                                title: "My new node",
+                                tooltip: "This folder and all child nodes were added programmatically."
+                            });
+                        },
+
+                        Cancel: function(){
+                            $( this ).dialog( "close" );
+                        },
+                    },
+                });
+
+                $("#attribute-edit").dialog("open");
+
+            }
+        },
+
+        // onActivate: function(node)
+            // {
+            // // A DynaTreeNode object is passed to the activation handler
+            // // Note: we also get this event, if persistence is on, and the page is reloaded.
+            // // alert("You activated " + node.data.title);
+            // // Display an edit dialog
+//
+//
+            // // alert("You activated ME");
+           // },
+        });
+
+    // defined in expression.query.results
+    add_sample_tree();
+
+
+    $("#attributes").dynatree(
+        {
+            debugLevel : 0,
+            onActivate: function(node)
+                {
+                // A DynaTreeNode object is passed to the activation handler
+                // Note: we also get this event, if persistence is on, and the page is reloaded.
+                console.log(node.data.title + " " + node.data.index)
+                var isUserEvent = node.tree.isUserEvent();
+                if (isUserEvent)
+                    {
+                    result.Update();
+                    }
+                },
+         dnd:
+            {
+            onDragStart: function(node)
+                {
+                /** This function MUST be defined to enable dragging for the tree.
+                 *  Return false to cancel dragging of node.
+                 */
+                logMsg("tree.onDragStart(%o)", node);
+                if(node.data.isFolder)
+                    return false;
+                return true;
+                },
+            onDragStop: function(node)
+                {
+                logMsg("tree.onDragStop(%o)", node);
+                }
+            },
+        });
+
+    var node = $("#attributes").dynatree("getTree").getRoot();
+
+    // Load the taxonomy data and parse
+    node.appendAjax({url: "/data/taxonomy.js",
+                       data: {"key": node.data.key, // Optional url arguments
+                              "mode": "all"
+                              }
+                      });
+
+    var operators = node.addChild(
+        {
+        title: "operators",
+        isFolder : true,
+        children : [ { title: "$and", isOperator : true }, { title : "$or", isOperator : true  }, { title : "$not" , isOperator : true }],
+        tooltip: "Special operations",
+        });
+
+    //var node = $("#attributes").dynatree("getTree").getNodeByKey("labels");
+    //node.expand(true);
+
+});
+</script>
+
+<script>
+// Initialize
+$(document).ready(function() {
+
+
+
+    $("input[name=search]").keyup(function() {
+        var match = [];
+
+        var $input = $(this);
+        var tree = $("#attributes").dynatree("getTree");
+        tree.visit(function (node) {
+            node.data.childmatch = false;
+            $(node.li).show();
+        });
+
+        var searchingfor = $input.val().toLowerCase();
+        $("button#btnResetSearch").attr("disabled", false);
+        tree.visit(function (node) {
+                if(node.data.title.toLowerCase().indexOf(searchingfor) >= 0 && node.data.isFolder === false) {
+                    // Make all parents visible
+                    match.push(node.data.title);
+                    node.makeVisible();
+                    node.visitParents(function(anode){
+                        anode.data.childmatch = true;
+                        //console.log("Parents - " + anode.data.title);
+                        $(anode.li).show();
+                    }, true);
+                }
+                else {
+                    if(node.data.childmatch === false) {
+                        // Make this node invisible
+                        $(node.li).hide();
+                    }
+                }
+        });
+        $("#matches").html("" + match.length + " matches");
+        // console.log(searchingfor);
+        // console.log(match.length);
+        // console.log(match)
+    });
+
+    $("button#btnResetSearch").click(function(e){
+        $("input[name=search]").val("");
+        $("span#matches").text("");
+        var tree = $("#attributes").dynatree("getTree");
+        tree.visit(function (node) {
+            node.data.childmatch = false;
+            $(node.li).show();
+            node.expand(false);
+        });
+    }).attr("disabled", true);
+
+
+    // jqueryui defaults
+    $.extend($.ui.dialog.prototype.options, {
+        create: function() {
+            var $this = $(this);
+
+            // focus first button and bind enter to it
+            $this.parent().find('.ui-dialog-buttonpane button:first').focus();
+            $this.keypress(function(e) {
+                if( e.keyCode == 13 ) {
+                    $this.parent().find('.ui-dialog-buttonpane button:first').click();
+                    return false;
+                }
+            });
+        }
+    });
+
+
+    $("#toggle-eventkit").on("click", function () {
+        console.log("Event kit view");
+        $('#colevent').css("display", "block");
+
+        window.setTimeout(function (){
+            $('#colmain').toggleClass('span12 span8');
+            $('#colevent').toggleClass('span0 span4');
+            if($('#colevent').hasClass("span0")) {
+                window.setTimeout(function (){
+                        $('#colevent').css("display", "none");
+                },400);
+            }
+        },10);
+
+        // else {
+        // }
+    });
+
+    result = new ImageResults();
+    resultContainer = new ResultsContainer("results-container");
+
+    // Enable bootstrapped select picker
+    $('.selectpicker').selectpicker();
+
+    var tm = new TextMarker();
+    tm.Init();
+    //tm.Update("E003")
+
+    //results.Clear()
+    //results.Images([ ])
+   // result.AddGraph();
+
+  // Handler for .ready() called.
+    $("#add-new").click(function () {
+        console.log("Adding new");
+
+    // Prepare the dialog
+    $("#ae-label").attr("placeholder", "New query name");
+    $("#ae-label").val("");
+    $("#attribute-edit").dialog(
+        {
+        resizable: false,
+        modal: false,
+        title: "Add new query",
+        buttons: {
+            "Ok": function() {
+                $( this ).dialog( "close" );
+                var name = $("#ae-label").val();
+                if(name.length > 0) {
+                    // Update the node object
+                    // Add a new node
+                    var rootNode = $("#tree").dynatree("getRoot");
+                    var node = rootNode.addChild({
+                        title: name,
+                        isFolder: true
+                      });
+                }
+            },
+            Cancel: function()
+                {
+                $( this ).dialog( "close" );
+                },
+            },
+        });
+
+    $("#attribute-edit").dialog("open");
+    });
+
+});
+</script>
+
+{% endblock head_scripts %}
+
+{% block body_content %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <button id="toggle-eventkit" class="btn"> Toggle Event Kit </button>
+    </div>
+    </br>
+
+    <div class="row-fluid">
+        <div id="colevent" class="span0" style="display:none;z-index=0">
+            <div id="event-name"> </div>
+            <div id="event-text"> </div>
+            <h2> Tags: </h2>
+            <div class="row-fluid">
+                <ul id="event-tags">
+                </ul>
+            </div>
+        </div> <!-- End of full column for selecting an event kit and its operations -->
+
+        <div id="colmain" class="span12"> <!-- Rest of it-->
+            <div class="row-fluid show-grid">
+                <div class="span6">
+                    <div class="row-fluid show-grid">
+                        <div class="span9">
+                            <h3> Expression trees </h3>
+                        </div>
+                        <div id="add-new" class="span3 btn">
+                            Add New
+                        </div>
+                    </div>
+                    <div id="tree" style="height:250px;overflow:visible;"> </div>
+                </div> <!-- span3 -->
+
+                <div class="span6">
+                    <h3> Available Attributes </h3>
+                    <p>
+                        <label>Filter:</label>
+                        <input name="search">
+                        <button id="btnResetSearch">X</button>
+                        <span id="matches"></span>
+                    </p>
+
+                    <div id="attributes" style="height:250px;overflow:visible;" > </div>
+                </div> <!-- span3 -->
+            </div><!-- end of two trees -->
+            <br/>
+
+            <!-- Another row for images -->
+            <div class="row-fluid show-grid">
+                <div id="results-container" class="span12 well">
+                <h2> Results </h2>
+                </div>
+            </div> <!-- results row -->
+
+            <!-- Another row for images -->
+            <div class="row-fluid show-grid">
+                 <select id="dataset" class="selectpicker" onchange="result.Update()">
+                      <option>ground_truth</option>
+                      <option>algo</option>
+                </select>
+
+                 <select id="dist" class="selectpicker" onchange="result.Update()">
+                      <option>algo_neg_half_percentile</option>
+                      <option>algo_percentile_positive</option>
+                      <option>algo_percent</option>
+                </select>
+
+                <h3>
+                <div id ="attrib_info" class="span12"> </div> <!--span12-->
+                <div id="chart_container" class="span12"> </div>
+                <div id ="query_info" class="span12"> </div> <!--span12-->
+                <div id ="image-results" class="span12"> </div> <!--span12-->
+                <div id ="images" class="span12"> </div> <!--span12-->
+                </h3>
+            </div><!-- row -->
+        </div><!-- rest of it -->
+    </div><!-- row -->
+   <!-- Definition of context menu -->
+  <ul id="myMenu" class="contextMenu">
+    <li class="configure"><a href="#configure">Configure</a></li>
+    <li class="query"><a href="#query-rank-fusion">RankFusion</a></li>
+    <li class="query"><a href="#query-score-fusion">ScoreFusion</a></li>
+    <li class="delete"><a href="#delete">Delete</a></li>
+  </ul>
+
+    <!-- Definition of confirmation dialog -->
+    <div id="confirm-dialog" title="Confirmation Required" style="display:none">
+        Are you sure you want to delete ?
+        <div id="delete-query"> </div>
+    </div>
+
+    <!-- Definition of confirmation dialog -->
+    <div id="attribute-edit">
+        <div class="container-fluid">
+            <input type="text" id="ae-label">
+        </div>
+    </div>
+
+
+</div>
+
+{% endblock body_content %}

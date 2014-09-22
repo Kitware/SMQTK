@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block head_scripts %}
+
+<style type="text/css">
+    *.highlight {
+        background-color: yellow;
+    }
+</style>
+
+<script>
+
+    $(document).ready(function() {
+        $("#search").submit(function(event){
+            event.preventDefault();
+            console.log("processing suggestion " + $("#search input").val());
+            $.ajax({
+                "url" : "/suggest/suggest_similar",
+                "method" : "GET",
+                "data" : {"search" : $("#search input").val()},
+                "success" : function (data) {
+                    console.log("Success");
+                    console.log(data);
+                    var htmlt = '';
+                    var sugs = [];
+                    for (var i = 0, len = data.suggestions.length; i < len; i++) {
+                        var item = data.suggestions[i];
+                        var classname = "label"
+
+                        if (item[0] > 0.08) {
+                            classname = "label-warning"
+                        }
+
+                        if (item[0] > 0.15) {
+                            classname = "label-success"
+                        }
+
+                        htmlt = htmlt + '<span class="label ' + classname + '"  style="margin:5px;float:left" title=""' + item[0] + '">' + item[1]  +  '</span>';
+                        sugs.push(item);
+                        if (sugs.length > 20) {
+                            break;
+                        }
+
+                    }
+
+                    $("#results").html(htmlt)
+                },
+                "error" : function (data) {
+                    console.log("Error in suggestions");
+                }
+            })
+        })
+    });
+</script>
+    
+{% endblock head_scripts %}
+
+{% block body_content %}    
+<div class="container">
+    <div class="row">
+        <h1> Suggest similar items </h1>
+        <br/>
+        <form class="form-horizontal span8" id="search">
+            <input name="search" class="input input-large" type="text" />
+            <button class="btn"> Search </button>
+        </form>
+    </div>
+    <div class="row">
+        <div class="span5" id="results">
+        </div>
+    </div>
+</div>
+
+{% endblock %}

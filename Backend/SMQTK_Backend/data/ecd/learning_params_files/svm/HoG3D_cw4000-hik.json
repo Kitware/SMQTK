@@ -1,0 +1,4 @@
+{
+    "features": ["HoG3D_cw4000"],
+    "kernel": "hik"
+}

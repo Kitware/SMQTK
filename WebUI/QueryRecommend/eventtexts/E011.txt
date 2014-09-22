@@ -1,0 +1,35 @@
+Event name: Making a sandwich
+
+Definition: Constructing an edible food item from ingredients, often
+including one or more slices of bread plus fillings
+
+Explication: Sandwiches are generally made by placing food items on top of
+a piece of bread, roll or similar item, and placing another piece of bread
+on top of the food items. Sandwiches with only one slice of bread are less
+common and are called "open face sandwiches". The food items inserted
+within the slices of bread are known as "fillings" and often include sliced
+meat, vegetables (commonly used vegetables include lettuce, tomatoes,
+onions, bell peppers, bean sprouts, cucumbers, and olives), and sliced or
+grated cheese. Often, a liquid or semi-liquid "condiment" or "spread" such
+as oil, mayonnaise, mustard, and/or flavored sauce, is drizzled onto the
+sandwich or spread with a knife on the bread or top of the sandwich
+fillers. The sandwich or bread used in the sandwich may also be heated in
+some way by placing it in a toaster, oven, frying pan, countertop grilling
+machine, microwave or grill. Sandwiches are a popular meal to make at home
+and are available for purchase in many cafes, convenience stores, and as
+part of the lunch menu at many restaurants.
+
+Evidential description:
+
+ scene: indoors (kitchen or restaurant or cafeteria) or outdoors (a park or
+ backyard)
+
+ objects/people: bread of various types; fillings (meat, cheese,
+ vegetables), condiments, knives, plates, other utensils
+
+ activities: slicing, toasting bread, spreading condiments on bread,
+ placing fillings on bread, cutting or dishing up fillings
+
+ audio: noises from equipment hitting the work surface; narration of or
+ commentary on the process; noises emanating from equipment (e.g. microwave
+ or griddle)

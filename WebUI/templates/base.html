@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+        <title>SMQTK</title>
+
+        <script src="/js/lib/jquery-1.9.1.min.js" type="text/javascript"></script>
+        <script src="/js/lib/jquery-migrate-1.1.0.min.js" type="text/javascript"></script>
+
+        {% block head_bootstrap %}
+            <link rel="stylesheet" href="/css/bootstrap.min.css">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="/css/bootstrap-responsive.css" rel="stylesheet">
+            <script src="/js/lib/bootstrap.min.js"></script>
+            <!--script src="/js/lib/bootstrap.min.js"></script-->
+            <!-- bootstrap selector -->
+            <script src="/js/lib/bootstrap-select.min.js"></script>
+            <link rel="stylesheet" href="/css/bootstrap-select.min.css">
+            <!-- BootBox --->
+            <script src="/js/lib/bootbox.min.js"></script>
+
+            <style type="text/css">
+                body {
+                    padding-top: 60px;
+                    padding-bottom: 40px;
+                }
+                .sidebar-nav {
+                    padding: 9px 0;
+                }
+
+                @media (max-width: 980px) {
+                    body {
+                        padding-top: 0px;
+                    }
+
+                    /* Enable use of floated navbar text */
+                    .navbar-text.pull-right {
+                        float: none;
+                        padding-left: 5px;
+                        padding-right: 5px;
+                    }
+                }
+            </style>
+
+        {% endblock head_bootstrap %}
+
+        <script src="/js/lib/jquery-ui-1.10.2.custom.min.js" type="text/javascript"></script>
+        <link href="/css/jquery-ui-1.10.2.custom.css" rel="stylesheet">
+
+        <script src="/js/lib/jquery.cookie.js" type="text/javascript"></script>
+
+        <script src="/js/lib/jquery.dynatree.js" type="text/javascript"></script>
+        <link href="/css/skin-vista/ui.dynatree.css" rel="stylesheet" type="text/css">
+
+        <!-- jquery.contextmenu,  A Beautiful Site (http://abeautifulsite.net/) -->
+        <script src="/js/lib/jquery.contextMenu-custom.js" type="text/javascript"></script>
+        <link href="/css/jquery.contextMenu.css" rel="stylesheet" type="text/css" >
+        <script src="/js/lib/jquery.timer.js" type="text/javascript"></script>
+        <script src="/js/lib/jquery.spriteOnHover-0.2.5.min.js" type="text/javascript"></script>
+
+        <!-- D3 and rikshaw -->
+        <script src="/js/lib/d3.min.js" type="text/javascript"></script>
+        <script src="/js/lib/rickshaw.js" type="text/javascript"></script>
+        <link href="/css/rickshaw.min.css" rel="stylesheet" type="text/css">
+
+        <!-- Rangy -->
+        <script src="/js/lib/rangy-core.js" type="text/javascript"></script>
+        <script src="/js/lib/rangy-cssclassapplier.js" type="text/javascript"></script>
+        <script src="/js/lib/rangy-serializer.js" type="text/javascript"></script>
+
+        <!-- tag-it -->
+        <script src="/js/lib/tag-it.min.js"></script>
+        <link rel="stylesheet" href="/css/jquery.tagit.css">
+        <link rel="stylesheet" href="/css/tagit.ui-zendesk.css">
+
+        <!-- rangy -->
+        <!-- script src="/js/tag-it.min.js"></script -->
+
+        <style>
+            .rickshaw_graph .detail .x_label {
+                display: none
+            }
+            .rickshaw_graph .detail .item {
+                line-height: 1.4;
+            }
+            .detail_swatch {
+                float: right;
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                margin: 0 4px 0 0
+            }
+            .rickshaw_graph .detail .date {
+                color: #a0a0a0
+            }
+            *.highlight {
+                background-color: yellow;
+            }
+            .middle {
+               width : 200px;
+               height : 150px;
+               overflow : hidden;
+               margin:10px;
+               float:left;
+            }
+
+            .middle img {
+               max-width:2000px;
+               height : 150px;
+               margin-left : -1000px;
+            }
+
+
+        </style>
+
+        <!-- (Irrelevant source removed.) -->
+
+        <!-- Add code to initialize the tree when the document is loaded: -->
+
+        <!--  Load custom classes -->
+
+        <script src="/js/adjudication.js" type="text/javascript"></script>
+        <link rel="stylesheet" href="/css/adjudication.css">
+
+        <script src="/js/image.results.js" type="text/javascript"></script>
+        <script src="/js/text.marker.js" type="text/javascript"></script>
+        <script src="/js/query.results.js" type="text/javascript"></script>
+        <script src="/js/attribute.query.results.js" type="text/javascript"></script>
+        <script src="/js/expression.query.results.js" type="text/javascript"></script>
+        <script src="/js/results.container.js" type="text/javascript"></script>
+
+        <script src="/js/filmstrip.js" type="text/javascript"></script>
+
+        <script src="/js/clip.view.js" type="text/javascript"></script>
+        <script src="/js/triage.clip.view.js" type="text/javascript"></script>
+        <link rel="stylesheet" href="/css/clip.view.css">
+
+        <script src="/js/clip.results.js" type="text/javascript"></script>
+        <script src="/js/triage.view.js" type="text/javascript"></script>
+
+        <script>
+            $(document).ready(function() {
+                $('ul.nav > li').click(function(e) {
+                    $('ul.nav > li').removeClass('active');
+                    $(this).addClass('active');
+                });
+
+                show_alert = function (message,alerttype) {
+                    console.log(message);
+                    console.log(alerttype);
+
+                    $('#alert_placeholder').append('<div id="alertdiv" class="alert alert-' +  alerttype + '"><a class="close" data-dismiss="alert">x</a><span>'+message+'</span></div>');
+
+                setTimeout(function() { // this will automatically close the alert and remove this if the users doesnt close it in 5 secs#}
+                    $("#alertdiv").remove();
+                    }, 3000);
+                }
+            });
+        </script>
+
+        {% block head_scripts %}
+
+        {% endblock head_scripts %}
+    </head>
+
+    <body>
+        {% block settitle %}
+        {% endblock settitle %}
+
+        {% set navigation_bar = [
+        ('home', '/', 'Home'),
+        ('iqr', '/iqr', 'Iterative Query Refinement'),
+        ('vcdi', '/vcdi', 'Video Content Explorer'),
+        ('vidinfo', '/vcdi/info_view', 'Video Lookup'),
+        ('oneshot', '/oneshot', 'Oneshot'),
+        ('triage', '/triage', 'Event Triage'),
+        ('about', '/about', 'About'),
+        ('help', '/help', 'Help')
+        ] -%}
+
+        {# Menu items based on roles #}
+
+        {% if "user" in session %}
+            {# Uncomment this to debug
+                {% do navigation_bar.append(('research', '/research', "Research")) %}
+                {{ session }}
+            #}
+            {% if "kitwarean" in session["user"]["roles"] %}
+                {% do navigation_bar.append(('research', '/research', "Research")) %}
+            {% endif %}
+        {% endif %}
+
+
+        {#
+        ('eventsearch', '/eventsearch', 'Event Search'),
+        ('upload', '/upload', 'Eventkit Upload'),
+        ('zero_shot', '/zero_shot', 'Zero shot'),
+        ('list', '/list', 'List Demos'),
+        #}
+
+        <div class="navbar navbar-inverse navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="brand" href="/home">SMQTK</a>
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            {% for id, href, label in navigation_bar %}
+                            <li {% if id == active_page %} class="active"{% endif %}>
+                                <a href="{{ href|escape }}">{{ label|escape }}</a>
+                            </li>
+                            {% endfor %}
+                            {% if not 'user' in session %}
+                                {% set login_url = url_for('login.login') %}
+                                {% set login_text = 'login' %}
+                            {% else %}
+                                {% set login_url = url_for('login.logout') %}
+                                {% set login_text = session.user.fullname + ' ~ logout' %}
+                            {% endif %}
+                        </ul>
+                        <ul class="nav pull-right">
+                            <li class="pull-right">
+                                <a href="{{ login_url }} "> {{ login_text|safe }} </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="alert_placeholder"  class="container-fluid">
+
+            {% with errors = get_flashed_messages(category_filter=["error"]) %}
+            {% if errors %}
+
+            <div class="alert alert-error">
+                <button type="button" class="close" data-dismiss="alert">
+                    x
+                </button>
+                <h4> Error </h4>
+                <ul>
+                    {%- for msg in errors %}
+                    <li>
+                        {{ msg }}
+                    </li>
+                    {% endfor -%}
+                </ul>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% with msgs = get_flashed_messages(category_filter=["success"]) %}
+            {% if msgs %}
+            <div class="alert alert-success">
+                <button type="button" class="close" data-dismiss="alert">
+                    x
+                </button>
+                <h4> Success </h4>
+                <ul>
+                    {%- for msg in msgs %}
+                    <li>
+                        {{ msg }}
+                    </li>
+                    {% endfor -%}
+                </ul>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% with infomsgs = get_flashed_messages(category_filter=["info"]) %}
+            {% if infomsgs %}
+            <div class="alert alert-info">
+                <button type="button" class="close" data-dismiss="alert">
+                    x
+                </button>
+                <h4> Information </h4>
+                <ul>
+                    {%- for amsg in infomsgs %}
+                    <li>
+                        {{ amsg }}
+                    </li>
+                    {% endfor -%}
+                </ul>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {#
+            {%- for msg in session %}
+            <li>
+                {{ msg }} {{ session[msg] }}
+            </li>
+            {% endfor -%}
+            #}
+
+        </div>
+
+        {% block body_content %}
+
+        {% endblock body_content %}
+
+        <footer>
+            <hr>
+            <center>
+                <p>
+                    <a href="http://www.kitware.com/solutions/computervision/computervision.html"> <img src="/img/Kitwarelogo-gradation.png" alt="&copy; Kitware Inc  2013" height="30px"> </a>
+                </p>
+            </center>
+        </footer>
+
+    </body>
+</html>

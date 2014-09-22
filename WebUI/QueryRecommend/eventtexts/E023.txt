@@ -1,0 +1,62 @@
+Event Name: Dog show
+
+Definition: A competitive exhibition of dogs.
+
+Explication: A dog show is normally a competitive exhibition of
+pure-bred dogs, where a person, known as the handler, leads or
+commands the dog to perform certain actions, and one or more judges
+determine the winner out of some designated group of dogs. There are
+three basic types of dog shows: shows that focus on appearance of the
+dog (e.g. the confirmation dog show, novelty shows like the world's
+ugliest dog show), shows that focus on obedience (e.g. obedience
+trials), and shows that focus on skills/agility (e.g. agility trials,
+sheepdog trials).
+
+Confirmation dog shows, such as those sponsored by the American Kennel
+Club (AKC), concentrate on how well the dogs conform to the standards
+set for their breed in appearance and attitude. At this type of dog
+show, there are multiple short competitions within the larger show,
+organized tournament style, where winners of a smaller category
+(e.g. "Chihuahua", a specific breed) will advance to the competition
+of a larger category (e.g. "toy group", which contains multiple "toy"
+breeds such as "Chihuahua"). Unlike the obedience, agility, or
+sheepdog trials, for appearance based shows the competing handlers and
+dogs for a particular competition are all in the ring competing at the
+same time. The dogs stay on leashes which the handler can use to guide
+their behavior, and the handler and dog both walk, run, or stand in
+synchrony. The judge may command their movements verbally or with
+gesture. The judge often inspects the dogs' appearance closely, and
+may touch their coat, lift their ears, lift their legs up and down,
+and/or open their mouth to look at their teeth/gum color.
+
+Obedience trials focus on the ability of the dogs to perform actions
+in response to commands given by the handler, such as fetching,
+sitting, or running from a pre-defined spot to the handler.
+
+Agility trials focus on the ability of the dogs to quickly navigate an
+obstacle course, requiring them to, for example, weave through a row
+of obstacles, run through tunnels, and jump over fences. Sheepdog
+trials focus on the ability of the dogs to move/control a herd of
+sheep according to the commands given by the handler. Typically a
+small group of sheep are enclosed in a fence inside the ring, and the
+trial begins when the fence is opened to let the sheep out.
+
+Evidential Description:
+
+ scene: indoors (exhibition hall, convention center) or outdoors
+ (usually in an area such as a grassy fairground)
+
+ objects/people: judge(s), handler(s), dogs, tents, name tags worn on
+ handler's clothing, band with number worn on handler's arm,
+ leash(es), prize ribbons (red, blue, white), frisbee, jumps, dog
+ tables, dog grooming equipment such as brushes, combs, powder, large
+ number of people, printed program, dog fences, dog water bowls
+
+ activities: pointing at dogs, moving dogs' feet, giving dogs treats,
+ pulling on leash, running next to dog, throwing frisbee, moving
+ toward judge to receive prize ribbon, brushing dog, combing dog,
+ giving dog water
+
+ audio: dogs barking, loudspeaker announcements, emcee narration of
+ events, audience clapping, people having general conversations,
+ judge(s) giving directions/announcing winners

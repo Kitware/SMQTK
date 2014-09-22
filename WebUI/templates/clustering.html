@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block head_bootstrap %}
+   {{ super() }}
+
+{% endblock head_bootstrap %}
+
+{% block head_scripts %}
+
+<script>
+// Initialize
+$(document).ready(function() {
+    var current_id = "75000";
+
+    var refresh_image = function (id) {
+        id = id || current_id;
+	current_id = id;
+        var d = new Date();
+        var src = "/clusters/random_frame?gridx=9&gridy=6&img=true";
+        src = src + "&clusterid=" + id;
+        src = src + "&t=" + d.getTime();
+
+        $("#soup").attr("src", src);
+    }
+
+    $("#btn-reload-image").click(function() {
+        refresh_image();
+    });
+
+    var activate_node = function(node, id) {
+        id = id || "-1";
+        // Custom update the tree with root node(s)
+        // Add children only if none present
+        children = node.getChildren()
+        refresh_image(node.data.id);
+        if(children !== null) {
+            if(children.length == 0) {
+            }
+            else {
+            	return;
+            }
+        }
+
+        $.ajax( {
+            url: "/clusters/get?id=" + id,
+            cache: false
+        }).done(function( data ) {
+            console.log(data);
+            if(node.parent === null) {
+                node.addChild(data);
+            }
+            else {
+                node.addChild(data.children);
+            }
+            refresh_image(data.id);
+            node.expand(true);
+            current_id = data.id;
+        });
+    }
+
+    $("#tree").dynatree({
+            debugLevel : 0,
+            onActivate: function(node)
+                {
+                // TODO: expand the node
+                console.log("Id: " + node.data.id + "Count: " + node.data.title)
+                activate_node(node, node.data.id);
+                },
+        });
+
+    activate_node($("#tree").dynatree("getTree").getRoot());
+
+
+});
+</script>
+
+{% endblock head_scripts %}
+
+{% block body_content %}
+<div class="container-fluid">
+    <div class="row-fluid">
+        <h1> Clustering </h1>
+    </div>
+
+    <br/>
+
+    <!-- Placeholder for cluster graph / tree  -->
+    <div class="row-fluid">
+        <div class="span12"> <!-- Rest of it-->
+            <div id="tree" style="height:250px;overflow:auto;"> </div>
+        </div><!-- row -->
+    </div>
+
+    <br/>
+
+    <!-- Placeholder for image soup -->
+    <div class="row-fluid">
+        <div class="span12"> <!-- Rest of it-->
+            <h3> Image Soup <div id="btn-reload-image" class="btn"> Refresh </div></h3>
+            <img id="soup" src="/clusters/random_frame?clusterid=75000&gridx=9&gridy=6&img=true"/>
+        </div><!-- row -->
+    </div>
+
+    <!-- Definition of context menu -->
+    <ul id="myMenu" class="contextMenu">
+        <li class="edit"><a href="#edit">Edit</a></li>
+        <li class="delete"><a href="#delete">Delete</a></li>
+    </ul>
+
+    <!-- Definition of confirmation dialog -->
+    <div id="confirm-dialog" title="Confirmation Required" style="display:none">
+        Are you sure you want to delete ?
+        <div id="delete-query"> </div>
+    </div>
+
+</div>
+
+
+{% endblock body_content %}

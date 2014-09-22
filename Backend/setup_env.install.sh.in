@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#+
+# LICENCE
+# -------
+# Copyright 2013 by Kitware, Inc. All Rights Reserved. Please refer to
+# KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
+# Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
+#-
+
+#
+# Set up the environment for the use of the SMQTK Backend components
+# (Install tree version)
+#
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+export PATH="${root_dir}/bin:$PATH"
+export PYTHONPATH="${root_dir}/@python_site_packages@:$PYTHONPATH"
+export LD_LIBRARY_PATH="${root_dir}/lib:$LD_LIBRARY_PATH"
+
+export SMQTK_BACKEND_SETUP=1

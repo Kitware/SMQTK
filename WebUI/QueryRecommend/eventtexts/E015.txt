@@ -1,0 +1,27 @@
+Event name: Working on a sewing project
+
+Definition: One or more people work on constructing a garment or other
+object from fabric, sewn by hand or by machine.
+
+Explication: Sewing consists of passing a needle attached to thread or
+other type of filament through the sewable material known as "fabric",
+which is typically a textile but may also include leather, plastic or other
+materials. Sewing may be performed by hand or with the aid of a motorized
+or non-motorized machine. Sewing may involve constructing, repairing, or
+altering a garment or other object by sewing pieces of material together;
+it may also consist of sewing objects (e.g buttons, decorative trim) onto
+the material. Related activities involving needle and thread, known as
+"needle crafts" include knitting and embroidery but these are not generally
+considered sewing.
+
+Evidential description:
+
+ scene: typically indoors, in a workroom or craft room
+
+ objects/people: sewing machine, needles, threads, fabric, patterns,
+ scissors, pins, tape measure, ironing board & iron
+
+ activities: measuring, cutting, sewing, ripping, tracing, bending over, pressing
+
+ audio: sounds of sewing machine being operated; sound of fabric ripping;
+ narration of process

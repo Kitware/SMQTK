@@ -1,0 +1,35 @@
+Event Name: Working on a metal crafts project
+
+Definition: One or more people fashion an object out of metal
+
+Explication: Working on a metal crafts project involves manipulating
+metal to create a decorative and/or functional object, such as
+jewelry, decorative wall hangings, or wrought-iron fences. Objects
+made in a factory or by operating a factory-style large machine do not
+count as relevant for this event. Metal may be manipulated by
+bending/molding with a vice, hammer, or other instrument, usually by
+initially heating the metal. This can be done by placing the
+designated metal into a hot fire or with targeted heat from a
+soldering iron or welding machine. Welding involves joining pieces of
+metal by heating them until they are molten and then joining them
+together. When metal is heated to this degree, it changes color to
+glow an orange or bright yellow/white color. Thin pieces of metal may
+have holes punched or drilled in them, either for decorative purposes
+or to allow wire or piece of connecting material (e.g. screw) to be
+passed through the hole.
+
+Evidential Description:
+
+ scene: usually indoors (workshop)
+
+ objects/people: metal pieces, soldering iron, rivets, vice, hammer,
+ various small metal rods (rivet punch, nail punch, metal stamps)
+ riveting machine, awl, caliper, solder, paintbrush, metal mold,
+ drill, polisher, welding machine, person doing the work
+
+ activities: hammering metal onto table/base block/mold, hammering
+ metal rod/awl into metal, painting metal with solder, melting metal
+ with soldering iron, polishing metal, drilling holes into metal,
+ bending metal using vice
+
+ audio: hammering, soldering iron flame, narration of process

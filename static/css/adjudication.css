@@ -1,0 +1,108 @@
+
+.clipAdjudication {
+    position : absolute;
+    background: #373737;
+    padding:3px;
+    /*display:none;*/
+    /*color: "white" !important;*/
+    opacity: 0.8;
+    -webkit-border-radius: 4px;
+    border-radius: 4px; 
+    right:5px;
+    bottom:5px;
+    z-index: 1000;
+    display:inline-block;
+
+    /*border-color: #C6C6C6;*/
+    /*background: inherit;*/
+}
+
+/*.triageAdjudication {*/
+    /*position : absolute;*/
+    /*background: #373737;*/
+    /*display:none;*/
+    /*color: "white" !important;*/
+    /*opacity: 0.8;*/
+    /*-webkit-border-radius: 4px;*/
+    /*top:5px;*/
+    /*bottom:5px;*/
+    /*z-index: 1000;*/
+    /*border-color: #C6C6C6;*/
+    /*background: inherit;*/
+/*}*/
+
+.adjudication-star-image {
+    position:absolute;
+    top:5px;
+    right:15px;
+    opacity:1.0;
+    width:26px;
+    height:26px;
+}
+
+/*No*/
+
+.clipAdjudication .no {
+    background: url('/img/carbon-rejected.png'); 
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+
+.clipAdjudication .no.adjudication {
+    background: url('/img/carbon-rejected_on.png');
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+
+/* yes */
+
+.clipAdjudication .yes {
+    background: url('/img/carbon-verified.png'); 
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+
+.clipAdjudication .yes.adjudication {
+    background: url('/img/carbon-verified_on.png'); 
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+
+/* star */
+
+.clipAdjudication .star {
+    background: url('/img/carbon-star.png'); 
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+
+.clipAdjudication .star.adjudication {
+    background: url('/img/carbon-star_on.png'); 
+	background-size:24px 24px; 
+	background-position: 50% 50%; 
+	background-repeat:no-repeat; 
+	width:0px; 
+	height: 0px;
+	padding: 12px; 
+}
+

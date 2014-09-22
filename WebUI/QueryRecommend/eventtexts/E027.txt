@@ -1,0 +1,33 @@
+Event Name: Rock climbing
+
+Definition: One or more people climb up or across rock formations or
+artificial rock walls.
+
+Explication: Rock climbing is a physically intense activity, where the
+goal is to reach the top or endpoint of a pre-defined route on a rock
+formation or artificial rock wall by finding a grip on the surface
+using hands and feet, and then pulling up using their arm and leg
+strength. Climbers usually wear harnesses connected to ropes that will
+catch them if they fall and allow them to more easily climb back down
+the rock. Though climbers move quickly up/across the rock on some
+climbs or portions of climbs, many climbs proceed slowly, and most of
+the climber's time is spent holding themselves in position on the side
+of the rock with what may be very minimal hand and footholds, and
+searching with one hand or foot for the next hand or foothold that
+will propel them further towards their goal destination.
+
+Evidential Description:
+
+ scene: outdoors in natural setting, indoors in rock climbing gym, or
+ outdoors on a specially constructed rock climbing wall
+
+ objects/people: carabiners, rope, helmet, harness, rock formation,
+ artificial rock wall, climbers
+
+ activities: hooking rope to harness, moving hands and feet along side
+ of rock face, grabbing rock outcroppings with hands, lifting up body
+ with arms/legs, jumping from one part of the rock to another
+
+ audio: carabiners clinking, climbers making comments on the
+ difficulty of the climb, onlookers cheering on climbers or directing
+ climbers where to put their hands/feet

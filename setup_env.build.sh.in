@@ -1,0 +1,11 @@
+#
+# SMQTK system setup script (build version)
+#
+
+# Sourcing Backend setup
+. "@BACKEND_SETUP_SCRIPT@"
+
+export SMQTK_INSTALL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="@SMQTK_SOURCE_DIR@:$PATH"
+export PYTHONPATH="@SMQTK_SOURCE_DIR@:$PYTHONPATH"
+export SMQTK_SYSTEM_SETUP=1

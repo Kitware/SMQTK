@@ -1,0 +1,604 @@
+
+{% extends "base.html" %}
+{% set active_page = "triage" %}
+
+{% block head_scripts %}
+
+<!-- Project specific JS code -->
+<script src="/js/timelineView.js" type="text/javascript"></script>
+<script src="/js/textView.js" type="text/javascript"></script>
+<script src="/js/videoPlayer.js" type="text/javascript"></script>
+
+<script src="/js/clip.results.js" type="text/javascript"></script>
+<script src="/js/triage.clip.results.js" type="text/javascript"></script>
+<script src="/js/random.clip.results.js" type="text/javascript"></script>
+
+<script>
+    $(document).ready(function() {
+
+        {% if "evaluator" in session.user.roles %}
+
+            function bunload() {
+                dontleave="Triage timer may be running";
+                return dontleave;
+            }
+
+            function Timer(config) {
+                var defaults = {
+                    resolution: 1000,
+                    remaining :12
+                };
+                this.status = 0;
+                this.elapsed = 0;
+                this.config = $.extend({},defaults, config);
+            }
+
+            Timer.prototype.tick = function() {
+                this.elapsed = new Date().getTime() - this.startTime;
+                if(this.elapsed > this.config.remaining * this.config.resolution) {
+                    $("#triage-timer-info").html(' Timer finished');
+                    clearInterval(this.interval);
+                    // Display popup done
+                    this.status = 0;
+                    $("#triage-timer").html("Start timer");
+                    var user_activity = JSON.parse(localStorage.getItem("triage_adjudication"));
+                    console.log(user_activity);
+                    if (clipresults !== undefined ) {
+                        clipresults.ResetAdjudication();
+                    }
+                    localStorage.clear();
+                    var request = $.ajax({
+                      url: "/adjudicate/mail",
+                      type: "POST",
+                      data: { user_activity : JSON.stringify(user_activity)},
+                      dataType: "json"
+                    });
+
+                    request.done(function( msg ) {
+                      alert("Triage complete, feedback email sent successfully");
+                    });
+
+                    request.fail(function( jqXHR, textStatus ) {
+                      alert( "Triage time over, but feedback not sent, no activity ? ");
+                    });
+
+                    window.onbeforeunload = null;
+
+                    $("#triage-timer").attr("disabled", "disabled");
+
+                    $("#event-kit").removeAttr("disabled");
+                    $("#event-kit").selectpicker();
+                    $('#event-kit').selectpicker('refresh');
+
+                    $("#training-kit").removeAttr("disabled");
+                    $("#training-kit").selectpicker();
+                    $('#training-kit').selectpicker('refresh');
+
+
+                    // Initiate email results
+                    return;
+                }
+                var togo = this.config.remaining - parseInt(this.elapsed / this.config.resolution);
+                var togomins = parseInt(togo / 60);
+                var togosecs = togo - togomins * 60;
+
+                $("#triage-timer-info").html('Remaining: ' + togomins + ":" + togosecs.pad() + " min");
+                console.log("Elapsed: " + parseInt(this.elapsed / this.config.resolution));
+            };
+
+            var triage_timer = new Timer({});
+
+            $("#triage-timer-info").html(' Timer not started');
+
+            $("#triage-timer").click(function(){
+               if(triage_timer.status === 0) {
+                   // Start timer
+                   triage_timer.startTime = new Date().getTime();
+                   $("#triage-timer").html("Interrupt timer");
+                   $("#triage-timer-info").html('Timer starting ...');
+                   triage_timer.interval = setInterval( function() { triage_timer.tick();}, triage_timer.config.resolution);
+                   triage_timer.status = 1;
+                   localStorage.removeItem("triage_storage");
+                   if(clipresults !== undefined) {
+                       clipresults.ResetAdjudication();
+                   }
+                   // Disable option buttons
+                   $("#event-kit").attr("disabled","disabled");
+                   $("#event-kit").selectpicker();
+                   $('#event-kit').selectpicker('refresh');
+
+                   $("#training-kit").attr("disabled","disabled");
+                   $("#training-kit").selectpicker();
+                   $('#training-kit').selectpicker('refresh');
+
+                   window.onbeforeunload = bunload;
+               }
+               else {
+                   // Clear the timer
+                   clearInterval(triage_timer.interval);
+                   triage_timer.status = 2;
+
+                   // for now cancel
+                   console.log("Pause, and offer to cancel / submit");
+                   var NewDialog = $('<p> Remaining: ' + (triage_timer.config.remaining - parseInt(triage_timer.elapsed / triage_timer.config.resolution)) + ' sec</p>');
+
+                   NewDialog.dialog({
+                        closeOnEscape: false,
+                        create : function(event, ui) {
+                            $(".ui-dialog-titlebar-close", ui.dialog).hide();
+                        },
+                        modal: true,
+                        title: "Timer is interrupted",
+                        buttons: [
+                            {
+                                text: "Resume",
+                                click: function()
+                                    {
+                                    $(this).dialog("close");
+                                    console.log("Resuming the timer");
+                                    // calculate the new remaining
+                                    triage_timer.config.remaining = parseInt((triage_timer.config.remaining * triage_timer.config.resolution - triage_timer.elapsed) / triage_timer.config.resolution);
+                                    triage_timer.elapsed = 0;
+                                    triage_timer.startTime = new Date().getTime();
+                                    triage_timer.interval = setInterval( function() { triage_timer.tick();}, triage_timer.config.resolution);
+                                    triage_timer.status = 1;
+                                    }
+                              },
+                              { text: "Restart", click: function() {
+                                    $(this).dialog("close");
+                                    alert("When implemented, this will restart the timer");
+                                }
+                            }
+                        ]
+                    });
+
+                   // Pause the timer
+
+
+                   // Interrupt running timer
+
+
+                   // Display a dialog
+
+
+               }
+
+               //
+            });
+
+        // Bind the storage changed event
+        $(document).on('triage_storage', function (e) {
+            // Modify the e to reflect current state
+            // ignore the message if timer is not running
+            if(triage_timer.status === 1) {
+                e.message.query = {event : eventkit, training : training};
+                var t = new Date();
+                var bits = t.toDateString().split(" ");
+                var daystr = bits[2] + "-" + bits[1] + "-" + bits[3] + ",";
+                var timestr = t.getHours() + ":" + t.getMinutes() + ",";
+                e.message.time = daystr + timestr;
+                e.message.elapsed = (new Date().getTime() - triage_timer.startTime )/ 1000;
+                console.log("Triage adjudication !");
+                console.log(e);
+                appendToStorage('triage_adjudication', e.message);
+            }
+        });
+
+        {% else %}
+
+        {% endif %}
+
+
+        localStorage.clear();
+        video_url_prefix = "{{video_url_prefix }}";
+        // Extend number prototype to achive padding while outputing nunmbers to string
+        Number.prototype.pad = function(size){
+              if(typeof(size) !== "number"){size = 2;}
+              var s = String(this);
+              while (s.length < size) s = "0" + s;
+              return s;
+            };
+
+
+        var appendToStorage = function(name, data) {
+            var old = JSON.parse(localStorage.getItem(name));
+            if(old === null) old = [];
+            old.push(data);
+            localStorage.setItem(name, JSON.stringify(old));
+        };
+
+
+        $("#show-random").on("click", function () {
+//            console.log("Event kit view");
+            if($('#random-results').hasClass("span0")) {
+            }
+
+            if($('#random-results').hasClass("span6")) {
+                $('#random-results').empty();
+            }
+
+            $('#clip-results').toggleClass('span12 span6', 500).promise().done(function() {
+                if($('#clip-results').hasClass("span6")){
+                var randomresults = new RandomClipResults($("#random-results"));
+                randomresults.limit=30;
+                randomresults.Submit();
+                }
+                $('#random-results').toggleClass('span0 span6');
+            });
+
+        });
+
+
+        var msg = {};
+
+        msg.trainings = [
+            { "name" : "100Ex", "kit" : "0" },
+            { "name" : "10Ex", "kit" : "0" },
+            { "name" : "0Ex", "kit" : "0" },
+        ];
+
+        msg.list = [
+//                    { "name" : "E001: Attempting a board trick", "kit" : "E001" },
+//                    { "name" : "E002: Feeding an animal", "kit" : "E002" },
+//                    { "name" : "E003: Landing a fish", "kit" : "E003" },
+//                    { "name" : "E004: Wedding ceremony", "kit" : "E004" },
+                    { "name" : "E006: Birthday party", "kit" : "6" },
+                    { "name" : "E007: Changing a vehicle tire", "kit" : "7" },
+                    { "name" : "E008: Flash mob gathering", "kit" : "8" },
+                    { "name" : "E009: Getting a vehicle unstuck", "kit" : "9" },
+                    { "name" : "E010: Grooming an animal", "kit" : "10" },
+                    { "name" : "E011: Making a sandwich", "kit" : "11" },
+                    { "name" : "E012: Parade", "kit" : "12" },
+                    { "name" : "E013: Parkour", "kit" : "13" },
+                    { "name" : "E014: Repairing an appliance", "kit" : "14" },
+                    { "name" : "E015: Working on a sewing project", "kit" : "15" },
+                    { "name" : "E021: Attempting a bike trick", "kit" : "21" },
+                    { "name" : "E022: Cleaning an appliance", "kit" : "22" },
+                    { "name" : "E023: Dog show", "kit" : "23" },
+                    { "name" : "E024: Giving directions to a location", "kit" : "24" },
+                    { "name" : "E025: Marriage proposal", "kit" : "25" },
+                    { "name" : "E026: Renovating a home", "kit" : "26" },
+                    { "name" : "E027: Rock climbing", "kit" : "27" },
+                    { "name" : "E028: Town hall meeting", "kit" : "28" },
+                    { "name" : "E029: Winning a race without a vehicle", "kit" : "29" },
+                    { "name" : "E030: Working on a metal crafts project", "kit" : "30" }
+                    ];
+        var liststr = '<Option data-kit="">Select Event Type</option>\n';
+        for(var i =0;  i < msg.list.length; i ++) {
+            liststr = liststr + '<Option data-kit="' + msg.list[i].kit + '"> ' + msg.list[i].name + "</option>\n";
+        }
+        $("#event-kit").html(liststr);
+        $("#event-kit").selectpicker();
+        $('#event-kit').selectpicker('refresh');
+
+        var liststr = "";
+        for(var i =0;  i < msg.trainings.length; i ++) {
+            liststr = liststr + '<Option> ' + msg.trainings[i].name + "</option>\n";
+        }
+
+        $("#training-kit").html(liststr);
+        $("#training-kit").selectpicker();
+        $("#training-kit").selectpicker('refresh');
+
+
+        var event_training_combo_changed = function () {
+            // Get the data from the selectpickers
+            eventkit = $("#event-kit").find('option:selected').data('kit');
+            var kit_text = $("#event-kit").find('option:selected').val();
+            training = $("#training-kit").find('option:selected').val();
+            if(eventkit === "")
+               {
+               return;
+               }
+            clipresults = new TriageClipResults($("#clip-results"));
+            clipresults.Submit(eventkit, kit_text, training);
+            $('#loadmore').show();
+            $("#triage-timer").removeAttr("disabled");
+            localStorage.clear();
+            // alert(eventkit);
+            // alert("Changed !!");
+        };
+
+
+        $('#event-kit').change(function () {
+            event_training_combo_changed();
+        });
+
+        $('#training-kit').change(function () {
+            event_training_combo_changed();
+        });
+
+        $('#loadmore').hide();
+
+        var clipresults;
+
+        $("#test-clip").click(function() {
+            //alert("Clicked");
+            var clipview = new FilmStripView($("#clip"),"003237");
+            clipview.Update()
+        });
+
+        $("#loadmore").click(function() {
+            //alert("Clicked");
+            clipresults.LoadMore();
+        });
+
+        // Navigation buttons
+        $("#navnext").click(function() {
+            clipresults.NextTriage();
+            //alert("Clicked");
+            //clipresults.LoadMore();
+        });
+
+        $("#navprev").click(function() {
+            //alert("Clicked");
+            clipresults.PrevTriage();
+            //clipresults.LoadMore();
+        });
+
+
+//        $(window).focus(function() {
+//        // code
+//        alert("In focus");
+//        });
+// http://www.eyecon.ro/slider-for-twitter-bootstrap.htm
+    });
+
+</script>
+<style>
+    .filmstrip {
+        overflow-x: scroll;
+        overflow-y: hidden;
+        height: 140px; /* give it enough space for the images and the scrollbar, if present */
+    }
+
+    ul.imageRow {
+        width: 0px; /*width of all of your images plus the margins/padding you use*/
+        height:140px;
+    }
+
+    ul.imageRow li {
+        float: left;
+        display: block;
+        padding: 7px;
+        margin: 0px;
+        background-color: #fff;
+    }
+
+    .selectframe_timeline {
+        background-color:red!important;
+        display:block!important;
+    }
+
+    .selectframe_text {
+        background-color:orange!important;
+        display:block!important;
+    }
+
+    .hiddenframe {
+        display:none!important;
+    }
+
+
+    ul.imageRow li:hover {
+        background-color:#bef;
+    }
+
+    .hoverclip {
+        width: 200px;
+        height:150px;
+        background: transparent url(/data/HVC758699preview.jpg) 0px 0px no-repeat;
+        float: left
+    }
+
+    .clipEvidence {
+        float: left;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+    .bar {
+      fill: steelblue;
+    }
+
+    /* Modal dialog */
+    #myModal {
+      /*width: 1000px;
+      height: 600px;*/
+      width: 90%;
+      height:90%;
+      left: 0px;
+      right: 0px;
+      bottom: 20px;
+      top: 20px;
+      margin-top: auto;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: auto;
+      overflow: auto;
+    }
+
+    .modal-header {
+        background-color:green;
+        button {
+        font-size:30px;
+        }
+    }
+
+   .modal-body {
+        overflow-x: auto;
+        height: 100%;
+        max-height:89%;
+    }
+
+
+    /* Video */
+    video {
+        width: 100%;
+    }
+
+    /** Text view */
+    .clipAttributes {
+        display: inline-block;
+    }
+
+    /** Timeline view */
+    #timelineView {
+        min-height: 200px;
+        max-height: 200px;
+        height: 200px;
+        width: 850px;
+    }
+
+    .selected {
+        fill: orange;
+        color: orange;
+        opacity: 1.0;
+    }
+
+    .selectedStandalone {
+        fill: red;
+        color: red;
+        opacity: 1.0;
+    }
+
+    .defocus {
+        opacity: 0.6;
+    }
+
+    .plot {
+        fill: rgba(250, 250, 255, 0.6);
+    }
+
+    #clipEvidences {
+        width: 100%;
+    }
+
+    .evidence-group ul {
+        list-style-type: none;
+    }
+
+    .evidence-group ul li {
+        background: none;
+        background-color: #EDE1E5;
+        display: inline-block;
+        padding-left: 8px;
+        padding-right: 8px;
+        margin-left: 2px;
+        margin-right: 2px;
+        font-size:200%;
+        -moz-border-radius: 6px;
+        border-radius: 6px;
+        -webkit-border-radius: 6px;
+        border: 1px solid #CAD8F3;
+    }
+
+</style>
+
+{% endblock %}
+
+{% block body_content %}
+
+<div class="container-fluid">
+    <div class="row-fluid">
+        <div class="span10">
+            <div class="row-fluid">
+            </div>
+            <select id="event-kit" class="span9" title="Select event type"> </select>
+            <select id="training-kit" class="span3" title="Select training data"> </select>
+        </div>
+
+        <div class="span2">
+            {% if "evaluator" in session.user.roles %}
+                <button id="triage-timer" class="btn" disabled="disabled">Start triage</button>
+                <div id="triage-timer-info"></div>
+            {% else %}
+                <button id="show-random" class='btn'> Toggle Random </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!--<div class="row-fluid">-->
+            <!--<div class="span1"> </div>-->
+    <!--</div>-->
+    <br/>
+    </div>
+    <div class="container-fluid">
+    <!-- div class="row-fluid">
+        <div id="progress" class="span12"> </div>
+    </div-->
+
+    <div class="row-fluid">
+        <div id="clip-results" class="span12 clip-results"> </div>
+        <div id="random-results" class="span0 clip-results"> </div>
+    </div>
+    <!--<center>-->
+        <!--<div id="wheel"> </div> </br>-->
+        <!--<div id="loadmore"><center><button class="btn"/>Load More</button></div>-->
+    <!--</center>-->
+
+
+    <!-- Modal -->
+    <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-header ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix">
+        <button type="button" data-dismiss="modal" aria-hidden="true">×</button>
+        <button id="navprev" type="button" aria-hidden="true">Prev</button>
+        <span id="myModalRank">45</span>
+        <button id="navnext" type="button" aria-hidden="true">Next</button>
+    </div>
+    <div class="modal-body">
+      <div class="container-fluid">
+            <div class="row-fluid">
+                <div id="" class="span12">
+                    <h3 id="myModalLabel" style="display: block"> </h3>
+                </div>
+            </div>
+            <br/>
+            <div class="row-fluid">
+                <div class="span4">
+                    <div class="row-fluid">
+                        <div id="clipEvidences" class="span4">
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div id='adjudication' class="span4">
+                            <h4> Adjudication </h4>
+                            <img class="yes" src="/img/carbon-verified.png" height="20px"/>
+                            <img class="no" src="/img/carbon-rejected.png" height="20px"/>
+                            <div>
+                                <h6> Notes </h6>
+                                <div class='myLabel'><label></label></div>
+                                <input type='text'/>
+                                <div class='btn'>Submit</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="myModalVid" class="video-container span8">
+                </div>
+
+            </div>
+
+            <div class="row-fluid">
+                <div class="span12">
+                    <div id="timelineView"></div>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span12">
+                    <div id="filmstripView"></div>
+               </div>
+            </div>
+        </div>
+       </div>
+    </div>
+</div>
+</div>
+
+
+{% endblock %}

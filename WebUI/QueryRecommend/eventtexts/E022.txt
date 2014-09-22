@@ -1,0 +1,43 @@
+Event Name: Cleaning an appliance
+
+Definition: One or more people clean an appliance.
+
+Explication: Household appliances are machines that are used for
+household functions such as cleaning, cooking, or cooling the
+home. Major household appliances are typically large appliances that
+are often metallic, black/white/beige/stainless steel in color, and
+can include: air conditioners, dishwashers, clothes dryers, drying
+cabinet, freezer, refrigerator, kitchen stove, water heater, washing
+machine, trash compactor, microwave ovens and induction
+cookers. Non-major household appliances are typically small appliances
+that perform a more specialized task, and can include: coffee makers,
+toasters, stand mixers, food processors, and electric can
+openers. Small devices that are held and moved with the hand while
+operating them, such as hand mixers, hair dryers, or electric
+toothbrushes, are not considered appliances and therefore cleaning
+these items is off-topic for this event.  Cleaning an appliance
+usually involves applying some kind of cleansing product to the
+appliance and scrubbing by hand and/or rinsing it with water. For a
+refrigerator or freezer, cleaning may also involve simply removing
+unwanted/old food items from the appliance. Cleaning of any appliance
+may also involve removing or disassembling some or all of the
+appliance to clean some parts separately and/or get better access to
+parts of the appliance to clean them. For example, the drawers and
+some shelves of a refrigerator may be removed and washed separately.
+
+Evidential Description:
+
+ scene: indoors (often in a kitchen, shop)
+
+ objects/people: appliance (refrigerator, stove, dishwasher,
+ microwave, etc.), food/food containers, spray bottle, sponge, paper
+ towels/cloths, person(s)
+
+ activities: person taking objects (often food/food containers, food
+ racks/microwave plate) out of the appliance, putting objects (often
+ food/food containers) back into appliance, throwing objects into
+ trash bags/can, running a dishwasher cleaning cycle, spraying
+ appliance with cleaning fluid, wiping/scrubbing appliance
+
+ audio: spraying of cleaning fluid, scrubbing, noises made by
+ dishwasher when activated, squeaking

@@ -1,0 +1,40 @@
+Event name: Repairing an appliance
+
+Definition: One or more people make repairs to a household appliance
+
+Explication: Appliances are machines that are used for functions related to
+the maintenance or care of a home or office (e.g. cleaning,
+cooling/heating), or to assist people in performing a household task
+(e.g. cooking, washing). Major household appliances are typically large and
+are often metallic, black or white in color, and may include: air
+conditioners, dishwashers, clothes dryers, drying cabinet, freezer,
+refrigerator, kitchen stove, water heater, washing machine, trash
+compactor, microwave ovens and induction cookers. Non-major household
+appliances are typically small appliances that perform a more specialized
+task, and include: coffee makers, toasters, stand mixers, food
+processors. Repairs to these items may include removing and replacing a
+part, or adjusting a part without replacing it.
+
+Small machines that are held and moved with the hand while operating them,
+such as hand mixers, hair dryers, or electric toothbrushes, may also be
+considered appliances. Large, permanently-installed machines that perform
+household tasks (e.g. a garage door opener, a central heating/cooling unit)
+are also not usually classified as appliances. Finally, machines primarily
+used for entertainment rather than household tasks, such as televisions, CD
+and DVD players, cameras, clocks, video game consoles, home cinema systems,
+telephones, answering machines, etc. are not generally considered
+appliances.
+
+Evidential description:
+
+ scene: typically indoors, in a home (kitchen, garage, basement)
+
+ objects/people: appliance (dishwasher, refrigerator, toaster oven, washing
+ machine etc); tools, rags, machine parts
+
+ activities: unscrewing/screwing parts, lifting machine parts, squatting
+ down, bending over, holding objects
+
+ audio: sounds of tools making contact with object being repaired; sounds
+ from power tools; narration of the process; sounds emanating from the
+ appliance itself (e.g. garbage disposal being operated)

@@ -1,0 +1,48 @@
+Event Name: Town hall meeting
+
+Definition: An informal public meeting where everyone in a community
+is invited to attend in order to hear discussion (and sometimes share
+opinions) on shared subjects of interest.
+
+Explication: Town hall meetings are used as a system of government in
+some small American communities, particularly in rural New England,
+where the town community directly legislates policy and budget
+issues. Town meetings involve the discussion of a policy issue, and
+are followed by either a vote on that issue, or for contentious
+issues, postponement to a machine ballot at a later time. Portions of
+town meetings where a controversial issue is being discussed may not
+be distinguishable from town hall meetings, and so will be considered
+relevant for this event. However, town hall meetings do not involve
+voting or any other direct effect on policy, but just serve as a way
+for politicians to interact directly with their constituents. Town
+hall meetings may be held with officials from any level of government,
+from the village to the national level. The politicians will generally
+give a speech, and then respond to individual speakers from the crowd
+who line up at a microphone or are chosen by a moderator to be allowed
+to make direct comments to the official(s). Town hall meetings may be
+called to help officials address a particular controversial issue, or
+they may be made a regular part of a politician's schedule, but will
+often be used by the attendees as an opportunity to address
+controversial issues with that politician. Because town hall meeting
+attendees are often those with strong opinions on controversial
+subjects, the audience will often react strongly (either positively or
+negatively) to what is being said by the attendees speaking to the
+officials, or the officials themselves; the speakers will often get
+into heated arguments with the official(s) or each other, or provide a
+heated monologue during the town hall meeting.
+
+Evidential Description:
+
+ scene: indoors (stage, auditorium, arena, church fellowship hall)
+
+ objects/people: microphones, microphone stands, political signs,
+ podiums, security guards or bouncers, protesters, politicians,
+ members of the community, paper handouts/flyers, chairs, elevated
+ stage
+
+ activities: arguing, waving signs, shouting, pointing, yelling,
+ people raising their hands to ask questions from their seats,
+ delivering a speech
+
+ audio: political speech, crowd reaction, arguments, boos, questions
+ coming from audience microphones, whispers among attendees

@@ -1,0 +1,29 @@
+Event name: Parade
+
+Definition: A large group of people process for a celebration/commemoration
+of some event
+
+Explication: A parade is a group of people processing either in celebration
+or commemoration of some event. Parades typically involve one or more
+groups of people proceeding down a route between two lines of
+spectators. Most often parades process down a street and the spectators are
+lined up on either side of the street. People in the parade may be driving
+cars, riding horses, and/or walking, dancing as a group in coordinated
+special dress or costumes, or riding on a parade float. Parade floats are
+decorated platforms that sit on top of a vehicle or are pulled by a vehicle
+or by people as part the procession. Parades are generally accompanied by
+music and by cheering or clapping from the spectators. Military groups may
+participate in parades, but not all military demonstrations constitute a
+parade.
+
+Evidential description:
+
+ scene: typically outdoors, any season, usually on a street
+
+ objects/people: a very large group of people, with floats, costumes,
+ props, vehicles, horses, megaphones
+
+ activities: marching, walking, singing, dancing, clapping, yelling
+
+ audio: music from bands; crowd cheering or clapping; announcers describing
+ the goings-on; horns or other vehicle noises

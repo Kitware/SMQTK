@@ -1,0 +1,33 @@
+Event name: Parkour
+
+Definition: A person travels by foot from one point to another while
+performing various gymnastic maneuvers over/on/through pre-existing
+man-made obstacles, typically outdoors.
+
+Explication: In parkour a person travels by foot as quickly as possible
+from one point to another while performing various acrobatic maneuvers
+(e.g. flips, swinging body over an object) and climbing over/on/through
+pre-existing obstacles such as trees, street lamps, fences, walls, children's
+playground equipment. Parkour is typically performed outdoors and often in
+an obstacle-dense urban environment. Freerunning is a related sport in
+which people interact with pre-existing obstacles via acrobatic tricks. For
+purposes of this event kit, freerunning is considered to be a form of
+parkour. Though typically performed outdoors, parkour may be practiced or
+demonstrated indoors, usually in a gym. Although acrobatic tricks occur in
+other sports/activities (skateboarding, cheerleading, gymnastics, dancing,
+snowboarding, etc.), these sports are distinct from parkour. In parkour,
+the acrobatic tricks are performed as part of the interaction with the
+pre-existing obstacles and/or in order to enable the athlete to maintain as
+much efficient forward movement as possible.
+
+Evidential description:
+
+ scene: usually outdoors in an urban setting
+
+ objects/people: natural environment, stairways, buildings, rooftops,
+ fire escapes, playground equipment
+
+ activities: running, scaling walls, jumping over obstacles, rolling
+
+ audio: sounds of human hitting the various obstacles (e.g. feet hitting a
+ picnic table); background music; occasional crowd reactions

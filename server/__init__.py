@@ -15,15 +15,6 @@ class Taxi(girder.api.rest.Resource):
     def __init__(self):
         self.resourceName = 'data'
         self.route('GET', (), self.find)
-        print '__init_ of giantoak'
-        # self.access = {
-        #     'mongo': (TaxiViaMongo, {}),
-        #     'mongo12': (TaxiViaMongoCompact, {
-        #         'dbUri': 'mongodb://parakon:27017/taxi12'}),
-        #     'mongofull': (TaxiViaMongoCompact, {
-        #         'dbUri': 'mongodb://parakon:27017/taxifull'}),
-        #     'tangelo': (TaxiViaTangeloService, {}),
-        # }
 
     @access.public
     def find(self, params):
@@ -37,9 +28,9 @@ class Taxi(girder.api.rest.Resource):
         # if isinstance(access, tuple):
         #     access = access[0](**access[1])
         #     self.access[params.get('source', 'mongo')] = access
-        db = pymongo.MongoClient('mongodb://localhost:27017/giantoak')
+        db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()
-        census = database['census']
+        census = database['ads']
         spec = census.find(spec={}, skip=offset, limit=limit, sort=sort)
         result = [row for row in spec]
 
@@ -114,7 +105,6 @@ class Taxi(girder.api.rest.Resource):
     #             required=False, dataType=dataType)
 
 def load(info):
-    print 'loading giantoak plugin'
     info['apiRoot'].data = Taxi()
     # info['apiRoot'].collection.route('GET', (':id', 'quota'),
     #                                  quota.getCollectionQuota)
@@ -128,6 +118,3 @@ def load(info):
     # events.bind('model.upload.save', 'userQuota', quota.checkUploadStart)
     # events.bind('model.upload.finalize', 'userQuota',
     #             quota.checkUploadFinalize)
-
-
-print 'giantoak'

@@ -27,7 +27,7 @@ class GeoAppRoot(object):
 
     def GET(self):
         if self.indexHtml is None:
-            page = open(os.path.join(ROOT_DIR, 'mapview/index.html')).read()
+            page = open(os.path.join(ROOT_DIR, 'index.html')).read()
             print '%r' % page
             self.indexHtml = mako.template.Template(page).render(**self.vars)
         return self.indexHtml
@@ -46,9 +46,9 @@ class GeoApp():
         self.root.girder, appconf = girder.utility.server.configureServer()
         curConfig = girder.utility.config.getConfig()
         localappconf = {
-            '/mapview': {
+            '/src': {
                 'tools.staticdir.on': 'True',
-                'tools.staticdir.dir': os.path.join(ROOT_DIR, 'mapview')
+                'tools.staticdir.dir': os.path.join(ROOT_DIR, 'src')
             },
             '/girder/static': curConfig['/static'],
             '/girder/static/lib/bootstrap/fonts': {

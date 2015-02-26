@@ -27,7 +27,7 @@ class GeoAppRoot(object):
 
     def GET(self):
         if self.indexHtml is None:
-            page = open(os.path.join(ROOT_DIR, 'sindex.html')).read()
+            page = open(os.path.join(ROOT_DIR, 'mapview/index.html')).read()
             print '%r' % page
             self.indexHtml = mako.template.Template(page).render(**self.vars)
         return self.indexHtml
@@ -80,7 +80,7 @@ class GeoApp():
         #   pluginRootDir: (root)}
         # it can modify root, appconf, and apiRoot
 
-        load(info)
+        taxi.load(info)
 
         cherrypy.engine.start()
         cherrypy.engine.block()

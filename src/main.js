@@ -5,20 +5,25 @@ $(function () {
   }
 
   function aggregateByLocation() {
-    var dataGroupedByLocation, key, locationBin = {}, aggData;
+    var dataGroupedByLocation, key, locationBin = {}, min = 0, max = 1;
     if (mdata) {
-      aggData = mdata.map(function(item) {
+      mdata.forEach(function(item) {
         key = item.field7 + '|' + item.field6;
-        if (item.binCount === undefined) {
+        if (key in locationBin) {
+          locationBin[key].binCount = 1 + locationBin[key].binCount;
+          if (locationBin[key].binCount > max) {
+            max = locationBin[key].binCount
+          }
+        } else {
           item.binCount = 1;
-          locationBin[key] = 1;
-          return item;
-        } else if (key in locationBin) {
-          locationBin[key] += 1;
-          item.binCount = locationBin[key];
+          locationBin[key] = item;
+          aggData.push(item);
         }
       });
     }
+
+    scale = d3.scale.linear().domain([min, max])
+              .range([2, 100]);
   }
 
   var map = geo.map({
@@ -28,7 +33,7 @@ $(function () {
       y: 39.5
     },
     zoom: 1
-  }), locationBin = null, mdata = null, aggData = null;
+  }), locationBin = null, mdata = null, aggData = [], scale = null;
 
   map.createLayer(
     'osm',
@@ -37,18 +42,20 @@ $(function () {
     }
   );
 
-  $.ajax( "/api/v1/data?limit=10000" )
+  $.ajax( "/api/v1/data?limit=500000" )
   .done(function(data) {
     // Cache the data for later
     mdata = data;
     aggregateByLocation();
+    console.log(aggData.length);
     map
       .createLayer('feature')
         .createFeature('point')
           .data(aggData)
-          .position(function(d) {return {x:d.field7, y:d.field6}})
+          .position(function (d) { return { x:d.field7, y:d.field6 } })
+          .style('radius', function (d) { return scale(d.binCount); })
           .style('stroke', false)
-          .style('fillOpacity', 0.05)
+          .style('fillOpacity', 0.4)
           .style('fillColor', "orange");
     map.draw();
   })

@@ -7,7 +7,7 @@ import girder.utility.server
 import mako.template
 import os
 
-import taxi
+import geospace
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(PACKAGE_DIR)
@@ -80,7 +80,7 @@ class GeoApp():
         #   pluginRootDir: (root)}
         # it can modify root, appconf, and apiRoot
 
-        taxi.load(info)
+        geospace.load(info)
 
         cherrypy.engine.start()
         cherrypy.engine.block()

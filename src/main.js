@@ -42,7 +42,7 @@ $(function () {
     }
   );
 
-  $.ajax( "/api/v1/data?limit=500000" )
+  $.ajax( "/api/v1/data?limit=1000" )
   .done(function(data) {
     // Cache the data for later
     mdata = data;
@@ -62,4 +62,6 @@ $(function () {
   .fail(function() {
     alert( "error" );
   });
+
+  $("#slider").dateRangeSlider();
 });

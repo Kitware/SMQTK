@@ -4,10 +4,24 @@
     <meta charset="UTF-8">
     <script src="src/geo.ext.min.js" type="text/javascript" charset="UTF8"></script>
     <script src="src/geo.min.js"></script>
+    <script src="src/jquery-ui-1.11.3.custom/jquery-ui.js"></script>
+    <script src="src/jQRangeSlider-5.7.1/jQDateRangeSlider-min.js"></script>
+    <script src="src/js/bootstrap.min.js"></script>
     <script src="src/main.js"></script>
+    <link href="src/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="src/jQRangeSlider-5.7.1/css/iThing.css" type="text/css" />
     <link href="src/main.css" rel="stylesheet">
 </head>
 <body>
-<div id='map'>
-</div>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8 fill">
+                <div id="map"></div>
+            </div>
+            <div class="col-md-4 fill">
+                <h3> Temporal selection</h3>
+                <div id="slider"></div>
+            </div>
+        </div>
+    </div>
 </body>

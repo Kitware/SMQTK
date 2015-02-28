@@ -47,7 +47,35 @@ $(function () {
     // Cache the data for later
     mdata = data;
     aggregateByLocation();
-    console.log(aggData.length);
+    console.log(aggData);
+
+    // Compute min and max for time
+    var format = d3.time.format("%Y-%m-%d %H:%M:%S");
+    var minMax = [d3.min(aggData, function(d) {
+        var date = format.parse(d.field4);
+        if (date) {
+          return date.getTime() / 1000
+        }
+      }), d3.max(aggData, function(d) {
+        var date = format.parse(d.field4);
+        if (date) {
+          return date.getTime() / 1000
+        }
+      })];
+
+    // Convert to date object
+    console.log(new Date(minMax[0] * 1000).toString());
+    console.log(new Date(minMax[1] * 1000).toString());
+
+    // Set the date range
+    $("#slider").dateRangeSlider(
+      "option",
+      "bounds",
+      {
+        min: new Date(minMax[0] * 1000),
+        max: new Date(minMax[1] * 1000)
+    });
+
     map
       .createLayer('feature')
         .createFeature('point')

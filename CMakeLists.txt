@@ -64,16 +64,6 @@ configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
                @ONLY
                )
 
-# Default system configuration file
-configure_file("${SMQTK_SOURCE_DIR}/smqtk_config.build.py.in"
-               "${SMQTK_SOURCE_DIR}/smqtk_config.py"
-               @ONLY
-               )
-configure_file("${SMQTK_SOURCE_DIR}/smqtk_config.install.py.in"
-               "${SMQTK_BINARY_DIR}/smqtk_config.install.py"
-               @ONLY
-               )
-
 
 ###
 # System Installation
@@ -125,11 +115,6 @@ install(FILES requirements.txt
 install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
         DESTINATION .
         RENAME setup_smqtk.sh
-        )
-
-install(FILES "${SMQTK_BINARY_DIR}/smqtk_config.install.py"
-        DESTINATION "${python_site_packages}"
-        RENAME smqtk_config.py
         )
 
 install(DIRECTORY WebUI

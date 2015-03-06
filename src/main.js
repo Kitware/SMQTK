@@ -1,13 +1,11 @@
 $(function () {
   'use strict';
 
-  function updateDataLayer() {
-  }
-
-  function aggregateByLocation() {
-    var dataGroupedByLocation, key, locationBin = {}, min = 0, max = 1;
-    if (mdata) {
-      mdata.forEach(function(item) {
+  // Aggregate data
+  function aggregateByLocation(data) {
+    var dataGroupedByLocation, key, locationBin = {}, min = 0, max = 1, newdata = [];
+    if (data) {
+      data.forEach(function(item) {
         key = item.field7 + '|' + item.field6;
         if (key in locationBin) {
           locationBin[key].binCount = 1 + locationBin[key].binCount;
@@ -17,20 +15,20 @@ $(function () {
         } else {
           item.binCount = 1;
           locationBin[key] = item;
-          aggData.push(item);
+          newdata.push(item);
         }
       });
     }
 
-    scale = d3.scale.linear().domain([min, max])
-              .range([2, 100]);
+    return {"data": newdata, "min": min, "max": max};
   }
 
+  // Query given a time duration
   function queryData(timerange, callback) {
     console.log("querying data");
-    console.log("/api/v1/data?limit=1000&timerange=["+timerange+"]");
+    console.log("/api/v1/data?limit=1000&duration=["+timerange+"]");
 
-    $.ajax( "/api/v1/data?limit=1000&timerange"+timerange)
+    $.ajax("/api/v1/data?limit=1000&duration=["+timerange+"]")
       .done(function(data) {
         console.log(data);
         if (callback !== undefined) {
@@ -42,6 +40,28 @@ $(function () {
       })
   }
 
+  // Create geovis
+  function createVis(data) {
+    var aggdata = aggregateByLocation(data);
+    console.log(aggdata);
+    scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
+              .range([2, 100]);
+    if (pointFeatureLayer === undefined) {
+
+    }
+    map
+      .createLayer('feature')
+        .createFeature('point')
+          .data(aggdata.data)
+          .position(function (d) { return { x:d.field7, y:d.field6 } })
+          .style('radius', function (d) { return scale(d.binCount); })
+          .style('stroke', false)
+          .style('fillOpacity', 0.4)
+          .style('fillColor', "orange");
+    map.draw();
+  }
+
+  // Globals
   var map = geo.map({
     node: '#map',
     center: {
@@ -49,7 +69,7 @@ $(function () {
       y: 39.5
     },
     zoom: 1
-  }), locationBin = null, mdata = null, aggData = [], scale = null;
+  }), locationBin = null, scale = null, pointFeatureLayer;
 
   map.createLayer(
     'osm',
@@ -92,25 +112,14 @@ $(function () {
       range: true,
       min: min.getTime()/1000,
       max: max.getTime()/1000,
-      values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 30 ],
+      values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
       slide: function( event, ui ) {
-        console.log($( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] ));
+        queryData($("#slider").slider("values"), createVis);
       }
     });
 
     // Now query data
-    queryData($("#slider").slider("values"), function() {
-      map
-        .createLayer('feature')
-          .createFeature('point')
-            .data(aggData)
-            .position(function (d) { return { x:d.field7, y:d.field6 } })
-            .style('radius', function (d) { return scale(d.binCount); })
-            .style('stroke', false)
-            .style('fillOpacity', 0.4)
-            .style('fillColor', "orange");
-      map.draw();
-    })
+    queryData($("#slider").slider("values"), createVis);
   })
   .fail(function() {
     alert( "error" );

@@ -28,6 +28,7 @@ class FeatureDescriptor (object):
         # Directory that work for this feature descriptor should be put. This
         # should be considered a temporary
         self._work_dir = osp.join(base_work_directory,
+                                  "FeatureDescriptorWork",
                                   self.__class__.__name__)
 
     @property
@@ -60,6 +61,8 @@ class FeatureDescriptor (object):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
+
+        :raises RuntimeError: Feature extraction failure of some kind.
 
         :param data: Some kind of input data.
 
@@ -113,15 +116,15 @@ def _get_plugins(plugin_dir):
             # Look for standard variable
             fd_classes = None
             if hasattr(module, standard_var):
-                fd_classes = getattr(module, fd_classes, None)
-                if issubclass(fd_classes, FeatureDescriptor):
-                    log.debug("[%s] Loaded class via variable: %s",
-                              module_name, fd_classes)
-                    fd_classes = [fd_classes]
-                elif isinstance(fd_classes, (tuple, list)):
+                fd_classes = getattr(module, standard_var, None)
+                if isinstance(fd_classes, (tuple, list)):
                     log.debug('[%s] Loaded list of classes via variable: '
                               '%s',
                               module_name, fd_classes)
+                elif issubclass(fd_classes, FeatureDescriptor):
+                    log.debug("[%s] Loaded class via variable: %s",
+                              module_name, fd_classes)
+                    fd_classes = [fd_classes]
                 else:
                     raise RuntimeError("[%s] %s variable not set to a "
                                        "valid value.",

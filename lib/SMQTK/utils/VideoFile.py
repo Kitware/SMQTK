@@ -44,11 +44,12 @@ class VideoFile (object):
     def __init__(self, filepath, base_work_directory):
         self._filepath = filepath
 
-        self._base_work_dir = base_work_directory
+        self._base_work_dir = osp.join(base_work_directory, "VideoWork")
         self._work_dir = None
 
         # Cache variables
         self.__md5_cache = None
+        self.__metadata_cache = None
 
     @property
     def log(self):
@@ -117,60 +118,64 @@ class VideoFile (object):
         """
         # TODO: In the future, this should be abstract and left to a subclass to
         #       implement.
-        PROC_FFPROBE = "smqtk_ffprobe"
-        re_float_match = "[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 
-        self.log.debug("Using ffprobe: %s", PROC_FFPROBE)
-        cmd = [PROC_FFPROBE, '-i', self.filepath]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        # ffprobe puts output to err stream
-        if p.returncode:  # non-zero
-            raise RuntimeError("Failed to probe video file. Error:\n%s"
-                               % err)
+        if self.__metadata_cache is None:
+            PROC_FFPROBE = "smqtk_ffprobe"
+            re_float_match = "[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 
-        # WxH
-        m = re.search("Stream.*Video.* (\d+)x(\d+)", err)
-        if m:
-            width = int(m.group(1))
-            height = int(m.group(2))
-        else:
-            raise RuntimeError("Couldn't find width/height specification "
-                               "for video file '%s'" % self.filepath)
+            self.log.debug("Using ffprobe: %s", PROC_FFPROBE)
+            cmd = [PROC_FFPROBE, '-i', self.filepath]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            # ffprobe puts output to err stream
+            if p.returncode:  # non-zero
+                raise RuntimeError("Failed to probe video file. Error:\n%s"
+                                   % err)
 
-        # FPS
-        m = re.search("Stream.*Video.* (%s) fps" % re_float_match, err)
-        if m:
-            fps = float(m.group(1))
-        else:
-            # falling back on tbr measurement
-            self.log.debug("Couldn't find fps measurement, looking for TBR")
-            m = re.search("Stream.*Video.* (%s) tbr" % re_float_match, err)
+            # WxH
+            m = re.search("Stream.*Video.* (\d+)x(\d+)", err)
+            if m:
+                width = int(m.group(1))
+                height = int(m.group(2))
+            else:
+                raise RuntimeError("Couldn't find width/height specification "
+                                   "for video file '%s'" % self.filepath)
+
+            # FPS
+            m = re.search("Stream.*Video.* (%s) fps" % re_float_match, err)
             if m:
                 fps = float(m.group(1))
             else:
-                raise RuntimeError("Couldn't find tbr specification for "
+                # falling back on tbr measurement
+                self.log.debug("Couldn't find fps measurement, looking for TBR")
+                m = re.search("Stream.*Video.* (%s) tbr" % re_float_match, err)
+                if m:
+                    fps = float(m.group(1))
+                else:
+                    raise RuntimeError("Couldn't find tbr specification for "
+                                       "video file '%s'" % self.filepath)
+
+            # Duration
+            m = re.search("Duration: (\d+):(\d+):(%s)" % re_float_match, err)
+            if m:
+                duration = (
+                    (60 * 60 * int(m.group(1)))     # hours
+                    + (60 * int(m.group(2)))        # minutes
+                    + float(m.group(3))             # seconds
+                )
+            else:
+                raise RuntimeError("Couldn't find duration specification for "
                                    "video file '%s'" % self.filepath)
 
-        # Duration
-        m = re.search("Duration: (\d+):(\d+):(%s)" % re_float_match, err)
-        if m:
-            duration = (
-                (60 * 60 * int(m.group(1)))     # hours
-                + (60 * int(m.group(2)))        # minutes
-                + float(m.group(3))             # seconds
-            )
-        else:
-            raise RuntimeError("Couldn't find duration specification for "
-                               "video file '%s'" % self.filepath)
+            md = VideoMetadata()
+            md.width = width
+            md.height = height
+            md.fps = fps
+            md.duration = duration
+            self.__metadata_cache = md
 
-        md = VideoMetadata()
-        md.width = width
-        md.height = height
-        md.fps = fps
-        md.duration = duration
-        return md
+        return self.__metadata_cache
 
     def frame_map(self, second_offset=0, second_interval=0, max_duration=0,
                   output_image_ext='png'):
@@ -321,9 +326,9 @@ class VideoFile (object):
 
         self.log.debug("Starting frame gathering...")
         for frame in xrange(num_frames):
-            self.log.debug("Frame >> %d", frame)
-            self.log.debug("... Cur frame time: %.16f -> %.4f",
-                           cur_time, round(cur_time, 3))
+            # self.log.debug("Frame >> %d", frame)
+            # self.log.debug("... Cur frame time: %.16f -> %.3f",
+            #               cur_time, round(cur_time, 3))
 
             # If we has surpassed our given maximum duration, kick out
             if max_duration and cur_time >= max_duration:
@@ -332,18 +337,18 @@ class VideoFile (object):
             if round(cur_time, 3) >= round(offset, 3):
                 if frames_taken:
                     if round(cur_time, 3) >= round(next_threshold, 3):
-                        self.log.debug("... T exceeded, gathering frame")
+                        # self.log.debug("... T exceeded, gathering frame")
                         # take frame, set next threshold
                         frames_taken.append(frame)
                         next_threshold += interval
                 else:
-                    self.log.debug("... First frame")
+                    # self.log.debug("... First frame")
                     # first valid frame seen, this is our starting frame
                     frames_taken.append(frame)
                     next_threshold = cur_time + interval
 
-                self.log.debug("... Next T: %.16f -> %.16f",
-                               next_threshold, round(next_threshold, 3))
+                # self.log.debug("... Next T: %.16f -> %.3f",
+                #                next_threshold, round(next_threshold, 3))
 
             cur_time += frame_time_interval
 

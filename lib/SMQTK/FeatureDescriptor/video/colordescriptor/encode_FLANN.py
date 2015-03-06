@@ -202,7 +202,7 @@ def build_sp_hist(key, outdir, outtype):
     filein  = os.path.join(outdir, key+'.'+inname)
     outname = outtype + '-sp.hist.txt'
     fileout = os.path.join(outdir, key+'.'+outname)
-    build_sp_hist_(filein, fileout)
+    return build_sp_hist_(filein, fileout)
 
 
 def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
@@ -248,4 +248,5 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
     # concatenate
     hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2, hist_csift_q3, hist_csift_q4, hist_csift_l1, hist_csift_l2, hist_csift_l3))
     np.savetxt(fileout, hist_csift, fmt = '%g')
+    return hist_csift
 ###################################################################################

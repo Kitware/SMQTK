@@ -19,27 +19,27 @@ vcd_store
 /smqtk_config.py
 
 #
-# Backend
+# TPL
 #
 
 ### TPL/flann-1.8.4 ###
-/Backend/TPL/flann-1.8.4/CMakeCache.txt
-/Backend/TPL/flann-1.8.4/CPack*
-/Backend/TPL/flann-1.8.4/install_manifest.txt
-/Backend/TPL/flann-1.8.4/uninstall_target.cmake
-/Backend/TPL/flann-1.8.4/**/CMakeFiles/
-/Backend/TPL/flann-1.8.4/**/Makefile
-/Backend/TPL/flann-1.8.4/**/cmake_install.cmake
-/Backend/TPL/flann-1.8.4/bin/flann_example_c
-/Backend/TPL/flann-1.8.4/cmake/flann.pc
-/Backend/TPL/flann-1.8.4/doc/build/
-/Backend/TPL/flann-1.8.4/lib/
-/Backend/TPL/flann-1.8.4/src/python/build
-/Backend/TPL/flann-1.8.4/src/python/setup.py
+/TPL/flann-1.8.4/CMakeCache.txt
+/TPL/flann-1.8.4/CPack*
+/TPL/flann-1.8.4/install_manifest.txt
+/TPL/flann-1.8.4/uninstall_target.cmake
+/TPL/flann-1.8.4/**/CMakeFiles/
+/TPL/flann-1.8.4/**/Makefile
+/TPL/flann-1.8.4/**/cmake_install.cmake
+/TPL/flann-1.8.4/bin/flann_example_c
+/TPL/flann-1.8.4/cmake/flann.pc
+/TPL/flann-1.8.4/doc/build/
+/TPL/flann-1.8.4/lib/
+/TPL/flann-1.8.4/src/python/build
+/TPL/flann-1.8.4/src/python/setup.py
 
 ### TPL/libsvm-3.17 ###
-/Backend/TPL/libsvm-3.17/libsvm.so.2
-/Backend/TPL/libsvm-3.17/svm-predict
-/Backend/TPL/libsvm-3.17/svm-scale
-/Backend/TPL/libsvm-3.17/svm-train
-/Backend/TPL/libsvm-3.17/svm.o
+/TPL/libsvm-3.17/libsvm.so.2
+/TPL/libsvm-3.17/svm-predict
+/TPL/libsvm-3.17/svm-scale
+/TPL/libsvm-3.17/svm-train
+/TPL/libsvm-3.17/svm.o

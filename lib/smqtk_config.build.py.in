@@ -7,6 +7,10 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+# use "0.0.0.0" for public use
+RUN_HOST = "127.0.0.1"
+RUN_PORT = 5000
+
 MONGO_SERVER = "127.0.0.1:27017"
 MONGO_DB = "smqtk"
 

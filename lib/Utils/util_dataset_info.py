@@ -29,7 +29,7 @@ def allowed_subsets():
     return info
 
 
-def subset_clipids(config)
+def subset_clipids(configs):
     """
     Find clipids across configs
 
@@ -45,4 +45,4 @@ def subset_clipids(config)
 
 
 
-    pass
+        pass

@@ -19,19 +19,22 @@ class Geospace(girder.api.rest.Resource):
     @access.public
     def find(self, params):
         limit, offset, sort = self.getPagingParameters(params)
+        result = {}
 
         db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()
         coll = database['ads']
 
-        # Check for valid time range
+        # Get valid time range
         time_range = params.get('duration', None)
         if (time_range is None):
             result['duration'] = {
-                "start":  coll.find().sort({'field4': -1}).limit(1),
-                "end":  coll.find().sort({'field4': 1}).limit(1)
+                "start": [i for i in coll.find({"field4": { "$exists": True, "$nin": ["None"] } } ).sort("field4",  1).limit(1)][0],
+                "end":   [i for i in coll.find({"field4": { "$exists": True, "$nin": ["None"] } } ).sort("field4", -1).limit(1)][0]
             };
             return result;
+
+        # Find all of the datasets within time range.
 
         db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()

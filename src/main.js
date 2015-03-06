@@ -26,6 +26,22 @@ $(function () {
               .range([2, 100]);
   }
 
+  function queryData(timerange, callback) {
+    console.log("querying data");
+    console.log("/api/v1/data?limit=1000&timerange=["+timerange+"]");
+
+    $.ajax( "/api/v1/data?limit=1000&timerange"+timerange)
+      .done(function(data) {
+        console.log(data);
+        if (callback !== undefined) {
+          callback(data);
+        }
+      })
+      .fail(function(err) {
+        console.log(err);
+      })
+  }
+
   var map = geo.map({
     node: '#map',
     center: {
@@ -42,54 +58,61 @@ $(function () {
     }
   );
 
-  $.ajax( "/api/v1/data?limit=1000" )
-  .done(function(data) {
-    // Cache the data for later
-    mdata = data;
-    aggregateByLocation();
-    console.log(aggData);
+  $.ajax( "/api/v1/data" )
+    .done(function(range) {
+    // return;
+
+    // // Cache the data for later
+    // mdata = data;
+    // aggregateByLocation();
+    // console.log(aggData);
 
     // Compute min and max for time
     var format = d3.time.format("%Y-%m-%d %H:%M:%S");
-    var minMax = [d3.min(aggData, function(d) {
-        var date = format.parse(d.field4);
-        if (date) {
-          return date.getTime() / 1000
-        }
-      }), d3.max(aggData, function(d) {
-        var date = format.parse(d.field4);
-        if (date) {
-          return date.getTime() / 1000
-        }
-      })];
+    // var minMax = [d3.min(aggData, function(d) {
+    //     var date = format.parse(d.field4);
+    //     if (date) {
+    //       return date.getTime() / 1000
+    //     }
+    //   }), d3.max(aggData, function(d) {
+    //     var date = format.parse(d.field4);
+    //     if (date) {
+    //       return date.getTime() / 1000
+    //     }
+    //   })];
 
-    // Convert to date object
-    console.log(new Date(minMax[0] * 1000).toString());
-    console.log(new Date(minMax[1] * 1000).toString());
+    console.log(format.parse(range.duration.start.field4));
+    console.log(format.parse(range.duration.end.field4));
+
+    var min = format.parse(range.duration.start.field4);
+    var max = format.parse(range.duration.end.field4);
 
     // Set the date range
-    $("#slider").dateRangeSlider(
-      "option",
-      "bounds",
-      {
-        min: new Date(minMax[0] * 1000),
-        max: new Date(minMax[1] * 1000)
+    $( "#slider" ).slider({
+      range: true,
+      min: min.getTime()/1000,
+      max: max.getTime()/1000,
+      values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 30 ],
+      slide: function( event, ui ) {
+        console.log($( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] ));
+      }
     });
 
-    map
-      .createLayer('feature')
-        .createFeature('point')
-          .data(aggData)
-          .position(function (d) { return { x:d.field7, y:d.field6 } })
-          .style('radius', function (d) { return scale(d.binCount); })
-          .style('stroke', false)
-          .style('fillOpacity', 0.4)
-          .style('fillColor', "orange");
-    map.draw();
+    // Now query data
+    queryData($("#slider").slider("values"), function() {
+      map
+        .createLayer('feature')
+          .createFeature('point')
+            .data(aggData)
+            .position(function (d) { return { x:d.field7, y:d.field6 } })
+            .style('radius', function (d) { return scale(d.binCount); })
+            .style('stroke', false)
+            .style('fillOpacity', 0.4)
+            .style('fillColor', "orange");
+      map.draw();
+    })
   })
   .fail(function() {
     alert( "error" );
   });
-
-  $("#slider").dateRangeSlider();
 });

@@ -26,6 +26,8 @@ def main():
                       help="Run port specification override. This will "
                            "override all other configuration method "
                            "specifications.")
+    parser.add_option('-l', '--list', default=False, action="store_true",
+                      help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
     import logging
@@ -33,6 +35,16 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
     if opts.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if opts.list:
+        from SMQTK.Web import APPLICATIONS
+        print
+        print "Available applications:"
+        print
+        for e in APPLICATIONS:
+            print "\t%s" % e.__name__
+            print
+        exit(0)
 
     host = opts.host
     port = opts.port and int(opts.port)

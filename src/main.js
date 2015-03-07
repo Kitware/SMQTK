@@ -122,6 +122,8 @@ $(function () {
     queryData($("#slider").slider("values"), createVis);
   })
   .fail(function() {
-    alert( "error" );
+    console.log('failed');
   });
+
+  $( "#slider" ).slider();
 });

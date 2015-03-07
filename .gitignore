@@ -31,6 +31,7 @@ vcd_store
 /TPL/flann-1.8.4/**/Makefile
 /TPL/flann-1.8.4/**/cmake_install.cmake
 /TPL/flann-1.8.4/bin/flann_example_c
+/TPL/flann-1.8.4/bin/flann_example_cpp
 /TPL/flann-1.8.4/cmake/flann.pc
 /TPL/flann-1.8.4/doc/build/
 /TPL/flann-1.8.4/lib/

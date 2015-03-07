@@ -5,7 +5,6 @@ SearchApp application object
 import flask
 import logging
 import os.path
-import pymongo
 
 from SMQTK.utils.MongoSessions import MongoSessionInterface
 
@@ -32,7 +31,7 @@ class SMQTKSearchApp (flask.Flask):
         #
         # Configuration setup
         #
-        config_default_loaded = config_env_loaded = config_file_loaded = None
+        config_env_loaded = config_file_loaded = None
 
         # Load default -- This should always be present, aka base defaults
         self.config.from_object('smqtk_config')
@@ -91,16 +90,6 @@ class SMQTKSearchApp (flask.Flask):
         self.jinja_env.add_extension('jinja2.ext.do')
 
         #
-        # Basic routing
-        #
-
-        @self.route('/home')
-        @self.route('/')
-        def smqtk_index():
-            self.log.info("Session: %s", flask.session.items())
-            return flask.render_template("index.html")
-
-        #
         # Modules
         #
         # Load up required and optional module blueprints
@@ -111,11 +100,29 @@ class SMQTKSearchApp (flask.Flask):
         self.module_login = LoginMod(self)
         self.register_blueprint(self.module_login)
 
+        self.log.debug("Importing Upload module")
+        self.upload_working_dir = os.path.join(self.config['WORK_DIR'],
+                                               'UploadWork')
+        from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
+        self.module_upload = FileUploadMod(self, self.upload_working_dir)
+        self.register_blueprint(self.module_upload,
+                                url_prefix="/upload")
+
         # self._log.debug("Importing Search module")
         # from .mods.search import SearchMod
         # self.module_search = SearchMod(self)
         # self.register_blueprint(self.module_search,
         #                         url_prefix="/search")
+
+        #
+        # Basic routing
+        #
+
+        @self.route('/home')
+        @self.route('/')
+        def smqtk_index():
+            self.log.info("Session: %s", flask.session.items())
+            return flask.render_template("index.html")
 
     def run(self, host=None, port=None, debug=False, **options):
         """

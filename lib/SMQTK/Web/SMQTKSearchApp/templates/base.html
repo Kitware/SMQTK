@@ -5,8 +5,8 @@
         <title>SMQTK</title>
 
         <!-- jQuery -->
-        <!--<script type="text/javascript"-->
-                <!--src="/static/js/jquery-1.11.1.js"></script>-->
+{#        <script type="text/javascript"#}
+{#                src="/static/js/jquery-1.11.1.js"></script>#}
         <script type="text/javascript"
                 src="/static/js/jquery-1.11.1.min.js"></script>
 
@@ -55,7 +55,7 @@
             }
             @media (max-width: 980px) {
                 body {
-                    padding-top: 0px;
+                    padding-top: 0;
                 }
 
                 /* Enable use of floated navbar text */
@@ -110,7 +110,7 @@
             {%- endif -%}
             {%- endwith -%}
 
-            });
+            }); // end document.ready()
         </script>
 
         {% block head_scripts %}

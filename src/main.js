@@ -25,12 +25,11 @@ $(function () {
 
   // Query given a time duration
   function queryData(timerange, callback) {
-    console.log("querying data");
-    console.log("/api/v1/data?limit=1000&duration=["+timerange+"]");
+    console.log("/api/v1/data?limit=1000000&duration=["+timerange+"]");
 
-    $.ajax("/api/v1/data?limit=1000&duration=["+timerange+"]")
+    $.ajax("/api/v1/data?limit=1000000&duration=["+timerange+"]")
       .done(function(data) {
-        console.log(data);
+        console.log(data.length);
         if (callback !== undefined) {
           callback(data);
         }
@@ -46,18 +45,19 @@ $(function () {
     console.log(aggdata);
     scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
               .range([2, 100]);
-    if (pointFeatureLayer === undefined) {
-
+    if (pointFeature === undefined) {
+      pointFeature = map
+                       .createLayer('feature')
+                       .createFeature('point');
     }
-    map
-      .createLayer('feature')
-        .createFeature('point')
-          .data(aggdata.data)
-          .position(function (d) { return { x:d.field7, y:d.field6 } })
-          .style('radius', function (d) { return scale(d.binCount); })
-          .style('stroke', false)
-          .style('fillOpacity', 0.4)
-          .style('fillColor', "orange");
+    pointFeature
+      .data(aggdata.data)
+      .position(function (d) { return { x:d.field7, y:d.field6 } })
+      .style('radius', function (d) { return scale(d.binCount); })
+      .style('stroke', false)
+      .style('fillOpacity', 0.4)
+      .style('fillColor', "orange");
+
     map.draw();
   }
 
@@ -69,7 +69,7 @@ $(function () {
       y: 39.5
     },
     zoom: 1
-  }), locationBin = null, scale = null, pointFeatureLayer;
+  }), locationBin = null, scale = null, pointFeature;
 
   map.createLayer(
     'osm',

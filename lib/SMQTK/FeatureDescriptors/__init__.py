@@ -24,12 +24,13 @@ class FeatureDescriptor (object):
         # Directory that permanent data for this feature descriptor will be
         # held, if any
         self._data_dir = osp.join(base_data_directory,
-                                  self.__class__.__name__)
+                                  "FeatureDescriptors",
+                                  self.name)
         # Directory that work for this feature descriptor should be put. This
         # should be considered a temporary
         self._work_dir = osp.join(base_work_directory,
                                   "FeatureDescriptorWork",
-                                  self.__class__.__name__)
+                                  self.name)
 
     @property
     def log(self):
@@ -41,11 +42,17 @@ class FeatureDescriptor (object):
                                            self.__class__.__name__)))
 
     @property
+    def name(self):
+        return self.__class__.__name__
+
+    @property
     def data_directory(self):
         """
         :return: Data directory for this feature descriptor
         :rtype: str
         """
+        if not os.path.isdir(self._data_dir):
+            os.makedirs(self._data_dir)
         return self._data_dir
 
     @property
@@ -54,6 +61,8 @@ class FeatureDescriptor (object):
         :return: Work directory for this feature descriptor
         :rtype: str
         """
+        if not os.path.isdir(self._work_dir):
+            os.makedirs(self._work_dir)
         return self._work_dir
 
     @abc.abstractmethod

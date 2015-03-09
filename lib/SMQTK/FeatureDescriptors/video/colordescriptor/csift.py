@@ -15,7 +15,7 @@ import os.path as osp
 import shutil
 import subprocess
 
-from SMQTK.FeatureDescriptor import FeatureDescriptor
+from SMQTK.FeatureDescriptors import FeatureDescriptor
 
 from . import DescriptorIO
 from . import encode_FLANN
@@ -158,6 +158,7 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
                     raise RuntimeError("Failed to process colordescriptor")
                 os.rename(tmp_file, out_file)
 
+                # # Parallel attempt?
                 # cmd = construct_cd_command(png_file, tmp_file)
                 # lfile = open(log_file, 'w')
                 #
@@ -292,5 +293,6 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
         # will be a 4 subset of these 8 vectors h-stacked.
         # Voila, clip level feature!
         _hist_sp = numpy.hstack(sp_histogram[[0, 5, 6, 7], :])
+        # histogram normalization
         hist_sp = _hist_sp / float(numpy.sum(_hist_sp))
         return hist_sp

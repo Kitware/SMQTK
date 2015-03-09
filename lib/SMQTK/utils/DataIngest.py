@@ -31,12 +31,15 @@ class DataIngest (object):
     FILE_TEMPLATE = "uid_%d.%s%s"  # (uid, md5, ext)
     FILE_REGEX = re.compile("uid_(\d+)\.(\w+)(\..*)")  # uid, md5, ext
 
-    def __init__(self, name, base_data_dir, starting_index=0):
+    def __init__(self, name, base_data_dir, base_work_dir, starting_index=0):
         """
         :param name: Name of the ingest
         :type name: str
 
         :param base_data_dir: Base directory for data storage
+        :type base_data_dir: str
+
+        :param base_data_dir: Base directory for work storage
         :type base_data_dir: str
 
         :param starting_index: Starting index for added data files
@@ -45,6 +48,7 @@ class DataIngest (object):
         """
         self._name = name
         self._data_dir = os.path.join(base_data_dir, "Ingest", name)
+        self._work_dir = os.path.join(base_data_dir, "IngestWork", name)
 
         self._next_id = starting_index
 
@@ -67,10 +71,10 @@ class DataIngest (object):
                 self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath)
                 if uid > max_uid:
                     max_uid = uid
+                self._next_id = max_uid + 1
             else:
                 raise RuntimeError("File in ingest failed to match expected "
                                    "naming format: '%s'" % filepath)
-        self._next_id = max_uid + 1
 
     def _iter_ingest_files(self, d):
         """
@@ -100,6 +104,9 @@ class DataIngest (object):
         self._next_id += 1
         return a
 
+    def __len__(self):
+        return len(self._id_data_map)
+
     @property
     def name(self):
         """ Name of ingest """
@@ -111,6 +118,13 @@ class DataIngest (object):
         if not os.path.isdir(self._data_dir):
             os.makedirs(self._data_dir)
         return self._data_dir
+
+    @property
+    def work_directory(self):
+        """ work directory for this ingest """
+        if not os.path.isdir(self._work_dir):
+            os.makedirs(self._work_dir)
+        return self._work_dir
 
     def add_data_file(self, origin_file):
         """
@@ -138,7 +152,7 @@ class DataIngest (object):
         shutil.copy(origin_data.filepath, target_data.filepath)
         assert origin_data.md5sum == target_data.md5sum, \
             "Origin and target data files had divergent MD5 sums!"
-        self._id_data_map[target_data.md5sum] = target_data
+        self._id_data_map[cur_id] = target_data
 
     def iteritems(self):
         """
@@ -182,3 +196,6 @@ class DataIngest (object):
 
 # TODO: Could probably add a ``compress`` function that creates a condensed
 #       tar.gz of the ingest or something.
+
+# TODO: Something to check for same-file ingest. Build map of MD5-to-idList,
+#       check for associations lists > 1 in length.

@@ -7,6 +7,7 @@ import logging
 import os.path
 
 from SMQTK.utils.MongoSessions import MongoSessionInterface
+from SMQTK.utils import DatabaseInfo
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -71,16 +72,16 @@ class SMQTKSearchApp (flask.Flask):
         #
         # Database setup using Mongo
         #
-        self._db_host, self._db_port = self.config['MONGO_SERVER'].split(':')
-        self._db_port = int(self._db_port)
-        self._db_name = "SMQTK_SearchApp"
+        h, p = self.config['MONGO_SERVER'].split(':')
+        n = "SMQTK_SearchApp"
+        self._db_info = DatabaseInfo(h, p, n)
 
         # Use mongo for session storage.
         # -> This allows session modification during AJAX routines (default
         #    Flask sessions do not)
-        self.session_interface = MongoSessionInterface(self._db_host,
-                                                       self._db_port,
-                                                       self._db_name)
+        self.session_interface = MongoSessionInterface(self._db_info.host,
+                                                       self._db_info.port,
+                                                       self._db_info.name)
 
         #
         # Misc. Setup
@@ -100,19 +101,19 @@ class SMQTKSearchApp (flask.Flask):
         self.module_login = LoginMod(self)
         self.register_blueprint(self.module_login)
 
-        self.log.debug("Importing Upload module")
-        self.upload_working_dir = os.path.join(self.config['WORK_DIR'],
-                                               'UploadWork')
-        from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
-        self.module_upload = FileUploadMod(self, self.upload_working_dir)
-        self.register_blueprint(self.module_upload,
-                                url_prefix="/upload")
+        # self.log.debug("Importing Upload module")
+        # self.upload_working_dir = os.path.join(self.config['WORK_DIR'],
+        #                                        'UploadWork')
+        # from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
+        # self.module_upload = FileUploadMod(self, self.upload_working_dir)
+        # self.register_blueprint(self.module_upload,
+        #                         url_prefix="/upload")
 
-        # self._log.debug("Importing Search module")
-        # from .mods.search import SearchMod
-        # self.module_search = SearchMod(self)
-        # self.register_blueprint(self.module_search,
-        #                         url_prefix="/search")
+        self._log.debug("Importing Video Search module")
+        from .modules.vsearch
+        self.module_search = SearchMod(self)
+        self.register_blueprint(self.module_search,
+                                url_prefix="/search")
 
         #
         # Basic routing

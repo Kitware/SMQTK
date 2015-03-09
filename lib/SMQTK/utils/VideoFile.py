@@ -361,3 +361,6 @@ class VideoFile (DataFile):
                                        self._get_file_name(fn, output_ext)))
             os.removedirs(tmp_extraction_dir)
             self.log.debug("Frame extraction complete")
+
+    # TODO: Function for preview frame-sequence generation? -- See existing
+    #       scripts that I think already have this functionality.

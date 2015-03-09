@@ -221,9 +221,9 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
     rx = cordx>=midx
     uy = cordy<midy
     dy = cordy>=midy
-    logging.error("LXUI: %s,%s"%(lx.__repr__(), uy.__repr__()))
-    logging.error("Length LXUI: %s,%s"%(lx.shape, uy.shape))
-    logging.error("feas dimensions: %s"%(feas.shape))
+    logging.debug("LXUI: %s,%s"%(lx.__repr__(), uy.__repr__()))
+    logging.debug("Length LXUI: %s,%s"%(lx.shape, uy.shape))
+    logging.debug("feas dimensions: %s"%(feas.shape))
 
     hist_csift_q1, _ = np.histogram(feas[lx&uy], bins = bins_code)
     hist_csift_q2, _ = np.histogram(feas[rx&uy], bins = bins_code)

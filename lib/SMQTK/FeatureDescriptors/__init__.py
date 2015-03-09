@@ -64,7 +64,8 @@ class FeatureDescriptor (object):
 
         :raises RuntimeError: Feature extraction failure of some kind.
 
-        :param data: Some kind of input data.
+        :param data: Some kind of input data for the feature descriptor. This is
+            descriptor dependent.
 
         :return: Feature vector.
         :rtype: numpy.ndarray

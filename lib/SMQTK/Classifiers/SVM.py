@@ -14,6 +14,8 @@ import os
 
 from . import SMQTKClassifier
 
+from SMQTK.utils.FeatureMemory import FeatureMemory
+
 
 def _svm_model_feature_generator((uid, data, descriptor)):
     """
@@ -73,12 +75,23 @@ class SVMClassifier_HIK (SMQTKClassifier):
         self._feature_data_filepath = os.path.join(self.data_dir, "feature_data.npy")
         self._kernel_data_filepath = os.path.join(self.data_dir, "kernel_data.npy")
 
+        # If we have existing model files, load them into a FeatureMemory
+        # instance
+        if self.has_model_files():
+            self._fm = FeatureMemory.construct_symmetric_from_files()
+
     # noinspection PyNoneFunctionAssignment,PyUnresolvedReferences,PyTypeChecker
-    def generate_model(self, **kwds):
+    def generate_model(self, parallel=None):
         """
         Generate this classifiers data-model using the given feature descriptor
         over the configured ingest, saving it to a known location in the
         configured data directory.
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
+
         """
         self.log.debug("Starting model generation")
 
@@ -155,7 +168,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
         numpy.save(self._feature_data_filepath, feature_mat)
         numpy.save(self._kernel_data_filepath, kernel_mat)
 
-    def _have_model_files(self):
+    def has_model_files(self):
         return (
             os.path.isfile(self._ids_filepath) and
             os.path.isfile(self._bg_flags_filepath) and

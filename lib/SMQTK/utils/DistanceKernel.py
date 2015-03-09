@@ -148,7 +148,7 @@ class DistanceKernel (object):
         :param bg_clip_ids: Optional array of boolean flags, marking whether an
             index should be considered a "background" video. Contents will be
             treated as ints.
-        :type bg_clip_ids: ndarray of int
+        :type bg_clip_ids: set of int
         :param rw_lock: Read-Write lock for data provided. This should be
             provided if the any of the data is shared with other objects/
             sources. If this is given None (default), then a lock is created.
@@ -170,11 +170,11 @@ class DistanceKernel (object):
         self._col_id_index_map = col_id_index_map
         self._kernel = kernel_mat
 
-        # assert ((bg_clip_ids is None)
-        #         or isinstance(bg_clip_ids, (ndarray, ArrayProxy))), \
-        #     "Must either given None or a numpy.ndarray for the bg_clip_ids " \
-        #     "vector. Got: %s" % type(bg_clip_ids)
-        self._bg_cid_vec = bg_clip_ids
+        assert ((bg_clip_ids is None)
+                or isinstance(bg_clip_ids, (set, frozenset))), \
+            "Must either given None or a set for the bg_clip_ids " \
+            "vector. Got: %s" % type(bg_clip_ids)
+        self._bg_cid_set = bg_clip_ids
         if bg_clip_ids is not None:
             try:
                 [int(e) for e in bg_clip_ids]
@@ -235,9 +235,9 @@ class DistanceKernel (object):
 
         """
         with self.get_lock().read_lock():
-            return self._bg_cid_vec \
-                if self._bg_cid_vec is not None \
-                else np.array([])
+            return frozenset(self._bg_cid_set) \
+                if self._bg_cid_set is not None \
+                else frozenset()
 
     def is_symmetric(self):
         """
@@ -312,8 +312,8 @@ class DistanceKernel (object):
 
             with SimpleTimer("Computing union of BG clips and provided IDs",
                              self._log):
-                if self._bg_cid_vec is not None:
-                    all_cids = set(self._bg_cid_vec).union(clip_ids)
+                if self._bg_cid_set is not None:
+                    all_cids = self._bg_cid_set.union(clip_ids)
                 else:
                     all_cids = set(clip_ids)
 

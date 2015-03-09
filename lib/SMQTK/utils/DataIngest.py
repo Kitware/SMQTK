@@ -47,7 +47,7 @@ class DataIngest (object):
 
         """
         self._name = name
-        self._data_dir = os.path.join(base_data_dir, "Ingest", name)
+        self._data_dir = os.path.join(base_data_dir, "Ingests", name)
         self._work_dir = os.path.join(base_data_dir, "IngestWork", name)
 
         self._next_id = starting_index

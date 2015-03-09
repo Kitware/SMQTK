@@ -23,32 +23,6 @@ class FeatureMemory (object):
     def construct_from_files(cls, id_vector_file, bg_flags_file,
                              feature_mat_file, kernel_mat_file, rw_lock=None):
         """ Initialize FeatureMemory object from file sources.
-        """
-        clip_ids = np.array(np.loadtxt(id_vector_file))
-        bg_flags = np.array(np.loadtxt(bg_flags_file))
-        # noinspection PyCallingNonCallable
-        feature_mat = np.matrix(np.load(feature_mat_file))
-        # noinspection PyCallingNonCallable
-        kernel_mat = np.matrix(np.load(kernel_mat_file))
-
-        bg_clips = np.array([clip_ids[i]
-                             for i, e in enumerate(bg_flags)
-                             if e])
-
-        return FeatureMemory(clip_ids, bg_clips, feature_mat, kernel_mat,
-                             rw_lock=rw_lock)
-
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
-    @classmethod
-    def construct_symmetric_from_files(cls, id_vector_file, feature_mat_file, kernel_mat_file,
-                                       bg_flags_file=None):
-        """
-        Constructs a symmetric FeatureMemory object from files, requiring a background
-        flags file to denote clip IDs that are to be treated as background
-        clips (required to activate symmetric_submatrix function).
 
         :param id_vector_file: File containing the numpy.savetxt(...) output of
             clip ID values in the order in which they associate to the rows of
@@ -68,22 +42,26 @@ class FeatureMemory (object):
         :return: Symmetric FeatureMemory constructed with the data provided in
             the provided files.
         :rtype: FeatureMemory
+
         """
         clip_ids = np.array(np.loadtxt(id_vector_file))
+        bg_flags = np.array(np.loadtxt(bg_flags_file))
+        # noinspection PyCallingNonCallable
+        feature_mat = np.matrix(np.load(feature_mat_file))
         # noinspection PyCallingNonCallable
         kernel_mat = np.matrix(np.load(kernel_mat_file))
-        feature_mat = np.matrix(np.load(feature_mat_file))
 
-        if bg_flags_file is not None:
-            bg_flags = np.array(np.loadtxt(bg_flags_file))
-            bg_clips = np.array([clip_ids[i]
-                                 for i, e in enumerate(bg_flags)
-                                 if e])
-        else:
-            bg_clips = None
+        bg_clips = np.array([clip_ids[i]
+                             for i, e in enumerate(bg_flags)
+                             if e])
 
-        return FeatureMemory(clip_ids, bg_clips, feature_mat, kernel_mat)
+        return FeatureMemory(clip_ids, bg_clips, feature_mat, kernel_mat,
+                             rw_lock=rw_lock)
 
+    @property
+    def _log(self):
+        return logging.getLogger('.'.join([self.__module__,
+                                           self.__class__.__name__]))
 
     def __init__(self, id_vector, bg_clip_ids, feature_mat, kernel_mat,
                  rw_lock=None):
@@ -104,9 +82,9 @@ class FeatureMemory (object):
             from an index position to the clip ID its associated with in the
             kernel and distance kernel matrices.
         :type id_vector: ndarray of int
-        :param bg_clip_ids: (numpy) Array of clip IDs that are to be treated as
-            background clip IDs.
-        :type bg_clip_ids: ndarray of int
+        :param bg_clip_ids: Set of clip IDs that are to be treated as background
+            clip IDs.
+        :type bg_clip_ids: set of int
         :param feature_mat: (numpy) Matrix of features for clip IDs. Features
             should be stored vertically, i.e. Each row is a feature for a
             particular clip ID (id_vector being the index-to-clipID map).
@@ -121,8 +99,8 @@ class FeatureMemory (object):
         """
         # assert isinstance(id_vector, (ndarray, ArrayProxy)), \
         #     "ID vector not given as a numpy.ndarray!"
-        # assert isinstance(bg_clip_ids, (ndarray, ArrayProxy)), \
-        #     "Background ID vector not a numpy.ndarray!"
+        assert isinstance(bg_clip_ids, (set, frozenset)), \
+            "Background ID vector not a numpy.ndarray!"
         # assert isinstance(feature_mat, (matrix, MatrixProxy)), \
         #     "Kernel matrix not a numpy.matrix!"
         # assert isinstance(kernel_mat, (matrix, MatrixProxy)), \
@@ -190,27 +168,6 @@ class FeatureMemory (object):
         # noinspection PyUnresolvedReferences
         return (a + b - np.abs(a - b)).sum() * 0.5
 
-    def _generate_distance_kernel_matrix(self):
-        """
-        Helper method to generate a distance kernel from the kernel matrix.
-        This takes along time...
-        """
-        with self._rw_lock.read_lock():
-            # Create matrix whose elements are the distances between all row
-            # permutations
-            fmat = self._feature_mat  # shorter name
-            num_rows = fmat.shape[0]
-            dist_kernel = np.mat(np.ndarray((num_rows,)*2))
-            for i in xrange(num_rows - 1):
-                with SimpleTimer('computing distances from i: %d' % i):
-                    dist_kernel[i, i] = 1.0
-                    for j in xrange(i + 1, num_rows):
-                        dist = self._histogram_intersection_distance(fmat[i],
-                                                                     fmat[j])
-                        dist_kernel[i, j] = dist_kernel[j, i] = dist
-            dist_kernel[-1, -1] = 1.0
-            return dist_kernel
-
     def get_ids(self):
         """
         NOTE: NOT THREAD SAFE. Use the returned structure only in conjunction
@@ -235,7 +192,7 @@ class FeatureMemory (object):
         :rtype: ndarray
 
         """
-        return self._bg_clip_ids
+        return frozenset(self._bg_clip_ids)
 
     def get_feature_matrix(self):
         """
@@ -320,7 +277,7 @@ class FeatureMemory (object):
             return ret_mat
 
     # noinspection PyUnresolvedReferences,PyCallingNonCallable
-    def update(self, clip_id, feature_vec, is_background=False, timeout=None):
+    def update(self, clip_id, feature_vec=None, is_background=False, timeout=None):
         """
         Update this feature with a feature vector associated with a clip ID. If
         clip ID is already in the feature matrix, we replace the current vector
@@ -347,23 +304,38 @@ class FeatureMemory (object):
 
         """
         with self._rw_lock.write_lock(timeout):
-            if not isinstance(clip_id, int):
-                raise ValueError("Expected the clip ID to be an integer. "
-                                 "Given: %s" % clip_id)
-            if not (feature_vec.ndim == 1
-                    and len(feature_vec) == self._feature_mat.shape[1]):
+            clip_id = int(clip_id)
+            if feature_vec is not None and \
+                    not (feature_vec.ndim == 1
+                         and len(feature_vec) == self._feature_mat.shape[1]):
                 raise ValueError("Given feature vector not compatible "
                                  "(dimensionality or length does not match)")
 
             # Update the given feature vector and kernel distances
             if self._cid2idx_map.get(clip_id, None) is not None:
-                # TODO
-                raise NotImplementedError("Feature and distance updating for "
-                                          "existing clip IDs currently not "
-                                          "implemented!")
+                # In all cases, update the background status of the clip
+                if is_background:
+                    self._bg_clip_ids.add(clip_id)
+                else:
+                    self._bg_clip_ids.discard(clip_id)
+
+                # If we were given a new feature vector, update entries
+                if feature_vec is not None:
+                    idx = self._cid2idx_map[clip_id]
+                    self._feature_mat[idx] = feature_vec
+                    new_dist = np.mat(tuple(
+                        self._histogram_intersection_distance(feature_vec, fv)
+                        for fv in self._feature_mat
+                    ))
+                    self._kernel_mat[idx, :] = new_dist
+                    self._kernel_mat[:, idx] = new_dist
 
             # Given a new feature to add.
             else:
+                if feature_vec is None:
+                    raise ValueError("Update given a new clip ID, but no "
+                                     "feature vector provided.")
+
                 # Update internal feature matrix with added vector
                 self._cid2idx_map[clip_id] = self._id_vector.size
                 self._id_vector.resize((self._id_vector.size + 1,),
@@ -371,9 +343,7 @@ class FeatureMemory (object):
                 self._id_vector[-1] = clip_id
 
                 if is_background:
-                    self._bg_clip_ids.resize((self._bg_clip_ids.size + 1,),
-                                             refcheck=False)
-                    self._bg_clip_ids[-1] = clip_id
+                    self._bg_clip_ids.add(clip_id)
 
                 # noinspection PyUnresolvedReferences
                 if self._feature_mat.base is not None:

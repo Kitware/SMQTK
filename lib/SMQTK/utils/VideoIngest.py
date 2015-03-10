@@ -7,18 +7,23 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-from SMQTK.utils import DataIngest, VideoFile
+import os
+from SMQTK.utils import DataFile, DataIngest, VideoFile
 
 
 class VideoIngest (DataIngest):
     """
-    Ingest of video files
+    Ingest of VideoFile type elements.
     """
 
-    def DATA_FILE_TYPE(self, filepath):
-        return VideoFile(filepath, self._base_work_dir)
-
-    def __init__(self, name, base_data_dir, base_work_dir, starting_index=0):
-        self._base_work_dir = base_work_dir
-        super(VideoIngest, self).__init__(name, base_data_dir, base_work_dir,
-                                          starting_index)
+    def DATA_FILE_TYPE(self, filepath, uid=None):
+        # Figure out the work directory for this video file in the ingest's work
+        # space
+        md5_split = DataFile(filepath).split_md5sum(8)
+        md5 = ''.join(md5_split)
+        v_work_dir = os.path.join(self.work_directory, *md5_split)
+        vf = VideoFile(filepath, v_work_dir, uid)
+        # Punch in MD5 sum that we already spent the time computing and don't
+        # want to waste
+        vf._DataFile__md5_cache = md5
+        return vf

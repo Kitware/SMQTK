@@ -41,11 +41,9 @@ class VideoFile (DataFile):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, filepath, base_work_directory):
-        super(VideoFile, self).__init__(filepath)
-
-        self._base_work_dir = osp.join(base_work_directory, "VideoWork")
-        self._work_dir = None
+    def __init__(self, filepath, work_directory, uid=None):
+        super(VideoFile, self).__init__(filepath, uid)
+        self._work_dir = work_directory
 
         # Cache variables
         self.__metadata_cache = None
@@ -60,9 +58,8 @@ class VideoFile (DataFile):
         :rtype: str
 
         """
-        if self._work_dir is None:
-            self._work_dir = osp.join(self._base_work_dir,
-                                      *self.split_md5sum(8))
+        if not os.path.isdir(self._work_dir):
+            os.makedirs(self._work_dir)
         return self._work_dir
 
     def metadata(self):
@@ -158,11 +155,6 @@ class VideoFile (DataFile):
 
         """
         frame_dir = self.work_directory
-        if not osp.isdir(frame_dir):
-            # If this ever errors, we have a directory creation race condition
-            # and more protection is needed
-            os.makedirs(frame_dir)
-
         video_md = self.metadata()
 
         # Frames to extract from video
@@ -278,14 +270,20 @@ class VideoFile (DataFile):
         frame_time_interval = 1.0 / fps
         next_threshold = None
 
-        self.log.debug("Starting frame gathering...")
+        # self.log.debug("Starting frame gathering...")
+        # self.log.debug("-- num_frames: %s", num_frames)
+        # self.log.debug("-- fps: %s", fps)
+        # self.log.debug("-- offset: %s", offset)
+        # self.log.debug("-- interval: %s", interval)
+        # self.log.debug("-- max duration: %s", max_duration)
         for frame in xrange(num_frames):
             # self.log.debug("Frame >> %d", frame)
             # self.log.debug("... Cur frame time: %.16f -> %.3f",
-            #               cur_time, round(cur_time, 3))
+            #                cur_time, round(cur_time, 3))
 
-            # If we has surpassed our given maximum duration, kick out
-            if max_duration and cur_time >= max_duration:
+            # If we has surpassed our given maximum duration (taking the offset
+            # into account), kick out
+            if max_duration and (cur_time - offset) >= max_duration:
                 break
 
             if round(cur_time, 3) >= round(offset, 3):

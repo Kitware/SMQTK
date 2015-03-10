@@ -10,7 +10,9 @@ import logging
 import multiprocessing
 import numpy as np
 
-from SMQTK.utils import DistanceKernel, ReadWriteLock, SimpleTimer
+from SMQTK.utils.DistanceKernel import DistanceKernel
+from SMQTK.utils.ReadWriteLock import ReadWriteLock
+from SMQTK.utils.SimpleTimer import SimpleTimer
 
 
 class FeatureMemory (object):
@@ -44,16 +46,16 @@ class FeatureMemory (object):
         :rtype: FeatureMemory
 
         """
-        clip_ids = np.array(np.loadtxt(id_vector_file))
-        bg_flags = np.array(np.loadtxt(bg_flags_file))
+        clip_ids = np.array(np.load(id_vector_file))
+        bg_flags = np.array(np.load(bg_flags_file))
         # noinspection PyCallingNonCallable
         feature_mat = np.matrix(np.load(feature_mat_file))
         # noinspection PyCallingNonCallable
         kernel_mat = np.matrix(np.load(kernel_mat_file))
 
-        bg_clips = np.array([clip_ids[i]
-                             for i, e in enumerate(bg_flags)
-                             if e])
+        bg_clips = set([clip_ids[i]
+                        for i, f in enumerate(bg_flags)
+                        if f])
 
         return FeatureMemory(clip_ids, bg_clips, feature_mat, kernel_mat,
                              rw_lock=rw_lock)
@@ -110,9 +112,6 @@ class FeatureMemory (object):
         # -> base IS a member of the matrix class...
         if id_vector.base is not None:
             raise ValueError("Given ``id_vector`` does not own its data! It "
-                             "will not be transformable later.")
-        elif bg_clip_ids.base is not None:
-            raise ValueError("Given ``bg_clip_ids`` does not own its data! It "
                              "will not be transformable later.")
         elif feature_mat.base is not None:
             raise ValueError("Given ``feature_mat`` does not own its data! It "

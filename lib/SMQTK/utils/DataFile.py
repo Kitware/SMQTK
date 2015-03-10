@@ -16,15 +16,33 @@ class DataFile (object):
     Basic data file representation
     """
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, uid=None):
         """
         :param filepath: Path to the data file
         :type filepath: str
         """
         self._filepath = filepath
 
+        # When not part of an ingest, this is None, otherwise the value is its
+        # integer unique ID in ingest
+        self._uid = uid
+
         # Cache variables
         self.__md5_cache = None
+
+    def __hash__(self):
+        return hash(self.md5sum)
+
+    def __eq__(self, other):
+        return isinstance(other, DataFile) and self.md5sum == other.md5sum
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __repr__(self):
+        return "%s{uid: %s, md5: %s}" % (
+            self.__class__.__name__, self.uid, self.md5sum
+        )
 
     @property
     def log(self):
@@ -33,11 +51,25 @@ class DataFile (object):
         :rtype: logging.Logger
         """
         return logging.getLogger('.'.join((self.__module__,
-                                           self.__class__.__name__)))
+                                           self.__class__.__name__))
+                                 + "::" + self.md5sum)
 
     @property
     def filepath(self):
         return self._filepath
+
+    @property
+    def uid(self):
+        """
+        When not part of an ingest, this is None, otherwise the value is its
+        integer unique ID in ingest.
+
+        :return: UID in the ingest that contains this data file, or None of this
+            data file is not part of an ingest.
+        :rtype: int
+
+        """
+        return self._uid
 
     @property
     def md5sum(self):

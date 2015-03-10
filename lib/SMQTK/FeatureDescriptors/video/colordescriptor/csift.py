@@ -7,8 +7,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import errno
 import math
-import multiprocessing
 import numpy
 import os
 import os.path as osp
@@ -29,9 +29,9 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
     # colordescriptor executable that should be on the PATH
     PROC_COLORDESCRIPTOR = 'colorDescriptor'
 
-    def __init__(self, base_data_directory, base_work_directory):
-        super(ColorDescriptor_CSIFT_Video, self).__init__(base_data_directory,
-                                                          base_work_directory)
+    def __init__(self, data_directory, work_directory):
+        super(ColorDescriptor_CSIFT_Video, self).__init__(data_directory,
+                                                          work_directory)
 
         # Required files for FLANN quantization
         self._flann_codebook = osp.join(osp.dirname(__file__),
@@ -55,7 +55,7 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
         :rtype: numpy.ndarray
 
         """
-        self.log.info("Processing video: %s", data.filepath)
+        self.log.debug("Processing video: %s", data.filepath)
 
         # Creating subdirectory to put video-specific work files in
         video_work_dir = osp.join(self.work_directory,
@@ -71,7 +71,10 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
         work_combined_features = osp.join(video_work_dir,
                                           self._combined_filename)
         if not osp.isfile(work_combined_features):
-            frame_map = data.frame_map(0, 2)
+            # TODO: This might be tuned further to find an optimal amount of
+            #       frames to use. This is a carry over from previous projects.
+            # Start 20% into the video, take next 20 seconds
+            frame_map = data.frame_map(data.metadata().duration * 0.2, 2, 10)
             self._generate_combined_features(data, frame_map, video_work_dir,
                                              work_combined_features)
 
@@ -96,7 +99,7 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
         :param video_data: Video data object we're processing over
         :type video_data: SMQTK.utils.VideoFile.VideoFile
 
-        :param frame_map: Video frame number-to-file association
+        :param frame_map: Video frame-number-to-image-file association
         :type frame_map: dict of (int, str)
 
         :param video_work_dir: Base working directory for the current video.
@@ -139,13 +142,11 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
                     '--descriptor', 'csift',
                     '--output', out_file]
 
-        # pool = multiprocessing.Pool()
-        # job_results = {}
         for i, (frame, png_file) in enumerate(frame_map.items()):
             out_file = cd_output_file_pattern % frame
             if not osp.isfile(out_file):
-                self.log.debug("[frame:%d] Submitting job for frame %d", frame,
-                               frame)
+                self.log.debug("[vid-%s::frame-%d] Submitting job",
+                               video_data, frame)
                 log_file = cd_log_file_pattern % frame
                 tmp_file = out_file + '.TMP'
                 if osp.isfile(tmp_file):
@@ -157,41 +158,24 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
                 if rc != 0:
                     raise RuntimeError("Failed to process colordescriptor")
                 os.rename(tmp_file, out_file)
-
-                # # Parallel attempt?
-                # cmd = construct_cd_command(png_file, tmp_file)
-                # lfile = open(log_file, 'w')
-                #
-                # def callback(rc):
-                #     if rc != 0:
-                #         raise RuntimeError("Failed to process colordescriptor")
-                #     self.log.debug("Finished processing for frame %d" % frame)
-                #     lfile.close()
-                #     os.rename(tmp_file, out_file)
-                #
-                # job_results[frame] = \
-                #     pool.apply_async(subprocess.call, (cmd,), {'stdout': lfile,
-                #                                                'stderr': lfile},
-                #                      callback)
+                # TODO: Parallelize this based on optional parameter
             else:
-                self.log.debug("[frame:%d] CSIFT features already processed")
+                self.log.debug("[vid-%s::frame-%d] CSIFT features already "
+                               "processed",
+                               video_data, frame)
 
             csift_frame_feature_files[frame] = out_file
 
-        # # Scan results for finish wait
-        # self.log.debug("Waiting for jobs to finish")
-        # for r in job_results.values():
-        #     r.wait()
-        # self.log.debug("-> Done!")
-
-        self.log.debug("Combining frame features")
+        self.log.debug("[vid-%s] Combining frame features", video_data)
         tmp_combined_output = combined_features_output + ".TMP"
         self._combine_frame_features(csift_frame_feature_files,
                                      tmp_combined_output)
         os.rename(tmp_combined_output, combined_features_output)
 
         # With combined file completed, remove per-frame work
-        self.log.debug("Cleaning up per-frame work directory...")
+        self.log.debug("[vid-%s] Cleaning up per-frame work directory...",
+                       video_data)
+
         def onerror(func, path, exc_info):
             self.log.warn("Error in rmtree on function [%s] -> %s\n"
                           "-- %s", str(func), path, exc_info)

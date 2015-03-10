@@ -12,9 +12,11 @@ import multiprocessing
 import numpy
 import os
 
-from . import SMQTKClassifier
+from EventContentDescriptor.iqr_modules import iqr_model_train, iqr_model_test
 
+from SMQTK.Classifiers import SMQTKClassifier
 from SMQTK.utils.FeatureMemory import FeatureMemory
+from SMQTK.utils.ReadWriteLock import ReadWriteLock
 
 
 def _svm_model_feature_generator((uid, data, descriptor)):
@@ -39,6 +41,7 @@ def _svm_model_feature_generator((uid, data, descriptor)):
         # Invalid feature matrix if there are inf or NaN values
         # noinspection PyUnresolvedReferences
         if numpy.isnan(feat.sum()):
+            log.error("Found feature with a NaN value.")
             return None, None
         return uid, feat
     except Exception, ex:
@@ -66,26 +69,81 @@ class SVMClassifier_HIK (SMQTKClassifier):
 
     BACKGROUND_RATIO = 0.40  # first 40%
 
-    def __init__(self, base_data_dir, base_work_dir, descriptor, ingest):
-        super(SVMClassifier_HIK, self).__init__(base_data_dir, base_work_dir,
-                                                descriptor, ingest)
+    def __init__(self, data_dir, work_dir, descriptor):
+        super(SVMClassifier_HIK, self).__init__(data_dir, work_dir, descriptor)
 
         self._ids_filepath = os.path.join(self.data_dir, "id_map.npy")
         self._bg_flags_filepath = os.path.join(self.data_dir, "bg_flags.npy")
         self._feature_data_filepath = os.path.join(self.data_dir, "feature_data.npy")
         self._kernel_data_filepath = os.path.join(self.data_dir, "kernel_data.npy")
 
+        self.svm_train_params = '-q -t 4 -b 1 -w1 50 -c 100'
+
         # If we have existing model files, load them into a FeatureMemory
         # instance
-        if self.has_model_files():
-            self._fm = FeatureMemory.construct_symmetric_from_files()
+        self._feat_mem_lock = ReadWriteLock()
+        self._feat_mem = None
+        if self._has_model_files():
+            self._feat_mem = FeatureMemory.construct_from_files(
+                self._ids_filepath, self._bg_flags_filepath,
+                self._feature_data_filepath, self._kernel_data_filepath,
+                rw_lock=self._feat_mem_lock
+            )
+
+    def _compute_features_parallel(self, data_map, parallel=None):
+        """
+        Compute features for each data element using the configured descriptor,
+        returning a dictionary mapping a data element UID to its computed
+        feature.
+
+        :param data_map: Mapping of data file UID to the data file instance
+        :type data_map: dict of (int, SMQTK.utils.DataFile.DataFile)
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
+
+        :return: Mapping of data UID to computed feature vector
+        :rtype: dict of (int, numpy.core.multiarray.ndarray)
+
+        """
+        args = []
+        for uid, df in data_map.iteritems():
+            args.append((uid, df, self._descriptor))
+        self.log.debug("Processing %d elements", len(args))
+
+        self.log.debug("starting pool...")
+        pool = multiprocessing.Pool(processes=parallel)
+        map_results = pool.map_async(_svm_model_feature_generator, args).get()
+        # # Sync debug version
+        # map_results = {}
+        # for arg in args:
+        #     _svm_model_feature_generator(arg)
+        pool.close()
+        pool.join()
+
+        r_dict = dict(map_results)
+        # Check for failed generation
+        if None in r_dict:
+            raise RuntimeError("Failure occurred during data feature "
+                               "computation. See logging.")
+
+        return r_dict
 
     # noinspection PyNoneFunctionAssignment,PyUnresolvedReferences,PyTypeChecker
-    def generate_model(self, parallel=None):
+    def generate_model(self, ingest, parallel=None, **kwds):
         """
         Generate this classifiers data-model using the given feature descriptor
         over the configured ingest, saving it to a known location in the
         configured data directory.
+
+        :raises RuntimeError: Precaution error when there is an existing data
+            model for this classifier. Manually delete or move the existing
+            model before computing another one.
+
+        :param ingest: The data ingest to generate a model over.
+        :type ingest: SMQTK.utils.DataIngest.DataIngest
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -93,29 +151,22 @@ class SVMClassifier_HIK (SMQTKClassifier):
         :type parallel: int
 
         """
+        if self._feat_mem is not None:
+            raise RuntimeError("\n"
+                               "!!! Warning !!! Warning !!! Warning !!!\n"
+                               "A model already exists for this"
+                               "ingest / descriptor combination! Make sure "
+                               "that you really want to do this by moving / "
+                               "deleting the existing model. Model location: "
+                               "%s\n"
+                               "!!! Warning !!! Warning !!! Warning !!!"
+                               % self.data_dir)
+
         self.log.debug("Starting model generation")
 
-        parallel = kwds.get('parallel', None)
-        if not len(self._ingest):
+        if not len(ingest):
             raise RuntimeError("Configured ingest has no content!")
-
-        # compute features for ingest content in parallel
-        args = []
-        for uid, data in self._ingest.iteritems():
-            args.append((uid, data, self._descriptor))
-        self.log.debug("Processing %d elements", len(args))
-
-        self.log.debug("starting pool...")
-        pool = multiprocessing.Pool(processes=parallel)
-        map_results = pool.map_async(_svm_model_feature_generator, args).get()
-        r_dict = dict(map_results)
-        pool.close()
-        pool.join()
-
-        # Check for failed generation
-        if None in r_dict:
-            raise RuntimeError("Failure occurred during model generation. "
-                               "See logging.")
+        r_dict = self._compute_features_parallel(dict(ingest.items()))
 
         # Initialize data stores
         num_features = len(r_dict)
@@ -124,6 +175,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
 
         idx2uid_map = numpy.empty(num_features, dtype=int)
         idx2bg_map = numpy.empty(num_features, dtype=bool)
+        bg_id_set = set()
         feature_mat = numpy.matrix(numpy.empty((num_features, feature_length),
                                                dtype=float))
         kernel_mat = numpy.matrix(numpy.empty((num_features, num_features),
@@ -142,6 +194,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
         for i in xrange(num_features):
             if i < pivot:
                 idx2bg_map[i] = True
+                bg_id_set.add(idx2uid_map[i])
             else:
                 idx2bg_map[i] = False
 
@@ -168,7 +221,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
         numpy.save(self._feature_data_filepath, feature_mat)
         numpy.save(self._kernel_data_filepath, kernel_mat)
 
-    def has_model_files(self):
+    def _has_model_files(self):
         return (
             os.path.isfile(self._ids_filepath) and
             os.path.isfile(self._bg_flags_filepath) and
@@ -176,36 +229,127 @@ class SVMClassifier_HIK (SMQTKClassifier):
             os.path.isfile(self._kernel_data_filepath)
         )
 
-    def extend_model(self, data):
+    def has_model(self):
         """
-        Extend the current ingest with new feature data based on the given data
-        and the configured feature descriptor, extending the current data model
-        for this classifier.
+        :return: If this classifier instance currently has a model loaded.
+        :rtype: bool
+        """
+        return self._feat_mem is not None
 
-        For not, if there is currently no data model created for this classifier
-        / descriptor combination, we will error. In the future, I would imagine
-        a new model would be created.
+    def extend_model(self, *data):
+        """
+        Extend, in memory, the current data model with given data elements using
+        the configured feature descriptor.
+
+        NOTE: For now, if there is currently no data model created for this
+        classifier / descriptor combination, we will error. In the future, I
+        would imagine a new model would be created.
+
+        :raises RuntimeError: When there is no existing data model present to
+            extend.
+        :raises ValueError: Raised when:
+            -   If one or more data elements provided do not have a
+                valid uid field, as we are not able to uniformly map the element
+                to an index.
+            -   One or more data elements have UIDs that already exist in the
+                model.
 
         :param data: Some kind of input data for the feature descriptor. This is
             descriptor dependent.
+        :type data: list of SMQTK.utils.DataFile.DataFile
 
         """
-        # TODO: Assert there there are existing data model files
-        raise NotImplementedError()
+        if self._feat_mem is None:
+            raise RuntimeError("No model for this classifier yet!")
 
-    def rank_ingest(self, pos_ids, neg_ids):
+        with self._feat_mem_lock.write_lock():
+            cur_ids = set(self._feat_mem.get_ids())
+
+            # Compute new feature vectors for new data items
+            dm = {}
+            for d in data:
+                if d.uid is None:
+                    raise ValueError("Data element did not have a UID: %s" % d)
+                elif d.uid in cur_ids:
+                    raise ValueError("Data element UID already in model: %s" % d)
+                dm[d.uid] = d
+            uid_feat_map = self._compute_features_parallel(dm)
+
+            # Add computed features to FeatureMemory
+            for uid, feat in uid_feat_map.iteritems():
+                self.log.debug("Updating FeatMem with data: %s", dm[uid])
+                self._feat_mem.update(uid, feat)
+
+    def rank_model(self, pos_ids, neg_ids=()):
         """
-        Rank the current ingest, returning a mapping of ingest element ID to a
+        Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
         of [0, 1]. Where
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)
 
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: list of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: list of int
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
         """
-        # TODO: Assert there there are existing data model files
-        raise NotImplementedError()
+        if self._feat_mem is None:
+            raise RuntimeError("No model for this classifier yet!")
+
+        self.log.debug("Extracting symmetric submatrix from DK")
+        idx2id_map, idx2isbg_map, m = \
+            self._feat_mem.get_distance_kernel().symmetric_submatrix(*pos_ids)
+        self.log.debug("-- num bg: %d", idx2isbg_map.count(True))
+        self.log.debug("-- m shape: %s", m.shape)
+
+        # for model training function, inverse of idx_is_bg: True
+        # indicates a positively adjudicated index
+        labels_train = numpy.array(tuple(not b for b in idx2isbg_map))
+
+        #
+        # SVM Training
+        #
+
+        # Returned dictionary contains the keys "model" and "clipid_SVs"
+        # referring to the trained model and a list of support vectors,
+        # respectively.
+        ret_dict = iqr_model_train(m, labels_train, idx2id_map,
+                                   self.svm_train_params)
+        svm_model = ret_dict['model']
+        svm_svIDs = ret_dict['clipids_SVs']
+
+        #
+        # SVM Model application ("testing")
+        #
+        self.log.info("Starting model application...")
+
+        # As we're extracting rows, the all IDs in the model are preserved along
+        # the x-axis (column IDs). The list of IDs along the x-axis is
+        # thus effectively the ordered list of all IDs.
+        idx2id_row, idx2id_col, kernel_test = \
+            self._feat_mem.get_distance_kernel()\
+                          .extract_rows(*svm_svIDs)
+
+        # Testing/Ranking call
+        #   Passing the array version of the kernel sub-matrix. The
+        #   returned output['probs'] type matches the type passed in
+        #   here, and using an array makes syntax cleaner.
+        self.log.debug("Ranking model IDs")
+        output = iqr_model_test(svm_model, kernel_test.A, idx2id_col)
+        probability_map = dict(zip(output['clipids'], output['probs']))
+
+        # Force adjudicated negatives to be probability 0.0 since we don't
+        # want them possibly polluting the further adjudication views.
+        for uid in neg_ids:
+            probability_map[uid] = 0.0
+
+        return probability_map
 
 
 CLASSIFIER_CLASS = SVMClassifier_HIK
-

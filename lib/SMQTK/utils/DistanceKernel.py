@@ -10,7 +10,8 @@ import logging
 import numpy as np
 from numpy.core.multiarray import ndarray
 
-from SMQTK.utils import ReadWriteLock, SimpleTimer
+from SMQTK.utils.ReadWriteLock import ReadWriteLock
+from SMQTK.utils.SimpleTimer import SimpleTimer
 
 
 class DistanceKernel (object):
@@ -269,7 +270,7 @@ class DistanceKernel (object):
         Clip IDs provided will be assumed non-background, or positive
         event examples. If the clip ID of a background video is provided as an
         argument, we will reconsider it as a non-background video in the
-        returned index-to-is-background map (tuple).
+        returned index-to-is-background mapping (tuple).
 
         Note: The matrix returned will always be a new instance and not set up
         to use shared memory. When directly used with shared memory objects, it
@@ -282,7 +283,7 @@ class DistanceKernel (object):
             (tuple) and the symmetric NxN submatrix, where N is the number of
             clip IDs provided as arguments plus the number of background IDs,
             minus the overlap between those two sets.
-        :rtype: tuple of int, tuple of bool, matrix
+        :rtype: tuple of int, tuple of bool, numpy.matrixlib.defmatrix.matrix
 
         """
         with self._rw_lock.read_lock():
@@ -363,11 +364,12 @@ class DistanceKernel (object):
         with self._rw_lock.read_lock():
             with SimpleTimer("Checking inputs", self._log):
                 try:
-                    clipID_or_IDs = [int(e) for e in clipID_or_IDs]
-                except:
-                    raise ValueError("Not all clip IDs could be used as ints!")
+                    clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
+                except Exception, ex:
+                    raise ValueError("Not all clip IDs could be used as ints: "
+                                     "%s" % str(ex))
 
-                id_diff = set(clipID_or_IDs).difference(self._row_id_index_map)
+                id_diff = clipID_or_IDs.difference(self._row_id_index_map)
                 assert not id_diff, \
                     "Not all clip IDs provided are represented in this " \
                     "distance kernel matrix! (difference: %s)" \
@@ -380,11 +382,15 @@ class DistanceKernel (object):
                 focus_row_indices = []
                 focus_row_clipids = []
                 for idx, cid in enumerate(self._row_id_index_map):
-                    if ((cid in clipID_or_IDs)
-                            and (cid not in focus_row_clipids)):
+                    # if ((cid in clipID_or_IDs)
+                    #         and (cid not in focus_row_clipids)):
+                    if cid in clipID_or_IDs:
                         focus_row_indices.append(idx)
                         focus_row_clipids.append(cid)
 
             with SimpleTimer("Cropping kernel to focus range", self._log):
-                return (tuple(focus_row_clipids), tuple(self._col_id_index_map),
-                        self._kernel[focus_row_indices, :])
+                return (
+                    tuple(focus_row_clipids),
+                    tuple(self._col_id_index_map),
+                    self._kernel[focus_row_indices, :]
+                )

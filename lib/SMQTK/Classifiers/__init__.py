@@ -20,45 +20,38 @@ class SMQTKClassifier (object):
     Classifiers are responsible for:
         - Generating a data model given an ingest.
         - Add new data to an existing data model.
-        - Rank the the content of the ingest given positive and negative
-            exemplars within the ingest.
+        - Rank the the content of the classifier's model given positive and
+            negative exemplar IDs.
 
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, base_data_dir, base_work_dir, descriptor, ingest):
+    def __init__(self, data_dir, work_dir, descriptor):
         """
-        Initialize classifier over a given ingest.
+        Initialize classifier for a given descriptor.
 
-        :param base_data_dir: Base data directory for this classifier to
-            initialize to.
-        :type base_data_dir: str
+        Construction of multiple classifier instances is expected to involve
+        providing a similar data directory but different work directories. The
+        data directory would only be read from except for when generating a
+        model which would error if there was already something there (read-only
+        enforcement).
 
-        :param base_work_dir: Base work directory for this classifier to
+        :param data_dir: Base data directory for this classifier to
             initialize to.
-        :type base_work_dir: str
+        :type data_dir: str
+
+        :param work_dir: Base work directory for this classifier to
+            initialize to.
+        :type work_dir: str
 
         :param descriptor: A FeatureDescriptor instance for this classifier to
             use.
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
-        :param ingest: Data ingest for this classifier to work over.
-        :type ingest: SMQTK.utils.DataIngest.DataIngest
-
         """
-        self._data_dir = os.path.join(base_data_dir,
-                                      "Classifiers",
-                                      self.__class__.__name__,
-                                      descriptor.__class__.__name__,
-                                      ingest.name)
-        self._work_dir = os.path.join(base_work_dir,
-                                      "Classifiers",
-                                      self.__class__.__name__,
-                                      descriptor.__class__.__name__,
-                                      ingest.name)
+        self._data_dir = data_dir
+        self._work_dir = work_dir
         self._descriptor = descriptor
-
-        self._ingest = ingest
 
     @property
     def log(self):
@@ -90,36 +83,55 @@ class SMQTKClassifier (object):
         return self._work_dir
 
     @abc.abstractmethod
-    def generate_model(self):
+    def generate_model(self, ingest, **kwds):
         """
         Generate this classifiers data-model using the given feature descriptor
         over the configured ingest, saving it to a known location in the
         configured data directory.
+
+        :raises RuntimeError: See implementation.
+
+        :param ingest: Ingest of data to create model with.
+        :type ingest: SMQTK.utils.DataIngest.DataIngest
+
         """
         pass
 
     @abc.abstractmethod
-    def extend_model(self, data):
+    def extend_model(self, *data):
         """
-        Extend the current ingest with new feature data based on the given data
-        and the configured feature descriptor, extending the current data model
-        for this classifier.
+        Extend, in memory, the current model with the given data elements using
+        the configured feature descriptor.
 
-        For not, if there is currently no data model created for this classifier
-        / descriptor combination, we will error. In the future, I would imagine
-        a new model would be created.
+        NOTE: For now, if there is currently no data model created for this
+        classifier / descriptor combination, we will error. In the future, I
+        would imagine a new model would be created.
+
+        :raises RuntimeError: See implementation.
+        :raises ValueError: See implementation.
 
         :param data: Some kind of input data for the feature descriptor. This is
             descriptor dependent.
+        :type data: tuple of SMQTK.utils.DataFile.DataFile
 
         """
+        pass
 
     @abc.abstractmethod
-    def rank_ingest(self, pos_ids, neg_ids):
+    def rank_model(self, pos_ids, neg_ids=()):
         """
-        Rank the current ingest, returning a mapping of ingest element ID to a
+        Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
         of [0, 1]. Where
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: list of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: list of int
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)

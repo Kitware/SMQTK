@@ -7,7 +7,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 from collections import deque
-from multiprocessing import current_process
+import multiprocessing
+#from multiprocessing import current_process
 from threading import current_thread
 import time
 
@@ -144,7 +145,8 @@ class ReadWriteLock (object):
         :type timeout: int or None
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
         # print "[DEBUG] acquireRead ID:", me
         if timeout is not None:
             expire_time = time.time() + timeout
@@ -199,7 +201,8 @@ class ReadWriteLock (object):
         :type timeout: int or None
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
         # print "[DEBUG] acquireWrite ID:", me
         if timeout is not None:
             expire_time = time.time() + timeout
@@ -260,7 +263,8 @@ class ReadWriteLock (object):
         (processID, threadID).
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
         # print "[DEBUG] releaseRead ID:", me
         with self.__cond:
             # Releasing an inner read lock within an outer write lock. Must have
@@ -315,7 +319,8 @@ class ReadWriteLock (object):
         (processID, threadID).
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
         # print "[DEBUG] releaseWrite ID:", me
         with self.__cond:
             # Obviously, only decrement when we own the write lock
@@ -355,7 +360,8 @@ class ReadWriteLock (object):
         :rtype: object
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
 
         # noinspection PyMethodParameters,PyUnusedLocal
         class ReadWithLock (object):
@@ -389,7 +395,8 @@ class ReadWriteLock (object):
         :rtype: object
 
         """
-        me = _id or (current_process().ident, current_thread().ident)
+        me = _id or (multiprocessing.current_process().ident,
+                     current_thread().ident)
 
         # noinspection PyMethodParameters,PyUnusedLocal
         class WriteWithLock (object):

@@ -7,6 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import logging
 import os
 import re
 import shutil
@@ -24,39 +25,41 @@ class DataIngest (object):
     """
 
     # DataIngest data file type. This should be set to a class or factory method
-    # that takes a single argument that is the file path.
+    # that takes up to two arguments: the filepath and an optional UID setting.
     DATA_FILE_TYPE = DataFile
 
     # Files saved with MD5sum and integer ID
     FILE_TEMPLATE = "uid_%d.%s%s"  # (uid, md5, ext)
     FILE_REGEX = re.compile("uid_(\d+)\.(\w+)(\..*)")  # uid, md5, ext
 
-    def __init__(self, name, base_data_dir, base_work_dir, starting_index=0):
+    def __init__(self, data_dir, work_dir, starting_index=0):
         """
-        :param name: Name of the ingest
-        :type name: str
+        :param data_dir: Base directory for data storage
+        :type data_dir: str
 
-        :param base_data_dir: Base directory for data storage
-        :type base_data_dir: str
-
-        :param base_data_dir: Base directory for work storage
-        :type base_data_dir: str
+        :param work_dir: Base directory for work storage
+        :type work_dir: str
 
         :param starting_index: Starting index for added data files
         :type starting_index: int
 
         """
-        self._name = name
-        self._data_dir = os.path.join(base_data_dir, "Ingests", name)
-        self._work_dir = os.path.join(base_data_dir, "IngestWork", name)
-
+        self._data_dir = data_dir
+        self._work_dir = work_dir
         self._next_id = starting_index
 
         # Map of ID-to-file
         #: :type: dict of (int, DataFile)
         self._id_data_map = {}
+        # Reverse mapping for reverse fetch
+        # Value is a set of UID as files of the same MD5 may bhe
+        #: :type: dict of (str, set)
+        self._md5_id_map = {}
 
         self._load_existing_ingest()
+
+    def __len__(self):
+        return len(self._id_data_map)
 
     def _load_existing_ingest(self):
         """
@@ -69,6 +72,10 @@ class DataIngest (object):
                 uid, md5, ext = m.groups()
                 uid = int(uid)
                 self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath)
+                self._id_data_map[uid]._uid = uid
+                if md5 not in self._md5_id_map:
+                    self._md5_id_map[md5] = set()
+                self._md5_id_map[md5].add(uid)
                 if uid > max_uid:
                     max_uid = uid
                 self._next_id = max_uid + 1
@@ -104,13 +111,10 @@ class DataIngest (object):
         self._next_id += 1
         return a
 
-    def __len__(self):
-        return len(self._id_data_map)
-
     @property
-    def name(self):
-        """ Name of ingest """
-        return self._name
+    def log(self):
+        return logging.getLogger('.'.join((self.__module__,
+                                           self.__class__.__name__)))
 
     @property
     def data_directory(self):
@@ -126,33 +130,49 @@ class DataIngest (object):
             os.makedirs(self._work_dir)
         return self._work_dir
 
-    def add_data_file(self, origin_file):
+    def add_data_file(self, origin_filepath):
         """
         Add the given data file to this ingest
 
         The original file is copied and further maintenance of the original
         file is left to the user.
 
-        :param origin_file: file that should be added to this ingest
-        :type origin_file: str
+        :param origin_filepath: Path to a file that should be added to this ingest
+        :type origin_filepath: str
+
+        :return: The DataFile instance that was just ingested
+        :rtype: DataFile
 
         """
-        origin_data = self.DATA_FILE_TYPE(origin_file)
+        self.log.debug('Ingesting file: %s', origin_filepath)
+        origin_data = self.DATA_FILE_TYPE(origin_filepath)
         cur_id = self._get_next_id()
-        origin_ext = os.path.splitext(origin_file)[1]
+        origin_ext = os.path.splitext(origin_filepath)[1]
 
         # Overwriting last element so we don't have a single directory per file
         containing_dir = os.path.join(self.data_directory,
                                       *origin_data.split_md5sum(8)[:-1])
+        # Copy original file into ingest
+        md5 = origin_data.md5sum
         if not os.path.isdir(containing_dir):
             os.makedirs(containing_dir)
-        fname = self.FILE_TEMPLATE % (cur_id, origin_data.md5sum, origin_ext)
-        target_data = self.DATA_FILE_TYPE(os.path.join(containing_dir, fname))
+        fname = self.FILE_TEMPLATE % (cur_id, md5, origin_ext)
+        target_filepath = os.path.join(containing_dir, fname)
+        shutil.copy(origin_data.filepath, target_filepath)
 
-        shutil.copy(origin_data.filepath, target_data.filepath)
-        assert origin_data.md5sum == target_data.md5sum, \
-            "Origin and target data files had divergent MD5 sums!"
+        # Now that its copied over, we can make the data instance
+        target_data = self.DATA_FILE_TYPE(target_filepath)
+        target_data._uid = cur_id
+        assert md5 == target_data.md5sum, \
+            "Origin and target data files had divergent MD5 sums somehow!"
+
         self._id_data_map[cur_id] = target_data
+
+        if md5 not in self._md5_id_map:
+            self._md5_id_map[md5] = set()
+        self._md5_id_map[md5].add(cur_id)
+
+        return target_data
 
     def iteritems(self):
         """
@@ -192,6 +212,21 @@ class DataIngest (object):
 
         """
         return self._id_data_map[uid]
+
+    def get_uid(self, data_file):
+        """
+        If the given DataFile instance is in this ingest via MD5 sum, returning
+        the UID of the last entry that matches MD5 sums, else returns None.
+
+        :param data_file: DataFile instance to get the UID of.
+        :type data_file: DataFile
+
+        :return: UID of the DataFile instance or None if its not in this ingest.
+        :rtype: int or None
+
+        """
+        if data_file.md5sum in self._md5_id_map:
+            return sorted(self._md5_id_map[data_file.md5sum])[0]
 
 
 # TODO: Could probably add a ``compress`` function that creates a condensed

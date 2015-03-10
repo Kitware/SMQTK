@@ -13,6 +13,8 @@ import os
 import os.path as osp
 import re
 
+from SMQTK.utils import safe_create_dir
+
 
 class FeatureDescriptor (object):
     """
@@ -20,17 +22,13 @@ class FeatureDescriptor (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, base_data_directory, base_work_directory):
+    def __init__(self, data_directory, work_directory):
         # Directory that permanent data for this feature descriptor will be
         # held, if any
-        self._data_dir = osp.join(base_data_directory,
-                                  "FeatureDescriptors",
-                                  self.name)
+        self._data_dir = data_directory
         # Directory that work for this feature descriptor should be put. This
         # should be considered a temporary
-        self._work_dir = osp.join(base_work_directory,
-                                  "FeatureDescriptorWork",
-                                  self.name)
+        self._work_dir = work_directory
 
     @property
     def log(self):
@@ -52,7 +50,7 @@ class FeatureDescriptor (object):
         :rtype: str
         """
         if not os.path.isdir(self._data_dir):
-            os.makedirs(self._data_dir)
+            safe_create_dir(self._data_dir)
         return self._data_dir
 
     @property
@@ -62,7 +60,7 @@ class FeatureDescriptor (object):
         :rtype: str
         """
         if not os.path.isdir(self._work_dir):
-            os.makedirs(self._work_dir)
+            safe_create_dir(self._work_dir)
         return self._work_dir
 
     @abc.abstractmethod

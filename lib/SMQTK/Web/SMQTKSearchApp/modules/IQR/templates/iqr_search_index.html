@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% set active_page = module_name %}
+
+{% block head_scripts %}
+    {{super()}}
+
+    {#- Upload module stuff #}
+    <link rel="stylesheet" type="text/css"
+          href="{{ uploader_url }}/static/css/smqtk_upload.css"/>
+    <script type="text/javascript"
+            src="{{ uploader_url }}/static/js/flow.min.js"></script>
+    <script type="text/javascript"
+            src="{{ uploader_url }}/static/js/smqtk_upload.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        var fz = new FlowUploadZone($("#FlowUploadZone"), "{{ uploader_post_url }}");
+
+        // Add uploaded to current session online ingest
+        fz.onFileSuccess(function(file_id) {
+            alert_info("Attempting data post");
+            $.ajax({
+                url: "iqr_ingest_file",
+                type: 'POST',
+                data: {
+                    fid: file_id
+                },
+                success: function(data, textStatus, jqXHR) {
+                    alert_success("Successfully POSTed file upload completion "
+                                  + "of " + file_id + " with return message: "
+                                  + data);
+                }
+            });
+        });
+
+    }); // Document.ready ends
+
+    </script>
+{% endblock head_scripts %}
+
+{% block body_content %}
+    <div class="container-fluid">
+        <h1>SMQTK Video Search</h1>
+
+        <div id="FlowUploadZone"></div>
+
+        <div id="upload_progress"></div>
+
+        <hr>
+
+        <div id="iqr_view_container"></div>
+
+    </div>
+
+{#-
+        <div class="flow-drop" ondragenter="jQuery(this).addClass('flow-dragover');" ondragend="jQuery(this).removeClass('flow-dragover');" ondrop="jQuery(this).removeClass('flow-dragover');">
+        Drop videos here to process or <a class="flow-browse-folder"><u>select folder</u></a> or <a class="flow-browse"><u>select from your computer</u></a>
+        </div>
+
+        <div class="flow-progress">
+        <table>
+          <tr>
+            <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
+            <td class="progress-text" nowrap="nowrap"></td>
+            <td class="progress-pause" nowrap="nowrap">
+              <a href="#" onclick="r.upload(); return(false);" class="progress-resume-link"><img src="/oneshot/static/resume.png" title="Resume upload" /></a>
+              <a href="#" onclick="r.pause(); return(false);" class="progress-pause-link"><img src="/oneshot/static/pause.png" title="Pause upload" /></a>
+              <a href="#" onclick="r.cancel(); return(false);" class="progress-cancel-link"><img src="/oneshot/static/cancel.png" title="Cancel upload" /></a>
+            </td>
+          </tr>
+        </table>
+        </div>
+
+        </br>
+        <ul class="flow-list"></ul>
+        </br>
+        <h2> Uploaded Videos </h2>
+        <div id="videos"></div>
+        <button id="beginiqr" class="btn btn-primary" disabled="disabled"> Search Simlar Videos </button>
+
+        <div id="clipresults"></div>
+#}
+
+{% endblock body_content %}
+

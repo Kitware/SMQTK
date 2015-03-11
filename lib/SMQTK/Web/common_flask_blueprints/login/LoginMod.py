@@ -12,7 +12,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # noinspection PyUnusedLocal
 class LoginMod (flask.Blueprint):
 
-    def __init__(self, parent_app):
+    def __init__(self, name, parent_app, url_prefix=None):
         """
         Initialize the login module
 
@@ -22,8 +22,9 @@ class LoginMod (flask.Blueprint):
 
         """
         super(LoginMod, self).__init__(
-            'login', __name__,
-            template_folder=os.path.join(script_dir, 'templates')
+            name, __name__,
+            template_folder=os.path.join(script_dir, 'templates'),
+            url_prefix=url_prefix
         )
 
         self.log = logging.getLogger('LoginMod')
@@ -75,7 +76,7 @@ class LoginMod (flask.Blueprint):
                                           % (next_page, userid))
 
                 flask.flash("Loading user: %s" % userid, "success")
-                self._login_user(user)
+                self._login_user(userid, user)
                 return flask.redirect(next_page)
             else:
                 flask.flash("Unknown user: %s" % userid, 'error')
@@ -97,19 +98,23 @@ class LoginMod (flask.Blueprint):
     #
 
     @staticmethod
-    def _login_user(user):
+    def _login_user(userid, user_info):
         """
         "log-in" the user in the current session. This adds the name and role
         list to the session. Only one user logged in at a time.
 
-        :param user: The user dictionary as recorded in our users.json config
-            file.
-        :type user: dict of (str, str or list of str)
+        :param userid: String ID of the user
+        :type userid: str
+
+        :param user_info: The user dictionary as recorded in our users.json
+            config file.
+        :type user_info: dict of (str, str or list of str)
 
         """
         flask.session['user'] = {
-            'fullname': user['fullname'],
-            'roles': user['roles']
+            'id': userid,
+            'fullname': user_info['fullname'],
+            'roles': user_info['roles']
         }
 
     @staticmethod

@@ -6,6 +6,8 @@ import os
 from StringIO import StringIO
 import tempfile
 
+from SMQTK.utils import safe_create_dir
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -20,7 +22,7 @@ class FileUploadMod (flask.Blueprint):
         return logging.getLogger('.'.join((self.__module__,
                                            self.__class__.__name__)))
 
-    def __init__(self, parent_app, working_directory):
+    def __init__(self, name, parent_app, working_directory, url_prefix=None):
         """
         Initialize uploading module
 
@@ -33,13 +35,16 @@ class FileUploadMod (flask.Blueprint):
 
         """
         super(FileUploadMod, self).__init__(
-            'file_upload', __name__,
-            static_folder=os.path.join(script_dir, 'static')
+            name, __name__,
+            static_folder=os.path.join(script_dir, 'static'),
+            url_prefix=url_prefix
         )
+        # TODO: Thread safety
 
         self.parent_app = parent_app
         self.working_dir = working_directory
 
+        # TODO: Move chunk storage to database for APACHE multiprocessing
         # File chunk aggregation
         #   Top level key is the file ID of the upload. The dictionary
         #   underneath that is the index ID'd chunks. When all chunks are
@@ -57,12 +62,13 @@ class FileUploadMod (flask.Blueprint):
         # Routing
         #
 
-        @self.route('/upload_file', methods=["POST"])
+        @self.route('/upload_chunk', methods=["POST"])
         @self.parent_app.module_login.login_required
         def upload_file():
             """
             Handle arbitrary file upload to OS temporary file storage, recording
             file upload completions.
+
             """
             form = flask.request.form
             self.log.debug("POST form contents: %s" % str(flask.request.form))
@@ -141,6 +147,14 @@ class FileUploadMod (flask.Blueprint):
         def completed_uploads():
             return flask.jsonify(self._completed_files)
 
+    def upload_post_url(self):
+        """
+        :return: The url string to give to the JS upload zone for POSTing file
+            chunks.
+        :rtype: str
+        """
+        return self.url_prefix + '/upload_chunk'
+
     def get_path_for_id(self, file_unique_id):
         """
         Get the path to the temp file that was uploaded.
@@ -160,6 +174,8 @@ class FileUploadMod (flask.Blueprint):
         """
         Clear the completed file entry in our cache. This should be called after
         taking responsibility for an uploaded file.
+
+        This does NOT delete the file.
 
         :raises KeyError: If the given unique ID does not correspond to an
             entry in our completed cache.
@@ -193,7 +209,7 @@ class FileUploadMod (flask.Blueprint):
         """
         # Make sure write dir exists...
         if not os.path.isdir(self.working_dir):
-            os.makedirs(self.working_dir)
+            safe_create_dir(self.working_dir)
         tmp_fd, tmp_path = tempfile.mkstemp(file_extension,
                                             dir=self.working_dir)
         self.log.debug("Combining chunks into temporary file: %s", tmp_path)

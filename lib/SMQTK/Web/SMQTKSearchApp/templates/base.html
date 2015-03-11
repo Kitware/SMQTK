@@ -5,8 +5,8 @@
         <title>SMQTK</title>
 
         <!-- jQuery -->
-{#        <script type="text/javascript"#}
-{#                src="/static/js/jquery-1.11.1.js"></script>#}
+{#-        <script type="text/javascript"#}
+{#-                src="/static/js/jquery-1.11.1.js"></script>#}
         <script type="text/javascript"
                 src="/static/js/jquery-1.11.1.min.js"></script>
 
@@ -15,10 +15,12 @@
                 src="/static/js/jquery.timer.js"></script>
 
         <!-- jQuery UI -->
-        <!--<script type="text/javascript"-->
-                <!--src="/static/js/jquery-ui.js"></script>-->
-        <!--<link rel="stylesheet" type="text/css"-->
-              <!--href="/static/css/jquery-ui.css"/>-->
+        {#-
+        <script type="text/javascript"
+                src="/static/js/jquery-ui.js"></script>
+        <link rel="stylesheet" type="text/css"
+              href="/static/css/jquery-ui.css"/>
+        #}
         <script type="text/javascript"
                 src="/static/js/jquery-ui.min.js"></script>
         <link rel="stylesheet" type="text/css"
@@ -26,18 +28,22 @@
 
         <!-- Bootstrap.js -->
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        {#-
         <!--<script type="text/javascript"-->
                 <!--src="/static/js/bootstrap.js"></script>-->
         <!--<link rel="stylesheet" type="text/css"-->
               <!--href="/static/css/bootstrap.css"/>-->
+        #}
         <script type="text/javascript"
                 src="/static/js/bootstrap.min.js"></script>
         <link rel="stylesheet" type="text/css"
               href="/static/css/bootstrap.min.css"/>
 
         <!-- BootBox -- for alerts -->
+        {#-
         <!--<script type="text/javascript"-->
                 <!--src="/static/js/bootbox.js"></script>-->
+        #}
         <script type="text/javascript"
                 src="/static/js/bootbox.min.js"></script>
 
@@ -86,29 +92,29 @@
         <script type="text/javascript">
             $(document).ready(function () {
 
-            {%- with msgs = get_flashed_messages(category_filter=["error"]) -%}
-            {%- if msgs -%}
-                {%- for msg in msgs -%}
+            {%- with msgs = get_flashed_messages(category_filter=["error"]) %}
+            {%- if msgs %}
+                {%- for msg in msgs %}
                 alert_error("{{msg}}");
-                {%- endfor -%}
-            {%- endif -%}
-            {%- endwith -%}
+                {%- endfor %}
+            {%- endif %}
+            {%- endwith %}
 
-            {%- with msgs = get_flashed_messages(category_filter=["success"]) -%}
-            {%- if msgs -%}
-                {%- for msg in msgs -%}
+            {%- with msgs = get_flashed_messages(category_filter=["success"]) %}
+            {%- if msgs %}
+                {%- for msg in msgs %}
                 alert_success("{{msg}}");
-                {%- endfor -%}
-            {%- endif -%}
-            {%- endwith -%}
+                {%- endfor %}
+            {%- endif %}
+            {%- endwith %}
 
-            {%- with msgs = get_flashed_messages(category_filter=["info"]) -%}
-            {%- if msgs -%}
-                {%- for msg in msgs -%}
+            {%- with msgs = get_flashed_messages(category_filter=["info"]) %}
+            {%- if msgs %}
+                {%- for msg in msgs %}
                 alert_info("{{msg}}");
-                {%- endfor -%}
-            {%- endif -%}
-            {%- endwith -%}
+                {%- endfor %}
+            {%- endif %}
+            {%- endwith %}
 
             }); // end document.ready()
         </script>
@@ -118,14 +124,14 @@
     </head>
 
     <body>
-        {% block settitle %}
-        {% endblock settitle %}
+        {%- block settitle %}
+        {%- endblock settitle %}
 
-        {% set navigation_bar = [
+        {%- set navigation_bar = [
         ('home', '/', 'Home'),
-        ('vsearch', '/vsearch', 'Video Search'),
+        ('VideoSearch', '/vsearch', 'Video Search'),
         ('isearch', '/isearch', 'Image Search')
-        ] -%}
+        ] %}
 
         <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
             <div class="container-fluid">
@@ -141,20 +147,20 @@
                 </div>
                 <div id="smqtk-nav-collapse" class="collapse navbar-collapse">
                     <ul class="nav navbar-nav">
-                        {% for id, href, label in navigation_bar %}
-                        <li {% if id == active_page %} class="active"{% endif %}>
+                        {%- for id, href, label in navigation_bar %}
+                        <li {%- if id == active_page %} class="active"{%- endif %}>
                             <a href="{{ href|escape }}">{{ label|escape }}</a>
                         </li>
-                        {% endfor %}
+                        {%- endfor %}
                     </ul>
 
-                    {% if not 'user' in session %}
-                        {% set login_url = url_for('login.login') %}
-                        {% set login_text = 'login' %}
-                    {% else %}
-                        {% set login_url = url_for('login.logout') %}
-                        {% set login_text = session.user.fullname + ' ~ logout' %}
-                    {% endif %}
+                    {%- if not 'user' in session %}
+                        {%- set login_url = url_for('login.login') %}
+                        {%- set login_text = 'login' %}
+                    {%- else %}
+                        {%- set login_url = url_for('login.logout') %}
+                        {%- set login_text = session.user.fullname + ' ~ logout' %}
+                    {%- endif %}
                     <ul class="nav navbar-nav navbar-right">
                         <li>
                             <a href="{{ login_url }} "> {{ login_text|safe }} </a>
@@ -168,19 +174,16 @@
         <div id="alert_placeholder"  class="container-fluid">
         </div>
 
-        {% block body_content %}
-        {% endblock body_content %}
+        {%- block body_content %}
+        {%- endblock body_content %}
 
         <footer>
-            {# DEBUG #}
-            {#
+            {#- DEBUG #}
             <div class="container-fluid">
                 <hr>
                 <h2>Session contents</h2>
                 <h4>{{ session }}</h4>
             </div>
-            #}
-
 
             <hr>
             <center>

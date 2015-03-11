@@ -9,11 +9,45 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import abc
 import logging
+import multiprocessing
+import numpy
 import os
 import os.path as osp
 import re
 
 from SMQTK.utils import safe_create_dir
+
+
+def _async_feature_generator_helper((uid, data, descriptor)):
+    """
+    :param uid: Data UID
+    :type uid: int
+
+    :param data: Data to generate feature over
+    :type data: DataFile
+
+    :param descriptor: Feature descriptor that will generate the feature
+    :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
+
+    :return: UID and associated feature vector
+    :rtype: (int, numpy.ndarray)
+
+    """
+    log = logging.getLogger("_svm_model_feature_generator")
+    try:
+        log.debug("Generating feature for UID[%d] -> %s", uid, data.filepath)
+        feat = descriptor.compute_feature(data)
+        # Invalid feature matrix if there are inf or NaN values
+        # noinspection PyUnresolvedReferences
+        if numpy.isnan(feat.sum()):
+            log.error("Found feature with a NaN value.")
+            return None, None
+        return uid, feat
+    except Exception, ex:
+        log.error("Failed feature generation for data file UID[%d] -> %s\n"
+                  "Error: %s",
+                  uid, data.filepath, str(ex))
+        return None, None
 
 
 class FeatureDescriptor (object):
@@ -22,12 +56,12 @@ class FeatureDescriptor (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, work_directory):
+    def __init__(self, data_directory, work_directory):
         """
         Initialize a feature descriptor instance
 
-        :param config: JSON configuration dictionary
-        :type config: dict
+        :param data_directory: Feature descriptor data directory.
+        :type data_directory: str
 
         :param work_directory: Work directory for this feature descriptor to use.
         :type work_directory: str
@@ -35,8 +69,7 @@ class FeatureDescriptor (object):
         """
         # Directory that permanent data for this feature descriptor will be
         # held, if any
-        self._data_dir = \
-            config['FeatureDescriptors'][self.name]['data_directory']
+        self._data_dir = data_directory
         # Directory that work for this feature descriptor should be put. This
         # should be considered a temporary
         self._work_dir = work_directory
@@ -91,6 +124,51 @@ class FeatureDescriptor (object):
         """
         raise NotImplementedError()
 
+    def compute_feature_async(self, *data, **kwds):
+        """
+        Asynchronously compute feature data for multiple data items.
+
+        :param data: List of data elements to compute features for. These must
+            have UIDs assigned for feature association in return value
+        :type data: list of SMQTK.utils.DataFile.DataFile
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
+
+        :return: Mapping of data UID to computed feature vector
+        :rtype: dict of (int, numpy.core.multiarray.ndarray)
+
+        """
+        args = []
+        for item in data:
+            # Make sure data items have valid UIDs
+            if item.uid is None:
+                raise RuntimeError("Some data elements do not have UIDs "
+                                   "assigned to them.")
+            args.append((item.uid, item, self))
+        self.log.debug("Processing %d elements", len(args))
+
+        self.log.debug("starting pool...")
+        parallel = kwds.get('parallel', None)
+        pool = multiprocessing.Pool(processes=parallel)
+        map_results = pool.map_async(_async_feature_generator_helper, args).get()
+        # # Sync debug version
+        # map_results = {}
+        # for arg in args:
+        #     _svm_model_feature_generator(arg)
+        pool.close()
+        pool.join()
+
+        r_dict = dict(map_results)
+        # Check for failed generation
+        if None in r_dict:
+            raise RuntimeError("Failure occurred during data feature "
+                               "computation. See logging.")
+
+        return r_dict
+
 
 def get_descriptors():
     """
@@ -109,7 +187,7 @@ def get_descriptors():
 
     :return: Map of discovered FeatureDescriptor types whose keys are the string
         name of the class.
-    :rtype: dict of (str, FeatureDescriptor)
+    :rtype: dict of (str, type)
 
     """
     log = logging.getLogger("get_descriptors")

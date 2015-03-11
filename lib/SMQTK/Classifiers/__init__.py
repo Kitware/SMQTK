@@ -28,7 +28,7 @@ class SMQTKClassifier (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, work_dir, descriptor):
+    def __init__(self, data_dir, work_dir, descriptor):
         """
         Initialize classifier with a given descriptor instance.
 
@@ -38,8 +38,8 @@ class SMQTKClassifier (object):
         model which would error if there was already something there (read-only
         enforcement).
 
-        :param config: JSON configuration dictionary
-        :type config: dict
+        :param data_dir: Classifier data directory
+        :type data_dir: str
 
         :param work_dir: Work directory for this classifier to use.
         :type work_dir: str
@@ -49,8 +49,7 @@ class SMQTKClassifier (object):
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
         """
-        self._data_dir = \
-            config["Classifiers"][self.name][descriptor.name]['data_directory']
+        self._data_dir = data_dir
         self._work_dir = work_dir
         self._descriptor = descriptor
 
@@ -100,7 +99,7 @@ class SMQTKClassifier (object):
         return self._descriptor
 
     @abc.abstractmethod
-    def generate_model(self, ingest, **kwds):
+    def generate_model(self, feature_map, parallel=None):
         """
         Generate this classifiers data-model using the given feature descriptor
         over the configured ingest, saving it to a known location in the
@@ -108,8 +107,14 @@ class SMQTKClassifier (object):
 
         :raises RuntimeError: See implementation.
 
-        :param ingest: Ingest of data to create model with.
-        :type ingest: SMQTK.utils.DataIngest.DataIngest
+        :param feature_map: Mapping of integer IDs to feature data. All feature
+            data must be of the same size!
+        :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
 
         """
         pass
@@ -174,7 +179,7 @@ def get_classifiers():
 
     :return: Map of discovered SMQTKClassifier types whose keys are the string
         name of the class.
-    :rtype: dict of (str, SMQTKClassifier)
+    :rtype: dict of (str, type)
 
     """
     log = logging.getLogger("get_classifers")

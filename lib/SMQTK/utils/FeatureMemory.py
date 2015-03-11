@@ -201,7 +201,7 @@ class FeatureMemory (object):
 
         :return: Matrix recording feature vectors for a feature type. See the
             id vector for row-wise index-to-clipID association.
-        :rtype: matrix
+        :rtype: numpy.matrixlib.defmatrix.matrix
 
         """
         return self._feature_mat

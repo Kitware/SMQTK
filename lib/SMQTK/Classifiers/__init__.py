@@ -12,6 +12,8 @@ import logging
 import os
 import re
 
+from SMQTK.utils import ConfigurableInterface
+
 
 class SMQTKClassifier (object):
     """
@@ -26,9 +28,9 @@ class SMQTKClassifier (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data_dir, work_dir, descriptor):
+    def __init__(self, config, work_dir, descriptor):
         """
-        Initialize classifier for a given descriptor.
+        Initialize classifier with a given descriptor instance.
 
         Construction of multiple classifier instances is expected to involve
         providing a similar data directory but different work directories. The
@@ -36,12 +38,10 @@ class SMQTKClassifier (object):
         model which would error if there was already something there (read-only
         enforcement).
 
-        :param data_dir: Base data directory for this classifier to
-            initialize to.
-        :type data_dir: str
+        :param config: JSON configuration dictionary
+        :type config: dict
 
-        :param work_dir: Base work directory for this classifier to
-            initialize to.
+        :param work_dir: Work directory for this classifier to use.
         :type work_dir: str
 
         :param descriptor: A FeatureDescriptor instance for this classifier to
@@ -49,9 +49,18 @@ class SMQTKClassifier (object):
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
         """
-        self._data_dir = data_dir
+        self._data_dir = \
+            config["Classifiers"][self.name][descriptor.name]['data_directory']
         self._work_dir = work_dir
         self._descriptor = descriptor
+
+    @property
+    def name(self):
+        """
+        :return: Classifier type name
+        :rtype: str
+        """
+        return self.__class__.__name__
 
     @property
     def log(self):
@@ -81,6 +90,14 @@ class SMQTKClassifier (object):
         if not os.path.isdir(self._work_dir):
             os.makedirs(self._work_dir)
         return self._work_dir
+
+    @property
+    def descriptor(self):
+        """
+        :return: Descriptor instance this classifier is using
+        :rtype: SMQTK.FeatureDescriptors.FeatureDescriptor
+        """
+        return self._descriptor
 
     @abc.abstractmethod
     def generate_model(self, ingest, **kwds):
@@ -180,17 +197,17 @@ def get_classifiers():
             module = __import__(module_path, fromlist=__name__)
 
             # Look for standard variable
-            fd_classes = None
+            cl_classes = []
             if hasattr(module, standard_var):
-                fd_classes = getattr(module, standard_var, None)
-                if isinstance(fd_classes, (tuple, list)):
+                cl_classes = getattr(module, standard_var, None)
+                if isinstance(cl_classes, (tuple, list)):
                     log.debug('[%s] Loaded list of classes via variable: '
                               '%s',
-                              module_name, fd_classes)
-                elif issubclass(fd_classes, SMQTKClassifier):
+                              module_name, cl_classes)
+                elif issubclass(cl_classes, SMQTKClassifier):
                     log.debug("[%s] Loaded class via variable: %s",
-                              module_name, fd_classes)
-                    fd_classes = [fd_classes]
+                              module_name, cl_classes)
+                    cl_classes = [cl_classes]
                 else:
                     raise RuntimeError("[%s] %s variable not set to a "
                                        "valid value.",
@@ -198,17 +215,17 @@ def get_classifiers():
 
             # Try finding a class with the same name as the module
             elif hasattr(module, module.__name__):
-                fd_classes = getattr(module, module.__name__, None)
-                if issubclass(fd_classes, SMQTKClassifier):
+                cl_classes = getattr(module, module.__name__, None)
+                if issubclass(cl_classes, SMQTKClassifier):
                     log.debug("[%s] Loaded class by module name: %s",
-                              module_name, fd_classes)
-                    fd_classes = [fd_classes]
+                              module_name, cl_classes)
+                    cl_classes = [cl_classes]
                 else:
                     raise RuntimeError("[%s] Failed to find valid class by "
                                        "module name",
                                        module_name)
 
-            for cls in fd_classes:
+            for cls in cl_classes:
                 class_map[cls.__name__] = cls
 
     return class_map

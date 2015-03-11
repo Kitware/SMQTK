@@ -22,10 +22,21 @@ class FeatureDescriptor (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data_directory, work_directory):
+    def __init__(self, config, work_directory):
+        """
+        Initialize a feature descriptor instance
+
+        :param config: JSON configuration dictionary
+        :type config: dict
+
+        :param work_directory: Work directory for this feature descriptor to use.
+        :type work_directory: str
+
+        """
         # Directory that permanent data for this feature descriptor will be
         # held, if any
-        self._data_dir = data_directory
+        self._data_dir = \
+            config['FeatureDescriptors'][self.name]['data_directory']
         # Directory that work for this feature descriptor should be put. This
         # should be considered a temporary
         self._work_dir = work_directory
@@ -81,7 +92,7 @@ class FeatureDescriptor (object):
         raise NotImplementedError()
 
 
-def _get_plugins(plugin_dir):
+def get_descriptors():
     """
     Discover and return FeatureDescriptor classes found in the given plugin
     directory. Keys will be the name of the discovered FeatureDescriptor class
@@ -101,28 +112,27 @@ def _get_plugins(plugin_dir):
     :rtype: dict of (str, FeatureDescriptor)
 
     """
-    log = logging.getLogger("_get_plugins['%s']" % plugin_dir)
+    log = logging.getLogger("get_descriptors")
     class_map = {}
+
+    this_dir = os.path.abspath(os.path.dirname(__file__))
+    log.debug("Searching in directory: %s", this_dir)
 
     file_re = re.compile("^[a-zA-Z].*(?:\.py)?$")
     standard_var = "FEATURE_DESCRIPTOR_CLASS"
 
-    for module_name in os.listdir(plugin_dir):
+    for module_name in os.listdir(this_dir):
         if file_re.match(module_name):
             log.debug("Examining file: %s", module_name)
 
             module_name = osp.splitext(module_name)[0]
-            local_dir = osp.relpath(plugin_dir, osp.dirname(__file__))
-            if '/' in local_dir:
-                raise ValueError("Plugin directory not located in local module "
-                                 "space! Given: '%s'" % plugin_dir)
 
-            module_path = '.'.join([__name__, local_dir, module_name])
+            module_path = '.'.join([__name__, module_name])
             log.debug("Attempting import of: %s", module_path)
             module = __import__(module_path, fromlist=__name__)
 
             # Look for standard variable
-            fd_classes = None
+            fd_classes = []
             if hasattr(module, standard_var):
                 fd_classes = getattr(module, standard_var, None)
                 if isinstance(fd_classes, (tuple, list)):
@@ -154,19 +164,3 @@ def _get_plugins(plugin_dir):
                 class_map[cls.__name__] = cls
 
     return class_map
-
-
-def get_image_descriptors():
-    """
-    :return: The map of available image feature descriptors
-    :rtype: dict of (str, FeatureDescriptor)
-    """
-    return _get_plugins(osp.join(osp.dirname(__file__), "image"))
-
-
-def get_video_descriptors():
-    """
-    :return: The map of available video feature descriptors
-    :rtype: dict of (str, FeatureDescriptor)
-    """
-    return _get_plugins(osp.join(osp.dirname(__file__), "video"))

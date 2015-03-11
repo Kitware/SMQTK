@@ -71,8 +71,7 @@ class DataIngest (object):
             if m:
                 uid, md5, ext = m.groups()
                 uid = int(uid)
-                self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath)
-                self._id_data_map[uid]._uid = uid
+                self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath, uid=uid)
                 if md5 not in self._md5_id_map:
                     self._md5_id_map[md5] = set()
                 self._md5_id_map[md5].add(uid)
@@ -227,6 +226,13 @@ class DataIngest (object):
         """
         if data_file.md5sum in self._md5_id_map:
             return sorted(self._md5_id_map[data_file.md5sum])[0]
+
+    def max_uid(self):
+        """
+        :return: The highest value UID integer in this ingest.
+        :rtype: int
+        """
+        return max(self._id_data_map)
 
 
 # TODO: Could probably add a ``compress`` function that creates a condensed

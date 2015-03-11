@@ -26,6 +26,7 @@ def safe_create_dir(d):
             raise
 
 
+from .ConfigurableObjectInterface import ConfigurableInterface
 from .DatabaseInfo import DatabaseInfo
 from .DataFile import DataFile
 from .DataIngest import DataIngest

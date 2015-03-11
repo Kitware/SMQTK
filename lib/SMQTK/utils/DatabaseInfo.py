@@ -16,7 +16,7 @@ class DatabaseInfo (object):
     may or may not have collection information (None if it doesn't).
     """
 
-    def __init__(self, host, port, name, collection=None):
+    def __init__(self, host, port, name):
         """
         Create a database info encapsulation object
 
@@ -27,8 +27,6 @@ class DatabaseInfo (object):
         12345
         >>> dbi.name
         'foobar'
-        >>> print dbi.collection
-        None
 
         :param host:
         :type host:
@@ -36,15 +34,12 @@ class DatabaseInfo (object):
         :type port:
         :param name:
         :type name:
-        :param collection:
-        :type collection:
         :return:
         :rtype:
         """
         self.host = str(host)
         self.port = int(port)
         self.name = str(name)
-        self.collection = collection if collection is None else str(collection)
 
     def copy(self):
         """
@@ -58,15 +53,13 @@ class DatabaseInfo (object):
         True
         >>> dbi.name == dbi2.name
         True
-        >>> dbi.collection == dbi2.collection
-        True
 
         :return: a completely new DatabaseInfo instance with the same data as
             this one.
         :rtype: DatabaseInfo
 
         """
-        return DatabaseInfo(self.host, self.port, self.name, self.collection)
+        return DatabaseInfo(self.host, self.port, self.name)
 
     def get_db_connection(self):
         """
@@ -83,5 +76,5 @@ class DatabaseInfo (object):
         DatabaseInfo{host: localhost, port: 12345, name: foobar, collection: None}
 
         """
-        return "DatabaseInfo{host: %s, port: %d, name: %s, collection: %s}" \
-               % (self.host, self.port, self.name, self.collection)
+        return "DatabaseInfo{host: %s, port: %d, name: %s}" \
+               % (self.host, self.port, self.name)

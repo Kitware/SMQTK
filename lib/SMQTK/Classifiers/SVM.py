@@ -69,8 +69,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
 
     BACKGROUND_RATIO = 0.40  # first 40%
 
-    def __init__(self, data_dir, work_dir, descriptor):
-        super(SVMClassifier_HIK, self).__init__(data_dir, work_dir, descriptor)
+    def __init__(self, config, work_dir, descriptor):
+        super(SVMClassifier_HIK, self).__init__(config, work_dir, descriptor)
 
         self._ids_filepath = os.path.join(self.data_dir, "id_map.npy")
         self._bg_flags_filepath = os.path.join(self.data_dir, "bg_flags.npy")

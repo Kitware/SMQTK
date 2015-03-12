@@ -18,7 +18,7 @@ $(function () {
             x: -98.0,
             y: 39.5
           },
-          zoom: 1
+          zoom: 2
         });
   myApp.map.createLayer(
     'osm',

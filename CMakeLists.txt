@@ -33,6 +33,7 @@ endif()
 # Backend
 #
 add_subdirectory(Backend)
+add_subdirectory(MASIR)
 
 
 ###

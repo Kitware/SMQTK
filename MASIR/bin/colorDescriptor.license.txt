@@ -1,0 +1,18 @@
+Color Descriptor software License Agreement
+
+Copyright (c) Koen van de Sande / University of Amsterdam
+
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any direct,
+indirect, consequential, special, incidental, or other damages, including
+but not limited to damages for lost profits, interruption of business,
+lost or corrupted data or programs, system crashes, or diversion of system
+or other resources, arising out of or relating to this license or the
+performance, quality, results, use of, or inability to use this software.
+
+The authors shall not be liable for any claim asserted against you by any
+other party, including but not limited to claims for infringement of copyright
+or other intellectual property rights. Any commercial use of this software
+requires a license from Euvision Technologies.
+
+This license must be retained with all copies of the software.

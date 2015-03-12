@@ -86,9 +86,29 @@ $(function () {
       .style('radius', function (d) { return myApp.scale(d.binCount); })
       .style('stroke', false)
       .style('fillOpacity', 0.4)
-      .style('fillColor', "orange")
-      .geoOn(geo.event.feature.mouseover, function (evt) {
-
+      .style('fillColor', 'orange')
+      .geoOn(geo.event.feature.mouseclick, function (evt) {
+        var div = evt.data.dialog || $(document.createElement('div')) , i = 0, anchor = null, list, listItem;
+        div.empty();
+        list = $(document.createElement('ul'));
+        list.addClass('list-unstyled');
+        div.addClass('dialog-box');
+        div.css({
+          'top': evt.mouse.page.y - 50,
+          'left': evt.mouse.page.x,
+          'position':'absolute', 'border':'1px solid black', 'padding':'5px'
+        });
+        for (i = 0; i < evt.data.urls.length; ++i) {
+          anchor = $(document.createElement('a'));
+          listItem = $(document.createElement('li'));
+          anchor.text(evt.data.urls[i]);
+          anchor.attr('href', evt.data.urls[i]);
+          listItem.append(anchor);
+          list.append(listItem);
+        }
+        div.append(list);
+        $('body').append(div);
+        evt.data.dialog = div;
       });
 
     myApp.map.draw();

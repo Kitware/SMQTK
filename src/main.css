@@ -36,3 +36,16 @@ footer {
     opacity: 0.95;
     background-color: lightgray;
 }
+
+.dialog-box {
+  width: 400px;
+  height: 300px;
+  position: absolute;
+  overflow: scroll;
+  opacity: 0.5;
+  background: black;
+}
+
+a {
+  color: white;
+}

@@ -11,6 +11,7 @@ $(function () {
   myApp.ready = false,
   myApp.startTime = null;
   myApp.animationState = 0;
+  myApp.visibleDialogs = [];
 
   myApp.map = geo.map({
           node: '#map',
@@ -79,7 +80,32 @@ $(function () {
       myApp.pointFeature = myApp.map
                        .createLayer('feature')
                        .createFeature('point', {selectionAPI: true});
+
+      myApp.pointFeature.layer().geoOn(geo.event.pan, function(evt) {
+        var i = null, left = null, top = null;
+        for (i = 0; i < myApp.visibleDialogs.length; ++i) {
+          left = parseInt(myApp.visibleDialogs[i].dialog.css('left'), 10);
+          top = parseInt(myApp.visibleDialogs[i].dialog.css('top'), 10);
+          myApp.visibleDialogs[i].dialog.css({
+            'left': left + evt.screenDelta.x,
+            'top': top + evt.screenDelta.y,
+          });
+        }
+      });
+
+      myApp.pointFeature.layer().geoOn(geo.event.zoom, function(evt) {
+        var i = null;
+        for (i = 0; i < myApp.visibleDialogs.length; ++i) {
+          myApp.visibleDialogs[i].dialog.remove();
+          myApp.visibleDialogs[i].dialog = null;
+        }
+        myApp.visibleDialogs = [];
+      });
     }
+    if (myApp.pointFeature) {
+      myApp.pointFeature.geoOff(geo.event.feature.mouseclick);
+    }
+
     myApp.pointFeature
       .data(aggdata.data)
       .position(function (d) { return { x:d.field7, y:d.field6 } })
@@ -88,15 +114,14 @@ $(function () {
       .style('fillOpacity', 0.4)
       .style('fillColor', 'orange')
       .geoOn(geo.event.feature.mouseclick, function (evt) {
-        var div = evt.data.dialog || $(document.createElement('div')) , i = 0, anchor = null, list, listItem;
+        var div = evt.data.dialog || $(document.createElement('div')) ,
+                  i = 0, anchor = null, list, listItem;
         div.empty();
         list = $(document.createElement('ul'));
         list.addClass('list-unstyled');
-        div.addClass('dialog-box');
         div.css({
-          'top': evt.mouse.page.y - 50,
+          'top': evt.mouse.page.y,
           'left': evt.mouse.page.x,
-          'position':'absolute', 'border':'1px solid black', 'padding':'5px'
         });
         for (i = 0; i < evt.data.urls.length; ++i) {
           anchor = $(document.createElement('a'));
@@ -106,9 +131,21 @@ $(function () {
           listItem.append(anchor);
           list.append(listItem);
         }
+
+        if (evt.data.dialog === null ||
+            evt.data.dialog === undefined) {
+          div.addClass('dialog-box');
+          div.css({
+            'position':'absolute',
+            'padding':'5px',
+            'box-shadow': '0px 0px 10px rgba(0, 0, 0, 0.5)'
+          });
+          $('body').append(div);
+          evt.data.dialog = div;
+          myApp.visibleDialogs.push(evt.data);
+        }
+
         div.append(list);
-        $('body').append(div);
-        evt.data.dialog = div;
       });
 
     myApp.map.draw();

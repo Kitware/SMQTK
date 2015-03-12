@@ -101,7 +101,13 @@ $(function () {
           min = $( "#slider" ).slider( "option", "min" ),
           max = $( "#slider" ).slider( "option", "max" ),
           delta = range[1] - range[0],
-          newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
+          newRange = null;
+
+      if (myApp.animationState == 3) {
+        newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
+      } else if (myApp.animationState == 2) {
+        newRange = [ range[ 0 ] - delta, range[ 1 ] - delta ];
+      }
 
       if (newRange[0] >= max) {
         newRange[0] = max;
@@ -109,7 +115,7 @@ $(function () {
       }
       if (newRange[0] <= min) {
         newRange[0] = min;
-        animationState = 0;
+        myApp.animationState = 0;
       }
       if (newRange[1] >= max) {
         newRange[1] = max;
@@ -117,7 +123,7 @@ $(function () {
       }
       if (newRange[1] <= min) {
         newRange[1] = min;
-        animationState = 0;
+        myApp.animationState = 0;
       }
 
       // Set the slider value
@@ -126,7 +132,7 @@ $(function () {
       // Query the data and create vis again
       queryData( newRange, function(data) {
         createVis(data, function() {
-          if (myApp.animationState > 0) {
+          if (myApp.animationState === 1) {
             window.requestAnimationFrame(myApp.runAnimation);
           }
         });
@@ -187,7 +193,8 @@ $(function () {
 
 
 myApp.buttonBackPress = function() {
-    // TODO implement this
+  myApp.animationState = 2;
+  window.requestAnimationFrame(myApp.runAnimation);
 }
 
 myApp.buttonPlayPress = function() {
@@ -200,5 +207,6 @@ myApp.buttonStopPress = function() {
 }
 
 myApp.buttonForwardPress = function() {
-  // TODO implement this
+  myApp.animationState = 3;
+  window.requestAnimationFrame(myApp.runAnimation);
 }

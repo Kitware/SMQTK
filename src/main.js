@@ -37,11 +37,13 @@ $(function () {
         key = item.field7 + '|' + item.field6;
         if (key in myApp.locationBin) {
           myApp.locationBin[key].binCount = 1 + myApp.locationBin[key].binCount;
+          myApp.locationBin[key].urls.push(item.field5);
           if (myApp.locationBin[key].binCount > max) {
             max = myApp.locationBin[key].binCount
           }
         } else {
           item.binCount = 1;
+          item.urls = [item.field5];
           myApp.locationBin[key] = item;
           newdata.push(item);
         }

@@ -78,7 +78,7 @@ $(function () {
     if (myApp.pointFeature === undefined) {
       myApp.pointFeature = myApp.map
                        .createLayer('feature')
-                       .createFeature('point');
+                       .createFeature('point', {selectionAPI: true});
     }
     myApp.pointFeature
       .data(aggdata.data)
@@ -86,7 +86,10 @@ $(function () {
       .style('radius', function (d) { return myApp.scale(d.binCount); })
       .style('stroke', false)
       .style('fillOpacity', 0.4)
-      .style('fillColor', "orange");
+      .style('fillColor', "orange")
+      .geoOn(geo.event.feature.mouseover, function (evt) {
+
+      });
 
     myApp.map.draw();
 

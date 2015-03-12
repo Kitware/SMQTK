@@ -1,17 +1,26 @@
+// Globals
+var myApp = {};
+
 $(function () {
   'use strict';
 
-  // Globals
-  var map = geo.map({
-    node: '#map',
-    center: {
-      x: -98.0,
-      y: 39.5
-    },
-    zoom: 1
-  }), locationBin = null, scale = null, pointFeature, ready = false, startTime = null;
+  myApp.map = null,
+  myApp.locationBin = null,
+  myApp.scale = null,
+  myApp.pointFeature,
+  myApp.ready = false,
+  myApp.startTime = null;
+  myApp.animationState = 0;
 
-  map.createLayer(
+  myApp.map = geo.map({
+          node: '#map',
+          center: {
+            x: -98.0,
+            y: 39.5
+          },
+          zoom: 1
+        });
+  myApp.map.createLayer(
     'osm',
     {
       baseUrl: 'http://c.tile.stamen.com/terrain-labels/'
@@ -20,18 +29,20 @@ $(function () {
 
   // Aggregate data
   function aggregateByLocation(data) {
-    var dataGroupedByLocation, key, locationBin = {}, min = 0, max = 1, newdata = [];
+    var dataGroupedByLocation, key, min = 0, max = 1, newdata = [];
+    myApp.locationBin = {};
+
     if (data) {
       data.forEach(function(item) {
         key = item.field7 + '|' + item.field6;
-        if (key in locationBin) {
-          locationBin[key].binCount = 1 + locationBin[key].binCount;
-          if (locationBin[key].binCount > max) {
-            max = locationBin[key].binCount
+        if (key in myApp.locationBin) {
+          myApp.locationBin[key].binCount = 1 + myApp.locationBin[key].binCount;
+          if (myApp.locationBin[key].binCount > max) {
+            max = myApp.locationBin[key].binCount
           }
         } else {
           item.binCount = 1;
-          locationBin[key] = item;
+          myApp.locationBin[key] = item;
           newdata.push(item);
         }
       });
@@ -60,22 +71,22 @@ $(function () {
   function createVis(data, callback) {
     var aggdata = aggregateByLocation(data);
     console.log(aggdata);
-    scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
+    myApp.scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
               .range([2, 100]);
-    if (pointFeature === undefined) {
-      pointFeature = map
+    if (myApp.pointFeature === undefined) {
+      myApp.pointFeature = myApp.map
                        .createLayer('feature')
                        .createFeature('point');
     }
-    pointFeature
+    myApp.pointFeature
       .data(aggdata.data)
       .position(function (d) { return { x:d.field7, y:d.field6 } })
-      .style('radius', function (d) { return scale(d.binCount); })
+      .style('radius', function (d) { return myApp.scale(d.binCount); })
       .style('stroke', false)
       .style('fillOpacity', 0.4)
       .style('fillColor', "orange");
 
-    map.draw();
+    myApp.map.draw();
 
     if (callback) {
       callback();
@@ -83,31 +94,30 @@ $(function () {
   }
 
   // Create animation
-  function runAnimation(timestamp) {
-    if (ready) {
+  myApp.runAnimation = function(timestamp) {
+    if (myApp.ready) {
       // First get the values from the slider
       var range = $( "#slider" ).slider( "values" ),
           min = $( "#slider" ).slider( "option", "min" ),
           max = $( "#slider" ).slider( "option", "max" ),
           delta = range[1] - range[0],
-          stopAnimation = false,
           newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
 
       if (newRange[0] >= max) {
         newRange[0] = max;
-        stopAnimation = true;
+        myApp.animationState = 0;
       }
       if (newRange[0] <= min) {
         newRange[0] = min;
-        stopAnimation = true;
+        animationState = 0;
       }
       if (newRange[1] >= max) {
         newRange[1] = max;
-        stopAnimation = true;
+        myApp.animationState = 0;
       }
       if (newRange[1] <= min) {
         newRange[1] = min;
-        stopAnimation = true;
+        animationState = 0;
       }
 
       // Set the slider value
@@ -116,8 +126,8 @@ $(function () {
       // Query the data and create vis again
       queryData( newRange, function(data) {
         createVis(data, function() {
-          if (!stopAnimation) {
-            window.requestAnimationFrame(runAnimation);
+          if (myApp.animationState > 0) {
+            window.requestAnimationFrame(myApp.runAnimation);
           }
         });
       });
@@ -166,11 +176,7 @@ $(function () {
 
     // Now query data
     queryData($("#slider").slider("values"), createVis);
-
-    ready = true;
-
-    // Testing
-    window.requestAnimationFrame(runAnimation);
+    myApp.ready = true;
   })
   .fail(function() {
     console.log('failed');
@@ -178,3 +184,21 @@ $(function () {
 
   $( "#slider" ).slider();
 });
+
+
+myApp.buttonBackPress = function() {
+    // TODO implement this
+}
+
+myApp.buttonPlayPress = function() {
+  myApp.animationState = 1;
+  window.requestAnimationFrame(myApp.runAnimation);
+}
+
+myApp.buttonStopPress = function() {
+  myApp.animationState = 0;
+}
+
+myApp.buttonForwardPress = function() {
+  // TODO implement this
+}

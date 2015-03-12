@@ -1,0 +1,8 @@
+{
+    "csift": {
+        "uids": "features/colordescriptor-csift/id_map.npy",
+        "bg_flags": "features/colordescriptor-csift/bg_flags.npy",
+        "feature_data": "features/colordescriptor-csift/feature_data.npy",
+        "kernel_data": "features/colordescriptor-csift/kernel_data.npy"
+    }
+}

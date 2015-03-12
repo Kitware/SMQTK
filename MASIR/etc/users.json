@@ -1,0 +1,7 @@
+{
+   "demo": {
+      "fullname": "Demo User",
+      "passwd": "jasmine",
+      "roles": [ "user" ]
+   }
+}

@@ -127,7 +127,7 @@ $(function () {
                   i = 0, anchor = null, list, listItem;
         div.empty();
         list = $(document.createElement('ul'));
-        list.addClass('list-unstyled');
+        list.addClass('list-group');
         div.css({
           'top': evt.mouse.page.y,
           'left': evt.mouse.page.x,
@@ -135,6 +135,7 @@ $(function () {
         for (i = 0; i < evt.data.urls.length; ++i) {
           anchor = $(document.createElement('a'));
           listItem = $(document.createElement('li'));
+          listItem.addClass('list-group-item');
           anchor.text(evt.data.urls[i]);
           anchor.attr('href', evt.data.urls[i]);
           listItem.append(anchor);

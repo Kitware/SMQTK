@@ -29,6 +29,7 @@ $(function () {
   );
 
   // Aggregate data
+  //--------------------------------------------------------------------------
   function aggregateByLocation(data) {
     var dataGroupedByLocation, key, min = 0, max = 1, newdata = [];
     myApp.locationBin = {};
@@ -55,6 +56,7 @@ $(function () {
   }
 
   // Query given a time duration
+  //--------------------------------------------------------------------------
   function queryData(timerange, callback) {
     console.log("/api/v1/data?limit=100000&duration=["+timerange+"]");
 
@@ -70,7 +72,19 @@ $(function () {
       })
   }
 
-  // Create geovis
+  // Clear out any information that is related to a particular time duration
+  //--------------------------------------------------------------------------
+  function clearInformation(callback) {
+    var i = null;
+    for (i = 0; i < myApp.visibleDialogs.length; ++i) {
+      myApp.visibleDialogs[i].dialog.remove();
+      myApp.visibleDialogs[i].dialog = null;
+    }
+    myApp.visibleDialogs = [];
+  }
+
+  // Create visualization given a dataset
+  //--------------------------------------------------------------------------
   function createVis(data, callback) {
     var aggdata = aggregateByLocation(data);
     console.log(aggdata);
@@ -94,12 +108,7 @@ $(function () {
       });
 
       myApp.pointFeature.layer().geoOn(geo.event.zoom, function(evt) {
-        var i = null;
-        for (i = 0; i < myApp.visibleDialogs.length; ++i) {
-          myApp.visibleDialogs[i].dialog.remove();
-          myApp.visibleDialogs[i].dialog = null;
-        }
-        myApp.visibleDialogs = [];
+        clearInformation();
       });
     }
     if (myApp.pointFeature) {
@@ -155,7 +164,8 @@ $(function () {
     }
   }
 
-  // Create animation
+  // Animate data
+  //--------------------------------------------------------------------------
   myApp.runAnimation = function(timestamp) {
     if (myApp.ready) {
       // First get the values from the slider
@@ -237,8 +247,14 @@ $(function () {
       min: min.getTime()/1000,
       max: max.getTime()/1000,
       values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
-      slide: function( event, ui ) {
-        queryData($("#slider").slider("values"), createVis);
+      stop: function( event, ui ) {
+        // Now run the query
+        queryData($("#slider").slider("values"), function(data) {
+          // Clear out any previous information
+          clearInformation();
+
+          createVis(data);
+        });
       }
     });
 
@@ -254,6 +270,8 @@ $(function () {
 });
 
 
+// Event handlers
+//--------------------------------------------------------------------------
 myApp.buttonBackPress = function() {
   myApp.animationState = 2;
   window.requestAnimationFrame(myApp.runAnimation);

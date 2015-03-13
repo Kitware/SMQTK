@@ -84,13 +84,12 @@ class IqrController (object):
             if not session_uuid:
                 session_uuid = uuid.uuid1()
             else:
-                if session_uuid in iqr_session:
+                if session_uuid in self._iqr_sessions:
                     raise RuntimeError("Cannot use given ID as it already "
                                        "exists in the controller session map: "
                                        "%s" % session_uuid)
 
             self._iqr_sessions[session_uuid] = iqr_session
-            self._iqr_sessions_locks[session_uuid] = iqr_session.lock
             return session_uuid
 
     def get_session(self, session_uuid):
@@ -120,46 +119,27 @@ class IqrController (object):
 
         """
         with self._map_rlock:
-            with self._iqr_sessions_locks[session_uuid]:
+            with self._iqr_sessions[session_uuid]:
                 del self._iqr_sessions[session_uuid]
-                del self._iqr_sessions_locks[session_uuid]
 
-    # def with_session(self, session_uuid):
-    #     """
-    #     Return a context object to allow use of a session while access locked.
-    #     This prevents removal while being used.
-    #
-    #     :param session_uuid: UUID of the session to get
-    #     :type session_uuid: uuid.UUID
-    #
-    #     :raises KeyError: There is no session associated with the given UUID
-    #         (may have never been or removed already).
-    #
-    #     :return: Return an object to use with the python with-statement to allow
-    #         use of the requested session within a protection lock.
-    #     :rtype: _session_context_
-    #
-    #     """
-    #     with self._map_rlock:
-    #         if session_uuid not in self._iqr_sessions:
-    #             raise KeyError(session_uuid)
-    #
-    #         with self._iqr_sessions_locks[session_uuid]:
-    #
-    #             # noinspection PyMethodParameters,PyPep8Naming
-    #             class _session_context_ (object):
-    #                 def __init__(inner_self):
-    #                     inner_self.sess_lock = self._iqr_sessions_locks[session_uuid]
-    #                     inner_self.sess = self._iqr_sessions[session_uuid]
-    #
-    #                 def __enter__(inner_self):
-    #                     """
-    #                     :rtype: IqrSession
-    #                     """
-    #                     inner_self.sess_lock.acquire()
-    #                     return inner_self.sess
-    #
-    #                 def __exit__(self, exc_type, exc_val, exc_tb):
-    #                     self.sess_lock.release()
-    #
-    #             return _session_context_()
+    def with_session(self, session_uuid):
+        """
+        Return a context object to allow use of a session while access locked.
+        This prevents removal while being used.
+
+        :param session_uuid: UUID of the session to get
+        :type session_uuid: uuid.UUID
+
+        :raises KeyError: There is no session associated with the given UUID
+            (may have never been or removed already).
+
+        :return: Return an object to use with the python with-statement to allow
+            use of the requested session within a protection lock.
+        :rtype: _session_context_
+
+        """
+        with self._map_rlock:
+            if session_uuid not in self._iqr_sessions:
+                raise KeyError(session_uuid)
+
+            return self._iqr_sessions[session_uuid]

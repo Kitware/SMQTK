@@ -15,9 +15,6 @@ vcd_store
 /static/data/clips
 /static/data/demo3/clips
 
-# Build generated config file
-/smqtk_config.py
-
 #
 # TPL
 #

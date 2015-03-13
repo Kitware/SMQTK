@@ -16,7 +16,8 @@ def safe_create_dir(d):
     :type d: str
 
     """
-    import os, errno
+    import os
+    import errno
     try:
         os.makedirs(d)
     except OSError, ex:
@@ -24,6 +25,20 @@ def safe_create_dir(d):
             pass
         else:
             raise
+
+
+def touch(fname):
+    """
+    Touch a file, creating it if it doesn't exist, setting its updated time to
+    now.
+
+    :param fname: File path to touch.
+    :type fname: str
+
+    """
+    import os
+    with open(fname, 'a'):
+        os.utime(fname, None)
 
 
 from .ConfigurableObjectInterface import ConfigurableInterface

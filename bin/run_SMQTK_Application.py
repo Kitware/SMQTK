@@ -18,6 +18,8 @@ def main():
                       help='Turn on server reloading.')
     parser.add_option('-d', '--debug', action='store_true', default=False,
                       help='Turn on server debugging')
+    parser.add_option('-t', '--threaded', action='store_true', default=False,
+                      help="Turn on web searcher threading.")
     parser.add_option('--host', default=None,
                       help="Run host address specification override. This will "
                            "override all other configuration method "
@@ -50,6 +52,7 @@ def main():
     port = opts.port and int(opts.port)
     debug = opts.debug
     use_reloader = opts.reload
+    use_threading = opts.threaded
     application_name = opts.application
 
     if application_name is None:
@@ -61,7 +64,8 @@ def main():
         raise ValueError("No available application by the name of '%s'"
                          % application_name)
     app = App(opts.config)
-    app.run(host=host, port=port, debug=debug, use_reloader=use_reloader)
+    app.run(host=host, port=port, debug=debug, use_reloader=use_reloader,
+            threaded=use_threading)
 
 
 if __name__ == "__main__":

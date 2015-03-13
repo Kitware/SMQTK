@@ -8,11 +8,13 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import logging
+import multiprocessing
 import os
+import os.path as osp
 import re
 import shutil
 
-from SMQTK.utils import DataFile
+from SMQTK.utils import DataFile, safe_create_dir, touch
 
 
 class DataIngest (object):
@@ -21,6 +23,12 @@ class DataIngest (object):
 
     Data files stored lose their original filenames and we instead use the
     unique MD5 sum of the file.
+
+    Within the specified data directory:
+        data/
+            content/
+                <ingest files>
+            explicit_ids.txt
 
     """
 
@@ -48,12 +56,20 @@ class DataIngest (object):
         self._work_dir = work_dir
         self._next_id = starting_index
 
+        # Explicit content management
+        self._eid_list_file = osp.join(self.data_directory,
+                                       "explicit_ids.txt")
+        if not osp.isfile(self._eid_list_file):
+            touch(self._eid_list_file)
+        self._eid_set = set()
+        self._eid_lock = multiprocessing.RLock()
+
         # Map of ID-to-file
         #: :type: dict of (int, DataFile)
         self._id_data_map = {}
         # Reverse mapping for reverse fetch
         # Value is a set of UID as files of the same MD5 may bhe
-        #: :type: dict of (str, set)
+        #: :type: dict of (str, int)
         self._md5_id_map = {}
 
         self._load_existing_ingest()
@@ -66,21 +82,29 @@ class DataIngest (object):
         Update state given existing ingest at the known data directory
         """
         max_uid = 0
-        for filepath in self._iter_ingest_files(self.data_directory):
+        for filepath in self._iter_ingest_files(self.content_directory):
             m = self.FILE_REGEX.match(os.path.basename(filepath))
             if m:
                 uid, md5, ext = m.groups()
                 uid = int(uid)
                 self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath, uid=uid)
-                if md5 not in self._md5_id_map:
-                    self._md5_id_map[md5] = set()
-                self._md5_id_map[md5].add(uid)
+                # If we allowed multiple of the same MD5...
+                # if md5 not in self._md5_id_map:
+                #     self._md5_id_map[md5] = set()
+                # self._md5_id_map[md5].add(uid)
+                self._md5_id_map[md5] = uid
                 if uid > max_uid:
                     max_uid = uid
                 self._next_id = max_uid + 1
             else:
                 raise RuntimeError("File in ingest failed to match expected "
                                    "naming format: '%s'" % filepath)
+
+        if osp.isfile(self._eid_list_file):
+            with self._eid_lock:
+                with open(self._eid_list_file) as eidfile:
+                    for line in eidfile.readlines():
+                        self._eid_set.add(int(line.strip()))
 
     def _iter_ingest_files(self, d):
         """
@@ -117,17 +141,35 @@ class DataIngest (object):
 
     @property
     def data_directory(self):
-        """ Data directory for this ingest """
+        """
+        :returns: Data directory for this ingest
+        :rtype: str
+        """
         if not os.path.isdir(self._data_dir):
-            os.makedirs(self._data_dir)
+            safe_create_dir(self._data_dir)
         return self._data_dir
 
     @property
     def work_directory(self):
-        """ work directory for this ingest """
+        """
+        :returns: Work directory for this ingest
+        :rtype: str
+        """
         if not os.path.isdir(self._work_dir):
-            os.makedirs(self._work_dir)
+            safe_create_dir(self._work_dir)
         return self._work_dir
+
+    @property
+    def content_directory(self):
+        """
+        :return: Sub-directory that contains the ingest data content tree
+            (under the data directory).
+        :rtype: str
+        """
+        d = osp.join(self.data_directory, "content")
+        if not osp.isdir(d):
+            safe_create_dir(d)
+        return d
 
     def add_data_file(self, origin_filepath):
         """
@@ -136,7 +178,12 @@ class DataIngest (object):
         The original file is copied and further maintenance of the original
         file is left to the user.
 
-        :param origin_filepath: Path to a file that should be added to this ingest
+        If the given file exists in the ingest already, we do not add a second
+        copy, instead returning the DataFile instance of the existing. Check max
+        UID before and after this call to check for new ingest file or not.
+
+        :param origin_filepath: Path to a file that should be added to this
+            ingest.
         :type origin_filepath: str
 
         :return: The DataFile instance that was just ingested
@@ -144,17 +191,30 @@ class DataIngest (object):
 
         """
         self.log.debug('Ingesting file: %s', origin_filepath)
-        origin_data = self.DATA_FILE_TYPE(origin_filepath)
-        cur_id = self._get_next_id()
-        origin_ext = os.path.splitext(origin_filepath)[1]
 
-        # Overwriting last element so we don't have a single directory per file
-        containing_dir = os.path.join(self.data_directory,
+        if not isinstance(origin_filepath, DataFile):
+            origin_data = self.DATA_FILE_TYPE(origin_filepath)
+        else:
+            origin_data = origin_filepath
+
+        # Overwriting last element in list so we don't have a single directory
+        # per file. With 8 splits of the 16-element hex hash, ~65k files max per
+        # leaf directory (16**16 total files).
+        containing_dir = os.path.join(self.content_directory,
                                       *origin_data.split_md5sum(8)[:-1])
         # Copy original file into ingest
         md5 = origin_data.md5sum
+        if md5 in self._md5_id_map:
+            self.log.debug("File already ingested: %s -> %s",
+                           origin_data.filepath, origin_data)
+            return self._id_data_map[self._md5_id_map[md5]]
+
         if not os.path.isdir(containing_dir):
             os.makedirs(containing_dir)
+
+        cur_id = self._get_next_id()
+        origin_ext = os.path.splitext(origin_data.filepath)[1]
+
         fname = self.FILE_TEMPLATE % (cur_id, md5, origin_ext)
         target_filepath = os.path.join(containing_dir, fname)
         shutil.copy(origin_data.filepath, target_filepath)
@@ -167,9 +227,10 @@ class DataIngest (object):
 
         self._id_data_map[cur_id] = target_data
 
-        if md5 not in self._md5_id_map:
-            self._md5_id_map[md5] = set()
-        self._md5_id_map[md5].add(cur_id)
+        # if md5 not in self._md5_id_map:
+        #     self._md5_id_map[md5] = set()
+        # self._md5_id_map[md5].add(cur_id)
+        self._md5_id_map[md5] = cur_id
 
         return target_data
 
@@ -185,6 +246,20 @@ class DataIngest (object):
         :rtype: tuple of (int, DataFile)
         """
         return self._id_data_map.items()
+
+    def uids(self):
+        """
+        :return: list of the UIDs of data currently in this ingest.
+        :rtype: list of int
+        """
+        return self._id_data_map.keys()
+
+    def data_list(self):
+        """
+        :return: List of data elements in this ingest, sorted by UID
+        :rtype: list of DataFile
+        """
+        return sorted(self._id_data_map.values(), key=lambda e: e.uid)
 
     def has_uid(self, uid):
         """
@@ -229,10 +304,47 @@ class DataIngest (object):
 
     def max_uid(self):
         """
-        :return: The highest value UID integer in this ingest.
+        :return: The highest value UID integer in this ingest. -1 if there is
+            nothing in the ingest yet.
         :rtype: int
         """
-        return max(self._id_data_map)
+        return max(self._id_data_map) if self._id_data_map else -1
+
+    def is_explicit(self, uid):
+        """
+        Return whether the given file ID is marked as explicit.
+
+        :raises KeyError: No element by the given UID in this ingest.
+
+        :param uid: Unique ID of the item to check
+        :type uid: int
+
+        """
+        with self._eid_lock:
+            if uid in self._id_data_map:
+                return uid in self._eid_set
+            else:
+                raise KeyError(uid)
+
+    def set_explicit(self, uid):
+        """
+        Set the given file ID as explicit. This also updates this ingest's
+        explicit ID list file if this ID wasn't labeled explicit before now.
+
+        :raises KeyError: No element by the given UID in this ingest.
+
+        :param uid: Item ID to set as explicit
+        :type uid: int
+
+        """
+        with self._eid_lock:
+            # only set and write out if this ID isn't already explicit
+            if self.has_uid(uid) and uid not in self._eid_set:
+                self._eid_set.add(uid)
+                with open(self._eid_list_file, 'a') as elfile:
+                    elfile.write('%d\n' % uid)
+            else:
+                raise KeyError(uid)
 
 
 # TODO: Could probably add a ``compress`` function that creates a condensed

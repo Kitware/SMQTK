@@ -63,7 +63,7 @@ def flann_build(codebook, flann_index_file=None, target_precision=0.99,
                         "but did not save it.")
 
     else:
-        log.info("Given existing index file. Loading it.")
+        log.debug("Given existing index file. Loading it.")
         flann.load_index(flann_index_file, codebook)
 
     return flann

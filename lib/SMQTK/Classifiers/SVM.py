@@ -11,15 +11,13 @@ import logging
 import multiprocessing
 import numpy
 import os
+import shutil
 
 from EventContentDescriptor.iqr_modules import iqr_model_train, iqr_model_test
 
 from SMQTK.Classifiers import SMQTKClassifier
 from SMQTK.utils.FeatureMemory import FeatureMemory
 from SMQTK.utils.ReadWriteLock import ReadWriteLock
-
-
-
 
 
 def _svm_model_hik_helper(i, j, i_feat, j_feat):
@@ -40,8 +38,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
 
     BACKGROUND_RATIO = 0.40  # first 40%
 
-    def __init__(self, data_dir, work_dir, descriptor):
-        super(SVMClassifier_HIK, self).__init__(data_dir, work_dir, descriptor)
+    def __init__(self, data_dir, work_dir):
+        super(SVMClassifier_HIK, self).__init__(data_dir, work_dir)
 
         self._ids_filepath = os.path.join(self.data_dir, "id_map.npy")
         self._bg_flags_filepath = os.path.join(self.data_dir, "bg_flags.npy")
@@ -54,6 +52,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
         # instance
         self._feat_mem_lock = ReadWriteLock()
         self._feat_mem = None
+        # Not using the reset method here as we need to allow for object
+        # construction so as to be able to call the ``generate_model`` method.
         if self._has_model_files():
             self._feat_mem = FeatureMemory.construct_from_files(
                 self._ids_filepath, self._bg_flags_filepath,
@@ -64,9 +64,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
     # noinspection PyNoneFunctionAssignment,PyUnresolvedReferences,PyTypeChecker
     def generate_model(self, feature_map, parallel=None):
         """
-        Generate this classifiers data-model using the given feature descriptor
-        over the configured ingest, saving it to a known location in the
-        configured data directory.
+        Generate this classifiers data-model using the given features,
+        saving it to files in the configured data directory.
 
         :raises RuntimeError: Precaution error when there is an existing data
             model for this classifier. Manually delete or move the existing
@@ -163,7 +162,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
         """
         return self._feat_mem is not None
 
-    def extend_model(self, id_feature_map):
+    def extend_model(self, id_feature_map, parallel=None):
         """
         Extend, in memory, the current data model with given data elements using
         the configured feature descriptor.
@@ -184,9 +183,15 @@ class SVMClassifier_HIK (SMQTKClassifier):
             classifier's model with.
         :type id_feature_map: dict of (int, numpy.core.multiarray.ndarray)
 
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
+
         """
         if self._feat_mem is None:
-            raise RuntimeError("No model for this classifier yet!")
+            raise RuntimeError("No model for this classifier yet! Expected to "
+                               "find files at: %s" % self.data_dir)
 
         with self._feat_mem_lock.write_lock():
             cur_ids = set(self._feat_mem.get_ids())
@@ -221,10 +226,10 @@ class SVMClassifier_HIK (SMQTKClassifier):
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)
 
-        :param pos_ids: List of positive data IDs
+        :param pos_ids: List of positive data IDs. Required.
         :type pos_ids: list of int
 
-        :param neg_ids: List of negative data IDs
+        :param neg_ids: List of negative data IDs. Optional.
         :type neg_ids: list of int
 
         :return: Mapping of ingest ID to a rank.
@@ -232,7 +237,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
 
         """
         if self._feat_mem is None:
-            raise RuntimeError("No model for this classifier yet!")
+            raise RuntimeError("No model for this classifier yet! Expected to "
+                               "find files at: %s" % self.data_dir)
 
         self.log.debug("Extracting symmetric submatrix from DK")
         idx2id_map, idx2isbg_map, m = \
@@ -282,6 +288,23 @@ class SVMClassifier_HIK (SMQTKClassifier):
             probability_map[uid] = 0.0
 
         return probability_map
+
+    def reset(self):
+        """
+        Reset this classifier to its original state, i.e. removing any model
+        extension that may have occurred.
+
+        :raises RuntimeError: There are no current model files to reset to.
+
+        """
+        if not self._has_model_files():
+            raise RuntimeError("No model files to reset state to! Please "
+                               "generate first.")
+        self._feat_mem = FeatureMemory.construct_from_files(
+            self._ids_filepath, self._bg_flags_filepath,
+            self._feature_data_filepath, self._kernel_data_filepath,
+            rw_lock=self._feat_mem_lock
+        )
 
 
 CLASSIFIER_CLASS = SVMClassifier_HIK

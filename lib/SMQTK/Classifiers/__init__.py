@@ -28,7 +28,7 @@ class SMQTKClassifier (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data_dir, work_dir, descriptor):
+    def __init__(self, data_dir, work_dir):
         """
         Initialize classifier with a given descriptor instance.
 
@@ -44,14 +44,9 @@ class SMQTKClassifier (object):
         :param work_dir: Work directory for this classifier to use.
         :type work_dir: str
 
-        :param descriptor: A FeatureDescriptor instance for this classifier to
-            use.
-        :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
-
         """
         self._data_dir = data_dir
         self._work_dir = work_dir
-        self._descriptor = descriptor
 
     @property
     def name(self):
@@ -90,14 +85,6 @@ class SMQTKClassifier (object):
             os.makedirs(self._work_dir)
         return self._work_dir
 
-    @property
-    def descriptor(self):
-        """
-        :return: Descriptor instance this classifier is using
-        :rtype: SMQTK.FeatureDescriptors.FeatureDescriptor
-        """
-        return self._descriptor
-
     @abc.abstractmethod
     def generate_model(self, feature_map, parallel=None):
         """
@@ -120,7 +107,7 @@ class SMQTKClassifier (object):
         pass
 
     @abc.abstractmethod
-    def extend_model(self, *data):
+    def extend_model(self, id_feature_map, parallel=None):
         """
         Extend, in memory, the current model with the given data elements using
         the configured feature descriptor.
@@ -132,9 +119,14 @@ class SMQTKClassifier (object):
         :raises RuntimeError: See implementation.
         :raises ValueError: See implementation.
 
-        :param data: Some kind of input data for the feature descriptor. This is
-            descriptor dependent.
-        :type data: tuple of SMQTK.utils.DataFile.DataFile
+        :param id_feature_map: Mapping of integer IDs to features to extend this
+            classifier's model with.
+        :type id_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores. Not all implementation support parallel model extension.
+        :type parallel: int
 
         """
         pass
@@ -146,17 +138,25 @@ class SMQTKClassifier (object):
         ranking valuation. This valuation should be a probability in the range
         of [0, 1]. Where
 
-        :return: Mapping of ingest ID to a rank.
-        :rtype: dict of (int, float)
-
         :param pos_ids: List of positive data IDs
-        :type pos_ids: list of int
+        :type pos_ids: collections.Iterable of int
 
         :param neg_ids: List of negative data IDs
-        :type neg_ids: list of int
+        :type neg_ids: collections.Iterable of int
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)
+
+        """
+        pass
+
+    @abc.abstractmethod
+    def reset(self):
+        """
+        Reset this classifier to its original state, i.e. removing any model
+        extension that may have occurred.
+
+        :raises RuntimeError: See implementation.
 
         """
         pass

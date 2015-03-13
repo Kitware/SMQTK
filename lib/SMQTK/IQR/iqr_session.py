@@ -1,10 +1,8 @@
 # coding=utf-8
 
 import logging
-import numpy
 import multiprocessing
 import multiprocessing.pool
-import os
 import os.path as osp
 import shutil
 import uuid
@@ -40,6 +38,15 @@ class IqrResultsDict (dict):
 
 
 class IqrSession (object):
+    """
+    Encapsulation of IQR Session related data structures with a centralized lock
+    for multi-thread access.
+
+    This object is compatible with the python with-statement, so when elements
+    are to be used or modified, it should be within a with-block so race
+    conditions do not occur across threads/sub-processes.
+
+    """
 
     @property
     def _log(self):
@@ -48,11 +55,15 @@ class IqrSession (object):
             + "[%s]" % self.uuid
         )
 
-    def __init__(self, work_directory, classifier, work_ingest, uid=None):
+    def __init__(self, work_directory, descriptor, classifier, work_ingest,
+                 uid=None):
         """ Initialize IQR session
 
         :param work_directory: Directory we are allowed to use for working files
         :type work_directory: str
+
+        :param descriptor: Descriptor to use for this IQR session
+        :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
         :param classifier: Classifier to use for this IQR session
         :type classifier: SMQTK.Classifiers.SMQTKClassifier
@@ -64,15 +75,16 @@ class IqrSession (object):
         :type uid: str or uuid.UUID
 
         """
-        self.lock = multiprocessing.RLock()
         self.uuid = uuid.uuid1() if uid is None else uid
+        self.lock = multiprocessing.RLock()
 
         self.positive_ids = set()
         self.negative_ids = set()
 
         self._work_dir = work_directory
 
-        self._classifier = classifier
+        self.descriptor = descriptor
+        self.classifier = classifier
 
         # Mapping of a clip ID to the probability of it being associated to
         # positive adjudications. This is None before any refinement occurs.
@@ -87,7 +99,11 @@ class IqrSession (object):
         shutil.rmtree(self.work_dir)
 
     def __enter__(self):
+        """
+        :rtype: IqrSession
+        """
         self.lock.acquire()
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
@@ -112,45 +128,6 @@ class IqrSession (object):
                                     key=lambda p: p[1],
                                     reverse=True))
             return None
-
-    def extend_model(self, *image_files):
-        """
-        Extend our data models given the following image file paths.
-
-        Given image files are added to this session's extension ingest.
-
-        :raises ValueError: If an image file is already ingested.
-
-        :param image_files: Iterable of image file paths
-        :type image_files: Iterable of str
-
-        """
-        # with self.lock:
-        #     p_pool = multiprocessing.pool.Pool()
-        #
-        #     args = []
-        #     for img in image_files:
-        #         uid, md5, fpath = self.extension_ingest.ingest_image(img)
-        #         args.append((self._log.name, self.descriptor, uid, fpath))
-        #
-        #     self._log.info("Feature generation...")
-        #     img_features = \
-        #         p_pool.map_async(_iqr_async_image_feature, args).get()
-        #
-        #     p_pool.close()
-        #     p_pool.join()
-        #
-        #     self._log.info("Updating FM")
-        #     new_ids = []
-        #     for img_id, img, feat in img_features:
-        #         self._log.info("=== %s", img)
-        #         # TODO: Update this function in FeatureMemory to take multiple
-        #         #       ID, feature pairs (or parallel arrays)
-        #         self.feature_memory.update(img_id, feat)
-        #         new_ids.append(img_id)
-        #
-        #     # adding new IDs to positive adjudications set
-        #     self.positive_ids.update(new_ids)
 
     def adjudicate(self, new_positives=(), new_negatives=(),
                    un_positives=(), un_negatives=()):
@@ -215,77 +192,28 @@ class IqrSession (object):
         :type un_negatives: tuple of int
 
         """
-        # with self.lock:
-        #     self.adjudicate(new_positives, new_negatives, un_positives,
-        #                     un_negatives)
-        #
-        #     if not self.positive_ids:
-        #         raise RuntimeError("Did not find at least one positive "
-        #                            "adjudication.")
-        #
-        #     #
-        #     # Model training
-        #     #
-        #     self._log.info("Starting model training...")
-        #     self._log.debug("-- Positives: %s", self.positive_ids)
-        #     self._log.debug("-- Negatives: %s", self.negative_ids)
-        #
-        #     # query submatrix of distance kernel for positive and background
-        #     # IDs.
-        #     self._log.debug("Extracting symmetric submatrix")
-        #     idx2id_map, idx_bg_flags, m = \
-        #         self.feature_memory\
-        #             .get_distance_kernel()\
-        #             .symmetric_submatrix(*self.positive_ids)
-        #     self._log.debug("-- num bg: %d", idx_bg_flags.count(True))
-        #     self._log.debug("-- m shape: %s", m.shape)
-        #
-        #     # for model training function, inverse of idx_is_bg: True
-        #     # indicates a positively adjudicated index
-        #     labels_train = numpy.array(tuple(not b for b in idx_bg_flags))
-        #
-        #     # # Where to save working models
-        #     # model_filepath = osp.join(self.work_dir,
-        #     #                           "iqr_session.%s.model" % self.uuid)
-        #     # svIDs_filepath = osp.join(self.work_dir,
-        #     #                           "iqr_session.%s.svIDs" % self.uuid)
-        #
-        #     # Returned dictionary contains the keys "model" and "clipid_SVs"
-        #     # referring to the trained model and a list of support vectors,
-        #     # respectively.
-        #     ret_dict = iqr_model_train(m, labels_train, idx2id_map,
-        #                                self.svm_train_params)
-        #     svm_model = ret_dict['model']
-        #     svm_svIDs = ret_dict['clipids_SVs']
-        #
-        #     #
-        #     # Model Testing/Application
-        #     #
-        #     self._log.info("Starting model application...")
-        #
-        #     # As we're extracting rows, the sum of IDs are preserved along
-        #     # the x-axis (column IDs). The list of IDs along the x-axis is
-        #     # then effectively the ordered list of all IDs
-        #     idx2id_row, idx2id_col, kernel_test = \
-        #         self.feature_memory.get_distance_kernel()\
-        #                            .extract_rows(svm_svIDs)
-        #
-        #     # Testing/Ranking call
-        #     #   Passing the array version of the kernel sub-matrix. The
-        #     #   returned output['probs'] type matches the type passed in
-        #     #   here, and using an array makes syntax cleaner.
-        #     self._log.debug("Ranking IDs")
-        #     output = iqr_model_test(svm_model, kernel_test.A, idx2id_col)
-        #
-        #     probability_map = dict(zip(output['clipids'], output['probs']))
-        #     if self.results is None:
-        #         self.results = IqrResultsDict()
-        #     self.results.update(probability_map)
-        #
-        #     # Force adjudicated negatives to be probability 0.0 since we don't
-        #     # want them possibly polluting the further adjudication views.
-        #     for uid in self.negative_ids:
-        #         self.results[uid] = 0.0
+        with self.lock:
+            self.adjudicate(new_positives, new_negatives, un_positives,
+                            un_negatives)
+
+            if not self.positive_ids:
+                raise RuntimeError("Did not find at least one positive "
+                                   "adjudication.")
+
+            id_probability_map = \
+                self.classifier.rank_model(self.positive_ids, self.negative_ids)
+
+            if self.results is None:
+                self.results = IqrResultsDict()
+            self.results.update(id_probability_map)
+
+            # Force adjudicated positives and negatives to be probability 1 and
+            # 0, respectively, since we want to control where they show up in
+            # our results view.
+            for uid in self.positive_ids:
+                self.results[uid] = 1.0
+            for uid in self.negative_ids:
+                self.results[uid] = 0.0
 
     def reset(self):
         """ Reset the IQR Search state
@@ -293,17 +221,11 @@ class IqrSession (object):
         No positive adjudications, reload original feature data
 
         """
-        # with self.lock:
-        #     self.positive_ids.clear()
-        #     self.negative_ids.clear()
-        #     # noinspection PyUnresolvedReferences
-        #     self.feature_memory = FeatureMemory.construct_from_files(
-        #         self.descriptor.ids_file, self.descriptor.bg_flags_file,
-        #         self.descriptor.feature_data_file,
-        #         self.descriptor.kernel_data_file
-        #     )
-        #     self.results = None
-        #
-        #     # clear contents of working directory
-        #     shutil.rmtree(self.work_dir)
-        #     os.makedirs(self.work_dir)
+        with self.lock:
+            self.positive_ids.clear()
+            self.negative_ids.clear()
+            self.classifier.reset()
+            self.results = None
+
+            # clear contents of working directory
+            shutil.rmtree(self.work_dir)

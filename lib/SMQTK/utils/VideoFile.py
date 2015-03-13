@@ -184,10 +184,10 @@ class VideoFile (DataFile):
         #       case.
         #
         lock_file = osp.join(frame_dir, '.lock')
-        self.log.info("Acquiring file lock...")
+        self.log.debug("Acquiring file lock...")
         while not self._exclusive_touch(lock_file):
             time.sleep(0.01)
-        self.log.info("--> Lock acquired!")
+        self.log.debug("--> Lock acquired!")
 
         try:
             ###

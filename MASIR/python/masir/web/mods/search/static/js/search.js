@@ -212,7 +212,7 @@ function IqrResult(container, rank, id, probability, parent_view,
     this.parent_view = parent_view;
     this.is_random_result = is_random_result || false;
 
-    this.image_data = null;
+    this.image_preview_data = null;
     this.image_loaded = false;
     this.is_explicit = false;
     this.img_long_side = 0;
@@ -372,7 +372,7 @@ function IqrResult(container, rank, id, probability, parent_view,
             else
             {
                 inst.explicit_icon.attr('src', inst.explicit_icon_off);
-                inst.image_data_view.attr('src', inst.image_data);
+                inst.image_data_view.attr('src', inst.image_preview_data);
                 // balance side scaling.
                 if (inst.img_long_side)
                 {
@@ -397,10 +397,10 @@ function IqrResult(container, rank, id, probability, parent_view,
                     // Check for failures
                     if  (!data.success) {
                         alert_error("Image fetch error: " + data.message);
-                        inst.image_data = 'url("/static/img/carbon-rejected_on.png")';
+                        inst.image_preview_data = 'url("/static/img/carbon-rejected_on.png")';
                     }
                     else {
-                        inst.image_data =
+                        inst.image_preview_data =
                             'data:image/'+data['ext']+';base64,'+ data['data'];
                         inst.image_loaded = true;
                         inst.is_explicit = inst.e_marked_servereide =
@@ -570,7 +570,7 @@ function IqrResult(container, rank, id, probability, parent_view,
             }
             // TODO: Should make this better...
             //       like open a webpage instead of just opening image data...
-            window.open(this.image_data);
+            window.open(this.image_preview_data);
         }
     };
 

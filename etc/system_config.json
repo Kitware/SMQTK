@@ -2,11 +2,11 @@
   "Ingest": {
     "Image": "Ingest/Image",
     "Video": "Ingest/Video"
-  }.
+  },
   "Classifiers": {
     "SVMClassifier_HIK": {
       "ColorDescriptor_CSIFT_Video": {
-        "data_directory": "Classifiers/SVM/CSIFT_Video"
+        "data_directory": "Classifiers/SVM_HIK/CSIFT_Video"
       }
     }
   },

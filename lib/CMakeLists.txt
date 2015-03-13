@@ -26,8 +26,3 @@ install(DIRECTORY SMQTK
 install(DIRECTORY Utils
   DESTINATION "${python_site_packages}"
   )
-
-#install(PROGRAMS SMQTK/FeatureManagerServer.py
-#  DESTINATION bin
-#  RENAME FeatureManagerServer
-#  )

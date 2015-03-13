@@ -635,11 +635,17 @@ class SearchMod (flask.Blueprint):
                     ext = osp.splitext(img_path)[1].lstrip('.')
 
             return flask.jsonify({
+                # Boolean success marker
                 "success": success,
+                # Informational message
                 "message": message,
+                # Base-64 encoded image data
                 "data": data,
+                # Extension of the preview image
                 "ext": ext,
+                # Which side of the preview image is the longest, see above
                 "long_side": long_side,
+                # If this preview is of an explicit nature
                 "is_explicit": is_explicit,
             })
 

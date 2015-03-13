@@ -14,6 +14,9 @@ import logging
 class DataFile (object):
     """
     Basic data file representation
+
+    This base-class assumes image data.
+
     """
 
     def __init__(self, filepath, uid=None):
@@ -101,3 +104,10 @@ class DataFile (object):
         if tail:
             segments.append(md5[-tail:])
         return segments
+
+    def get_preview_image(self):
+        """
+        :return: The path to a preview image for this data file.
+        :rtype: str
+        """
+        return self.filepath

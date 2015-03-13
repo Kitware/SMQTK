@@ -145,8 +145,8 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
         for i, (frame, png_file) in enumerate(frame_map.items()):
             out_file = cd_output_file_pattern % frame
             if not osp.isfile(out_file):
-                self.log.debug("[vid-%s::frame-%d] Submitting job",
-                               video_data, frame)
+                self.log.debug("[vid-%s::frame-%d] Submitting colorDescriptor "
+                               "job...", video_data, frame)
                 log_file = cd_log_file_pattern % frame
                 tmp_file = out_file + '.TMP'
                 if osp.isfile(tmp_file):

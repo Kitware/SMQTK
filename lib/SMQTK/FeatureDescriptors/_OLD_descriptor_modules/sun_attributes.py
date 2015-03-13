@@ -234,7 +234,7 @@ class sun_attributes (VCDWorkerInterface):
         """
         # video frame extraction
         #
-        # extracting jpb because the MATLAB code only works with jpg files
+        # extracting jpg because the MATLAB code only works with jpg files
         # apparently...
         #
         # exiting failure if no frames extracted.

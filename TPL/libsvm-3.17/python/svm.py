@@ -35,7 +35,7 @@ def load_svm_lib():
     if sys.platform == 'win32':
         libnames = ['svm.dll', 'libsvm.dll']
     elif sys.platform == 'darwin':
-        libnames = ['libsvm.dylib']
+        libnames.append('libsvm.dylib')
 
     while root_dir is not None:
         for libname in libnames:

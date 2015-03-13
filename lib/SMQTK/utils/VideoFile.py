@@ -48,6 +48,15 @@ class VideoFile (DataFile):
         # Cache variables
         self.__metadata_cache = None
 
+    def get_preview_image(self):
+        """
+        :return: The path to a preview image for this data file.
+        :rtype: str
+        """
+        # TODO: Generate a GIF sequence within some simple interval
+        # For now, just returning the first frame of the sequence.
+        return self.frame_map(frames=[0])[0]
+
     @property
     def work_directory(self):
         """
@@ -129,7 +138,7 @@ class VideoFile (DataFile):
         return self.__metadata_cache
 
     def frame_map(self, second_offset=0, second_interval=0, max_duration=0,
-                  output_image_ext='png'):
+                  frames=(), output_image_ext='png'):
         """
         Return a map of video frame index to image file in the given format.
 
@@ -150,6 +159,9 @@ class VideoFile (DataFile):
         :param max_duration: Maximum number of seconds worth of extracted frames
         :type second_offset: float
 
+        :param frames: Specific exact frames within the video to extract.
+        :type frames: list of int
+
         :return: Map of frame-to-filepath for requested video frames
         :rtype: dict of (int, str)
 
@@ -159,10 +171,13 @@ class VideoFile (DataFile):
 
         # Frames to extract from video
         num_frames = int(video_md.fps * video_md.duration)
-        extract_indices = \
+        extract_indices = set(frames)
+        extract_indices.update(
             self._get_frames_for_interval(num_frames, video_md.fps,
                                           second_offset, second_interval,
                                           max_duration)
+        )
+
         if not extract_indices:
             return []
 
@@ -359,6 +374,3 @@ class VideoFile (DataFile):
                                        self._get_file_name(fn, output_ext)))
             os.removedirs(tmp_extraction_dir)
             self.log.debug("Frame extraction complete")
-
-    # TODO: Function for preview frame-sequence generation? -- See existing
-    #       scripts that I think already have this functionality.

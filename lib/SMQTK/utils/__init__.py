@@ -41,7 +41,6 @@ def touch(fname):
         os.utime(fname, None)
 
 
-from .ConfigurableObjectInterface import ConfigurableInterface
 from .DatabaseInfo import DatabaseInfo
 from .DataFile import DataFile
 from .DataIngest import DataIngest

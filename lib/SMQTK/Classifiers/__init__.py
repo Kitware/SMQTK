@@ -12,8 +12,6 @@ import logging
 import os
 import re
 
-from SMQTK.utils import ConfigurableInterface
-
 
 class SMQTKClassifier (object):
     """

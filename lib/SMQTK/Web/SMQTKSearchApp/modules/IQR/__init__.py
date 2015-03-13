@@ -2,11 +2,13 @@
 Video Search blueprint
 """
 
+import base64
 import flask
 import json
 import logging
 import os
 import os.path as osp
+import PIL.Image
 import random
 
 from SMQTK.FeatureDescriptors import get_descriptors
@@ -260,21 +262,50 @@ class IQRSearch (flask.Blueprint):
             all_ids = self._ingest.uids()
             with self.get_current_iqr_session() as iqrs:
                 all_ids.extend(iqrs.extension_ingest.uids())
+            random.shuffle(all_ids)
             return flask.jsonify({
-                "uids": random.shuffle(all_ids)
+                "uids": all_ids
             })
 
         @self.route("/get_ingest_image_preview_data", methods=["GET"])
         @self._parent_app.module_login.login_required
         def get_ingest_item_image_rep():
             """
-            Return image data representing the ingest item requested.
-
-            For images, this would just be the image itself, but for other data
-            types different things could be returned.
+            Return the base64 preview image data for the data file associated
+            with the give UID.
             """
             uid = int(flask.request.args['uid'])
-            # TODO: This function and required functionality
+            info = {
+                "success": True,
+                "message": None,
+                "is_explicit": None,
+                "shape": None,
+                "data": None,
+                "ext": None,
+            }
+
+            df = None
+            if uid in self._ingest.has_uid(uid):
+                df = self._ingest.get_data(uid)
+                info["is_explicit"] = self._ingest.is_explicit(uid)
+            else:
+                with self.get_current_iqr_session() as iqrs:
+                    if iqrs.extension_ingest.has_uid(uid):
+                        df = iqrs.extension_ingest.get_data(uid)
+                        info["is_explicit"] = iqrs.extension_ingest.is_explicit(uid)
+
+            if not df:
+                info["success"] = False
+                info["message"] = "UID not part of the ingest"
+            else:
+                img_path = df.get_preview_image()
+                img = PIL.Image.open(img_path)
+                info["shape"] = img.size
+                with open(img_path, 'rb').read() as img_data:
+                    info["data"] = base64.encodestring(img_data)
+                info["ext"] = osp.splitext(img_path)[1].lstrip('.')
+
+            return flask.jsonify(info)
 
         @self.route("/mark_uid_explicit", methods=["POST"])
         @self._parent_app.module_login.login_required

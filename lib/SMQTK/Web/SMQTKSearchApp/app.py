@@ -1,13 +1,17 @@
 """
-SearchApp application object
+Top level flask application
 """
 
 import flask
+import json
 import logging
 import os.path
 
+from SMQTK.FeatureDescriptors import get_descriptors
+from SMQTK.Classifiers import get_classifiers
+
 from SMQTK.utils.MongoSessions import MongoSessionInterface
-from SMQTK.utils import DatabaseInfo
+from SMQTK.utils import DatabaseInfo, VideoIngest
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -73,15 +77,15 @@ class SMQTKSearchApp (flask.Flask):
         # Database setup using Mongo
         #
         h, p = self.config['MONGO_SERVER'].split(':')
-        n = "SMQTK_SearchApp"
-        self._db_info = DatabaseInfo(h, p, n)
+        n = "SMQTKSearchApp"
+        self.db_info = DatabaseInfo(h, p, n)
 
         # Use mongo for session storage.
         # -> This allows session modification during AJAX routines (default
         #    Flask sessions do not)
-        self.session_interface = MongoSessionInterface(self._db_info.host,
-                                                       self._db_info.port,
-                                                       self._db_info.name)
+        self.session_interface = MongoSessionInterface(self.db_info.host,
+                                                       self.db_info.port,
+                                                       self.db_info.name)
 
         #
         # Misc. Setup
@@ -96,24 +100,29 @@ class SMQTKSearchApp (flask.Flask):
         # Load up required and optional module blueprints
         #
 
+        # Login module
         self.log.debug("Importing Login module")
         from SMQTK.Web.common_flask_blueprints.login import LoginMod
-        self.module_login = LoginMod(self)
+        self.module_login = LoginMod('login', self)
         self.register_blueprint(self.module_login)
 
-        # self.log.debug("Importing Upload module")
-        # self.upload_working_dir = os.path.join(self.config['WORK_DIR'],
-        #                                        'UploadWork')
-        # from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
-        # self.module_upload = FileUploadMod(self, self.upload_working_dir)
-        # self.register_blueprint(self.module_upload,
-        #                         url_prefix="/upload")
+        # IQR modules
+        from .modules.IQR import IQRSearch
+        # TODO: At the moment, for simplicity, we're fixing the feature detector
+        #       and classifier types. In the future this should either be moved
+        #       to something that can be chosen by the user or a
+        #       multi-feature/classifier fusion system.
+        ingest_video = \
+            VideoIngest(os.path.join(self.config['DATA_DIR'],
+                                     self.config['SYSTEM_CONFIG']['Ingest']['Video']),
+                        os.path.join(self.config['WORK_DIR'],
+                                     'Ingest', 'Video'))
 
-        self._log.debug("Importing Video Search module")
-        from .modules.vsearch
-        self.module_search = SearchMod(self)
-        self.register_blueprint(self.module_search,
-                                url_prefix="/search")
+        self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
+                                        'ColorDescriptor_CSIFT_Video',
+                                        'SVMClassifier_HIK',
+                                        url_prefix="/vsearch")
+        self.register_blueprint(self.module_vsearch)
 
         #
         # Basic routing

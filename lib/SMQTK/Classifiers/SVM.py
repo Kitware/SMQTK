@@ -35,6 +35,8 @@ class SVMClassifier_HIK (SMQTKClassifier):
     """
     SVM classifier implementation
     """
+    # TODO: Add optional model caching so that successive classifier
+    #       construction doesn't take additional time.
 
     BACKGROUND_RATIO = 0.40  # first 40%
 

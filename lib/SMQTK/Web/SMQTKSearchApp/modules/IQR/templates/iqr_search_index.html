@@ -14,8 +14,13 @@
 
     <script type="text/javascript"
             src="static/js/smqtk.progress_bars.js"></script>
-        <script type="text/javascript"
-            src="static/js/smqtk.iqr.js"></script>
+
+    <link rel="stylesheet" type="text/css"
+          href="static/css/smqtk.iqr.css"/>
+    <script type="text/javascript"
+            src="static/js/smqtk.iqr_result.js"></script>
+    <script type="text/javascript"
+            src="static/js/smqtk.iqr_view.js"></script>
 
 
     <!--suppress JSCheckFunctionSignatures -->
@@ -48,6 +53,8 @@
                 }
             });
         });
+
+        var iqr_view = new IqrView($("#iqr_view_container"));
 
     }); // Document.ready ends
 

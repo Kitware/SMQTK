@@ -3,10 +3,11 @@ Video Search blueprint
 """
 
 import flask
+import json
 import logging
-import multiprocessing
 import os
 import os.path as osp
+import random
 
 from SMQTK.FeatureDescriptors import get_descriptors
 from SMQTK.Classifiers import get_classifiers
@@ -63,13 +64,15 @@ class IQRSearch (flask.Blueprint):
         if classifier_type not in get_classifiers():
             raise ValueError("Not a valid classifier type: %s" % classifier_type)
         try:
-            parent_app.system_config['FeatureDescriptors'][self._fd_type_str]
+            parent_app.config['SYSTEM_CONFIG']\
+                ['FeatureDescriptors'][descriptor_type]
         except KeyError:
             raise ValueError("No configuration section for descriptor type '%s'"
                              % descriptor_type)
         try:
-            parent_app.system_config['Classifiers'][self._cl_type_str] \
-                [self._fd_type_str]['data_directory']
+            parent_app.config['SYSTEM_CONFIG']\
+                ['Classifiers'][classifier_type][descriptor_type]\
+                ['data_directory']
         except KeyError:
             raise ValueError("No configuration section for classifier type "
                              "'%s' for descriptor '%s'"
@@ -96,6 +99,7 @@ class IQRSearch (flask.Blueprint):
         self._iqr_controller = IqrController()
 
         # structures for session ingest progress
+        # Two levels: SID -> FID
         self._ingest_progress_locks = {}
         self._ingest_progress = {}
 
@@ -112,42 +116,256 @@ class IQRSearch (flask.Blueprint):
                 "uploader_post_url": self.mod_upload.upload_post_url()
             })
 
-        @self.route('/iqr_ingest_file', methods=['GET', 'POST'])
+        @self.route('/iqr_session_info', methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def iqr_session_info():
+            """
+            Get information about the current IRQ session
+            """
+            with self.get_current_iqr_session() as iqrs:
+                return flask.jsonify({
+                    "uuid": iqrs.uuid,
+                    "positive_uids": tuple(iqrs.positive_ids),
+                    "negative_uids": tuple(iqrs.negative_ids),
+                    "extension_ingest_contents":
+                        dict((id, str(df))
+                             for id, df in iqrs.extension_ingest.iteritems())
+                })
+
+        @self.route('/iqr_ingest_file', methods=['POST'])
+        @self._parent_app.module_login.login_required
         def iqr_ingest_file():
             """
             Ingest the file with the given UID, getting the path from the
             uploader.
+
+            :return: status message
             """
+            iqr_sess = self.get_current_iqr_session()
+            # TODO: Add status dict with a "GET" method branch for getting that
+            #       status information.
+
             # Start the ingest of a FID when POST
             if flask.request.method == "POST":
-                status = {}
-                status_lock = multiprocessing.RLock()
-
                 fid = flask.request.form['fid']
+
+                self.log.debug("[%s::%s] Getting temporary filepath from "
+                               "uploader module", iqr_sess.uuid, fid)
                 upload_filepath = self.mod_upload.get_path_for_id(fid)
                 self.mod_upload.clear_completed(fid)
 
-                # Extend session ingest
-                os.remove(upload_filepath)
+                # Extend session ingest -- modifying
+                with iqr_sess:
+                    self.log.debug("[%s::%s] Adding new file to extension "
+                                   "ingest", iqr_sess.uuid, fid)
+                    old_max_uid = iqr_sess.extension_ingest.max_uid()
+                    upload_data = iqr_sess.extension_ingest.add_data_file(upload_filepath)
+                    os.remove(upload_filepath)
+                    new_max_uid = iqr_sess.extension_ingest.max_uid()
+                    if old_max_uid == new_max_uid:
+                        return "Already Ingested"
 
-                # Compute feature for data
+                # Compute feature for data -- non-modifying
+                self.log.debug("[%s::%s] Computing feature for file",
+                               iqr_sess.uuid, fid)
+                feat = iqr_sess.descriptor.compute_feature(upload_data)
 
-                # Extend classifier model with feature data
+                # Extend classifier model with feature data -- modifying
+                with iqr_sess:
+                    self.log.debug("[%s::%s] Extending classifier model with "
+                                   "feature", iqr_sess.uuid, fid)
+                    iqr_sess.classifier.extend_model({upload_data.uid: feat})
 
-                return "Return Message"
+                return "Finished Ingestion"
 
-            # Return ingest status when GET
+        @self.route("/adjudicate", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def adjudicate():
+            """
+            Update adjudication for this session
+
+            :return: {
+                    success: <bool>,
+                    message: <str>
+                }
+            """
+            pos_to_add = json.loads(flask.request.form.get('add_pos', '[]'))
+            pos_to_remove = json.loads(flask.request.form.get('remove_pos', '[]'))
+            neg_to_add = json.loads(flask.request.form.get('add_neg', '[]'))
+            neg_to_remove = json.loads(flask.request.form.get('remove_neg', '[]'))
+
+            self.log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
+                           % (pos_to_add, pos_to_remove,
+                              neg_to_add, neg_to_remove))
+
+            with self.get_current_iqr_session() as iqrs:
+                iqrs.adjudicate(pos_to_add, neg_to_add,
+                                pos_to_remove, neg_to_remove)
+            return flask.jsonify({
+                "success": True,
+                "message": "Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
+                           % (pos_to_add, pos_to_remove,
+                              neg_to_add, neg_to_remove)
+            })
+
+        @self.route("/get_item_adjudication", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def get_adjudication():
+            """
+            Get the adjudication status of a particular result by ingest ID.
+
+            This should only ever return a dict where one of the two, or
+            neither, are labeled True.
+
+            :return: {
+                    is_pos: <bool>,
+                    is_neg: <bool>
+                }
+            """
+            ingest_uid = int(flask.request.args['uid'])
+            with self.get_current_iqr_session() as iqrs:
+                return flask.jsonify({
+                    "is_pos": ingest_uid in iqrs.positive_ids,
+                    "is_neg": ingest_uid in iqrs.negative_ids
+                })
+
+        @self.route("/get_positive_uids", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def get_positive_uids():
+            """
+            Get a list of the positive ingest UIDs
+
+            :return: {
+                    uids: list of <int>
+                }
+            """
+            with self.get_current_iqr_session() as iqrs:
+                return flask.jsonify({
+                    "uids": list(iqrs.positive_ids)
+                })
+
+        @self.route("/get_random_uids")
+        @self._parent_app.module_login.login_required
+        def get_random_uids():
+            """
+            Return to the client a list of all known dataset IDs but in a random
+            order. If there is currently an active IQR session with elements in
+            its extension ingest, then those IDs are included in the random
+            list.
+
+            :return: {
+                    uids: list of int
+                }
+            """
+            all_ids = self._ingest.uids()
+            with self.get_current_iqr_session() as iqrs:
+                all_ids.extend(iqrs.extension_ingest.uids())
+            return flask.jsonify({
+                "uids": random.shuffle(all_ids)
+            })
+
+        @self.route("/get_ingest_image_preview_data", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def get_ingest_item_image_rep():
+            """
+            Return image data representing the ingest item requested.
+
+            For images, this would just be the image itself, but for other data
+            types different things could be returned.
+            """
+            uid = int(flask.request.args['uid'])
+            # TODO: This function and required functionality
+
+        @self.route("/mark_uid_explicit", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def mark_uid_explicit():
+            """
+            Mark a given UID as explicit in its containing ingest.
+
+            :return: Success value of True if the given UID was valid and set
+                as explicit in its containing ingest.
+            :rtype: {
+                "success": bool
+            }
+            """
+            uid = int(flask.request.form['uid'])
+            if self._ingest.has_uid(uid):
+                self._ingest.set_explicit(uid)
             else:
-                fid = flask.request.args['fid']
-                # return flask.jsonify({})
-                return None
+                with self.get_current_iqr_session() as iqrs:
+                    if iqrs.extension_ingest.has_uid(uid):
+                        iqrs.extension_ingest.set_explicit(uid)
+
+            return flask.jsonify({'r': True})
+
+        @self.route("/iqr_refine", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def iqr_refine():
+            """
+            Classify current IQR session classifier, updating ranking for
+            display.
+
+            Fails gracefully if there are no positive[/negative] adjudications.
+
+            Expected Args:
+            """
+            pos_to_add = json.loads(flask.request.form.get('add_pos', '[]'))
+            pos_to_remove = json.loads(flask.request.form.get('remove_pos', '[]'))
+            neg_to_add = json.loads(flask.request.form.get('add_neg', '[]'))
+            neg_to_remove = json.loads(flask.request.form.get('remove_neg', '[]'))
+
+            with self.get_current_iqr_session() as iqrs:
+                try:
+                    iqrs.refine(pos_to_add, neg_to_add,
+                                pos_to_remove, neg_to_remove)
+                    return flask.jsonify({
+                        "success": True,
+                        "message": "Completed refinement"
+                    })
+                except Exception, ex:
+                    return flask.jsonify({
+                        "success": False,
+                        "message": str(ex)
+                    })
+
+        @self.route("/iqr_ordered_results", methods=['GET'])
+        @self._parent_app.module_login.login_required
+        def get_ordered_results():
+            """
+            Get ordered (UID, probability) pairs in between the given indices,
+            [i, j). If j Is beyond the end of available results, only available
+            results are returned.
+
+            This may be empty if no refinement has yet occurred.
+
+            Return format:
+            {
+                results: [ (uid, probability), ... ]
+            }
+            """
+            with self.get_current_iqr_session() as iqrs:
+                i = int(flask.request.args.get('i', 0))
+                j = int(flask.request.args.get('j', len(iqrs.results)
+                                               if iqrs.results else 0))
+                return flask.jsonify({
+                    "results": (iqrs.ordered_results or [])[i:j]
+                })
+
+        @self.route("/reset_iqr_session", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def reset_iqr_session():
+            """
+            Reset the current IQR session
+            """
+            with self.get_current_iqr_session() as iqrs:
+                iqrs.reset()
+                return flask.jsonify({
+                    "success": True
+                })
 
     def register_blueprint(self, blueprint, **options):
         """ Add sub-blueprint to a blueprint. """
         def deferred(state):
-            print "[sub-BP-reg-deferred] Registering new blueprint with URL " \
-                  "prefix '%s' underneath parent prefix '%s'" \
-                  % (blueprint.url_prefix, self.url_prefix)
             if blueprint.url_prefix:
                 blueprint.url_prefix = self.url_prefix + blueprint.url_prefix
             else:
@@ -173,16 +391,21 @@ class IQRSearch (flask.Blueprint):
                 sid_work_dir = osp.join(self._parent_app.config['WORK_DIR'],
                                         "IQR", self.name, sid)
                 descriptor = get_descriptors()[self._fd_type_str](
-                    self._parent_app.system_config['FeatureDescriptors']
-                                                  [self._fd_type_str]
-                                                  ['data_directory'],
+                    osp.join(
+                        self._parent_app.config['DATA_DIR'],
+                        self._parent_app.config['SYSTEM_CONFIG']\
+                            ['FeatureDescriptors'][self._fd_type_str]\
+                            ['data_directory']
+                    ),
                     osp.join(sid_work_dir, 'fd')
                 )
                 classifier = get_classifiers()[self._cl_type_str](
-                    self._parent_app.system_config['Classifiers']
-                                                  [self._cl_type_str]
-                                                  [self._fd_type_str]
-                                                  ['data_directory'],
+                    osp.join(
+                        self._parent_app.config['DATA_DIR'],
+                        self._parent_app.config['SYSTEM_CONFIG']\
+                            ['Classifiers'][self._cl_type_str]\
+                            [self._fd_type_str]['data_directory']
+                    ),
                     osp.join(sid_work_dir, 'cl'),
                 )
                 online_ingest = self._ingest.__class__(

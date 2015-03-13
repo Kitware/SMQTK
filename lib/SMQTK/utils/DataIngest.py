@@ -343,8 +343,6 @@ class DataIngest (object):
                 self._eid_set.add(uid)
                 with open(self._eid_list_file, 'a') as elfile:
                     elfile.write('%d\n' % uid)
-            else:
-                raise KeyError(uid)
 
 
 # TODO: Could probably add a ``compress`` function that creates a condensed

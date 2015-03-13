@@ -39,7 +39,7 @@ footer {
 
 .dialog-box {
   width: 400px;
-  height: 300px;
+  height: 200px;
   position: absolute;
   overflow: auto;
   opacity: 0.9;

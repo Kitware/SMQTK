@@ -165,7 +165,7 @@ $(function () {
           delta = range[1] - range[0],
           newRange = null;
 
-      if (myApp.animationState == 3) {
+      if (myApp.animationState == 3 || myApp.animationState == 1) {
         newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
       } else if (myApp.animationState == 2) {
         newRange = [ range[ 0 ] - delta, range[ 1 ] - delta ];

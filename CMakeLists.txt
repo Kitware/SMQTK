@@ -32,7 +32,7 @@ endif()
 ###
 # TPL
 #
-# Location variables
+# local installation control variables
 set(TPL_BUILD_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/TPL/build")
 set(TPL_LOCAL_INSTALL "${CMAKE_CURRENT_BINARY_DIR}/TPL/install")
 set(TPL_PYTHON_SP "${TPL_LOCAL_INSTALL}/${python_site_packages}")
@@ -42,6 +42,7 @@ add_subdirectory( TPL )
 ###
 # SMQTK Library
 #
+add_subdirectory( src )
 add_subdirectory( lib )
 add_subdirectory( bin )
 

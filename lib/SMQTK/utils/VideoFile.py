@@ -83,7 +83,7 @@ class VideoFile (DataFile):
         #       implement.
 
         if self.__metadata_cache is None:
-            PROC_FFPROBE = "smqtk_ffprobe"
+            PROC_FFPROBE = "ffprobe"
             re_float_match = "[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 
             self.log.debug("Using ffprobe: %s", PROC_FFPROBE)
@@ -345,7 +345,7 @@ class VideoFile (DataFile):
         # TODO: In the future, this should be abstract and left to a subclass to
         #       implement.
 
-        PROC_FRAME_EXTRACTOR = "smqtk_frame_extractor"
+        PROC_FRAME_EXTRACTOR = "frame_extractor"
 
         # Setup temp extraction directory
         tmp_extraction_dir = osp.join(self.work_directory, ".TMP")

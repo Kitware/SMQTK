@@ -1,7 +1,7 @@
 flask
 flask-login
 gevent
-pillow
+PIL
 pymongo
 sphinx
 numpy

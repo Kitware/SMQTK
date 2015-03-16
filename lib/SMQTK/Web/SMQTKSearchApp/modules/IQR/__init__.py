@@ -285,7 +285,7 @@ class IQRSearch (flask.Blueprint):
             }
 
             df = None
-            if uid in self._ingest.has_uid(uid):
+            if self._ingest.has_uid(uid):
                 df = self._ingest.get_data(uid)
                 info["is_explicit"] = self._ingest.is_explicit(uid)
             else:
@@ -298,11 +298,13 @@ class IQRSearch (flask.Blueprint):
                 info["success"] = False
                 info["message"] = "UID not part of the ingest"
             else:
+                # TODO: Have data-file return an HTML chunk for implementation
+                #       defined visualization?
                 img_path = df.get_preview_image()
                 img = PIL.Image.open(img_path)
                 info["shape"] = img.size
-                with open(img_path, 'rb').read() as img_data:
-                    info["data"] = base64.encodestring(img_data)
+                with open(img_path, 'rb') as img_file:
+                    info["data"] = base64.encodestring(img_file.read())
                 info["ext"] = osp.splitext(img_path)[1].lstrip('.')
 
             return flask.jsonify(info)

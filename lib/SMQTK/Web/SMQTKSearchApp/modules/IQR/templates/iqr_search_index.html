@@ -26,6 +26,8 @@
     <!--suppress JSCheckFunctionSignatures -->
     <script>
     $(document).ready(function() {
+        // TODO: Check that session IQR is initialized before page construction.
+
         var fz = new FlowUploadZone($("#FlowUploadZone"), "{{ uploader_post_url }}");
 
         // Add uploaded to current session online ingest

@@ -54,8 +54,11 @@ class VideoFile (DataFile):
         :rtype: str
         """
         # TODO: Generate a GIF sequence within some simple interval
-        # For now, just returning the first frame of the sequence.
-        return self.frame_map(frames=[0])[0]
+        # For now, just returning a frame 20% into the video
+        md = self.metadata()
+        perc20 = int(md.duration * md.fps * 0.2)
+        self.log.debug("Extracting preview frame %d", perc20)
+        return self.frame_map(frames=[perc20])[perc20]
 
     @property
     def work_directory(self):
@@ -160,6 +163,8 @@ class VideoFile (DataFile):
         :type second_offset: float
 
         :param frames: Specific exact frames within the video to extract.
+            Providing explicit frames causes other parameters to be ignored and
+            only the frames specified here to be extracted and returned.
         :type frames: list of int
 
         :return: Map of frame-to-filepath for requested video frames
@@ -171,12 +176,15 @@ class VideoFile (DataFile):
 
         # Frames to extract from video
         num_frames = int(video_md.fps * video_md.duration)
-        extract_indices = set(frames)
-        extract_indices.update(
-            self._get_frames_for_interval(num_frames, video_md.fps,
-                                          second_offset, second_interval,
-                                          max_duration)
-        )
+        extract_indices = set()
+        if frames:
+            extract_indices.update(frames)
+        else:
+            extract_indices.update(
+                self._get_frames_for_interval(num_frames, video_md.fps,
+                                              second_offset, second_interval,
+                                              max_duration)
+            )
 
         if not extract_indices:
             return []

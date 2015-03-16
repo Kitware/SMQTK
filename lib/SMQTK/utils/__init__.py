@@ -10,7 +10,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 def safe_create_dir(d):
     """
-    Recursively create the given directory, ignoring the already-exists  error.
+    Recursively create the given directory, ignoring the already-exists error if
+    thrown.
 
     :param d: Directory filepath to create
     :type d: str
@@ -46,6 +47,7 @@ from .DataFile import DataFile
 from .DataIngest import DataIngest
 from .DistanceKernel import DistanceKernel
 from .FeatureMemory import FeatureMemory, FeatureMemoryMap
+from .images2gif import readGif, writeGif
 from .ReadWriteLock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .SafeConfigCommentParser import SafeConfigCommentParser
 from .SignalHandler import SignalHandler

@@ -2,18 +2,9 @@
 *.pyc
 *.pyo
 
-# Other generated files
-vcd_store
-
-# Documentation generation directory
-/docs/_build
-
 # External data and generated files directories
 /data
 /work
-/nltk_data
-/static/data/clips
-/static/data/demo3/clips
 
 #
 # TPL

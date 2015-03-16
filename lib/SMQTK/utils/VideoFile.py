@@ -10,12 +10,13 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 import abc
 import os
 import os.path as osp
+import PIL.Image
 import re
 import shutil
 import subprocess
 import time
 
-from SMQTK.utils import DataFile
+from SMQTK.utils import DataFile, safe_create_dir, writeGif
 
 
 class VideoMetadata (object):
@@ -47,18 +48,53 @@ class VideoFile (DataFile):
 
         # Cache variables
         self.__metadata_cache = None
+        self.__preview_cache = None
 
-    def get_preview_image(self):
+    def get_preview_image(self, save_dir=None, regenerate=False):
         """
+        Generate and return a preview GIF animation for this video file. File
+        saved is named according to the format: %s.preview.gif, where the '%s'
+        is the MD5 hex sum of the video that the preview is of.
+
+        If a preview has already been generated and still exists on the file
+        system, we simply return the cached path to that file, if regenerate is
+        False.
+
+        :param save_dir: Optional directory to save generated GIF image file to.
+            By default we save it in this video file's working directory.
+        :type save_dir: str
+
+        :param regenerate: Force regeneration of the preview GIF image file.
+            This also rewrites the cached location so the regenerated file is
+            new returned.
+        :type regenerate: bool
+
         :return: The path to a preview image for this data file.
         :rtype: str
+
         """
-        # TODO: Generate a GIF sequence within some simple interval
-        # For now, just returning a frame 20% into the video
-        md = self.metadata()
-        perc20 = int(md.duration * md.fps * 0.2)
-        self.log.debug("Extracting preview frame %d", perc20)
-        return self.frame_map(frames=[perc20])[perc20]
+        if (self.__preview_cache is None
+                or not osp.isfile(self.__preview_cache)
+                or regenerate):
+            # For now, just returning a frame 20% into the video
+            md = self.metadata()
+            offset = md.duration * md.fps * 0.2
+            duration = md.duration * md.fps * 0.6  # for 20% -> 80% coverage
+            interval = 0.25  # ~4fps gif
+            fm = self.frame_map(offset, interval, duration)
+            fname = "%s.preview.gif" % self.md5sum
+            if save_dir:
+                safe_create_dir(save_dir)
+                target_fp = osp.join(save_dir, fname)
+            else:
+                target_fp = osp.join(self.work_directory, fname)
+            images = []
+            for frm_num in sorted(fm.keys()):
+                images.append(PIL.Image.open(fm[frm_num]))
+            writeGif(target_fp, images, duration=interval, repeat=True)
+            self.__preview_cache = target_fp
+
+        return self.__preview_cache
 
     @property
     def work_directory(self):
@@ -157,10 +193,10 @@ class VideoFile (DataFile):
         :type second_offset: float
 
         :param second_interval: Number of seconds between extracted frames
-        :type second_offset: float
+        :type second_interval: float
 
         :param max_duration: Maximum number of seconds worth of extracted frames
-        :type second_offset: float
+        :type max_duration: float
 
         :param frames: Specific exact frames within the video to extract.
             Providing explicit frames causes other parameters to be ignored and

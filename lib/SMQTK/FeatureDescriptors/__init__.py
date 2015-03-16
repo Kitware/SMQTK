@@ -33,7 +33,7 @@ def _async_feature_generator_helper((uid, data, descriptor)):
     :rtype: (int, numpy.ndarray)
 
     """
-    log = logging.getLogger("_svm_model_feature_generator")
+    log = logging.getLogger("_async_feature_generator_helper")
     try:
         log.debug("Generating feature for UID[%d] -> %s", uid, data.filepath)
         feat = descriptor.compute_feature(data)

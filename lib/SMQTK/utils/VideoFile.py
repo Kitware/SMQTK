@@ -8,15 +8,15 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import abc
+import imageio
 import os
 import os.path as osp
-import PIL.Image
 import re
 import shutil
 import subprocess
 import time
 
-from SMQTK.utils import DataFile, safe_create_dir, writeGif
+from SMQTK.utils import DataFile, safe_create_dir
 
 
 class VideoMetadata (object):
@@ -56,9 +56,9 @@ class VideoFile (DataFile):
         saved is named according to the format: %s.preview.gif, where the '%s'
         is the MD5 hex sum of the video that the preview is of.
 
-        If a preview has already been generated and still exists on the file
-        system, we simply return the cached path to that file, if regenerate is
-        False.
+        If a preview has already been generated somewhere and still exists on
+        the file system, we simply return the cached path to that file, if
+        regenerate is False.
 
         :param save_dir: Optional directory to save generated GIF image file to.
             By default we save it in this video file's working directory.
@@ -76,22 +76,25 @@ class VideoFile (DataFile):
         if (self.__preview_cache is None
                 or not osp.isfile(self.__preview_cache)
                 or regenerate):
-            # For now, just returning a frame 20% into the video
+            self.log.debug("Populating preview GIF cache")
             md = self.metadata()
-            offset = md.duration * md.fps * 0.2
-            duration = md.duration * md.fps * 0.6  # for 20% -> 80% coverage
-            interval = 0.25  # ~4fps gif
-            fm = self.frame_map(offset, interval, duration)
+            offset = md.duration * 0.2
+            interval = 0.5  # ~2fps gif
+            fm = self.frame_map(offset, interval, 10)
             fname = "%s.preview.gif" % self.md5sum
             if save_dir:
                 safe_create_dir(save_dir)
                 target_fp = osp.join(save_dir, fname)
             else:
                 target_fp = osp.join(self.work_directory, fname)
-            images = []
-            for frm_num in sorted(fm.keys()):
-                images.append(PIL.Image.open(fm[frm_num]))
-            writeGif(target_fp, images, duration=interval, repeat=True)
+            # if the file already exists, we don't need to generate it again
+            if not osp.isfile(target_fp):
+                self.log.debug("[%s] Generating preview GIF for video", self)
+                img_arrays = []
+                for frm_num in sorted(fm.keys()):
+                    img_arrays.append(imageio.imread(fm[frm_num]))
+                imageio.mimwrite(target_fp, img_arrays, duration=interval)
+                self.log.debug("[%s] Finished generating GIF", self)
             self.__preview_cache = target_fp
 
         return self.__preview_cache
@@ -214,8 +217,12 @@ class VideoFile (DataFile):
         num_frames = int(video_md.fps * video_md.duration)
         extract_indices = set()
         if frames:
+            self.log.debug("Only extracting specified frames: %s", frames)
             extract_indices.update(frames)
         else:
+            self.log.debug("Determining frames needed for specification: "
+                           "offset: %f, interval: %f, max_duration: %f",
+                           second_offset, second_interval, max_duration)
             extract_indices.update(
                 self._get_frames_for_interval(num_frames, video_md.fps,
                                               second_offset, second_interval,
@@ -223,7 +230,7 @@ class VideoFile (DataFile):
             )
 
         if not extract_indices:
-            return []
+            return {}
 
         # frame/filename map that will be returned based on requested frames
         frame_map = dict(
@@ -307,7 +314,7 @@ class VideoFile (DataFile):
                 raise
 
     def _get_frames_for_interval(self, num_frames, fps, offset, interval,
-                                 max_duration=0):
+                                 max_duration=0.0):
         """
         Return a tuple of frame numbers from the given number of frames
         specification, taking into account the give time offset, time interval
@@ -318,52 +325,50 @@ class VideoFile (DataFile):
         speeds of over 1000Hz and rounding frame frame times to the neared
         thousandth of a second to mitigate floating point error.
 
+        :param num_frames: Number of frame numbers to consider. This should be
+            the total number of frames in the video.
+        :param fps: The FPS rating of the video.
+        :param offset: The number of seconds into the video to start gathering
+            frames.
+        :param interval: The minimum second interval between frames taken.
+        :param max_duration: Maximum second duration of collected frames
+
         :rtype: list of int
 
         """
-        frames_taken = []
-
-        # run through frames, counting the seconds per frame. when time interval
-        # elapses, take the last frame encountered.
-        cur_time = 0.0
-        frame_time_interval = 1.0 / fps
-        next_threshold = None
-
+        # Interpolating based i interval
         # self.log.debug("Starting frame gathering...")
         # self.log.debug("-- num_frames: %s", num_frames)
         # self.log.debug("-- fps: %s", fps)
         # self.log.debug("-- offset: %s", offset)
         # self.log.debug("-- interval: %s", interval)
         # self.log.debug("-- max duration: %s", max_duration)
-        for frame in xrange(num_frames):
-            # self.log.debug("Frame >> %d", frame)
-            # self.log.debug("... Cur frame time: %.16f -> %.3f",
-            #                cur_time, round(cur_time, 3))
+        fps = float(fps)
+        first_frame = offset * fps
+        self.log.debug("First Frame: %f", first_frame)
+        if max_duration:
+            cutoff_frame = (max_duration + offset) * fps
+        else:
+            cutoff_frame = float(num_frames)
+        self.log.debug("Cutoff frame: %f", cutoff_frame)
+        if interval:
+            incr = interval * fps
+        else:
+            incr = 1
+        self.log.debug("Frame increment: %f", incr)
 
-            # If we has surpassed our given maximum duration (taking the offset
-            # into account), kick out
-            if max_duration and (cur_time - offset) >= max_duration:
-                break
-
-            if round(cur_time, 3) >= round(offset, 3):
-                if frames_taken:
-                    if round(cur_time, 3) >= round(next_threshold, 3):
-                        # self.log.debug("... T exceeded, gathering frame")
-                        # take frame, set next threshold
-                        frames_taken.append(frame)
-                        next_threshold += interval
-                else:
-                    # self.log.debug("... First frame")
-                    # first valid frame seen, this is our starting frame
-                    frames_taken.append(frame)
-                    next_threshold = cur_time + interval
-
-                # self.log.debug("... Next T: %.16f -> %.3f",
-                #                next_threshold, round(next_threshold, 3))
-
-            cur_time += frame_time_interval
-
-        return frames_taken
+        # Interpolate
+        frms = [first_frame]
+        next_frm = first_frame + incr
+        while next_frm < cutoff_frame:
+            self.log.debug("-- adding frame: %f", next_frm)
+            frms.append(next_frm)
+            next_frm += incr
+        # in-place cast all elements to int
+        self.log.debug("int casting frames...")
+        for i in xrange(len(frms)):
+            frms[i] = int(frms[i])
+        return frms
 
     def _extract_frames(self, frame_list, output_ext):
         """

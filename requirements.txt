@@ -1,6 +1,7 @@
 flask
 flask-login
 gevent
+imageio
 PIL
 pymongo
 sphinx

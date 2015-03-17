@@ -9,7 +9,7 @@ import os.path as osp
 
 import smqtk_config
 
-from SMQTK.utils import DataIngest
+from SMQTK.utils import DataIngest, VideoIngest
 
 
 def main():
@@ -22,9 +22,9 @@ def main():
                       help="Ingest data type. Currently supports 'image' or "
                            "'video'.")
     parser.add_option('-d',
-                      help="Custom directory to base the ingest in. Otherwise "
-                           "we use the system default based on the ingest "
-                           "type.")
+                      help="Custom directory to base the ingest data in. "
+                           "Otherwise we use the system default based on the "
+                           "ingest type.")
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Add debug messaged to output logging.')
     opts, args = parser.parse_args()
@@ -35,6 +35,12 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if opts.type not in ('image', 'video'):
+        raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
+    if opts.type == 'image':
+        ingest_t = DataIngest
+    elif opts.type == 'video':
+        ingest_t = VideoIngest
+    else:
         raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
     t = opts.type
     t = t[0].upper() + t[1:]
@@ -47,7 +53,7 @@ def main():
     work_dir = osp.join(smqtk_config.WORK_DIR,
                         smqtk_config.SYSTEM_CONFIG['Ingest'][t])
 
-    ingest = DataIngest(target_dir, work_dir)
+    ingest = ingest_t(target_dir, work_dir)
     print "Script arguments:\n%s" % args
     for g in args:
         if osp.isfile(g):

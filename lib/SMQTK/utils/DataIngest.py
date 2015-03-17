@@ -65,6 +65,7 @@ class DataIngest (object):
         self._eid_lock = multiprocessing.RLock()
 
         # Map of ID-to-file
+        self._map_lock = multiprocessing.RLock()
         #: :type: dict of (int, DataFile)
         self._id_data_map = {}
         # Reverse mapping for reverse fetch
@@ -77,6 +78,18 @@ class DataIngest (object):
     def __len__(self):
         return len(self._id_data_map)
 
+    def _register_data_item(self, data):
+        """ Internal add-data-to-maps function
+        :param data: DataFile instance to add.
+        :type data: DataFile
+        """
+        # If we allowed multiple of the same MD5...
+        # if md5 not in self._md5_id_map:
+        #     self._md5_id_map[md5] = set()
+        # self._md5_id_map[md5].add(uid)
+        self._id_data_map[data.uid] = data
+        self._md5_id_map[data.md5sum] = data.uid
+
     def _load_existing_ingest(self):
         """
         Update state given existing ingest at the known data directory
@@ -87,12 +100,8 @@ class DataIngest (object):
             if m:
                 uid, md5, ext = m.groups()
                 uid = int(uid)
-                self._id_data_map[uid] = self.DATA_FILE_TYPE(filepath, uid=uid)
-                # If we allowed multiple of the same MD5...
-                # if md5 not in self._md5_id_map:
-                #     self._md5_id_map[md5] = set()
-                # self._md5_id_map[md5].add(uid)
-                self._md5_id_map[md5] = uid
+                df = self.DATA_FILE_TYPE(filepath, uid=uid)
+                self._register_data_item(df)
                 if uid > max_uid:
                     max_uid = uid
                 self._next_id = max_uid + 1
@@ -224,13 +233,7 @@ class DataIngest (object):
         target_data._uid = cur_id
         assert md5 == target_data.md5sum, \
             "Origin and target data files had divergent MD5 sums somehow!"
-
-        self._id_data_map[cur_id] = target_data
-
-        # if md5 not in self._md5_id_map:
-        #     self._md5_id_map[md5] = set()
-        # self._md5_id_map[md5].add(cur_id)
-        self._md5_id_map[md5] = cur_id
+        self._register_data_item(target_data)
 
         return target_data
 
@@ -347,6 +350,3 @@ class DataIngest (object):
 
 # TODO: Could probably add a ``compress`` function that creates a condensed
 #       tar.gz of the ingest or something.
-
-# TODO: Something to check for same-file ingest. Build map of MD5-to-idList,
-#       check for associations lists > 1 in length.

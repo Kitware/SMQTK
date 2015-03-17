@@ -40,31 +40,18 @@ class VideoIngest (DataIngest):
             safe_create_dir(d)
         return d
 
-    def add_data_file(self, origin_filepath):
+    def _register_data_item(self, data):
+        """ Internal add-data-to-maps function
+        :param data: DataFile instance to add.
+        :type data: VideoFile
         """
-        Add the given data file to this ingest
+        super(VideoIngest, self)._register_data_item(data)
 
-        The original file is copied and further maintenance of the original
-        file is left to the user.
-
-        If the given file exists in the ingest already, we do not add a second
-        copy, instead returning the DataFile instance of the existing. Check max
-        UID before and after this call to check for new ingest file or not.
-
-        As this is a video ingest, we also compute the preview image GIF file
-        upon ingest.
-
-        :param origin_filepath: Path to a file that should be added to this
-            ingest.
-        :type origin_filepath: str
-
-        :return: The DataFile instance that was just ingested
-        :rtype: VideoFile
-
-        """
-        vf = super(VideoIngest, self).add_data_file(origin_filepath)
-
-        # Generate preview by calling preview getter with regenerate flag,
-        # forcing generation to the given cache location in the data directory.
+        # Generate preview GIF if needed by calling preview getter the
+        # data-based location
+        self.log.debug("Generating preview GIF for video file...")
         vf_preview_dir = osp.join(self.previews_directory,
-                                  *vf.split_md5sum(8)[:-1])
+                                  *data.split_md5sum(8)[:-1])
+        if not osp.isfile(data.get_preview_image(vf_preview_dir)):
+            raise RuntimeError("Failed to generate GIF preview for video file "
+                               "%s" % data)

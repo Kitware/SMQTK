@@ -94,7 +94,7 @@ class SVMClassifier_HIK (SMQTKClassifier):
                                "!!! Warning !!! Warning !!! Warning !!!"
                                % self.data_dir)
 
-        self.log.debug("Starting model generation")
+        self.log.info("Starting model generation")
 
         # Initialize data stores
         num_features = len(feature_map)
@@ -109,15 +109,15 @@ class SVMClassifier_HIK (SMQTKClassifier):
         kernel_mat = numpy.matrix(numpy.empty((num_features, num_features),
                                               dtype=float))
 
-        self.log.debug("Building idx2uid map and feature matrix")
+        self.log.info("Building idx2uid map and feature matrix")
         for idx, uid in enumerate(sorted_uids):
             idx2uid_map[idx] = uid
-            feature_mat[idx] = feature_map[idx]
+            feature_mat[idx] = feature_map[uid]
 
         # Flag a percentage of leading data in ingest as background data (auto-
         # negative exemplars). Leading % more deterministic than random for
         # tuning/debugging.
-        self.log.debug("Building idx2bg_flags mapping")
+        self.log.info("Building idx2bg_flags mapping")
         pivot = int(num_features * self.BACKGROUND_RATIO)
         for i in xrange(num_features):
             if i < pivot:
@@ -127,23 +127,24 @@ class SVMClassifier_HIK (SMQTKClassifier):
                 idx2bg_map[i] = False
 
         # Constructing histogram intersection kernel
-        self.log.debug("Computing Histogram Intersection kernel matrix")
+        self.log.info("Computing Histogram Intersection kernel matrix")
         pool = multiprocessing.Pool(processes=parallel)
-        self.log.debug("Entering jobs...")
+        self.log.info("\tEntering jobs...")
         results = {}
         for i, i_feat in enumerate(feature_mat):
             results[i] = {}
             for j, j_feat in enumerate(feature_mat):
                 results[i][j] = pool.apply_async(_svm_model_hik_helper,
                                                  (i, j, i_feat, j_feat))
-        self.log.debug("Collecting results...")
+        self.log.info("\tCollecting results...")
         for i in results.keys():
+            self.log.info("\t\tRow: %d/%d", i, len(results)-1)
             for j in results[i].keys():
                 kernel_mat[i, j] = results[i][j].get()
         pool.close()
         pool.join()
 
-        self.log.debug("Saving data files")
+        self.log.info("Saving data files")
         numpy.save(self._ids_filepath, idx2uid_map)
         numpy.save(self._bg_flags_filepath, idx2bg_map)
         numpy.save(self._feature_data_filepath, feature_mat)
@@ -242,6 +243,17 @@ class SVMClassifier_HIK (SMQTKClassifier):
             raise RuntimeError("No model for this classifier yet! Expected to "
                                "find files at: %s" % self.data_dir)
 
+        # # Update BG flags in feature mem structure
+        # self.log.debug("Update FeatMem background flags")
+        # for pid in pos_ids:
+        #     self._feat_mem.update(pid, is_background=False)
+        # for nid in neg_ids:
+        #     self._feat_mem.update(nid, is_background=True)
+
+        # TODO: EXPERIMENT
+        #   Add background N uids that are the N uids farthest away from the
+        #   given positive uids. Use a set so duplicates are eaten.
+
         self.log.debug("Extracting symmetric submatrix from DK")
         idx2id_map, idx2isbg_map, m = \
             self._feat_mem.get_distance_kernel().symmetric_submatrix(*pos_ids)
@@ -283,11 +295,6 @@ class SVMClassifier_HIK (SMQTKClassifier):
         self.log.debug("Ranking model IDs")
         output = iqr_model_test(svm_model, kernel_test.A, idx2id_col)
         probability_map = dict(zip(output['clipids'], output['probs']))
-
-        # Force adjudicated negatives to be probability 0.0 since we don't
-        # want them possibly polluting the further adjudication views.
-        for uid in neg_ids:
-            probability_map[uid] = 0.0
 
         return probability_map
 

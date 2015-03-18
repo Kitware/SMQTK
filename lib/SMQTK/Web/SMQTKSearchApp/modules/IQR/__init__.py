@@ -125,13 +125,34 @@ class IQRSearch (flask.Blueprint):
             Get information about the current IRQ session
             """
             with self.get_current_iqr_session() as iqrs:
+                # noinspection PyProtectedMember
                 return flask.jsonify({
                     "uuid": iqrs.uuid,
                     "positive_uids": tuple(iqrs.positive_ids),
                     "negative_uids": tuple(iqrs.negative_ids),
                     "extension_ingest_contents":
-                        dict((id, str(df))
-                             for id, df in iqrs.extension_ingest.iteritems())
+                        dict((uid, str(df))
+                             for uid, df in iqrs.extension_ingest.iteritems()),
+                    "FeatureMemory": {
+                        "BG IDs": tuple(iqrs.classifier._feat_mem._bg_clip_ids)
+                    }
+                })
+
+        @self.route("/check_current_iqr_session")
+        @self._parent_app.module_login.login_required
+        def check_current_iqr_session():
+            """
+            Check that the current IQR session exists and is initialized.
+
+            :rtype: {
+                    success: bool
+                }
+            """
+            # Getting the current IQR session ensures that one has been
+            # constructed for the current session.
+            with self.get_current_iqr_session():
+                return flask.jsonify({
+                    "success": True
                 })
 
         @self.route('/iqr_ingest_file', methods=['POST'])
@@ -142,6 +163,8 @@ class IQRSearch (flask.Blueprint):
             uploader.
 
             :return: status message
+            :rtype: str
+
             """
             iqr_sess = self.get_current_iqr_session()
             # TODO: Add status dict with a "GET" method branch for getting that
@@ -279,7 +302,7 @@ class IQRSearch (flask.Blueprint):
                 "success": True,
                 "message": None,
                 "is_explicit": None,
-                "shape": None,
+                "shape": None,  # (width, height)
                 "data": None,
                 "ext": None,
             }

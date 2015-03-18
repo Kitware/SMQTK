@@ -11,7 +11,7 @@ from SMQTK.FeatureDescriptors import get_descriptors
 from SMQTK.Classifiers import get_classifiers
 
 from SMQTK.utils.MongoSessions import MongoSessionInterface
-from SMQTK.utils import DatabaseInfo, VideoIngest
+from SMQTK.utils import DatabaseInfo, DataIngest, VideoIngest
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,8 +81,8 @@ class SMQTKSearchApp (flask.Flask):
         self.db_info = DatabaseInfo(h, p, n)
 
         # Use mongo for session storage.
-        # -> This allows session modification during AJAX routines (default
-        #    Flask sessions do not)
+        # -> This allows session modification during Flask methods called from
+        #    AJAX routines (default Flask sessions do not)
         self.session_interface = MongoSessionInterface(self.db_info.host,
                                                        self.db_info.port,
                                                        self.db_info.name)
@@ -101,7 +101,7 @@ class SMQTKSearchApp (flask.Flask):
         #
 
         # Login module
-        self.log.debug("Importing Login module")
+        self.log.info("Initializing Login Blueprint")
         from SMQTK.Web.common_flask_blueprints.login import LoginMod
         self.module_login = LoginMod('login', self)
         self.register_blueprint(self.module_login)
@@ -112,17 +112,32 @@ class SMQTKSearchApp (flask.Flask):
         #       and classifier types. In the future this should either be moved
         #       to something that can be chosen by the user or a
         #       multi-feature/classifier fusion system.
+        self.log.info("Loading Image Ingest")
+        ingest_image = \
+            DataIngest(os.path.join(self.config['DATA_DIR'],
+                                    self.config['SYSTEM_CONFIG']['Ingest']['Image']),
+                       os.path.join(self.config['WORK_DIR'],
+                                    self.config['SYSTEM_CONFIG']['Ingest']['Image']))
+        self.log.info("Loading Video Ingest")
         ingest_video = \
             VideoIngest(os.path.join(self.config['DATA_DIR'],
                                      self.config['SYSTEM_CONFIG']['Ingest']['Video']),
                         os.path.join(self.config['WORK_DIR'],
-                                     'Ingest', 'Video'))
+                                     self.config['SYSTEM_CONFIG']['Ingest']['Video']))
 
+        self.log.info("Initializing IQR Blueprint -- Video")
         self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
                                         'ColorDescriptor_CSIFT_Video',
                                         'SVMClassifier_HIK',
                                         url_prefix="/vsearch")
         self.register_blueprint(self.module_vsearch)
+
+        self.log.info("Initializing IQR Blueprint -- Image")
+        self.module_isearch = IQRSearch('ImageSearch', self, ingest_image,
+                                        'ColorDescriptor_CSIFT_Image',
+                                        'SVMClassifier_HIK',
+                                        url_prefix="/isearch")
+        self.register_blueprint(self.module_isearch)
 
         #
         # Basic routing

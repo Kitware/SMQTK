@@ -26,38 +26,52 @@
     <!--suppress JSCheckFunctionSignatures -->
     <script>
     $(document).ready(function() {
-        // TODO: Check that session IQR is initialized before page construction.
+        var a = new ActivityBar($("#initialLoadProgress"),
+                                "Initializing IQR session"),
+            fz = null,
+            iqr_view = null;
+        a.on();
 
-        var fz = new FlowUploadZone($("#FlowUploadZone"), "{{ uploader_post_url }}");
+        $.ajax({
+            url: "check_current_iqr_session",
+            success: function( data ) {
+                if( data.success ) {
+                    a.remove();
 
-        // Add uploaded to current session online ingest
-        fz.onFileSuccess(function(file) {
-            var fname = file.name;
-            var fid = file.uniqueIdentifier;
+                    fz = new FlowUploadZone($("#FlowUploadZone"),
+                                            "{{ uploader_post_url }}");
 
-            var message_prefix = "Ingesting file ["+fname+"]: ";
-            var bar = new ActivityBar($("#ingest_progress"),
-                                      message_prefix+"Ingesting...");
-            bar.on();
+                    // Add uploaded to current session online ingest
+                    fz.onFileSuccess(function(file) {
+                        var fname = file.name;
+                        var fid = file.uniqueIdentifier;
 
-            $.ajax({
-                url: "iqr_ingest_file",
-                type: 'POST',
-                data: {
-                    fid: fid
-                },
-                success: function(data) {
-                    bar.on(message_prefix+data);
-                    bar.stop_active();
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    alert_error("Error during FID upload POST: " + textStatus);
+                        var message_prefix = "Ingesting file ["+fname+"]: ";
+                        var bar = new ActivityBar($("#ingest_progress"),
+                                                  message_prefix+"Ingesting...");
+                        bar.on();
+
+                        $.ajax({
+                            url: "iqr_ingest_file",
+                            type: 'POST',
+                            data: {
+                                fid: fid
+                            },
+                            success: function(data) {
+                                bar.on(message_prefix+data);
+                                bar.stop_active();
+                            },
+                            error: function(jqXHR, textStatus, errorThrown) {
+                                alert_error("Error during FID upload POST: "
+                                            + textStatus);
+                            }
+                        });
+                    });
+
+                    iqr_view = new IqrView($("#iqr_view_container"));
                 }
-            });
+            }
         });
-
-        var iqr_view = new IqrView($("#iqr_view_container"));
-
     }); // Document.ready ends
 
     </script>
@@ -65,8 +79,8 @@
 
 {% block body_content %}
     <div class="container-fluid">
-        <h1>SMQTK Video Search</h1>
-
+        <h1>SMQTK {{ module_name }}</h1>
+        <div id="initialLoadProgress"></div>
         <div id="FlowUploadZone"></div>
 
         <hr>

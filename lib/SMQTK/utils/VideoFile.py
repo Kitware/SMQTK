@@ -97,6 +97,8 @@ class VideoFile (DataFile):
                     img_arrays.append(imageio.imread(fm[frm_num]))
                 imageio.mimwrite(target_fp, img_arrays, duration=interval)
                 self.log.debug("[%s] Finished generating GIF", self)
+            else:
+                self.log.debug("[%s] Already exists", self)
             self.__preview_cache = target_fp
 
         return self.__preview_cache

@@ -84,6 +84,17 @@ class SMQTKClassifier (object):
         return self._work_dir
 
     @abc.abstractmethod
+    def has_model(self):
+        """
+        True of this classifier has a valid initialized model for extension and
+        ranking (or doesn't need one to perform those tasks).
+
+        :rtype: bool
+
+        """
+        pass
+
+    @abc.abstractmethod
     def generate_model(self, feature_map, parallel=None):
         """
         Generate this classifiers data-model using the given feature descriptor

@@ -188,6 +188,8 @@ class IQRSearch (flask.Blueprint):
                     os.remove(upload_filepath)
                     new_max_uid = iqr_sess.extension_ingest.max_uid()
                     if old_max_uid == new_max_uid:
+                        # re-mark as a positive
+                        iqr_sess.adjudicate((upload_data.uid,))
                         return "Already Ingested"
 
                 # Compute feature for data -- non-modifying
@@ -200,6 +202,9 @@ class IQRSearch (flask.Blueprint):
                     self.log.debug("[%s::%s] Extending classifier model with "
                                    "feature", iqr_sess.uuid, fid)
                     iqr_sess.classifier.extend_model({upload_data.uid: feat})
+
+                    # of course, add the new data element as a positive
+                    iqr_sess.adjudicate((upload_data.uid,))
 
                 return "Finished Ingestion"
 
@@ -381,7 +386,7 @@ class IQRSearch (flask.Blueprint):
                 except Exception, ex:
                     return flask.jsonify({
                         "success": False,
-                        "message": str(ex)
+                        "message": "ERROR: " + str(ex)
                     })
 
         @self.route("/iqr_ordered_results", methods=['GET'])
@@ -446,6 +451,7 @@ class IQRSearch (flask.Blueprint):
             if not self._iqr_controller.has_session_uuid(sid):
                 sid_work_dir = osp.join(self._parent_app.config['WORK_DIR'],
                                         "IQR", self.name, sid)
+                #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
                 descriptor = get_descriptors()[self._fd_type_str](
                     osp.join(
                         self._parent_app.config['DATA_DIR'],
@@ -455,6 +461,7 @@ class IQRSearch (flask.Blueprint):
                     ),
                     osp.join(sid_work_dir, 'fd')
                 )
+                #: :type: SMQTK.Classifiers.SMQTKClassifier
                 classifier = get_classifiers()[self._cl_type_str](
                     osp.join(
                         self._parent_app.config['DATA_DIR'],
@@ -472,5 +479,9 @@ class IQRSearch (flask.Blueprint):
                 iqr_sess = IqrSession(sid_work_dir, descriptor, classifier,
                                       online_ingest, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
+                # If there are things already in our extension ingest, extend
+                # the base classifier
+                feat_map = descriptor.compute_feature_async(*online_ingest.data_list())
+                classifier.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

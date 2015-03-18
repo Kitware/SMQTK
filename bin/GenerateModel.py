@@ -8,13 +8,38 @@ Results are
 
 import json
 import logging
+import multiprocessing.pool
 import os.path as osp
 
 import smqtk_config
 
 from SMQTK.Classifiers import get_classifiers
-from SMQTK.FeatureDescriptors import get_descriptors
+from SMQTK.FeatureDescriptors import get_descriptors, FeatureDescriptor
 from SMQTK.utils import DataIngest, VideoIngest
+
+
+class NonDaemonicProcess (multiprocessing.Process):
+    """ Same as normal processes, but force daemon flag to False """
+
+    # noinspection PyMethodOverriding
+    @multiprocessing.Process.daemon.setter
+    def daemon(self, daemonic):
+        """
+        Set whether process is a daemon
+        """
+        assert self._popen is None, 'process has already started'
+        # self._daemonic = daemonic
+
+
+# noinspection PyAbstractClass
+class NonDaemonicPool (multiprocessing.pool.Pool):
+    """ Multiprocessing pool that uses Non-daemonic processes.
+
+    This allows nested subprocesses.
+
+    """
+
+    Process = NonDaemonicProcess
 
 
 def main():
@@ -91,17 +116,19 @@ def main():
     else:
         sc = smqtk_config.SYSTEM_CONFIG
 
-    if opts.type == 'image':
+    if opts.type.lower() == 'image':
         ingest_t = DataIngest
-    elif opts.type == 'video':
+    elif opts.type.lower() == 'video':
         ingest_t = VideoIngest
     else:
         raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    t = opts.type
+    t = opts.type.lower()
     t = t[0].upper() + t[1:]
 
+    #: :type: DataIngest or VideoIngest
     ingest = ingest_t(osp.join(data_dir, sc['Ingest'][t]),
                       osp.join(work_dir, sc['Ingest'][t]))
+    #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
     descriptor = descriptor_t(osp.join(data_dir,
                                        sc['FeatureDescriptors']
                                          [opts.feature_descriptor]
@@ -110,6 +137,7 @@ def main():
                                        sc['FeatureDescriptors']
                                          [opts.feature_descriptor]
                                          ['data_directory']))
+    #: :type: SMQTK.Classifiers.SMQTKClassifier
     classifier = classifier_t(osp.join(data_dir,
                                        sc["Classifiers"]
                                          [opts.classifier]
@@ -121,7 +149,17 @@ def main():
                                          [opts.feature_descriptor]
                                          ['data_directory']))
 
-    fmap = descriptor.compute_feature_async(*(df for _, df in ingest.iteritems()))
+    # In order to attempt avoiding spawning far too many threads, requesting
+    # that the descriptors execute serially, while executing many at the same
+    # time, as its not guaranteed that the descriptor is doing anything in
+    # parallel.
+    FeatureDescriptor.PARALLEL = 1
+    # Using NonDaemonicPool because FeatureDescriptors that might to parallel
+    # processing might use multiprocessing.Pool instances, too. Pools don't
+    # usually allow daemonic processes, so this custom top-level pool allows
+    # worker processes to spawn pools themselves.
+    fmap = descriptor.compute_feature_async(*(df for _, df in ingest.iteritems()),
+                                            pool_type=NonDaemonicPool)
     classifier.generate_model(fmap)
 
 

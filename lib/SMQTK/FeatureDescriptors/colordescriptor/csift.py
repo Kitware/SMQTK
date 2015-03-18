@@ -7,21 +7,90 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import errno
-import math
+import abc
+import logging
+import multiprocessing.pool
 import numpy
 import os
 import os.path as osp
-import shutil
+import PIL.Image
 import subprocess
+import tempfile
 
 from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.utils import safe_create_dir
 
 from . import DescriptorIO
 from . import encode_FLANN
 
 
-class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
+def _async_cd_process_helper(cd_util, detector_type, work_directory,
+                             image_filepath, ds_spacing):
+        """
+        Worker method for generating descriptor matrix via the colorDescriptor
+        tool.
+
+        :param cd_util: colorDescriptor utility executable to use (path).
+        :type cd_util: str
+
+        :param detector_type: ColorDescriptor detector type to use
+        :type detector_type: str
+
+        :param work_directory: Work directory to place temporary files
+        :type work_directory: str
+
+        :param image_filepath: Image file to generate a descriptor matrix for
+        :type image_filepath: str
+
+        :return: Descriptor matrix
+        :rtype: numpy.matrix
+
+        """
+        log = logging.getLogger("ColorDescriptor_Base._async_cd_process_helper")
+        log.debug("Async work{ cd_util: %s, detector_type: %s, "
+                  "work_directory: %s, image_filepath: %s, ds_spacing: %s }",
+                  cd_util, detector_type, work_directory, image_filepath,
+                  ds_spacing)
+
+        tmp_fd, tmp_file = tempfile.mkstemp(dir=work_directory)
+
+        def tmp_clean():
+            os.remove(tmp_file)
+            os.close(tmp_fd)
+
+        cmd = [cd_util, image_filepath,
+               '--detector', 'densesampling',
+               '--ds_spacing', str(ds_spacing),
+               '--descriptor', detector_type,
+               '--output', tmp_file]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        if p.returncode != 0:
+            tmp_clean()
+            raise RuntimeError("Failed to fun colorDescriptor executable for "
+                               "file \"%(file)s\" (command: %(cmd)s)\n"
+                               "Output:\n%(out)s\n"
+                               "Error :\n%(err)s"
+                               % {"file": image_filepath,
+                                  "cmd": cmd,
+                                  "out": out,
+                                  "err": err})
+
+        # Read in descriptor output from file and convert to matrix form
+        info, descriptors = DescriptorIO.readDescriptors(tmp_file)
+        tmp_clean()
+
+        # number of descriptor elements in this image
+        n = info.shape[0]
+        return numpy.hstack((
+            numpy.zeros((n, 1)),
+            info[:, 0:2],
+            descriptors
+        ))
+
+
+class ColorDescriptor_Base (FeatureDescriptor):
     """
     CSIFT colordescriptor feature descriptor
     """
@@ -29,254 +98,287 @@ class ColorDescriptor_CSIFT_Video (FeatureDescriptor):
     # colordescriptor executable that should be on the PATH
     PROC_COLORDESCRIPTOR = 'colorDescriptor'
 
-    def __init__(self, data_directory, work_directory):
-        super(ColorDescriptor_CSIFT_Video, self).__init__(data_directory,
-                                                          work_directory)
+    # Class detector type string to pass to colorDescriptor exe
+    DETECTOR_TYPE = None  # e.g. "csift" or "transformedcolorhistogram"
 
-        # Required files for FLANN quantization
-        self._flann_codebook = osp.join(osp.dirname(__file__),
-                                        "csift_codebook_med12.txt")
-        self._flann_file = osp.join(osp.dirname(__file__),
-                                    "csift.flann")
+    @abc.abstractmethod
+    def _get_flan_file_components(self):
+        """
+        :return: Paths to FLANN component files in (codebook, flann-file) format
+        :rtype: (str, str)
+        """
+        pass
 
-        # Standard filenames for stage components
-        self._combined_filename = "csift.combined.txt"
-        self._quantized_filename = "csift.quantized.txt"
-        self._sp_hist_filename = "csift.sp_hist.txt"
+    @abc.abstractmethod
+    def _get_data_width_height(self, data):
+        """
+        :return: Get the pixel width and height of the given data element.
+        :rtype: (int, int)
+        """
+        pass
+
+    @abc.abstractmethod
+    def _generate_descriptor_matrix(self, data, ds_spacing):
+        """
+        Generate the descriptor matrix for the given data file.
+
+        :param data: Data file to base descriptor generation on
+        :type data: DataFile
+
+        :return: Descriptor matrix
+        :rtype: numpy.matrix
+
+        """
+        pass
 
     def compute_feature(self, data):
         """
         Compute CSIFT colordescriptor feature given a VideoFile instance.
 
         :param data: Video file wrapper
-        :type data: SMQTK.utils.VideoFile.VideoFile
+        :type data:
+            SMQTK.utils.DataFile.DataFile or SMQTK.utils.VideoFile.VideoFile
 
         :return: Video feature vector
         :rtype: numpy.ndarray
 
         """
+        # Check for checkpoint file, if exists, just return the loaded feature
+        # vector
+        check_point_file = osp.join(osp.join(self.work_directory,
+                                             *data.split_md5sum(8)[:-1]),
+                                    "%s.feature.npy" % data.md5sum)
+        if osp.isfile(check_point_file):
+            return numpy.load(check_point_file)
+
         self.log.debug("Processing video: %s", data.filepath)
 
-        # Creating subdirectory to put video-specific work files in
-        video_work_dir = osp.join(self.work_directory,
-                                  *data.split_md5sum(8))
-        if not osp.isdir(video_work_dir):
-            os.makedirs(video_work_dir)
-
         ###
-        # Create combined feature file from per-frame features
-        # Only extracting every 2 seconds to get sparse representation.
-        # Skipping if file already present.
-        #
-        work_combined_features = osp.join(video_work_dir,
-                                          self._combined_filename)
-        if not osp.isfile(work_combined_features):
-            # TODO: This might be tuned further to find an optimal amount of
-            #       frames to use. This is a carry over from previous projects.
-            # Start 20% into the video, take next 20 seconds
-            frame_map = data.frame_map(data.metadata().duration * 0.2, 2, 10)
-            self._generate_combined_features(data, frame_map, video_work_dir,
-                                             work_combined_features)
-
-        ###
-        # use FLANN to encode/quantize combined features
-        #
-        csift_feature = self._encode_FLANN(work_combined_features,
-                                           video_work_dir)
-
-        return csift_feature
-
-    def _generate_combined_features(self, video_data, frame_map, video_work_dir,
-                                    combined_features_output):
-        """
-        Generate CSIFT combined features to file given a set of video frames.
-
-        This method generates N intermediary per-frame output files from the
-        colordescriptor executable in order to combine them into the final
-        output file. Intermediate per-frame files are removed once the combined
-        file is successfully generated.
-
-        :param video_data: Video data object we're processing over
-        :type video_data: SMQTK.utils.VideoFile.VideoFile
-
-        :param frame_map: Video frame-number-to-image-file association
-        :type frame_map: dict of (int, str)
-
-        :param video_work_dir: Base working directory for the current video.
-        :type video_work_dir: str
-
-        :param combined_features_output: Output file to save combined features
-            to.
-        :type combined_features_output: str
-
-        """
-        per_frame_work_dir = osp.join(video_work_dir, 'f')
-        if not osp.isdir(per_frame_work_dir):
-            os.makedirs(per_frame_work_dir)
-
-        vmd = video_data.metadata()
-        w = vmd.width
-        h = vmd.height
-
         # For pixel sample grid, we want to take at a maximum of 50,
         # sample points in longest direction with at least a 6 pixel spacing. We
         # will take fewer sample points to ensure the 6 pixel minimum spacing.
-        # (magic numbers are
-        # a result of tuning)
-        sample_size = max(int(math.floor(max(w, h) / 50.0)), 6)
+        # (magic numbers are a result of tuning, see Sangmin)
+        #
+        # Using min instead of max due to images that are long and thin, and
+        # vice versa, which, when using max, would cause some quadrants to have
+        # no detections (see spHist below)
+        #
+        # ds_spacing = max(int(max(w, h) / 50.0), 6)
+        w, h = self._get_data_width_height(data)
+        ds_spacing = max(int(min(w, h) / 50.0), 6)
+        self.log.debug("Calculated ds_spacing: %f", ds_spacing)
 
-        # Output files used by this method. These files will also act like stamp
-        # files, detailing progress from previous runs. Files will be removed
-        # from the disk when the final product of this method has been
-        # completed. When this file is present before processing occurs, a total
-        # processing skip occurs.
-        cd_output_file_pattern = osp.join(per_frame_work_dir, "csift-%06d.txt")
-        cd_log_file_pattern = osp.join(per_frame_work_dir, "csift-%06d.log")
-        # Files will be added to these maps keyed by their frame/index number
-        csift_frame_feature_files = {}
+        ###
+        # Create descriptor matrix from colorDescriptor tool output
+        #
+        # - This ends up boiling down to one or more calls to
+        #   _async_cd_process_helper.
+        #
+        descriptor_matrix = self._generate_descriptor_matrix(data, ds_spacing)
 
-        def construct_cd_command(in_frame_file, out_file):
-            return [self.PROC_COLORDESCRIPTOR, in_frame_file,
-                    '--detector', 'densesampling',
-                    '--ds_spacing', str(sample_size),
-                    '--descriptor', 'csift',
-                    '--output', out_file]
+        ###
+        # Encode/Quantize result descriptor matrix
+        #
+        flann_codebook, flann_file = self._get_flan_file_components()
+        quantized = encode_FLANN.quantizeResults3(descriptor_matrix,
+                                                  flann_codebook, flann_file)
+        self.log.debug("quantized :: %s\n%s", quantized.shape, quantized)
 
-        for i, (frame, png_file) in enumerate(frame_map.items()):
-            out_file = cd_output_file_pattern % frame
-            if not osp.isfile(out_file):
-                self.log.debug("[vid-%s::frame-%d] Submitting colorDescriptor "
-                               "job...", video_data, frame)
-                log_file = cd_log_file_pattern % frame
-                tmp_file = out_file + '.TMP'
-                if osp.isfile(tmp_file):
-                    os.remove(tmp_file)
-
-                cmd = construct_cd_command(png_file, tmp_file)
-                with open(log_file, 'w') as lfile:
-                    rc = subprocess.call(cmd, stdout=lfile, stderr=lfile)
-                if rc != 0:
-                    raise RuntimeError("Failed to process colordescriptor")
-                os.rename(tmp_file, out_file)
-                # TODO: Parallelize this based on optional parameter
-            else:
-                self.log.debug("[vid-%s::frame-%d] CSIFT features already "
-                               "processed",
-                               video_data, frame)
-
-            csift_frame_feature_files[frame] = out_file
-
-        self.log.debug("[vid-%s] Combining frame features", video_data)
-        tmp_combined_output = combined_features_output + ".TMP"
-        self._combine_frame_features(csift_frame_feature_files,
-                                     tmp_combined_output)
-        os.rename(tmp_combined_output, combined_features_output)
-
-        # With combined file completed, remove per-frame work
-        self.log.debug("[vid-%s] Cleaning up per-frame work directory...",
-                       video_data)
-
-        def onerror(func, path, exc_info):
-            self.log.warn("Error in rmtree on function [%s] -> %s\n"
-                          "-- %s", str(func), path, exc_info)
-        shutil.rmtree(per_frame_work_dir, onerror=onerror)
-
-    # noinspection PyMethodMayBeStatic
-    def _combine_frame_features(self, frame_feature_files,
-                                output_file):
-        """
-        Combine descriptor output matrices into a single matrix.
-
-        The combined data matrix representing the all given features has a
-        specific format intended for use in quantization (encode_FLANN
-        functions):
-            [
-             [ <frame_num>, <info1>, <info2>, ... <feature vector> ],
-             ...
-            ]
-
-        :param frame_feature_files: Mapping of frame number to its associated
-            feature file as generated from colordescriptor.
-        :type frame_feature_files: dict of (int, str)
-
-        :param output_file: The file to output the combined matrix to. If a file
-            exists by this name already, it will be overwritten.
-        :type output_file: str
-
-        """
-        with open(output_file, 'w') as output_file:
-
-            for i, ff in sorted(frame_feature_files.items()):
-                info, descriptors = DescriptorIO.readDescriptors(ff)
-
-                n = info.shape[0]  # num rows
-                data_frame = numpy.hstack((numpy.ones((n, 1)) * i,
-                                          info[:, 0:2],
-                                          descriptors))
-
-                # Continuously adding to the same file with savetxt effectively
-                # performs a v-stack operation. '%g' uses the shorter of %e or
-                # %f, i.e. exponential or floating point format respectively.
-                # TODO: Actually v-stack arras save to binary file (saves space)
-                #       Would also require modifications to quantize step
-                # TODO: Could also use mmap
-                numpy.savetxt(output_file, data_frame, fmt='%g')
-
-    def _encode_FLANN(self, combined_file, video_work_dir):
-        """
-        Quantize and encode the given combined matrix into the supplied
-        quantized and spacial pyramid histogram files. We return a
-        numpy array object of the video-level feature described by the given
-        combined matrix file.
-
-        If the quantized file and/or sphist file already exist, we load the
-        existing data from those files to construct the video-level feature
-        vector.
-
-        :param combined_file: Path to the file containing the result from the
-            _combine_frame_results method, which is basically matrix containing
-            all frame-level feature matrices.
-        :type combined_file: str
-
-        :param video_work_dir: Base working directory for the current video
-        :type video_work_dir: str
-
-        :return: A 1D numpy array (vector) representing the video-level feature.
-        :rtype: numpy.ndarray
-
-        """
-        quantized_file = osp.join(video_work_dir, self._quantized_filename)
-        sphist_file = osp.join(video_work_dir, self._sp_hist_filename)
-
-        if not osp.isfile(quantized_file):
-            self.log.debug('building FLANN quantized file')
-            tmp_file = quantized_file + ".TMP"
-            encode_FLANN.quantizeResults2(combined_file, tmp_file,
-                                          self._flann_codebook,
-                                          self._flann_file)
-            os.rename(tmp_file, quantized_file)
-        else:
-            self.log.debug('existing quantized file found')
-
-        if not osp.isfile(sphist_file):
-            self.log.debug('building FLANN spacial pyramid')
-            tmp_file = sphist_file + ".TMP"
-            # Returns matrix of int64 type
-            sp_histogram = encode_FLANN.build_sp_hist_(quantized_file, tmp_file)
-            os.rename(tmp_file, sphist_file)
-        else:
-            # ... So we load it back in as that type, too
-            sp_histogram = numpy.loadtxt(sphist_file, dtype=numpy.int64)
-            self.log.debug('existing sphist file found')
-
-        # Histogram file will consist of 8 vectors. Unified vector is all of
-        # those h-stacked.
-
+        ###
+        # Create spacial pyramid histogram
+        #
         # Result of build_sp_hist is an 8xN matrix, where each row is a
         # clip-level feature for a spacial region. Final feature product
-        # will be a 4 subset of these 8 vectors h-stacked.
-        # Voila, clip level feature!
-        _hist_sp = numpy.hstack(sp_histogram[[0, 5, 6, 7], :])
-        # histogram normalization
-        hist_sp = _hist_sp / float(numpy.sum(_hist_sp))
-        return hist_sp
+        # will composed of 4 of the 8 vectors (full image + image thirds)
+        #
+        sp_hist = encode_FLANN.build_sp_hist2(quantized)
+        self.log.debug("sphist :: %s\n%s",
+                       sp_hist.shape, sp_hist)
+        self.log.debug("sphist sums: \n%s", sp_hist.sum(axis=1))
+
+        ###
+        # Combine SP histogram into single vector and return
+        #
+        # normalizing each "quadrant" so their sum is a quarter of the feature
+        # total (this 4x multiplier on each vector norm)
+        #
+        q1 = sp_hist[0] / (sp_hist[0].sum()*4.0)
+        q2 = sp_hist[5] / (sp_hist[5].sum()*4.0)
+        q3 = sp_hist[6] / (sp_hist[6].sum()*4.0)
+        q4 = sp_hist[7] / (sp_hist[7].sum()*4.0)
+
+        feature = numpy.hstack((q1, q2, q3, q4))
+
+        # Diagnostic introspection logging
+        # self.log.debug("feature :: %s shape=%s dtype=%s",
+        #                type(feature), feature.shape, feature.dtype)
+        # self.log.debug("\tnormalized max: %s", feature.max())
+        # self.log.debug("\tnormalized sum: %s", feature.sum())
+        # self.log.debug("\tnormalized sum 1/4: %s", feature[:4096].sum())
+        # self.log.debug("\tnormalized sum 2/4: %s",
+        #                feature[4096*1:4096*2].sum())
+        # self.log.debug("\tnormalized sum 3/4: %s",
+        #                feature[4096*2:4096*3].sum())
+        # self.log.debug("\tnormalized sum 4/4: %s",
+        #                feature[4096*3:4096*4].sum())
+
+        # write check-point file with feature vector
+        self.log.debug("Saving feature vector checkpoint: %s", check_point_file)
+        safe_create_dir(osp.dirname(check_point_file))
+        numpy.save(check_point_file, feature)
+
+        return feature
+
+
+# noinspection PyAbstractClass
+class ColorDescriptor_Image (ColorDescriptor_Base):
+    """
+    Image-based implementation of abstract functions
+    """
+
+    def _get_data_width_height(self, data):
+        """
+        :param data: DataFile to get the properties from
+        :type data: SMQTK.utils.DataFile.DataFile
+
+        :return: Get the pixel width and height of the given data element in
+            (width, height) format..
+        :rtype: (int, int)
+
+        """
+        return PIL.Image.open(data.filepath).size
+
+    def _generate_descriptor_matrix(self, data, ds_spacing):
+        """
+        Generate the descriptor matrix for the given data file.
+
+        :param data: Data file to base descriptor generation on
+        :type data: SMQTK.utils.DataFile.DataFile
+
+        :return: Descriptor matrix
+        :rtype: numpy.matrix
+
+        """
+        # one image, so single call to generator helper
+        return _async_cd_process_helper(self.PROC_COLORDESCRIPTOR,
+                                        self.DETECTOR_TYPE,
+                                        self.work_directory, data.filepath,
+                                        ds_spacing)
+
+
+# noinspection PyAbstractClass
+class ColorDescriptor_Video (ColorDescriptor_Base):
+    """
+    Video-based implementation of abstract functions
+    """
+
+    def _get_data_width_height(self, data):
+        """
+        :param data: DataFile to get the properties from
+        :type data: SMQTK.utils.VideoFile.VideoFile
+
+        :return: Get the pixel width and height of the given data element in
+            (width, height) format..
+        :rtype: (int, int)
+
+        """
+        md = data.metadata()
+        return md.width, md.height
+
+    def _generate_descriptor_matrix(self, data, ds_spacing):
+        """
+        Generate the descriptor matrix for the given data file.
+
+        :param data: Data file to base descriptor generation on
+        :type data: SMQTK.utils.VideoFile.VideoFile
+
+        :return: Descriptor matrix
+        :rtype: numpy.matrix
+
+        """
+        # Creating subdirectory to put video-specific work files in
+        # video_work_dir = osp.join(self.work_directory,
+        #                           *data.split_md5sum(8))
+        # if not osp.isdir(video_work_dir):
+        #     os.makedirs(video_work_dir)
+
+        # Extract frame from the video to process over
+        # - Cover every 2 seconds between 20% -> 80% time points of video
+        self.log.debug("[%s] getting video frames", data)
+        frame_map = data.frame_map(data.metadata().duration * 0.2, 2,
+                                   data.metadata().duration * 0.6)
+        ordered_frame_list = sorted(frame_map.keys())
+
+        self.log.debug("[%s] Submitting colorDescriptor jobs", data)
+        # Using a thread pool since underlying ta[sks are primarily within a
+        # subprocess and outside the GIL
+        p = multiprocessing.Pool(processes=self.PARALLEL)
+        #: :type: dict of (int, multiprocessing.pool.ApplyResult)
+        result_map = {}
+        for frame in ordered_frame_list:
+            result_map[frame] = \
+                p.apply_async(_async_cd_process_helper,
+                              args=(self.PROC_COLORDESCRIPTOR,
+                                    self.DETECTOR_TYPE, self.work_directory,
+                                    frame_map[frame], ds_spacing))
+
+        self.log.debug("[%s] Combining colorDescriptor results", data)
+        combined_matrix = None
+        for frame in ordered_frame_list:
+            frame_d_mat = result_map[frame].get()
+            if combined_matrix is None:
+                combined_matrix = frame_d_mat
+            else:
+                combined_matrix = numpy.vstack((combined_matrix, frame_d_mat))
+
+        p.close()
+        p.join()
+
+        return combined_matrix
+
+
+# noinspection PyAbstractClass
+class ColorDescriptor_CSIFT (ColorDescriptor_Base):
+    DETECTOR_TYPE = "csift"
+
+    def _get_flan_file_components(self):
+        """
+        :return: Paths to FLANN component files in (codebook, flann-file) format
+        :rtype: (str, str)
+        """
+        return (osp.join(osp.dirname(__file__), "csift_codebook_med12.txt"),
+                osp.join(osp.dirname(__file__), "csift.flann"))
+
+
+# noinspection PyAbstractClass
+class ColorDescriptor_TCH (ColorDescriptor_Base):
+    DETECTOR_TYPE = "transformedcolorhistogram"
+
+    def _get_flan_file_components(self):
+        """
+        :return: Paths to FLANN component files in (codebook, flann-file) format
+        :rtype: (str, str)
+        """
+        return (osp.join(osp.dirname(__file__), "tch_codebook_med12.txt"),
+                osp.join(osp.dirname(__file__), "tch.flann"))
+
+
+# ColorDescriptor descriptor combinations
+class ColorDescriptor_CSIFT_Image (ColorDescriptor_CSIFT,
+                                   ColorDescriptor_Image):
+    """ CSIFT descriptor over image files """
+
+
+class ColorDescriptor_CSIFT_Video (ColorDescriptor_CSIFT,
+                                   ColorDescriptor_Video):
+    """ CSIFT descriptor over video files """
+
+
+class ColorDescriptor_TCH_Image (ColorDescriptor_TCH,
+                                 ColorDescriptor_Image):
+    """ TCH descriptor over image files """
+
+
+class ColorDescriptor_TCH_Video (ColorDescriptor_TCH,
+                                 ColorDescriptor_Video):
+    """ TCH descriptor over video files """

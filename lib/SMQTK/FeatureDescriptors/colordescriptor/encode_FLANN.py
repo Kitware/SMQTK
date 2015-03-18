@@ -154,6 +154,72 @@ def flann_quantize_data(flann,
     return 1
 
 
+def flann_quantize_data2(flann, in_descriptors, func_normalize=None,
+                         k=10, sparsity=1, size_block=20000):
+    """
+    Quantize raw data based on flan module (in-memory version)
+
+    :param flann: Prepared FLANN module
+    :type flann: pyflann.FLANN
+    :param in_descriptors: descriptors matrix (colorDescriptor)
+    :type in_descriptors: numpy.matrixlib.defmatrix.matrix
+    :param func_normalize: a function to normalize each data row (if not
+        necessary, use None)
+    :param k: number of quantization nearest neighbors to be saved (if k>1,
+        that's soft quantization)
+    :param sparsity: controls the amount of input data to be used. E.g., if 3,
+        only every three lines are used.
+    :param size_block: number of data points to be used at once. Need to be
+        adjusted baesd on memory and CPU IO speed
+
+    :return:
+    :rtype:
+
+    """
+    # tracks how many lines are read from file
+    count1 = 0
+
+    # Get array base, better suited for loop below
+    in_descriptors = in_descriptors.A
+
+    rows = []
+    quantized = None
+
+    # Quantization helper function
+    # noinspection PyShadowingNames
+    def quantize_then_write(rows, quantized):
+        data = np.matrix(rows)
+
+        if func_normalize:
+            data[:, 3:] = func_normalize(data[:, 3:])
+
+        idx, dists = flann.nn_index(data[:, 3:], k)
+        out_data = np.concatenate((data[:, 0:3], idx, dists), axis=1)
+
+        if quantized is None:
+            quantized = out_data
+        else:
+            np.vstack((quantized, out_data))
+        return quantized
+
+    # Run through rows in input matrix
+    for row in in_descriptors:
+        count1 += 1
+        if sparsity > 1 and (count1 % sparsity) == 0:
+            continue
+
+        rows.append(row)
+
+        if len(rows) == size_block:
+            quantized = quantize_then_write(rows, quantized)
+            rows = []
+
+    if len(rows) > 0:
+        quantized = quantize_then_write(rows, quantized)
+
+    return quantized
+
+
 def quantizeResults(key, outdir, outtype,
                     pattern_codebook='%s_codebook_med12.txt'):
     # feature file for quantization
@@ -194,6 +260,25 @@ def quantizeResults2(file_input, file_output, file_codebook, file_flann,
                         filein_gzipped=filein_gzipped,
                         filein_bzipped=filein_bzipped)
     flann.delete_index()
+
+
+def quantizeResults3(in_descriptors, file_codebook, file_flann):
+    """
+    Another version of raw feature quantization using FLANN.
+    No directory structure is assumed. Uses input numpy matrix vs. file.
+
+    :param in_descriptors: Matrix of input descriptors, first row: frame number,
+        rows 2-3: colorDescriptor info, rows 4+: descriptor
+    :param file_codebook: codebook file
+    ;param file_flann: quantization parameters for approximate nearest-neighbor
+
+    """
+    cbook = flann_load_codebook(file_codebook, is_rowwise=False)
+    flann = flann_build(cbook, file_flann)
+
+    quantized = flann_quantize_data2(flann, in_descriptors)
+    flann.delete_index()
+    return quantized
 
 
 #########################################################################
@@ -249,4 +334,59 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
     hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2, hist_csift_q3, hist_csift_q4, hist_csift_l1, hist_csift_l2, hist_csift_l3))
     np.savetxt(fileout, hist_csift, fmt = '%g')
     return hist_csift
-###################################################################################
+
+
+def build_sp_hist2(feas, bins_code=np.arange(0, 4096+1)):
+    """ Build spacial pyramid from quantized data
+
+    :param feas: quantized data matrix
+    :type feas: numpy.matrixlib.defmatrix.matrix
+
+    :return: martrix of 8 rows representing the histograms for the different
+        spacial regions.
+    :rtype: numpy.matrixlib.defmatrix.matrix
+
+    """
+    cordx = feas[:, 1]
+    cordy = feas[:, 2]
+    feas  = feas[:, 3]  # only the top component, we are looking
+    # hard quantization
+    # global histogram
+    hist_csift_g, _ = np.histogram(feas, bins = bins_code)
+    hist_csift_g = hist_csift_g[np.newaxis]
+    # 4 quadrants
+    midx = np.ceil(cordx.max()/2)
+    midy = np.ceil(cordy.max()/2)
+    lx = cordx<midx
+    rx = cordx>=midx
+    uy = cordy<midy
+    dy = cordy>=midy
+    # logging.error("LXUI: %s,%s", lx.__repr__(), uy.__repr__())
+    # logging.error("Length LXUI: %s,%s", lx.shape, uy.shape)
+    # logging.error("feas dimensions: %s", feas.shape)
+
+    hist_csift_q1, _ = np.histogram(feas[lx&uy], bins = bins_code)
+    hist_csift_q2, _ = np.histogram(feas[rx&uy], bins = bins_code)
+    hist_csift_q3, _ = np.histogram(feas[lx&dy], bins = bins_code)
+    hist_csift_q4, _ = np.histogram(feas[rx&dy], bins = bins_code)
+    hist_csift_q1 = hist_csift_q1[np.newaxis]
+    hist_csift_q2 = hist_csift_q2[np.newaxis]
+    hist_csift_q3 = hist_csift_q3[np.newaxis]
+    hist_csift_q4 = hist_csift_q4[np.newaxis]
+
+    # 3 layers
+    ythird = np.ceil(cordy.max()/3)
+    l1 = cordy<=ythird
+    l2 = (cordy>ythird)&(cordy<=2*ythird)
+    l3 = cordy>2*ythird
+    hist_csift_l1, _ = np.histogram(feas[l1], bins = bins_code)
+    hist_csift_l2, _ = np.histogram(feas[l2], bins = bins_code)
+    hist_csift_l3, _ = np.histogram(feas[l3], bins = bins_code)
+    hist_csift_l1 = hist_csift_l1[np.newaxis]
+    hist_csift_l2 = hist_csift_l2[np.newaxis]
+    hist_csift_l3 = hist_csift_l3[np.newaxis]
+    # concatenate
+    hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2,
+                            hist_csift_q3, hist_csift_q4, hist_csift_l1,
+                            hist_csift_l2, hist_csift_l3))
+    return hist_csift

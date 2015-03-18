@@ -15,9 +15,11 @@ from SMQTK.utils import DataIngest, VideoIngest
 def main():
     import optparse
 
-    usage = """%prog [options] GLOB [ GLOB [ ... ] ]"""
+    usage = "%prog [options] GLOB [ GLOB [ ... ] ]"
+    description = "Create a formal ingest from a set of file paths or " \
+                  "shell-style glob strings."
 
-    parser = optparse.OptionParser(usage)
+    parser = optparse.OptionParser(usage, description=description)
     parser.add_option('-t', '--type',
                       help="Ingest data type. Currently supports 'image' or "
                            "'video'.")
@@ -34,15 +36,13 @@ def main():
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    if opts.type not in ('image', 'video'):
-        raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    if opts.type == 'image':
+    if opts.type.lower() == 'image':
         ingest_t = DataIngest
-    elif opts.type == 'video':
+    elif opts.type.lower() == 'video':
         ingest_t = VideoIngest
     else:
         raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    t = opts.type
+    t = opts.type.lower()
     t = t[0].upper() + t[1:]
 
     if opts.d:

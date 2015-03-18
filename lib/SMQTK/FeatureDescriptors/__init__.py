@@ -18,10 +18,8 @@ import re
 from SMQTK.utils import safe_create_dir
 
 
-def _async_feature_generator_helper((uid, data, descriptor)):
+def _async_feature_generator_helper(data, descriptor):
     """
-    :param uid: Data UID
-    :type uid: int
 
     :param data: Data to generate feature over
     :type data: DataFile
@@ -30,24 +28,24 @@ def _async_feature_generator_helper((uid, data, descriptor)):
     :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
     :return: UID and associated feature vector
-    :rtype: (int, numpy.ndarray)
+    :rtype: (int, numpy.core.multiarray.ndarray)
 
     """
     log = logging.getLogger("_async_feature_generator_helper")
     try:
-        log.debug("Generating feature for UID[%d] -> %s", uid, data.filepath)
+        log.debug("Generating feature for [%s] -> %s", data, data.filepath)
         feat = descriptor.compute_feature(data)
         # Invalid feature matrix if there are inf or NaN values
         # noinspection PyUnresolvedReferences
         if numpy.isnan(feat.sum()):
-            log.error("Found feature with a NaN value.")
-            return None, None
-        return uid, feat
+            log.error("[%s] Computed feature has NaN values.", data)
+            return None
+        return feat
     except Exception, ex:
-        log.error("Failed feature generation for data file UID[%d] -> %s\n"
+        log.error("[%s] Failed feature generation\n"
                   "Error: %s",
-                  uid, data.filepath, str(ex))
-        return None, None
+                  data, str(ex))
+        return None
 
 
 class FeatureDescriptor (object):
@@ -55,6 +53,10 @@ class FeatureDescriptor (object):
     Base abstract Feature Descriptor interface
     """
     __metaclass__ = abc.ABCMeta
+
+    # Number of cores to use when doing parallel multiprocessing operations
+    # - None means use all available cores.
+    PARALLEL = None
 
     def __init__(self, data_directory, work_directory):
         """
@@ -128,6 +130,10 @@ class FeatureDescriptor (object):
         """
         Asynchronously compute feature data for multiple data items.
 
+        This function does not use the class attribute PARALLEL for determining
+        parallel factor as this method can take that specification as an
+        argument.
+
         :param data: List of data elements to compute features for. These must
             have UIDs assigned for feature association in return value
         :type data: list of SMQTK.utils.DataFile.DataFile
@@ -137,35 +143,52 @@ class FeatureDescriptor (object):
             cores.
         :type parallel: int
 
+        :param pool_type: multiprocessing pool type to use. If no provided, we
+            use a normal multiprocessing.pool.Pool instance.
+        :type pool_type: type
+
         :return: Mapping of data UID to computed feature vector
         :rtype: dict of (int, numpy.core.multiarray.ndarray)
 
         """
-        args = []
+        # Make sure that all input data have associated UIDs
         for item in data:
             # Make sure data items have valid UIDs
             if item.uid is None:
                 raise RuntimeError("Some data elements do not have UIDs "
                                    "assigned to them.")
-            args.append((item.uid, item, self))
-        self.log.debug("Processing %d elements", len(args))
+            # args.append((item.uid, item, self))
+        self.log.info("Processing %d elements", len(data))
 
         self.log.debug("starting pool...")
         parallel = kwds.get('parallel', None)
-        pool = multiprocessing.Pool(processes=parallel)
-        map_results = pool.map_async(_async_feature_generator_helper, args).get()
-        # # Sync debug version
-        # map_results = {}
-        # for arg in args:
-        #     _svm_model_feature_generator(arg)
-        pool.close()
-        pool.join()
+        pool_t = kwds.get('pool_type', multiprocessing.Pool)
+        pool = pool_t(processes=parallel)
+        #: :type: dict of (int, multiprocessing.pool.ApplyResult)
+        ar_map = {}
+        for d in data:
+            ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
+                                             args=(d, self))
 
-        r_dict = dict(map_results)
+        #: :type: dict of (int, numpy.core.multiarray.ndarray)
+        r_dict = {}
+        failures = False
+        for i, (uid, ar) in enumerate(ar_map.iteritems()):
+            feat = ar.get()
+            if feat is None:
+                failures = True
+                continue
+            else:
+                r_dict[uid] = feat
+            self.log.info("Progress: [%d/%d] %3.3f%%",
+                          i, len(ar_map)-1,  float(i)/(len(ar_map)-1) * 100)
         # Check for failed generation
-        if None in r_dict:
+        if failures:
             raise RuntimeError("Failure occurred during data feature "
                                "computation. See logging.")
+
+        pool.close()
+        pool.join()
 
         return r_dict
 

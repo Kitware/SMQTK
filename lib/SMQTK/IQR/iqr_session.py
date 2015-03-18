@@ -229,3 +229,13 @@ class IqrSession (object):
 
             # clear contents of working directory
             shutil.rmtree(self.work_dir)
+
+            # Re-initialize extension ingest. Now that we're killed the IQR work
+            # tree, this should initialize empty
+            if len(self.extension_ingest):
+                #: :type: SMQTK.utils.DataIngest.DataIngest
+                self.extension_ingest = self.extension_ingest.__class__(
+                    self.extension_ingest.data_directory,
+                    self.extension_ingest.work_directory,
+                    starting_index=min(self.extension_ingest.uids())
+                )

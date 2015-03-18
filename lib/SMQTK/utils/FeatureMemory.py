@@ -175,7 +175,7 @@ class FeatureMemory (object):
 
         :return: Ordered vector of clip IDs along the row-edge of this object's
             feature matrix and along both edges of the kernel matrix.
-        :rtype: ndarray
+        :rtype: numpy.core.multiarray.ndarray
 
         """
         return self._id_vector

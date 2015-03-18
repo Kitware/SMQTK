@@ -108,10 +108,13 @@ def main():
 
     descriptor_t = get_descriptors()[opts.feature_descriptor]
     classifier_t = get_classifiers()[opts.classifier]
-    data_dir = opts.data_dir or smqtk_config.DATA_DIR
-    work_dir = opts.work_dir or smqtk_config.WORK_DIR
+
+    abspath = lambda p: osp.abspath(osp.expanduser(p))
+    data_dir = abspath(opts.data_dir or smqtk_config.DATA_DIR)
+    work_dir = abspath(opts.work_dir or smqtk_config.WORK_DIR)
+
     if opts.sys_json:
-        with open(opts.sys_json) as ifile:
+        with open(abspath(opts.sys_json)) as ifile:
             sc = json.load(ifile)
     else:
         sc = smqtk_config.SYSTEM_CONFIG

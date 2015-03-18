@@ -26,7 +26,8 @@ def main():
     parser.add_option('-d',
                       help="Custom directory to base the ingest data in. "
                            "Otherwise we use the system default based on the "
-                           "ingest type.")
+                           "ingest type. Relative directory paths still used "
+                           "from system_config.json")
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Add debug messaged to output logging.')
     opts, args = parser.parse_args()
@@ -45,20 +46,19 @@ def main():
     t = opts.type.lower()
     t = t[0].upper() + t[1:]
 
-    if opts.d:
-        target_dir = opts.d
-    else:
-        target_dir = osp.join(smqtk_config.DATA_DIR,
-                              smqtk_config.SYSTEM_CONFIG['Ingest'][t])
+    target_dir = osp.join(opts.d or smqtk_config.DATA_DIR,
+                          smqtk_config.SYSTEM_CONFIG['Ingest'][t])
     work_dir = osp.join(smqtk_config.WORK_DIR,
                         smqtk_config.SYSTEM_CONFIG['Ingest'][t])
 
     ingest = ingest_t(target_dir, work_dir)
     print "Script arguments:\n%s" % args
     for g in args:
+        g = osp.expanduser(g)
         if osp.isfile(g):
             ingest.add_data_file(g)
         else:
+            print "Expanding glob: %s" % g
             for fp in glob.glob(g):
                 ingest.add_data_file(fp)
 

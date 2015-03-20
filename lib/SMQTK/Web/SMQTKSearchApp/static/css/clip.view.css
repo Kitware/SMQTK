@@ -1,0 +1,45 @@
+.clip-results {
+    text-align: center;
+    /*font-size: 0;*/
+}
+
+.clip-view-image {
+    width: 200px;
+    height:150px;
+    position : relative;
+    background-position:center;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.clip-view {
+    display:inline-block;
+    text-align: left;
+    position:relative;
+    margin:7px;
+    padding : 5px;
+    border-style: solid;
+    border-color: lightblue;
+    border-width : 2px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    background-color:rgba(220, 220, 250, 0.1);
+}
+
+
+.adjudication-yes{
+    border-color: limegreen;
+    background-color:rgba(154, 230, 154, 0.3);
+}
+
+.adjudication-no{
+    border-color: red;
+    background-color:rgba(230, 154, 154, 0.3);
+}
+
+.adjudication-star{
+    border-color: #fbcb09;
+    position: relative;
+    background-color:rgba(220, 220, 144, 0.5);
+}

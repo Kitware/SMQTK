@@ -1,0 +1,37 @@
+/* IQR Result display elements */
+.iqr-result {
+    display: inline-block;
+    text-align: center;
+    margin: 5px;
+    padding: 5px;
+    border: 2px solid lightblue;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
+    background-color:rgba(220, 220, 250, 0.1);
+    vertical-align: top;
+}
+.iqr-result-img-container {
+    height: 192px;
+    width: 192px;
+}
+.result-positive {
+    border-color: lightgreen;
+    background-color:rgba(154, 230, 154, 0.3);
+}
+.result-negative {
+    border-color: red;
+    background-color:rgba(230, 154, 154, 0.3);
+}
+.adjudication-box {
+    background: #373737;
+    opacity: 0.8;
+    margin-bottom: 2px;
+    text-align: left;
+}
+
+/* IQR View display elements */
+.iqr-view-results-container {
+    display: inline-block;
+    text-align: center;
+    vertical-align: top;
+}

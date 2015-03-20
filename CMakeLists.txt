@@ -30,27 +30,38 @@ endif()
 
 
 ###
-# Backend
+# TPL
 #
-add_subdirectory(Backend)
-add_subdirectory(MASIR)
+# local installation control variables
+set(TPL_BUILD_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/TPL/build")
+set(TPL_LOCAL_INSTALL "${CMAKE_CURRENT_BINARY_DIR}/TPL/install")
+set(TPL_PYTHON_SP "${TPL_LOCAL_INSTALL}/${python_site_packages}")
+add_subdirectory( TPL )
 
+
+###
+# SMQTK Library
+#
+add_subdirectory( src )
+add_subdirectory( lib )
+add_subdirectory( bin )
+
+
+###
+# MASIR side-car project
+#
+add_subdirectory(MASIR)
 
 ###
 # File configuration
 #
-set(BACKEND_SETUP_SCRIPT "${SMQTK_BINARY_DIR}/Backend/setup_env.build.sh")
+# Environment setup scripts
 configure_file("${SMQTK_SOURCE_DIR}/setup_env.build.sh.in"
                "${SMQTK_BINARY_DIR}/setup_env.build.sh"
                @ONLY
                )
-
-configure_file("${SMQTK_SOURCE_DIR}/smqtk_config.build.py.in"
-               "${SMQTK_SOURCE_DIR}/smqtk_config.py"
-               @ONLY
-               )
-configure_file("${SMQTK_SOURCE_DIR}/smqtk_config.install.py.in"
-               "${SMQTK_BINARY_DIR}/smqtk_config.install.py"
+configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
+               "${SMQTK_BINARY_DIR}/setup_env.install.sh"
                @ONLY
                )
 
@@ -60,7 +71,7 @@ configure_file("${SMQTK_SOURCE_DIR}/smqtk_config.install.py.in"
 #
 
 option(FORCE_STANDARD_INSTALL_PREFIX
-  "Force the standard install prefix (for initial override of baseic install prefix)."
+  "Force the standard install prefix (for initial override of basic install prefix)."
   ON
   )
 if (FORCE_STANDARD_INSTALL_PREFIX)
@@ -102,14 +113,9 @@ install(FILES requirements.txt
         DESTINATION .
         )
 
-install(FILES setup_env.install.sh
+install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
         DESTINATION .
         RENAME setup_smqtk.sh
-        )
-
-install(FILES "${SMQTK_BINARY_DIR}/smqtk_config.install.py"
-        DESTINATION "${python_site_packages}"
-        RENAME smqtk_config.py
         )
 
 install(DIRECTORY WebUI

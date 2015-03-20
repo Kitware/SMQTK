@@ -1,0 +1,35 @@
+#*
+# Template file for sun_attributes configuration file. This should be generated
+# for every video with a different working path set for each video.
+#
+# Required format attributes:
+#   sa_src_dir
+#   working_dir
+#
+*#
+<parameters>
+    <src_fullpath_sun_attributes_code>
+        ${sa_src_dir}/sun_attributes/code_v2/
+    </src_fullpath_sun_attributes_code>
+    <src_fullpath_sun_attributes_data>
+        ${sa_src_dir}/sun_attributes/
+    </src_fullpath_sun_attributes_data>
+    <src_fullpath_sun09_feature_extraction>
+        ${sa_src_dir}/SUN_source_code_v2/code/
+    </src_fullpath_sun09_feature_extraction>
+    <src_fullpath_kitware_matlab_library>
+        ${sa_src_dir}/KWVision/trunk/matlab/library/
+    </src_fullpath_kitware_matlab_library>
+    <src_fullpath_vlfeat>
+        ${sa_src_dir}/vlfeat-0.9.16/
+    </src_fullpath_vlfeat>
+    <fullpath_sun_attribute_classifier>
+        ${sa_src_dir}/sun_attributes/data_v2/classifiers/
+    </fullpath_sun_attribute_classifier>
+    <path_image_features>
+        ${working_dir}
+    </path_image_features>
+    <path_kernel_save>
+        ${working_dir}
+    </path_kernel_save>
+</parameters>

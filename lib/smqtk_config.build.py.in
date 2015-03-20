@@ -1,0 +1,30 @@
+"""
+LICENCE
+-------
+Copyright 2013-2015 by Kitware, Inc. All Rights Reserved. Please refer to
+KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
+Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
+
+"""
+
+import json
+import os
+
+
+# use "0.0.0.0" for public use
+RUN_HOST = "127.0.0.1"
+RUN_PORT = 5000
+
+MONGO_SERVER = "127.0.0.1:27017"
+MONGO_DB = "smqtk"
+
+SECRET_KEY = 'MySuperUltraSecret'
+
+ETC_DIR = "@SMQTK_SOURCE_DIR@/etc"
+STATIC_DIR = "@SMQTK_SOURCE_DIR@/static"
+DATA_DIR = "@SMQTK_SOURCE_DIR@/data"
+WORK_DIR = "@SMQTK_SOURCE_DIR@/work"
+
+SYSTEM_CONFIG_JSON = os.path.join(ETC_DIR, "system_config.json")
+with open(SYSTEM_CONFIG_JSON) as sc:
+    SYSTEM_CONFIG = json.load(sc)

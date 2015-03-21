@@ -76,13 +76,30 @@ $(function () {
 
   // Clear out any information that is related to a particular time duration
   //--------------------------------------------------------------------------
-  function clearMessages(callback) {
+  function clearDialogs(callback) {
     var i = null;
     for (i = 0; i < myApp.visibleDialogs.length; ++i) {
       myApp.visibleDialogs[i].dialog.remove();
       myApp.visibleDialogs[i].dialog = null;
     }
     myApp.visibleDialogs = [];
+
+    // Clear images
+    $("#images").empty();
+  }
+
+  // Scrap a URL for images and return list of images URL
+  //--------------------------------------------------------------------------
+  function scrapUrl(url, callback) {
+    $.ajax("/api/v1/scrap?url="+url+"")
+      .done(function(data) {
+        if (callback !== undefined) {
+          callback(data);
+        }
+      })
+      .fail(function(err) {
+        console.log(err);
+      })
   }
 
   // Create visualization given a dataset
@@ -109,7 +126,7 @@ $(function () {
       });
 
       myApp.pointFeature.layer().geoOn(geo.event.zoom, function(evt) {
-        clearMessages();
+        clearDialogs();
       });
     }
     if (myApp.pointFeature) {
@@ -141,6 +158,11 @@ $(function () {
           anchor.attr('href', evt.data.urls[i]);
           listItem.append(anchor);
           list.append(listItem);
+
+          // Scrap the URL
+          scrapUrl(evt.data.urls[i], function(images) {
+            myApp.displayImages(images);
+          });
         }
 
         if (evt.data.dialog === null ||
@@ -173,7 +195,7 @@ $(function () {
     myApp.timeRange = $("#slider").slider("values");
     queryData(myApp.timeRange, function(data) {
       // Clear out any previous information
-      clearMessages();
+      clearDialogs();
 
       render(data, function() {
         // Update the UI
@@ -327,4 +349,26 @@ myApp.buttonStopPress = function() {
 myApp.buttonForwardPress = function() {
   myApp.animationState = 3;
   window.requestAnimationFrame(myApp.animate);
+}
+
+
+// Display images
+//--------------------------------------------------------------------------
+myApp.displayImages = function(images) {
+  var div = $("#images"),
+      newDiv = $(document.createElement('div')),
+      i = null;
+  newDiv.addClass('row image-row');
+  div.append(newDiv);
+  for (i = 0; i < images.length; ++i) {
+    var imageDiv = $(document.createElement('div'));
+    imageDiv.addClass('col-xs-3');
+    newDiv.append(imageDiv)
+    var newAnchor = $(document.createElement('a'));
+    var newImage = $(document.createElement('img'));
+    newImage.addClass('img-responsive');
+    imageDiv.append(newAnchor);
+    newAnchor.append(newImage);
+    newImage.attr('src', images[i]);
+  }
 }

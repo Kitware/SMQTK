@@ -9,6 +9,28 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description
 
+class Scrapper(girder.api.rest.Resource):
+    def __init__(self):
+        self.resourceName = 'scrap'
+        self.route('GET', (), self.scrap)
+
+    @access.public
+    def scrap(self, params):
+        result = []
+        url = params.get('url', None)
+        if url:
+            import requests
+            import BeautifulSoup as bs4
+            print type(url)
+            page = requests.get(url)
+            print page.text
+            #tree = html.fromstring(page.text)
+            soup = bs4.BeautifulSoup(page.text)
+            result = soup.findAll('img')
+            result = [a.get('src') for a in result]
+            print result
+        return result
+
 class Geospace(girder.api.rest.Resource):
     """API endpoint for Geospace data."""
 
@@ -62,3 +84,4 @@ class Geospace(girder.api.rest.Resource):
 
 def load(info):
     info['apiRoot'].data = Geospace()
+    info['apiRoot'].scrap = Scrapper()

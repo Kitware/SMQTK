@@ -53,6 +53,14 @@ footer {
   z-index: 300;
 }
 
+.image-fill-width {
+  width: 100%;
+}
+
+.image-row {
+  background: #eee;
+}
+
 a {
   color: black;
 }

@@ -87,7 +87,6 @@ $(function () {
   //--------------------------------------------------------------------------
   function createVis(data, callback) {
     var aggdata = aggregateByLocation(data);
-    console.log(aggdata);
     myApp.scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
               .range([2, 100]);
     if (myApp.pointFeature === undefined) {
@@ -167,7 +166,7 @@ $(function () {
 
   // Animate data
   //--------------------------------------------------------------------------
-  myApp.runAnimation = function(timestamp) {
+  myApp.animate = function(timestamp) {
     if (myApp.ready) {
       // First get the values from the slider
       var range = $( "#slider" ).slider( "values" ),
@@ -183,20 +182,20 @@ $(function () {
       }
 
       if (newRange[0] >= max) {
-        newRange[0] = max;
-        myApp.animationState = 0;
+        newRange[0] = min;
+        myApp.animationState = 1;
       }
       if (newRange[0] <= min) {
         newRange[0] = min;
-        myApp.animationState = 0;
+        myApp.animationState = 1;
       }
       if (newRange[1] >= max) {
-        newRange[1] = max;
-        myApp.animationState = 0;
+        newRange[1] = newRange[0] + delta;
+        myApp.animationState = 1;
       }
       if (newRange[1] <= min) {
-        newRange[1] = min;
-        myApp.animationState = 0;
+        newRange[1] = newRange[0] + delta;
+        myApp.animationState = 1;
       }
 
       // Set the slider value
@@ -206,7 +205,7 @@ $(function () {
       queryData( newRange, function(data) {
         createVis(data, function() {
           if (myApp.animationState === 1) {
-            window.requestAnimationFrame(myApp.runAnimation);
+            window.requestAnimationFrame(myApp.animate);
           }
         });
       });
@@ -275,19 +274,24 @@ $(function () {
 //--------------------------------------------------------------------------
 myApp.buttonBackPress = function() {
   myApp.animationState = 2;
-  window.requestAnimationFrame(myApp.runAnimation);
+  window.requestAnimationFrame(myApp.animate);
 }
 
 myApp.buttonPlayPress = function() {
   myApp.animationState = 1;
-  window.requestAnimationFrame(myApp.runAnimation);
+  window.requestAnimationFrame(myApp.animate);
 }
 
 myApp.buttonStopPress = function() {
   myApp.animationState = 0;
+  var min = $( "#slider" ).slider( "option", "min" ),
+      max = $( "#slider" ).slider( "option", "max" ),
+      range = $( "#slider" ).slider( "option", "values" );
+
+  $( "#slider" ).slider( "option", "values", [ min, min + range[1] - range[0] ] );
 }
 
 myApp.buttonForwardPress = function() {
   myApp.animationState = 3;
-  window.requestAnimationFrame(myApp.runAnimation);
+  window.requestAnimationFrame(myApp.animate);
 }

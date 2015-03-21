@@ -35,11 +35,16 @@
 
     <div class="container-fluid">
         <div class="row fill">
-            <div class="col-md-9 fill">
-                <div class= "fill" id="map"></div>
-            </div>
-            <div class="col-md-3">
-                <div class="row col-md-12 top-buffer with-background">
+            <div class="col-md-12 fill">
+                <div class= "fill" id="map">
+                </div>
+                <div class="absolute-fixed-width">
+                    <div><span id="start">Foo</span></div>
+                    <div><span id="end">Bar</span></div>
+                </div>
+            <!-- </div>
+            <div class="col-md-3"> -->
+                <div class="col-md-offset-9 col-md-3 top-buffer with-background">
                     <label></label> <!-- Empty space -->
                     <form class="form form-horizontal" role="search">
                         <label> Spatial Query</label>
@@ -76,7 +81,7 @@
                         <label></label> <!-- empty space -->
                     </form>
                 </div> <!-- form -->
-            </div>
+            <!-- </div> -->
         </div>
     </div>
 </body>

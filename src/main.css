@@ -21,6 +21,11 @@ footer {
     height: 100%;
 }
 
+.absolute-fixed-width {
+    position: absolute;
+    font-family: "Courier New", Courier, monospace;
+}
+
 .top-buffer {
     margin-top:40px;
 }

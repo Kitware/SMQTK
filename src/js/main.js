@@ -11,7 +11,9 @@ $(function () {
   myApp.ready = false,
   myApp.startTime = null;
   myApp.animationState = 0;
+  myApp.timeRange = 0;
   myApp.visibleDialogs = [];
+  myApp.prevTimestamp = 0;
 
   myApp.map = geo.map({
           node: '#map',
@@ -24,7 +26,7 @@ $(function () {
   myApp.map.createLayer(
     'osm',
     {
-      baseUrl: 'http://c.tile.stamen.com/terrain-labels/'
+      baseUrl: 'http://b.basemaps.cartocdn.com/light_all/'
     }
   );
 
@@ -88,7 +90,7 @@ $(function () {
   function createVis(data, callback) {
     var aggdata = aggregateByLocation(data);
     myApp.scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
-              .range([2, 100]);
+              .range([2, 50]);
     if (myApp.pointFeature === undefined) {
       myApp.pointFeature = myApp.map
                        .createLayer('feature')
@@ -164,6 +166,13 @@ $(function () {
     }
   }
 
+  // Update view
+  //--------------------------------------------------------------------------
+  myApp.updateView = function(timestamp, timeRange)  {
+    $ ("#start").html((new Date(timeRange[0] * 1000)).toDateString());
+    $ ("#end").html((new Date(timeRange[1] * 1000)).toDateString());
+  }
+
   // Animate data
   //--------------------------------------------------------------------------
   myApp.animate = function(timestamp) {
@@ -172,43 +181,62 @@ $(function () {
       var range = $( "#slider" ).slider( "values" ),
           min = $( "#slider" ).slider( "option", "min" ),
           max = $( "#slider" ).slider( "option", "max" ),
-          delta = range[1] - range[0],
-          newRange = null;
+          delta = myApp.timeRange[1] - myApp.timeRange[0],
+          newRange = null,
+          elapsedTime = timestamp - myApp.prevTimestamp;
 
-      if (myApp.animationState == 3 || myApp.animationState == 1) {
-        newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
-      } else if (myApp.animationState == 2) {
-        newRange = [ range[ 0 ] - delta, range[ 1 ] - delta ];
-      }
+      if (elapsedTime * 0.001 > 1) {
+        myApp.prevTimestamp = timestamp;
 
-      if (newRange[0] >= max) {
-        newRange[0] = min;
-        myApp.animationState = 1;
-      }
-      if (newRange[0] <= min) {
-        newRange[0] = min;
-        myApp.animationState = 1;
-      }
-      if (newRange[1] >= max) {
-        newRange[1] = newRange[0] + delta;
-        myApp.animationState = 1;
-      }
-      if (newRange[1] <= min) {
-        newRange[1] = newRange[0] + delta;
-        myApp.animationState = 1;
-      }
+        console.log('elapsedTime * 0.001 ', elapsedTime * 0.001);
 
-      // Set the slider value
-      $( "#slider" ).slider( "option", "values", newRange );
+        if (myApp.animationState == 3 || myApp.animationState == 1) {
+          newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
+        } else if (myApp.animationState == 2) {
+          newRange = [ range[ 0 ] - delta, range[ 1 ] - delta ];
+        }
 
-      // Query the data and create vis again
-      queryData( newRange, function(data) {
-        createVis(data, function() {
-          if (myApp.animationState === 1) {
-            window.requestAnimationFrame(myApp.animate);
-          }
+        if (range[1] === max) {
+          newRange[0] = min;
+          newRange[1] = newRange[0] + delta;
+          console.log('newRange[1]', newRange[1]);
+          myApp.animationState = 1;
+        }
+        if (newRange[0] >= max) {
+          newRange[0] = min;
+          myApp.animationState = 1;
+        }
+        if (newRange[0] <= min) {
+          newRange[0] = min;
+          myApp.animationState = 1;
+        }
+        if (newRange[1] > max) {
+          newRange[1] = max;
+          myApp.animationState = 1;
+        }
+        if (newRange[1] <= min) {
+          newRange[1] = newRange[0] + delta;
+          myApp.animationState = 1;
+        }
+
+        // Set the slider value
+        $( "#slider" ).slider( "option", "values", newRange );
+
+        // Query the data and create vis again
+        queryData( newRange, function(data) {
+          createVis(data, function() {
+
+            // Set the UI
+            myApp.updateView(timestamp, newRange);
+
+            if (myApp.animationState === 1) {
+              window.requestAnimationFrame(myApp.animate);
+            }
+          });
         });
-      });
+      } else {
+        window.requestAnimationFrame(myApp.animate);
+      }
     }
   }
 
@@ -249,7 +277,9 @@ $(function () {
       values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
       stop: function( event, ui ) {
         // Now run the query
-        queryData($("#slider").slider("values"), function(data) {
+        myApp.timeRange = $("#slider").slider("values");
+        queryData(myApp.timeRange, function(data) {
+
           // Clear out any previous information
           clearInformation();
 
@@ -259,7 +289,16 @@ $(function () {
     });
 
     // Now query data
-    queryData($("#slider").slider("values"), createVis);
+    myApp.timeRange = $("#slider").slider("values");
+
+    queryData(myApp.timeRange, function(data) {
+      createVis(data, function() {
+
+        // Set the UI
+        myApp.updateView(null, myApp.timeRange);
+      });
+    });
+
     myApp.ready = true;
   })
   .fail(function() {
@@ -288,7 +327,7 @@ myApp.buttonStopPress = function() {
       max = $( "#slider" ).slider( "option", "max" ),
       range = $( "#slider" ).slider( "option", "values" );
 
-  $( "#slider" ).slider( "option", "values", [ min, min + range[1] - range[0] ] );
+  $( "#slider" ).slider( "option", "values", [ min, min + (range[1] - range[0]) ] );
 }
 
 myApp.buttonForwardPress = function() {

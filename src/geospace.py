@@ -43,8 +43,6 @@ class Geospace(girder.api.rest.Resource):
         start_time = datetime.datetime.fromtimestamp(start).isoformat()
         end_time = datetime.datetime.fromtimestamp(end).isoformat()
 
-        print start_time, end_time
-
         query_result = coll.find({"field4":{"$gte": start_time, "$lt": end_time}}, skip=offset, limit=limit, sort=sort)
         result = [row for row in query_result]
         return result

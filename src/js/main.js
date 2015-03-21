@@ -59,12 +59,12 @@ $(function () {
 
   // Query given a time duration
   //--------------------------------------------------------------------------
-  function queryData(timerange, callback) {
-    console.log("/api/v1/data?limit=100000&duration=["+timerange+"]");
+  function queryData(timeRange, callback) {
+    console.log("/api/v1/data?limit=100000&duration=["+timeRange+"]");
 
-    $.ajax("/api/v1/data?limit=100000&duration=["+timerange+"]")
+    $.ajax("/api/v1/data?limit=100000&duration=["+timeRange+"]")
       .done(function(data) {
-        console.log(data.length);
+
         if (callback !== undefined) {
           callback(data);
         }
@@ -76,7 +76,7 @@ $(function () {
 
   // Clear out any information that is related to a particular time duration
   //--------------------------------------------------------------------------
-  function clearInformation(callback) {
+  function clearMessages(callback) {
     var i = null;
     for (i = 0; i < myApp.visibleDialogs.length; ++i) {
       myApp.visibleDialogs[i].dialog.remove();
@@ -87,7 +87,7 @@ $(function () {
 
   // Create visualization given a dataset
   //--------------------------------------------------------------------------
-  function createVis(data, callback) {
+  function render(data, callback) {
     var aggdata = aggregateByLocation(data);
     myApp.scale = d3.scale.linear().domain([aggdata.min, aggdata.max])
               .range([2, 50]);
@@ -109,7 +109,7 @@ $(function () {
       });
 
       myApp.pointFeature.layer().geoOn(geo.event.zoom, function(evt) {
-        clearInformation();
+        clearMessages();
       });
     }
     if (myApp.pointFeature) {
@@ -166,6 +166,22 @@ $(function () {
     }
   }
 
+  // Update extents and then render
+  //--------------------------------------------------------------------------
+  myApp.updateExtents = function() {
+    // Now run the query
+    myApp.timeRange = $("#slider").slider("values");
+    queryData(myApp.timeRange, function(data) {
+      // Clear out any previous information
+      clearMessages();
+
+      render(data, function() {
+        // Update the UI
+        myApp.updateView(null, myApp.timeRange);
+      });
+    });
+  }
+
   // Update view
   //--------------------------------------------------------------------------
   myApp.updateView = function(timestamp, timeRange)  {
@@ -200,23 +216,18 @@ $(function () {
           newRange[0] = min;
           newRange[1] = newRange[0] + delta;
           console.log('newRange[1]', newRange[1]);
-          myApp.animationState = 1;
         }
         if (newRange[0] >= max) {
           newRange[0] = min;
-          myApp.animationState = 1;
         }
         if (newRange[0] <= min) {
           newRange[0] = min;
-          myApp.animationState = 1;
         }
         if (newRange[1] > max) {
           newRange[1] = max;
-          myApp.animationState = 1;
         }
         if (newRange[1] <= min) {
           newRange[1] = newRange[0] + delta;
-          myApp.animationState = 1;
         }
 
         // Set the slider value
@@ -224,16 +235,15 @@ $(function () {
 
         // Query the data and create vis again
         queryData( newRange, function(data) {
-          createVis(data, function() {
-
-            // Set the UI
-            myApp.updateView(timestamp, newRange);
+          render(data, function() {
+            myApp.updateView(null, newRange);
 
             if (myApp.animationState === 1) {
               window.requestAnimationFrame(myApp.animate);
             }
           });
         });
+
       } else {
         window.requestAnimationFrame(myApp.animate);
       }
@@ -276,29 +286,11 @@ $(function () {
       max: max.getTime()/1000,
       values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
       stop: function( event, ui ) {
-        // Now run the query
-        myApp.timeRange = $("#slider").slider("values");
-        queryData(myApp.timeRange, function(data) {
-
-          // Clear out any previous information
-          clearInformation();
-
-          createVis(data);
-        });
+        myApp.updateExtents();
       }
     });
 
-    // Now query data
-    myApp.timeRange = $("#slider").slider("values");
-
-    queryData(myApp.timeRange, function(data) {
-      createVis(data, function() {
-
-        // Set the UI
-        myApp.updateView(null, myApp.timeRange);
-      });
-    });
-
+    myApp.updateExtents();
     myApp.ready = true;
   })
   .fail(function() {
@@ -328,6 +320,8 @@ myApp.buttonStopPress = function() {
       range = $( "#slider" ).slider( "option", "values" );
 
   $( "#slider" ).slider( "option", "values", [ min, min + (range[1] - range[0]) ] );
+
+  myApp.updateExtents();
 }
 
 myApp.buttonForwardPress = function() {

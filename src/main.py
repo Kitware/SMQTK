@@ -12,7 +12,6 @@ import geospace
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(PACKAGE_DIR)
 
-
 class GeoAppRoot(object):
     """
     Serve the root webpage for our application.

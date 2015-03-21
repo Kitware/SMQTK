@@ -60,6 +60,7 @@ $(function () {
   // Query given a time duration
   //--------------------------------------------------------------------------
   function queryData(timeRange, callback) {
+
     console.log("/api/v1/data?limit=100000&duration=["+timeRange+"]");
 
     $.ajax("/api/v1/data?limit=100000&duration=["+timeRange+"]")
@@ -161,7 +162,9 @@ $(function () {
 
           // Scrap the URL
           scrapUrl(evt.data.urls[i], function(images) {
-            myApp.displayImages(images);
+            myApp.displayImages({
+              "data": evt.data,
+              "images": images});
           });
         }
 
@@ -274,50 +277,30 @@ $(function () {
 
   $.ajax( "/api/v1/data" )
     .done(function(range) {
-    // return;
+      var format = d3.time.format("%Y-%m-%d %H:%M:%S");
+      console.log(format.parse(range.duration.start.field4));
+      console.log(format.parse(range.duration.end.field4));
 
-    // // Cache the data for later
-    // mdata = data;
-    // aggregateByLocation();
-    // console.log(aggData);
+      var min = format.parse(range.duration.start.field4);
+      var max = format.parse(range.duration.end.field4);
 
-    // Compute min and max for time
-    var format = d3.time.format("%Y-%m-%d %H:%M:%S");
-    // var minMax = [d3.min(aggData, function(d) {
-    //     var date = format.parse(d.field4);
-    //     if (date) {
-    //       return date.getTime() / 1000
-    //     }
-    //   }), d3.max(aggData, function(d) {
-    //     var date = format.parse(d.field4);
-    //     if (date) {
-    //       return date.getTime() / 1000
-    //     }
-    //   })];
+      // Set the date range
+      $( "#slider" ).slider({
+        range: true,
+        min: min.getTime()/1000,
+        max: max.getTime()/1000,
+        values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
+        stop: function( event, ui ) {
+          myApp.updateExtents();
+        }
+      });
 
-    console.log(format.parse(range.duration.start.field4));
-    console.log(format.parse(range.duration.end.field4));
-
-    var min = format.parse(range.duration.start.field4);
-    var max = format.parse(range.duration.end.field4);
-
-    // Set the date range
-    $( "#slider" ).slider({
-      range: true,
-      min: min.getTime()/1000,
-      max: max.getTime()/1000,
-      values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
-      stop: function( event, ui ) {
-        myApp.updateExtents();
-      }
+      myApp.updateExtents();
+      myApp.ready = true;
+    })
+    .fail(function() {
+      console.log('failed');
     });
-
-    myApp.updateExtents();
-    myApp.ready = true;
-  })
-  .fail(function() {
-    console.log('failed');
-  });
 
   $( "#slider" ).slider();
 });
@@ -341,7 +324,8 @@ myApp.buttonStopPress = function() {
       max = $( "#slider" ).slider( "option", "max" ),
       range = $( "#slider" ).slider( "option", "values" );
 
-  $( "#slider" ).slider( "option", "values", [ min, min + (range[1] - range[0]) ] );
+  $( "#slider" ).slider( "option", "values",
+    [ min, min + (range[1] - range[0]) ] );
 
   myApp.updateExtents();
 }
@@ -354,21 +338,27 @@ myApp.buttonForwardPress = function() {
 
 // Display images
 //--------------------------------------------------------------------------
-myApp.displayImages = function(images) {
+myApp.displayImages = function(data) {
   var div = $("#images"),
       newDiv = $(document.createElement('div')),
+      tag = $(document.createElement('div')),
       i = null;
-  newDiv.addClass('row image-row');
   div.append(newDiv);
-  for (i = 0; i < images.length; ++i) {
-    var imageDiv = $(document.createElement('div'));
-    imageDiv.addClass('col-xs-3');
-    newDiv.append(imageDiv)
-    var newAnchor = $(document.createElement('a'));
-    var newImage = $(document.createElement('img'));
-    newImage.addClass('img-responsive');
-    imageDiv.append(newAnchor);
-    newAnchor.append(newImage);
-    newImage.attr('src', images[i]);
+  newDiv.addClass('row');
+  tag.addClass('col-md-12');
+  newDiv.append(tag);
+  if (data.images.length > 0) {
+    tag.append("<h3 class='hd-highlight'>"+data.data["field3"]+"</h3>");
+    for (i = 0; i < data.images.length; ++i) {
+      var imageDiv = $(document.createElement('div'));
+      imageDiv.addClass('col-xs-1');
+      newDiv.append(imageDiv)
+      var newAnchor = $(document.createElement('a'));
+      var newImage = $(document.createElement('img'));
+      newImage.addClass('img-responsive img-fluid');
+      imageDiv.append(newAnchor);
+      newAnchor.append(newImage);
+      newImage.attr('src', data.images[i]);
+    }
   }
 }

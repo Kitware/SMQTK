@@ -23,6 +23,7 @@ class SimpleTimer (object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._log:
-            self._log.info("-> %f s", time.time() - self._s)
+            self._log.info("%s -> %f s", self._msg, time.time() - self._s)
         else:
-            print "[SimpleTimer] -> %f s" % (time.time() - self._s)
+            print "[SimpleTimer] %s -> %f s" % (self._msg,
+                                                time.time() - self._s)

@@ -7,6 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import hashlib
 import logging
 import multiprocessing
 import os
@@ -179,6 +180,28 @@ class DataIngest (object):
         if not osp.isdir(d):
             safe_create_dir(d)
         return d
+
+    def __hash__(self):
+        """
+        Ingest hash is the hash of the md5 string value of this ingest.
+        """
+        return hash(self.md5())
+
+    def md5(self):
+        """
+        Get the MD5 hex sum of this ingest as a whole.
+
+        This is computed by taking the md5 sum of the ordered (alphanumerically)
+        concatenation of all contained data md5 hex sums.
+
+        :return: Ingest MD5 sum
+        :rtype: str
+
+        """
+        elem_md5s = set()
+        for e in self._id_data_map.values():
+            elem_md5s.add(e.md5sum)
+        return hashlib.md5(''.join(sorted(elem_md5s))).hexdigest()
 
     def add_data_file(self, origin_filepath):
         """

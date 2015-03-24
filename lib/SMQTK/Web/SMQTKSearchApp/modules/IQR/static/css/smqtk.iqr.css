@@ -35,3 +35,9 @@
     text-align: center;
     vertical-align: top;
 }
+.explicit-image {
+    filter: blur(10px);
+}
+.explicit-image:hover {
+    filter: blur(0);
+}

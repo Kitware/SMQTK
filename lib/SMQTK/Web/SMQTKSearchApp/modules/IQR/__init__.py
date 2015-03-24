@@ -134,7 +134,6 @@ class IQRSearch (flask.Blueprint):
                         dict((uid, str(df))
                              for uid, df in iqrs.extension_ingest.iteritems()),
                     "FeatureMemory": {
-                        "BG IDs": tuple(iqrs.classifier._feat_mem._bg_clip_ids)
                     }
                 })
 

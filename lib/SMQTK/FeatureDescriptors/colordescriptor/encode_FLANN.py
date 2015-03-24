@@ -24,6 +24,10 @@ def flann_load_codebook(filename, is_rowwise=True):
     """
     Load codebook for quantization, and make it ready to be used for pyflann
 
+    To build codebook for colorDescriptor, see the exampleCreateCodebook.py
+    script that comes with the colorDescriptor ZIP package. This uses scipy.vq
+    kmeans to build the centroid list given a set of colorDescriptor outputs.
+
     @param filename: file path to the codebook file
     @param is_rowwise: asks if codebook is stored as rowwise. If not, it will be transposed internally after loading.
     @return: row-wise numpy codebook
@@ -176,6 +180,11 @@ def flann_quantize_data2(flann, in_descriptors, func_normalize=None,
     :rtype:
 
     """
+    # Input descriptor matrix is of the format:
+    # [[ frm, x, y, descriptor... ]
+    #  [ ...
+    #  ...
+
     # tracks how many lines are read from file
     count1 = 0
 
@@ -217,6 +226,10 @@ def flann_quantize_data2(flann, in_descriptors, func_normalize=None,
     if len(rows) > 0:
         quantized = quantize_then_write(rows, quantized)
 
+    # Output Format:
+    # [[ frame, x, y, idx0, ..., idx9, dist0, ..., dist9 ]
+    #  [ ... [
+    #  ...
     return quantized
 
 

@@ -3,35 +3,43 @@
     "Image": "Ingest/Image",
     "Video": "Ingest/Video"
   },
-  "Classifiers": {
-    "SVMClassifier_HIK": {
-      "_comment": "Classifiers operate in context to a feature detector that provided it features to work with.",
-      "ColorDescriptor_CSIFT_Image": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Image"
-      },
-      "ColorDescriptor_CSIFT_Video": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Video"
-      },
-      "ColorDescriptor_TCH_Image": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Image"
-      },
-      "ColorDescriptor_TCH_Video": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Video"
-      }
-    }
-  },
+
   "FeatureDescriptors": {
-    "ColorDescriptor_CSIFT_Image": {
+
+    "ColorDescriptor_Image_csift": {
       "data_directory": "FeatureDescriptors/CSIFT/Image"
     },
-    "ColorDescriptor_CSIFT_Video": {
+    "ColorDescriptor_Video_csift": {
       "data_directory": "FeatureDescriptors/CSIFT/Video"
     },
-    "ColorDescriptor_TCH_Image": {
+    "ColorDescriptor_Image_transformedcolorhistogram": {
       "data_directory": "FeatureDescriptors/TCH/Image"
     },
-    "ColorDescriptor_TCH_Video": {
-      "data_directory": "FeatureDescriptors/TCH/Video"
+    "ColorDescriptor_Video_transformedcolorhistogram": {
+      "data_directory": "FeatureDescriptors/CSIFT/Video"
     }
+
+  },
+
+  "Classifiers": {
+    "_comment": "Classifiers operate on input features. For consistency, models are build within the context of a particular feature type.",
+
+    "SVMClassifier_HIK": {
+
+      "ColorDescriptor_Image_csift": {
+        "data_directory": "Classifiers/SVM_HIK/CSIFT/Image"
+      },
+      "ColorDescriptor_Video_csift": {
+        "data_directory": "Classifiers/SVM_HIK/CSIFT/Video"
+      },
+      "ColorDescriptor_Image_transformedcolorhistogram": {
+        "data_directory": "Classifiers/SVM_HIK/TCH/Image"
+      },
+      "ColorDescriptor_Video_transformedcolorhistogram": {
+        "data_directory": "Classifiers/SVM_HIK/TCH/Video"
+      }
+
+    }
+
   }
 }

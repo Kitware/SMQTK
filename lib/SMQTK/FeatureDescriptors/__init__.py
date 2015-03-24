@@ -14,6 +14,7 @@ import numpy
 import os
 import os.path as osp
 import re
+import traceback
 
 from SMQTK.utils import safe_create_dir
 
@@ -43,8 +44,10 @@ def _async_feature_generator_helper(data, descriptor):
         return feat
     except Exception, ex:
         log.error("[%s] Failed feature generation\n"
-                  "Error: %s",
-                  data, str(ex))
+                  "Error: %s\n"
+                  "Traceback:\n"
+                  "%s",
+                  data, str(ex), traceback.format_exc())
         return None
 
 
@@ -53,6 +56,11 @@ class FeatureDescriptor (object):
     Base abstract Feature Descriptor interface
     """
     __metaclass__ = abc.ABCMeta
+
+    # TODO: Input data type white-list + black-lis?
+    #       - Requires data objects to specify what data type they are.
+    #       - function for telling a user whether it will accept a data element
+    #         or not. Ideally a static/class method.
 
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
@@ -109,6 +117,36 @@ class FeatureDescriptor (object):
             safe_create_dir(self._work_dir)
         return self._work_dir
 
+    @abc.abstractproperty
+    def has_model(self):
+        """
+        :return: True if this FeatureDescriptor instance has a valid mode, and
+            False if it doesn't.
+        :rtype: bool
+        """
+        return
+
+    @abc.abstractmethod
+    def generate_model(self, data_list, parallel=None, **kwargs):
+        """
+        Generate this feature detector's data-model given a file ingest. This
+        saves the generated model to the currently configured data directory.
+
+        This method emits a warning message but does nothing if there is already
+        a model generated.
+
+        :param data_list: List of input data elements to generate model with.
+        :type data_list: list of SMQTK.utils.DataFile.DataFile
+            or tuple of SMQTK.utils.DataFile.DataFile
+
+        :param parallel: Optionally specification of how many processors to use
+            when pooling sub-tasks. If None, we attempt to use all available
+            cores.
+        :type parallel: int
+
+        """
+        return
+
     @abc.abstractmethod
     def compute_feature(self, data):
         """
@@ -158,7 +196,8 @@ class FeatureDescriptor (object):
                 raise RuntimeError("Some data elements do not have UIDs "
                                    "assigned to them.")
             # args.append((item.uid, item, self))
-        self.log.info("Processing %d elements", len(data))
+        self.log.info("Async compute features processing %d elements",
+                      len(data))
 
         self.log.debug("starting pool...")
         parallel = kwds.get('parallel', None)
@@ -181,7 +220,7 @@ class FeatureDescriptor (object):
             else:
                 r_dict[uid] = feat
             self.log.info("Progress: [%d/%d] %3.3f%%",
-                          i+1, len(ar_map),  float(i+1)/(len(ar_map)) * 100)
+                          i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
         # Check for failed generation
         if failures:
             raise RuntimeError("Failure occurred during data feature "

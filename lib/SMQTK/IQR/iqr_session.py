@@ -56,7 +56,7 @@ class IqrSession (object):
         )
 
     def __init__(self, work_directory, descriptor, classifier, work_ingest,
-                 uid=None):
+                 session_uid=None):
         """ Initialize IQR session
 
         :param work_directory: Directory we are allowed to use for working files
@@ -71,11 +71,11 @@ class IqrSession (object):
         :param work_ingest: Ingest to add extension files to
         :type work_ingest: SMQTK.utils.DataIngest.DataIngest
 
-        :param uid: Optional manual specification of session UUID.
-        :type uid: str or uuid.UUID
+        :param session_uid: Optional manual specification of session UUID.
+        :type session_uid: str or uuid.UUID
 
         """
-        self.uuid = uuid.uuid1() if uid is None else uid
+        self.uuid = session_uid or uuid.uuid1()
         self.lock = multiprocessing.RLock()
 
         self.positive_ids = set()
@@ -105,6 +105,7 @@ class IqrSession (object):
         self.lock.acquire()
         return self
 
+    # noinspection PyUnusedLocal
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
 
@@ -136,12 +137,16 @@ class IqrSession (object):
         specific image IDs
 
         :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: tuple of int
+        :type new_positives: collections.Iterable of int
+
         :param new_negatives: New IDs of items to now be considered negative.
+        :type new_negatives: collections.Iterable of int
+
         :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: tuple of int
+        :type un_positives: collections.Iterable of int
+
         :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: tuple of int
+        :type un_negatives: collections.Iterable of int
 
         """
         with self.lock:
@@ -156,9 +161,9 @@ class IqrSession (object):
             # # EXPERIMENT
             # # When we have negative adjudications, remove use of the original
             # # bg IDs set in the feature memory, injecting this session's
-            # # negative ID set (all both use set objects, so just share the ptr)
-            # # When we don't have negative adjudications, reinstate the original
-            # # set of bg IDs.
+            # # negative ID set (all both use set objects, so just share the
+            # # ptr) When we don't have negative adjudications, reinstate the
+            # # original set of bg IDs.
             # if self.negative_ids:
             #     self.feature_memory._bg_clip_ids = self.negative_ids
             # else:
@@ -184,12 +189,16 @@ class IqrSession (object):
             at least one positive adjudication.
 
         :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: tuple of int
+        :type new_positives: collections.Iterable of int
+
         :param new_negatives: New IDs of items to now be considered negative.
+        :type new_negatives: collections.Iterable of int
+
         :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: tuple of int
+        :type un_positives: collections.Iterable of int
+
         :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: tuple of int
+        :type un_negatives: collections.Iterable of int
 
         """
         with self.lock:

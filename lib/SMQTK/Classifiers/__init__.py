@@ -97,11 +97,15 @@ class SMQTKClassifier (object):
     @abc.abstractmethod
     def generate_model(self, feature_map, parallel=None):
         """
-        Generate this classifiers data-model using the given feature descriptor
-        over the configured ingest, saving it to a known location in the
-        configured data directory.
+        Generate this classifiers data-model using the given features,
+        saving it to files in the configured data directory.
 
-        :raises RuntimeError: See implementation.
+        :raises RuntimeError: Precaution error when there is an existing data
+            model for this classifier. Manually delete or move the existing
+            model before computing another one.
+
+            Specific implementations may error on other things. See the specific
+            implementations for more details.
 
         :param feature_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!

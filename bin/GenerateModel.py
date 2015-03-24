@@ -95,13 +95,19 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     if opts.list:
+        fds = get_descriptors().keys()
+        cls = get_classifiers().keys()
+
         print
         print "Feature Descriptors:"
-        for name in get_descriptors().keys():
+        print
+        for name in fds:
             print "\t%s" % name
         print
+        print
         print "Classifiers:"
-        for name in get_classifiers().keys():
+        print
+        for name in cls:
             print "\t%s" % name
         print
         exit(0)
@@ -152,10 +158,12 @@ def main():
                                          [opts.feature_descriptor]
                                          ['data_directory']))
 
-    # In order to attempt avoiding spawning far too many threads, requesting
-    # that the descriptors execute serially, while executing many at the same
-    # time, as its not guaranteed that the descriptor is doing anything in
-    # parallel.
+    # Generate any model files needed by the chosen descriptor
+    descriptor.generate_model(ingest.data_list())
+
+    # It is not guaranteed that the feature computation method is doing anything
+    # in parallel, but if it is, request that it perform serially in order to
+    # allow multiple high-level feature computation jobs.
     FeatureDescriptor.PARALLEL = 1
     # Using NonDaemonicPool because FeatureDescriptors that might to parallel
     # processing might use multiprocessing.Pool instances, too. Pools don't

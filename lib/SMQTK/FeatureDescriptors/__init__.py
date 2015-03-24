@@ -57,6 +57,11 @@ class FeatureDescriptor (object):
     """
     __metaclass__ = abc.ABCMeta
 
+    # TODO: Input data type white-list + black-lis?
+    #       - Requires data objects to specify what data type they are.
+    #       - function for telling a user whether it will accept a data element
+    #         or not. Ideally a static/class method.
+
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
     PARALLEL = None
@@ -191,7 +196,8 @@ class FeatureDescriptor (object):
                 raise RuntimeError("Some data elements do not have UIDs "
                                    "assigned to them.")
             # args.append((item.uid, item, self))
-        self.log.info("Processing %d elements", len(data))
+        self.log.info("Async compute features processing %d elements",
+                      len(data))
 
         self.log.debug("starting pool...")
         parallel = kwds.get('parallel', None)

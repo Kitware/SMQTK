@@ -18,14 +18,13 @@ import subprocess
 import tempfile
 
 from SMQTK.FeatureDescriptors import FeatureDescriptor
-from SMQTK.utils import safe_create_dir
 
-from . import DescriptorIO
+from .utils import DescriptorIO
 from . import encode_FLANN
 
 
 def _async_cd_process_helper(cd_util, detector_type, work_directory,
-                             image_filepath, ds_spacing):
+                             image_filepath, frame, ds_spacing):
         """
         Worker method for generating descriptor matrix via the colorDescriptor
         tool.
@@ -84,7 +83,7 @@ def _async_cd_process_helper(cd_util, detector_type, work_directory,
         # number of descriptor elements in this image
         n = info.shape[0]
         return numpy.hstack((
-            numpy.zeros((n, 1)),
+            numpy.zeros((n, 1)) + frame,
             info[:, 0:2],
             descriptors
         ))
@@ -93,6 +92,9 @@ def _async_cd_process_helper(cd_util, detector_type, work_directory,
 class ColorDescriptor_Base (FeatureDescriptor):
     """
     CSIFT colordescriptor feature descriptor
+
+    This generates histogram-based features.
+
     """
 
     # colordescriptor executable that should be on the PATH
@@ -100,6 +102,12 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
     # Class detector type string to pass to colorDescriptor exe
     DETECTOR_TYPE = None  # e.g. "csift" or "transformedcolorhistogram"
+
+    def __init__(self, data_directory, work_directory):
+        super(ColorDescriptor_Base, self).__init__(data_directory,
+                                                   work_directory)
+        # Expected codebook filepath to use for quantization
+        self._codebook_file = osp.join(self.data_directory, "codebook.npy")
 
     @abc.abstractmethod
     def _get_flan_file_components(self):
@@ -145,11 +153,11 @@ class ColorDescriptor_Base (FeatureDescriptor):
         """
         # Check for checkpoint file, if exists, just return the loaded feature
         # vector
-        check_point_file = osp.join(osp.join(self.work_directory,
-                                             *data.split_md5sum(8)[:-1]),
-                                    "%s.feature.npy" % data.md5sum)
-        if osp.isfile(check_point_file):
-            return numpy.load(check_point_file)
+        # check_point_file = osp.join(osp.join(self.work_directory,
+        #                                      *data.split_md5sum(8)[:-1]),
+        #                             "%s.feature.npy" % data.md5sum)
+        # if osp.isfile(check_point_file):
+        #     return numpy.load(check_point_file)
 
         self.log.debug("Processing video: %s", data.filepath)
 
@@ -222,10 +230,10 @@ class ColorDescriptor_Base (FeatureDescriptor):
         # self.log.debug("\tnormalized sum 4/4: %s",
         #                feature[4096*3:4096*4].sum())
 
-        # write check-point file with feature vector
-        self.log.debug("Saving feature vector checkpoint: %s", check_point_file)
-        safe_create_dir(osp.dirname(check_point_file))
-        numpy.save(check_point_file, feature)
+        # # write check-point file with feature vector
+        # self.log.debug("Saving feature vector checkpoint: %s", check_point_file)
+        # safe_create_dir(osp.dirname(check_point_file))
+        # numpy.save(check_point_file, feature)
 
         return feature
 
@@ -263,7 +271,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
         return _async_cd_process_helper(self.PROC_COLORDESCRIPTOR,
                                         self.DETECTOR_TYPE,
                                         self.work_directory, data.filepath,
-                                        ds_spacing)
+                                        0, ds_spacing)
 
 
 # noinspection PyAbstractClass
@@ -320,7 +328,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 p.apply_async(_async_cd_process_helper,
                               args=(self.PROC_COLORDESCRIPTOR,
                                     self.DETECTOR_TYPE, self.work_directory,
-                                    frame_map[frame], ds_spacing))
+                                    frame_map[frame], frame, ds_spacing))
 
         self.log.debug("[%s] Combining colorDescriptor results", data)
         combined_matrix = None

@@ -127,14 +127,14 @@ class SMQTKSearchApp (flask.Flask):
 
         self.log.info("Initializing IQR Blueprint -- Video")
         self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
-                                        'ColorDescriptor_CSIFT_Video',
+                                        'ColorDescriptor_Video_csift',
                                         'SVMClassifier_HIK',
                                         url_prefix="/vsearch")
         self.register_blueprint(self.module_vsearch)
 
         self.log.info("Initializing IQR Blueprint -- Image")
         self.module_isearch = IQRSearch('ImageSearch', self, ingest_image,
-                                        'ColorDescriptor_CSIFT_Image',
+                                        'ColorDescriptor_Image_csift',
                                         'SVMClassifier_HIK',
                                         url_prefix="/isearch")
         self.register_blueprint(self.module_isearch)

@@ -14,12 +14,16 @@ def main():
                            '(a python file).')
     parser.add_option('-a', '--application', default=None,
                       help="Name of the web application to run. Required.")
+
     parser.add_option('-r', '--reload', action='store_true', default=False,
                       help='Turn on server reloading.')
-    parser.add_option('-d', '--debug', action='store_true', default=False,
-                      help='Turn on server debugging')
     parser.add_option('-t', '--threaded', action='store_true', default=False,
                       help="Turn on web searcher threading.")
+    parser.add_option('--debug-server', action='store_true', default=False,
+                      help='Turn on server debugging messages')
+    parser.add_option('--debug-backend', action='store_true', default=False,
+                      help='Turn on SMQTK backend debugging messages')
+
     parser.add_option('--host', default=None,
                       help="Run host address specification override. This will "
                            "override all other configuration method "
@@ -34,9 +38,11 @@ def main():
 
     import logging
     logging.basicConfig()  # TODO: Add better message format here
-    logging.getLogger().setLevel(logging.INFO)
-    if opts.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger("SMQTK").setLevel(logging.INFO)
+    if opts.debug_server:
+        logging.getLogger("werkzeug").setLevel(logging.DEBUG)
+    if opts.debug_backend:
+        logging.getLogger("SMQTK").setLevel(logging.DEBUG)
 
     if opts.list:
         from SMQTK.Web import APPLICATIONS
@@ -50,7 +56,7 @@ def main():
 
     host = opts.host
     port = opts.port and int(opts.port)
-    debug = opts.debug
+    debug_server = opts.debug_server
     use_reloader = opts.reload
     use_threading = opts.threaded
     application_name = opts.application
@@ -64,7 +70,7 @@ def main():
         raise ValueError("No available application by the name of '%s'"
                          % application_name)
     app = App(opts.config)
-    app.run(host=host, port=port, debug=debug, use_reloader=use_reloader,
+    app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
 
 

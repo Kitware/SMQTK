@@ -12,7 +12,7 @@ import PIL.Image
 import random
 
 from SMQTK.FeatureDescriptors import get_descriptors
-from SMQTK.Classifiers import get_classifiers
+from SMQTK.Indexers import get_indexers
 
 from SMQTK.IQR import IqrController, IqrSession
 
@@ -63,7 +63,7 @@ class IQRSearch (flask.Blueprint):
         # we as their system configuration sections
         if descriptor_type not in get_descriptors():
             raise ValueError("Not a valid descriptor type: %s" % descriptor_type)
-        if classifier_type not in get_classifiers():
+        if classifier_type not in get_indexers():
             raise ValueError("Not a valid classifier type: %s" % classifier_type)
         try:
             parent_app.config['SYSTEM_CONFIG']\
@@ -73,7 +73,7 @@ class IQRSearch (flask.Blueprint):
                              % descriptor_type)
         try:
             parent_app.config['SYSTEM_CONFIG']\
-                ['Classifiers'][classifier_type][descriptor_type]\
+                ['Indexers'][classifier_type][descriptor_type]\
                 ['data_directory']
         except KeyError:
             raise ValueError("No configuration section for classifier type "
@@ -460,12 +460,12 @@ class IQRSearch (flask.Blueprint):
                     ),
                     osp.join(sid_work_dir, 'fd')
                 )
-                #: :type: SMQTK.Classifiers.SMQTKClassifier
-                classifier = get_classifiers()[self._cl_type_str](
+                #: :type: SMQTK.Indexers.Indexer
+                classifier = get_indexers()[self._cl_type_str](
                     osp.join(
                         self._parent_app.config['DATA_DIR'],
                         self._parent_app.config['SYSTEM_CONFIG']\
-                            ['Classifiers'][self._cl_type_str]\
+                            ['Indexers'][self._cl_type_str]\
                             [self._fd_type_str]['data_directory']
                     ),
                     osp.join(sid_work_dir, 'cl'),

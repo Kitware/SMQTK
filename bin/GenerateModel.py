@@ -13,7 +13,7 @@ import os.path as osp
 
 import smqtk_config
 
-from SMQTK.Classifiers import get_classifiers
+from SMQTK.Indexers import get_indexers
 from SMQTK.FeatureDescriptors import get_descriptors, FeatureDescriptor
 from SMQTK.utils import DataIngest, VideoIngest
 
@@ -96,7 +96,7 @@ def main():
 
     if opts.list:
         fds = get_descriptors().keys()
-        cls = get_classifiers().keys()
+        cls = get_indexers().keys()
 
         print
         print "Feature Descriptors:"
@@ -105,7 +105,7 @@ def main():
             print "\t%s" % name
         print
         print
-        print "Classifiers:"
+        print "Indexers:"
         print
         for name in cls:
             print "\t%s" % name
@@ -113,7 +113,7 @@ def main():
         exit(0)
 
     descriptor_t = get_descriptors()[opts.feature_descriptor]
-    classifier_t = get_classifiers()[opts.classifier]
+    classifier_t = get_indexers()[opts.classifier]
 
     abspath = lambda p: osp.abspath(osp.expanduser(p))
     data_dir = abspath(opts.data_dir or smqtk_config.DATA_DIR)
@@ -146,14 +146,14 @@ def main():
                                        sc['FeatureDescriptors']
                                          [opts.feature_descriptor]
                                          ['data_directory']))
-    #: :type: SMQTK.Classifiers.SMQTKClassifier
+    #: :type: SMQTK.Indexers.Indexer
     classifier = classifier_t(osp.join(data_dir,
-                                       sc["Classifiers"]
+                                       sc["Indexers"]
                                          [opts.classifier]
                                          [opts.feature_descriptor]
                                          ['data_directory']),
                               osp.join(work_dir,
-                                       sc["Classifiers"]
+                                       sc["Indexers"]
                                          [opts.classifier]
                                          [opts.feature_descriptor]
                                          ['data_directory']))

@@ -8,7 +8,7 @@ import logging
 import os.path
 
 from SMQTK.FeatureDescriptors import get_descriptors
-from SMQTK.Classifiers import get_classifiers
+from SMQTK.Indexers import get_indexers
 
 from SMQTK.utils.MongoSessions import MongoSessionInterface
 from SMQTK.utils import DatabaseInfo, DataIngest, VideoIngest
@@ -128,14 +128,14 @@ class SMQTKSearchApp (flask.Flask):
         self.log.info("Initializing IQR Blueprint -- Video")
         self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
                                         'ColorDescriptor_Video_csift',
-                                        'SVMClassifier_HIK',
+                                        'SVMIndexer_HIK',
                                         url_prefix="/vsearch")
         self.register_blueprint(self.module_vsearch)
 
         self.log.info("Initializing IQR Blueprint -- Image")
         self.module_isearch = IQRSearch('ImageSearch', self, ingest_image,
                                         'ColorDescriptor_Image_csift',
-                                        'SVMClassifier_HIK',
+                                        'SVMIndexer_HIK',
                                         url_prefix="/isearch")
         self.register_blueprint(self.module_isearch)
 

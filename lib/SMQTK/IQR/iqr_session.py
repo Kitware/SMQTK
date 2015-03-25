@@ -66,7 +66,7 @@ class IqrSession (object):
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
         :param classifier: Classifier to use for this IQR session
-        :type classifier: SMQTK.Classifiers.SMQTKClassifier
+        :type classifier: SMQTK.Classifiers.Indexer
 
         :param work_ingest: Ingest to add extension files to
         :type work_ingest: SMQTK.utils.DataIngest.DataIngest

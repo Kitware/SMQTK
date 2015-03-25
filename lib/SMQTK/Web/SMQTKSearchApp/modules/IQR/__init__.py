@@ -25,11 +25,11 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class IQRSearch (flask.Blueprint):
 
     def __init__(self, name, parent_app, ingest,
-                 descriptor_type, classifier_type,
+                 descriptor_type, indexer_type,
                  url_prefix=None):
         """
         Initialize a generic IQR Search module with a single descriptor and
-        classifier.
+        indexer.
 
         :param name: Name of this blueprint instance
         :type name:
@@ -43,13 +43,13 @@ class IQRSearch (flask.Blueprint):
         :param descriptor_type: Feature Descriptor type string
         :type descriptor_type: str
 
-        :param classifier_type: Classifier type string
-        :type classifier_type: str
+        :param indexer_type: indexer type string
+        :type indexer_type: str
 
         :param url_prefix:
         :type url_prefix:
 
-        :raises ValueError: Invalid Descriptor or Classifier type
+        :raises ValueError: Invalid Descriptor or indexer type
 
         """
         super(IQRSearch, self).__init__(
@@ -59,12 +59,12 @@ class IQRSearch (flask.Blueprint):
             url_prefix=url_prefix
         )
 
-        # Make sure that the configured descriptor/classifier types exist, as
+        # Make sure that the configured descriptor/indexer types exist, as
         # we as their system configuration sections
         if descriptor_type not in get_descriptors():
             raise ValueError("Not a valid descriptor type: %s" % descriptor_type)
-        if classifier_type not in get_indexers():
-            raise ValueError("Not a valid classifier type: %s" % classifier_type)
+        if indexer_type not in get_indexers():
+            raise ValueError("Not a valid indexer type: %s" % indexer_type)
         try:
             parent_app.config['SYSTEM_CONFIG']\
                 ['FeatureDescriptors'][descriptor_type]
@@ -73,17 +73,17 @@ class IQRSearch (flask.Blueprint):
                              % descriptor_type)
         try:
             parent_app.config['SYSTEM_CONFIG']\
-                ['Indexers'][classifier_type][descriptor_type]\
+                ['Indexers'][indexer_type][descriptor_type]\
                 ['data_directory']
         except KeyError:
-            raise ValueError("No configuration section for classifier type "
+            raise ValueError("No configuration section for indexer type "
                              "'%s' for descriptor '%s'"
-                             % (classifier_type, descriptor_type))
+                             % (indexer_type, descriptor_type))
 
         self._parent_app = parent_app
         self._ingest = ingest
         self._fd_type_str = descriptor_type
-        self._cl_type_str = classifier_type
+        self._cl_type_str = indexer_type
 
         # Uploader Sub-Module
         self.upload_work_dir = os.path.join(
@@ -196,11 +196,11 @@ class IQRSearch (flask.Blueprint):
                                iqr_sess.uuid, fid)
                 feat = iqr_sess.descriptor.compute_feature(upload_data)
 
-                # Extend classifier model with feature data -- modifying
+                # Extend indexer model with feature data -- modifying
                 with iqr_sess:
-                    self.log.debug("[%s::%s] Extending classifier model with "
+                    self.log.debug("[%s::%s] Extending indexer model with "
                                    "feature", iqr_sess.uuid, fid)
-                    iqr_sess.classifier.extend_model({upload_data.uid: feat})
+                    iqr_sess.indexer.extend_model({upload_data.uid: feat})
 
                     # of course, add the new data element as a positive
                     iqr_sess.adjudicate((upload_data.uid,))
@@ -362,7 +362,7 @@ class IQRSearch (flask.Blueprint):
         @self._parent_app.module_login.login_required
         def iqr_refine():
             """
-            Classify current IQR session classifier, updating ranking for
+            Classify current IQR session indexer, updating ranking for
             display.
 
             Fails gracefully if there are no positive[/negative] adjudications.
@@ -461,7 +461,7 @@ class IQRSearch (flask.Blueprint):
                     osp.join(sid_work_dir, 'fd')
                 )
                 #: :type: SMQTK.Indexers.Indexer
-                classifier = get_indexers()[self._cl_type_str](
+                indexer = get_indexers()[self._cl_type_str](
                     osp.join(
                         self._parent_app.config['DATA_DIR'],
                         self._parent_app.config['SYSTEM_CONFIG']\
@@ -475,12 +475,12 @@ class IQRSearch (flask.Blueprint):
                     osp.join(sid_work_dir, 'online-ingest-work'),
                     starting_index=self._ingest.max_uid() + 1
                 )
-                iqr_sess = IqrSession(sid_work_dir, descriptor, classifier,
+                iqr_sess = IqrSession(sid_work_dir, descriptor, indexer,
                                       online_ingest, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
                 # If there are things already in our extension ingest, extend
-                # the base classifier
+                # the base indexer
                 feat_map = descriptor.compute_feature_async(*online_ingest.data_list())
-                classifier.extend_model(feat_map)
+                indexer.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

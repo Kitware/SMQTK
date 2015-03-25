@@ -86,11 +86,9 @@ class Indexer (object):
     @abc.abstractmethod
     def has_model(self):
         """
-        True of this indexer has a valid initialized model for extension and
-        ranking (or doesn't need one to perform those tasks).
-
+        :return: True if this indexer has a valid initialized model for
+            extension and ranking (or doesn't need one to perform those tasks).
         :rtype: bool
-
         """
         pass
 
@@ -107,6 +105,8 @@ class Indexer (object):
             Specific implementations may error on other things. See the specific
             implementations for more details.
 
+        :raises ValueError: The given feature map had no content.
+
         :param feature_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
         :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
@@ -117,7 +117,19 @@ class Indexer (object):
         :type parallel: int
 
         """
-        pass
+        if self.has_model:
+            raise RuntimeError(
+                "\n"
+                "!!! Warning !!! Warning !!! Warning !!!\n"
+                "A model already exists for this indexer! "
+                "Make sure that you really want to do this by moving / "
+                "deleting the existing model (file(s)). Model location: "
+                "%s\n"
+                "!!! Warning !!! Warning !!! Warning !!!"
+                % self.data_dir
+            )
+        if not feature_map:
+            raise ValueError("The given feature_map has no content.")
 
     @abc.abstractmethod
     def extend_model(self, id_feature_map, parallel=None):

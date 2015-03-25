@@ -21,22 +21,22 @@
 
   },
 
-  "Classifiers": {
-    "_comment": "Classifiers operate on input features. For consistency, models are build within the context of a particular feature type.",
+  "Indexers": {
+    "_comment": "Indexers operate on input features. For consistency, models are build within the context of a particular feature type.",
 
-    "SVMClassifier_HIK": {
+    "SVMIndexer_HIK": {
 
       "ColorDescriptor_Image_csift": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Image"
+        "data_directory": "Indexers/SVM_HIK/CSIFT/Image"
       },
       "ColorDescriptor_Video_csift": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Video"
+        "data_directory": "Indexers/SVM_HIK/CSIFT/Video"
       },
       "ColorDescriptor_Image_transformedcolorhistogram": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Image"
+        "data_directory": "Indexers/SVM_HIK/TCH/Image"
       },
       "ColorDescriptor_Video_transformedcolorhistogram": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Video"
+        "data_directory": "Indexers/SVM_HIK/TCH/Video"
       }
 
     }

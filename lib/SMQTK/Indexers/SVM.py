@@ -34,6 +34,9 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
 class SVMIndexer_HIK (Indexer):
     """
     SVM indexer implementation
+
+    Inherited from progenitor ALADDIN project
+
     """
     # TODO: Add optional global model caching so that successive indexer
     #       construction doesn't take additional time.
@@ -78,6 +81,8 @@ class SVMIndexer_HIK (Indexer):
             model for this indexer. Manually delete or move the existing
             model before computing another one.
 
+        :raises ValueError: The given feature map had no content.
+
         :param feature_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
         :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
@@ -88,16 +93,7 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        if self._feat_mem is not None:
-            raise RuntimeError("\n"
-                               "!!! Warning !!! Warning !!! Warning !!!\n"
-                               "A model already exists for this"
-                               "ingest / descriptor combination! Make sure "
-                               "that you really want to do this by moving / "
-                               "deleting the existing model. Model location: "
-                               "%s\n"
-                               "!!! Warning !!! Warning !!! Warning !!!"
-                               % self.data_dir)
+        super(SVMIndexer_HIK, self).generate_model(feature_map, parallel)
 
         self.log.info("Starting model generation")
 
@@ -165,7 +161,8 @@ class SVMIndexer_HIK (Indexer):
 
     def has_model(self):
         """
-        :return: If this indexer instance currently has a model loaded.
+        :return: True if this indexer has a valid initialized model for
+            extension and ranking (or doesn't need one to perform those tasks).
         :rtype: bool
         """
         return self._feat_mem is not None

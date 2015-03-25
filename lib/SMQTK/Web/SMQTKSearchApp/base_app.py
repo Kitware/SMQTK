@@ -109,9 +109,9 @@ class SMQTKSearchApp (flask.Flask):
         # IQR modules
         from .modules.IQR import IQRSearch
         # TODO: At the moment, for simplicity, we're fixing the feature detector
-        #       and classifier types. In the future this should either be moved
+        #       and indexer types. In the future this should either be moved
         #       to something that can be chosen by the user or a
-        #       multi-feature/classifier fusion system.
+        #       multi-feature/indexer fusion system.
         self.log.info("Loading Image Ingest")
         ingest_image = \
             DataIngest(os.path.join(self.config['DATA_DIR'],

@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """
-Generate a classifier model for the given ingest data
-
-Results are
-
+Generate model files for an ingest.
 """
 
 import json
@@ -45,7 +42,7 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
 def main():
     import optparse
     description = \
-        "Generate the model for the given classifier type, using features " \
+        "Generate the model for the given indexer type, using features " \
         "from the given feature descriptor type. We use configured valued in " \
         "the smqtk_config module and from the system configuration JSON file " \
         "(etc/system_config.json) unless otherwise specified by options to " \
@@ -62,8 +59,8 @@ def main():
     groupRequired.add_option('-d', '--feature-descriptor',
                              help="Type of feature descriptor to use for "
                                   "feature generation.")
-    groupRequired.add_option('-c', '--classifier',
-                             help="Type of classifier to generate the model "
+    groupRequired.add_option('-i', '--indexer',
+                             help="Type of indexer to generate the model "
                                   "for.")
 
     groupOptional.add_option('--data-dir',
@@ -80,7 +77,7 @@ def main():
                                   "the smqtk_config module.")
     groupOptional.add_option('-l', '--list', action='store_true', default=False,
                              help="List available FeatureDescriptor and "
-                                  "Classifier types.")
+                                  "Indexer types.")
     groupOptional.add_option('-v', '--verbose', action='store_true',
                              default=False,
                              help='Add debug messaged to output logging.')
@@ -113,7 +110,7 @@ def main():
         exit(0)
 
     descriptor_t = get_descriptors()[opts.feature_descriptor]
-    classifier_t = get_indexers()[opts.classifier]
+    indexer_t = get_indexers()[opts.indexer]
 
     abspath = lambda p: osp.abspath(osp.expanduser(p))
     data_dir = abspath(opts.data_dir or smqtk_config.DATA_DIR)
@@ -147,16 +144,16 @@ def main():
                                          [opts.feature_descriptor]
                                          ['data_directory']))
     #: :type: SMQTK.Indexers.Indexer
-    classifier = classifier_t(osp.join(data_dir,
-                                       sc["Indexers"]
-                                         [opts.classifier]
-                                         [opts.feature_descriptor]
-                                         ['data_directory']),
-                              osp.join(work_dir,
-                                       sc["Indexers"]
-                                         [opts.classifier]
-                                         [opts.feature_descriptor]
-                                         ['data_directory']))
+    indexer = indexer_t(osp.join(data_dir,
+                                 sc["Indexers"]
+                                 [opts.indexer]
+                                 [opts.feature_descriptor]
+                                 ['data_directory']),
+                        osp.join(work_dir,
+                                 sc["Indexers"]
+                                 [opts.indexer]
+                                 [opts.feature_descriptor]
+                                 ['data_directory']))
 
     # Generate any model files needed by the chosen descriptor
     descriptor.generate_model(ingest.data_list())
@@ -171,7 +168,7 @@ def main():
     # worker processes to spawn pools themselves.
     fmap = descriptor.compute_feature_async(*(df for _, df in ingest.iteritems()),
                                             pool_type=NonDaemonicPool)
-    classifier.generate_model(fmap)
+    indexer.generate_model(fmap)
 
 
 if __name__ == "__main__":

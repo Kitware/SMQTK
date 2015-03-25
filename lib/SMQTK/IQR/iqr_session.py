@@ -55,7 +55,7 @@ class IqrSession (object):
             + "[%s]" % self.uuid
         )
 
-    def __init__(self, work_directory, descriptor, classifier, work_ingest,
+    def __init__(self, work_directory, descriptor, indexer, work_ingest,
                  session_uid=None):
         """ Initialize IQR session
 
@@ -65,8 +65,8 @@ class IqrSession (object):
         :param descriptor: Descriptor to use for this IQR session
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
-        :param classifier: Classifier to use for this IQR session
-        :type classifier: SMQTK.Classifiers.Indexer
+        :param indexer: indexer to use for this IQR session
+        :type indexer: SMQTK.Indexers.Indexer
 
         :param work_ingest: Ingest to add extension files to
         :type work_ingest: SMQTK.utils.DataIngest.DataIngest
@@ -84,7 +84,7 @@ class IqrSession (object):
         self._work_dir = work_directory
 
         self.descriptor = descriptor
-        self.classifier = classifier
+        self.indexer = indexer
 
         # Mapping of a clip ID to the probability of it being associated to
         # positive adjudications. This is None before any refinement occurs.
@@ -210,7 +210,7 @@ class IqrSession (object):
                                    "adjudication.")
 
             id_probability_map = \
-                self.classifier.rank_model(self.positive_ids, self.negative_ids)
+                self.indexer.rank_model(self.positive_ids, self.negative_ids)
 
             if self.results is None:
                 self.results = IqrResultsDict()
@@ -233,7 +233,7 @@ class IqrSession (object):
         with self.lock:
             self.positive_ids.clear()
             self.negative_ids.clear()
-            self.classifier.reset()
+            self.indexer.reset()
             self.results = None
 
             # clear contents of working directory

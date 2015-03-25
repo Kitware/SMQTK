@@ -31,7 +31,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
     This was started as an attempt at gaining a deeper understanding of what's
     going on with this feature descriptor's use and how it applied to later use
-    in an classifiers.
+    in an indexer.
 
     Codebook generated via kmeans given a set of input data. FLANN index model
     used for quantization, buily using auto-tuning (picks the best indexing

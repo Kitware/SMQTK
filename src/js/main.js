@@ -355,7 +355,15 @@ myApp.displayImages = function(data) {
       newDiv.append(imageDiv)
       var newAnchor = $(document.createElement('a'));
       var newImage = $(document.createElement('img'));
-      newImage.addClass('img-responsive img-fluid');
+      newImage.addClass('img-responsive img-fluid img-blur');
+      newImage.on('mouseover', function() {
+        $(this).addClass('img-clear');
+        $(this).removeClass('img-blur');
+      });
+      newImage.on('mouseout', function() {
+        $(this).addClass('img-blur');
+        $(this).removeClass('img-clear');
+      });
       imageDiv.append(newAnchor);
       newAnchor.append(newImage);
       newImage.attr('src', data.images[i]);

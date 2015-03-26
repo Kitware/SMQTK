@@ -74,6 +74,14 @@ footer {
   color: white;
 }
 
+.img-blur {
+  -webkit-filter: blur(5px);
+}
+
+.img-clear {
+  -webkit-filter: none;
+}
+
 a {
   color: black;
 }

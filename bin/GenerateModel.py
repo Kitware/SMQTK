@@ -6,13 +6,10 @@ Generate model files for an ingest.
 import json
 import logging
 import multiprocessing.pool
-import os.path as osp
 
-import smqtk_config
-
-from SMQTK.Indexers import get_indexers
-from SMQTK.FeatureDescriptors import get_descriptors, FeatureDescriptor
-from SMQTK.utils import DataIngest, VideoIngest
+from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.utils.configuration import IngestConfiguration
+from SMQTK.utils.jsmin import jsmin
 
 
 class NonDaemonicProcess (multiprocessing.Process):
@@ -39,6 +36,34 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
     Process = NonDaemonicProcess
 
 
+def list_ingest_labels():
+    print
+    print "Available ingest labels:"
+    print
+    for l in IngestConfiguration.available_ingest_labels():
+        print "\t%s" % l
+    print
+
+
+def list_available_fds_idxrs(ingest_config):
+    """
+    :type ingest_config: IngestConfiguration
+    """
+    print
+    print "For ingest configuration '%s'..." % ingest_config.label
+    print
+    print "Available FeatureDescriptor types:"
+    print
+    for l in ingest_config.get_available_descriptor_labels():
+        print "\t%s" % l
+    print
+    print "Available Indexer types:"
+    print
+    for l in ingest_config.get_available_indexer_labels():
+        print "\t%s" % l
+    print
+
+
 def main():
     import optparse
     description = \
@@ -52,32 +77,24 @@ def main():
     groupRequired = optparse.OptionGroup(parser, "Required Options")
     groupOptional = optparse.OptionGroup(parser, "Optional")
 
-    groupRequired.add_option('-t', '--type',
-                             help="Ingest data type. Currently supports "
-                                  "'image' or 'video'. This determines which "
-                                  "data ingest to use.")
+    groupRequired.add_option('-i', '--ingest',
+                             help="Ingest configuration to use.")
     groupRequired.add_option('-d', '--feature-descriptor',
-                             help="Type of feature descriptor to use for "
+                             help="Feature descriptor type for model and "
                                   "feature generation.")
-    groupRequired.add_option('-i', '--indexer',
-                             help="Type of indexer to generate the model "
-                                  "for.")
+    groupRequired.add_option('-I', '--indexer',
+                             help="Indexer type for model generation.")
 
-    groupOptional.add_option('--data-dir',
-                             help='Custom data directory to use. Otherwise '
-                                  'we pull the data directory from the '
-                                  'smqtk_config module.')
-    groupOptional.add_option('--work-dir',
-                             help="Custom work directory to use. Otherwise "
-                                  "we pull the work directory from the "
-                                  "smqtk_config module.")
     groupOptional.add_option('--sys-json',
                              help="Custom system configuration JSON file to "
                                   "use. Otherwise we use the one specified in "
                                   "the smqtk_config module.")
     groupOptional.add_option('-l', '--list', action='store_true', default=False,
-                             help="List available FeatureDescriptor and "
-                                  "Indexer types.")
+                             help="List available ingest configurations. If "
+                                  "a valid ingest configuration has been "
+                                  "specified, we list available "
+                                  "FeatureDetector and Indexer configurations "
+                                  "available.")
     groupOptional.add_option('-v', '--verbose', action='store_true',
                              default=False,
                              help='Add debug messaged to output logging.')
@@ -91,69 +108,48 @@ def main():
     if opts.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    if opts.list:
-        fds = get_descriptors().keys()
-        cls = get_indexers().keys()
+    ingest_label = opts.ingest
+    fd_label = opts.feature_descriptor
+    idxr_label = opts.indexer
 
-        print
-        print "Feature Descriptors:"
-        print
-        for name in fds:
-            print "\t%s" % name
-        print
-        print
-        print "Indexers:"
-        print
-        for name in cls:
-            print "\t%s" % name
-        print
-        exit(0)
-
-    descriptor_t = get_descriptors()[opts.feature_descriptor]
-    indexer_t = get_indexers()[opts.indexer]
-
-    abspath = lambda p: osp.abspath(osp.expanduser(p))
-    data_dir = abspath(opts.data_dir or smqtk_config.DATA_DIR)
-    work_dir = abspath(opts.work_dir or smqtk_config.WORK_DIR)
-
+    # Prep custom JSON configuration if one was given
     if opts.sys_json:
-        with open(abspath(opts.sys_json)) as ifile:
-            sc = json.load(ifile)
-    else:
-        sc = smqtk_config.SYSTEM_CONFIG
+        with open(opts.sys_json) as json_file:
+            json_config = json.loads(jsmin(json_file.read()))
+        IngestConfiguration.INGEST_CONFIG = json_config['Ingests']
 
-    if opts.type.lower() == 'image':
-        ingest_t = DataIngest
-    elif opts.type.lower() == 'video':
-        ingest_t = VideoIngest
-    else:
-        raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    t = opts.type.lower()
-    t = t[0].upper() + t[1:]
+    if opts.list:
+        if ingest_label is None:
+            list_ingest_labels()
+            exit(0)
+        elif ingest_label not in IngestConfiguration.available_ingest_labels():
+            print "ERROR: Label '%s' is not a valid ingest configuration." \
+                % ingest_label
+            list_ingest_labels()
+            exit(0)
+        else:
+            # List available FeatureDescriptor and Indexer configurations
+            # available for the given ingest config label.
+            ingest_config = IngestConfiguration(ingest_label)
+            list_available_fds_idxrs(ingest_config)
+            exit(0)
+
+    # If we weren't given an index label, or if the one given was invalid, print
+    if (ingest_label is None or ingest_label not in
+            IngestConfiguration.available_ingest_labels()):
+        print "ERROR: Invalid ingest configuration specified for use:", \
+            ingest_label
+        list_ingest_labels()
+        exit(1)
+
+    ingest_config = IngestConfiguration(ingest_label)
 
     #: :type: DataIngest or VideoIngest
-    ingest = ingest_t(osp.join(data_dir, sc['Ingest'][t]),
-                      osp.join(work_dir, sc['Ingest'][t]))
+    ingest = ingest_config.get_ingest_instance()
     #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
-    descriptor = descriptor_t(osp.join(data_dir,
-                                       sc['FeatureDescriptors']
-                                         [opts.feature_descriptor]
-                                         ['data_directory']),
-                              osp.join(work_dir,
-                                       sc['FeatureDescriptors']
-                                         [opts.feature_descriptor]
-                                         ['data_directory']))
+    descriptor = ingest_config.get_FeatureDetector_instance(fd_label)
     #: :type: SMQTK.Indexers.Indexer
-    indexer = indexer_t(osp.join(data_dir,
-                                 sc["Indexers"]
-                                 [opts.indexer]
-                                 [opts.feature_descriptor]
-                                 ['data_directory']),
-                        osp.join(work_dir,
-                                 sc["Indexers"]
-                                 [opts.indexer]
-                                 [opts.feature_descriptor]
-                                 ['data_directory']))
+    indexer = ingest_config.get_Indexer_instance(idxr_label, fd_label)
 
     # Generate any model files needed by the chosen descriptor
     descriptor.generate_model(ingest.data_list())

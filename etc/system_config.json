@@ -1,45 +1,49 @@
+// Comments are allowed in JSON files used with the SMQTK system. They are
+// parsed out.
 {
-  "Ingest": {
-    "Image": "Ingest/Image",
-    "Video": "Ingest/Video"
-  },
-
-  "FeatureDescriptors": {
-
-    "ColorDescriptor_Image_csift": {
-      "data_directory": "FeatureDescriptors/CSIFT/Image"
-    },
-    "ColorDescriptor_Video_csift": {
-      "data_directory": "FeatureDescriptors/CSIFT/Video"
-    },
-    "ColorDescriptor_Image_transformedcolorhistogram": {
-      "data_directory": "FeatureDescriptors/TCH/Image"
-    },
-    "ColorDescriptor_Video_transformedcolorhistogram": {
-      "data_directory": "FeatureDescriptors/CSIFT/Video"
+    "Ingests": {
+        // relative to the SMQTK configured data directory
+        "dir": "SMQTK_Ingests",
+        // Available data ingests and their associated settings
+        "listing": {
+            "example_image": {
+                // relative to the ingest base directory
+                "dir": "example_image",
+                // As of now, there are only two supported types: "image" and "video".
+                // If something other than those two values are used here, we error.
+                "type": "image",
+                // FeatureDescriptor settings for this ingest
+                "descriptors": {
+                    // Relative to containing ingest directory
+                    "dir": "FeatureDescriptors",
+                    "listing": {
+                        "ColorDescriptor_Image_csift": {
+                            "dir": "CSIFT"
+                        },
+                        "ColorDescriptor_Image_transformedcolorhistogram": {
+                            "dir": "TCH"
+                        }
+                    }
+                },
+                // Indexer settings for this ingest
+                // - indexers operate on input features. Currently we assume
+                //   that indexers will only ever want features from one
+                //   consistent FeatureDetector type. Thus, the run-time data
+                //   and work directories for an Indexer type will have a
+                //   sub-directory under it for each Indexer-Descriptor pairing
+                //   instantiated.
+                "indexers": {
+                    "dir": "Indexers",
+                    "listing": {
+                        "NearestDistance_HIK": {
+                            "dir": "NearestDistance_HIK"
+                        },
+                        "SVMIndexer_HIK": {
+                            "dir": "SVM_HIK"
+                        }
+                    }
+                }
+            }
+        }
     }
-
-  },
-
-  "Indexers": {
-    "_comment": "Indexers operate on input features. For consistency, models are build within the context of a particular feature type.",
-
-    "SVMIndexer_HIK": {
-
-      "ColorDescriptor_Image_csift": {
-        "data_directory": "Indexers/SVM_HIK/CSIFT/Image"
-      },
-      "ColorDescriptor_Video_csift": {
-        "data_directory": "Indexers/SVM_HIK/CSIFT/Video"
-      },
-      "ColorDescriptor_Image_transformedcolorhistogram": {
-        "data_directory": "Indexers/SVM_HIK/TCH/Image"
-      },
-      "ColorDescriptor_Video_transformedcolorhistogram": {
-        "data_directory": "Indexers/SVM_HIK/TCH/Video"
-      }
-
-    }
-
-  }
 }

@@ -11,11 +11,11 @@ import logging
 import multiprocessing
 import numpy
 import os
-import shutil
 
 from EventContentDescriptor.iqr_modules import iqr_model_train, iqr_model_test
 
 from SMQTK.Indexers import Indexer
+from SMQTK.utils.distance_functions import histogram_intersection_distance
 from SMQTK.utils.FeatureMemory import FeatureMemory
 from SMQTK.utils.ReadWriteLock import ReadWriteLock
 
@@ -27,7 +27,7 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
     log = logging.getLogger("_svm_model_hik_helper")
     log.debug("Computing HIK for [%d, %d]", i, j)
     # noinspection PyUnresolvedReferences
-    ij_hik = (i_feat + j_feat - numpy.abs(i_feat - j_feat)).sum() * 0.5
+    ij_hik = histogram_intersection_distance(i_feat, j_feat)
     return ij_hik
 
 
@@ -170,7 +170,8 @@ class SVMIndexer_HIK (Indexer):
     def extend_model(self, id_feature_map, parallel=None):
         """
         Extend, in memory, the current data model with given data elements using
-        the configured feature descriptor.
+        the configured feature descriptor. Online extensions are not saved to
+        data files.
 
         NOTE: For now, if there is currently no data model created for this
         indexer / descriptor combination, we will error. In the future, I
@@ -194,9 +195,7 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        if self._feat_mem is None:
-            raise RuntimeError("No model for this indexer yet! Expected to "
-                               "find files at: %s" % self.data_dir)
+        super(SVMIndexer_HIK, self).extend_model(id_feature_map, parallel)
 
         with self._feat_mem_lock.write_lock():
             cur_ids = set(self._feat_mem.get_ids())
@@ -226,7 +225,9 @@ class SVMIndexer_HIK (Indexer):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
-        of [0, 1]. Where
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)
@@ -241,9 +242,7 @@ class SVMIndexer_HIK (Indexer):
         :rtype: dict of (int, float)
 
         """
-        if self._feat_mem is None:
-            raise RuntimeError("No model for this indexer yet! Expected to "
-                               "find files at: %s" % self.data_dir)
+        super(SVMIndexer_HIK, self).rank_model(pos_ids, neg_ids)
 
         # === EXPERIMENT ===
         # Swapping out FeatureMemory background clips with auto-selected UIDs
@@ -341,9 +340,7 @@ class SVMIndexer_HIK (Indexer):
         :raises RuntimeError: There are no current model files to reset to.
 
         """
-        if not self._has_model_files():
-            raise RuntimeError("No model files to reset state to! Please "
-                               "generate first.")
+        super(SVMIndexer_HIK, self).reset()
         self._feat_mem = FeatureMemory.construct_from_files(
             self._ids_filepath, self._bg_flags_filepath,
             self._feature_data_filepath, self._kernel_data_filepath,

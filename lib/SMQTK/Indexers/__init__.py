@@ -117,7 +117,7 @@ class Indexer (object):
         :type parallel: int
 
         """
-        if self.has_model:
+        if self.has_model():
             raise RuntimeError(
                 "\n"
                 "!!! Warning !!! Warning !!! Warning !!!\n"
@@ -135,13 +135,17 @@ class Indexer (object):
     def extend_model(self, id_feature_map, parallel=None):
         """
         Extend, in memory, the current model with the given data elements using
-        the configured feature descriptor.
+        the configured feature descriptor. Online extensions are not saved to
+        data files.
 
         NOTE: For now, if there is currently no data model created for this
         indexer / descriptor combination, we will error. In the future, I
         would imagine a new model would be created.
 
-        :raises RuntimeError: See implementation.
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
         :raises ValueError: See implementation.
 
         :param id_feature_map: Mapping of integer IDs to features to extend this
@@ -154,14 +158,19 @@ class Indexer (object):
         :type parallel: int
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
     @abc.abstractmethod
     def rank_model(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
-        of [0, 1]. Where
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
 
         :param pos_ids: List of positive data IDs
         :type pos_ids: collections.Iterable of int
@@ -173,7 +182,8 @@ class Indexer (object):
         :rtype: dict of (int, float)
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
     @abc.abstractmethod
     def reset(self):
@@ -181,10 +191,12 @@ class Indexer (object):
         Reset this indexer to its original state, i.e. removing any model
         extension that may have occurred.
 
-        :raises RuntimeError: See implementation.
+        :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer to reset "
+                               "to.")
 
 
 def get_indexers():

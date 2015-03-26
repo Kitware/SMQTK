@@ -213,7 +213,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                           "descriptor '%s'.", self.descriptor_type())
 
             # generate descriptors
-            with SimpleTimer("Generating descriptor matrices...", self.log):
+            with SimpleTimer("Generating descriptor matrices...", self.log.debug):
                 info, descriptors = \
                     self._generate_descriptor_matrices(*data_list)
 
@@ -223,7 +223,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
             #   the generated codebook as the same exact whitening
             #   transformation would need to be applied in order for the
             #   comparison to the codebook centroids to be valid.
-            with SimpleTimer("Computing scipy.cluster.vq.kmeans...", self.log):
+            with SimpleTimer("Computing scipy.cluster.vq.kmeans...", self.log.debug):
                 codebook, distortion = scipy.cluster.vq.kmeans(
                     descriptors,
                     kwargs.get('kmeans_k', 1024),
@@ -232,7 +232,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                 )
                 self.log.debug("KMeans result distortion: %f", distortion)
                 # Alternate kmeans implementations: OpenCV, sklearn, pyflann
-            with SimpleTimer("Saving generated codebook...", self.log):
+            with SimpleTimer("Saving generated codebook...", self.log.debug):
                 numpy.save(self.codebook_filepath, codebook)
         else:
             self.log.info("Found existing codebook file.")
@@ -245,7 +245,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
             log_level = 'info'
         else:
             log_level = 'warning'
-        with SimpleTimer("Building FLANN index...", self.log):
+        with SimpleTimer("Building FLANN index...", self.log.debug):
             params = flann.build_index(codebook, **{
                 "target_precision": kwargs.get("flann_target_precision", 0.99),
                 "sample_fraction": kwargs.get("flann_sample_fraction", 1.0),
@@ -253,7 +253,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                 "algorithm": "autotuned"
             })
             # TODO: Save params dict as JSON?
-        with SimpleTimer("Saving FLANN index to file...", self.log):
+        with SimpleTimer("Saving FLANN index to file...", self.log.debug):
             flann.save_index(self.flann_index_filepath)
 
         # save generation results to class for immediate feature computation use
@@ -361,7 +361,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             # Mapping of UID to async processing result
             #: :type: dict of (int, multiprocessing.pool.ApplyResult)
             r_map = {}
-            with SimpleTimer("Computing descriptors async...", self.log):
+            with SimpleTimer("Computing descriptors async...", self.log.debug):
                 for di in data_items:
                     args = (self.PROC_COLORDESCRIPTOR, di.filepath,
                             self.descriptor_type())
@@ -372,7 +372,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
             # Each result is a tuple of two ndarrays: info and descriptor
             # matrices.
-            with SimpleTimer("Combining results...", self.log):
+            with SimpleTimer("Combining results...", self.log.debug):
                 combined_info = None
                 combined_desc = None
                 for uid in sorted(r_map.keys()):
@@ -418,7 +418,8 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         pool = multiprocessing.Pool(processes=self.PARALLEL)
         #: :type: dict of (tuple of (int, int), multiprocessing.pool.ApplyResult)
         r_map = {}
-        with SimpleTimer("Extracting frames and submitting descriptor jobs..."):
+        with SimpleTimer("Extracting frames and submitting descriptor jobs...",
+                         self.log.debug):
             for di in data_items:
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
                 p['second_offset'] = di.metadata().duration * p['second_offset']
@@ -432,7 +433,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     )
 
         # Each result is a tuple of two ndarrays: info and descriptor matrices
-        with SimpleTimer("Combining results...", self.log):
+        with SimpleTimer("Combining results...", self.log.debug):
             combined_info = None
             combined_desc = None
             for uid, frame in sorted(r_map.keys()):

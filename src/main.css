@@ -70,7 +70,8 @@ footer {
 }
 
 .hd-highlight {
-  background: gray;
+  background: black;
+  color: white;
 }
 
 a {

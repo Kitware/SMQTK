@@ -26,7 +26,7 @@ $(function () {
   myApp.map.createLayer(
     'osm',
     {
-      baseUrl: 'http://b.basemaps.cartocdn.com/light_all/'
+      baseUrl: 'http://otile1.mqcdn.com/tiles/1.0.0/map/'
     }
   );
 

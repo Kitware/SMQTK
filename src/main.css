@@ -10,7 +10,6 @@ body {
     overflow-y: auto;
 }
 
-
 #map {
   width: 100%;
   height: calc(100% - 50px);

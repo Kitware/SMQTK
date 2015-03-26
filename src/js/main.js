@@ -15,13 +15,18 @@ $(function () {
   myApp.visibleDialogs = [];
   myApp.prevTimestamp = 0;
 
+  $( window ).resize(function() {
+    myApp.resize();
+  });
+
   myApp.map = geo.map({
           node: '#map',
           center: {
             x: -98.0,
             y: 39.5
           },
-          zoom: 2
+          zoom: 2,
+          autoResize: false
         });
   myApp.map.createLayer(
     'osm',
@@ -29,6 +34,13 @@ $(function () {
       baseUrl: 'http://otile1.mqcdn.com/tiles/1.0.0/map/'
     }
   );
+
+  myApp.resize = function() {
+    var height = $(window).height(),
+        width  = $(window).width();
+    myApp.map.resize(0, 0, width, height);
+  }
+  myApp.resize();
 
   // Aggregate data
   //--------------------------------------------------------------------------
@@ -92,7 +104,7 @@ $(function () {
   // Scrap a URL for images and return list of images URL
   //--------------------------------------------------------------------------
   function scrapUrl(url, callback) {
-    $.ajax("/api/v1/scrap?url="+url+"")
+    $.ajax("/api/v1/scrape?url="+url+"")
       .done(function(data) {
         if (callback !== undefined) {
           callback(data);

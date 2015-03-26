@@ -9,13 +9,13 @@ from girder import logger
 from girder.api import access
 from girder.api.describe import Description
 
-class Scrapper(girder.api.rest.Resource):
+class Scraper(girder.api.rest.Resource):
     def __init__(self):
-        self.resourceName = 'scrap'
-        self.route('GET', (), self.scrap)
+        self.resourceName = 'scrape'
+        self.route('GET', (), self.scrape)
 
     @access.public
-    def scrap(self, params):
+    def scrape(self, params):
         result = []
         url = params.get('url', None)
         if url:
@@ -84,4 +84,4 @@ class Geospace(girder.api.rest.Resource):
 
 def load(info):
     info['apiRoot'].data = Geospace()
-    info['apiRoot'].scrap = Scrapper()
+    info['apiRoot'].scrape = Scraper()

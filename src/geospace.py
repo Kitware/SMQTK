@@ -56,6 +56,27 @@ class Geospace(girder.api.rest.Resource):
             };
             return result;
 
+        # Get location if provided
+        location = params.get('location', None)
+
+        print 'location is ', location
+
+        if location is not None:
+            # Reverse geocode location
+            print 'location is ', location
+
+            from geopy.geocoders import Nominatim
+            geolocator = Nominatim()
+            location = geolocator.geocode(location)
+
+            print 'location is ', location.longitude
+
+            # Hard-coded to 1 unit for now
+            geospatial_query = { "$geoWithin" : {
+                    "$center" : [[location.longitude, location.latitude], 1],
+                }
+            }
+
         # Find all of the datasets within time range.
         time_range = eval(time_range)
 
@@ -65,7 +86,10 @@ class Geospace(girder.api.rest.Resource):
         start_time = datetime.datetime.fromtimestamp(start).isoformat()
         end_time = datetime.datetime.fromtimestamp(end).isoformat()
 
-        query_result = coll.find({"field4":{"$gte": start_time, "$lt": end_time}}, skip=offset, limit=limit, sort=sort)
+        if location is None:
+            query_result = coll.find({"field4":{"$gte": start_time, "$lt": end_time}}, skip=offset, limit=limit, sort=sort)
+        else:
+            query_result = coll.find({"field4":[{"$gte": start_time, "$lt": end_time}, geospatial_query]}, skip=offset, limit=limit, sort=sort)
         result = [row for row in query_result]
         return result
 

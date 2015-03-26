@@ -12,6 +12,7 @@ $(function () {
   myApp.startTime = null;
   myApp.animationState = 0;
   myApp.timeRange = 0;
+  myApp.location = null;
   myApp.visibleDialogs = [];
   myApp.prevTimestamp = 0;
 
@@ -71,11 +72,16 @@ $(function () {
 
   // Query given a time duration
   //--------------------------------------------------------------------------
-  function queryData(timeRange, callback) {
+  function queryData(timeRange, location, callback) {
+    var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
 
-    console.log("/api/v1/data?limit=100000&duration=["+timeRange+"]");
+    if (location !== undefined || location !== null) {
+      url += "&location="+location+"";
+    }
 
-    $.ajax("/api/v1/data?limit=100000&duration=["+timeRange+"]")
+    console.log(url);
+
+    $.ajax(url)
       .done(function(data) {
 
         if (callback !== undefined) {
@@ -208,7 +214,8 @@ $(function () {
   myApp.updateExtents = function() {
     // Now run the query
     myApp.timeRange = $("#slider").slider("values");
-    queryData(myApp.timeRange, function(data) {
+    myApp.location = $("#search-location").text();
+    queryData(myApp.timeRange, myApp.location, function(data) {
       // Clear out any previous information
       clearDialogs();
 
@@ -270,8 +277,11 @@ $(function () {
         // Set the slider value
         $( "#slider" ).slider( "option", "values", newRange );
 
+        myApp.timeRange = newRange;
+        myApp.location = $("#search-location").text();
+
         // Query the data and create vis again
-        queryData( newRange, function(data) {
+        queryData(myApp.timeRange, myApp.location, function(data) {
           render(data, function() {
             myApp.updateView(null, newRange);
 

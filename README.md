@@ -7,6 +7,8 @@ In order to provide complete functionality, the following dependencies are requi
   * After unpacking the downloaded ZIP archive, add the directory it was
     extracted to to the PYTHONPATH so the DescriptorIO.py module can be
     accessed and used within the SMQTK library.
+  * Note that a license is required for commercial use (See the koen.me
+    webpage).
 * MongoDB
   * MongoDB is required for the Web application for session storage. This
     allows the Flask application API to modify session contents when within

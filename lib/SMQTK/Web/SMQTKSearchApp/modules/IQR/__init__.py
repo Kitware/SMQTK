@@ -11,12 +11,9 @@ import os.path as osp
 import PIL.Image
 import random
 
-from SMQTK.FeatureDescriptors import get_descriptors
-from SMQTK.Indexers import get_indexers
-
 from SMQTK.IQR import IqrController, IqrSession
 
-from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
+from SMQTK.Web.SMQTKSearchApp.modules.file_upload import FileUploadMod
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +21,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class IQRSearch (flask.Blueprint):
 
-    def __init__(self, name, parent_app, ingest,
+    def __init__(self, name, parent_app, ingest_config,
                  descriptor_type, indexer_type,
                  url_prefix=None):
         """
@@ -37,8 +34,8 @@ class IQRSearch (flask.Blueprint):
         :param parent_app: Parent containing flask app instance
         :type parent_app: SMQTK.Web.SMQTKSearchApp.app.SMQTKSearchApp
 
-        :param ingest: The primary data ingest to search over.
-        :type ingest: SMQTK.utils.DataIngest.DataIngest
+        :param ingest_config: Ingest configuration instance
+        :type ingest_config: SMQTK.utils.configuration.IngestConfiguration
 
         :param descriptor_type: Feature Descriptor type string
         :type descriptor_type: str
@@ -61,29 +58,18 @@ class IQRSearch (flask.Blueprint):
 
         # Make sure that the configured descriptor/indexer types exist, as
         # we as their system configuration sections
-        if descriptor_type not in get_descriptors():
-            raise ValueError("Not a valid descriptor type: %s" % descriptor_type)
-        if indexer_type not in get_indexers():
-            raise ValueError("Not a valid indexer type: %s" % indexer_type)
-        try:
-            parent_app.config['SYSTEM_CONFIG']\
-                ['FeatureDescriptors'][descriptor_type]
-        except KeyError:
-            raise ValueError("No configuration section for descriptor type '%s'"
-                             % descriptor_type)
-        try:
-            parent_app.config['SYSTEM_CONFIG']\
-                ['Indexers'][indexer_type][descriptor_type]\
-                ['data_directory']
-        except KeyError:
-            raise ValueError("No configuration section for indexer type "
-                             "'%s' for descriptor '%s'"
-                             % (indexer_type, descriptor_type))
+        if descriptor_type not in ingest_config.get_available_descriptor_labels():
+            raise ValueError("'%s' not a valid descriptor type for ingest '%s'"
+                             % (descriptor_type, ingest_config.label))
+        if indexer_type not in ingest_config.get_available_indexer_labels():
+            raise ValueError("'%s' not a valid indexer type for ingest '%s'"
+                             % (indexer_type, ingest_config.label))
 
         self._parent_app = parent_app
-        self._ingest = ingest
+        self._ingest_config = ingest_config
+        self._ingest = ingest_config.new_ingest_instance()
         self._fd_type_str = descriptor_type
-        self._cl_type_str = indexer_type
+        self._idxr_type_str = indexer_type
 
         # Uploader Sub-Module
         self.upload_work_dir = os.path.join(
@@ -112,11 +98,13 @@ class IQRSearch (flask.Blueprint):
         @self.route("/")
         @self._parent_app.module_login.login_required
         def index():
-            return flask.render_template("iqr_search_index.html", **{
+            r = {
                 "module_name": self.name,
                 "uploader_url": self.mod_upload.url_prefix,
-                "uploader_post_url": self.mod_upload.upload_post_url()
-            })
+                "uploader_post_url": self.mod_upload.upload_post_url(),
+            }
+            r.update(parent_app.nav_bar_content())
+            return flask.render_template("iqr_search_index.html", **r)
 
         @self.route('/iqr_session_info', methods=["GET"])
         @self._parent_app.module_login.login_required
@@ -449,32 +437,32 @@ class IQRSearch (flask.Blueprint):
             sid = flask.session.sid
             if not self._iqr_controller.has_session_uuid(sid):
                 sid_work_dir = osp.join(self._parent_app.config['WORK_DIR'],
-                                        "IQR", self.name, sid)
+                                        "Web", "IQR", self.name, sid)
+
                 #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
-                descriptor = get_descriptors()[self._fd_type_str](
-                    osp.join(
-                        self._parent_app.config['DATA_DIR'],
-                        self._parent_app.config['SYSTEM_CONFIG']\
-                            ['FeatureDescriptors'][self._fd_type_str]\
-                            ['data_directory']
-                    ),
-                    osp.join(sid_work_dir, 'fd')
+                descriptor = self._ingest_config.new_descriptor_instance(
+                    self._fd_type_str,
+                    work_dir=osp.join(sid_work_dir, 'descriptors',
+                                      self._fd_type_str)
                 )
+
                 #: :type: SMQTK.Indexers.Indexer
-                indexer = get_indexers()[self._cl_type_str](
-                    osp.join(
-                        self._parent_app.config['DATA_DIR'],
-                        self._parent_app.config['SYSTEM_CONFIG']\
-                            ['Indexers'][self._cl_type_str]\
-                            [self._fd_type_str]['data_directory']
-                    ),
-                    osp.join(sid_work_dir, 'cl'),
+                indexer = self._ingest_config.new_indexer_instance(
+                    self._idxr_type_str, self._fd_type_str,
+                    work_dir=osp.join(sid_work_dir, "indexers",
+                                      self._idxr_type_str)
                 )
-                online_ingest = self._ingest.__class__(
-                    osp.join(sid_work_dir, 'online-ingest'),
-                    osp.join(sid_work_dir, 'online-ingest-work'),
+
+                # Custom ingest inheriting the same type as the base ingest
+                # NOTE: This assumes that the base ingest is static in regards
+                #       to content (required by starting_index being assigned
+                #       here).
+                online_ingest = self._ingest_config.new_ingest_instance(
+                    data_dir=osp.join(sid_work_dir, 'online-ingest'),
+                    work_dir=osp.join(sid_work_dir, 'online-ingest-work'),
                     starting_index=self._ingest.max_uid() + 1
                 )
+
                 iqr_sess = IqrSession(sid_work_dir, descriptor, indexer,
                                       online_ingest, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)

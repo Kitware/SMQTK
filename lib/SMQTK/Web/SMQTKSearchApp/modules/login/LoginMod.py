@@ -48,7 +48,8 @@ class LoginMod (flask.Blueprint):
             return flask.render_template(
                 'login.html',
                 next=flask.request.args.get('next', '/home'),
-                username=flask.request.args.get('username', '')
+                username=flask.request.args.get('username', ''),
+                **parent_app.nav_bar_content()
             )
 
         @self.route('/login.passwd', methods=['post'])

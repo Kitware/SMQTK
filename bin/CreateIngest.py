@@ -49,7 +49,7 @@ def main():
         exit(1)
 
     ingest_config = IngestConfiguration(opts.ingest)
-    ingest = ingest_config.get_ingest_instance()
+    ingest = ingest_config.new_ingest_instance()
     print "Script arguments:\n%s" % args
     for g in args:
         g = osp.expanduser(g)

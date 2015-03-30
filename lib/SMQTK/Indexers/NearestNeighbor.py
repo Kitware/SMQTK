@@ -7,8 +7,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import abc
 import multiprocessing
-from operator import neg
 import numpy
 import os.path as osp
 
@@ -17,7 +17,7 @@ from SMQTK.utils import SimpleTimer
 from SMQTK.utils.distance_functions import histogram_intersection_distance
 
 
-class NearestDistance_HIK (Indexer):
+class NearestNeighbor_HIK_Base (Indexer):
     """
     Indexer that ranks elements based on HIK distance metric to other elements
     in the model.
@@ -29,7 +29,7 @@ class NearestDistance_HIK (Indexer):
     AUTO_NEG_PERCENT = 0.1
 
     def __init__(self, data_dir, work_dir):
-        super(NearestDistance_HIK, self).__init__(data_dir, work_dir)
+        super(NearestNeighbor_HIK_Base, self).__init__(data_dir, work_dir)
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
@@ -43,7 +43,7 @@ class NearestDistance_HIK (Indexer):
 
         # Distance kernel matrix
         #: :type: numpy.core.multiarray.ndarray
-        self._kernel_mat = None
+        self._similarity_mat = None
 
         if self.has_model_files():
             self._load_model_files()
@@ -54,7 +54,7 @@ class NearestDistance_HIK (Indexer):
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
         #: :type: numpy.core.multiarray.ndarray
-        self._kernel_mat = numpy.load(self.kernel_mat_filepath)
+        self._similarity_mat = numpy.load(self.kernel_mat_filepath)
 
         # Mapping of element UID to array/matrix index position
         #: :type: dict of int
@@ -89,8 +89,8 @@ class NearestDistance_HIK (Indexer):
             self._uid_array is not None
             and self._feature_mat is not None
             and 0 not in self._feature_mat.shape  # has dimensionality
-            and self._kernel_mat is not None
-            and 0 not in self._kernel_mat.shape   # has dimensionality
+            and self._similarity_mat is not None
+            and 0 not in self._similarity_mat.shape   # has dimensionality
         )
 
     def generate_model(self, feature_map, parallel=None):
@@ -117,7 +117,8 @@ class NearestDistance_HIK (Indexer):
         :type parallel: int
 
         """
-        super(NearestDistance_HIK, self).generate_model(feature_map, parallel)
+        super(NearestNeighbor_HIK_Base, self)\
+            .generate_model(feature_map, parallel)
 
         num_features = len(feature_map)
         ordered_uids = sorted(feature_map.keys())
@@ -130,7 +131,7 @@ class NearestDistance_HIK (Indexer):
         feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
-        dist_kernel_mat = numpy.zeros(
+        sim_kernel_mat = numpy.zeros(
             (num_features, num_features), dtype=sample_feature.dtype
         )
 
@@ -152,25 +153,25 @@ class NearestDistance_HIK (Indexer):
         with SimpleTimer("Aggregating HI dists into matrix", self.log.debug):
             for i in range(num_features):
                 for j in range(i, num_features):
-                    dist_kernel_mat[i, j] = rmap[i, j].get()
+                    sim_kernel_mat[i, j] = rmap[i, j].get()
                     if i != j:
-                        dist_kernel_mat[j, i] = dist_kernel_mat[i, j]
+                        sim_kernel_mat[j, i] = sim_kernel_mat[i, j]
         # Filling in top then bottom might result in less cache swapping, but
         # I'm not even sure if this optimization would do anything with python
         # being so high level.
         # with SimpleTimer("Filling in bottom triangle", self.log.debug):
         #     for i in range(1, num_features):
         #         for j in range(0, i):
-        #             dist_kernel_mat[i, j] = dist_kernel_mat[j, i]
+        #             sim_kernel_mat[i, j] = sim_kernel_mat[j, i]
 
         self._uid_array = uid_array
         self._feature_mat = feature_mat
-        self._kernel_mat = dist_kernel_mat
+        self._similarity_mat = sim_kernel_mat
 
         with SimpleTimer("Saving data files", self.log.debug):
             numpy.save(self.uid_list_filepath, uid_array)
             numpy.save(self.feature_mat_filepath, feature_mat)
-            numpy.save(self.kernel_mat_filepath, dist_kernel_mat)
+            numpy.save(self.kernel_mat_filepath, sim_kernel_mat)
 
     def extend_model(self, uid_feature_map, parallel=None):
         """
@@ -201,7 +202,13 @@ class NearestDistance_HIK (Indexer):
         :type parallel: int
 
         """
-        super(NearestDistance_HIK, self).extend_model(uid_feature_map, parallel)
+        super(NearestNeighbor_HIK_Base, self)\
+            .extend_model(uid_feature_map, parallel)
+
+        # Shortcut when we're not given anything to actually process
+        if not uid_feature_map:
+            self.log.debug("Not new features to extend")
+            return
 
         # Check UID intersection
         with SimpleTimer("Checking UID uniqueness", self.log.debug):
@@ -267,16 +274,43 @@ class NearestDistance_HIK (Indexer):
         # noinspection PyNoneFunctionAssignment
         with SimpleTimer("'Resizing' kernel matrix", self.log.debug):
             new_km = numpy.ndarray((num_features_after, num_features_after),
-                                   dtype=self._kernel_mat.dtype)
+                                   dtype=self._similarity_mat.dtype)
             new_km[:num_features_before,
-                   :num_features_before] = self._kernel_mat
-            self._kernel_mat = new_km
+                   :num_features_before] = self._similarity_mat
+            self._similarity_mat = new_km
 
         with SimpleTimer("Collecting dist results into matrix", self.log.debug):
             for (r, c), dist in hid_map.iteritems():
                 d = dist.get()
-                self._kernel_mat[r, c] = d
-                self._kernel_mat[c, r] = d
+                self._similarity_mat[r, c] = d
+                self._similarity_mat[c, r] = d
+
+    def _pick_auto_negatives(self, pos_uids):
+        """
+        Pick automatic negative UIDs based on distances from the given positive
+        UIDs.
+
+        :param pos_uids: List of positive UIDs
+        :type pos_uids: list of int
+
+        :return: List of automatically chosen negative UIDs
+        :rtype: list of int
+
+        """
+        # Pick automatic negatives that are the most distant elements from
+        # given positive elements.
+        #: :type: set of int
+        auto_neg = set()
+        n = int(self._uid_array.size * self.AUTO_NEG_PERCENT)
+        for p_UID in pos_uids:
+            auto_neg.update(self._least_similar_uid(p_UID, n))
+
+        # Cancel out any auto-picked negatives that conflict with given positive
+        # UIDs.
+        auto_neg.difference_update(pos_uids)
+
+        self.log.debug("Post auto-negative selection: %s", auto_neg)
+        return list(auto_neg)
 
     def _least_similar_uid(self, uid, N=1):
         """
@@ -295,62 +329,9 @@ class NearestDistance_HIK (Indexer):
 
         """
         i = self._uid_idx_map[uid]
-        z = zip(self._uid_array, self._kernel_mat[i])
+        z = zip(self._uid_array, self._similarity_mat[i])
         # Sort by least similarity, pick top N
         return [e[0] for e in sorted(z, key=lambda f: f[1])[:N]]
-
-    def rank_model(self, pos_ids, neg_ids=()):
-        """
-        Rank the current model, returning a mapping of element IDs to a
-        ranking valuation. This valuation should be a probability in the range
-        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
-
-        :raises RuntimeError: No current model.
-
-        :param pos_ids: List of positive data IDs
-        :type pos_ids: collections.Iterable of int
-
-        :param neg_ids: List of negative data IDs
-        :type neg_ids: collections.Iterable of int
-
-        :return: Mapping of ingest ID to a rank.
-        :rtype: dict of (int, float)
-
-        """
-        super(NearestDistance_HIK, self).rank_model(pos_ids, neg_ids)
-
-        # # Pick automatic negatives that are the most distant elements from given
-        # # positive elements.
-        # #: :type: set of int
-        # new_neg = set()
-        # n = int(self._uid_array.size * self.AUTO_NEG_PERCENT)
-        # for p_UID in pos_ids:
-        #     new_neg.update(self._least_similar_uid(p_UID, n))
-        # #: :type: set of int
-        # neg_ids = set(neg_ids).union(new_neg.difference(pos_ids))
-
-        pidx = [self._uid_idx_map[pid] for pid in pos_ids]
-        nidx = [self._uid_idx_map[nid] for nid in neg_ids]
-        npow = numpy.power
-        d = 1.0 - self._kernel_mat  # kernel is similarity matrix at the moment
-
-        # get the squared distances for positive and negative rows
-        pos_sqrd_dists = npow(d[pidx, :], 2.0)
-        neg_sqrd_dists = npow(d[nidx, :], 2.0)
-        # sum both along rows to make (1xN) vector
-        pos_dist = pos_sqrd_dists.sum(axis=0)
-        neg_dist = neg_sqrd_dists.sum(axis=0)
-        # subtract negative dist vector from positive to weight highly distant
-        # elements away.
-        dists = pos_dist - neg_dist
-
-        # Shift minimum to 0-point, scale result into [0,1] scale as per comment
-        dists -= dists.min()
-        rank = 1.0 - (dists / dists.max())
-
-        # dists vector still in column order of kernel, so pair with UID vector
-        # for result ranking map.
-        return dict(zip(self._uid_array, rank))
 
     def reset(self):
         """
@@ -360,10 +341,112 @@ class NearestDistance_HIK (Indexer):
         :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        super(NearestDistance_HIK, self).reset()
+        super(NearestNeighbor_HIK_Base, self).reset()
 
         # Reloading data elements from file
         self._load_model_files()
 
 
-INDEXER_CLASS = NearestDistance_HIK
+class NearestNeighbor_HIK_Distance (NearestNeighbor_HIK_Base):
+    """
+    Implementation that uses element-wise HI distance to determine similarity
+    ranking.
+    """
+
+    def rank_model(self, pos_ids, neg_ids=()):
+        super(NearestNeighbor_HIK_Distance, self).rank_model(pos_ids, neg_ids)
+
+        self.log.debug("ND_HIK source exemplars:\n"
+                       "Pos: %s\n"
+                       "Neg: %s",
+                       pos_ids, neg_ids)
+        # TODO: add auto-negative selection?
+
+        pindx = [self._uid_idx_map[pid] for pid in pos_ids]
+        nindx = [self._uid_idx_map[nid] for nid in neg_ids]
+        npow = numpy.power
+
+        # Distance method
+        d = 1.0 - self._similarity_mat
+
+        # get the squared distances for positive and negative rows
+        p = 1.0
+        pos_sqrd_dists = npow(d[pindx, :], p)
+        neg_sqrd_dists = npow(d[nindx, :], p)
+        # sum + average both along rows to make (1xN) vector
+        pos_dist = pos_sqrd_dists.sum(axis=0)
+        neg_dist = neg_sqrd_dists.sum(axis=0)
+        if pindx:
+            pos_dist /= len(pindx)
+        if nindx:
+            neg_dist /= len(nindx)
+        # subtract negative dist vector from positive to weight highly distant
+        # elements away.t
+        dists = pos_dist - neg_dist
+
+        # Shift minimum to 0-point, scale result into [0,1] scale as per
+        # comment
+        dists -= dists.min()
+        rank = 1.0 - (dists / dists.max())
+
+        # dists vector still in column order of kernel, so pair with UID
+        # vector for result ranking map.
+        return dict(zip(self._uid_array, rank))
+
+
+class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
+    """
+    Implementation that uses element-wise integer rank valuation to determine
+    similarity ordering.
+    """
+
+    def rank_model(self, pos_ids, neg_ids=()):
+        super(NearestNeighbor_HIK_Rank, self).rank_model(pos_ids, neg_ids)
+
+        self.log.debug("ND_HIK source exemplars:\n"
+                       "Pos: %s\n"
+                       "Neg: %s",
+                       pos_ids, neg_ids)
+        # TODO: add auto-negative selection?
+
+        pindx = [self._uid_idx_map[pid] for pid in pos_ids]
+        nindx = [self._uid_idx_map[nid] for nid in neg_ids]
+
+        # Ordered rank method
+        # Create rank vectors for positive/negative exemplars. The lower the
+        # rank, the more similar an index is.
+        def get_rank_list(s):
+            """ where ``s`` is an array of similarity scores """
+            idx_sim = zip(numpy.arange(s.size), s)
+            # ordered list of idx-to-similarity value in descending order
+            o_idx_sim = sorted(idx_sim, key=lambda e: e[1], reverse=1)
+            # [ ..., (idx, rank), ... ]
+            o_rank = [(idx, rank) for rank, (idx, sim) in enumerate(o_idx_sim)]
+            # rank in index order
+            return [rank for _, rank in sorted(o_rank, key=lambda e: e[0])]
+
+        p_ranked_rows = []
+        n_ranked_rows = []
+        for r in self._similarity_mat[pindx, :]:
+            p_ranked_rows.append(get_rank_list(r))
+        for r in self._similarity_mat[nindx, :]:
+            n_ranked_rows.append(get_rank_list(r))
+        p_ranked = numpy.array(p_ranked_rows)
+        n_ranked = numpy.array(n_ranked_rows)
+
+        p_rank_sum = p_ranked.sum(axis=0)
+        n_rank_sum = n_ranked.sum(axis=0)
+
+        n = p_rank_sum - n_rank_sum
+        n = n - n.min()
+        # noinspection PyAugmentAssignment
+        n = n / float(n.max())
+        n = zip(self._uid_array, 1.0 - n)
+
+        return dict(n)
+
+
+INDEXER_CLASS = [
+    NearestNeighbor_HIK_Distance,
+    NearestNeighbor_HIK_Rank
+]

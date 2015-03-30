@@ -23,6 +23,7 @@ class IngestConfiguration (object):
 
     """
 
+    #: :type: dict
     INGEST_CONFIG = smqtk_config.SYSTEM_CONFIG['Ingests']
 
     TYPE_MAP = {
@@ -39,7 +40,7 @@ class IngestConfiguration (object):
         return cls.INGEST_CONFIG['listing'].keys()
 
     @classmethod
-    def ingest_data_directory(cls):
+    def base_ingest_data_dir(cls):
         """
         :return: The base directory where ingests data should be located
         :rtype: str
@@ -47,7 +48,7 @@ class IngestConfiguration (object):
         return osp.join(smqtk_config.DATA_DIR, cls.INGEST_CONFIG['dir'])
 
     @classmethod
-    def ingest_work_directory(cls):
+    def base_ingest_work_dir(cls):
         """
         :return: The base directory where ingests work should be located
         :rtype: str
@@ -55,6 +56,15 @@ class IngestConfiguration (object):
         return osp.join(smqtk_config.WORK_DIR, cls.INGEST_CONFIG['dir'])
 
     def __init__(self, ingest_label, config_dict=None):
+        """
+        :param ingest_label: Ingest to configure to
+        :type ingest_label: str
+
+        :param config_dict: Custom configuration dictionary to use instead of
+            common system configuration JSON file contents.
+        :type config_dict: dict
+
+        """
         # Override local base config dict if one was given
         self.INGEST_CONFIG = config_dict or IngestConfiguration.INGEST_CONFIG
 
@@ -67,30 +77,31 @@ class IngestConfiguration (object):
         label_config = self.INGEST_CONFIG['listing'][ingest_label]
 
         self.label = ingest_label
-        self.data_dir = osp.join(self.ingest_data_directory(), label_config['dir'])
-        self.work_dir = osp.join(self.ingest_work_directory(), label_config['dir'])
+        self.data_dir = osp.join(self.base_ingest_data_dir(), label_config['dir'])
+        self.work_dir = osp.join(self.base_ingest_work_dir(), label_config['dir'])
         self.type = label_config['type']
 
         self.descriptor_config = label_config['descriptors']
         self.indexer_config = label_config['indexers']
 
-        # Cache of requested FeatureDescriptor instances for sharing with
-        # Indexer factory method,
-        self._ingest_inst = None
-        self._fd_cache = {}
-        self._idxr_cache = {}
-
-    def get_ingest_instance(self, starting_index=0):
+    def new_ingest_instance(self, data_dir=None, work_dir=None,
+                            starting_index=0):
         """
+
+
+        :param data_dir: Data directory override.
+        :type data_dir: str
+
+        :param work_dir: Working directory override
+        :type work_dir: str
+
         :return: The configuration singleton ingest instance. Type based on
             configured type field.
         :rtype: DataIngest or VideoIngest
         """
-        if self._ingest_inst is None:
-            self._ingest_inst = self.TYPE_MAP[self.type](self.data_dir,
-                                                         self.work_dir,
-                                                         starting_index)
-        return self._ingest_inst
+        return self.TYPE_MAP[self.type](data_dir or self.data_dir,
+                                        work_dir or self.work_dir,
+                                        starting_index)
 
     def get_available_descriptor_labels(self):
         """
@@ -100,18 +111,10 @@ class IngestConfiguration (object):
         """
         return self.descriptor_config['listing'].keys()
 
-    def get_available_indexer_labels(self):
+    def new_descriptor_instance(self, fd_label, data_dir=None, work_dir=None):
         """
-        :return: List of Indexer configuration labels for this ingest
-            configuration.
-        :rtype: list of str
-        """
-        return self.indexer_config['listing'].keys()
-
-    def get_FeatureDetector_instance(self, fd_label):
-        """
-        Return this configuration's FeatureDescriptor singleton instance for the
-        given FeatureDescriptor type label.
+        Get a new descriptor instance. Unless overrides are given, settings for
+        the descriptor instance are taken from the current ingest configuration.
 
         :raises KeyError: If the given label is not associated with a
             FeatureDescriptor class type.
@@ -121,8 +124,14 @@ class IngestConfiguration (object):
         :param fd_label: The FeatureDescriptor type label.
         :type fd_label: str
 
-        :return: The singleton instance of the given FeatureDescriptor type for
-            this configuration instance.
+        :param data_dir: Data directory override.
+        :type data_dir: str
+
+        :param work_dir: Working directory override
+        :type work_dir: str
+
+        :return: New instance of the given FeatureDescriptor type for this
+            configuration instance.
         :rtype: SMQTK.FeatureDescriptors.FeatureDescriptor
 
         """
@@ -132,19 +141,29 @@ class IngestConfiguration (object):
                              "in ingest configuration '%s'"
                              % (fd_label, self.label))
 
-        if fd_label not in self._fd_cache:
-            self._fd_cache[fd_label] = fd_type(
-                osp.join(self.data_dir, self.descriptor_config['dir'],
-                         self.descriptor_config['listing'][fd_label]['dir']),
-                osp.join(self.work_dir, self.descriptor_config['dir'],
-                         self.descriptor_config['listing'][fd_label]['dir'])
-            )
-        return self._fd_cache[fd_label]
+        return fd_type(
+            data_dir or
+            osp.join(self.data_dir, self.descriptor_config['dir'],
+                     self.descriptor_config['listing'][fd_label]['dir'])
+            ,
+            work_dir or
+            osp.join(self.work_dir, self.descriptor_config['dir'],
+                     self.descriptor_config['listing'][fd_label]['dir'])
+        )
 
-    def get_Indexer_instance(self, indexer_label, fd_label):
+    def get_available_indexer_labels(self):
         """
-        Return this configuration's Indexer singleton instance for the given
-        Indexer-type/FeatureDescriptor-type label pairing.
+        :return: List of Indexer configuration labels for this ingest
+            configuration.
+        :rtype: list of str
+        """
+        return self.indexer_config['listing'].keys()
+
+    def new_indexer_instance(self, indexer_label, fd_label,
+                             data_dir=None, work_dir=None):
+        """
+        Get a new indexer instance. Unless overrides are given, settings for
+        the indexer instance are taken from the current ingest configuration.
 
         NOTE: This assumes a 1-to-1 relationship between descriptors and
         indexers, i.e. indexers only take features from on consistent descriptor
@@ -163,8 +182,14 @@ class IngestConfiguration (object):
         :param fd_label: The FeatureDescriptor type label.
         :type fd_label: str
 
-        :return: The singleton instance of the given Indexer type for this
-            configuration instance.
+        :param data_dir: Data directory override.
+        :type data_dir: str
+
+        :param work_dir: Working directory override
+        :type work_dir: str
+
+        :return: New instance of the given Indexer type for this configuration
+            instance.
         :rtype: SMQTK.Indexers.Indexer
 
         """
@@ -178,13 +203,14 @@ class IngestConfiguration (object):
                              "in ingest configuration '%s'"
                              % (fd_label, self.label))
 
-        if (indexer_label, fd_label) not in self._idxr_cache:
-            self._idxr_cache[indexer_label, fd_label] = idxr_type(
-                osp.join(self.data_dir, self.indexer_config['dir'],
-                         self.indexer_config['listing'][indexer_label]['dir'],
-                         self.descriptor_config['listing'][fd_label]['dir']),
-                osp.join(self.work_dir, self.indexer_config['dir'],
-                         self.indexer_config['listing'][indexer_label]['dir'],
-                         self.descriptor_config['listing'][fd_label]['dir'])
-            )
-        return self._idxr_cache[indexer_label, fd_label]
+        return idxr_type(
+            data_dir or
+            osp.join(self.data_dir, self.indexer_config['dir'],
+                     self.indexer_config['listing'][indexer_label]['dir'],
+                     self.descriptor_config['listing'][fd_label]['dir'])
+            ,
+            work_dir or
+            osp.join(self.work_dir, self.indexer_config['dir'],
+                     self.indexer_config['listing'][indexer_label]['dir'],
+                     self.descriptor_config['listing'][fd_label]['dir'])
+        )

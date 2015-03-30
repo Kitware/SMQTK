@@ -145,11 +145,11 @@ def main():
     ingest_config = IngestConfiguration(ingest_label)
 
     #: :type: DataIngest or VideoIngest
-    ingest = ingest_config.get_ingest_instance()
+    ingest = ingest_config.new_ingest_instance()
     #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
-    descriptor = ingest_config.get_FeatureDetector_instance(fd_label)
+    descriptor = ingest_config.new_descriptor_instance(fd_label)
     #: :type: SMQTK.Indexers.Indexer
-    indexer = ingest_config.get_Indexer_instance(idxr_label, fd_label)
+    indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
 
     # Generate any model files needed by the chosen descriptor
     descriptor.generate_model(ingest.data_list())

@@ -195,7 +195,7 @@ class IQRSearch (flask.Blueprint):
 
                 return "Finished Ingestion"
 
-        @self.route("/adjudicate", methods=["POST"])
+        @self.route("/adjudicate", methods=["POST", "GET"])
         @self._parent_app.module_login.login_required
         def adjudicate():
             """
@@ -206,10 +206,18 @@ class IQRSearch (flask.Blueprint):
                     message: <str>
                 }
             """
-            pos_to_add = json.loads(flask.request.form.get('add_pos', '[]'))
-            pos_to_remove = json.loads(flask.request.form.get('remove_pos', '[]'))
-            neg_to_add = json.loads(flask.request.form.get('add_neg', '[]'))
-            neg_to_remove = json.loads(flask.request.form.get('remove_neg', '[]'))
+            if flask.request.method == "POST":
+                fetch = flask.request.form
+            elif flask.request.method == "GET":
+                fetch = flask.request.args
+            else:
+                raise RuntimeError("Invalid request method '%s'"
+                                   % flask.request.method)
+
+            pos_to_add = json.loads(fetch.get('add_pos', '[]'))
+            pos_to_remove = json.loads(fetch.get('remove_pos', '[]'))
+            neg_to_add = json.loads(fetch.get('add_neg', '[]'))
+            neg_to_remove = json.loads(fetch.get('remove_neg', '[]'))
 
             self.log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
                            % (pos_to_add, pos_to_remove,
@@ -424,7 +432,7 @@ class IQRSearch (flask.Blueprint):
 
     @property
     def log(self):
-        return logging.getLogger("IqrSearch(%s)" % self.name)
+        return logging.getLogger("SMQTK.IQRSearch(%s)" % self.name)
 
     def get_current_iqr_session(self):
         """

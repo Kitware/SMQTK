@@ -7,14 +7,17 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import abc
 import multiprocessing
 import numpy
 import os.path as osp
+import pyflann
 
 from SMQTK.Indexers import Indexer
 from SMQTK.utils import SimpleTimer
-from SMQTK.utils.distance_functions import histogram_intersection_distance
+from SMQTK.utils.distance_functions import (
+    histogram_intersection_distance,
+    histogram_intersection_dist_matrix,
+)
 
 
 class NearestNeighbor_HIK_Base (Indexer):
@@ -148,6 +151,8 @@ class NearestNeighbor_HIK_Base (Indexer):
                 rmap[i, j] = pool.apply_async(histogram_intersection_distance,
                                               args=(feature_mat[i],
                                                     feature_mat[j]))
+        pool.close()
+
         # Poll for results in upper triangle of matrix first, as that follows
         # the line of jobs spawned
         with SimpleTimer("Aggregating HI dists into matrix", self.log.debug):
@@ -285,6 +290,27 @@ class NearestNeighbor_HIK_Base (Indexer):
                 self._similarity_mat[r, c] = d
                 self._similarity_mat[c, r] = d
 
+    def _least_similar_uid(self, uid, N=1):
+        """
+        Return an array of N UIDs that are least similar to the feature for the
+        given UID. If N is greater than the total number of elements in this
+        indexer's model, we return a list of T ordered elements, where T is
+        the total number of in the model. I.e. we return an ordered list of all
+        UIDs by least similarity (the given UID will be the last element in the
+        list).
+
+        :param uid: UID to find the least similar UIDs for.
+        :type uid: int
+
+        :return: List of min(N, T) least similar UIDs.
+        :rtype: list of int
+
+        """
+        i = self._uid_idx_map[uid]
+        z = zip(self._uid_array, self._similarity_mat[i])
+        # Sort by least similarity, pick top N
+        return [e[0] for e in sorted(z, key=lambda f: f[1])[:N]]
+
     def _pick_auto_negatives(self, pos_uids):
         """
         Pick automatic negative UIDs based on distances from the given positive
@@ -312,27 +338,6 @@ class NearestNeighbor_HIK_Base (Indexer):
         self.log.debug("Post auto-negative selection: %s", auto_neg)
         return list(auto_neg)
 
-    def _least_similar_uid(self, uid, N=1):
-        """
-        Return an array of N UIDs that are least similar to the feature for the
-        given UID. If N is greater than the total number of elements in this
-        indexer's model, we return a list of T ordered elements, where T is
-        the total number of in the model. I.e. we return an ordered list of all
-        UIDs by least similarity (the given UID will be the last element in the
-        list).
-
-        :param uid: UID to find the least similar UIDs for.
-        :type uid: int
-
-        :return: List of min(N, T) least similar UIDs.
-        :rtype: list of int
-
-        """
-        i = self._uid_idx_map[uid]
-        z = zip(self._uid_array, self._similarity_mat[i])
-        # Sort by least similarity, pick top N
-        return [e[0] for e in sorted(z, key=lambda f: f[1])[:N]]
-
     def reset(self):
         """
         Reset this indexer to its original state, i.e. removing any model
@@ -354,6 +359,25 @@ class NearestNeighbor_HIK_Distance (NearestNeighbor_HIK_Base):
     """
 
     def rank_model(self, pos_ids, neg_ids=()):
+        """
+        Rank the current model, returning a mapping of element IDs to a
+        ranking valuation. This valuation should be a probability in the range
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: collections.Iterable of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: collections.Iterable of int
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
+        """
         super(NearestNeighbor_HIK_Distance, self).rank_model(pos_ids, neg_ids)
 
         self.log.debug("ND_HIK source exemplars:\n"
@@ -400,7 +424,27 @@ class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
     similarity ordering.
     """
 
+    # noinspection PyAugmentAssignment
     def rank_model(self, pos_ids, neg_ids=()):
+        """
+        Rank the current model, returning a mapping of element IDs to a
+        ranking valuation. This valuation should be a probability in the range
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: collections.Iterable of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: collections.Iterable of int
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
+        """
         super(NearestNeighbor_HIK_Rank, self).rank_model(pos_ids, neg_ids)
 
         self.log.debug("ND_HIK source exemplars:\n"
@@ -426,16 +470,21 @@ class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
             return [rank for _, rank in sorted(o_rank, key=lambda e: e[0])]
 
         p_ranked_rows = []
-        n_ranked_rows = []
         for r in self._similarity_mat[pindx, :]:
             p_ranked_rows.append(get_rank_list(r))
-        for r in self._similarity_mat[nindx, :]:
-            n_ranked_rows.append(get_rank_list(r))
         p_ranked = numpy.array(p_ranked_rows)
-        n_ranked = numpy.array(n_ranked_rows)
-
         p_rank_sum = p_ranked.sum(axis=0)
-        n_rank_sum = n_ranked.sum(axis=0)
+        p_rank_sum = p_rank_sum / float(p_rank_sum.max())
+
+        if neg_ids:
+            n_ranked_rows = []
+            for r in self._similarity_mat[nindx, :]:
+                n_ranked_rows.append(get_rank_list(r))
+            n_ranked = numpy.array(n_ranked_rows)
+            n_rank_sum = n_ranked.sum(axis=0)
+            n_rank_sum = n_rank_sum / float(n_rank_sum.max())
+        else:
+            n_rank_sum = numpy.zeros(self._similarity_mat.shape[1])
 
         n = p_rank_sum - n_rank_sum
         n = n - n.min()
@@ -446,7 +495,145 @@ class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
         return dict(n)
 
 
+class NearestNeighbor_HIK_Centroids (NearestNeighbor_HIK_Base):
+    """
+    Implementation using a centroid-based approach to ranking elements.
+    """
+
+    def rank_model(self, pos_ids, neg_ids=()):
+        """
+        Rank the current model, returning a mapping of element IDs to a
+        ranking valuation. This valuation should be a probability in the range
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: collections.Iterable of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: collections.Iterable of int
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
+        """
+        super(NearestNeighbor_HIK_Base, self).rank_model(pos_ids, neg_ids)
+
+        self.log.debug("ND_HIK source exemplars:\n"
+                       "Pos: %s\n"
+                       "Neg: %s",
+                       pos_ids, neg_ids)
+        # TODO: add auto-negative selection?
+
+        # Find average centroid from given positive and negative features
+        pos_centroids = self._feature_mat[[self._uid_idx_map[pid]
+                                           for pid in pos_ids]]
+        #: :type: numpy.core.multiarray.ndarray
+        pos_avg_c = pos_centroids.sum(axis=0) / float(len(pos_ids))
+
+        # Populate idx_rank array with ranks where nearness to 0 indicates high
+        # rank.
+        if neg_ids:
+            neg_centroids = self._feature_mat[[self._uid_idx_map[nid]
+                                               for nid in neg_ids]]
+            #: :type: numpy.core.multiarray.ndarray
+            neg_avg_c = neg_centroids.sum(axis=0) / float(len(neg_ids))
+
+            fpd = histogram_intersection_dist_matrix(self._feature_mat, pos_avg_c)
+            fnd = histogram_intersection_dist_matrix(self._feature_mat, neg_avg_c)
+            idx_rank = fpd / fnd
+        else:
+            idx_rank = histogram_intersection_dist_matrix(self._feature_mat,
+                                                          pos_avg_c)
+
+        # Constrain to [0,1] range and associate to UIDs
+        idx_rank = idx_rank / idx_rank.max()
+        d = dict(zip(self._uid_array, idx_rank))
+        return d
+
+
+class NearestNeighbor_HIK_Centroids_FLANN_CS (NearestNeighbor_HIK_Base):
+    """
+    Implementation using a centroid-based approach to ranking elements, but
+    using FLANN to compute chi-squared distance between centroids and feature
+    histograms
+    """
+
+    def rank_model(self, pos_ids, neg_ids=()):
+        """
+        Rank the current model, returning a mapping of element IDs to a
+        ranking valuation. This valuation should be a probability in the range
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
+        :param pos_ids: List of positive data IDs
+        :type pos_ids: collections.Iterable of int
+
+        :param neg_ids: List of negative data IDs
+        :type neg_ids: collections.Iterable of int
+
+        :return: Mapping of ingest ID to a rank.
+        :rtype: dict of (int, float)
+
+        """
+        super(NearestNeighbor_HIK_Base, self).rank_model(pos_ids, neg_ids)
+
+        self.log.debug("ND_HIK source exemplars:\n"
+                       "Pos: %s\n"
+                       "Neg: %s",
+                       pos_ids, neg_ids)
+        # TODO: add auto-negative selection?
+
+        # Construct / use cached FLANN index from feature data
+        pyflann.set_distance_type('cs')  # chi squared
+        flann = pyflann.FLANN()
+        flann.build_index(self._feature_mat, **{
+            "target_precision":  0.99,
+            "sample_fraction": 1.0,
+            "log_level": "info",
+            "algorithm": "autotuned"
+        })
+
+        # Find positive/negative centroids
+        pos_centroids = self._feature_mat[[self._uid_idx_map[pid]
+                                           for pid in pos_ids]]
+        #: :type: numpy.core.multiarray.ndarray
+        pos_avg_c = pos_centroids.sum(axis=0) / float(len(pos_ids))
+        idxs, dists = flann.nn_index(pos_avg_c, self._feature_mat.shape[0])
+        pos_dists = numpy.array([v[1] for v in sorted(zip(idxs[0], dists[0]),
+                                                      key=lambda e: e[0])])
+
+        if neg_ids:
+            neg_centroids = self._feature_mat[[self._uid_idx_map[nid]
+                                               for nid in neg_ids]]
+            #: :type: numpy.core.multiarray.ndarray
+            neg_avg_c = neg_centroids.sum(axis=0) / float(len(neg_ids))
+            idxs, dists = flann.nn_index(neg_avg_c, self._feature_mat.shape[0])
+            neg_dists = numpy.array([v[1] for v in sorted(zip(idxs[0], dists[0]),
+                                                          key=lambda e: e[0])])
+            idx_rank = pos_dists / neg_dists
+        else:
+            idx_rank = pos_dists
+
+        # Constrain to [0,1] range and associate to UIDs
+        idx_rank = 1.0 - (idx_rank / idx_rank.max())
+        d = dict(zip(self._uid_array, idx_rank))
+        return d
+
+
+# Implementation using FLANN indexing on feature matrix as if feature matrix
+# were a codebook, using centroids like in "_Centroid" implementation.
+
+
 INDEXER_CLASS = [
     NearestNeighbor_HIK_Distance,
-    NearestNeighbor_HIK_Rank
+    NearestNeighbor_HIK_Rank,
+    NearestNeighbor_HIK_Centroids,
+    NearestNeighbor_HIK_Centroids_FLANN_CS,
 ]

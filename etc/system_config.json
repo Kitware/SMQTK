@@ -111,6 +111,15 @@
                         },
                         "NearestNeighbor_HIK_Rank": {
                             "dir": "NearestNeighbor_HIK/Rank"
+                        },
+                        "NearestNeighbor_HIK_Centroids": {
+                            "dir": "NearestNeighbor_HIK/Centroids"
+                        },
+                        "NearestNeighbor_HIK_Centroids_FLANN_CS": {
+                            "dir": "NearestNeighbor_HIK/Centroids_FLANN_CS"
+                        },
+                        "SVMIndexer_HIK": {
+                            "dir": "SVM_HIK"
                         }
                     }
                 }

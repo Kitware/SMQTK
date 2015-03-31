@@ -118,21 +118,51 @@ class SMQTKSearchApp (flask.Flask):
         from .modules.IQR import IQRSearch
         ingest_config_dev = IngestConfiguration("indexer_development")
 
-        self.module_is_nn_hik_dist = IQRSearch('IS - NN_HIK - Distance', self,
-                                               ingest_config_dev,
-                                               'ColorDescriptor_Image_csift',
-                                               'NearestNeighbor_HIK_Distance',
-                                               url_prefix="/is_nn_hik_dist")
+        self.module_is_svm_hik = IQRSearch(
+            "IS - SVM HIK", self,
+            ingest_config_dev,
+            "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
+            url_prefix="/is_svm_hik"
+        )
+        self.register_blueprint(self.module_is_svm_hik)
+        self.add_navigable_blueprint(self.module_is_svm_hik)
+
+        self.module_is_nn_hik_dist = IQRSearch(
+            'IS - NN_HIK - Distance', self,
+            ingest_config_dev,
+            'ColorDescriptor_Image_csift', 'NearestNeighbor_HIK_Distance',
+            url_prefix="/is_nn_hik_dist"
+        )
         self.register_blueprint(self.module_is_nn_hik_dist)
         self.add_navigable_blueprint(self.module_is_nn_hik_dist)
 
-        self.module_is_nn_hik_rank = IQRSearch("IS - NN_HIK - Rank", self,
-                                               ingest_config_dev,
-                                               "ColorDescriptor_Image_csift",
-                                               "NearestNeighbor_HIK_Rank",
-                                               url_prefix="/is_nn_hik_rank")
+        self.module_is_nn_hik_rank = IQRSearch(
+            "IS - NN_HIK - Rank", self,
+            ingest_config_dev,
+            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Rank",
+            url_prefix="/is_nn_hik_rank"
+        )
         self.register_blueprint(self.module_is_nn_hik_rank)
         self.add_navigable_blueprint(self.module_is_nn_hik_rank)
+
+        self.module_is_nn_hik_centroid = IQRSearch(
+            "IS - NN_HIK - Avg Centroids", self,
+            ingest_config_dev,
+            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Centroids",
+            url_prefix="/is_nn_hik_centroids"
+        )
+        self.register_blueprint(self.module_is_nn_hik_centroid)
+        self.add_navigable_blueprint(self.module_is_nn_hik_centroid)
+
+        self.module_is_nn_hik_centroid_flann_cs = IQRSearch(
+            "IS - NN_HIK - FLANN Chi-Squared", self,
+            ingest_config_dev,
+            "ColorDescriptor_Image_csift",
+            "NearestNeighbor_HIK_Centroids_FLANN_CS",
+            url_prefix="/is_nn_hik_centroids_flann_cs"
+        )
+        self.register_blueprint(self.module_is_nn_hik_centroid_flann_cs)
+        self.add_navigable_blueprint(self.module_is_nn_hik_centroid_flann_cs)
 
         # self.log.info("Initializing IQR Blueprint -- Video")
         # self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,

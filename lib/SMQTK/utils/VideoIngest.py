@@ -17,6 +17,19 @@ class VideoIngest (DataIngest):
     """
 
     def DATA_FILE_TYPE(self, filepath, uid=None):
+        """
+        VideoIngest data file factory method.
+
+        :param filepath: Path to the data file
+        :type filepath: str
+
+        :param uid: Optional UID of the item
+        :type uid: int
+
+        :return: New VideoFile instance
+        :rtype: VideoFile
+
+        """
         # Figure out the work directory for this video file in the ingest's work
         # space
         md5_split = DataFile(filepath).split_md5sum(8)

@@ -102,6 +102,7 @@ class DataIngest (object):
                 uid, md5, ext = m.groups()
                 uid = int(uid)
                 df = self.DATA_FILE_TYPE(filepath, uid=uid)
+                df._md5_cache = md5  # shortcut instead of reading file for md5
                 self._register_data_item(df)
                 if uid > max_uid:
                     max_uid = uid

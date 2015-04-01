@@ -31,7 +31,7 @@ class DataFile (object):
         self._uid = uid
 
         # Cache variables
-        self.__md5_cache = None
+        self._md5_cache = None
 
     def __hash__(self):
         return hash(self.md5sum)
@@ -80,10 +80,11 @@ class DataFile (object):
         :return: the MD5 sum of the data file
         :rtype: str
         """
-        if self.__md5_cache is None:
+        if self._md5_cache is None:
             with open(self.filepath, 'rb') as data_file:
-                self.__md5_cache = hashlib.md5(data_file.read()).hexdigest()
-        return self.__md5_cache
+                print "Reading file for md5"
+                self._md5_cache = hashlib.md5(data_file.read()).hexdigest()
+        return self._md5_cache
 
     def split_md5sum(self, parts):
         """

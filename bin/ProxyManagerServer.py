@@ -18,20 +18,23 @@ authkey = <string>
 """
 
 import logging
-import optparse
 import os.path as osp
 
-from SMQTK.utils.ProxyManager import ProxyManager
+from SMQTK.utils import bin_utils
 from SMQTK.utils import SafeConfigCommentParser
+from SMQTK.utils.ProxyManager import ProxyManager
 
 
 def main():
-    parser = optparse.OptionParser()
+    parser = bin_utils.SMQTKOptParser()
     parser.add_option('-c', '--config', type=str,
                       help='Path to the configuration file.')
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Add debugging log messages.')
     opts, args = parser.parse_args()
+
+    bin_utils.initializeLogging(logging.getLogger(),
+                                logging.INFO - (10*opts.verbose))
 
     config_file = opts.config
     assert config_file is not None, \
@@ -53,16 +56,6 @@ def main():
         "No authkey option in config!"
     port = config.getint(section, 'port')
     authkey = config.get(section, 'authkey')
-
-    # Setup logging
-    log_format_str = '%(levelname)7s - %(asctime)s - %(name)s.%(funcName)s - ' \
-                     '%(message)s'
-    if opts.verbose:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-    logging.getLogger().setLevel(log_level)
-    logging.basicConfig(format=log_format_str)
 
     mgr = ProxyManager(('', port), authkey)
     mgr.get_server().serve_forever()

@@ -5,10 +5,13 @@ Start SMQTK SearchApp
 
 """
 
+import logging
+
+from SMQTK.utils import bin_utils
+
 
 def main():
-    import optparse
-    parser = optparse.OptionParser()
+    parser = bin_utils.SMQTKOptParser()
     parser.add_option('-c', '--config', default=None,
                       help='Path to an SMQTK configuration extension file '
                            '(a python file).')
@@ -36,22 +39,20 @@ def main():
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
-    import logging
-    logging.basicConfig()  # TODO: Add better message format here
-    logging.getLogger("SMQTK").setLevel(logging.INFO)
-    if opts.debug_server:
-        logging.getLogger("werkzeug").setLevel(logging.DEBUG)
-    if opts.debug_backend:
-        logging.getLogger("SMQTK").setLevel(logging.DEBUG)
+    bin_utils.initializeLogging(logging.getLogger("SMQTK"),
+                                logging.INFO - (10*opts.debug_backend))
+    bin_utils.initializeLogging(logging.getLogger("werkzeug"),
+                                logging.WARN - (20*opts.debug_server))
+    log = logging.getLogger("SMQTK.main")
 
     if opts.list:
         from SMQTK.Web import APPLICATIONS
-        print
-        print "Available applications:"
-        print
+        log.info("")
+        log.info("Available applications:")
+        log.info("")
         for e in APPLICATIONS:
-            print "\t%s" % e.__name__
-            print
+            log.info("\t%s" % e.__name__)
+            log.info("")
         exit(0)
 
     host = opts.host

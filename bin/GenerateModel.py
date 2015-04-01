@@ -8,6 +8,7 @@ import logging
 import multiprocessing.pool
 
 from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.utils import bin_utils
 from SMQTK.utils.configuration import IngestConfiguration
 from SMQTK.utils.jsmin import jsmin
 
@@ -36,32 +37,32 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
     Process = NonDaemonicProcess
 
 
-def list_ingest_labels():
-    print
-    print "Available ingest labels:"
-    print
+def list_ingest_labels(log):
+    log.info("")
+    log.info("Available ingest labels:")
+    log.info("")
     for l in IngestConfiguration.available_ingest_labels():
-        print "\t%s" % l
-    print
+        log.info("\t%s", l)
+    log.info("")
 
 
-def list_available_fds_idxrs(ingest_config):
+def list_available_fds_idxrs(log, ingest_config):
     """
     :type ingest_config: IngestConfiguration
     """
-    print
-    print "For ingest configuration '%s'..." % ingest_config.label
-    print
-    print "Available FeatureDescriptor types:"
-    print
+    log.info("")
+    log.info("For ingest configuration '%s'...", ingest_config.label)
+    log.info("")
+    log.info("Available FeatureDescriptor types:")
+    log.info("")
     for l in ingest_config.get_available_descriptor_labels():
-        print "\t%s" % l
-    print
-    print "Available Indexer types:"
-    print
+        log.info("\t%s" % l)
+    log.info("")
+    log.info("Available Indexer types:")
+    log.info("")
     for l in ingest_config.get_available_indexer_labels():
-        print "\t%s" % l
-    print
+        log.info("\t%s", l)
+    log.info("")
 
 
 def main():
@@ -73,7 +74,7 @@ def main():
         "(etc/system_config.json) unless otherwise specified by options to " \
         "this script. Specific ingest used is determined by the ingest type " \
         "provided (-t/--type)."
-    parser = optparse.OptionParser(description=description)
+    parser = bin_utils.SMQTKOptParser(description=description)
     groupRequired = optparse.OptionGroup(parser, "Required Options")
     groupOptional = optparse.OptionGroup(parser, "Optional")
 
@@ -103,10 +104,9 @@ def main():
     parser.add_option_group(groupOptional)
     opts, args = parser.parse_args()
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
-    if opts.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    bin_utils.initializeLogging(logging.getLogger(),
+                                logging.INFO - (10*opts.verbose))
+    log = logging.getLogger("main")
 
     ingest_label = opts.ingest
     fd_label = opts.feature_descriptor
@@ -120,51 +120,59 @@ def main():
 
     if opts.list:
         if ingest_label is None:
-            list_ingest_labels()
+            list_ingest_labels(log)
             exit(0)
         elif ingest_label not in IngestConfiguration.available_ingest_labels():
-            print "ERROR: Label '%s' is not a valid ingest configuration." \
-                % ingest_label
-            list_ingest_labels()
+            log.error("Label '%s' is not a valid ingest configuration.",
+                      ingest_label)
+            list_ingest_labels(log)
             exit(0)
         else:
             # List available FeatureDescriptor and Indexer configurations
             # available for the given ingest config label.
             ingest_config = IngestConfiguration(ingest_label)
-            list_available_fds_idxrs(ingest_config)
+            list_available_fds_idxrs(log, ingest_config)
             exit(0)
 
     # If we weren't given an index label, or if the one given was invalid, print
     if (ingest_label is None or ingest_label not in
             IngestConfiguration.available_ingest_labels()):
-        print "ERROR: Invalid ingest configuration specified for use:", \
-            ingest_label
-        list_ingest_labels()
+        log.error("Invalid ingest configuration specified for use: %s",
+                  ingest_label)
+        list_ingest_labels(log)
         exit(1)
 
     ingest_config = IngestConfiguration(ingest_label)
 
+    log.info("Loading ingest instance...")
     #: :type: DataIngest or VideoIngest
     ingest = ingest_config.new_ingest_instance()
+
+    log.info("Loading descriptor instance...")
     #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
     descriptor = ingest_config.new_descriptor_instance(fd_label)
-    #: :type: SMQTK.Indexers.Indexer
-    indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
-
     # Generate any model files needed by the chosen descriptor
     descriptor.generate_model(ingest.data_list())
 
-    # It is not guaranteed that the feature computation method is doing anything
-    # in parallel, but if it is, request that it perform serially in order to
-    # allow multiple high-level feature computation jobs.
-    FeatureDescriptor.PARALLEL = 1
-    # Using NonDaemonicPool because FeatureDescriptors that might to parallel
-    # processing might use multiprocessing.Pool instances, too. Pools don't
-    # usually allow daemonic processes, so this custom top-level pool allows
-    # worker processes to spawn pools themselves.
-    fmap = descriptor.compute_feature_async(*(df for _, df in ingest.iteritems()),
-                                            pool_type=NonDaemonicPool)
-    indexer.generate_model(fmap)
+    # Don't do indexer model generation if a type was not provided
+    if idxr_label:
+        log.info("Loading indexer instance...")
+        #: :type: SMQTK.Indexers.Indexer
+        indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
+
+        # It is not guaranteed that the feature computation method is doing
+        # anything in parallel, but if it is, request that it perform serially
+        # in order to allow multiple high-level feature computation jobs.
+        FeatureDescriptor.PARALLEL = 1
+        # Using NonDaemonicPool because FeatureDescriptors that might to
+        # parallel processing might use multiprocessing.Pool instances, too.
+        # Pools don't usually allow daemonic processes, so this custom top-level
+        # pool allows worker processes to spawn pools themselves.
+        fmap = descriptor.compute_feature_async(*(df for _, df
+                                                  in ingest.iteritems()),
+                                                pool_type=NonDaemonicPool)
+
+        indexer.generate_model(fmap)
 
 
 if __name__ == "__main__":

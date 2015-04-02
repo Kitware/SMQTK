@@ -594,10 +594,7 @@ class NearestNeighbor_HIK_Centroids_FLANN_CS (NearestNeighbor_HIK_Base):
         pyflann.set_distance_type('cs')  # chi squared
         flann = pyflann.FLANN()
         flann.build_index(self._feature_mat, **{
-            "target_precision":  0.99,
-            "sample_fraction": 1.0,
             "log_level": "info",
-            "algorithm": "autotuned"
         })
 
         # Find positive/negative centroids

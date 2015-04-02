@@ -116,11 +116,11 @@ class SMQTKSearchApp (flask.Flask):
         #       to something that can be chosen by the user or a
         #       multi-feature/indexer fusion system.
         from .modules.IQR import IQRSearch
-        ingest_config_dev = IngestConfiguration("indexer_development")
+        example_image_ic = IngestConfiguration("example_image")
 
         self.module_is_svm_hik = IQRSearch(
             "IS - SVM HIK", self,
-            ingest_config_dev,
+            example_image_ic,
             "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
             url_prefix="/is_svm_hik"
         )
@@ -129,7 +129,7 @@ class SMQTKSearchApp (flask.Flask):
 
         self.module_is_nn_hik_dist = IQRSearch(
             'IS - NN_HIK - Distance', self,
-            ingest_config_dev,
+            example_image_ic,
             'ColorDescriptor_Image_csift', 'NearestNeighbor_HIK_Distance',
             url_prefix="/is_nn_hik_dist"
         )
@@ -138,7 +138,7 @@ class SMQTKSearchApp (flask.Flask):
 
         self.module_is_nn_hik_rank = IQRSearch(
             "IS - NN_HIK - Rank", self,
-            ingest_config_dev,
+            example_image_ic,
             "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Rank",
             url_prefix="/is_nn_hik_rank"
         )
@@ -147,7 +147,7 @@ class SMQTKSearchApp (flask.Flask):
 
         self.module_is_nn_hik_centroid = IQRSearch(
             "IS - NN_HIK - Avg Centroids", self,
-            ingest_config_dev,
+            example_image_ic,
             "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Centroids",
             url_prefix="/is_nn_hik_centroids"
         )
@@ -156,7 +156,7 @@ class SMQTKSearchApp (flask.Flask):
 
         self.module_is_nn_hik_centroid_flann_cs = IQRSearch(
             "IS - NN_HIK - FLANN Chi-Squared", self,
-            ingest_config_dev,
+            example_image_ic,
             "ColorDescriptor_Image_csift",
             "NearestNeighbor_HIK_Centroids_FLANN_CS",
             url_prefix="/is_nn_hik_centroids_flann_cs"

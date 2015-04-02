@@ -23,20 +23,21 @@ except ImportError:
 
 
 def generate_descriptors(cd_exe, img_filepath, descriptor_type,
-                         info_checkpoint_path=None,
-                         descr_checkpoint_path=None):
+                         info_matrix_path, descr_matrix_path,
+                         limit_descriptors=None,
+                         recompute=False):
     """
-    Execute the given colorDescriptor executable, returning the generated info
-    and descriptor matrices for the provided image. Descriptor matrix is
-    normalized into histograms of relative frequencies instead of histograms of
-    bin counts.
+    Execute the given colorDescriptor executable, saving the generated info
+    and descriptor matrices for the provided image to the provided file paths.
+    Descriptor matrix is normalized into histograms of relative frequencies
+    instead of histograms of raw bin counts.
 
-    If either checkpoint file paths are not provided, we will always compute the
-    descriptors for the given image file using the provided executable. If both
-    checkpoint files exist, we load their contents and return their contents as
-    is. If both checkpoint filepaths were provided and we generated new content
-    with the provided executable, the results are saved to their respective
-    checkpoint files. The normalized descriptor matrix is saved.
+    This does NOT return matrices directly due to memory concerns, especially
+    in regards to multiprocessing as multiple copies of the matrix exist in the
+    system, leading to excessive memory clogging.
+
+    Matrices are saved in numpy binary format (.npy). ``numpy.load`` function
+    should be used to load matrices back in.
 
     :param cd_exe: ColorDescriptor executable to use
     :type cd_exe: str
@@ -48,29 +49,38 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
         colorDescriptor.
     :type descriptor_type: str
 
-    :param info_checkpoint_path: Path to where the computed information matrix
-        for the given file should be.
-    :type info_checkpoint_path: str
+    :param info_matrix_path: Path to where the computed information matrix
+        for the given file should be saved. This will be saved as a numpy
+        binary file (.npy).
+    :type info_matrix_path: str
 
-    :param descr_checkpoint_path: Path to where the computed descriptor matrix
-        for the given file should be.
-    :type descr_checkpoint_path: str
+    :param descr_matrix_path: Path to where the computed descriptor matrix
+        for the given file should be saved. This will be saved as a numpy
+        binary file (.npy).
+    :type descr_matrix_path: str
 
-    :return: 2 matrices: the metadata matrix and normalized descriptor matrix
-        (relative frequency histograms).
-    :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
+    :param limit_descriptors: Limit the number of descriptors generated if we
+        were to produce more than the limit. If we exceed the limit, we randomly
+        subsample down to the limit.
+    :type limit_descriptors: int
+
+    :param recompute: Force re-computation of descriptors for the given image
+        file. This causes possible existing output files to be overwritten.
+    :type recompute: bool
+
+    :return: Shape information for info and descriptor matrices
+    :rtype: ((int, int), (int, int))
 
     """
     log = logging.getLogger("ColorDescriptor::generate_descriptors{%s,%s}"
                             % (descriptor_type, osp.basename(img_filepath)))
 
-    if info_checkpoint_path and descr_checkpoint_path \
-            and osp.isfile(info_checkpoint_path) \
-            and osp.isfile(descr_checkpoint_path):
-        log.debug("Found existing checkpoint files, loading those.")
-        i = numpy.load(info_checkpoint_path)
-        d = numpy.load(descr_checkpoint_path)
-        return i, d
+    if not recompute \
+            and osp.isfile(info_matrix_path) \
+            and osp.isfile(descr_matrix_path):
+        # log.debug("Found existing matrix files, loading shapes.")
+        return (numpy.load(info_matrix_path).shape,
+                numpy.load(descr_matrix_path).shape)
 
     # Determine the spacing between sample points in the image. We want have at
     # least 50 sample points along the shortest side with a minimum of 6 pixels
@@ -84,16 +94,16 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
 
     log.debug("launching executable subprocess")
     cmd = [cd_exe, img_filepath, '--output', tmp_path,
-           '--detector', 'densesampling',
+           '--detector', 'densesampling',  # "harrislaplace"
            '--ds_spacing', str(ds_spacing),
            '--descriptor', descriptor_type]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     p.communicate()
 
-    log.debug("normalizing histogram into relative frequency")
     # Info matrix consists of [x, y, scale, orientation, corner-ness]
     # - See colorDescriptor documentation for more information
     info, descriptors = DescriptorIO.readDescriptors(tmp_path)
+    os.remove(tmp_path)
 
     # Divides each row in the descriptors matrix with the row-wise sum.
     # - This results in histograms for relative frequencies instead of direct
@@ -101,11 +111,18 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     # - Adding float_info.min to row sums to prevent div-by-zero exception while
     #   introducing minimal numerical error.
     # noinspection PyUnresolvedReferences
+    log.debug("normalizing histogram into relative frequency")
     descriptors = descriptors / (numpy.matrix(descriptors).sum(axis=1) +
                                  sys.float_info.min).A
 
-    if info_checkpoint_path and descr_checkpoint_path:
-        numpy.save(info_checkpoint_path, info)
-        numpy.save(descr_checkpoint_path, descriptors)
+    # Randomly sample rows down to this count if what was generated exceeded the
+    # limit.
+    if limit_descriptors and info.shape[0] > limit_descriptors:
+        idxs = numpy.random.permutation(numpy.arange(info.shape[0]))[:limit_descriptors]
+        idxs = sorted(idxs)
+        info = info[idxs, :]
+        descriptors = descriptors[idxs, :]
 
-    return info, descriptors
+    numpy.save(info_matrix_path, info)
+    numpy.save(descr_matrix_path, descriptors)
+    return info.shape, descriptors.shape

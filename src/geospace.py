@@ -51,25 +51,26 @@ class Geospace(girder.api.rest.Resource):
         time_range = params.get('duration', None)
         if (time_range is None):
             result['duration'] = {
-                "start": [i for i in coll.find({"field4": { "$exists": True, "$nin": ["None"] } } ).sort("field4",  1).limit(1)][0],
-                "end":   [i for i in coll.find({"field4": { "$exists": True, "$nin": ["None"] } } ).sort("field4", -1).limit(1)][0]
+                "start": [i for i in coll.find(
+                    {"field4": { "$exists": True, "$nin": ["None"] } } ).sort(
+                        "field4",  1).limit(1)][0],
+                "end":   [i for i in coll.find(
+                    {"field4": { "$exists": True, "$nin": ["None"] } } ).sort(
+                        "field4", -1).limit(1)][0]
             };
             return result;
 
         # Get location if provided
         location = params.get('location', None)
+        use_location = False
 
-        print 'location is ', location
+        if location is not None and len(location) > 0:
+            use_location = True
 
-        if location is not None:
             # Reverse geocode location
-            print 'location is ', location
-
             from geopy.geocoders import Nominatim
             geolocator = Nominatim()
             location = geolocator.geocode(location)
-
-            print 'location is ', location.longitude
 
             # Hard-coded to 1 unit for now
             geospatial_query = { "$geoWithin" : {
@@ -86,10 +87,14 @@ class Geospace(girder.api.rest.Resource):
         start_time = datetime.datetime.fromtimestamp(start).isoformat()
         end_time = datetime.datetime.fromtimestamp(end).isoformat()
 
-        if location is None:
-            query_result = coll.find({"field4":{"$gte": start_time, "$lt": end_time}}, skip=offset, limit=limit, sort=sort)
+        if use_location:
+            query_result = coll.find({"field4":
+                {"$gte": start_time, "$lt": end_time}},
+                skip=offset, limit=limit, sort=sort)
         else:
-            query_result = coll.find({"field4":[{"$gte": start_time, "$lt": end_time}, geospatial_query]}, skip=offset, limit=limit, sort=sort)
+            query_result = coll.find({"field4":[
+                {"$gte": start_time, "$lt": end_time}, geospatial_query]},
+                skip=offset, limit=limit, sort=sort)
         result = [row for row in query_result]
         return result
 

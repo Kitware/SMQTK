@@ -75,11 +75,11 @@ $(function () {
   function queryData(timeRange, location, callback) {
     var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
 
-    if (location !== undefined || location !== null) {
+    if (location !== undefined || location !== null || location !== '') {
       url += "&location="+location+"";
     }
 
-    console.log(url);
+    console.log(location);
 
     $.ajax(url)
       .done(function(data) {

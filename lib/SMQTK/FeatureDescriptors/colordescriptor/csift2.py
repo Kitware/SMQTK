@@ -1,27 +1,18 @@
 import abc
 import logging
 import multiprocessing
+import multiprocessing.pool
 import numpy
+import os
 import os.path as osp
 import pyflann
 import scipy.cluster.vq
+import tempfile
 
 from SMQTK.FeatureDescriptors import FeatureDescriptor
 from SMQTK.utils import safe_create_dir, SimpleTimer
 
 from . import utils
-
-
-class DummyResult (object):
-    """
-    Mock AsyncResult with preexisting info and descriptor matrices
-    """
-    def __init__(self, info, descriptors):
-        self._i = info
-        self._d = descriptors
-
-    def get(self):
-        return self._i, self._d
 
 
 class ColorDescriptor_Base (FeatureDescriptor):
@@ -31,7 +22,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
     This was started as an attempt at gaining a deeper understanding of what's
     going on with this feature descriptor's use and how it applied to later use
-    in an classifiers.
+    in an indexer.
 
     Codebook generated via kmeans given a set of input data. FLANN index model
     used for quantization, buily using auto-tuning (picks the best indexing
@@ -47,6 +38,12 @@ class ColorDescriptor_Base (FeatureDescriptor):
     # available distance function types (under the MATLAB section reference for
     # valid string identifiers)
     FLANN_DISTANCE_FUNCTION = 'chi_square'
+
+    # Total number of descriptors to use from input data to generate codebook
+    # model. Fewer than this may be used if the data set is small, but if it is
+    # greater, we randomly sample down to this count (occurs on a per element
+    # basis).
+    CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
     def __init__(self, data_directory, work_directory):
         super(ColorDescriptor_Base, self).__init__(data_directory,
@@ -86,13 +83,16 @@ class ColorDescriptor_Base (FeatureDescriptor):
         return
 
     @abc.abstractmethod
-    def _generate_descriptor_matrices(self, *data_items):
+    def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
         :param data_items: DataFile elements to generate combined info and
             descriptor matrices for.
         :type data_items: tuple of SMQTK.utils.DataFile.DataFile
+
+        :param limit: Limit the number of descriptor entries to this amount.
+        :type limit: int
 
         :return: Combined info and descriptor matrices for all base images
         :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
@@ -111,11 +111,11 @@ class ColorDescriptor_Base (FeatureDescriptor):
         :rtype: str
 
         """
-        d = osp.join(self.work_directory, *data.split_md5sum(8)[:-1])
+        d = osp.join(self.work_directory, *data.split_md5sum(8))
         safe_create_dir(d)
         return d
 
-    def _get_checkpoint_info_descriptors_file(self, data, frame=None):
+    def _get_standard_info_descriptors_filepath(self, data, frame=None):
         """
         Get the standard path to a data element's computed descriptor output,
         which for colorDescriptor consists of two matrices: info and descriptors
@@ -131,21 +131,24 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
         """
         d = self._get_checkpoint_dir(data)
-        return (
-            osp.join(d, "%s.info.%d.npy" % (data.md5sum, frame or 0)),
-            osp.join(d, "%s.descriptors.%d.npy" % (data.md5sum, frame or 0))
-        )
+        if frame is not None:
+            return (
+                osp.join(d, "%s.info.%d.npy" % (data.md5sum, frame)),
+                osp.join(d, "%s.descriptors.%d.npy" % (data.md5sum, frame))
+            )
+        else:
+            return (
+                osp.join(d, "%s.info.npy" % data.md5sum),
+                osp.join(d, "%s.descriptors.npy" % data.md5sum)
+            )
 
-    def _get_checkpoint_feature_file(self, data, frame=None):
+    def _get_checkpoint_feature_file(self, data):
         """
         Return the standard path to a data element's computed feature checkpoint
         file relative to our current working directory.
 
         :param data: Data element
         :type data: SMQTK.utils.DataFile.DataFile
-
-        :param frame: frame within the data file
-        :type frame: int
 
         :return: Standard path to where the feature checkpoint file for this
             given data element.
@@ -200,6 +203,9 @@ class ColorDescriptor_Base (FeatureDescriptor):
         :type flann_sample_fraction: float
 
         """
+        # Set an arbitrary limit of 1000000 descriptors across all data elements
+        # num of descriptors to take per element = 1000000 / N
+
         if self.has_model:
             self.log.warn("ColorDescriptor model for descriptor type '%s' "
                           "already generated!", self.descriptor_type())
@@ -213,17 +219,36 @@ class ColorDescriptor_Base (FeatureDescriptor):
                           "descriptor '%s'.", self.descriptor_type())
 
             # generate descriptors
-            with SimpleTimer("Generating descriptor matrices...", self.log):
-                info, descriptors = \
-                    self._generate_descriptor_matrices(*data_list)
+            with SimpleTimer("Generating descriptor matrices...", self.log.debug):
+                descriptors_checkpoint = osp.join(self.work_directory,
+                                                  "model_descriptors.npy")
 
-            # compute centroids (codebook) with kmeans
+                if osp.isfile(descriptors_checkpoint):
+                    self.log.debug("Found existing computed descriptors work "
+                                   "file for model generation.")
+                    descriptors = numpy.load(descriptors_checkpoint)
+                else:
+                    self.log.debug("Computing model descriptors")
+                    _, descriptors = \
+                        self._generate_descriptor_matrices(
+                            *data_list,
+                            limit=self.CODEBOOK_DESCRIPTOR_LIMIT
+                        )
+                    _, tmp = tempfile.mkstemp(dir=self.work_directory,
+                                              suffix='.npy')
+                    self.log.debug("Saving model-gen info/descriptor matrix")
+                    numpy.save(tmp, descriptors)
+                    os.rename(tmp, descriptors_checkpoint)
+
+            # Compute centroids (codebook) with kmeans
             # - NOT performing whitening, as this transforms the feature space
-            #   in such aray that newly computed features cannot be applied to
+            #   in such a way that newly computed features cannot be applied to
             #   the generated codebook as the same exact whitening
             #   transformation would need to be applied in order for the
             #   comparison to the codebook centroids to be valid.
-            with SimpleTimer("Computing scipy.cluster.vq.kmeans...", self.log):
+            # - Alternate kmeans implementations: OpenCV, sklearn, pyflann
+            with SimpleTimer("Computing scipy.cluster.vq.kmeans...",
+                             self.log.debug):
                 codebook, distortion = scipy.cluster.vq.kmeans(
                     descriptors,
                     kwargs.get('kmeans_k', 1024),
@@ -231,8 +256,12 @@ class ColorDescriptor_Base (FeatureDescriptor):
                     kwargs.get('kmeans_threshold', 1e-5)
                 )
                 self.log.debug("KMeans result distortion: %f", distortion)
-                # Alternate kmeans implementations: OpenCV, sklearn, pyflann
-            with SimpleTimer("Saving generated codebook...", self.log):
+            # with SimpleTimer("Computing pyflann.FLANN.hierarchical_kmeans...",
+            #                  self.log.debug):
+            #     # results in 1009 clusters (should, anyway, given the
+            #     # function's comment)
+            #     codebook2 = flann.hierarchical_kmeans(descriptors, 64, 16, 5)
+            with SimpleTimer("Saving generated codebook...", self.log.debug):
                 numpy.save(self.codebook_filepath, codebook)
         else:
             self.log.info("Found existing codebook file.")
@@ -245,7 +274,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
             log_level = 'info'
         else:
             log_level = 'warning'
-        with SimpleTimer("Building FLANN index...", self.log):
+        with SimpleTimer("Building FLANN index...", self.log.debug):
             params = flann.build_index(codebook, **{
                 "target_precision": kwargs.get("flann_target_precision", 0.99),
                 "sample_fraction": kwargs.get("flann_sample_fraction", 1.0),
@@ -253,7 +282,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                 "algorithm": "autotuned"
             })
             # TODO: Save params dict as JSON?
-        with SimpleTimer("Saving FLANN index to file...", self.log):
+        with SimpleTimer("Saving FLANN index to file...", self.log.debug):
             flann.save_index(self.flann_index_filepath)
 
         # save generation results to class for immediate feature computation use
@@ -308,8 +337,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
         # Create histogram
         # - See numpy note about ``bins`` to understand why the +1 is necessary
-        h, _ = numpy.histogram(idxs,
-                               bins=numpy.arange(self._codebook.shape[0] + 1))
+        h, _ = numpy.histogram(idxs, bins=self._codebook.shape[0] + 1)
         self.log.debug("Quantization histogram: %s", h)
         # Normalize histogram into relative frequencies
         # - Not using /= on purpose. h is originally int32 coming out of
@@ -332,7 +360,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
 # noinspection PyAbstractClass
 class ColorDescriptor_Image (ColorDescriptor_Base):
 
-    def _generate_descriptor_matrices(self, *data_items):
+    def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
@@ -340,53 +368,99 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             descriptor matrices for.
         :type data_items: tuple of SMQTK.utils.DataFile.DataFile
 
+        :param limit: Limit the number of descriptor entries to this amount.
+        :type limit: int
+
         :return: Combined info and descriptor matrices for all base images
-            vertically stacked.
         :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
 
         """
-        assert len(data_items), "No data given to process."
+        if not len(data_items):
+            raise ValueError("No data given to process.")
+
+        inf = float('inf')
+        descriptor_limit = kwargs.get('limit', inf)
+        per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
 
         if len(data_items) == 1:
             # Check for checkpoint files
-            return utils.generate_descriptors(
+            info_fp, desc_fp = \
+                self._get_standard_info_descriptors_filepath(data_items[0])
+            utils.generate_descriptors(
                 self.PROC_COLORDESCRIPTOR, data_items[0].filepath,
-                self.descriptor_type(),
-                *self._get_checkpoint_info_descriptors_file(data_items[0])
+                self.descriptor_type(), info_fp, desc_fp, per_item_limit
             )
+            return numpy.load(info_fp), numpy.load(desc_fp)
         else:
             # compute and V-stack matrices for all given images
             pool = multiprocessing.Pool(processes=self.PARALLEL)
 
-            # Mapping of UID to async processing result
-            #: :type: dict of (int, multiprocessing.pool.ApplyResult)
+            # Mapping of UID to tuple containing:
+            #   (info_fp, desc_fp, async processing result)
             r_map = {}
-            with SimpleTimer("Computing descriptors async...", self.log):
+            with SimpleTimer("Computing descriptors async...", self.log.debug):
                 for di in data_items:
+                    info_fp, desc_fp = \
+                        self._get_standard_info_descriptors_filepath(di)
                     args = (self.PROC_COLORDESCRIPTOR, di.filepath,
-                            self.descriptor_type())
-                    args += self._get_checkpoint_info_descriptors_file(di)
-                    r_map[di.uid] = pool.apply_async(
-                        utils.generate_descriptors, args
+                            self.descriptor_type(), info_fp, desc_fp)
+                    r = pool.apply_async(utils.generate_descriptors, args)
+                    r_map[di.uid] = (info_fp, desc_fp, r)
+            pool.close()
+
+            # Pass through results from descriptor generation, aggregating
+            # matrix shapes.
+            # - Transforms r_map into:
+            #       UID -> (info_fp, desc_fp, starting_row, SubSampleIndices)
+            self.log.debug("Constructing information for super matrices...")
+            s_keys = sorted(r_map.keys())
+            running_height = 0  # info and desc heights congruent
+            i_width = d_width = None
+            for uid in s_keys:
+                ifp, dfp, r = r_map[uid]
+                i_shape, d_shape = r.get()
+                if None in (i_width, d_width):
+                    i_width = i_shape[1]
+                    d_width = d_shape[1]
+
+                ssi = None
+                if i_shape[0] > per_item_limit:
+                    # pick random indices to subsample down to size limit
+                    ssi = sorted(
+                        numpy.random.permutation(i_shape[0])[:per_item_limit]
                     )
 
-            # Each result is a tuple of two ndarrays: info and descriptor
-            # matrices.
-            with SimpleTimer("Combining results...", self.log):
-                combined_info = None
-                combined_desc = None
-                for uid in sorted(r_map.keys()):
-                    i, d = r_map[uid].get()
-                    if combined_info is None:
-                        combined_info = i
-                        combined_desc = d
-                    else:
-                        combined_info = numpy.vstack((combined_info, i))
-                        combined_desc = numpy.vstack((combined_desc, d))
-
-            pool.close()
+                r_map[uid] = (ifp, dfp, running_height, ssi)
+                running_height += min(i_shape[0], per_item_limit)
             pool.join()
-            return combined_info, combined_desc
+
+            # Asynchronously load files, inserting data into master matrices
+            self.log.debug("Building super matrices...")
+            master_info = numpy.zeros((running_height, i_width), dtype=float)
+            master_desc = numpy.zeros((running_height, d_width), dtype=float)
+            tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
+            for uid in s_keys:
+                ifp, dfp, sR, ssi = r_map[uid]
+                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                               args=(ifp, master_info, sR, ssi))
+                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                               args=(dfp, master_desc, sR, ssi))
+            tp.close()
+            tp.join()
+            return master_info, master_desc
+
+    @staticmethod
+    def _thread_load_matrix(filepath, m, sR, subsample=None):
+        """
+        load a numpy matrix from ``filepath``, inserting the loaded matrix into
+        ``m`` starting at the row ``sR``.
+
+        If subsample has a value, it will be a list if indices to
+        """
+        n = numpy.load(filepath)
+        if subsample:
+            n = n[subsample, :]
+        m[sR:sR+n.shape[0], :n.shape[1]] = n
 
 
 # noinspection PyAbstractClass
@@ -399,7 +473,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         "output_image_ext": 'png'   # Output PNG files
     }
 
-    def _generate_descriptor_matrices(self, *data_items):
+    def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
@@ -407,55 +481,136 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
             descriptor matrices for.
         :type data_items: tuple of SMQTK.utils.VideoFile.VideoFile
 
+        :param limit: Limit the number of descriptor entries to this amount.
+        :type limit: int
+
         :return: Combined info and descriptor matrices for all base images
-            vertically stacked.
         :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
 
         """
+        descriptor_limit = kwargs.get('limit', float('inf'))
+        # With videos, an "item" is one video, so, collect for a while video
+        # as normal, then subsample from the full video collection.
+        per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
+
         # For each video, extract frames and submit colorDescriptor processing
         # jobs for each frame, combining all results into a single matrix for
         # return.
         pool = multiprocessing.Pool(processes=self.PARALLEL)
-        #: :type: dict of (tuple of (int, int), multiprocessing.pool.ApplyResult)
+
+        # Mapping of [UID] to [frame] to tuple containing:
+        #   (info_fp, desc_fp, async processing result)
         r_map = {}
-        with SimpleTimer("Extracting frames and submitting descriptor jobs..."):
+        with SimpleTimer("Extracting frames and submitting descriptor jobs...",
+                         self.log.debug):
             for di in data_items:
+                r_map[di.uid] = {}
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
                 p['second_offset'] = di.metadata().duration * p['second_offset']
                 p['max_duration'] = di.metadata().duration * p['max_duration']
                 fm = di.frame_map(**self.FRAME_EXTRACTION_PARAMS)
                 for frame, imgPath in fm.iteritems():
-                    r_map[di.uid, frame] = pool.apply_async(
+                    info_fp, desc_fp = \
+                        self._get_standard_info_descriptors_filepath(di, frame)
+                    r = pool.apply_async(
                         utils.generate_descriptors,
                         args=(self.PROC_COLORDESCRIPTOR, imgPath,
-                              self.descriptor_type())
+                              self.descriptor_type(), info_fp, desc_fp)
                     )
+                    r_map[di.uid][frame] = (info_fp, desc_fp, r)
+        pool.close()
 
         # Each result is a tuple of two ndarrays: info and descriptor matrices
-        with SimpleTimer("Combining results...", self.log):
-            combined_info = None
-            combined_desc = None
-            for uid, frame in sorted(r_map.keys()):
-                i, d = r_map[uid, frame].get()
-                if combined_info is None:
-                    combined_info = i
-                    combined_desc = d
-                else:
-                    combined_info = numpy.vstack((combined_info, i))
-                    combined_desc = numpy.vstack((combined_desc, d))
+        with SimpleTimer("Collecting shape information for super matrices...",
+                         self.log.debug):
+            running_height = 0
+            i_width = d_width = None
 
-        pool.close()
+            # Transform r_map[uid] into:
+            #   (info_mat_files, desc_mat_files, sR, ssi_list)
+            #   -> files in frame order
+            uids = sorted(r_map)
+            for uid in uids:
+                video_num_desc = 0
+                video_info_mat_fps = []  # ordered list of frame info mat files
+                video_desc_mat_fps = []  # ordered list of frame desc mat files
+                for frame in sorted(r_map[uid]):
+                    ifp, dfp, r = r_map[uid][frame]
+                    i_shape, d_shape = r.get()
+                    if None in (i_width, d_width):
+                        i_width = i_shape[1]
+                        d_width = d_shape[1]
+
+                    video_info_mat_fps.append(ifp)
+                    video_desc_mat_fps.append(dfp)
+                    video_num_desc += i_shape[0]
+
+                    # If combined descriptor height exceeds the per-item limit,
+                    # generate a random subsample index list
+                    ssi = None
+                    if video_num_desc > per_item_limit:
+                        ssi = sorted(
+                            numpy.random.permutation(video_num_desc)[:per_item_limit]
+                        )
+                        video_num_desc = len(ssi)
+
+                    r_map[uid] = (video_info_mat_fps, video_desc_mat_fps,
+                                  running_height, ssi)
+                    running_height += video_num_desc
         pool.join()
-        return combined_info, combined_desc
+
+        with SimpleTimer("Building master descriptor matrices...",
+                         self.log.debug):
+            master_info = numpy.zeros((running_height, i_width), dtype=float)
+            master_desc = numpy.zeros((running_height, d_width), dtype=float)
+            tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
+            for uid in uids:
+                info_fp_list, desc_fp_list, sR, ssi = r_map[uid]
+                tp.apply_async(ColorDescriptor_Video._thread_load_matrices,
+                               args=(master_info, info_fp_list, sR, ssi))
+                tp.apply_async(ColorDescriptor_Video._thread_load_matrices,
+                               args=(master_desc, desc_fp_list, sR, ssi))
+            tp.close()
+            tp.join()
+
+        return master_info, master_desc
+
+    @staticmethod
+    def _thread_load_matrices(m, file_list, sR, subsample=None):
+        """
+        load numpy matrices from files in ``file_list``, concatenating them
+        vertically. If a list of row indices is provided in ``subsample`` we
+        subsample those rows out of the concatenated matrix. This matrix is then
+        inserted into ``m`` starting at row ``sR``.
+        """
+        c = numpy.load(file_list[0])
+        for i in range(1, len(file_list)):
+            c = numpy.vstack((c, numpy.load(file_list[i])))
+        if subsample:
+            c = c[subsample, :]
+        m[sR:sR+c.shape[0], :c.shape[1]] = c
 
 
+# Begin automatic class type creation
 valid_descriptor_types = [
+    'rgbhistogram',
+    'opponenthistogram',
+    'huehistogram',
+    'nrghistogram',
+    'transformedcolorhistogram',
+    'colormoments',
+    'colormomentinvariants',
+    'sift',
+    'huesift',
+    'hsvsift',
+    'opponentsift',
+    'rgsift',
     'csift',
-    'transformedcolorhistogram'
+    'rgbsift',
 ]
 
 
-def create_image_descriptor_class(descriptor_type_str):
+def _create_image_descriptor_class(descriptor_type_str):
     """
     Create and return a ColorDescriptor class that operates over Image files
     using the given descriptor type.
@@ -475,7 +630,7 @@ def create_image_descriptor_class(descriptor_type_str):
     return _cd_image_impl
 
 
-def create_video_descriptor_class(descriptor_type_str):
+def _create_video_descriptor_class(descriptor_type_str):
     """
     Create and return a ColorDescriptor class that operates over Video files
     using the given descriptor type.
@@ -495,10 +650,7 @@ def create_video_descriptor_class(descriptor_type_str):
     return _cd_video_impl
 
 
-ColorDescriptor_Image_csift = create_image_descriptor_class('csift')
-ColorDescriptor_Image_transformedcolorhistogram = \
-    create_image_descriptor_class('transformedcolorhistogram')
-
-ColorDescriptor_Video_csift = create_video_descriptor_class('csift')
-ColorDescriptor_Video_transformedcolorhistogram = \
-    create_video_descriptor_class('transformedcolorhistogram')
+cd_type_list = []
+for t in valid_descriptor_types:
+    cd_type_list.append(_create_image_descriptor_class(t))
+    cd_type_list.append(_create_video_descriptor_class(t))

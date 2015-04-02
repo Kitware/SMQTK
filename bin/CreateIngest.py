@@ -7,58 +7,54 @@ import glob
 import logging
 import os.path as osp
 
-import smqtk_config
-
-from SMQTK.utils import DataIngest, VideoIngest
+from SMQTK.utils import bin_utils
+from SMQTK.utils.configuration import IngestConfiguration
 
 
 def main():
-    import optparse
-
     usage = "%prog [options] GLOB [ GLOB [ ... ] ]"
     description = "Create a formal ingest from a set of file paths or " \
                   "shell-style glob strings."
 
-    parser = optparse.OptionParser(usage, description=description)
-    parser.add_option('-t', '--type',
-                      help="Ingest data type. Currently supports 'image' or "
-                           "'video'.")
-    parser.add_option('-d',
-                      help="Custom directory to base the ingest data in. "
-                           "Otherwise we use the system default based on the "
-                           "ingest type. Relative directory paths still used "
-                           "from system_config.json")
+    parser = bin_utils.SMQTKOptParser(usage, description=description)
+    parser.add_option('-i', '--ingest',
+                      help="Configured ingest to 'ingest' into.")
+    parser.add_option('-l', '--list-ingests', action='store_true',
+                      default=False,
+                      help="List available ingests we can ingest new data "
+                           "into. See the system_config.json file in the etc "
+                           "directory for more details.")
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Add debug messaged to output logging.')
     opts, args = parser.parse_args()
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
-    if opts.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    bin_utils.initializeLogging(logging.getLogger(),
+                                logging.INFO - (10*opts.verbose))
+    log = logging.getLogger("main")
 
-    if opts.type.lower() == 'image':
-        ingest_t = DataIngest
-    elif opts.type.lower() == 'video':
-        ingest_t = VideoIngest
-    else:
-        raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    t = opts.type.lower()
-    t = t[0].upper() + t[1:]
+    if opts.list_ingests:
+        log.info("")
+        log.info("Available Ingests:")
+        for k in sorted(IngestConfiguration.available_ingest_labels()):
+            log.info("\t%s", k)
+        log.info("")
+        exit(0)
 
-    target_dir = osp.join(opts.d or smqtk_config.DATA_DIR,
-                          smqtk_config.SYSTEM_CONFIG['Ingest'][t])
-    work_dir = osp.join(smqtk_config.WORK_DIR,
-                        smqtk_config.SYSTEM_CONFIG['Ingest'][t])
+    if opts.ingest is None:
+        log.info("")
+        log.info("ERROR: Please provide an ingest label.")
+        log.info("")
+        exit(1)
 
-    ingest = ingest_t(target_dir, work_dir)
-    print "Script arguments:\n%s" % args
+    ingest_config = IngestConfiguration(opts.ingest)
+    ingest = ingest_config.new_ingest_instance()
+    log.debug("Script arguments:\n%s" % args)
     for g in args:
         g = osp.expanduser(g)
         if osp.isfile(g):
             ingest.add_data_file(g)
         else:
-            print "Expanding glob: %s" % g
+            log.debug("Expanding glob: %s" % g)
             for fp in glob.glob(g):
                 ingest.add_data_file(fp)
 

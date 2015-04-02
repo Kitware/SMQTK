@@ -11,12 +11,9 @@ import os.path as osp
 import PIL.Image
 import random
 
-from SMQTK.FeatureDescriptors import get_descriptors
-from SMQTK.Classifiers import get_classifiers
-
 from SMQTK.IQR import IqrController, IqrSession
 
-from SMQTK.Web.common_flask_blueprints.file_upload import FileUploadMod
+from SMQTK.Web.SMQTKSearchApp.modules.file_upload import FileUploadMod
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,12 +21,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class IQRSearch (flask.Blueprint):
 
-    def __init__(self, name, parent_app, ingest,
-                 descriptor_type, classifier_type,
+    def __init__(self, name, parent_app, ingest_config,
+                 descriptor_type, indexer_type,
                  url_prefix=None):
         """
         Initialize a generic IQR Search module with a single descriptor and
-        classifier.
+        indexer.
 
         :param name: Name of this blueprint instance
         :type name:
@@ -37,19 +34,19 @@ class IQRSearch (flask.Blueprint):
         :param parent_app: Parent containing flask app instance
         :type parent_app: SMQTK.Web.SMQTKSearchApp.app.SMQTKSearchApp
 
-        :param ingest: The primary data ingest to search over.
-        :type ingest: SMQTK.utils.DataIngest.DataIngest
+        :param ingest_config: Ingest configuration instance
+        :type ingest_config: SMQTK.utils.configuration.IngestConfiguration
 
         :param descriptor_type: Feature Descriptor type string
         :type descriptor_type: str
 
-        :param classifier_type: Classifier type string
-        :type classifier_type: str
+        :param indexer_type: indexer type string
+        :type indexer_type: str
 
         :param url_prefix:
         :type url_prefix:
 
-        :raises ValueError: Invalid Descriptor or Classifier type
+        :raises ValueError: Invalid Descriptor or indexer type
 
         """
         super(IQRSearch, self).__init__(
@@ -59,31 +56,20 @@ class IQRSearch (flask.Blueprint):
             url_prefix=url_prefix
         )
 
-        # Make sure that the configured descriptor/classifier types exist, as
+        # Make sure that the configured descriptor/indexer types exist, as
         # we as their system configuration sections
-        if descriptor_type not in get_descriptors():
-            raise ValueError("Not a valid descriptor type: %s" % descriptor_type)
-        if classifier_type not in get_classifiers():
-            raise ValueError("Not a valid classifier type: %s" % classifier_type)
-        try:
-            parent_app.config['SYSTEM_CONFIG']\
-                ['FeatureDescriptors'][descriptor_type]
-        except KeyError:
-            raise ValueError("No configuration section for descriptor type '%s'"
-                             % descriptor_type)
-        try:
-            parent_app.config['SYSTEM_CONFIG']\
-                ['Classifiers'][classifier_type][descriptor_type]\
-                ['data_directory']
-        except KeyError:
-            raise ValueError("No configuration section for classifier type "
-                             "'%s' for descriptor '%s'"
-                             % (classifier_type, descriptor_type))
+        if descriptor_type not in ingest_config.get_available_descriptor_labels():
+            raise ValueError("'%s' not a valid descriptor type for ingest '%s'"
+                             % (descriptor_type, ingest_config.label))
+        if indexer_type not in ingest_config.get_available_indexer_labels():
+            raise ValueError("'%s' not a valid indexer type for ingest '%s'"
+                             % (indexer_type, ingest_config.label))
 
         self._parent_app = parent_app
-        self._ingest = ingest
+        self._ingest_config = ingest_config
+        self._ingest = ingest_config.new_ingest_instance()
         self._fd_type_str = descriptor_type
-        self._cl_type_str = classifier_type
+        self._idxr_type_str = indexer_type
 
         # Uploader Sub-Module
         self.upload_work_dir = os.path.join(
@@ -112,11 +98,13 @@ class IQRSearch (flask.Blueprint):
         @self.route("/")
         @self._parent_app.module_login.login_required
         def index():
-            return flask.render_template("iqr_search_index.html", **{
+            r = {
                 "module_name": self.name,
                 "uploader_url": self.mod_upload.url_prefix,
-                "uploader_post_url": self.mod_upload.upload_post_url()
-            })
+                "uploader_post_url": self.mod_upload.upload_post_url(),
+            }
+            r.update(parent_app.nav_bar_content())
+            return flask.render_template("iqr_search_index.html", **r)
 
         @self.route('/iqr_session_info', methods=["GET"])
         @self._parent_app.module_login.login_required
@@ -196,18 +184,18 @@ class IQRSearch (flask.Blueprint):
                                iqr_sess.uuid, fid)
                 feat = iqr_sess.descriptor.compute_feature(upload_data)
 
-                # Extend classifier model with feature data -- modifying
+                # Extend indexer model with feature data -- modifying
                 with iqr_sess:
-                    self.log.debug("[%s::%s] Extending classifier model with "
+                    self.log.debug("[%s::%s] Extending indexer model with "
                                    "feature", iqr_sess.uuid, fid)
-                    iqr_sess.classifier.extend_model({upload_data.uid: feat})
+                    iqr_sess.indexer.extend_model({upload_data.uid: feat})
 
                     # of course, add the new data element as a positive
                     iqr_sess.adjudicate((upload_data.uid,))
 
                 return "Finished Ingestion"
 
-        @self.route("/adjudicate", methods=["POST"])
+        @self.route("/adjudicate", methods=["POST", "GET"])
         @self._parent_app.module_login.login_required
         def adjudicate():
             """
@@ -218,10 +206,18 @@ class IQRSearch (flask.Blueprint):
                     message: <str>
                 }
             """
-            pos_to_add = json.loads(flask.request.form.get('add_pos', '[]'))
-            pos_to_remove = json.loads(flask.request.form.get('remove_pos', '[]'))
-            neg_to_add = json.loads(flask.request.form.get('add_neg', '[]'))
-            neg_to_remove = json.loads(flask.request.form.get('remove_neg', '[]'))
+            if flask.request.method == "POST":
+                fetch = flask.request.form
+            elif flask.request.method == "GET":
+                fetch = flask.request.args
+            else:
+                raise RuntimeError("Invalid request method '%s'"
+                                   % flask.request.method)
+
+            pos_to_add = json.loads(fetch.get('add_pos', '[]'))
+            pos_to_remove = json.loads(fetch.get('remove_pos', '[]'))
+            neg_to_add = json.loads(fetch.get('add_neg', '[]'))
+            neg_to_remove = json.loads(fetch.get('remove_neg', '[]'))
 
             self.log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
                            % (pos_to_add, pos_to_remove,
@@ -362,7 +358,7 @@ class IQRSearch (flask.Blueprint):
         @self._parent_app.module_login.login_required
         def iqr_refine():
             """
-            Classify current IQR session classifier, updating ranking for
+            Classify current IQR session indexer, updating ranking for
             display.
 
             Fails gracefully if there are no positive[/negative] adjudications.
@@ -436,7 +432,7 @@ class IQRSearch (flask.Blueprint):
 
     @property
     def log(self):
-        return logging.getLogger("IqrSearch(%s)" % self.name)
+        return logging.getLogger("SMQTK.IQRSearch(%s)" % self.name)
 
     def get_current_iqr_session(self):
         """
@@ -449,38 +445,38 @@ class IQRSearch (flask.Blueprint):
             sid = flask.session.sid
             if not self._iqr_controller.has_session_uuid(sid):
                 sid_work_dir = osp.join(self._parent_app.config['WORK_DIR'],
-                                        "IQR", self.name, sid)
+                                        "Web", "IQR", self.name, sid)
+
                 #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
-                descriptor = get_descriptors()[self._fd_type_str](
-                    osp.join(
-                        self._parent_app.config['DATA_DIR'],
-                        self._parent_app.config['SYSTEM_CONFIG']\
-                            ['FeatureDescriptors'][self._fd_type_str]\
-                            ['data_directory']
-                    ),
-                    osp.join(sid_work_dir, 'fd')
+                descriptor = self._ingest_config.new_descriptor_instance(
+                    self._fd_type_str,
+                    work_dir=osp.join(sid_work_dir, 'descriptors',
+                                      self._fd_type_str)
                 )
-                #: :type: SMQTK.Classifiers.SMQTKClassifier
-                classifier = get_classifiers()[self._cl_type_str](
-                    osp.join(
-                        self._parent_app.config['DATA_DIR'],
-                        self._parent_app.config['SYSTEM_CONFIG']\
-                            ['Classifiers'][self._cl_type_str]\
-                            [self._fd_type_str]['data_directory']
-                    ),
-                    osp.join(sid_work_dir, 'cl'),
+
+                #: :type: SMQTK.Indexers.Indexer
+                indexer = self._ingest_config.new_indexer_instance(
+                    self._idxr_type_str, self._fd_type_str,
+                    work_dir=osp.join(sid_work_dir, "indexers",
+                                      self._idxr_type_str)
                 )
-                online_ingest = self._ingest.__class__(
-                    osp.join(sid_work_dir, 'online-ingest'),
-                    osp.join(sid_work_dir, 'online-ingest-work'),
+
+                # Custom ingest inheriting the same type as the base ingest
+                # NOTE: This assumes that the base ingest is static in regards
+                #       to content (required by starting_index being assigned
+                #       here).
+                online_ingest = self._ingest_config.new_ingest_instance(
+                    data_dir=osp.join(sid_work_dir, 'online-ingest'),
+                    work_dir=osp.join(sid_work_dir, 'online-ingest-work'),
                     starting_index=self._ingest.max_uid() + 1
                 )
-                iqr_sess = IqrSession(sid_work_dir, descriptor, classifier,
+
+                iqr_sess = IqrSession(sid_work_dir, descriptor, indexer,
                                       online_ingest, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
                 # If there are things already in our extension ingest, extend
-                # the base classifier
+                # the base indexer
                 feat_map = descriptor.compute_feature_async(*online_ingest.data_list())
-                classifier.extend_model(feat_map)
+                indexer.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

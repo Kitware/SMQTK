@@ -3,15 +3,12 @@ Top level flask application
 """
 
 import flask
-import json
 import logging
 import os.path
 
-from SMQTK.FeatureDescriptors import get_descriptors
-from SMQTK.Classifiers import get_classifiers
-
+from SMQTK.utils import DatabaseInfo
+from SMQTK.utils.configuration import IngestConfiguration
 from SMQTK.utils.MongoSessions import MongoSessionInterface
-from SMQTK.utils import DatabaseInfo, DataIngest, VideoIngest
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -100,44 +97,79 @@ class SMQTKSearchApp (flask.Flask):
         # Load up required and optional module blueprints
         #
 
+        # Navigable blueprints. This should contain the blueprints that a user
+        # should be able to navigate to. Not all blueprints have navigable
+        # content or should allow user explicit navigation to, thus this
+        # structure.
+        #: :type: list of flask.Blueprint
+        self._navigable_blueprints = []
+
         # Login module
         self.log.info("Initializing Login Blueprint")
-        from SMQTK.Web.common_flask_blueprints.login import LoginMod
+        from .modules.login import LoginMod
         self.module_login = LoginMod('login', self)
         self.register_blueprint(self.module_login)
 
         # IQR modules
-        from .modules.IQR import IQRSearch
         # TODO: At the moment, for simplicity, we're fixing the feature detector
-        #       and classifier types. In the future this should either be moved
+        #       and indexer types. In the future this should either be moved
         #       to something that can be chosen by the user or a
-        #       multi-feature/classifier fusion system.
-        self.log.info("Loading Image Ingest")
-        ingest_image = \
-            DataIngest(os.path.join(self.config['DATA_DIR'],
-                                    self.config['SYSTEM_CONFIG']['Ingest']['Image']),
-                       os.path.join(self.config['WORK_DIR'],
-                                    self.config['SYSTEM_CONFIG']['Ingest']['Image']))
-        self.log.info("Loading Video Ingest")
-        ingest_video = \
-            VideoIngest(os.path.join(self.config['DATA_DIR'],
-                                     self.config['SYSTEM_CONFIG']['Ingest']['Video']),
-                        os.path.join(self.config['WORK_DIR'],
-                                     self.config['SYSTEM_CONFIG']['Ingest']['Video']))
+        #       multi-feature/indexer fusion system.
+        from .modules.IQR import IQRSearch
+        example_image_ic = IngestConfiguration("example_image")
 
-        self.log.info("Initializing IQR Blueprint -- Video")
-        self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
-                                        'ColorDescriptor_Video_csift',
-                                        'SVMClassifier_HIK',
-                                        url_prefix="/vsearch")
-        self.register_blueprint(self.module_vsearch)
+        self.module_is_svm_hik = IQRSearch(
+            "IS - SVM HIK", self,
+            example_image_ic,
+            "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
+            url_prefix="/is_svm_hik"
+        )
+        self.register_blueprint(self.module_is_svm_hik)
+        self.add_navigable_blueprint(self.module_is_svm_hik)
 
-        self.log.info("Initializing IQR Blueprint -- Image")
-        self.module_isearch = IQRSearch('ImageSearch', self, ingest_image,
-                                        'ColorDescriptor_Image_csift',
-                                        'SVMClassifier_HIK',
-                                        url_prefix="/isearch")
-        self.register_blueprint(self.module_isearch)
+        self.module_is_nn_hik_dist = IQRSearch(
+            'IS - NN_HIK - Distance', self,
+            example_image_ic,
+            'ColorDescriptor_Image_csift', 'NearestNeighbor_HIK_Distance',
+            url_prefix="/is_nn_hik_dist"
+        )
+        self.register_blueprint(self.module_is_nn_hik_dist)
+        self.add_navigable_blueprint(self.module_is_nn_hik_dist)
+
+        self.module_is_nn_hik_rank = IQRSearch(
+            "IS - NN_HIK - Rank", self,
+            example_image_ic,
+            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Rank",
+            url_prefix="/is_nn_hik_rank"
+        )
+        self.register_blueprint(self.module_is_nn_hik_rank)
+        self.add_navigable_blueprint(self.module_is_nn_hik_rank)
+
+        self.module_is_nn_hik_centroid = IQRSearch(
+            "IS - NN_HIK - Avg Centroids", self,
+            example_image_ic,
+            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Centroids",
+            url_prefix="/is_nn_hik_centroids"
+        )
+        self.register_blueprint(self.module_is_nn_hik_centroid)
+        self.add_navigable_blueprint(self.module_is_nn_hik_centroid)
+
+        self.module_is_nn_hik_centroid_flann_cs = IQRSearch(
+            "IS - NN_HIK - FLANN Chi-Squared", self,
+            example_image_ic,
+            "ColorDescriptor_Image_csift",
+            "NearestNeighbor_HIK_Centroids_FLANN_CS",
+            url_prefix="/is_nn_hik_centroids_flann_cs"
+        )
+        self.register_blueprint(self.module_is_nn_hik_centroid_flann_cs)
+        self.add_navigable_blueprint(self.module_is_nn_hik_centroid_flann_cs)
+
+        # self.log.info("Initializing IQR Blueprint -- Video")
+        # self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
+        #                                 'ColorDescriptor_Video_csift',
+        #                                 'SVMIndexer_HIK',
+        #                                 url_prefix="/vsearch")
+        # self.register_blueprint(self.module_vsearch)
 
         #
         # Basic routing
@@ -147,7 +179,43 @@ class SMQTKSearchApp (flask.Flask):
         @self.route('/')
         def smqtk_index():
             self.log.info("Session: %s", flask.session.items())
-            return flask.render_template("index.html")
+            return flask.render_template("index.html", **self.nav_bar_content())
+
+    def add_navigable_blueprint(self, bp):
+        """
+        Register a navigable blueprint. This is not the same thing as
+        registering a blueprint with flask, which should happen separately.
+
+        :param bp: Blueprint to register as navigable via the navigation bar.
+        :type bp: flask.Blueprint
+
+        """
+        self._navigable_blueprints.append(bp)
+
+    def nav_bar_content(self):
+        """
+        Formatted dictionary for return during a flask.render_template() call.
+        This content must be included in all flask.render_template calls that
+        are rendering a template that descends from our ``base.html`` template
+        in order to allow proper construction and rendering of navigation bar
+        content.
+
+        For example, when returning a flask.render_template() call:
+        >>> ret = {"things": "and stuff"}
+        >>> ret.update(smqtk_search_app.nav_bar_content())
+        >>> return flask.render_template("some_template.tmpl", **ret)
+
+        :return: Dictionary of content required for proper display of the
+            navigation bar. Contains keys of module names and values of module
+            URL prefixes.
+        :rtype: {"nav_content": list of (tuple of str)}
+        """
+        l = []
+        for nbp in self._navigable_blueprints:
+            l.append((nbp.name, nbp.url_prefix))
+        return {
+            "nav_content": l
+        }
 
     def run(self, host=None, port=None, debug=False, **options):
         """

@@ -33,10 +33,6 @@ class DataIngest (object):
 
     """
 
-    # DataIngest data file type. This should be set to a class or factory method
-    # that takes up to two arguments: the filepath and an optional UID setting.
-    DATA_FILE_TYPE = DataFile
-
     # Files saved with MD5sum and integer ID
     FILE_TEMPLATE = "uid_%d.%s%s"  # (uid, md5, ext)
     FILE_REGEX = re.compile("uid_(\d+)\.(\w+)(\..*)")  # uid, md5, ext
@@ -79,6 +75,22 @@ class DataIngest (object):
     def __len__(self):
         return len(self._id_data_map)
 
+    def DATA_FILE_TYPE(self, filepath, uid=None):
+        """
+        DataIngest data file factory method.
+
+        :param filepath: Path to the data file
+        :type filepath: str
+
+        :param uid: Optional UID of the item
+        :type uid: int
+
+        :return: New DataFile instance
+        :rtype: DataFile
+
+        """
+        return DataFile(filepath, uid)
+
     def _register_data_item(self, data):
         """ Internal add-data-to-maps function
         :param data: DataFile instance to add.
@@ -102,6 +114,7 @@ class DataIngest (object):
                 uid, md5, ext = m.groups()
                 uid = int(uid)
                 df = self.DATA_FILE_TYPE(filepath, uid=uid)
+                df._md5_cache = md5  # shortcut instead of reading file for md5
                 self._register_data_item(df)
                 if uid > max_uid:
                     max_uid = uid

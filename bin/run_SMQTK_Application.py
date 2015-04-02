@@ -5,21 +5,28 @@ Start SMQTK SearchApp
 
 """
 
+import logging
+
+from SMQTK.utils import bin_utils
+
 
 def main():
-    import optparse
-    parser = optparse.OptionParser()
+    parser = bin_utils.SMQTKOptParser()
     parser.add_option('-c', '--config', default=None,
                       help='Path to an SMQTK configuration extension file '
                            '(a python file).')
     parser.add_option('-a', '--application', default=None,
                       help="Name of the web application to run. Required.")
+
     parser.add_option('-r', '--reload', action='store_true', default=False,
                       help='Turn on server reloading.')
-    parser.add_option('-d', '--debug', action='store_true', default=False,
-                      help='Turn on server debugging')
     parser.add_option('-t', '--threaded', action='store_true', default=False,
                       help="Turn on web searcher threading.")
+    parser.add_option('--debug-server', action='store_true', default=False,
+                      help='Turn on server debugging messages')
+    parser.add_option('--debug-backend', action='store_true', default=False,
+                      help='Turn on SMQTK backend debugging messages')
+
     parser.add_option('--host', default=None,
                       help="Run host address specification override. This will "
                            "override all other configuration method "
@@ -32,25 +39,25 @@ def main():
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
-    import logging
-    logging.basicConfig()  # TODO: Add better message format here
-    logging.getLogger().setLevel(logging.INFO)
-    if opts.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+    bin_utils.initializeLogging(logging.getLogger("SMQTK"),
+                                logging.INFO - (10*opts.debug_backend))
+    bin_utils.initializeLogging(logging.getLogger("werkzeug"),
+                                logging.WARN - (20*opts.debug_server))
+    log = logging.getLogger("SMQTK.main")
 
     if opts.list:
         from SMQTK.Web import APPLICATIONS
-        print
-        print "Available applications:"
-        print
+        log.info("")
+        log.info("Available applications:")
+        log.info("")
         for e in APPLICATIONS:
-            print "\t%s" % e.__name__
-            print
+            log.info("\t%s" % e.__name__)
+            log.info("")
         exit(0)
 
     host = opts.host
     port = opts.port and int(opts.port)
-    debug = opts.debug
+    debug_server = opts.debug_server
     use_reloader = opts.reload
     use_threading = opts.threaded
     application_name = opts.application
@@ -64,7 +71,7 @@ def main():
         raise ValueError("No available application by the name of '%s'"
                          % application_name)
     app = App(opts.config)
-    app.run(host=host, port=port, debug=debug, use_reloader=use_reloader,
+    app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
 
 

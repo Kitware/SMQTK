@@ -287,7 +287,7 @@ class DistanceKernel (object):
 
         """
         with self._rw_lock.read_lock():
-            with SimpleTimer("Checking inputs", self._log):
+            with SimpleTimer("Checking inputs", self._log.debug):
                 if not self.is_symmetric():
                     raise RuntimeError("Cannot get a symmetric sub-matrix if "
                                        "the kernel is not square!")
@@ -312,7 +312,7 @@ class DistanceKernel (object):
                 del id_diff
 
             with SimpleTimer("Computing union of BG clips and provided IDs",
-                             self._log):
+                             self._log.debug):
                 if self._bg_cid_set is not None:
                     all_cids = self._bg_cid_set.union(clip_ids)
                 else:
@@ -362,7 +362,7 @@ class DistanceKernel (object):
 
         """
         with self._rw_lock.read_lock():
-            with SimpleTimer("Checking inputs", self._log):
+            with SimpleTimer("Checking inputs", self._log.debug):
                 try:
                     clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
                 except Exception, ex:
@@ -378,7 +378,7 @@ class DistanceKernel (object):
 
             # Reorder the given clip IDs so that they are in the same relative
             # order as the kernel matrix edge order
-            with SimpleTimer("Creating focus index/cid sequence", self._log):
+            with SimpleTimer("Creating focus index/cid sequence", self._log.debug):
                 focus_row_indices = []
                 focus_row_clipids = []
                 for idx, cid in enumerate(self._row_id_index_map):
@@ -388,7 +388,7 @@ class DistanceKernel (object):
                         focus_row_indices.append(idx)
                         focus_row_clipids.append(cid)
 
-            with SimpleTimer("Cropping kernel to focus range", self._log):
+            with SimpleTimer("Cropping kernel to focus range", self._log.debug):
                 return (
                     tuple(focus_row_clipids),
                     tuple(self._col_id_index_map),

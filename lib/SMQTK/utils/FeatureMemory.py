@@ -264,7 +264,7 @@ class FeatureMemory (object):
 
         with self._rw_lock.read_lock():
             # rows = num of IDs given, cols = width of feature matrix
-            with SimpleTimer("Allocating return matrix", self._log):
+            with SimpleTimer("Allocating return matrix", self._log.debug):
                 # noinspection PyUnresolvedReferences
                 # -> matrix class DOES have ``dtype`` property...
                 ret_mat = matrix(ndarray((len(clip_id_or_ids),

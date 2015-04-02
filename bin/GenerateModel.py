@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 """
-Generate a classifier model for the given ingest data
-
-Results are
-
+Generate model files for an ingest.
 """
 
 import json
 import logging
 import multiprocessing.pool
-import os.path as osp
 
-import smqtk_config
-
-from SMQTK.Classifiers import get_classifiers
-from SMQTK.FeatureDescriptors import get_descriptors, FeatureDescriptor
-from SMQTK.utils import DataIngest, VideoIngest
+from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.utils import bin_utils
+from SMQTK.utils.configuration import IngestConfiguration
+from SMQTK.utils.jsmin import jsmin
 
 
 class NonDaemonicProcess (multiprocessing.Process):
@@ -42,45 +37,65 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
     Process = NonDaemonicProcess
 
 
+def list_ingest_labels(log):
+    log.info("")
+    log.info("Available ingest labels:")
+    log.info("")
+    for l in IngestConfiguration.available_ingest_labels():
+        log.info("\t%s", l)
+    log.info("")
+
+
+def list_available_fds_idxrs(log, ingest_config):
+    """
+    :type ingest_config: IngestConfiguration
+    """
+    log.info("")
+    log.info("For ingest configuration '%s'...", ingest_config.label)
+    log.info("")
+    log.info("Available FeatureDescriptor types:")
+    log.info("")
+    for l in ingest_config.get_available_descriptor_labels():
+        log.info("\t%s" % l)
+    log.info("")
+    log.info("Available Indexer types:")
+    log.info("")
+    for l in ingest_config.get_available_indexer_labels():
+        log.info("\t%s", l)
+    log.info("")
+
+
 def main():
     import optparse
     description = \
-        "Generate the model for the given classifier type, using features " \
+        "Generate the model for the given indexer type, using features " \
         "from the given feature descriptor type. We use configured valued in " \
         "the smqtk_config module and from the system configuration JSON file " \
         "(etc/system_config.json) unless otherwise specified by options to " \
         "this script. Specific ingest used is determined by the ingest type " \
         "provided (-t/--type)."
-    parser = optparse.OptionParser(description=description)
+    parser = bin_utils.SMQTKOptParser(description=description)
     groupRequired = optparse.OptionGroup(parser, "Required Options")
     groupOptional = optparse.OptionGroup(parser, "Optional")
 
-    groupRequired.add_option('-t', '--type',
-                             help="Ingest data type. Currently supports "
-                                  "'image' or 'video'. This determines which "
-                                  "data ingest to use.")
+    groupRequired.add_option('-i', '--ingest',
+                             help="Ingest configuration to use.")
     groupRequired.add_option('-d', '--feature-descriptor',
-                             help="Type of feature descriptor to use for "
+                             help="Feature descriptor type for model and "
                                   "feature generation.")
-    groupRequired.add_option('-c', '--classifier',
-                             help="Type of classifier to generate the model "
-                                  "for.")
+    groupRequired.add_option('-I', '--indexer',
+                             help="Indexer type for model generation.")
 
-    groupOptional.add_option('--data-dir',
-                             help='Custom data directory to use. Otherwise '
-                                  'we pull the data directory from the '
-                                  'smqtk_config module.')
-    groupOptional.add_option('--work-dir',
-                             help="Custom work directory to use. Otherwise "
-                                  "we pull the work directory from the "
-                                  "smqtk_config module.")
     groupOptional.add_option('--sys-json',
                              help="Custom system configuration JSON file to "
                                   "use. Otherwise we use the one specified in "
                                   "the smqtk_config module.")
     groupOptional.add_option('-l', '--list', action='store_true', default=False,
-                             help="List available FeatureDescriptor and "
-                                  "Classifier types.")
+                             help="List available ingest configurations. If "
+                                  "a valid ingest configuration has been "
+                                  "specified, we list available "
+                                  "FeatureDetector and Indexer configurations "
+                                  "available.")
     groupOptional.add_option('-v', '--verbose', action='store_true',
                              default=False,
                              help='Add debug messaged to output logging.')
@@ -89,89 +104,75 @@ def main():
     parser.add_option_group(groupOptional)
     opts, args = parser.parse_args()
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
-    if opts.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    bin_utils.initializeLogging(logging.getLogger(),
+                                logging.INFO - (10*opts.verbose))
+    log = logging.getLogger("main")
+
+    ingest_label = opts.ingest
+    fd_label = opts.feature_descriptor
+    idxr_label = opts.indexer
+
+    # Prep custom JSON configuration if one was given
+    if opts.sys_json:
+        with open(opts.sys_json) as json_file:
+            json_config = json.loads(jsmin(json_file.read()))
+        IngestConfiguration.INGEST_CONFIG = json_config['Ingests']
 
     if opts.list:
-        fds = get_descriptors().keys()
-        cls = get_classifiers().keys()
+        if ingest_label is None:
+            list_ingest_labels(log)
+            exit(0)
+        elif ingest_label not in IngestConfiguration.available_ingest_labels():
+            log.error("Label '%s' is not a valid ingest configuration.",
+                      ingest_label)
+            list_ingest_labels(log)
+            exit(0)
+        else:
+            # List available FeatureDescriptor and Indexer configurations
+            # available for the given ingest config label.
+            ingest_config = IngestConfiguration(ingest_label)
+            list_available_fds_idxrs(log, ingest_config)
+            exit(0)
 
-        print
-        print "Feature Descriptors:"
-        print
-        for name in fds:
-            print "\t%s" % name
-        print
-        print
-        print "Classifiers:"
-        print
-        for name in cls:
-            print "\t%s" % name
-        print
-        exit(0)
+    # If we weren't given an index label, or if the one given was invalid, print
+    if (ingest_label is None or ingest_label not in
+            IngestConfiguration.available_ingest_labels()):
+        log.error("Invalid ingest configuration specified for use: %s",
+                  ingest_label)
+        list_ingest_labels(log)
+        exit(1)
 
-    descriptor_t = get_descriptors()[opts.feature_descriptor]
-    classifier_t = get_classifiers()[opts.classifier]
+    ingest_config = IngestConfiguration(ingest_label)
 
-    abspath = lambda p: osp.abspath(osp.expanduser(p))
-    data_dir = abspath(opts.data_dir or smqtk_config.DATA_DIR)
-    work_dir = abspath(opts.work_dir or smqtk_config.WORK_DIR)
-
-    if opts.sys_json:
-        with open(abspath(opts.sys_json)) as ifile:
-            sc = json.load(ifile)
-    else:
-        sc = smqtk_config.SYSTEM_CONFIG
-
-    if opts.type.lower() == 'image':
-        ingest_t = DataIngest
-    elif opts.type.lower() == 'video':
-        ingest_t = VideoIngest
-    else:
-        raise RuntimeError("Invalid ingest type! Given: %s" % opts.type)
-    t = opts.type.lower()
-    t = t[0].upper() + t[1:]
-
+    log.info("Loading ingest instance...")
     #: :type: DataIngest or VideoIngest
-    ingest = ingest_t(osp.join(data_dir, sc['Ingest'][t]),
-                      osp.join(work_dir, sc['Ingest'][t]))
-    #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
-    descriptor = descriptor_t(osp.join(data_dir,
-                                       sc['FeatureDescriptors']
-                                         [opts.feature_descriptor]
-                                         ['data_directory']),
-                              osp.join(work_dir,
-                                       sc['FeatureDescriptors']
-                                         [opts.feature_descriptor]
-                                         ['data_directory']))
-    #: :type: SMQTK.Classifiers.SMQTKClassifier
-    classifier = classifier_t(osp.join(data_dir,
-                                       sc["Classifiers"]
-                                         [opts.classifier]
-                                         [opts.feature_descriptor]
-                                         ['data_directory']),
-                              osp.join(work_dir,
-                                       sc["Classifiers"]
-                                         [opts.classifier]
-                                         [opts.feature_descriptor]
-                                         ['data_directory']))
+    ingest = ingest_config.new_ingest_instance()
 
+    log.info("Loading descriptor instance...")
+    #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
+    descriptor = ingest_config.new_descriptor_instance(fd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.generate_model(ingest.data_list())
 
-    # It is not guaranteed that the feature computation method is doing anything
-    # in parallel, but if it is, request that it perform serially in order to
-    # allow multiple high-level feature computation jobs.
-    FeatureDescriptor.PARALLEL = 1
-    # Using NonDaemonicPool because FeatureDescriptors that might to parallel
-    # processing might use multiprocessing.Pool instances, too. Pools don't
-    # usually allow daemonic processes, so this custom top-level pool allows
-    # worker processes to spawn pools themselves.
-    fmap = descriptor.compute_feature_async(*(df for _, df in ingest.iteritems()),
-                                            pool_type=NonDaemonicPool)
-    classifier.generate_model(fmap)
+    # Don't do indexer model generation if a type was not provided
+    if idxr_label:
+        log.info("Loading indexer instance...")
+        #: :type: SMQTK.Indexers.Indexer
+        indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
+
+        # It is not guaranteed that the feature computation method is doing
+        # anything in parallel, but if it is, request that it perform serially
+        # in order to allow multiple high-level feature computation jobs.
+        FeatureDescriptor.PARALLEL = 1
+        # Using NonDaemonicPool because FeatureDescriptors that might to
+        # parallel processing might use multiprocessing.Pool instances, too.
+        # Pools don't usually allow daemonic processes, so this custom top-level
+        # pool allows worker processes to spawn pools themselves.
+        fmap = descriptor.compute_feature_async(*(df for _, df
+                                                  in ingest.iteritems()),
+                                                pool_type=NonDaemonicPool)
+
+        indexer.generate_model(fmap)
 
 
 if __name__ == "__main__":

@@ -1,45 +1,101 @@
+// Comments are allowed in JSON files used with the SMQTK system. They are
+// parsed out using the SMQTK.utils.jsmin module.
 {
-  "Ingest": {
-    "Image": "Ingest/Image",
-    "Video": "Ingest/Video"
-  },
+    "Ingests": {
+        // relative to the SMQTK configured data directory
+        "dir": "SMQTK_Ingests",
+        // Available data ingests and their associated settings
+        "listing": {
+            "example_image": {
+                // relative to the ingest base directory
+                "dir": "example_image",
 
-  "FeatureDescriptors": {
+                // As of now, there are only two supported types: "image" and "video".
+                // If something other than those two values are used here, we error.
+                "type": "image",
 
-    "ColorDescriptor_Image_csift": {
-      "data_directory": "FeatureDescriptors/CSIFT/Image"
-    },
-    "ColorDescriptor_Video_csift": {
-      "data_directory": "FeatureDescriptors/CSIFT/Video"
-    },
-    "ColorDescriptor_Image_transformedcolorhistogram": {
-      "data_directory": "FeatureDescriptors/TCH/Image"
-    },
-    "ColorDescriptor_Video_transformedcolorhistogram": {
-      "data_directory": "FeatureDescriptors/CSIFT/Video"
+                // Other settings may appear here as well as in specific
+                // descriptor/indexer types as needed. Currently, only
+                // data/work directory specifications are needed for instance
+                // construction.
+
+                // FeatureDescriptor settings for this ingest
+                "descriptors": {
+                    // Relative to containing ingest directory
+                    "dir": "FeatureDescriptors",
+                    "listing": {
+                        "ColorDescriptor_Image_csift": {
+                            "dir": "CSIFT"
+                        },
+                        "ColorDescriptor_Image_transformedcolorhistogram": {
+                            "dir": "TCH"
+                        }
+                    }
+                },
+                // Indexer settings for this ingest
+                // - indexers operate on input features. Currently we assume
+                //   that indexers will only ever want features from one
+                //   consistent FeatureDetector type. Thus, the run-time data
+                //   and work directories for an Indexer type will have a
+                //   sub-directory under it for each Indexer-Descriptor pairing
+                //   instantiated.
+                "indexers": {
+                    "dir": "Indexers",
+                    "listing": {
+                        "NearestNeighbor_HIK_Distance": {
+                            "dir": "NearestNeighbor_HIK/Distance"
+                        },
+                        "NearestNeighbor_HIK_Rank": {
+                            "dir": "NearestNeighbor_HIK/Rank"
+                        },
+                        "NearestNeighbor_HIK_Centroids": {
+                            "dir": "NearestNeighbor_HIK/Centroids"
+                        },
+                        "NearestNeighbor_HIK_Centroids_FLANN_CS": {
+                            "dir": "NearestNeighbor_HIK/Centroids_FLANN_CS"
+                        },
+                        "SVMIndexer_HIK": {
+                            "dir": "SVM_HIK"
+                        }
+                    }
+                }
+            },
+
+            "example_video": {
+                "dir": "example_video",
+                "type": "video",
+                "descriptors": {
+                    "dir": "FeatureDescriptors",
+                    "listing": {
+                        "ColorDescriptor_Video_csift": {
+                            "dir": "CSIFT"
+                        },
+                        "ColorDescriptor_Video_transformedcolorhistogram": {
+                            "dir": "TCH"
+                        }
+                    }
+                },
+                "indexers": {
+                    "dir": "Indexers",
+                    "listing": {
+                        "NearestNeighbor_HIK_Distance": {
+                            "dir": "NearestNeighbor_HIK/Distance"
+                        },
+                        "NearestNeighbor_HIK_Rank": {
+                            "dir": "NearestNeighbor_HIK/Rank"
+                        },
+                        "NearestNeighbor_HIK_Centroids": {
+                            "dir": "NearestNeighbor_HIK/Centroids"
+                        },
+                        "NearestNeighbor_HIK_Centroids_FLANN_CS": {
+                            "dir": "NearestNeighbor_HIK/Centroids_FLANN_CS"
+                        },
+                        "SVMIndexer_HIK": {
+                            "dir": "SVM_HIK"
+                        }
+                    }
+                }
+            }
+        }
     }
-
-  },
-
-  "Classifiers": {
-    "_comment": "Classifiers operate on input features. For consistency, models are build within the context of a particular feature type.",
-
-    "SVMClassifier_HIK": {
-
-      "ColorDescriptor_Image_csift": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Image"
-      },
-      "ColorDescriptor_Video_csift": {
-        "data_directory": "Classifiers/SVM_HIK/CSIFT/Video"
-      },
-      "ColorDescriptor_Image_transformedcolorhistogram": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Image"
-      },
-      "ColorDescriptor_Video_transformedcolorhistogram": {
-        "data_directory": "Classifiers/SVM_HIK/TCH/Video"
-      }
-
-    }
-
-  }
 }

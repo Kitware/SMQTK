@@ -13,33 +13,33 @@ import os
 import re
 
 
-class SMQTKClassifier (object):
+class Indexer (object):
     """
-    Base class for classifier implementations.
+    Base class for indexer implementations.
 
-    Classifiers are responsible for:
+    Indexers are responsible for:
         - Generating a data model given an ingest.
         - Add new data to an existing data model.
-        - Rank the the content of the classifier's model given positive and
-            negative exemplar IDs.
+        - Rank the the content of the indexer's model given positive and
+            negative exemplars.
 
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, data_dir, work_dir):
         """
-        Initialize classifier with a given descriptor instance.
+        Initialize indexer with a given descriptor instance.
 
-        Construction of multiple classifier instances is expected to involve
+        Construction of multiple indexer instances is expected to involve
         providing a similar data directory but different work directories. The
         data directory would only be read from except for when generating a
         model which would error if there was already something there (read-only
         enforcement).
 
-        :param data_dir: Classifier data directory
+        :param data_dir: indexer data directory
         :type data_dir: str
 
-        :param work_dir: Work directory for this classifier to use.
+        :param work_dir: Work directory for this indexer to use.
         :type work_dir: str
 
         """
@@ -49,7 +49,7 @@ class SMQTKClassifier (object):
     @property
     def name(self):
         """
-        :return: Classifier type name
+        :return: Indexer type name
         :rtype: str
         """
         return self.__class__.__name__
@@ -66,7 +66,7 @@ class SMQTKClassifier (object):
     @property
     def data_dir(self):
         """
-        :return: This classifier type's base data directory
+        :return: This indexer type's base data directory
         :rtype: str
         """
         if not os.path.isdir(self._data_dir):
@@ -76,7 +76,7 @@ class SMQTKClassifier (object):
     @property
     def work_dir(self):
         """
-        :return: This classifier type's base work directory
+        :return: This indexer type's base work directory
         :rtype: str
         """
         if not os.path.isdir(self._work_dir):
@@ -86,26 +86,26 @@ class SMQTKClassifier (object):
     @abc.abstractmethod
     def has_model(self):
         """
-        True of this classifier has a valid initialized model for extension and
-        ranking (or doesn't need one to perform those tasks).
-
+        :return: True if this indexer has a valid initialized model for
+            extension and ranking (or doesn't need one to perform those tasks).
         :rtype: bool
-
         """
         pass
 
     @abc.abstractmethod
     def generate_model(self, feature_map, parallel=None):
         """
-        Generate this classifiers data-model using the given features,
+        Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
 
         :raises RuntimeError: Precaution error when there is an existing data
-            model for this classifier. Manually delete or move the existing
+            model for this indexer. Manually delete or move the existing
             model before computing another one.
 
             Specific implementations may error on other things. See the specific
             implementations for more details.
+
+        :raises ValueError: The given feature map had no content.
 
         :param feature_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
@@ -117,23 +117,39 @@ class SMQTKClassifier (object):
         :type parallel: int
 
         """
-        pass
+        if self.has_model():
+            raise RuntimeError(
+                "\n"
+                "!!! Warning !!! Warning !!! Warning !!!\n"
+                "A model already exists for this indexer! "
+                "Make sure that you really want to do this by moving / "
+                "deleting the existing model (file(s)). Model location: "
+                "%s\n"
+                "!!! Warning !!! Warning !!! Warning !!!"
+                % self.data_dir
+            )
+        if not feature_map:
+            raise ValueError("The given feature_map has no content.")
 
     @abc.abstractmethod
     def extend_model(self, id_feature_map, parallel=None):
         """
         Extend, in memory, the current model with the given data elements using
-        the configured feature descriptor.
+        the configured feature descriptor. Online extensions are not saved to
+        data files.
 
         NOTE: For now, if there is currently no data model created for this
-        classifier / descriptor combination, we will error. In the future, I
+        indexer / descriptor combination, we will error. In the future, I
         would imagine a new model would be created.
 
-        :raises RuntimeError: See implementation.
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
+
         :raises ValueError: See implementation.
 
         :param id_feature_map: Mapping of integer IDs to features to extend this
-            classifier's model with.
+            indexer's model with.
         :type id_feature_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
@@ -142,14 +158,19 @@ class SMQTKClassifier (object):
         :type parallel: int
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
     @abc.abstractmethod
     def rank_model(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
-        of [0, 1]. Where
+        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+
+        :raises RuntimeError: No current model.
+
+            See implementation for other possible RuntimeError causes.
 
         :param pos_ids: List of positive data IDs
         :type pos_ids: collections.Iterable of int
@@ -161,36 +182,39 @@ class SMQTKClassifier (object):
         :rtype: dict of (int, float)
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
     @abc.abstractmethod
     def reset(self):
         """
-        Reset this classifier to its original state, i.e. removing any model
+        Reset this indexer to its original state, i.e. removing any model
         extension that may have occurred.
 
-        :raises RuntimeError: See implementation.
+        :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        pass
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer to reset "
+                               "to.")
 
 
-def get_classifiers():
+def get_indexers():
     """
-    Discover and return SMQTKClassifier classes found in the fixed plugin
-    directory. Keys will be the name of the discovered SMQTKClassifier class
+    Discover and return Indexer classes found in the fixed plugin
+    directory. Keys will be the name of the discovered Indexer class
     with the paired value being the associated class object.
 
     We look for modules (directories or files) that start with an alphanumeric
     character ('_' prefixed files are "hidden").
 
     Within the module we look first for a variable named
-    "CLASSIFIER_CLASS", which can either be a class object or a list of
+    "INDEXER_CLASS", which can either be a class object or a list of
     class objects, to be exported. If the above variable is not found, we look
     for a class by the same name of the module. If neither are found, we raise
     a RuntimeError.
 
-    :return: Map of discovered SMQTKClassifier types whose keys are the string
+    :return: Map of discovered Indexer types whose keys are the string
         name of the class.
     :rtype: dict of (str, type)
 
@@ -202,7 +226,7 @@ def get_classifiers():
     log.debug("Searching in directory: %s", this_dir)
 
     file_re = re.compile("^[a-zA-Z].*(?:\.py)?$")
-    standard_var = "CLASSIFIER_CLASS"
+    standard_var = "INDEXER_CLASS"
 
     for module_file in os.listdir(this_dir):
         if file_re.match(module_file):
@@ -222,7 +246,7 @@ def get_classifiers():
                     log.debug('[%s] Loaded list of classes via variable: '
                               '%s',
                               module_name, cl_classes)
-                elif issubclass(cl_classes, SMQTKClassifier):
+                elif issubclass(cl_classes, Indexer):
                     log.debug("[%s] Loaded class via variable: %s",
                               module_name, cl_classes)
                     cl_classes = [cl_classes]
@@ -234,7 +258,7 @@ def get_classifiers():
             # Try finding a class with the same name as the module
             elif hasattr(module, module.__name__):
                 cl_classes = getattr(module, module.__name__, None)
-                if issubclass(cl_classes, SMQTKClassifier):
+                if issubclass(cl_classes, Indexer):
                     log.debug("[%s] Loaded class by module name: %s",
                               module_name, cl_classes)
                     cl_classes = [cl_classes]

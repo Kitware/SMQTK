@@ -42,8 +42,17 @@
                 "indexers": {
                     "dir": "Indexers",
                     "listing": {
-                        "NearestDistance_HIK": {
-                            "dir": "NearestDistance_HIK"
+                        "NearestNeighbor_HIK_Distance": {
+                            "dir": "NearestNeighbor_HIK/Distance"
+                        },
+                        "NearestNeighbor_HIK_Rank": {
+                            "dir": "NearestNeighbor_HIK/Rank"
+                        },
+                        "NearestNeighbor_HIK_Centroids": {
+                            "dir": "NearestNeighbor_HIK/Centroids"
+                        },
+                        "NearestNeighbor_HIK_Centroids_FLANN_CS": {
+                            "dir": "NearestNeighbor_HIK/Centroids_FLANN_CS"
                         },
                         "SVMIndexer_HIK": {
                             "dir": "SVM_HIK"
@@ -53,14 +62,9 @@
             },
 
             "example_video": {
-                // relative to the ingest base directory
                 "dir": "example_video",
-                // As of now, there are only two supported types: "image" and "video".
-                // If something other than those two values are used here, we error.
                 "type": "video",
-                // FeatureDescriptor settings for this ingest
                 "descriptors": {
-                    // Relative to containing ingest directory
                     "dir": "FeatureDescriptors",
                     "listing": {
                         "ColorDescriptor_Video_csift": {
@@ -68,38 +72,6 @@
                         },
                         "ColorDescriptor_Video_transformedcolorhistogram": {
                             "dir": "TCH"
-                        }
-                    }
-                },
-                // Indexer settings for this ingest
-                // - indexers operate on input features. Currently we assume
-                //   that indexers will only ever want features from one
-                //   consistent FeatureDetector type. Thus, the run-time data
-                //   and work directories for an Indexer type will have a
-                //   sub-directory under it for each Indexer-Descriptor pairing
-                //   instantiated.
-                "indexers": {
-                    "dir": "Indexers",
-                    "listing": {
-                        "NearestDistance_HIK": {
-                            "dir": "NearestDistance_HIK"
-                        },
-                        "SVMIndexer_HIK": {
-                            "dir": "SVM_HIK"
-                        }
-                    }
-                }
-            },
-
-            // test image set for Indexer development
-            "indexer_development": {
-                "dir": "indexer_development",
-                "type": "image",
-                "descriptors": {
-                    "dir": "FeatureDescriptors",
-                    "listing": {
-                        "ColorDescriptor_Image_csift": {
-                            "dir": "CSIFT"
                         }
                     }
                 },

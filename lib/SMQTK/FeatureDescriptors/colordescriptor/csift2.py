@@ -650,7 +650,68 @@ def _create_video_descriptor_class(descriptor_type_str):
     return _cd_video_impl
 
 
-cd_type_list = []
-for t in valid_descriptor_types:
-    cd_type_list.append(_create_image_descriptor_class(t))
-    cd_type_list.append(_create_video_descriptor_class(t))
+# In order to allow multiprocessing, class types must be concretely assigned to
+# variables in the module. Dynamic generation causes issues with pickling (the
+# default data transmission protocol).
+
+ColorDescriptor_Image_rgbhistogram = _create_image_descriptor_class('rgbhistogram')
+ColorDescriptor_Image_opponenthistogram = _create_image_descriptor_class('opponenthistogram')
+ColorDescriptor_Image_huehistogram = _create_image_descriptor_class('huehistogram')
+ColorDescriptor_Image_nrghistogram = _create_image_descriptor_class('nrghistogram')
+ColorDescriptor_Image_transformedcolorhistogram = _create_image_descriptor_class('transformedcolorhistogram')
+ColorDescriptor_Image_colormoments = _create_image_descriptor_class('colormoments')
+ColorDescriptor_Image_colormomentinvariants = _create_image_descriptor_class('colormomentinvariants')
+ColorDescriptor_Image_sift = _create_image_descriptor_class('sift')
+ColorDescriptor_Image_huesift = _create_image_descriptor_class('huesift')
+ColorDescriptor_Image_hsvsift = _create_image_descriptor_class('hsvsift')
+ColorDescriptor_Image_opponentsift = _create_image_descriptor_class('opponentsift')
+ColorDescriptor_Image_rgsift = _create_image_descriptor_class('rgsift')
+ColorDescriptor_Image_csift = _create_image_descriptor_class('csift')
+ColorDescriptor_Image_rgbsift = _create_image_descriptor_class('rgbsift')
+
+ColorDescriptor_Video_rgbhistogram = _create_video_descriptor_class('rgbhistogram')
+ColorDescriptor_Video_opponenthistogram = _create_video_descriptor_class('opponenthistogram')
+ColorDescriptor_Video_huehistogram = _create_video_descriptor_class('huehistogram')
+ColorDescriptor_Video_nrghistogram = _create_video_descriptor_class('nrghistogram')
+ColorDescriptor_Video_transformedcolorhistogram = _create_video_descriptor_class('transformedcolorhistogram')
+ColorDescriptor_Video_colormoments = _create_video_descriptor_class('colormoments')
+ColorDescriptor_Video_colormomentinvariants = _create_video_descriptor_class('colormomentinvariants')
+ColorDescriptor_Video_sift = _create_video_descriptor_class('sift')
+ColorDescriptor_Video_huesift = _create_video_descriptor_class('huesift')
+ColorDescriptor_Video_hsvsift = _create_video_descriptor_class('hsvsift')
+ColorDescriptor_Video_opponentsift = _create_video_descriptor_class('opponentsift')
+ColorDescriptor_Video_rgsift = _create_video_descriptor_class('rgsift')
+ColorDescriptor_Video_csift = _create_video_descriptor_class('csift')
+ColorDescriptor_Video_rgbsift = _create_video_descriptor_class('rgbsift')
+
+
+cd_type_list = [
+    ColorDescriptor_Image_rgbhistogram,
+    ColorDescriptor_Video_rgbhistogram,
+    ColorDescriptor_Image_opponenthistogram,
+    ColorDescriptor_Video_opponenthistogram,
+    ColorDescriptor_Image_huehistogram,
+    ColorDescriptor_Video_huehistogram,
+    ColorDescriptor_Image_nrghistogram,
+    ColorDescriptor_Video_nrghistogram,
+    ColorDescriptor_Image_transformedcolorhistogram,
+    ColorDescriptor_Video_transformedcolorhistogram,
+    ColorDescriptor_Image_colormoments,
+    ColorDescriptor_Video_colormoments,
+    ColorDescriptor_Image_colormomentinvariants,
+    ColorDescriptor_Video_colormomentinvariants,
+    ColorDescriptor_Image_sift,
+    ColorDescriptor_Video_sift,
+    ColorDescriptor_Image_huesift,
+    ColorDescriptor_Video_huesift,
+    ColorDescriptor_Image_hsvsift,
+    ColorDescriptor_Video_hsvsift,
+    ColorDescriptor_Image_opponentsift,
+    ColorDescriptor_Video_opponentsift,
+    ColorDescriptor_Image_rgsift,
+    ColorDescriptor_Video_rgsift,
+    ColorDescriptor_Image_csift,
+    ColorDescriptor_Video_csift,
+    ColorDescriptor_Image_rgbsift,
+    ColorDescriptor_Video_rgbsift,
+]

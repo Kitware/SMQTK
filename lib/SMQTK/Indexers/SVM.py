@@ -33,7 +33,7 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
 
 class SVMIndexer_HIK (Indexer):
     """
-    SVM indexer implementation
+    Indexer using SVM classification model with Platt scaling
 
     Inherited from progenitor ALADDIN project
 
@@ -130,14 +130,14 @@ class SVMIndexer_HIK (Indexer):
         # Constructing histogram intersection kernel
         self.log.info("Computing Histogram Intersection kernel matrix")
         pool = multiprocessing.Pool(processes=parallel)
-        self.log.info("\tEntering jobs...")
+        self.log.info("\t- Entering jobs...")
         results = {}
         for i, i_feat in enumerate(feature_mat):
             results[i] = {}
             for j, j_feat in enumerate(feature_mat):
                 results[i][j] = pool.apply_async(_svm_model_hik_helper,
                                                  (i, j, i_feat, j_feat))
-        self.log.info("\tCollecting results...")
+        self.log.info("\t- Collecting results...")
         for i in results.keys():
             # self.log.info("\t\tRow: %d/%d", i, len(results)-1)
             for j in results[i].keys():

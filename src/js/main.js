@@ -56,6 +56,8 @@ $(function () {
     }
   });
 
+  $("#spinner").hide();
+
   // Aggregate data
   //--------------------------------------------------------------------------
   function aggregateByLocation(data) {
@@ -182,6 +184,8 @@ $(function () {
   // Update extents and then render
   //--------------------------------------------------------------------------
   myApp.runQuery = function() {
+    $("#spinner").show();
+
     myApp.clearLastSearch();
 
     // Now run the query
@@ -192,6 +196,8 @@ $(function () {
       myApp.clearLastSearch();
 
       render(data, function() {
+        $("#spinner").hide();
+
         // Update the UI
         myApp.updateView(null, myApp.timeRange);
       });

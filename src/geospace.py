@@ -93,7 +93,12 @@ class Geospace(girder.api.rest.Resource):
                 skip=offset, limit=limit, sort=sort)
         else:
             # When using location do not limit by time for now
-            query_result = coll.find(geospatial_query,
+            query_result = coll.find( {"$and":[
+                    geospatial_query,
+                    {"field4":
+                        {"$gte": start_time, "$lt": end_time}
+                    }]
+                },
                 skip=offset, limit=limit, sort=sort)
         result = [row for row in query_result]
         return result

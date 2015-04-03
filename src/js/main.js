@@ -43,6 +43,15 @@ $(function () {
   }
   myApp.resize();
 
+  // Bind events
+  //--------------------------------------------------------------------------
+  $("#search").on('keydown', function() {
+    console.log('searching');
+    if(event.keyCode == 13) {
+        myApp.runQuery();
+    }
+  });
+
   // Aggregate data
   //--------------------------------------------------------------------------
   function aggregateByLocation(data) {
@@ -168,10 +177,12 @@ $(function () {
 
   // Update extents and then render
   //--------------------------------------------------------------------------
-  myApp.updateExtents = function() {
+  myApp.runQuery = function() {
+    myApp.clearLastSearch();
+
     // Now run the query
     myApp.timeRange = $("#slider").slider("values");
-    myApp.location = $("#search-location").text();
+    myApp.location = $("#search").val();
     queryData(myApp.timeRange, myApp.location, function(data) {
       // Clear out any previous information
       myApp.clearLastSearch();
@@ -270,11 +281,11 @@ $(function () {
         max: max.getTime()/1000,
         values: [ min.getTime()/1000, min.getTime()/1000 + 24 * 3600 * 180 ],
         stop: function( event, ui ) {
-          myApp.updateExtents();
+          myApp.runQuery();
         }
       });
 
-      myApp.updateExtents();
+      myApp.runQuery();
       myApp.ready = true;
     })
     .fail(function() {
@@ -306,7 +317,7 @@ myApp.buttonStopPress = function() {
   $( "#slider" ).slider( "option", "values",
     [ min, min + (range[1] - range[0]) ] );
 
-  myApp.updateExtents();
+  myApp.runQuery();
 }
 
 myApp.buttonForwardPress = function() {
@@ -323,12 +334,14 @@ myApp.clearLastSearch = function(callback) {
 
 // Display search result
 //--------------------------------------------------------------------------
-myApp.displaySearchResults = function(data) {
+myApp.displaySearchResults = function(data, clearPrev) {
   var div = $("#images"),
       newDiv = $(document.createElement('div')),
       i = null;
 
-  myApp.clearLastSearch();
+  if (clearPrev) {
+    myApp.clearLastSearch();
+  }
 
   div.append(newDiv);
   newDiv.addClass('row');

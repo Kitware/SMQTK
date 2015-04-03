@@ -21,14 +21,11 @@ class Scraper(girder.api.rest.Resource):
         if url:
             import requests
             import BeautifulSoup as bs4
-            print type(url)
             page = requests.get(url)
-            print page.text
             #tree = html.fromstring(page.text)
             soup = bs4.BeautifulSoup(page.text)
             result = soup.findAll('img')
             result = [a.get('src') for a in result]
-            print result
         return result
 
 class Geospace(girder.api.rest.Resource):

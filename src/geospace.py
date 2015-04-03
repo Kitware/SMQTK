@@ -63,20 +63,22 @@ class Geospace(girder.api.rest.Resource):
         use_location = False
 
         if (location is not None) and (len(location) > 0):
-            use_location = True
+            location = location.strip()
+            if (location != "*"):
+                use_location = True
 
-            # Reverse geocode location
-            from geopy.geocoders import Nominatim
-            geolocator = Nominatim()
-            loc = geolocator.geocode(location)
+                # Reverse geocode location
+                from geopy.geocoders import Nominatim
+                geolocator = Nominatim()
+                loc = geolocator.geocode(location)
 
-            # Hard-coded to 10 units for now
-            geospatial_query = {   "loc" : {"$geoWithin" :
-                    {
-                        "$center" : [[loc.latitude, loc.longitude], 1]
+                # Hard-coded to 10 units for now
+                geospatial_query = {   "loc" : {"$geoWithin" :
+                        {
+                            "$center" : [[loc.latitude, loc.longitude], 1]
+                        }
                     }
                 }
-            }
 
         # Find all of the datasets within time range.
         time_range = eval(time_range)

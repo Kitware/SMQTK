@@ -38,7 +38,7 @@ $(function () {
 
   myApp.resize = function() {
     var height = $(window).height(),
-        width  = $(window).width();
+        width  = $("#map").width();
     myApp.map.resize(0, 0, width, height);
   }
   myApp.resize();
@@ -93,20 +93,6 @@ $(function () {
       })
   }
 
-  // Clear out any information that is related to a particular time duration
-  //--------------------------------------------------------------------------
-  function clearDialogs(callback) {
-    var i = null;
-    for (i = 0; i < myApp.visibleDialogs.length; ++i) {
-      myApp.visibleDialogs[i].dialog.remove();
-      myApp.visibleDialogs[i].dialog = null;
-    }
-    myApp.visibleDialogs = [];
-
-    // Clear images
-    $("#images").empty();
-  }
-
   // Scrap a URL for images and return list of images URL
   //--------------------------------------------------------------------------
   function scrapUrl(url, callback) {
@@ -131,22 +117,6 @@ $(function () {
       myApp.pointFeature = myApp.map
                        .createLayer('feature')
                        .createFeature('point', {selectionAPI: true});
-
-      myApp.pointFeature.layer().geoOn(geo.event.pan, function(evt) {
-        var i = null, left = null, top = null;
-        for (i = 0; i < myApp.visibleDialogs.length; ++i) {
-          left = parseInt(myApp.visibleDialogs[i].dialog.css('left'), 10);
-          top = parseInt(myApp.visibleDialogs[i].dialog.css('top'), 10);
-          myApp.visibleDialogs[i].dialog.css({
-            'left': left + evt.screenDelta.x,
-            'top': top + evt.screenDelta.y,
-          });
-        }
-      });
-
-      myApp.pointFeature.layer().geoOn(geo.event.zoom, function(evt) {
-        clearDialogs();
-      });
     }
     if (myApp.pointFeature) {
       myApp.pointFeature.geoOff(geo.event.feature.mouseclick);
@@ -180,23 +150,10 @@ $(function () {
 
           // Scrap the URL
           scrapUrl(evt.data.urls[i], function(images) {
-            myApp.displayImages({
+            myApp.displaySearchResults({
               "data": evt.data,
               "images": images});
           });
-        }
-
-        if (evt.data.dialog === null ||
-            evt.data.dialog === undefined) {
-          div.addClass('dialog-box');
-          div.css({
-            'position':'absolute',
-            'padding':'5px',
-            'box-shadow': '0px 0px 10px rgba(0, 0, 0, 0.5)'
-          });
-          $('body').append(div);
-          evt.data.dialog = div;
-          myApp.visibleDialogs.push(evt.data);
         }
 
         div.append(list);
@@ -217,7 +174,7 @@ $(function () {
     myApp.location = $("#search-location").text();
     queryData(myApp.timeRange, myApp.location, function(data) {
       // Clear out any previous information
-      clearDialogs();
+      myApp.clearLastSearch();
 
       render(data, function() {
         // Update the UI
@@ -357,23 +314,28 @@ myApp.buttonForwardPress = function() {
   window.requestAnimationFrame(myApp.animate);
 }
 
-
-// Display images
+// Clear out any information that is related to a particular time duration
 //--------------------------------------------------------------------------
-myApp.displayImages = function(data) {
+myApp.clearLastSearch = function(callback) {
+  // Clear images
+  $("#images").empty();
+}
+
+// Display search result
+//--------------------------------------------------------------------------
+myApp.displaySearchResults = function(data) {
   var div = $("#images"),
       newDiv = $(document.createElement('div')),
-      tag = $(document.createElement('div')),
       i = null;
+
+  myApp.clearLastSearch();
+
   div.append(newDiv);
   newDiv.addClass('row');
-  tag.addClass('col-md-12');
-  newDiv.append(tag);
   if (data.images.length > 0) {
-    tag.append("<h3 class='hd-highlight'>"+data.data["field3"]+"</h3>");
     for (i = 0; i < data.images.length; ++i) {
       var imageDiv = $(document.createElement('div'));
-      imageDiv.addClass('col-xs-1');
+      imageDiv.addClass('col-xs-4');
       newDiv.append(imageDiv)
       var newAnchor = $(document.createElement('a'));
       var newImage = $(document.createElement('img'));

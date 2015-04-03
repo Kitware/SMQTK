@@ -56,7 +56,8 @@ $(function () {
     }
   });
 
-  $("#spinner").hide();
+  $("#spinner .gs-spinner-icon").hide();
+  $("#spinner .gs-spinner-text").hide();
 
   // Aggregate data
   //--------------------------------------------------------------------------
@@ -184,7 +185,8 @@ $(function () {
   // Update extents and then render
   //--------------------------------------------------------------------------
   myApp.runQuery = function() {
-    $("#spinner").show();
+    $("#spinner .gs-spinner-icon").show();
+    $("#spinner .gs-spinner-text").hide();
 
     myApp.clearLastSearch();
 
@@ -196,7 +198,9 @@ $(function () {
       myApp.clearLastSearch();
 
       render(data, function() {
-        $("#spinner").hide();
+        $("#spinner .gs-spinner-icon").hide();
+        $("#spinner .gs-spinner-text").show();
+        $("#spinner .gs-spinner-text").text(data.length);
 
         // Update the UI
         myApp.updateView(null, myApp.timeRange);

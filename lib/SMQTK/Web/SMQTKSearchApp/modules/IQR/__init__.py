@@ -72,9 +72,7 @@ class IQRSearch (flask.Blueprint):
         self._idxr_type_str = indexer_type
 
         # Uploader Sub-Module
-        self.upload_work_dir = os.path.join(
-            parent_app.config['WORK_DIR'], "IQR", self.name, "uploads"
-        )
+        self.upload_work_dir = os.path.join(self.work_dir, "uploads")
         self.mod_upload = FileUploadMod('%s_uploader' % self.name, parent_app,
                                         self.upload_work_dir,
                                         url_prefix='/uploader')
@@ -434,6 +432,15 @@ class IQRSearch (flask.Blueprint):
     def log(self):
         return logging.getLogger("SMQTK.IQRSearch(%s)" % self.name)
 
+    @property
+    def work_dir(self):
+        """
+        :return: Common work directory for this instance.
+        :rtype: str
+        """
+        return osp.join(self._parent_app.config['WORK_DIR'], "Web", "IQR",
+                        self.name)
+
     def get_current_iqr_session(self):
         """
         Get the current IQR Session instance.
@@ -444,8 +451,7 @@ class IQRSearch (flask.Blueprint):
         with self._iqr_controller:
             sid = flask.session.sid
             if not self._iqr_controller.has_session_uuid(sid):
-                sid_work_dir = osp.join(self._parent_app.config['WORK_DIR'],
-                                        "Web", "IQR", self.name, sid)
+                sid_work_dir = osp.join(self.work_dir, sid)
 
                 #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
                 descriptor = self._ingest_config.new_descriptor_instance(

@@ -340,7 +340,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
         #   creating tightly constrained bins. This would otherwise cause
         #   histograms between two inputs to be non-comparable (unaligned bins).
         # - See numpy note about ``bins`` to understand why the +1 is necessary
-        h, b = numpy.histogram(idxs,
+        h, b = numpy.histogram(idxs,  # indices are all integers
                                bins=numpy.arange(self._codebook.shape[0] + 1))
         self.log.debug("Quantization histogram: %s", h)
         # Normalize histogram into relative frequencies

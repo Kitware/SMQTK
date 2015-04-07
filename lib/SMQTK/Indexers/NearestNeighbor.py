@@ -46,7 +46,7 @@ class NearestNeighbor_HIK_Base (Indexer):
 
         # Distance kernel matrix
         #: :type: numpy.core.multiarray.ndarray
-        self._similarity_mat = None
+        self._distrance_mat = None
 
         if self.has_model_files():
             self._load_model_files()
@@ -57,7 +57,7 @@ class NearestNeighbor_HIK_Base (Indexer):
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
         #: :type: numpy.core.multiarray.ndarray
-        self._similarity_mat = numpy.load(self.kernel_mat_filepath)
+        self._distrance_mat = numpy.load(self.kernel_mat_filepath)
 
         # Mapping of element UID to array/matrix index position
         #: :type: dict of int
@@ -92,11 +92,11 @@ class NearestNeighbor_HIK_Base (Indexer):
             self._uid_array is not None
             and self._feature_mat is not None
             and 0 not in self._feature_mat.shape  # has dimensionality
-            and self._similarity_mat is not None
-            and 0 not in self._similarity_mat.shape   # has dimensionality
+            and self._distrance_mat is not None
+            and 0 not in self._distrance_mat.shape   # has dimensionality
         )
 
-    def generate_model(self, feature_map, parallel=None):
+    def generate_model(self, feature_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -134,7 +134,7 @@ class NearestNeighbor_HIK_Base (Indexer):
         feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
-        sim_kernel_mat = numpy.zeros(
+        dist_kernel_mat = numpy.zeros(
             (num_features, num_features), dtype=sample_feature.dtype
         )
 
@@ -158,31 +158,30 @@ class NearestNeighbor_HIK_Base (Indexer):
         with SimpleTimer("Aggregating HI dists into matrix", self.log.debug):
             for i in range(num_features):
                 for j in range(i, num_features):
-                    sim_kernel_mat[i, j] = rmap[i, j].get()
+                    dist_kernel_mat[i, j] = rmap[i, j].get()
                     if i != j:
-                        sim_kernel_mat[j, i] = sim_kernel_mat[i, j]
+                        dist_kernel_mat[j, i] = dist_kernel_mat[i, j]
         # Filling in top then bottom might result in less cache swapping, but
         # I'm not even sure if this optimization would do anything with python
         # being so high level.
         # with SimpleTimer("Filling in bottom triangle", self.log.debug):
         #     for i in range(1, num_features):
         #         for j in range(0, i):
-        #             sim_kernel_mat[i, j] = sim_kernel_mat[j, i]
+        #             dist_kernel_mat[i, j] = dist_kernel_mat[j, i]
 
         self._uid_array = uid_array
         self._feature_mat = feature_mat
-        self._similarity_mat = sim_kernel_mat
+        self._distrance_mat = dist_kernel_mat
 
         with SimpleTimer("Saving data files", self.log.debug):
             numpy.save(self.uid_list_filepath, uid_array)
             numpy.save(self.feature_mat_filepath, feature_mat)
-            numpy.save(self.kernel_mat_filepath, sim_kernel_mat)
+            numpy.save(self.kernel_mat_filepath, dist_kernel_mat)
 
     def extend_model(self, uid_feature_map, parallel=None):
         """
-        Extend, in memory, the current model with the given data elements using
-        the configured feature descriptor. Online extensions are not saved to
-        data files.
+        Extend, in memory, the current model with the given feature elements.
+        Online extensions are not saved to data files.
 
         NOTE: For now, if there is currently no data model created for this
         indexer / descriptor combination, we will error. In the future, I
@@ -279,16 +278,18 @@ class NearestNeighbor_HIK_Base (Indexer):
         # noinspection PyNoneFunctionAssignment
         with SimpleTimer("'Resizing' kernel matrix", self.log.debug):
             new_km = numpy.ndarray((num_features_after, num_features_after),
-                                   dtype=self._similarity_mat.dtype)
+                                   dtype=self._distrance_mat.dtype)
             new_km[:num_features_before,
-                   :num_features_before] = self._similarity_mat
-            self._similarity_mat = new_km
+                   :num_features_before] = self._distrance_mat
+            self._distrance_mat = new_km
 
         with SimpleTimer("Collecting dist results into matrix", self.log.debug):
             for (r, c), dist in hid_map.iteritems():
                 d = dist.get()
-                self._similarity_mat[r, c] = d
-                self._similarity_mat[c, r] = d
+                self._distrance_mat[r, c] = d
+                self._distrance_mat[c, r] = d
+
+        pool.join()
 
     def _least_similar_uid(self, uid, N=1):
         """
@@ -307,9 +308,9 @@ class NearestNeighbor_HIK_Base (Indexer):
 
         """
         i = self._uid_idx_map[uid]
-        z = zip(self._uid_array, self._similarity_mat[i])
+        z = zip(self._uid_array, self._distrance_mat[i])
         # Sort by least similarity, pick top N
-        return [e[0] for e in sorted(z, key=lambda f: f[1])[:N]]
+        return [e[0] for e in sorted(z, key=lambda f: f[1], reverse=1)[:N]]
 
     def _pick_auto_negatives(self, pos_uids):
         """
@@ -391,7 +392,7 @@ class NearestNeighbor_HIK_Distance (NearestNeighbor_HIK_Base):
         npow = numpy.power
 
         # Distance method
-        d = 1.0 - self._similarity_mat
+        d = self._distrance_mat
 
         # get the squared distances for positive and negative rows
         p = 1.0
@@ -461,16 +462,16 @@ class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
         # rank, the more similar an index is.
         def get_rank_list(s):
             """ where ``s`` is an array of similarity scores """
-            idx_sim = zip(numpy.arange(s.size), s)
-            # ordered list of idx-to-similarity value in descending order
-            o_idx_sim = sorted(idx_sim, key=lambda e: e[1], reverse=1)
+            idx_dist = zip(numpy.arange(s.size), s)
+            # ordered list of idx-to-distance value in ascending order
+            o_idx_dist = sorted(idx_dist, key=lambda e: e[1])
             # [ ..., (idx, rank), ... ]
-            o_rank = [(idx, rank) for rank, (idx, sim) in enumerate(o_idx_sim)]
+            o_rank = [(idx, rank) for rank, (idx, _) in enumerate(o_idx_dist)]
             # rank in index order
             return [rank for _, rank in sorted(o_rank, key=lambda e: e[0])]
 
         p_ranked_rows = []
-        for r in self._similarity_mat[pindx, :]:
+        for r in self._distrance_mat[pindx, :]:
             p_ranked_rows.append(get_rank_list(r))
         p_ranked = numpy.array(p_ranked_rows)
         p_rank_sum = p_ranked.sum(axis=0)
@@ -478,13 +479,13 @@ class NearestNeighbor_HIK_Rank (NearestNeighbor_HIK_Base):
 
         if neg_ids:
             n_ranked_rows = []
-            for r in self._similarity_mat[nindx, :]:
+            for r in self._distrance_mat[nindx, :]:
                 n_ranked_rows.append(get_rank_list(r))
             n_ranked = numpy.array(n_ranked_rows)
             n_rank_sum = n_ranked.sum(axis=0)
             n_rank_sum = n_rank_sum / float(n_rank_sum.max())
         else:
-            n_rank_sum = numpy.zeros(self._similarity_mat.shape[1])
+            n_rank_sum = numpy.zeros(self._distrance_mat.shape[1])
 
         n = p_rank_sum - n_rank_sum
         n = n - n.min()
@@ -549,8 +550,10 @@ class NearestNeighbor_HIK_Centroids (NearestNeighbor_HIK_Base):
             idx_rank = histogram_intersection_dist_matrix(self._feature_mat,
                                                           pos_avg_c)
 
-        # Constrain to [0,1] range and associate to UIDs
-        idx_rank = idx_rank / idx_rank.max()
+        # Constrain to [0,1] range and inverse so high ranking elements are
+        # closer to 1.0.
+        idx_rank = 1.0 - (idx_rank / idx_rank.max())
+        # Associating with UIDs
         d = dict(zip(self._uid_array, idx_rank))
         return d
 

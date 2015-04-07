@@ -70,6 +70,11 @@
 
                     iqr_view = new IqrView($("#iqr_view_container"));
                 }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                a.remove();
+                alert_error("Failed to initialize IQR session: " + textStatus
+                            + ": " + errorThrown);
             }
         });
     }); // Document.ready ends

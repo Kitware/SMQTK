@@ -16,7 +16,7 @@ import os.path as osp
 import re
 import traceback
 
-from SMQTK.utils import safe_create_dir
+from SMQTK.utils import safe_create_dir, SimpleTimer
 
 
 def _async_feature_generator_helper(data, descriptor):
@@ -34,7 +34,7 @@ def _async_feature_generator_helper(data, descriptor):
     """
     log = logging.getLogger("_async_feature_generator_helper")
     try:
-        log.debug("Generating feature for [%s] -> %s", data, data.filepath)
+        # log.debug("Generating feature for [%s] -> %s", data, data.filepath)
         feat = descriptor.compute_feature(data)
         # Invalid feature matrix if there are inf or NaN values
         # noinspection PyUnresolvedReferences
@@ -199,28 +199,30 @@ class FeatureDescriptor (object):
         self.log.info("Async compute features processing %d elements",
                       len(data))
 
-        self.log.debug("starting pool...")
+
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
         pool = pool_t(processes=parallel)
         #: :type: dict of (int, multiprocessing.pool.ApplyResult)
         ar_map = {}
-        for d in data:
-            ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
-                                             args=(d, self))
+        with SimpleTimer("Starting pool...", self.log.debug):
+            for d in data:
+                ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
+                                                 args=(d, self))
 
         #: :type: dict of (int, numpy.core.multiarray.ndarray)
         r_dict = {}
         failures = False
-        for i, (uid, ar) in enumerate(ar_map.iteritems()):
-            feat = ar.get()
-            if feat is None:
-                failures = True
-                continue
-            else:
-                r_dict[uid] = feat
-            self.log.info("Progress: [%d/%d] %3.3f%%",
-                          i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
+        with SimpleTimer("Collecting async results...", self.log.debug):
+            for i, (uid, ar) in enumerate(ar_map.iteritems()):
+                feat = ar.get()
+                if feat is None:
+                    failures = True
+                    continue
+                else:
+                    r_dict[uid] = feat
+                # self.log.debug("Progress: [%d/%d] %3.3f%%",
+                #                i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
         # Check for failed generation
         if failures:
             raise RuntimeError("Failure occurred during data feature "

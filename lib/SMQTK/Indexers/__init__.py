@@ -93,7 +93,7 @@ class Indexer (object):
         pass
 
     @abc.abstractmethod
-    def generate_model(self, feature_map, parallel=None):
+    def generate_model(self, feature_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -132,11 +132,10 @@ class Indexer (object):
             raise ValueError("The given feature_map has no content.")
 
     @abc.abstractmethod
-    def extend_model(self, id_feature_map, parallel=None):
+    def extend_model(self, uid_feature_map, parallel=None):
         """
-        Extend, in memory, the current model with the given data elements using
-        the configured feature descriptor. Online extensions are not saved to
-        data files.
+        Extend, in memory, the current model with the given feature elements.
+        Online extensions are not saved to data files.
 
         NOTE: For now, if there is currently no data model created for this
         indexer / descriptor combination, we will error. In the future, I
@@ -148,9 +147,9 @@ class Indexer (object):
 
         :raises ValueError: See implementation.
 
-        :param id_feature_map: Mapping of integer IDs to features to extend this
+        :param uid_feature_map: Mapping of integer IDs to features to extend this
             indexer's model with.
-        :type id_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available

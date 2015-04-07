@@ -72,7 +72,7 @@ class SVMIndexer_HIK (Indexer):
             )
 
     # noinspection PyNoneFunctionAssignment,PyUnresolvedReferences,PyTypeChecker
-    def generate_model(self, feature_map, parallel=None):
+    def generate_model(self, feature_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -145,6 +145,9 @@ class SVMIndexer_HIK (Indexer):
         pool.close()
         pool.join()
 
+        # Transform kernel from distance to similarity matrix
+        kernel_mat = 1.0 - kernel_mat
+
         self.log.info("Saving data files")
         numpy.save(self._ids_filepath, idx2uid_map)
         numpy.save(self._bg_flags_filepath, idx2bg_map)
@@ -169,9 +172,8 @@ class SVMIndexer_HIK (Indexer):
 
     def extend_model(self, id_feature_map, parallel=None):
         """
-        Extend, in memory, the current data model with given data elements using
-        the configured feature descriptor. Online extensions are not saved to
-        data files.
+        Extend, in memory, the current model with the given feature elements.
+        Online extensions are not saved to data files.
 
         NOTE: For now, if there is currently no data model created for this
         indexer / descriptor combination, we will error. In the future, I

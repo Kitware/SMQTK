@@ -96,7 +96,8 @@ class IqrSession (object):
 
     def __del__(self):
         # Clean up working directory
-        shutil.rmtree(self.work_dir)
+        if osp.isdir(self.work_dir):
+            shutil.rmtree(self.work_dir)
 
     def __enter__(self):
         """

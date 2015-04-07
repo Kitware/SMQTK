@@ -13,8 +13,8 @@ import numpy
 def histogram_intersection_distance(i, j):
     """
     Compute the histogram intersection percent relation between given histogram
-    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 1.0 means
-    full intersection, and 0.0 means no intersection.
+    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 0.0 means
+    full intersection, and 1.0 means no intersection.
 
     This implements non-branching formula for efficient computation.
 
@@ -24,7 +24,7 @@ def histogram_intersection_distance(i, j):
     :param j: Histogram ``j``
     :type j: numpy.core.multiarray.ndarray
 
-    :return: Float percent intersection amount.
+    :return: Float inverse percent intersection amount.
     :rtype: float
 
     """
@@ -34,14 +34,14 @@ def histogram_intersection_distance(i, j):
     #       if i_sum != 0:
     #           i /= i_sum
     #       ...
-    return (i + j - numpy.abs(i - j)).sum() * 0.5
+    return 1.0 - ((i + j - numpy.abs(i - j)).sum() * 0.5)
 
 
 def histogram_intersection_dist_matrix(a, b):
     """
     Compute the histogram intersection percent relation between given histogram
-    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 1.0 means
-    full intersection, and 0.0 means no intersection.
+    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 0.0 means
+    full intersection, and 1.0 means no intersection.
 
     This implements non-branching formula for efficient computation.
 
@@ -69,7 +69,7 @@ def histogram_intersection_dist_matrix(a, b):
     :param b: Histogram or array of histograms ``b``
     :type b: numpy.core.multiarray.ndarray
 
-    :return: Float or array of float percent intersection amount.
+    :return: Float or array of float distance (inverse percent intersection).
     :rtype: float or numpy.core.multiarray.ndarray
     """
     # TODO: Always normalize input histograms here? e.g.:
@@ -83,7 +83,7 @@ def histogram_intersection_dist_matrix(a, b):
         a = numpy.array([a])
     # TODO: Assert shape consistency
 
-    r = (numpy.add(a, b) - numpy.abs(numpy.subtract(a, b))).sum(axis=1) * 0.5
+    r = 1.0 - ((numpy.add(a, b) - numpy.abs(numpy.subtract(a, b))).sum(axis=1) * 0.5)
 
     if a_dim == 1:
         return r[0]

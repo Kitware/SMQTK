@@ -313,8 +313,8 @@ class ColorDescriptor_Base (FeatureDescriptor):
         """
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         if osp.isfile(checkpoint_filepath):
-            self.log.debug("Found checkpoint feature vector file, loading and "
-                           "returning.")
+            # self.log.debug("Found checkpoint feature vector file, loading and "
+            #                "returning.")
             return numpy.load(checkpoint_filepath)
 
         if not self.has_model:

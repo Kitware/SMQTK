@@ -336,8 +336,12 @@ class ColorDescriptor_Base (FeatureDescriptor):
         idxs, dists = flann.nn_index(descriptors)
 
         # Create histogram
+        # - Using explicit bin slots to prevent numpy from automatically
+        #   creating tightly constrained bins. This would otherwise cause
+        #   histograms between two inputs to be non-comparable (unaligned bins).
         # - See numpy note about ``bins`` to understand why the +1 is necessary
-        h, _ = numpy.histogram(idxs, bins=self._codebook.shape[0] + 1)
+        h, b = numpy.histogram(idxs,
+                               bins=numpy.arange(self._codebook.shape[0] + 1))
         self.log.debug("Quantization histogram: %s", h)
         # Normalize histogram into relative frequencies
         # - Not using /= on purpose. h is originally int32 coming out of

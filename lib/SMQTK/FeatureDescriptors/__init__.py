@@ -221,8 +221,8 @@ class FeatureDescriptor (object):
                     continue
                 else:
                     r_dict[uid] = feat
-                # self.log.debug("Progress: [%d/%d] %3.3f%%",
-                #                i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
+                self.log.debug("Progress: [%d/%d] %3.3f%%",
+                               i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
         # Check for failed generation
         if failures:
             raise RuntimeError("Failure occurred during data feature "

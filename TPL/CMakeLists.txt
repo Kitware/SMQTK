@@ -11,7 +11,7 @@ include(ExternalProject)
 ###
 # libSVM
 #
-set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.17")
+set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.1-custom")
 ExternalProject_Add(libSVM
   PREFIX            "${TPL_BUILD_PREFIX}"
   SOURCE_DIR        "${libSVM_DIR}"

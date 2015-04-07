@@ -8,16 +8,17 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import logging
-import multiprocessing
+import multiprocessing.pool
 import numpy
-import os
+import os.path as osp
+import svm
+import svmutil
 
-from EventContentDescriptor.iqr_modules import iqr_model_train, iqr_model_test
+from EventContentDescriptor.iqr_modules import svmtools
 
 from SMQTK.Indexers import Indexer
+from SMQTK.utils import SimpleTimer
 from SMQTK.utils.distance_functions import histogram_intersection_distance
-from SMQTK.utils.FeatureMemory import FeatureMemory
-from SMQTK.utils.ReadWriteLock import ReadWriteLock
 
 
 def _svm_model_hik_helper(i, j, i_feat, j_feat):
@@ -38,40 +39,79 @@ class SVMIndexer_HIK (Indexer):
     Inherited from progenitor ALADDIN project
 
     """
-    # TODO: Add optional global model caching so that successive indexer
-    #       construction doesn't take additional time.
 
-    BACKGROUND_RATIO = 0.40  # first 40%
-
-    # Pick lowest 20% intersecting elements as auto-bg
-    AUTO_BG_PERCENT = 0.20
+    # Pick lowest % intersecting elements as auto-bg
+    AUTO_NEG_PERCENT = 0.10
 
     def __init__(self, data_dir, work_dir):
         super(SVMIndexer_HIK, self).__init__(data_dir, work_dir)
 
-        self._ids_filepath = os.path.join(self.data_dir, "id_map.npy")
-        self._bg_flags_filepath = os.path.join(self.data_dir, "bg_flags.npy")
-        self._feature_data_filepath = os.path.join(self.data_dir, "feature_data.npy")
-        self._kernel_data_filepath = os.path.join(self.data_dir, "kernel_data.npy")
+        # Array of UIDs in the index the UID refers to in these internal
+        # structures
+        #: :type: numpy.core.multiarray.ndarray
+        self._uid_array = None
+        self._uid2idx_map = None
 
-        self.svm_train_params = '-q -t 4 -b 1 -w1 8 -c 20'
-        # self.svm_train_params = '-q -t 4 -b 1 -w1 8 -c 1'
-        # self.svm_train_params = '-q -t 0 -b 1 -w1 8 -c 1'
+        # Matrix of features
+        #: :type: numpy.core.multiarray.ndarray
+        self._feature_mat = None
 
-        # If we have existing model files, load them into a FeatureMemory
-        # instance
-        self._feat_mem_lock = ReadWriteLock()
-        self._feat_mem = None
-        # Not using the reset method here as we need to allow for object
-        # construction so as to be able to call the ``generate_model`` method.
-        if self._has_model_files():
-            self._feat_mem = FeatureMemory.construct_from_files(
-                self._ids_filepath, self._bg_flags_filepath,
-                self._feature_data_filepath, self._kernel_data_filepath,
-                rw_lock=self._feat_mem_lock
-            )
+        # Distance kernel matrix
+        #: :type: numpy.core.multiarray.ndarray
+        self._distance_mat = None
 
-    # noinspection PyNoneFunctionAssignment,PyUnresolvedReferences,PyTypeChecker
+        # Templated to take the W1 integer weight argument, which should be
+        # floor(num_negatives / num_positives), which a min value of 1
+        self.svm_train_params = '-q -t 5 -b 1 -c 2 -w1 %f  -g 0.0078125'
+
+        if self.has_model_files():
+            self._load_model_files()
+
+    @property
+    def uid_list_filepath(self):
+        return osp.join(self.data_dir, "uid_list.npy")
+
+    @property
+    def feature_mat_filepath(self):
+        return osp.join(self.data_dir, "feature_mat.npy")
+
+    @property
+    def distance_mat_filepath(self):
+        return osp.join(self.data_dir, 'hik_distance_kernel.npy')
+
+    def has_model_files(self):
+        return (osp.isfile(self.uid_list_filepath)
+                and osp.isfile(self.feature_mat_filepath)
+                and osp.isfile(self.distance_mat_filepath))
+
+    def _load_model_files(self):
+        #: :type: numpy.core.multiarray.ndarray
+        self._uid_array = numpy.load(self.uid_list_filepath)
+        #: :type: numpy.core.multiarray.ndarray
+        self._feature_mat = numpy.load(self.feature_mat_filepath)
+        #: :type: numpy.core.multiarray.ndarray
+        self._distance_mat = numpy.load(self.distance_mat_filepath)
+
+        # Mapping of element UID to array/matrix index position
+        #: :type: dict of int
+        self._uid2idx_map = {}
+        for idx, uid in enumerate(self._uid_array):
+            self._uid2idx_map[uid] = idx
+
+    def has_model(self):
+        """
+        :return: True if this indexer has a valid initialized model for
+            extension and ranking (or doesn't need one to perform those tasks).
+        :rtype: bool
+        """
+        return (
+            self._uid_array is not None
+            and self._feature_mat is not None
+            and 0 not in self._feature_mat.shape  # has dimensionality
+            and self._distance_mat is not None
+            and 0 not in self._distance_mat.shape   # has dimensionality
+        )
+
     def generate_model(self, feature_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
@@ -80,6 +120,9 @@ class SVMIndexer_HIK (Indexer):
         :raises RuntimeError: Precaution error when there is an existing data
             model for this indexer. Manually delete or move the existing
             model before computing another one.
+
+            Specific implementations may error on other things. See the specific
+            implementations for more details.
 
         :raises ValueError: The given feature map had no content.
 
@@ -95,82 +138,52 @@ class SVMIndexer_HIK (Indexer):
         """
         super(SVMIndexer_HIK, self).generate_model(feature_map, parallel)
 
-        self.log.info("Starting model generation")
-
-        # Initialize data stores
         num_features = len(feature_map)
-        sorted_uids = sorted(feature_map.keys())
-        feature_length = len(feature_map[sorted_uids[0]])
+        ordered_uids = sorted(feature_map.keys())
 
-        idx2uid_map = numpy.empty(num_features, dtype=int)
-        idx2bg_map = numpy.empty(num_features, dtype=bool)
-        bg_id_set = set()
-        feature_mat = numpy.matrix(numpy.empty((num_features, feature_length),
-                                               dtype=float))
-        kernel_mat = numpy.matrix(numpy.empty((num_features, num_features),
-                                              dtype=float))
+        sample_feature = feature_map[ordered_uids[0]]
+        feature_len = len(sample_feature)
 
-        self.log.info("Building idx2uid map and feature matrix")
-        for idx, uid in enumerate(sorted_uids):
-            idx2uid_map[idx] = uid
-            feature_mat[idx] = feature_map[uid]
-
-        # Flag a percentage of leading data in ingest as background data (auto-
-        # negative exemplars). Leading % more deterministic than random for
-        # tuning/debugging.
-        self.log.info("Building idx2bg_flags mapping")
-        pivot = int(num_features * self.BACKGROUND_RATIO)
-        for i in xrange(num_features):
-            if i < pivot:
-                idx2bg_map[i] = True
-                bg_id_set.add(idx2uid_map[i])
-            else:
-                idx2bg_map[i] = False
-
-        # Constructing histogram intersection kernel
-        self.log.info("Computing Histogram Intersection kernel matrix")
-        pool = multiprocessing.Pool(processes=parallel)
-        self.log.info("\t- Entering jobs...")
-        results = {}
-        for i, i_feat in enumerate(feature_mat):
-            results[i] = {}
-            for j, j_feat in enumerate(feature_mat):
-                results[i][j] = pool.apply_async(_svm_model_hik_helper,
-                                                 (i, j, i_feat, j_feat))
-        self.log.info("\t- Collecting results...")
-        for i in results.keys():
-            # self.log.info("\t\tRow: %d/%d", i, len(results)-1)
-            for j in results[i].keys():
-                kernel_mat[i, j] = results[i][j].get()
-        pool.close()
-        pool.join()
-
-        # Transform kernel from distance to similarity matrix
-        kernel_mat = 1.0 - kernel_mat
-
-        self.log.info("Saving data files")
-        numpy.save(self._ids_filepath, idx2uid_map)
-        numpy.save(self._bg_flags_filepath, idx2bg_map)
-        numpy.save(self._feature_data_filepath, feature_mat)
-        numpy.save(self._kernel_data_filepath, kernel_mat)
-
-    def _has_model_files(self):
-        return (
-            os.path.isfile(self._ids_filepath) and
-            os.path.isfile(self._bg_flags_filepath) and
-            os.path.isfile(self._feature_data_filepath) and
-            os.path.isfile(self._kernel_data_filepath)
+        # Pre-allocating arrays
+        self._uid_array = numpy.ndarray(num_features, dtype=int)
+        self._feature_mat = numpy.zeros(
+            (num_features, feature_len), dtype=sample_feature.dtype
+        )
+        self._distance_mat = numpy.zeros(
+            (num_features, num_features), dtype=sample_feature.dtype
         )
 
-    def has_model(self):
-        """
-        :return: True if this indexer has a valid initialized model for
-            extension and ranking (or doesn't need one to perform those tasks).
-        :rtype: bool
-        """
-        return self._feat_mem is not None
+        self.log.info("Populating feature matrix")
+        for i, (uid, feat) in enumerate(feature_map.iteritems()):
+            self._uid_array[i] = uid
+            self._feature_mat[i] = feat
 
-    def extend_model(self, id_feature_map, parallel=None):
+        self.log.info("Spawning HI computation tasks")
+        pool = multiprocessing.Pool(processes=parallel)
+        rmap = {}
+        for i in range(num_features):
+            for j in range(i, num_features):
+                rmap[i, j] = pool.apply_async(histogram_intersection_distance,
+                                              args=(self._feature_mat[i],
+                                                    self._feature_mat[j]))
+        pool.close()
+
+        # Poll for results in upper triangle of matrix first, as that follows
+        # the line of jobs spawned
+        with SimpleTimer("Aggregating HI dists into matrix", self.log.info):
+            for i in range(num_features):
+                for j in range(i, num_features):
+                    self._distance_mat[i, j] = rmap[i, j].get()
+                    if i != j:
+                        self._distance_mat[j, i] = self._distance_mat[i, j]
+        pool.join()
+
+        with SimpleTimer("Saving data files", self.log.info):
+            numpy.save(self.uid_list_filepath, self._uid_array)
+            numpy.save(self.feature_mat_filepath, self._feature_mat)
+            numpy.save(self.distance_mat_filepath, self._distance_mat)
+
+    def extend_model(self, uid_feature_map, parallel=None):
         """
         Extend, in memory, the current model with the given feature elements.
         Online extensions are not saved to data files.
@@ -179,49 +192,152 @@ class SVMIndexer_HIK (Indexer):
         indexer / descriptor combination, we will error. In the future, I
         would imagine a new model would be created.
 
-        :raises RuntimeError: When there is no existing data model present to
-            extend.
-        :raises ValueError: Raised when:
-            -   One or more data elements have UIDs that already exist in the
-                model.
-            -   One or more features are not of the proper shape for this
-                indexer's model.
+        :raises RuntimeError: No current model.
 
-        :param id_feature_map: Mapping of integer UIDs to features to extend
-            this indexer's model with.
-        :type id_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :param uid_feature_map: Mapping of integer IDs to features to extend this
+            indexer's model with.
+        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
-            cores.
+            cores. Not all implementation support parallel model extension.
         :type parallel: int
 
         """
-        super(SVMIndexer_HIK, self).extend_model(id_feature_map, parallel)
+        super(SVMIndexer_HIK, self).extend_model(uid_feature_map, parallel)
 
-        with self._feat_mem_lock.write_lock():
-            cur_ids = set(self._feat_mem.get_ids())
+        # Shortcut when we're not given anything to actually process
+        if not uid_feature_map:
+            self.log.debug("No new features to extend")
+            return
 
-            # Check UID intersection
-            intersection = cur_ids.intersection(id_feature_map.keys())
+        # Check UID intersection
+        with SimpleTimer("Checking UID uniqueness", self.log.debug):
+            cur_uids = set(self._uid_array)
+            intersection = cur_uids.intersection(uid_feature_map.keys())
             if intersection:
                 raise ValueError("The following IDs are already present in the "
                                  "indexer's model: %s" % tuple(intersection))
 
-            # Check feature consistency
-            example_feat = self._feat_mem.get_feature_matrix()[0]
-            for feat in id_feature_map.values():
-                if feat.shape[0] != example_feat.shape[1]:
+        # Check feature consistency
+        # - Assuming that there is are least one feature in our current model...
+        with SimpleTimer("Checking input feature shape", self.log.debug):
+            example_feat = self._feature_mat[0]
+            for feat in uid_feature_map.values():
+                if feat.shape[0] != example_feat.shape[0]:
                     raise ValueError("One or more features provided are not of "
                                      "the correct shape! Found %s when we "
                                      "require %s"
                                      % (feat.shape, example_feat.shape[1]))
+            del example_feat  # Deleting so we can resize later in the function
 
-            # Add computed features to FeatureMemory
-            for uid, feat in id_feature_map.iteritems():
-                self.log.debug("Updating FeatMem with data: %s",
-                               id_feature_map[uid])
-                self._feat_mem.update(uid, feat)
+        # Extend data structures
+        # - UID and Feature matrix can be simply resized in-place as we are
+        #   strictly adding to the end of the structure in memory.
+        # - distance matrix, since we're adding new columns in addition to rows,
+        #   need to create a new matrix of the desired shape, copying in
+        #   existing into new matrix.
+        self.log.debug("Sorting feature UIDs")
+        new_uids = sorted(uid_feature_map.keys())
+
+        self.log.debug("Calculating before and after sizes.")
+        num_features_before = self._feature_mat.shape[0]
+        num_features_after = num_features_before + len(uid_feature_map)
+
+        with SimpleTimer("Resizing uid/feature matrices", self.log.debug):
+            self._uid_array.resize((num_features_after,))
+            self._feature_mat.resize((num_features_after,
+                                      self._feature_mat.shape[1]))
+
+        # Calculate distances for new features to all others
+        # - for-each new feature row, calc distance to all features in rows
+        #   before it + itself
+        # - r is the index of the current new feature
+        #       (num_features_before <= r < num_features_after)
+        #   c is the index of the feature we are computing the distance to
+        #       (0 <= c <= r)
+        # - Expanding and copying kernel matrix while computing distance to not
+        #   waste time waiting for computations to finish
+        pool = multiprocessing.Pool(processes=parallel)
+        hid_map = {}
+        with SimpleTimer("Adding to matrices, submitting HI work",
+                         self.log.debug):
+            for r in range(num_features_before, num_features_after):
+                r_uid = new_uids[r-num_features_before]
+                self._uid_array[r] = r_uid
+                self._uid2idx_map[r_uid] = r
+                self._feature_mat[r] = uid_feature_map[r_uid]
+                for c in range(r+1):
+                    hid_map[r, c] = pool.apply_async(
+                        histogram_intersection_distance,
+                        args=(self._feature_mat[r], self._feature_mat[c])
+                    )
+        pool.close()
+
+        # Expanding kernel matrix in local memory while async processing is
+        # going on.
+        # noinspection PyNoneFunctionAssignment
+        with SimpleTimer("'Resizing' kernel matrix", self.log.debug):
+            new_dm = numpy.ndarray((num_features_after, num_features_after),
+                                   dtype=self._distance_mat.dtype)
+            new_dm[:num_features_before,
+                   :num_features_before] = self._distance_mat
+            self._distance_mat = new_dm
+
+        with SimpleTimer("Collecting dist results into matrix", self.log.debug):
+            for (r, c), dist in hid_map.iteritems():
+                d = dist.get()
+                self._distance_mat[r, c] = d
+                self._distance_mat[c, r] = d
+        pool.join()
+
+    def _least_similar_uid(self, uid, N=1):
+        """
+        Return an array of N UIDs that are least similar to the feature for the
+        given UID. If N is greater than the total number of elements in this
+        indexer's model, we return a list of T ordered elements, where T is
+        the total number of in the model. I.e. we return an ordered list of all
+        UIDs by least similarity (the given UID will be the last element in the
+        list).
+
+        :param uid: UID to find the least similar UIDs for.
+        :type uid: int
+
+        :return: List of min(N, T) least similar UIDs.
+        :rtype: list of int
+
+        """
+        i = self._uid2idx_map[uid]
+        z = zip(self._uid_array, self._distance_mat[i])
+        # Sort by least similarity, pick top N
+        return [e[0] for e in sorted(z, key=lambda f: f[1], reverse=1)[:N]]
+
+    def _pick_auto_negatives(self, pos_uids):
+        """
+        Pick automatic negative UIDs based on distances from the given positive
+        UIDs.
+
+        :param pos_uids: List of positive UIDs
+        :type pos_uids: list of int
+
+        :return: List of automatically chosen negative UIDs
+        :rtype: set of int
+
+        """
+        # Pick automatic negatives that are the most distant elements from
+        # given positive elements.
+        #: :type: set of int
+        auto_neg = set()
+        n = int(self._uid_array.size * self.AUTO_NEG_PERCENT)
+        for p_UID in pos_uids:
+            auto_neg.update(self._least_similar_uid(p_UID, n))
+
+        # Cancel out any auto-picked negatives that conflict with given positive
+        # UIDs.
+        auto_neg.difference_update(pos_uids)
+
+        self.log.debug("Post auto-negative selection: %s", auto_neg)
+        return auto_neg
 
     def rank_model(self, pos_ids, neg_ids=()):
         """
@@ -246,91 +362,66 @@ class SVMIndexer_HIK (Indexer):
         """
         super(SVMIndexer_HIK, self).rank_model(pos_ids, neg_ids)
 
-        # === EXPERIMENT ===
-        # Swapping out FeatureMemory background clips with auto-selected UIDs
-        # that are those that intersect least with the given positive UIDs.
-        # NOTE: There must be at least 1/AUTO_BG_SELECTOR_RATIO elements in the
-        #       model for this to make sense.
-        self.log.debug("Auto-selecting additional negative UID")
-        self.log.debug("Selecting %2.2f%% least similar", self.AUTO_BG_PERCENT)
-        original_bgUIDs = self._feat_mem._bg_clip_ids
-        autoselected_neg_UIDs = set()
-        for pos_UID in pos_ids:
-            # Using the row of the DK corresponding to the UID, sort
-            # (index, intersection) pairs in ascending intersection and store
-            # the UIDs of the top X% of least intersecting points.
-            _, colUIDs, m = \
-                self._feat_mem.get_distance_kernel().extract_rows(pos_UID)
-            num_least_intersecting = int(len(colUIDs) * self.AUTO_BG_PERCENT)
-            # self.log.debug("HIK distance matrix: %s", m)
-            # List of (UID, intersection) tuples in order of ascending
-            # intersection value. Got one row, so morphing matrix into 1D array.
-            ordered_HIK = sorted(zip(colUIDs, m.A[0]), key=lambda e: e[1])
-            # self.log.debug("Ordered pairs: %s",
-            #                ordered_HIK[:num_least_intersecting])
-            # list of least intersecting UIDs
-            least_intersecting_uids = \
-                [elem[0] for elem
-                 in ordered_HIK[:num_least_intersecting]]
-            # self.log.debug("%.2f%% Least similar to PosID[%d]: %s",
-            #                self.AUTO_BG_PERCENT * 100, pos_UID,
-            #                least_intersecting_uids)
-            autoselected_neg_UIDs.update(least_intersecting_uids)
-        # User supplied positives override auto or supplied negatives
-        neg_ids = autoselected_neg_UIDs.union(neg_ids).difference(pos_ids)
-        self._feat_mem._bg_clip_ids = neg_ids
-        self.log.debug("Updated Pos/Neg:\n"
-                       "Pos: %s\n"
-                       "Neg: %s",
-                       pos_ids, neg_ids)
+        # Automatically support the negative IDs with the most distance UIDs
+        # from the provided positive UIDs.
+        if len(neg_ids) == 0:
+            neg_ids = self._pick_auto_negatives(pos_ids)
 
         #
-        # SVM Training
+        # SVM model training
         #
-        self.log.debug("Extracting symmetric submatrix from DK")
-        idx2id_map, idx2isbg_map, m = \
-            self._feat_mem.get_distance_kernel().symmetric_submatrix(*pos_ids)
-        m = 1.0 - m  # inverse to get distance instead of similarity
-        self.log.debug("-- num bg: %d", idx2isbg_map.count(True))
-        self.log.debug("-- m shape: %s", m.shape)
+        uid_list = sorted(set.union(set(pos_ids), neg_ids))
+        feature_len = self._feature_mat.shape[1]
+        # positive label: 1, negative label: 0
+        bool2label = {1: 1, 0: 0}
+        labels = [bool2label[uid in pos_ids] for uid in uid_list]
+        train_features = \
+            self._feature_mat[list(self._uid2idx_map[uid] for uid in uid_list), :]
 
-        # for model training function, inverse of idx_is_bg: True
-        # indicates a positively adjudicated index
-        labels_train = numpy.array(tuple(not b for b in idx2isbg_map))
+        self.log.debug("Creating SVM problem")
+        svm_problem = svm.svm_problem(labels, train_features.tolist())
+        self.log.debug("Creating SVM model")
+        w1_weight = max(1.0, len(neg_ids)/float(len(pos_ids)))
+        svm_model = svmutil.svm_train(svm_problem,
+                                      self.svm_train_params % w1_weight)
+        if svm_model.l == 0:
+            raise RuntimeError("SVM Model learning failed")
 
-        # Returned dictionary contains the keys "model" and "clipid_SVs"
-        # referring to the trained model and a list of support vectors,
-        # respectively.
-        ret_dict = iqr_model_train(m, labels_train, idx2id_map,
-                                   self.svm_train_params)
-        svm_model = ret_dict['model']
-        svm_svIDs = ret_dict['clipids_SVs']
-        svm_svID_labels = [svID in pos_ids for svID in svm_svIDs]
+        # Finding associated clip IDs of trained support vectors
+        self.log.debug("Finding clip IDs for support vectors")
+        hash2feature_idx = dict([(hash(tuple(f)), r)
+                                 for r, f in enumerate(self._feature_mat)])
+        svm_sv_idxs = []
+        tmp_list = [0] * feature_len
+        for r in range(svm_model.nSV[0] + svm_model.nSV[1]):
+            for c in range(feature_len):
+                tmp_list[c] = svm_model.SV[r][c].value
+            svm_sv_idxs.append(hash2feature_idx[hash(tuple(tmp_list))])
 
         #
-        # SVM Model application ("testing")
+        # Platt Scaling for probability ranking
         #
-        self.log.info("Starting model application...")
 
-        # As we're extracting rows, the all IDs in the model are preserved along
-        # the x-axis (column IDs). The list of IDs along the x-axis is
-        # thus effectively the ordered list of all IDs.
-        idx2id_row, idx2id_col, kernel_test = \
-            self._feat_mem.get_distance_kernel()\
-                          .extract_rows(*svm_svIDs)
-        kernel_test = 1.0 - kernel_test  # inverse to get distance instead of similarity
+        # Features associated to support vectors in trained model
+        self.log.debug("Forming data for Platt Scaling")
+        # We need the distances between support vectors to all features
+        test_kernel = self._distance_mat[svm_sv_idxs, :]
 
-        # Testing/Ranking call
-        #   Passing the array version of the kernel sub-matrix. The
-        #   returned output['probs'] type matches the type passed in
-        #   here, and using an array makes syntax cleaner.
-        self.log.debug("Ranking model IDs")
-        output = iqr_model_test(svm_model, kernel_test.A, idx2id_col,
-                                svm_svID_labels)
-        probability_map = dict(zip(output['clipids'], output['probs']))
+        weights = numpy.array(svm_model.get_sv_coef()).flatten()
+        margins = (numpy.mat(weights) * test_kernel).A[0]
 
-        # Restoring feature memories original background clip IDs
-        self._feat_mem._bg_clip_ids = original_bgUIDs
+        self.log.debug("Performing Platt scaling")
+        rho = svm_model.rho[0]
+        probA = svm_model.probA[0]
+        probB = svm_model.probB[0]
+        probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
+
+        # Test if the probability of an adjudicated positive is below a
+        # threshold. If it is, invert probabilities.
+        if probs[self._uid2idx_map[tuple(pos_ids)[0]]] < 0.50:
+            probs = 1.0 - probs
+
+        probability_map = dict(zip(self._uid_array, probs))
 
         return probability_map
 
@@ -339,15 +430,11 @@ class SVMIndexer_HIK (Indexer):
         Reset this indexer to its original state, i.e. removing any model
         extension that may have occurred.
 
-        :raises RuntimeError: There are no current model files to reset to.
+        :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
         super(SVMIndexer_HIK, self).reset()
-        self._feat_mem = FeatureMemory.construct_from_files(
-            self._ids_filepath, self._bg_flags_filepath,
-            self._feature_data_filepath, self._kernel_data_filepath,
-            rw_lock=self._feat_mem_lock
-        )
+        self._load_model_files()
 
 
 INDEXER_CLASS = SVMIndexer_HIK

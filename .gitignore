@@ -26,9 +26,13 @@
 /TPL/flann-1.8.4/src/python/build
 /TPL/flann-1.8.4/src/python/setup.py
 
-### TPL/libsvm-3.17 ###
-/TPL/libsvm-3.17/libsvm.so.2
-/TPL/libsvm-3.17/svm-predict
-/TPL/libsvm-3.17/svm-scale
-/TPL/libsvm-3.17/svm-train
-/TPL/libsvm-3.17/svm.o
+### TPL/libsvm-3.1-custom
+/TPL/libsvm-3.1-custom/eval.o
+/TPL/libsvm-3.1-custom/svm.o
+/TPL/libsvm-3.1-custom/libsvm.so.2
+/TPL/libsvm-3.1-custom/binary-predict
+/TPL/libsvm-3.1-custom/binary-train
+/TPL/libsvm-3.1-custom/svm-predict
+/TPL/libsvm-3.1-custom/svm-prob
+/TPL/libsvm-3.1-custom/svm-scale
+/TPL/libsvm-3.1-custom/svm-train

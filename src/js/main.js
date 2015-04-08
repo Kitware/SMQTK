@@ -88,7 +88,7 @@ $(function () {
 
   // Query given a time duration
   //--------------------------------------------------------------------------
-  function queryData(timeRange, location, callback) {
+  myApp.queryData = function(timeRange, location, callback) {
     var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
 
     if (location !== undefined || location !== null || location !== '') {
@@ -172,6 +172,41 @@ $(function () {
           });
         }
 
+        if (myApp.location !== null || myApp.location !== undefined ||
+        myApp.location !== "") {
+          myApp.queryData(myApp.timeRange, myApp.location, function(data) {
+              // Format the data
+              console.log(data);
+              var adsPerDay = {}, newData = [], i, time, month, inst, timeString, item;
+              for (i = 0; i < data.length; ++i) {
+                time = new Date(data[i]["field4"]);
+                month = (time.getMonth() + 1);
+                if (month < 10) {
+                  month = ("0" + month);
+                }
+                timeString = time.getFullYear() + "-"
+                               + month + "-" +
+                               + time.getDate();
+                if (timeString in adsPerDay) {
+                  adsPerDay[timeString] = adsPerDay[timeString] + 1;
+                } else {
+                  adsPerDay[timeString] = 1;
+                }
+              }
+
+              for (item in adsPerDay) {
+                inst = {};
+                inst["date"] = item;
+                inst["value"] = adsPerDay[item];
+                newData.push(inst);
+              }
+
+              if (newData.length > 1) {
+                myApp.displayStatistics(newData, false);
+              }
+          });
+        }
+
         div.append(list);
       });
 
@@ -193,7 +228,7 @@ $(function () {
     // Now run the query
     myApp.timeRange = $("#slider").slider("values");
     myApp.location = $("#search").val();
-    queryData(myApp.timeRange, myApp.location, function(data) {
+    myApp.queryData(myApp.timeRange, myApp.location, function(data) {
       // Clear out any previous information
       myApp.clearLastSearch();
 
@@ -263,7 +298,7 @@ $(function () {
         myApp.location = $("#search-location").text();
 
         // Query the data and create vis again
-        queryData(myApp.timeRange, myApp.location, function(data) {
+        myApp.queryData(myApp.timeRange, myApp.location, function(data) {
           render(data, function() {
             myApp.updateView(null, newRange);
 
@@ -379,18 +414,16 @@ myApp.displaySearchResults = function(data, clearPrev) {
       newAnchor.append(newImage);
       newImage.attr('src', data.images[i]);
     }
-
-    myApp.displayStatistics(data, false);
   }
 }
 
 // Create statistical plot
 //--------------------------------------------------------------------------
 myApp.displayStatistics = function(data, clearPrev) {
-  var data = [
-    {"date": "2012-01-05",  "value": 28},
-    {"date": "2012-01-10",  "value": 43}
-  ];
+  // var data = [
+  //   {"date": "2012-01-05",  "value": 28},
+  //   {"date": "2012-01-10",  "value": 43}
+  // ];
   var spec = {
     "width": 400,
     "height": 200,

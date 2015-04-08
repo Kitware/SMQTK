@@ -405,6 +405,7 @@ class VideoFile (DataFile):
         md = self.metadata()
         frame_times = numpy.array(frame_list) / md.fps
         sPIPE = subprocess.PIPE
+        # TODO: thread/multiprocess this.
         for f, t in zip(frame_list, frame_times):
             cmd = ['ffmpeg', '-accurate_seek', '-ss', str(t),
                    '-i', self.filepath,

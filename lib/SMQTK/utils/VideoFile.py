@@ -78,30 +78,25 @@ class VideoFile (DataFile):
         if (self.__preview_cache is None
                 or not osp.isfile(self.__preview_cache)
                 or regenerate):
-            self.log.debug("[%s] Populating preview GIF cache", self)
             fname = "%s.preview.gif" % self.md5sum
             if save_dir:
                 safe_create_dir(save_dir)
                 target_fp = osp.join(save_dir, fname)
             else:
                 target_fp = osp.join(self.work_directory, fname)
-            self.log.debug("[%s] Preview image file: %s", self, target_fp)
             # if the file already exists, we don't need to generate it again
             if not osp.isfile(target_fp):
-                self.log.debug("[%s] Extracting frames for GIF", self)
+                self.log.debug("[%s] GIF file doesn't exist, generating", self)
                 md = self.metadata()
                 offset = md.duration * 0.2
                 interval = 0.5  # ~2fps gif
                 max_duration = min(10.0, md.duration * 0.6)
                 fm = self.frame_map(offset, interval, max_duration)
-                self.log.debug("[%s] GIF file doesn't exist, generating", self)
                 img_arrays = []
                 for frm_num in sorted(fm.keys()):
                     img_arrays.append(imageio.imread(fm[frm_num]))
                 imageio.mimwrite(target_fp, img_arrays, duration=interval)
                 self.log.debug("[%s] Finished generating GIF", self)
-            else:
-                self.log.debug("[%s] Already exists", self)
             self.__preview_cache = target_fp
 
         return self.__preview_cache

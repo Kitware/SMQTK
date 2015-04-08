@@ -9,10 +9,12 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import abc
 import imageio
+import numpy
 import os
 import os.path as osp
 import re
 import shutil
+import StringIO
 import subprocess
 import time
 
@@ -90,7 +92,8 @@ class VideoFile (DataFile):
                 md = self.metadata()
                 offset = md.duration * 0.2
                 interval = 0.5  # ~2fps gif
-                fm = self.frame_map(offset, interval, 10)
+                max_duration = min(10.0, md.duration * 0.6)
+                fm = self.frame_map(offset, interval, max_duration)
                 self.log.debug("[%s] GIF file doesn't exist, generating", self)
                 img_arrays = []
                 for frm_num in sorted(fm.keys()):
@@ -329,8 +332,8 @@ class VideoFile (DataFile):
         speeds of over 1000Hz and rounding frame frame times to the neared
         thousandth of a second to mitigate floating point error.
 
-        :param num_frames: Number of frame numbers to consider. This should be
-            the total number of frames in the video.
+        :param num_frames: Number of frame numbers to consider. This should be,
+            at most, the total number of frames in the video.
         :param fps: The FPS rating of the video.
         :param offset: The number of seconds into the video to start gathering
             frames.
@@ -351,7 +354,7 @@ class VideoFile (DataFile):
         first_frame = offset * fps
         self.log.debug("First Frame: %f", first_frame)
         if max_duration:
-            cutoff_frame = (max_duration + offset) * fps
+            cutoff_frame = min(num_frames, (max_duration + offset) * fps)
         else:
             cutoff_frame = float(num_frames)
         self.log.debug("Cutoff frame: %f", cutoff_frame)
@@ -378,7 +381,8 @@ class VideoFile (DataFile):
         """
         Extract specific frames from our configured video file.
 
-        This function is called with a locked section of code.
+        This function is called within a locked section of code (filesystem
+        based).
 
         :param frame_list: List of frame numbers to extract. Must be sorted.
         :type frame_list: list of int
@@ -390,8 +394,6 @@ class VideoFile (DataFile):
         # TODO: In the future, this should be abstract and left to a subclass to
         #       implement.
 
-        PROC_FRAME_EXTRACTOR = "frame_extractor"
-
         # Setup temp extraction directory
         tmp_extraction_dir = osp.join(self.work_directory, ".TMP")
         if osp.isdir(tmp_extraction_dir):
@@ -400,30 +402,34 @@ class VideoFile (DataFile):
             shutil.rmtree(tmp_extraction_dir, ignore_errors=True)
         os.makedirs(tmp_extraction_dir)
 
-        str_frame_selection = ','.join(map(str, frame_list))
+        md = self.metadata()
+        frame_times = numpy.array(frame_list) / md.fps
+        sPIPE = subprocess.PIPE
+        for f, t in zip(frame_list, frame_times):
+            cmd = ['ffmpeg', '-accurate_seek', '-ss', str(t),
+                   '-i', self.filepath,
+                   '-frames:v', '1',
+                   osp.join(tmp_extraction_dir, "%08d.%s" % (f, output_ext))]
+            self.log.debug("Frame extraction command: %s", cmd)
 
-        cmd = [PROC_FRAME_EXTRACTOR,
-               '-i', self.filepath,
-               '-f', str_frame_selection,
-               '-o', osp.join(tmp_extraction_dir, "%%08d.%s" % output_ext)]
-        self.log.debug("Extractor command: %s", cmd)
+            p = subprocess.Popen(cmd, stdout=sPIPE, stderr=sPIPE)
+            _, _ = p.communicate()
+            if p.returncode != 0:
+                raise RuntimeError("FFmpeg failed to extract frame at time %f! "
+                                   "(return code: %d)"
+                                   % (t, p.returncode))
 
-        ret_code = subprocess.call(cmd)
-        if ret_code != 0:
-            raise RuntimeError("Frame extractor utility failed! (return code: "
-                               "%d)" % ret_code)
-        else:
-            generated_files = [osp.join(tmp_extraction_dir, f)
-                               for f in sorted(os.listdir(tmp_extraction_dir))]
+        generated_files = [osp.join(tmp_extraction_dir, f)
+                           for f in sorted(os.listdir(tmp_extraction_dir))]
 
-            # If there is a mismatch in number of frames requested and number of
-            # frames produced, something went wrong
-            if len(generated_files) != len(frame_list):
-                raise RuntimeError("Failed to extract all frames requested!")
+        # If there is a mismatch in number of frames requested and number of
+        # frames produced, something went wrong
+        if len(generated_files) != len(frame_list):
+            raise RuntimeError("Failed to extract all frames requested!")
 
-            # Move generated files out of temp directory
-            for fn, gf in zip(frame_list, generated_files):
-                os.rename(gf, osp.join(self.work_directory,
-                                       self._get_file_name(fn, output_ext)))
-            os.removedirs(tmp_extraction_dir)
-            self.log.debug("Frame extraction complete")
+        # Move generated files out of temp directory
+        for fn, gf in zip(frame_list, generated_files):
+            os.rename(gf, osp.join(self.work_directory,
+                                   self._get_file_name(fn, output_ext)))
+        os.removedirs(tmp_extraction_dir)
+        self.log.debug("Frame extraction complete")

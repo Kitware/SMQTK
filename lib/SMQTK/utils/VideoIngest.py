@@ -62,7 +62,6 @@ class VideoIngest (DataIngest):
 
         # Generate preview GIF if needed by calling preview getter the
         # data-based location
-        self.log.debug("Generating preview GIF for video file...")
         vf_preview_dir = osp.join(self.previews_directory,
                                   *data.split_md5sum(8)[:-1])
         if not osp.isfile(data.get_preview_image(vf_preview_dir)):

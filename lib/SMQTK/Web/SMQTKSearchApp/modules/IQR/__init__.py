@@ -350,7 +350,7 @@ class IQRSearch (flask.Blueprint):
                     if iqrs.extension_ingest.has_uid(uid):
                         iqrs.extension_ingest.set_explicit(uid)
 
-            return flask.jsonify({'r': True})
+            return flask.jsonify({'success': True})
 
         @self.route("/iqr_refine", methods=["POST"])
         @self._parent_app.module_login.login_required

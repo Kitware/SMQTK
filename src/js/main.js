@@ -379,5 +379,85 @@ myApp.displaySearchResults = function(data, clearPrev) {
       newAnchor.append(newImage);
       newImage.attr('src', data.images[i]);
     }
+
+    myApp.displayStatistics(data, false);
   }
 }
+
+// Create statistical plot
+//--------------------------------------------------------------------------
+myApp.displayStatistics = function(data, clearPrev) {
+  var data = [
+    {"date": "2012-01-05",  "value": 28},
+    {"date": "2012-01-10",  "value": 43}
+  ];
+  var spec = {
+    "width": 400,
+    "height": 200,
+    "padding": {"top": 10, "left": 30, "bottom": 30, "right": 30},
+    "data": [
+      {
+        "name": "table",
+        "format": {"type":"json", "parse":{"date":"date", "value":"number"}},
+        "values": data
+      }
+    ],
+    "scales": [
+      {
+        "name": "x",
+        "type": "time",
+        "range": "width",
+        "nice": true,
+        "domain": {"data": "table", "field": "data.date"}
+      },
+      {
+        "name": "y",
+        "type": "linear",
+        "range": "height",
+        "nice": true,
+        "domain": {"data": "table", "field": "data.value"}
+      },
+      {
+        "name": "color",
+        "type": "ordinal",
+        "range": "category20"
+      }
+    ],
+    "axes": [
+      {"type": "x", "scale": "x"},
+      {"type": "y", "scale": "y"}
+    ],
+    "marks": [
+      {
+        "type": "line",
+        "from": {"data": "table"},
+        "properties": {
+          "enter": {
+            "interpolate": {"value": "monotone"},
+            "x": {"scale": "x", "field": "data.date"},
+            "y": {"scale": "y", "field": "data.value"},
+            "size": {"value": 50},
+            "stroke": {"scale": "color", "field": "data.indexname"},
+            "strokeWidth": {"value": 2}
+          },
+          "update": {
+            "opacity": {"value": 1}
+          },
+          "hover": {
+            "opacity": {"value": 0.5}
+          }
+        }
+      }
+    ]
+  }
+
+  if (clearPrev) {
+    $("#statistics").empty();
+  }
+
+  vg.parse.spec(spec, function(chart) {
+  var view = chart({el:"#statistics"})
+    .update();
+  });
+}
+

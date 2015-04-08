@@ -158,25 +158,13 @@ class SVMIndexer_HIK (Indexer):
             self._uid_array[i] = uid
             self._feature_mat[i] = feat
 
-        self.log.info("Spawning HI computation tasks")
-        pool = multiprocessing.Pool(processes=parallel)
-        rmap = {}
+        self.log.info("Computing HI matrix kernel")
+        # Using a ThreadPool here is actually much slower. Not sure why,
         for i in range(num_features):
             for j in range(i, num_features):
-                rmap[i, j] = pool.apply_async(histogram_intersection_distance,
-                                              args=(self._feature_mat[i],
-                                                    self._feature_mat[j]))
-        pool.close()
-
-        # Poll for results in upper triangle of matrix first, as that follows
-        # the line of jobs spawned
-        with SimpleTimer("Aggregating HI dists into matrix", self.log.info):
-            for i in range(num_features):
-                for j in range(i, num_features):
-                    self._distance_mat[i, j] = rmap[i, j].get()
-                    if i != j:
-                        self._distance_mat[j, i] = self._distance_mat[i, j]
-        pool.join()
+                self._distance_mat[i, j] = self._distance_mat[j, i] = \
+                    histogram_intersection_distance(self._feature_mat[i],
+                                                    self._feature_mat[j])
 
         with SimpleTimer("Saving data files", self.log.info):
             numpy.save(self.uid_list_filepath, self._uid_array)
@@ -287,8 +275,7 @@ class SVMIndexer_HIK (Indexer):
         with SimpleTimer("Collecting dist results into matrix", self.log.debug):
             for (r, c), dist in hid_map.iteritems():
                 d = dist.get()
-                self._distance_mat[r, c] = d
-                self._distance_mat[c, r] = d
+                self._distance_mat[r, c] = self._distance_mat[c, r] = d
         pool.join()
 
     def _least_similar_uid(self, uid, N=1):

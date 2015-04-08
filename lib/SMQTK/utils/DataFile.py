@@ -82,7 +82,6 @@ class DataFile (object):
         """
         if self._md5_cache is None:
             with open(self.filepath, 'rb') as data_file:
-                print "Reading file for md5"
                 self._md5_cache = hashlib.md5(data_file.read()).hexdigest()
         return self._md5_cache
 

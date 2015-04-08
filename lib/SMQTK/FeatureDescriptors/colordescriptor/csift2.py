@@ -203,9 +203,6 @@ class ColorDescriptor_Base (FeatureDescriptor):
         :type flann_sample_fraction: float
 
         """
-        # Set an arbitrary limit of 1000000 descriptors across all data elements
-        # num of descriptors to take per element = 1000000 / N
-
         if self.has_model:
             self.log.warn("ColorDescriptor model for descriptor type '%s' "
                           "already generated!", self.descriptor_type())
@@ -469,6 +466,9 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
 # noinspection PyAbstractClass
 class ColorDescriptor_Video (ColorDescriptor_Base):
+
+    # Custom higher limit for video since, ya know, they have multiple frames.
+    CODEBOOK_DESCRIPTOR_LIMIT = 2000000
 
     FRAME_EXTRACTION_PARAMS = {
         "second_offset": 0.2,       # Start 20% in

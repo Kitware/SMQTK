@@ -339,7 +339,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
         # - See numpy note about ``bins`` to understand why the +1 is necessary
         h, b = numpy.histogram(idxs,  # indices are all integers
                                bins=numpy.arange(self._codebook.shape[0] + 1))
-        self.log.debug("Quantization histogram: %s", h)
+        # self.log.debug("Quantization histogram: %s", h)
         # Normalize histogram into relative frequencies
         # - Not using /= on purpose. h is originally int32 coming out of
         #   histogram. /= would keep int32 type when we want it to be
@@ -348,7 +348,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
             h = h / float(h.sum())
         else:
             h = numpy.zeros(h.shape, h.dtype)
-        self.log.debug("Normalized histogram: %s", h)
+        # self.log.debug("Normalized histogram: %s", h)
 
         if not no_checkpoint:
             if not osp.isdir(osp.dirname(checkpoint_filepath)):
@@ -467,8 +467,9 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 # noinspection PyAbstractClass
 class ColorDescriptor_Video (ColorDescriptor_Base):
 
-    # Custom higher limit for video since, ya know, they have multiple frames.
-    CODEBOOK_DESCRIPTOR_LIMIT = 2000000
+    # # Custom higher limit for video since, ya know, they have multiple frames.
+    # # This also consumes more RAM that my computer has
+    # CODEBOOK_DESCRIPTOR_LIMIT = 2000000
 
     FRAME_EXTRACTION_PARAMS = {
         "second_offset": 0.2,       # Start 20% in
@@ -512,7 +513,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
                 p['second_offset'] = di.metadata().duration * p['second_offset']
                 p['max_duration'] = di.metadata().duration * p['max_duration']
-                fm = di.frame_map(**self.FRAME_EXTRACTION_PARAMS)
+                fm = di.frame_map(**p)
                 for frame, imgPath in fm.iteritems():
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di, frame)
@@ -549,18 +550,18 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     video_desc_mat_fps.append(dfp)
                     video_num_desc += i_shape[0]
 
-                    # If combined descriptor height exceeds the per-item limit,
-                    # generate a random subsample index list
-                    ssi = None
-                    if video_num_desc > per_item_limit:
-                        ssi = sorted(
-                            numpy.random.permutation(video_num_desc)[:per_item_limit]
-                        )
-                        video_num_desc = len(ssi)
+                # If combined descriptor height exceeds the per-item limit,
+                # generate a random subsample index list
+                ssi = None
+                if video_num_desc > per_item_limit:
+                    ssi = sorted(
+                        numpy.random.permutation(video_num_desc)[:per_item_limit]
+                    )
+                    video_num_desc = len(ssi)
 
-                    r_map[uid] = (video_info_mat_fps, video_desc_mat_fps,
-                                  running_height, ssi)
-                    running_height += video_num_desc
+                r_map[uid] = (video_info_mat_fps, video_desc_mat_fps,
+                              running_height, ssi)
+                running_height += video_num_desc
         pool.join()
 
         with SimpleTimer("Building master descriptor matrices...",

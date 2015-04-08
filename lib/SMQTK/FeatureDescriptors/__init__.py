@@ -209,10 +209,13 @@ class FeatureDescriptor (object):
             for d in data:
                 ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
                                                  args=(d, self))
+        pool.close()
 
         #: :type: dict of (int, numpy.core.multiarray.ndarray)
         r_dict = {}
         failures = False
+        perc_T = 0.0
+        perc_inc = 0.1
         with SimpleTimer("Collecting async results...", self.log.debug):
             for i, (uid, ar) in enumerate(ar_map.iteritems()):
                 feat = ar.get()
@@ -221,15 +224,19 @@ class FeatureDescriptor (object):
                     continue
                 else:
                     r_dict[uid] = feat
-                self.log.debug("Progress: [%d/%d] %3.3f%%",
-                               i+1, len(ar_map), float(i+1)/(len(ar_map)) * 100)
+
+                perc = float(i+1)/len(ar_map)
+                if perc >= perc_T:
+                    self.log.debug("Progress: [%d/%d] %3.3f%%",
+                                   i+1, len(ar_map),
+                                   float(i+1)/(len(ar_map)) * 100)
+                    perc_T += perc_inc
+        pool.join()
+
         # Check for failed generation
         if failures:
             raise RuntimeError("Failure occurred during data feature "
                                "computation. See logging.")
-
-        pool.close()
-        pool.join()
 
         return r_dict
 

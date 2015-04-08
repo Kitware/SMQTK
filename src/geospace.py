@@ -2,14 +2,15 @@ import datetime
 import dateutil.parser
 import json
 import pymongo
-# import urllib
 
 import girder.api.rest
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description
 
+# ----------------------------------------------------------------------------
 class Scraper(girder.api.rest.Resource):
+    """ Scrap a URL for images """
     def __init__(self):
         self.resourceName = 'scrape'
         self.route('GET', (), self.scrape)
@@ -22,12 +23,12 @@ class Scraper(girder.api.rest.Resource):
             import requests
             import BeautifulSoup as bs4
             page = requests.get(url)
-            #tree = html.fromstring(page.text)
             soup = bs4.BeautifulSoup(page.text)
             result = soup.findAll('img')
             result = [a.get('src') for a in result]
         return result
 
+# ----------------------------------------------------------------------------
 class Geospace(girder.api.rest.Resource):
     """API endpoint for Geospace data."""
 
@@ -39,6 +40,8 @@ class Geospace(girder.api.rest.Resource):
     def find(self, params):
         limit, offset, sort = self.getPagingParameters(params)
         result = {}
+        loc = None
+        search_radius = 1
 
         db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()
@@ -59,6 +62,7 @@ class Geospace(girder.api.rest.Resource):
 
         # Get location if provided
         location = params.get('location', None)
+        location_type = params.get('location_type', None)
         geospatial_query = None
         use_location = False
 
@@ -67,15 +71,25 @@ class Geospace(girder.api.rest.Resource):
             if (location != "*"):
                 use_location = True
 
-                # Reverse geocode location
-                from geopy.geocoders import Nominatim
-                geolocator = Nominatim()
-                loc = geolocator.geocode(location)
+                # Geocode location
+                if (location_type == "address"):
+                    from geopy.geocoders import Nominatim
+                    geolocator = Nominatim()
+                    loc = geolocator.geocode(location)
+                    loc = {"latitude":loc.latitude, "longitude": loc.longitude};
+                else:
+                    try:
+                        loc = location.split(",")
+                        loc = {"latitude":float(loc[0]), "longitude": float(loc[1])};
+                        search_radius = 0.1
+                    except:
+                        use_location = False
+                        pass
 
                 # Hard-coded to 10 units for now
                 geospatial_query = {   "loc" : {"$geoWithin" :
                         {
-                            "$center" : [[loc.latitude, loc.longitude], 1]
+                            "$center" : [[loc["latitude"], loc["longitude"]], search_radius]
                         }
                     }
                 }
@@ -118,6 +132,7 @@ class Geospace(girder.api.rest.Resource):
         .param('sortdir', '1 for ascending, -1 for descending (default=1)',
                required=False, dataType='int'))
 
+# ----------------------------------------------------------------------------
 def load(info):
     info['apiRoot'].data = Geospace()
     info['apiRoot'].scrape = Scraper()

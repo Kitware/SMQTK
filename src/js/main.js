@@ -13,6 +13,7 @@ $(function () {
   myApp.animationState = 0;
   myApp.timeRange = 0;
   myApp.location = null;
+  myApp.locationType="address";
   myApp.visibleDialogs = [];
   myApp.prevTimestamp = 0;
 
@@ -50,8 +51,8 @@ $(function () {
   // Bind events
   //--------------------------------------------------------------------------
   $("#search").on('keydown', function() {
-    console.log('searching');
     if(event.keyCode == 13) {
+        myApp.setLocationTypeToAddress();
         myApp.runQuery();
     }
   });
@@ -84,29 +85,6 @@ $(function () {
     }
 
     return {"data": newdata, "min": min, "max": max};
-  }
-
-  // Query given a time duration
-  //--------------------------------------------------------------------------
-  myApp.queryData = function(timeRange, location, callback) {
-    var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
-
-    if (location !== undefined || location !== null || location !== '') {
-      url += "&location="+location+"";
-    }
-
-    console.log(location);
-
-    $.ajax(url)
-      .done(function(data) {
-
-        if (callback !== undefined) {
-          callback(data);
-        }
-      })
-      .fail(function(err) {
-        console.log(err);
-      })
   }
 
   // Scrap a URL for images and return list of images URL
@@ -146,24 +124,18 @@ $(function () {
       .style('fillOpacity', 0.4)
       .style('fillColor', 'orange')
       .geoOn(geo.event.feature.mouseclick, function (evt) {
-        var div = evt.data.dialog || $(document.createElement('div')) ,
-                  i = 0, anchor = null, list, listItem;
-        div.empty();
-        list = $(document.createElement('ul'));
-        list.addClass('list-group');
-        div.css({
-          'top': evt.mouse.page.y,
-          'left': evt.mouse.page.x,
-        });
-        for (i = 0; i < evt.data.urls.length; ++i) {
-          anchor = $(document.createElement('a'));
-          listItem = $(document.createElement('li'));
-          listItem.addClass('list-group-item');
-          anchor.text(evt.data.urls[i]);
-          anchor.attr('href', evt.data.urls[i]);
-          listItem.append(anchor);
-          list.append(listItem);
+        var i = 0, anchor = null;
 
+        var currLocation = $("#search").val();
+        var clickedLocation = evt.data["field3"];
+        if (!currLocation || currLocation.length < 1 || currLocation !== myApp.location ||
+          clickedLocation !== myApp.location) {
+          $("#search").val(evt.data["field3"])
+          $("#search").trigger("geocode");
+          myApp.location = [evt.data["field6"], evt.data["field7"]];
+          myApp.setLocationTypeToLatLon();
+        }
+        for (i = 0; i < evt.data.urls.length; ++i) {
           // Scrap the URL
           scrapUrl(evt.data.urls[i], function(images) {
             myApp.displaySearchResults({
@@ -174,9 +146,9 @@ $(function () {
 
         if (myApp.location !== null || myApp.location !== undefined ||
         myApp.location !== "") {
-          myApp.queryData(myApp.timeRange, myApp.location, function(data) {
+          myApp.queryData(myApp.timeRange, {"value":myApp.location, "type":myApp.locationType},
+            function(data) {
               // Format the data
-              console.log(data);
               var adsPerDay = {}, newData = [], i, time, month, inst, timeString, item;
               for (i = 0; i < data.length; ++i) {
                 time = new Date(data[i]["field4"]);
@@ -206,8 +178,6 @@ $(function () {
               }
           });
         }
-
-        div.append(list);
       });
 
     myApp.map.draw();
@@ -215,6 +185,29 @@ $(function () {
     if (callback) {
       callback();
     }
+  }
+
+  // Query given a time duration
+  //--------------------------------------------------------------------------
+  myApp.queryData = function(timeRange, location, callback) {
+    var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
+
+    if (location !== undefined || location !== null || location !== '') {
+      url += "&location="+location.value+"&location_type="+location.type;
+    }
+
+    $.ajax(url)
+      .done(function(data) {
+
+        $("#statistics").empty();
+
+        if (callback !== undefined) {
+          callback(data);
+        }
+      })
+      .fail(function(err) {
+        console.log(err);
+      })
   }
 
   // Update extents and then render
@@ -228,7 +221,8 @@ $(function () {
     // Now run the query
     myApp.timeRange = $("#slider").slider("values");
     myApp.location = $("#search").val();
-    myApp.queryData(myApp.timeRange, myApp.location, function(data) {
+    myApp.queryData(myApp.timeRange,
+      {"value":myApp.location, "type":myApp.locationType}, function(data) {
       // Clear out any previous information
       myApp.clearLastSearch();
 
@@ -265,7 +259,7 @@ $(function () {
       if (elapsedTime * 0.001 > 1) {
         myApp.prevTimestamp = timestamp;
 
-        console.log('elapsedTime * 0.001 ', elapsedTime * 0.001);
+        //console.log('elapsedTime * 0.001 ', elapsedTime * 0.001);
 
         if (myApp.animationState == 3 || myApp.animationState == 1) {
           newRange = [ range[ 0 ] + delta, range[ 1 ] + delta ];
@@ -276,7 +270,6 @@ $(function () {
         if (range[1] === max) {
           newRange[0] = min;
           newRange[1] = newRange[0] + delta;
-          console.log('newRange[1]', newRange[1]);
         }
         if (newRange[0] >= max) {
           newRange[0] = min;
@@ -298,7 +291,8 @@ $(function () {
         myApp.location = $("#search-location").text();
 
         // Query the data and create vis again
-        myApp.queryData(myApp.timeRange, myApp.location, function(data) {
+        myApp.queryData(myApp.timeRange,
+          {"value":myApp.location, "type":myApp.locationType}, function(data) {
           render(data, function() {
             myApp.updateView(null, newRange);
 
@@ -316,12 +310,9 @@ $(function () {
 
   $.ajax( "/api/v1/data" )
     .done(function(range) {
-      var format = d3.time.format("%Y-%m-%d %H:%M:%S");
-      console.log(format.parse(range.duration.start.field4));
-      console.log(format.parse(range.duration.end.field4));
-
-      var min = format.parse(range.duration.start.field4);
-      var max = format.parse(range.duration.end.field4);
+      var format = d3.time.format("%Y-%m-%d %H:%M:%S"),
+          min = format.parse(range.duration.start.field4),
+          max = format.parse(range.duration.end.field4);
 
       // Set the date range
       $( "#slider" ).slider({
@@ -425,8 +416,8 @@ myApp.displayStatistics = function(data, clearPrev) {
   //   {"date": "2012-01-10",  "value": 43}
   // ];
   var spec = {
-    "width": 400,
-    "height": 200,
+    "width": $("#statistics").width() * 0.90,
+    "height": $("#statistics").height(),
     "padding": {"top": 10, "left": 30, "bottom": 30, "right": 30},
     "data": [
       {
@@ -488,9 +479,22 @@ myApp.displayStatistics = function(data, clearPrev) {
     $("#statistics").empty();
   }
 
-  vg.parse.spec(spec, function(chart) {
-  var view = chart({el:"#statistics"})
-    .update();
-  });
+  try {
+    vg.parse.spec(spec, function(chart) {
+    var view = chart({el:"#statistics"})
+      .update();
+    });
+  } catch(err) {
+  }
+}
+
+//--------------------------------------------------------------------------
+myApp.setLocationTypeToAddress = function() {
+  myApp.locationType = "address";
+}
+
+//--------------------------------------------------------------------------
+myApp.setLocationTypeToLatLon = function() {
+  myApp.locationType = "4326";
 }
 

@@ -405,7 +405,15 @@ class SVMIndexer_HIK (Indexer):
 
         # Test if the probability of an adjudicated positive is below a
         # threshold. If it is, invert probabilities.
-        if probs[self._uid2idx_map[tuple(pos_ids)[0]]] < 0.50:
+        # * Find lowest ranking positive example
+        # * Test if the probability valuation falls in the lower 50% of all
+        #   probabilities.
+        pos_probs = numpy.array(
+            [probs[self._uid2idx_map[uid]] for uid in pos_ids]
+        )
+        pos_mean_prob = pos_probs.sum() / pos_probs.size
+        total_mean_prob = probs.sum() / probs.size
+        if pos_mean_prob < total_mean_prob:
             probs = 1.0 - probs
 
         probability_map = dict(zip(self._uid_array, probs))

@@ -4,6 +4,7 @@ gevent
 imageio
 PIL
 pymongo
+scikit-learn
 sphinx
 numpy
 scipy

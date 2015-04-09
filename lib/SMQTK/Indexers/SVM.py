@@ -315,7 +315,7 @@ class SVMIndexer_HIK (Indexer):
         # given positive elements.
         #: :type: set of int
         auto_neg = set()
-        n = int(self._uid_array.size * self.AUTO_NEG_PERCENT)
+        n = max(1, int(self._uid_array.size * self.AUTO_NEG_PERCENT))
         for p_UID in pos_uids:
             auto_neg.update(self._least_similar_uid(p_UID, n))
 

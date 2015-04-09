@@ -6,7 +6,7 @@ import flask
 import logging
 import os.path
 
-from SMQTK.utils import DatabaseInfo
+from SMQTK.utils import DatabaseInfo, SimpleTimer
 from SMQTK.utils.configuration import IngestConfiguration
 from SMQTK.utils.MongoSessions import MongoSessionInterface
 
@@ -116,60 +116,28 @@ class SMQTKSearchApp (flask.Flask):
         #       to something that can be chosen by the user or a
         #       multi-feature/indexer fusion system.
         from .modules.IQR import IQRSearch
-        example_image_ic = IngestConfiguration("example_image")
 
-        self.module_is_svm_hik = IQRSearch(
-            "IS - SVM HIK", self,
-            example_image_ic,
-            "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
-            url_prefix="/is_svm_hik"
-        )
-        self.register_blueprint(self.module_is_svm_hik)
-        self.add_navigable_blueprint(self.module_is_svm_hik)
+        with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
+            ic_example_image = IngestConfiguration("example_image")
+            self.mod_example_image = IQRSearch(
+                "Image Search - Example Imagery",
+                self, ic_example_image,
+                "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
+                url_prefix='/image_example'
+            )
+            self.register_blueprint(self.mod_example_image)
+            self.add_navigable_blueprint(self.mod_example_image)
 
-        self.module_is_nn_hik_dist = IQRSearch(
-            'IS - NN_HIK - Distance', self,
-            example_image_ic,
-            'ColorDescriptor_Image_csift', 'NearestNeighbor_HIK_Distance',
-            url_prefix="/is_nn_hik_dist"
-        )
-        self.register_blueprint(self.module_is_nn_hik_dist)
-        self.add_navigable_blueprint(self.module_is_nn_hik_dist)
-
-        self.module_is_nn_hik_rank = IQRSearch(
-            "IS - NN_HIK - Rank", self,
-            example_image_ic,
-            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Rank",
-            url_prefix="/is_nn_hik_rank"
-        )
-        self.register_blueprint(self.module_is_nn_hik_rank)
-        self.add_navigable_blueprint(self.module_is_nn_hik_rank)
-
-        self.module_is_nn_hik_centroid = IQRSearch(
-            "IS - NN_HIK - Avg Centroids", self,
-            example_image_ic,
-            "ColorDescriptor_Image_csift", "NearestNeighbor_HIK_Centroids",
-            url_prefix="/is_nn_hik_centroids"
-        )
-        self.register_blueprint(self.module_is_nn_hik_centroid)
-        self.add_navigable_blueprint(self.module_is_nn_hik_centroid)
-
-        self.module_is_nn_hik_centroid_flann_cs = IQRSearch(
-            "IS - NN_HIK - FLANN Chi-Squared", self,
-            example_image_ic,
-            "ColorDescriptor_Image_csift",
-            "NearestNeighbor_HIK_Centroids_FLANN_CS",
-            url_prefix="/is_nn_hik_centroids_flann_cs"
-        )
-        self.register_blueprint(self.module_is_nn_hik_centroid_flann_cs)
-        self.add_navigable_blueprint(self.module_is_nn_hik_centroid_flann_cs)
-
-        # self.log.info("Initializing IQR Blueprint -- Video")
-        # self.module_vsearch = IQRSearch('VideoSearch', self, ingest_video,
-        #                                 'ColorDescriptor_Video_csift',
-        #                                 'SVMIndexer_HIK',
-        #                                 url_prefix="/vsearch")
-        # self.register_blueprint(self.module_vsearch)
+        with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
+            ic_example_video = IngestConfiguration("example_video")
+            self.mod_example_video = IQRSearch(
+                "Video Search - Example Videos",
+                self, ic_example_video,
+                "ColorDescriptor_Video_csift", "SVMIndexer_HIK",
+                url_prefix='/video_example'
+            )
+            self.register_blueprint(self.mod_example_video)
+            self.add_navigable_blueprint(self.mod_example_video)
 
         #
         # Basic routing

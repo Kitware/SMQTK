@@ -243,73 +243,26 @@ class FeatureDescriptor (object):
 
 def get_descriptors():
     """
-    Discover and return FeatureDescriptor classes found in the given plugin
-    directory. Keys will be the name of the discovered FeatureDescriptor class
-    with the paired value being the associated class object.
+    Discover and return FeatureDescriptor classes found in the given plugin search
+    directory. Keys in the returned map are the names of the discovered classes,
+    and the paired values are the actual class type objects.
 
     We look for modules (directories or files) that start with an alphanumeric
-    character ('_' prefixed files are "hidden").
+    character ('_' prefixed files/directories are hidden, but not recommended).
 
-    Within the module we look first for a variable named
-    "FEATURE_DESCRIPTOR_CLASS", which can either be a class object or a list of
-    class objects, to be exported. If the above variable is not found, we look
-    for a class by the same name of the module. If neither are found, we raise
-    a RuntimeError.
+    Within a module we first look for a helper variable by the name
+    ``FEATURE_DESCRIPTOR_CLASS``, which can either be a single class object or
+    an iterable of class objects, to be exported. If the variable is set to
+    None, we skip that module and do not import anything. If the variable is not
+    present, we look for a class by the same name and casing as the module. If
+    neither are found, the module is skipped.
 
-    :return: Map of discovered FeatureDescriptor types whose keys are the string
-        name of the class.
+    :return: Map of discovered class object of type ``FeatureDescriptor`` whose
+        keys are the string names of the classes.
     :rtype: dict of (str, type)
 
     """
-    log = logging.getLogger("get_descriptors")
-    class_map = {}
-
+    from SMQTK.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    log.debug("Searching in directory: %s", this_dir)
-
-    file_re = re.compile("^[a-zA-Z].*(?:\.py)?$")
-    standard_var = "FEATURE_DESCRIPTOR_CLASS"
-
-    for module_name in os.listdir(this_dir):
-        if file_re.match(module_name):
-            log.debug("Examining file: %s", module_name)
-
-            module_name = osp.splitext(module_name)[0]
-
-            module_path = '.'.join([__name__, module_name])
-            log.debug("Attempting import of: %s", module_path)
-            module = __import__(module_path, fromlist=__name__)
-
-            # Look for standard variable
-            fd_classes = []
-            if hasattr(module, standard_var):
-                fd_classes = getattr(module, standard_var, None)
-                if isinstance(fd_classes, (tuple, list)):
-                    log.debug('[%s] Loaded list of classes via variable: '
-                              '%s',
-                              module_name, fd_classes)
-                elif issubclass(fd_classes, FeatureDescriptor):
-                    log.debug("[%s] Loaded class via variable: %s",
-                              module_name, fd_classes)
-                    fd_classes = [fd_classes]
-                else:
-                    raise RuntimeError("[%s] %s variable not set to a "
-                                       "valid value.",
-                                       module_name)
-
-            # Try finding a class with the same name as the module
-            elif hasattr(module, module.__name__):
-                fd_classes = getattr(module, module.__name__, None)
-                if issubclass(fd_classes, FeatureDescriptor):
-                    log.debug("[%s] Loaded class by module name: %s",
-                              module_name, fd_classes)
-                    fd_classes = [fd_classes]
-                else:
-                    raise RuntimeError("[%s] Failed to find valid class by "
-                                       "module name",
-                                       module_name)
-
-            for cls in fd_classes:
-                class_map[cls.__name__] = cls
-
-    return class_map
+    helper_var = "FEATURE_DESCRIPTOR_CLASS"
+    return get_plugins(__name__, this_dir, helper_var, FeatureDescriptor)

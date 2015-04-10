@@ -227,6 +227,9 @@ class DataIngest (object):
         copy, instead returning the DataFile instance of the existing. Check max
         UID before and after this call to check for new ingest file or not.
 
+        :raises ValueError: When the given file is not valid for this ingest's
+            data type.
+
         :param origin_filepath: Path to a file that should be added to this
             ingest.
         :type origin_filepath: str
@@ -242,18 +245,22 @@ class DataIngest (object):
         else:
             origin_data = origin_filepath
 
-        # Overwriting last element in list so we don't have a single directory
-        # per file. With 8 splits of the 16-element hex hash, ~65k files max per
-        # leaf directory (16**16 total files).
-        containing_dir = os.path.join(self.content_directory,
-                                      *origin_data.split_md5sum(8)[:-1])
-        # Copy original file into ingest
         md5 = origin_data.md5sum
         if md5 in self._md5_id_map:
             self.log.debug("File already ingested: %s -> %s",
                            origin_data.filepath, origin_data)
             return self._id_data_map[self._md5_id_map[md5]]
 
+        # Fail if the data file has been determined invalid
+        if not origin_data.is_valid():
+            raise ValueError("Give file is not valid (%s)" % origin_filepath)
+
+        # Overwriting last element in list so we don't have a single directory
+        # per file. With 8 splits of the 16-element hex hash, ~65k files max per
+        # leaf directory (16**16 total files).
+        containing_dir = os.path.join(self.content_directory,
+                                      *origin_data.split_md5sum(8)[:-1])
+        # Copy original file into ingest
         if not os.path.isdir(containing_dir):
             os.makedirs(containing_dir)
 

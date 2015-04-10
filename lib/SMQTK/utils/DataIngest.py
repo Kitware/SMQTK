@@ -75,7 +75,7 @@ class DataIngest (object):
     def __len__(self):
         return len(self._id_data_map)
 
-    def DATA_FILE_TYPE(self, filepath, uid=None):
+    def DATA_FILE_TYPE(self, filepath, uid=None, md5_shortcut=None):
         """
         DataIngest data file factory method.
 
@@ -85,11 +85,18 @@ class DataIngest (object):
         :param uid: Optional UID of the item
         :type uid: int
 
+        :param md5_shortcut: MD5 hexdigest string, if its already known, to use
+            instead of needing to explicitly compute it. This saves processing
+            time.
+        :type md5_shortcut: str
+
         :return: New DataFile instance
         :rtype: DataFile
 
         """
-        return DataFile(filepath, uid)
+        d = DataFile(filepath, uid)
+        d._md5_cache = md5_shortcut
+        return d
 
     def _register_data_item(self, data):
         """ Internal add-data-to-maps function
@@ -113,8 +120,7 @@ class DataIngest (object):
             if m:
                 uid, md5, ext = m.groups()
                 uid = int(uid)
-                df = self.DATA_FILE_TYPE(filepath, uid=uid)
-                df._md5_cache = md5  # shortcut instead of reading file for md5
+                df = self.DATA_FILE_TYPE(filepath, uid=uid, md5_shortcut=md5)
                 self._register_data_item(df)
                 if uid > max_uid:
                     max_uid = uid
@@ -247,8 +253,8 @@ class DataIngest (object):
 
         md5 = origin_data.md5sum
         if md5 in self._md5_id_map:
-            self.log.debug("File already ingested: %s -> %s",
-                           origin_data.filepath, origin_data)
+            # self.log.debug("File already ingested: %s -> %s",
+            #                origin_data.filepath, origin_data)
             return self._id_data_map[self._md5_id_map[md5]]
 
         # Fail if the data file has been determined invalid

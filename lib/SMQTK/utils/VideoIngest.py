@@ -16,7 +16,7 @@ class VideoIngest (DataIngest):
     Ingest of VideoFile type elements.
     """
 
-    def DATA_FILE_TYPE(self, filepath, uid=None):
+    def DATA_FILE_TYPE(self, filepath, uid=None, md5_shortcut=None):
         """
         VideoIngest data file factory method.
 
@@ -26,19 +26,25 @@ class VideoIngest (DataIngest):
         :param uid: Optional UID of the item
         :type uid: int
 
+        :param md5_shortcut: MD5 hexdigest string, if its already known, to use
+            instead of needing to explicitly compute it. This saves processing
+            time.
+        :type md5_shortcut: str
+
         :return: New VideoFile instance
         :rtype: VideoFile
 
         """
         # Figure out the work directory for this video file in the ingest's work
         # space
-        md5_split = DataFile(filepath).split_md5sum(8)
-        md5 = ''.join(md5_split)
+        d = super(VideoIngest, self).DATA_FILE_TYPE(filepath, uid=uid,
+                                                    md5_shortcut=md5_shortcut)
+        md5_split = d.split_md5sum(8)
         v_work_dir = osp.join(self.work_directory, *md5_split)
         vf = VideoFile(filepath, v_work_dir, uid)
         # Punch in MD5 sum that we already spent the time computing and don't
         # want to waste
-        vf._DataFile__md5_cache = md5
+        vf._md5_cache = ''.join(md5_split)
         return vf
 
     @property

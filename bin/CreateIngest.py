@@ -47,6 +47,7 @@ def main():
         exit(1)
 
     ingest_config = IngestConfiguration(opts.ingest)
+    log.debug("Loading existing ingest...")
     ingest = ingest_config.new_ingest_instance()
     log.debug("Script arguments:\n%s" % args)
 

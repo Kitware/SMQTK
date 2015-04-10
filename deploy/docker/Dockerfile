@@ -57,7 +57,7 @@ RUN mkdir /home/kwuser/logs
 # Memex's proxy can't use the git protocol
 #RUN git config --global url."https://".insteadOf git://
 
-RUN git clone git://github.com/OpenGeoscience/vgl.git geoinfo_space && \
+RUN git clone git://github.com/memex-explorer/geoinfo_space.git && \
     cd geoinfo_space && \
     git checkout master && \
     git reset --hard

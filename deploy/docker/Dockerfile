@@ -1,5 +1,5 @@
 FROM ubuntu:14.04
-MAINTAINER David Manthey <aashish.chaudhary@kitware.com>
+MAINTAINER Aashish Chaudhary <aashish.chaudhary@kitware.com>
 
 # The environment variables beginning with KWDEMO can be used to map this demo
 # to the main url space
@@ -54,22 +54,20 @@ WORKDIR /home/kwuser
 
 RUN mkdir /home/kwuser/logs
 
-# XDATA's proxy can't use the git protocol
-RUN git config --global url."https://".insteadOf git://
+# Memex's proxy can't use the git protocol
+#RUN git config --global url."https://".insteadOf git://
 
-RUN git clone git://github.com/memex-explorer/geoinfo_space.git && \
+RUN git clone git://github.com/OpenGeoscience/vgl.git geoinfo_space && \
     cd geoinfo_space && \
     git checkout master && \
     git reset --hard
-WORKDIR /home/kwuser/geoapp
+WORKDIR /home/kwuser/geoinfospace
 #RUN git submodule update --init --recursive && \
 #    git submodule update --recursive && \
 #    cd geojs && \
 #    npm install && \
 #    grunt library
-RUN curl https://raw.githubusercontent.com/draperlaboratory/user-ale/master/helper-libs/javascript/draper.activity_logger-2.1.1.js -o client/optional/js/draper.activity_logger-2.1.1.js && \
-    curl https://raw.githubusercontent.com/draperlaboratory/user-ale/master/helper-libs/javascript/draper.activity_worker-2.1.1.js -o client/optional/static/draper.activity_worker-2.1.1.js
-RUN npm install
+#RUN npm install
 
 # COPY .vimrc /home/kwuser/.vimrc
 # RUN sudo chown kwuser:kwuser /home/kwuser/.vimrc

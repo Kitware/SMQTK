@@ -61,7 +61,7 @@ RUN git clone git://github.com/OpenGeoscience/vgl.git geoinfo_space && \
     cd geoinfo_space && \
     git checkout master && \
     git reset --hard
-WORKDIR /home/kwuser/geoinfospace
+WORKDIR /home/kwuser/geoinfo_space
 #RUN git submodule update --init --recursive && \
 #    git submodule update --recursive && \
 #    cd geojs && \

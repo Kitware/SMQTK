@@ -40,6 +40,9 @@ RUN pip install girder python-dateutil PyGreSQL==4.1.1 psycopg2 && \
     python -c "import bcrypt" && \
     girder-install web && \
     girder-install plugin
+
+RUN pip install geopy
+
 RUN npm install -g grunt-cli
 
 # bower does't work particularly well as root, so we create a non-root user

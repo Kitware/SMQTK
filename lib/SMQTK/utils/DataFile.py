@@ -9,6 +9,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import hashlib
 import logging
+import os
 
 
 class DataFile (object):
@@ -84,6 +85,13 @@ class DataFile (object):
             with open(self.filepath, 'rb') as data_file:
                 self._md5_cache = hashlib.md5(data_file.read()).hexdigest()
         return self._md5_cache
+
+    def is_valid(self):
+        """
+        :return: if the file this object wraps is valid
+        :rtype: bool
+        """
+        return os.path.isfile(self.filepath)
 
     def split_md5sum(self, parts):
         """

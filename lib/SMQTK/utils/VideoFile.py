@@ -9,12 +9,12 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import abc
 import imageio
+import multiprocessing.pool
 import numpy
 import os
 import os.path as osp
 import re
 import shutil
-import StringIO
 import subprocess
 import time
 
@@ -115,6 +115,20 @@ class VideoFile (DataFile):
             os.makedirs(self._work_dir)
         return self._work_dir
 
+    def is_valid(self):
+        """
+        Video files are additionally not valid if they do not valid metadata.
+
+        :return: if the file this object wraps is valid
+        :rtype: bool
+
+        """
+        try:
+            self.metadata()
+        except RuntimeError:
+            return False
+        return super(VideoFile, self).is_valid()
+
     def metadata(self):
         """
         :return: the simple metadata for this video
@@ -206,7 +220,7 @@ class VideoFile (DataFile):
         :param frames: Specific exact frames within the video to extract.
             Providing explicit frames causes other parameters to be ignored and
             only the frames specified here to be extracted and returned.
-        :type frames: list of int
+        :type frames: tuple of int or list of int
 
         :return: Map of frame-to-filepath for requested video frames
         :rtype: dict of (int, str)
@@ -261,13 +275,12 @@ class VideoFile (DataFile):
             ###
             # Determine frames to extract from existing files (if any)
             #
+            #: :type: list of (int, str)
             frames_to_process = []
             for i, img_file in sorted(frame_map.items()):
-                # If file doesn't exist, add it to the frame-to-file map,
-                # indicating that it needs processing.
                 if not osp.isfile(img_file):
                     self.log.debug('frame %d needs processing', i)
-                    frames_to_process.append(i)
+                    frames_to_process.append((i, img_file))
 
             ###
             # Extract needed frames via hook function that provides
@@ -379,8 +392,8 @@ class VideoFile (DataFile):
         This function is called within a locked section of code (filesystem
         based).
 
-        :param frame_list: List of frame numbers to extract. Must be sorted.
-        :type frame_list: list of int
+        :param frame_list: List of frame-number/file-path pairs to extract.
+        :type frame_list: list of (int, str)
 
         :param output_ext: Output file extension
         :type output_ext: str
@@ -398,34 +411,51 @@ class VideoFile (DataFile):
         os.makedirs(tmp_extraction_dir)
 
         md = self.metadata()
-        frame_times = numpy.array(frame_list) / md.fps
-        sPIPE = subprocess.PIPE
-        # TODO: thread/multiprocess this.
-        for f, t in zip(frame_list, frame_times):
-            cmd = ['ffmpeg', '-accurate_seek', '-ss', str(t),
-                   '-i', self.filepath,
-                   '-frames:v', '1',
-                   osp.join(tmp_extraction_dir, "%08d.%s" % (f, output_ext))]
-            self.log.debug("Frame extraction command: %s", cmd)
 
-            p = subprocess.Popen(cmd, stdout=sPIPE, stderr=sPIPE)
-            _, _ = p.communicate()
-            if p.returncode != 0:
-                raise RuntimeError("FFmpeg failed to extract frame at time %f! "
-                                   "(return code: %d)"
-                                   % (t, p.returncode))
+        tp = multiprocessing.pool.ThreadPool()
+        # Mapping of frame to (result, output_filepath)
+        #: :type: dict of (int, (AsyncResult, str))
+        rmap = {}
+        for f, ofp in frame_list:
+            tfp = osp.join(tmp_extraction_dir,
+                           self._get_file_name(f, output_ext))
+            t = f / md.fps
+            rmap[f] = (
+                tp.apply_async(self._thread_ffmpeg_extract_frame,
+                               args=(t, self.filepath, tfp)),
+                tfp
+            )
+        tp.close()
+        # Check for failures
+        try:
+            for f, ofp in frame_list:
+                r, tfp = rmap[f]
+                r.get()  # wait for finish
+                if not osp.isfile(tfp):
+                    raise RuntimeError("Failed to generated file for frame %d"
+                                       % f)
+                os.rename(tfp, ofp)
+        except RuntimeError, ex:
+            tp.terminate()
+            raise RuntimeError('Failed to extract all frames requested: %s'
+                               % str(ex))
+        finally:
+            tp.join()
 
-        generated_files = [osp.join(tmp_extraction_dir, f)
-                           for f in sorted(os.listdir(tmp_extraction_dir))]
-
-        # If there is a mismatch in number of frames requested and number of
-        # frames produced, something went wrong
-        if len(generated_files) != len(frame_list):
-            raise RuntimeError("Failed to extract all frames requested!")
-
-        # Move generated files out of temp directory
-        for fn, gf in zip(frame_list, generated_files):
-            os.rename(gf, osp.join(self.work_directory,
-                                   self._get_file_name(fn, output_ext)))
         os.removedirs(tmp_extraction_dir)
         self.log.debug("Frame extraction complete")
+
+    @staticmethod
+    def _thread_ffmpeg_extract_frame(t, input_filepath, output_filepath):
+        """
+        Extract a frame a the given time ``t`` from the input video file.
+        """
+        cmd = ['ffmpeg', '-accurate_seek', '-ss', str(t), '-i', input_filepath,
+               '-frames:v', '1', output_filepath]
+        sPIPE = subprocess.PIPE
+        p = subprocess.Popen(cmd, stdout=sPIPE, stderr=sPIPE)
+        _, _ = p.communicate()
+        if p.returncode != 0:
+            raise RuntimeError("FFmpeg failed to extract frame at time %f! "
+                               "(return code: %d)"
+                               % (t, p.returncode))

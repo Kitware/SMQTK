@@ -49,14 +49,21 @@ def main():
     ingest_config = IngestConfiguration(opts.ingest)
     ingest = ingest_config.new_ingest_instance()
     log.debug("Script arguments:\n%s" % args)
-    for g in args:
-        g = osp.expanduser(g)
-        if osp.isfile(g):
-            ingest.add_data_file(g)
+
+    def ingest_file(fp):
+        try:
+            ingest.add_data_file(fp)
+        except ValueError:
+            log.warning("File '%s' not valid, skipping.", fp)
+
+    for f in args:
+        f = osp.expanduser(f)
+        if osp.isfile(f):
+            ingest_file(f)
         else:
-            log.debug("Expanding glob: %s" % g)
-            for fp in glob.glob(g):
-                ingest.add_data_file(fp)
+            log.debug("Expanding glob: %s" % f)
+            for g in glob.glob(f):
+                ingest_file(g)
 
 
 if __name__ == '__main__':

@@ -43,6 +43,7 @@ class Geospace(girder.api.rest.Resource):
         loc = None
         search_radius = 1
 
+        # TODO read it from the config file
         db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()
         coll = database['ads']

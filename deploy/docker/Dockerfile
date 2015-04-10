@@ -10,7 +10,7 @@ ENV KWDEMO_SRCURL https://github.com/memex-explorer/geoinfo_space
 ENV KWDEMO_DESC Memex geoinfo data explorer
 ENV KWDEMO_IMG "geoinfospace.png"
 
-EXPOSE 8081
+EXPOSE 8001
 
 RUN apt-get update && apt-get install -y curl \
     software-properties-common \
@@ -52,7 +52,7 @@ USER kwuser
 
 WORKDIR /home/kwuser
 
-RUN mkdir /home/kwuser/logs
+RUN mkdir -p /home/kwuser/.girder/logs
 
 # Memex's proxy can't use the git protocol
 #RUN git config --global url."https://".insteadOf git://
@@ -61,18 +61,17 @@ RUN git clone git://github.com/memex-explorer/geoinfo_space.git && \
     cd geoinfo_space && \
     git checkout master && \
     git reset --hard
-WORKDIR /home/kwuser/geoinfo_space
-#RUN git submodule update --init --recursive && \
-#    git submodule update --recursive && \
-#    cd geojs && \
-#    npm install && \
-#    grunt library
-#RUN npm install
 
-# COPY .vimrc /home/kwuser/.vimrc
-# RUN sudo chown kwuser:kwuser /home/kwuser/.vimrc
-COPY makelocalcfg.py /home/kwuser/makelocalcfg.py
+WORKDIR /home/kwuser/geoinfo_space
+
+COPY makelocalcfg.py  /home/kwuser/makelocalcfg.py
+
+USER root
+
+RUN python /home/kwuser/makelocalcfg.py > /etc/girder.cfg
+
+USER kwuser
 
 ENV KWDEMO_READY TRUE
 
-CMD ["sh", "-c", "python /home/kwuser/makelocalcfg.py > conf/geoapp.local.cfg && python server/main.py"]
+CMD ["python", "src/main.py"]

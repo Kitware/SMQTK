@@ -14,17 +14,19 @@ class Atom (object):
     A single Descriptor/Indexer unit pairing.
     """
 
-    def __init__(self, descriptor, indexer):
+    def __init__(self, descriptor, indexers):
         """
         :param descriptor: FeatureDescriptor instance to contain
         :type descriptor: SMQTK.FeatureDescriptors.FeatureDescriptor
 
-        :param indexer: Indexer instance to contain.
-        :type indexer: SMQTK.Indexers.Indexer
+        :param indexers: One or more indexer instances to associate with the
+            provided descriptor (i.e. have models generated with the given
+            descriptor's features).
+        :type indexers: collections.Iterable of SMQTK.Indexers.Indexer
 
         """
         self._descriptor = descriptor
-        self._indexer = indexer
+        self._indexer_list = list(indexers)
 
     def extend(self, data):
         """
@@ -36,15 +38,17 @@ class Atom (object):
 
         """
         feature = self._descriptor.compute_feature(data)
-        self._indexer.extend_model({data.uid: feature})
+        for i in self._indexer_list:
+            i.extend_model({data.uid: feature})
 
     def rank(self, pos, neg=()):
         """
-        Rank the current model, returning a mapping of element IDs to a
-        ranking valuation. This valuation should be a probability in the range
-        of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
+        Perform ranking for all indexers present in this atom. Returns a list of
+        ranking dictionaries (see documentation for
+        SMQTK.Indexers.Indexer.rank_model) in the same number and order as
+        indexers were provided to this atom during instantiation.
 
-        :raises RuntimeError: No current model.
+        :raises RuntimeError: No current model in one or more indexers.
 
         :param pos: List of positive data IDs
         :type pos: collections.Iterable of int
@@ -53,10 +57,13 @@ class Atom (object):
         :type neg: collections.Iterable of int
 
         :return: Mapping of ingest ID to a rank.
-        :rtype: dict of (int, float)
+        :rtype: list of (dict of (int, float))
 
         """
-        return self._indexer.rank_model(pos, neg)
+        rank_results = []
+        for i in self._indexer_list:
+            rank_results.append(i.rank_model(pos, neg))
+        return rank_results
 
     def reset(self):
         """
@@ -66,4 +73,5 @@ class Atom (object):
         :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        self._indexer.reset()
+        for i in self._indexer_list:
+            i.reset()

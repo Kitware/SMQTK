@@ -15,7 +15,7 @@ class Reactor (object):
     catalyst fusor.
     """
 
-    def __init__(self, atoms, catalyst):
+    def __init__(self, atoms, catalyst, atom_catalysts=None):
         """
         :param atoms: Iterable of atoms to function over
         :type atoms: collections.Iterable of SMQTK.Fusion.Atom.Atom
@@ -23,9 +23,27 @@ class Reactor (object):
         :param catalyst: Catalyst implementation instance
         :type catalyst: SMQTK.Fusion.Catalyst.Catalyst
 
+        :param atom_catalysts: Optional list catalyst instances to apply
+            directly to the local output of a single atom. This must be the same
+            length as the list of atoms provided. None may be provided in this
+            list to indicate that the atom in the associated index should not
+            have a catalyst applied to its output. The results of these
+            "sub-fusions", plus any atom results that didn't go through a
+            sub-catalyst, are input to the final catalyst.
+        :type atom_catalysts:
+            collections.Iterable of (None or SMQTK.Fusion.Catalyst.Catalyst)
+
         """
-        self._atom_list = atoms
+        #: :type: tuple of SMQTK.Fusion.Atom.Atom
+        self._atom_list = tuple(atoms)
         self._catalyst = catalyst
+
+        if atom_catalysts:
+            #: :type: tuple of (None or SMQTK.Fusion.Catalyst.Catalyst)
+            self._atom_catalysts = tuple(atom_catalysts)
+        else:
+            #: :type: tuple of (None or SMQTK.Fusion.Catalyst.Catalyst)
+            self._atom_catalysts = (None,) * len(self._atom_list)
 
     def extend(self, data):
         """
@@ -55,8 +73,11 @@ class Reactor (object):
 
         """
         atom_ranks = []
-        for a in self._atom_list:
-            atom_ranks.append(a.rank(pos, neg))
+        for a, c in zip(self._atom_list, self._atom_catalysts):
+            if c:
+                atom_ranks.append(c.fuze(*a.rank(pos, neg)))
+            else:
+                atom_ranks.extend(a.rank(pos, neg))
         return self._catalyst.fuse(*atom_ranks)
 
     def reset(self):
@@ -68,4 +89,6 @@ class Reactor (object):
         """
         for a in self._atom_list:
             a.reset()
+        for c in self._atom_catalysts:
+            c and c.reset()
         self._catalyst.reset()

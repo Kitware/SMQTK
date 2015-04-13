@@ -94,7 +94,9 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
 
     log.debug("launching executable subprocess")
     cmd = [cd_exe, img_filepath, '--output', tmp_path,
-           '--detector', 'densesampling',  # "harrislaplace"
+           # "harrislaplace" is another option here, but this can result in 0
+           # descriptors for an image, and is also slower.
+           '--detector', 'densesampling',
            '--ds_spacing', str(ds_spacing),
            '--descriptor', descriptor_type]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

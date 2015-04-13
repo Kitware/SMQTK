@@ -8,6 +8,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import logging
+
 
 class Atom (object):
     """
@@ -28,18 +30,29 @@ class Atom (object):
         self._descriptor = descriptor
         self._indexer_list = list(indexers)
 
-    def extend(self, data):
+    @property
+    def log(self):
+        """
+        :return: logging object for this class
+        :rtype: logging.Logger
+        """
+        return logging.getLogger('.'.join((self.__module__,
+                                           self.__class__.__name__)))
+
+    def extend(self, *data):
         """
         Extend this atom's indexer mode for the given data element. The
         contained descriptor generated the necessary feature.
 
-        :param data: Data element to extend the index with
-        :type data: SMQTK.utils.DataFile.DataFile
+        :param data: Data element(s) to extend the index with
+        :type data: list of SMQTK.utils.DataFile.DataFile
 
         """
-        feature = self._descriptor.compute_feature(data)
+        self.log.debug("Computing features for data")
+        feature_map = self._descriptor.compute_feature_async(*data)
+        self.log.debug("Extending indexer models")
         for i in self._indexer_list:
-            i.extend_model({data.uid: feature})
+            i.extend_model(feature_map)
 
     def rank(self, pos, neg=()):
         """

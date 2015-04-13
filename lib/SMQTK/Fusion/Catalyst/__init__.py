@@ -28,6 +28,10 @@ class Catalyst (object):
 
     @property
     def log(self):
+        """
+        :return: logging object for this class
+        :rtype: logging.Logger
+        """
         return logging.getLogger('.'.join((self.__module__,
                                            self.__class__.__name__)))
 

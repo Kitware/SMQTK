@@ -8,6 +8,8 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import logging
+
 
 class Reactor (object):
     """
@@ -45,16 +47,25 @@ class Reactor (object):
             #: :type: tuple of (None or SMQTK.Fusion.Catalyst.Catalyst)
             self._atom_catalysts = (None,) * len(self._atom_list)
 
-    def extend(self, data):
+    @property
+    def log(self):
         """
-        Extend atoms with the given data element.
+        :return: logging object for this class
+        :rtype: logging.Logger
+        """
+        return logging.getLogger('.'.join((self.__module__,
+                                           self.__class__.__name__)))
 
-        :param data: Data element to extend the index with
-        :type data: SMQTK.utils.DataFile.DataFile
+    def extend(self, *data):
+        """
+        Serially extend atoms with the given data element.
+
+        :param data: Data element(s) to extend the index with
+        :type data: list of SMQTK.utils.DataFile.DataFile
 
         """
         for a in self._atom_list:
-            a.extend(data)
+            a.extend(*data)
 
     def rank(self, pos, neg=()):
         """

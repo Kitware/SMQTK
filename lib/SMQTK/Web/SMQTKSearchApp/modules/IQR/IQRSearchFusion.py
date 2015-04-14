@@ -170,18 +170,11 @@ class IQRSearchFusion (flask.Blueprint):
                         iqr_sess.adjudicate((upload_data.uid,))
                         return "Already Ingested"
 
-                # Compute feature for data -- non-modifying
-                self.log.debug("[%s::%s] Computing feature for file",
-                               iqr_sess.uuid, fid)
-                feat = iqr_sess.descriptor.compute_feature(upload_data)
-
-                # Extend indexer model with feature data -- modifying
                 with iqr_sess:
-                    self.log.debug("[%s::%s] Extending indexer model with "
-                                   "feature", iqr_sess.uuid, fid)
-                    iqr_sess.indexer.extend_model({upload_data.uid: feat})
-
-                    # of course, add the new data element as a positive
+                    # Compute feature for data -- non-modifying
+                    self.log.debug("[%s::%s] Computing feature for file",
+                                   iqr_sess.uuid, fid)
+                    iqr_sess.reactor.extend(upload_data)
                     iqr_sess.adjudicate((upload_data.uid,))
 
                 return "Finished Ingestion"
@@ -439,7 +432,7 @@ class IQRSearchFusion (flask.Blueprint):
         Get the current IQR Session instance.
 
         :return: IqrSession instance for the current session.
-        :rtype: SMQTK.IQR.iqr_session.IqrSession
+        :rtype: SMQTK.IQR.iqr_session_fusion.IqrSessionFusion
 
         """
         with self._iqr_controller:

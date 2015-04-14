@@ -7,6 +7,9 @@ import os.path as osp
 import smqtk_config
 
 from SMQTK.FeatureDescriptors import get_descriptors
+from SMQTK.Fusion.Atom import Atom
+from SMQTK.Fusion.Catalyst import get_catalysts
+from SMQTK.Fusion.Reactor import Reactor
 from SMQTK.Indexers import get_indexers
 from SMQTK.utils import DataIngest, VideoIngest
 
@@ -83,6 +86,7 @@ class IngestConfiguration (object):
 
         self.descriptor_config = label_config['descriptors']
         self.indexer_config = label_config['indexers']
+        self.fusion_config = label_config['fusion']
 
     def new_ingest_instance(self, data_dir=None, work_dir=None,
                             starting_index=0):
@@ -113,8 +117,7 @@ class IngestConfiguration (object):
 
     def new_descriptor_instance(self, fd_label, data_dir=None, work_dir=None):
         """
-        Get a new descriptor instance. Unless overrides are given, settings for
-        the descriptor instance are taken from the current ingest configuration.
+        Get a new descriptor instance.
 
         :raises KeyError: If the given label is not associated with a
             FeatureDescriptor class type.
@@ -124,10 +127,12 @@ class IngestConfiguration (object):
         :param fd_label: The FeatureDescriptor type label.
         :type fd_label: str
 
-        :param data_dir: Data directory override.
+        :param data_dir: Data directory override, otherwise uses configured
+            directory.
         :type data_dir: str
 
-        :param work_dir: Working directory override
+        :param work_dir: Working directory override, otherwise uses configured
+            directory.
         :type work_dir: str
 
         :return: New instance of the given FeatureDescriptor type for this
@@ -162,8 +167,7 @@ class IngestConfiguration (object):
     def new_indexer_instance(self, indexer_label, fd_label,
                              data_dir=None, work_dir=None):
         """
-        Get a new indexer instance. Unless overrides are given, settings for
-        the indexer instance are taken from the current ingest configuration.
+        Get a new indexer instance.
 
         NOTE: This assumes a 1-to-1 relationship between descriptors and
         indexers, i.e. indexers only take features from on consistent descriptor
@@ -182,10 +186,12 @@ class IngestConfiguration (object):
         :param fd_label: The FeatureDescriptor type label.
         :type fd_label: str
 
-        :param data_dir: Data directory override.
+        :param data_dir: Data directory override, otherwise uses configured
+            directory.
         :type data_dir: str
 
-        :param work_dir: Working directory override
+        :param work_dir: Working directory override, otherwise uses configured
+            directory.
         :type work_dir: str
 
         :return: New instance of the given Indexer type for this configuration
@@ -214,3 +220,78 @@ class IngestConfiguration (object):
                      self.indexer_config['listing'][indexer_label]['dir'],
                      self.descriptor_config['listing'][fd_label]['dir'])
         )
+
+    def get_available_catalyst_labels(self):
+        """
+        :return: List of Catalyst configuration labels for this ingest
+            configuration.
+        :rtype: list of str
+        """
+        return self.fusion_config['catalysts']['listing'].keys()
+
+    def new_catalyst_instance(self, catalyst_label, data_dir=None,
+                              work_dir=None):
+        """
+        Get a new Catalyst instance.
+
+        :param catalyst_label: The Catalyst type label.
+        :type catalyst_label: str
+
+        :param data_dir: Data directory override, otherwise uses configured
+            directory.
+        :type data_dir: str
+
+        :param work_dir: Working directory override, otherwise uses configured
+            directory.
+        :type work_dir: str
+
+        :return: New fusion Catalyst instance.
+        :rtype: SMQTK.Fusion.Catalyst.Catalyst
+
+        """
+        catalyst_type = get_catalysts()[catalyst_label]
+        catalyst_config = self.fusion_config['catalysts']
+        if catalyst_label not in catalyst_config['listing']:
+            raise ValueError("No configuration for Catalyst type '%s' in "
+                             "ingest configuration '%s'"
+                             % (catalyst_label, self.label))
+
+        return catalyst_type(
+            data_dir or
+            osp.join(self.data_dir, catalyst_config['dir'],
+                     catalyst_config['listing'][catalyst_label]['dir'])
+            ,
+            work_dir or
+            osp.join(self.work_dir, catalyst_config['dir'],
+                     catalyst_config['listing'][catalyst_label]['dir'])
+        )
+
+    def new_reactor(self, catalyst_label):
+        """
+        Construct a new descriptor/indexer Reactor instance as configured for
+        this ingest. This creates new instances of descriptors and indexers
+
+        :param catalyst_label: The Catalyst type label.
+        :type catalyst_label: str
+
+        :return: New SMQTK Reactor instance
+        :rtype: SMQTK.Fusion.Reactor.Reactor
+
+        """
+        # Build from "fusion" section under ingest configuration
+        fusion_catalyst = self.new_catalyst_instance(catalyst_label)
+
+        #: :type: list of dict
+        atom_configs = self.fusion_config['atoms']
+        atom_instances = []
+        for a_config in atom_configs:
+            d_label = a_config['descriptor']
+            descriptor = self.new_descriptor_instance(d_label)
+            indexers = []
+            for i_label in a_config['indexers']:
+                indexers.append(self.new_indexer_instance(i_label, d_label))
+            atom_instances.append(Atom(descriptor, indexers))
+
+            # TODO: Collect sub-catalyst instances if/when specified
+
+        return Reactor(atom_instances, fusion_catalyst)

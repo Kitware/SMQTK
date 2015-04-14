@@ -327,6 +327,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
 
         # Quantization
         # - loaded the model at class initialization if we had one
+        self.log.debug("Quantizing descriptors")
         pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
         flann = pyflann.FLANN()
         flann.load_index(self.flann_index_filepath, self._codebook)
@@ -351,6 +352,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
         # self.log.debug("Normalized histogram: %s", h)
 
         if not no_checkpoint:
+            self.log.debug("Saving checkpoint feature file")
             if not osp.isdir(osp.dirname(checkpoint_filepath)):
                 safe_create_dir(osp.dirname(checkpoint_filepath))
             numpy.save(checkpoint_filepath, h)
@@ -468,8 +470,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 class ColorDescriptor_Video (ColorDescriptor_Base):
 
     # # Custom higher limit for video since, ya know, they have multiple frames.
-    # # This also consumes more RAM that my computer has
-    # CODEBOOK_DESCRIPTOR_LIMIT = 2000000
+    CODEBOOK_DESCRIPTOR_LIMIT = 1500000
 
     FRAME_EXTRACTION_PARAMS = {
         "second_offset": 0.2,       # Start 20% in

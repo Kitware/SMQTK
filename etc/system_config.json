@@ -58,6 +58,29 @@
                             "dir": "SVM_HIK"
                         }
                     }
+                },
+                // Fusion settings
+                "fusion": {
+                    // Parameters defining construction of Reactor instance
+                    "catalysts": {
+                        "dir": "Fusion/Catalysts",
+                        "listing": {
+                            "Average": {
+                                "dir": "Average"
+                            }
+                        }
+                    },
+                    "atoms": [
+                        {
+                            "descriptor": "ColorDescriptor_Image_csift",
+                            "indexers": [
+                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
+                            ]
+                            // TODO: Need sub-catalyst parameter option
+                        }
+                        // Multiple atoms can be defined for each content
+                        // descriptor base available or wanted.
+                    ]
                 }
             },
 
@@ -94,6 +117,24 @@
                             "dir": "SVM_HIK"
                         }
                     }
+                },
+                "fusion": {
+                    "catalysts": {
+                        "dir": "Fusion/Catalysts",
+                        "listing": {
+                            "Average": {
+                                "dir": "Average"
+                            }
+                        }
+                    },
+                    "atoms": [
+                        {
+                            "descriptor": "ColorDescriptor_Image_csift",
+                            "indexers": [
+                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
+                            ]
+                        }
+                    ]
                 }
             }
         }

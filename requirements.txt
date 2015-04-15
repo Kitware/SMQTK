@@ -1,4 +1,5 @@
 flask
+flask-basicauth
 flask-login
 gevent
 imageio

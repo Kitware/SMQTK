@@ -6,6 +6,7 @@ Start SMQTK SearchApp
 """
 
 import logging
+from flask.ext.basicauth import BasicAuth
 
 from SMQTK.utils import bin_utils
 
@@ -35,6 +36,8 @@ def main():
                       help="Run port specification override. This will "
                            "override all other configuration method "
                            "specifications.")
+    parser.add_option("--use-basic-auth", action="store_true", default=False,
+                      help="Use global basic authentication as configured.")
     parser.add_option('-l', '--list', default=False, action="store_true",
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
@@ -61,6 +64,7 @@ def main():
     use_reloader = opts.reload
     use_threading = opts.threaded
     application_name = opts.application
+    use_basic_auth = opts.use_basic_auth
 
     if application_name is None:
         raise ValueError("No application name given!")
@@ -71,6 +75,10 @@ def main():
         raise ValueError("No available application by the name of '%s'"
                          % application_name)
     app = App(opts.config)
+    if use_basic_auth:
+        app.config["BASIC_AUTH_FORCE"] = True
+        BasicAuth(app)
+
     app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
 

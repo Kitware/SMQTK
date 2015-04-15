@@ -10,7 +10,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import flask
 import logging
-import mimetypes
 import multiprocessing
 import os
 import requests
@@ -32,8 +31,7 @@ class DescriptorServiceServer (flask.Flask):
     Computes the requested descriptor for the given file and returns that via
     a JSON structure.
 
-    Standarad return JSON:
-
+    Standard return JSON:
     {
         "success": <bool>,
         "descriptor": [ <float>, ... ]
@@ -117,9 +115,8 @@ class DescriptorServiceServer (flask.Flask):
             else:
                 r = requests.get(uri)
                 if r.ok:
-                    # ext = r.headers['content-type'].rsplit('/', 1)[1]
-                    ext = mimetypes.guess_extension(r.headers['content-type'])
-                    fd, filepath = tempfile.mkstemp(suffix=ext)
+                    ext = r.headers['content-type'].rsplit('/', 1)[1]
+                    fd, filepath = tempfile.mkstemp(suffix='.'+ext)
                     os.close(fd)
                     with open(filepath, 'wb') as ofile:
                         ofile.write(r.content)

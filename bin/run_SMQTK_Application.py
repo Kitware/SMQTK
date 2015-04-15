@@ -52,7 +52,7 @@ def main():
         log.info("")
         for e in APPLICATIONS:
             log.info("\t%s" % e.__name__)
-            log.info("")
+        log.info("")
         exit(0)
 
     host = opts.host

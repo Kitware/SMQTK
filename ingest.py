@@ -11,7 +11,7 @@ with open("istdata.txt", "r") as file:
     reader = csv.reader(file)
     time_pattern = '%Y-%m-%d %H:%M:%S'
     for row in reader:
-        if row[6] != "" and row[7] != "":
+        if len(row) >= 8 and (row[6] != "" and row[7] != ""):
             ad_time = row[4]
             if (ad_time is not None and ad_time != "None"):
                 print ad_time

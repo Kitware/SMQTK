@@ -46,19 +46,21 @@ class Geospace(girder.api.rest.Resource):
         # TODO read it from the config file
         db = pymongo.MongoClient('mongodb://localhost:27017/ist')
         database = db.get_default_database()
-        coll = database['ads']
+        coll = database['ads2']
 
         # Get valid time range
         time_range = params.get('duration', None)
         if (time_range is None):
             result['duration'] = {
                 "start": [i for i in coll.find(
-                    {"field4": { "$exists": True, "$nin": ["None"] } } ).sort(
-                        "field4",  1).limit(1)][0],
+                    {"time": { "$exists": True, "$nin": ["None"] } } ).sort(
+                        "time",  1).limit(1)][0],
                 "end":   [i for i in coll.find(
-                    {"field4": { "$exists": True, "$nin": ["None"] } } ).sort(
-                        "field4", -1).limit(1)][0]
+                    {"time": { "$exists": True, "$nin": ["None"] } } ).sort(
+                        "time", -1).limit(1)][0]
             };
+
+            print result
             return result;
 
         # Get location if provided
@@ -101,18 +103,18 @@ class Geospace(girder.api.rest.Resource):
         start = time_range[0]
         end = time_range[1]
 
-        start_time = datetime.datetime.fromtimestamp(start).isoformat()
-        end_time = datetime.datetime.fromtimestamp(end).isoformat()
+        start_time = start
+        end_time = end
 
         if not use_location:
-            query_result = coll.find({"field4":
+            query_result = coll.find({"time":
                 {"$gte": start_time, "$lt": end_time}},
                 skip=offset, limit=limit, sort=sort)
         else:
             # When using location do not limit by time for now
             query_result = coll.find( {"$and":[
                     geospatial_query,
-                    {"field4":
+                    {"time":
                         {"$gte": start_time, "$lt": end_time}
                     }]
                 },

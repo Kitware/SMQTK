@@ -12,13 +12,13 @@ tools.proxy.on: True
 
 [database]
 uri: "mongodb://%HOSTIP%:27017/%ROOTPATH%"
+isuri: "mongodb://%HOSTIP%:27017/ist"
 
 [server]
 # Set to "production" or "development"
 mode: "production"
-api_root: "api/v1"
-static_root: "static"
-api_static_root: "../static"
+api_root: "../api/v1"
+static_root: "girder/static"
 """
 
 hostip = os.popen(

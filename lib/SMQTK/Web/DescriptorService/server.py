@@ -16,7 +16,7 @@ import requests
 import tempfile
 
 from SMQTK.utils.configuration import IngestConfiguration
-from SMQTK.utils import DataFile
+from SMQTK.utils import DataFile, SimpleTimer
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -120,21 +120,27 @@ class DescriptorServiceServer (flask.Flask):
             filepath = None
             remove_file = False
             if uri[:7] == "file://":
+                self.log.debug("Given local disk filepath")
                 filepath = uri[7:]
                 if not os.path.isfile(filepath):
                     success = False
                     message = "File URI did not point to an existing file on " \
                               "disk."
             else:
+                self.log.debug("Given URL")
                 r = requests.get(uri)
                 if r.ok:
                     ext = r.headers['content-type'].rsplit('/', 1)[1]
                     fd, filepath = tempfile.mkstemp(suffix='.'+ext)
+                    self.log.debug("Saving image with type '%s' to: %s",
+                                   r.headers['content-type'], filepath)
                     os.close(fd)
                     with open(filepath, 'wb') as ofile:
                         ofile.write(r.content)
+                    self.log.debug("Image file written.")
                     remove_file = True
                 else:
+                    self.log.debug("Request failed")
                     success = False
                     message = "Web request did not yield an OK response " \
                               "(received %d :: %s)" \
@@ -146,17 +152,24 @@ class DescriptorServiceServer (flask.Flask):
 
                 # Get the descriptor instance, creating it if necessary
                 index = (ingest, descriptor_type)
+                self.log.debug("Index requested: %s", index)
                 if index not in descriptor_cache:
                     ic = IngestConfiguration(ingest)
+                    self.log.debug("Creating descriptor for requested "
+                                   "index %s", index)
                     with descriptor_cache_lock:
                         descriptor_cache[index] = \
                             ic.new_descriptor_instance(descriptor_type)
+                self.log.debug("Getting descriptor for index: %s", index)
                 with descriptor_cache_lock:
                     d = descriptor_cache[index]
-                descriptor = d.compute_feature(df)
-                message = "Descriptor computed of type '%s'" % descriptor_type
+                with SimpleTimer("Computing descriptor...", self.log.debug):
+                    descriptor = d.compute_feature(df)
+                    message = "Descriptor computed of type '%s'" \
+                              % descriptor_type
 
                 if remove_file:
+                    self.log.debug("Removing downloaded file.")
                     os.remove(filepath)
 
             return flask.jsonify({

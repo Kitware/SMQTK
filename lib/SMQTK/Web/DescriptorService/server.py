@@ -96,8 +96,21 @@ class DescriptorServiceServer (flask.Flask):
         #
         self.secret_key = self.config['SECRET_KEY']
 
+        @self.route("/")
+        def list_ingest_labels():
+            return flask.jsonify({
+                "labels": IngestConfiguration.available_ingest_labels()
+            })
+
+        @self.route("/<string:ingest>/")
+        def list_descriptor_labels(ingest):
+            ic = IngestConfiguration(ingest)
+            return flask.jsonify({
+                "labels": ic.get_available_descriptor_labels()
+            })
+
         @self.route("/<string:ingest>/<string:descriptor_type>/<path:uri>")
-        def handle(ingest, descriptor_type, uri):
+        def compute_descriptor(ingest, descriptor_type, uri):
             success = True
             message = "Nothing has happened yet"
 

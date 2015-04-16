@@ -62,7 +62,7 @@ RUN mkdir -p /home/kwuser/.girder/logs
 
 RUN git clone git://github.com/memex-explorer/geoinfo_space.git && \
     cd geoinfo_space && \
-    git checkout master && \
+    git checkout optimizations && \
     git reset --hard
 
 WORKDIR /home/kwuser/geoinfo_space

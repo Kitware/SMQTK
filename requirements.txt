@@ -3,13 +3,9 @@ flask-basicauth
 flask-login
 gevent
 imageio
-PIL
+Pillow
 pymongo
 requests
 scikit-learn
-sphinx
 numpy
 scipy
-nltk
-celery
-Cheetah

@@ -45,7 +45,7 @@ def load_svm_lib():
             except:
                 pass
         tmp = path.dirname(root_dir)
-        if tmp is None:
+        if tmp is None or tmp == root_dir:
             root_dir = None
         else:
             root_dir = tmp

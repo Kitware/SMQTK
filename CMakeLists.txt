@@ -43,7 +43,7 @@ add_subdirectory( TPL )
 # SMQTK Library
 #
 add_subdirectory( src )
-add_subdirectory( lib )
+add_subdirectory( python )
 add_subdirectory( bin )
 
 
@@ -86,7 +86,6 @@ endif()
 install(DIRECTORY DESTINATION var/work)
 install(DIRECTORY DESTINATION var/data)
 install(DIRECTORY DESTINATION var/nltk_data)
-install(DIRECTORY static/ DESTINATION var/static)
 
 if(UNIX)
   # Due to super-user privaleges being required to run things like groupadd,
@@ -116,26 +115,6 @@ install(FILES requirements.txt
 install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
         DESTINATION .
         RENAME setup_smqtk.sh
-        )
-
-install(DIRECTORY WebUI
-        DESTINATION "${python_site_packages}"
-        )
-
-install(DIRECTORY common_utils
-        DESTINATION "${python_site_packages}"
-        )
-
-install(PROGRAMS run_WebApp.py
-        DESTINATION bin
-        )
-
-install(PROGRAMS run_static_server.py
-        DESTINATION bin
-        )
-
-install(PROGRAMS run_smqtk.py
-        DESTINATION bin
         )
 
 ###

@@ -1,8 +1,7 @@
 # Install pre-compiled binaries
 
 install(
-  PROGRAMS colorDescriptor colorDescriptorCompatible
-           ffmpeg ffprobe ffserver frame_extractor
-           unify_videos.py vcd_mpi_scheduler.py
+  PROGRAMS ComputeFeature.py CreateIngest.py GenerateModel.py
+           ProxyManagerServer.py remove_old_files.py run_SMQTK_Application.py
   DESTINATION bin
   )

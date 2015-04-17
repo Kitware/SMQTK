@@ -418,7 +418,10 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             self.log.debug("Constructing information for super matrices...")
             s_keys = sorted(r_map.keys())
             running_height = 0  # info and desc heights congruent
-            i_width = d_width = None
+            # Known constants
+            i_width = 5
+            d_width = 384
+
             for uid in s_keys:
                 ifp, dfp, r = r_map[uid]
                 i_shape, d_shape = r.get()
@@ -530,7 +533,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         with SimpleTimer("Collecting shape information for super matrices...",
                          self.log.debug):
             running_height = 0
-            i_width = d_width = None
+            # Known constants
+            i_width = 5
+            d_width = 384
 
             # Transform r_map[uid] into:
             #   (info_mat_files, desc_mat_files, sR, ssi_list)

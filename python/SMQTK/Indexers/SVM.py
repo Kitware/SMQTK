@@ -351,8 +351,9 @@ class SVMIndexer_HIK (Indexer):
 
         # Automatically support the negative IDs with the most distance UIDs
         # from the provided positive UIDs.
-        if len(neg_ids) == 0:
-            neg_ids = self._pick_auto_negatives(pos_ids)
+        # if len(neg_ids) == 0:
+        #     neg_ids = self._pick_auto_negatives(pos_ids)
+        neg_ids = set(neg_ids).union(self._pick_auto_negatives(pos_ids))
 
         #
         # SVM model training

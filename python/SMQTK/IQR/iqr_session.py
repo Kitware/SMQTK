@@ -167,29 +167,6 @@ class IqrSession (object):
             self.negative_ids.difference_update(un_negatives)
             self.negative_ids.difference_update(new_positives)
 
-            # # EXPERIMENT
-            # # When we have negative adjudications, remove use of the original
-            # # bg IDs set in the feature memory, injecting this session's
-            # # negative ID set (all both use set objects, so just share the
-            # # ptr) When we don't have negative adjudications, reinstate the
-            # # original set of bg IDs.
-            # if self.negative_ids:
-            #     self.feature_memory._bg_clip_ids = self.negative_ids
-            # else:
-            #     self.feature_memory._bg_clip_ids = self._original_fm_bgid_set
-
-            # # Update background flags in our feature_memory
-            # # - new positives and un-negatives are now non-background
-            # # - new negatives are now background.
-            # for uid in set(new_positives).union(un_negatives):
-            #     self._log.info("Marking UID %d as non-background", uid)
-            #     self.feature_memory.update(uid, is_background=False)
-            #     assert uid not in self.feature_memory.get_bg_ids()
-            # for uid in new_negatives:
-            #     self._log.info("Marking UID %d as background", uid)
-            #     self.feature_memory.update(uid, is_background=True)
-            #     assert uid in self.feature_memory.get_bg_ids()
-
     def refine(self, new_positives=(), new_negatives=(),
                un_positives=(), un_negatives=()):
         """ Refine current model results based on current adjudication state

@@ -16,6 +16,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class SMQTKSearchApp (flask.Flask):
 
+    # Optional environment variable that can point to a configuration file
     ENV_CONFIG = "SMQTK_SEARCHAPP_CONFIG"
 
     @property
@@ -115,7 +116,7 @@ class SMQTKSearchApp (flask.Flask):
         #       and indexer types. In the future this should either be moved
         #       to something that can be chosen by the user or a
         #       multi-feature/indexer fusion system.
-        from .modules.IQR import IQRSearch
+        from .modules.IQR import IQRSearch, IQRSearchFusion
 
         with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
             ic_example_image = IngestConfiguration("example_image")
@@ -127,6 +128,16 @@ class SMQTKSearchApp (flask.Flask):
             )
             self.register_blueprint(self.mod_example_image)
             self.add_navigable_blueprint(self.mod_example_image)
+
+        with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
+            self.mod_example_image_fusion = IQRSearchFusion(
+                "Image Search Fusion - Example Imagery",
+                self, ic_example_image,
+                "Average",
+                url_prefix='/image_example_fusion'
+            )
+            self.register_blueprint(self.mod_example_image_fusion)
+            self.add_navigable_blueprint(self.mod_example_image_fusion)
 
         with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
             ic_example_video = IngestConfiguration("example_video")

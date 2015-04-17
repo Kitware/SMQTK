@@ -17,6 +17,10 @@ In order to provide complete functionality, the following dependencies are requi
   * This is not a perminent requirement as other mediums can be used for this
     purpose, however they would need implementation.
 
+## Recommended
+Before installing Numpy and Scipy, it may be useful or required to install
+BLAS or LAPACK libraries for certain functionalities and efficiency.
+
 # Forming a new ingest
 
 ## Create File "Ingest"
@@ -32,7 +36,7 @@ High level steps:
 
 ### The ``system_config.json`` file
 In order for the system to know where to put and look for files, we need to
-supply it with such information. This configuration file declares incrementally 
+supply it with such information. This configuration file declares incrementally
 relative paths for system components that are ingest (or data) dependent.
 
 Previous iterations of this software used static pathing and settings for

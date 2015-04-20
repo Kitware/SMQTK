@@ -196,7 +196,7 @@ class VideoFile (DataFile):
         return self.__metadata_cache
 
     def frame_map(self, second_offset=0, second_interval=0, max_duration=0,
-                  frames=(), output_image_ext='png'):
+                  frames=(), output_image_ext='png', parallel=None):
         """
         Return a map of video frame index to image file in the given format.
 
@@ -221,6 +221,10 @@ class VideoFile (DataFile):
             Providing explicit frames causes other parameters to be ignored and
             only the frames specified here to be extracted and returned.
         :type frames: tuple of int or list of int
+
+        :param parallel: Number of threads to use for frame extraction. This is
+            None by default, meaning that all available cores are used.
+        :type parallel: int or None
 
         :return: Map of frame-to-filepath for requested video frames
         :rtype: dict of (int, str)
@@ -277,17 +281,25 @@ class VideoFile (DataFile):
             #
             #: :type: list of (int, str)
             frames_to_process = []
+            existing_frames = []
             for i, img_file in sorted(frame_map.items()):
                 if not osp.isfile(img_file):
                     self.log.debug('frame %d needs processing', i)
                     frames_to_process.append((i, img_file))
+                else:
+                    existing_frames.append(i)
 
             ###
             # Extract needed frames via hook function that provides
             # implementation.
             #
             if frames_to_process:
-                self._extract_frames(frames_to_process, output_image_ext)
+                frames_extracted = self._extract_frames(frames_to_process,
+                                                        output_image_ext,
+                                                        parallel)
+
+                if (len(existing_frames) + len(frames_extracted)) == 0:
+                    raise RuntimeError("Failed to extract any frames for video")
 
             return frame_map
         finally:
@@ -385,9 +397,11 @@ class VideoFile (DataFile):
             frms[i] = int(frms[i])
         return frms
 
-    def _extract_frames(self, frame_list, output_ext):
+    def _extract_frames(self, frame_list, output_ext, threads):
         """
-        Extract specific frames from our configured video file.
+        Extract specific frames from our configured video file. If not all
+        frames could be extracted, we return what we were able to extract.
+        Raises RuntimeError if no frames were extracted.
 
         This function is called within a locked section of code (filesystem
         based).
@@ -397,6 +411,14 @@ class VideoFile (DataFile):
 
         :param output_ext: Output file extension
         :type output_ext: str
+
+        :param threads: Number of cores to use. If None, we use all available
+            cores.
+        :type threads: None or int
+
+        :return: List of frames from the given frame list that were
+            successfully extracted.
+        :rtype: list of int
 
         """
         # TODO: In the future, this should be abstract and left to a subclass to
@@ -412,7 +434,7 @@ class VideoFile (DataFile):
 
         md = self.metadata()
 
-        tp = multiprocessing.pool.ThreadPool()
+        tp = multiprocessing.pool.ThreadPool(threads)
         # Mapping of frame to (result, output_filepath)
         #: :type: dict of (int, (AsyncResult, str))
         rmap = {}
@@ -427,23 +449,21 @@ class VideoFile (DataFile):
             )
         tp.close()
         # Check for failures
-        try:
-            for f, ofp in frame_list:
-                r, tfp = rmap[f]
-                r.get()  # wait for finish
-                if not osp.isfile(tfp):
-                    raise RuntimeError("Failed to generated file for frame %d"
-                                       % f)
+        extracted_frames = []
+        for f, ofp in frame_list:
+            r, tfp = rmap[f]
+            r.get()  # wait for finish
+            if not osp.isfile(tfp):
+                self.log.warn("Failed to generated file for frame %d", f)
+            else:
+                extracted_frames.append(f)
                 os.rename(tfp, ofp)
-        except RuntimeError, ex:
-            tp.terminate()
-            raise RuntimeError('Failed to extract all frames requested: %s'
-                               % str(ex))
-        finally:
-            tp.join()
+        tp.join()
 
         os.removedirs(tmp_extraction_dir)
         self.log.debug("Frame extraction complete")
+
+        return extracted_frames
 
     @staticmethod
     def _thread_ffmpeg_extract_frame(t, input_filepath, output_filepath):
@@ -455,7 +475,7 @@ class VideoFile (DataFile):
         sPIPE = subprocess.PIPE
         p = subprocess.Popen(cmd, stdout=sPIPE, stderr=sPIPE)
         _, _ = p.communicate()
-        if p.returncode != 0:
-            raise RuntimeError("FFmpeg failed to extract frame at time %f! "
-                               "(return code: %d)"
-                               % (t, p.returncode))
+        # if p.returncode != 0:
+        #     raise RuntimeError("FFmpeg failed to extract frame at time %f! "
+        #                        "(return code: %d)"
+        #                        % (t, p.returncode))

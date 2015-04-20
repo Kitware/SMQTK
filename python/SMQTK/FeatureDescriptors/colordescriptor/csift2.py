@@ -315,7 +315,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
             return numpy.load(checkpoint_filepath)
 
         if not self.has_model:
-            raise RuntimeError("No model currently loaded! Check the existance "
+            raise RuntimeError("No model currently loaded! Check the existence "
                                "or, or generate, model files!\n"
                                "Codebook path: %s\n"
                                "FLANN Index path: %s"
@@ -476,9 +476,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
     CODEBOOK_DESCRIPTOR_LIMIT = 1500000
 
     FRAME_EXTRACTION_PARAMS = {
-        "second_offset": 0.2,       # Start 20% in
-        "second_interval": 2,       # Sample every 2 seconds
-        "max_duration": 0.6,        # Cover middle 60% of video
+        "second_offset": 0.0,       # Start at beginning
+        "second_interval": 0.5,       # Sample every 0.5 seconds
+        "max_duration": 1.0,        # Cover full duration
         "output_image_ext": 'png'   # Output PNG files
     }
 

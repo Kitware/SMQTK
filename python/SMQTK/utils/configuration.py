@@ -203,7 +203,7 @@ class IngestConfiguration (object):
         if indexer_label not in self.get_available_indexer_labels():
             raise ValueError("No configuration for Indexer type '%s' "
                              "in ingest configuration '%s'"
-                             % (fd_label, self.label))
+                             % (indexer_label, self.label))
         if fd_label not in self.get_available_descriptor_labels():
             raise ValueError("No configuration for FeatureDescriptor type '%s' "
                              "in ingest configuration '%s'"

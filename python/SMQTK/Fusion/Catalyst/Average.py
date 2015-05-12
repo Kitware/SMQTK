@@ -13,7 +13,7 @@ from SMQTK.Fusion.Catalyst import Catalyst
 
 class Average (Catalyst):
     """
-    Fuze by averaging probabilities for a given UID
+    Fuse by averaging probabilities for a given UID
     """
 
     def fuse(self, *rank_maps):

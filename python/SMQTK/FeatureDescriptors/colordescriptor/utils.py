@@ -39,6 +39,9 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     Matrices are saved in numpy binary format (.npy). ``numpy.load`` function
     should be used to load matrices back in.
 
+    :raises RuntimeError: Failed to generate output files or matrices for the '
+        given input.
+
     :param cd_exe: ColorDescriptor executable to use
     :type cd_exe: str
 
@@ -85,7 +88,11 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     # Determine the spacing between sample points in the image. We want have at
     # least 50 sample points along the shortest side with a minimum of 6 pixels
     # distance between sample points.
-    w, h = PIL.Image.open(img_filepath).size
+    try:
+        w, h = PIL.Image.open(img_filepath).size
+    except IOError, ex:
+        raise RuntimeError("Could not open image at filepath '%s': %s"
+                           % (img_filepath, str(ex)))
     ds_spacing = max(int(min(w, h) / 50.0), 6)
     log.debug("dense-sample spacing: %d", ds_spacing)
 
@@ -104,8 +111,19 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
 
     # Info matrix consists of [x, y, scale, orientation, corner-ness]
     # - See colorDescriptor documentation for more information
-    info, descriptors = DescriptorIO.readDescriptors(tmp_path)
-    os.remove(tmp_path)
+    try:
+        log.debug("Reading descriptors output")
+        info, descriptors = DescriptorIO.readDescriptors(tmp_path)
+    except IOError, ex:
+        raise RuntimeError("ColorDescriptor failed to generate proper output "
+                           "file. See error log for details. (error: %s"
+                           % str(ex))
+    finally:
+        os.remove(tmp_path)
+
+    # Also error if the descriptor is empty
+    if not descriptors.shape[1]:
+        raise RuntimeError("Produced empty descriptor.")
 
     # Divides each row in the descriptors matrix with the row-wise sum.
     # - This results in histograms for relative frequencies instead of direct

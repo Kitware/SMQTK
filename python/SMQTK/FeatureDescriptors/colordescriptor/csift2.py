@@ -6,7 +6,8 @@ import numpy
 import os
 import os.path as osp
 import pyflann
-import scipy.cluster.vq
+# import scipy.cluster.vq
+import sklearn.cluster
 import tempfile
 
 from SMQTK.FeatureDescriptors import FeatureDescriptor
@@ -216,7 +217,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                           "descriptor '%s'.", self.descriptor_type())
 
             # generate descriptors
-            with SimpleTimer("Generating descriptor matrices...", self.log.debug):
+            with SimpleTimer("Generating descriptor matrices...", self.log.info):
                 descriptors_checkpoint = osp.join(self.work_directory,
                                                   "model_descriptors.npy")
 
@@ -244,20 +245,33 @@ class ColorDescriptor_Base (FeatureDescriptor):
             #   transformation would need to be applied in order for the
             #   comparison to the codebook centroids to be valid.
             # - Alternate kmeans implementations: OpenCV, sklearn, pyflann
-            with SimpleTimer("Computing scipy.cluster.vq.kmeans...",
-                             self.log.debug):
-                codebook, distortion = scipy.cluster.vq.kmeans(
-                    descriptors,
-                    kwargs.get('kmeans_k', 1024),
-                    kwargs.get('kmeans_iter', 5),
-                    kwargs.get('kmeans_threshold', 1e-5)
-                )
-                self.log.debug("KMeans result distortion: %f", distortion)
+            # with SimpleTimer("Computing scipy.cluster.vq.kmeans...",
+            #                  self.log.debug):
+            #     codebook, distortion = scipy.cluster.vq.kmeans(
+            #         descriptors,
+            #         kwargs.get('kmeans_k', 1024),
+            #         kwargs.get('kmeans_iter', 5),
+            #         kwargs.get('kmeans_threshold', 1e-5)
+            #     )
+            #     self.log.debug("KMeans result distortion: %f", distortion)
             # with SimpleTimer("Computing pyflann.FLANN.hierarchical_kmeans...",
             #                  self.log.debug):
             #     # results in 1009 clusters (should, anyway, given the
             #     # function's comment)
             #     codebook2 = flann.hierarchical_kmeans(descriptors, 64, 16, 5)
+            with SimpleTimer("Computing sklearn.cluster.MiniBatchKMeans...",
+                             self.log.info):
+                kmeans_k = kwargs.get('kmeans_k', 1024)
+                kmeans_verbose = self.log.getEffectiveLevel <= logging.DEBUG
+                kmeans = sklearn.cluster.MiniBatchKMeans(
+                    n_clusters=kmeans_k,
+                    batch_size=kmeans_k*3,
+                    random_state=133742,
+                    verbose=kmeans_verbose,
+                    compute_labels=False,
+                )
+                kmeans.fit(descriptors)
+                codebook = kmeans.cluster_centers_
             with SimpleTimer("Saving generated codebook...", self.log.debug):
                 numpy.save(self.codebook_filepath, codebook)
         else:
@@ -271,10 +285,10 @@ class ColorDescriptor_Base (FeatureDescriptor):
             log_level = 'info'
         else:
             log_level = 'warning'
-        with SimpleTimer("Building FLANN index...", self.log.debug):
+        with SimpleTimer("Building FLANN index...", self.log.info):
             params = flann.build_index(codebook, **{
-                "target_precision": kwargs.get("flann_target_precision", 0.99),
-                "sample_fraction": kwargs.get("flann_sample_fraction", 1.0),
+                "target_precision": kwargs.get("flann_target_precision", 0.90),
+                "sample_fraction": kwargs.get("flann_sample_fraction", 0.75),
                 "log_level": log_level,
                 "algorithm": "autotuned"
             })
@@ -322,7 +336,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
                                % (self.codebook_filepath,
                                   self.flann_index_filepath))
 
-        self.log.debug("Computing descriptors...")
+        self.log.debug("Computing descriptors for data UID[%s]...", data.uid)
         info, descriptors = self._generate_descriptor_matrices(data)
 
         # Quantization
@@ -331,7 +345,14 @@ class ColorDescriptor_Base (FeatureDescriptor):
         pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
         flann = pyflann.FLANN()
         flann.load_index(self.flann_index_filepath, self._codebook)
-        idxs, dists = flann.nn_index(descriptors)
+        try:
+            idxs, dists = flann.nn_index(descriptors)
+        except AssertionError:
+
+            self.log.error("Codebook shape  : %s", self._codebook.shape)
+            self.log.error("Descriptor shape: %s", descriptors.shape)
+
+            raise
 
         # Create histogram
         # - Using explicit bin slots to prevent numpy from automatically
@@ -424,7 +445,17 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
             for uid in s_keys:
                 ifp, dfp, r = r_map[uid]
-                i_shape, d_shape = r.get()
+
+                # descriptor generation may have failed for this ingest UID
+                try:
+                    i_shape, d_shape = r.get()
+                except RuntimeError:
+                    self.log.warning("Descriptor generation failed for "
+                                     "UID[%d], skipping its inclusion in "
+                                     "model.", uid)
+                    r_map[uid] = None
+                    continue
+
                 if None in (i_width, d_width):
                     i_width = i_shape[1]
                     d_width = d_shape[1]
@@ -446,11 +477,12 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
             for uid in s_keys:
-                ifp, dfp, sR, ssi = r_map[uid]
-                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                               args=(ifp, master_info, sR, ssi))
-                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                               args=(dfp, master_desc, sR, ssi))
+                if r_map[uid]:
+                    ifp, dfp, sR, ssi = r_map[uid]
+                    tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                                   args=(ifp, master_info, sR, ssi))
+                    tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                                   args=(dfp, master_desc, sR, ssi))
             tp.close()
             tp.join()
             return master_info, master_desc

@@ -65,6 +65,7 @@ function ActivityBar(container, message) {
 
     // jQuery div container
     this.c = $(container);
+    this.color_class = null;
 
     this.progress_div = $('<div class="progress" style="text-align: center;"/>');
     this.progress_div.appendTo(this.c);
@@ -92,10 +93,21 @@ ActivityBar.prototype.on = function(message) {
 
 /**
  * Remove animation and striping from bar
+ *
+ * For valid color class strings, see:
+ *     http://www.w3schools.com/bootstrap/bootstrap_progressbars.asp
+ *
  */
-ActivityBar.prototype.stop_active = function() {
+ActivityBar.prototype.stop_active = function(color_class) {
     this.loading_bar.removeClass("progress-bar-striped");
     this.loading_bar.removeClass("active");
+    if( color_class ) {
+        this.color_class = "progress-bar-"+color_class;
+        this.loading_bar.addClass(this.color_class);
+    }
+    else if (this.color_class) {
+        this.loading_bar.removeClass(this.color_class);
+    }
 };
 
 ActivityBar.prototype.off = function() {

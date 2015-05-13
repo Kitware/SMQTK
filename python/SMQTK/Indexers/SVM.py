@@ -153,18 +153,19 @@ class SVMIndexer_HIK (Indexer):
             (num_features, num_features), dtype=sample_feature.dtype
         )
 
-        self.log.info("Populating feature matrix")
-        for i, (uid, feat) in enumerate(feature_map.iteritems()):
-            self._uid_array[i] = uid
-            self._feature_mat[i] = feat
+        with SimpleTimer("Populating feature matrix", self.log.info):
+            for i, (uid, feat) in enumerate(feature_map.iteritems()):
+                self._uid_array[i] = uid
+                self._feature_mat[i] = feat
 
-        self.log.info("Computing HI matrix kernel")
-        # Using a ThreadPool here is actually much slower. Not sure why,
-        for i in range(num_features):
-            for j in range(i, num_features):
-                self._distance_mat[i, j] = self._distance_mat[j, i] = \
-                    histogram_intersection_distance(self._feature_mat[i],
-                                                    self._feature_mat[j])
+        with SimpleTimer("Computing HI matrix kernel", self.log.info):
+            # Using [process] Pool here with large sets eats far too much RAM.
+            # Using a ThreadPool here is actually much slower. Not sure why?
+            for i in range(num_features):
+                for j in range(i, num_features):
+                    self._distance_mat[i, j] = self._distance_mat[j, i] = \
+                        histogram_intersection_distance(self._feature_mat[i],
+                                                        self._feature_mat[j])
 
         with SimpleTimer("Saving data files", self.log.info):
             numpy.save(self.uid_list_filepath, self._uid_array)

@@ -9,6 +9,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import logging
+import multiprocessing.pool
 
 
 class Reactor (object):
@@ -64,8 +65,11 @@ class Reactor (object):
         :type data: list of SMQTK.utils.DataFile.DataFile
 
         """
+        tp = multiprocessing.pool.ThreadPool()
         for a in self._atom_list:
-            a.extend(*data)
+            tp.apply_async(a.extend, args=data)
+        tp.close()
+        tp.join()
 
     def rank(self, pos, neg=()):
         """
@@ -83,13 +87,39 @@ class Reactor (object):
         :rtype: dict of (int, float)
 
         """
-        atom_ranks = []
+        # rank dicts to fuse using global catalyst
+        ranks = []
+
+        # async result objects yielding rank matrices
+        ar = []
+        ar2 = []
+
+        # pairs of catalyst and async result objects that should be fused and
+        # added to ``ranks`` list
+        cr_pairs = []
+
+        tp = multiprocessing.pool.ThreadPool()
+
         for a, c in zip(self._atom_list, self._atom_catalysts):
             if c:
-                atom_ranks.append(c.fuze(*a.rank(pos, neg)))
+                cr_pairs.append([c, tp.apply_async(a.rank, (pos, neg))])
             else:
-                atom_ranks.extend(a.rank(pos, neg))
-        return self._catalyst.fuse(*atom_ranks)
+                ar.append(tp.apply_async(a.rank, (pos, neg)))
+
+        # fuse atoms that have sub-catalysts
+        for c, r in cr_pairs:
+            ar2.append(tp.apply_async(c.fuse, args=r.get()))
+
+        for r in ar:
+            ranks.extend(r.get())
+        for r in ar2:
+            ranks.append(r.get())
+
+        tp.close()
+        tp.join()
+        del tp
+
+        return self._catalyst.fuse(*ranks)
 
     def reset(self):
         """

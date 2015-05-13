@@ -96,6 +96,9 @@ def main():
                                   "specified, we list available "
                                   "FeatureDetector and Indexer configurations "
                                   "available.")
+    groupOptional.add_option('-t', '--threads', type=int, default=None,
+                             help='Number of threads/processes to use for '
+                                  'processing.')
     groupOptional.add_option('-v', '--verbose', action='store_true',
                              default=False,
                              help='Add debug messaged to output logging.')
@@ -111,6 +114,7 @@ def main():
     ingest_label = opts.ingest
     fd_label = opts.feature_descriptor
     idxr_label = opts.indexer
+    parallel = opts.threads
 
     # Prep custom JSON configuration if one was given
     if opts.sys_json:
@@ -152,6 +156,7 @@ def main():
     #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
     descriptor = ingest_config.new_descriptor_instance(fd_label)
     # Generate any model files needed by the chosen descriptor
+    descriptor.PARALLEL = parallel
     descriptor.generate_model(ingest.data_list())
 
     # Don't do indexer model generation if a type was not provided
@@ -162,17 +167,19 @@ def main():
 
         # It is not guaranteed that the feature computation method is doing
         # anything in parallel, but if it is, request that it perform serially
-        # in order to allow multiple high-level feature computation jobs.
-        FeatureDescriptor.PARALLEL = 1
+        # in order to allow multiple high-level feature computation jobs, else
+        # we could be overrun with threads.
+        descriptor.PARALLEL = 1
         # Using NonDaemonicPool because FeatureDescriptors that might to
         # parallel processing might use multiprocessing.Pool instances, too.
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
         fmap = descriptor.compute_feature_async(*(df for _, df
                                                   in ingest.iteritems()),
+                                                parallel=parallel,
                                                 pool_type=NonDaemonicPool)
 
-        indexer.generate_model(fmap)
+        indexer.generate_model(fmap, parallel=parallel)
 
 
 if __name__ == "__main__":

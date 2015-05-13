@@ -2,7 +2,7 @@ import unittest
 import sys
 
 # modified path since this is now being embeded in another project.
-from SMQTK_Backend.utils import jsmin
+from SMQTK.utils import jsmin
 
 class JsTests(unittest.TestCase):
     def _minify(self, js):

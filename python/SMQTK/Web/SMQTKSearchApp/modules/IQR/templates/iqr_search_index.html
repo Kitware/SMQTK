@@ -59,9 +59,11 @@
                             },
                             success: function(data) {
                                 bar.on(message_prefix+data);
-                                bar.stop_active();
+                                bar.stop_active("success");
                             },
                             error: function(jqXHR, textStatus, errorThrown) {
+                                bar.on("ERROR: "+errorThrown);
+                                bar.stop_active("danger");
                                 alert_error("Error during FID upload POST: "
                                             + textStatus);
                             }

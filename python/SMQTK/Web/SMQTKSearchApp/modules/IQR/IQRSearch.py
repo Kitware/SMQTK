@@ -11,7 +11,7 @@ import os.path as osp
 import PIL.Image
 import random
 
-from SMQTK.IQR import IqrController, IqrSession
+from SMQTK.iqr import IqrController, IqrSession
 
 from SMQTK.Web.SMQTKSearchApp.modules.file_upload import FileUploadMod
 

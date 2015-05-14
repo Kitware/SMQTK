@@ -49,7 +49,7 @@ def main():
     log = logging.getLogger("SMQTK.main")
 
     if opts.list:
-        from SMQTK.Web import APPLICATIONS
+        from SMQTK.web import APPLICATIONS
         log.info("")
         log.info("Available applications:")
         log.info("")
@@ -69,8 +69,8 @@ def main():
     if application_name is None:
         raise ValueError("No application name given!")
 
-    import SMQTK.Web
-    App = getattr(SMQTK.Web, application_name, None)
+    import SMQTK.web
+    App = getattr(SMQTK.web, application_name, None)
     if App is None:
         raise ValueError("No available application by the name of '%s'"
                          % application_name)

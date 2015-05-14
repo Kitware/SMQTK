@@ -13,7 +13,7 @@ import random
 
 from SMQTK.iqr import IqrController, IqrSession
 
-from SMQTK.Web.SMQTKSearchApp.modules.file_upload import FileUploadMod
+from SMQTK.web.SMQTKSearchApp.modules.file_upload import FileUploadMod
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +32,7 @@ class IQRSearch (flask.Blueprint):
         :type name:
 
         :param parent_app: Parent containing flask app instance
-        :type parent_app: SMQTK.Web.SMQTKSearchApp.app.SMQTKSearchApp
+        :type parent_app: SMQTK.web.SMQTKSearchApp.app.SMQTKSearchApp
 
         :param ingest_config: Ingest configuration instance
         :type ingest_config: SMQTK.utils.configuration.IngestConfiguration

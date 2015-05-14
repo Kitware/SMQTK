@@ -117,6 +117,15 @@ class FeatureDescriptor (object):
             safe_create_dir(self._work_dir)
         return self._work_dir
 
+    @abc.abstractmethod
+    def valid_content_types(self):
+        """
+        :return: A list valid MIME type content types that this descriptor can
+            handle.
+        :rtype: collections.Iterable[str]
+        """
+        return
+
     @abc.abstractproperty
     def has_model(self):
         """

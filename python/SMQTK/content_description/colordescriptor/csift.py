@@ -17,7 +17,7 @@ import PIL.Image
 import subprocess
 import tempfile
 
-from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.content_description import FeatureDescriptor
 
 from .utils import DescriptorIO
 from . import encode_FLANN

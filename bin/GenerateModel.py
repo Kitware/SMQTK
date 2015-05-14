@@ -7,7 +7,7 @@ import json
 import logging
 import multiprocessing.pool
 
-from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.content_description import FeatureDescriptor
 from SMQTK.utils import bin_utils
 from SMQTK.utils.configuration import IngestConfiguration
 from SMQTK.utils.jsmin import jsmin
@@ -153,7 +153,7 @@ def main():
     ingest = ingest_config.new_ingest_instance()
 
     log.info("Loading descriptor instance...")
-    #: :type: SMQTK.FeatureDescriptors.FeatureDescriptor
+    #: :type: SMQTK.content_description.FeatureDescriptor
     descriptor = ingest_config.new_descriptor_instance(fd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.PARALLEL = parallel
@@ -170,7 +170,7 @@ def main():
         # in order to allow multiple high-level feature computation jobs, else
         # we could be overrun with threads.
         descriptor.PARALLEL = 1
-        # Using NonDaemonicPool because FeatureDescriptors that might to
+        # Using NonDaemonicPool because content_description that might to
         # parallel processing might use multiprocessing.Pool instances, too.
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.

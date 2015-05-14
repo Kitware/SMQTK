@@ -10,7 +10,7 @@ import pyflann
 import sklearn.cluster
 import tempfile
 
-from SMQTK.FeatureDescriptors import FeatureDescriptor
+from SMQTK.content_description import FeatureDescriptor
 from SMQTK.utils import safe_create_dir, SimpleTimer
 
 from . import utils

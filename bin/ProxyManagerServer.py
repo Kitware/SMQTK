@@ -20,9 +20,9 @@ authkey = <string>
 import logging
 import os.path as osp
 
-from SMQTK.utils import bin_utils
-from SMQTK.utils import SafeConfigCommentParser
-from SMQTK.utils.ProxyManager import ProxyManager
+from smqtk.utils import bin_utils
+from smqtk.utils import SafeConfigCommentParser
+from smqtk.utils.ProxyManager import ProxyManager
 
 
 def main():

@@ -7,9 +7,9 @@ import json
 import logging
 import multiprocessing.pool
 
-from SMQTK.utils import bin_utils
-from SMQTK.utils.configuration import IngestConfiguration
-from SMQTK.utils.jsmin import jsmin
+from smqtk.utils import bin_utils
+from smqtk.utils.configuration import IngestConfiguration
+from smqtk.utils.jsmin import jsmin
 
 
 class NonDaemonicProcess (multiprocessing.Process):
@@ -152,7 +152,7 @@ def main():
     ingest = ingest_config.new_ingest_instance()
 
     log.info("Loading descriptor instance...")
-    #: :type: SMQTK.content_description.FeatureDescriptor
+    #: :type: smqtk.content_description.FeatureDescriptor
     descriptor = ingest_config.new_descriptor_instance(fd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.PARALLEL = parallel
@@ -161,7 +161,7 @@ def main():
     # Don't do indexer model generation if a type was not provided
     if idxr_label:
         log.info("Loading indexer instance...")
-        #: :type: SMQTK.indexing.Indexer
+        #: :type: smqtk.indexing.Indexer
         indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
 
         # It is not guaranteed that the feature computation method is doing

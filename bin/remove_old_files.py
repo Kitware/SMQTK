@@ -10,8 +10,8 @@ import os
 import time
 
 
-sf_log = logging.getLogger("SMQTK.scan_files")
-is_log = logging.getLogger("SMQTK.timed_scan")
+sf_log = logging.getLogger("smqtk.scan_files")
+is_log = logging.getLogger("smqtk.timed_scan")
 
 
 def scan_files(base_dir, expire_seconds, action):
@@ -70,7 +70,7 @@ def interval_scan(interval, base_dir, expire_seconds, action):
 
 
 def main():
-    from SMQTK.utils.bin_utils import initializeLogging, SMQTKOptParser
+    from smqtk.utils.bin_utils import initializeLogging, SMQTKOptParser
     parser = SMQTKOptParser()
     parser.add_option('-d', '--base-dir',
                       help='Starting directory for scan.')
@@ -86,7 +86,7 @@ def main():
     logging_level = logging.INFO
     if opts.verbose:
         logging_level = logging.DEBUG
-    initializeLogging(logging.getLogger("SMQTK"), logging_level)
+    initializeLogging(logging.getLogger("smqtk"), logging_level)
 
     base_dir = opts.base_dir
     interval_seconds = opts.interval

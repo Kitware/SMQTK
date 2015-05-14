@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 """
 
-Start SMQTK SearchApp
+Start smqtk SearchApp
 
 """
 
 import logging
 from flask.ext.basicauth import BasicAuth
 
-from SMQTK.utils import bin_utils
+from smqtk.utils import bin_utils
 
 
 def main():
     parser = bin_utils.SMQTKOptParser()
     parser.add_option('-c', '--config', default=None,
-                      help='Path to an SMQTK configuration extension file '
+                      help='Path to an smqtk configuration extension file '
                            '(a python file).')
     parser.add_option('-a', '--application', default=None,
                       help="Name of the web application to run. Required.")
@@ -26,7 +26,7 @@ def main():
     parser.add_option('--debug-server', action='store_true', default=False,
                       help='Turn on server debugging messages')
     parser.add_option('--debug-backend', action='store_true', default=False,
-                      help='Turn on SMQTK backend debugging messages')
+                      help='Turn on smqtk backend debugging messages')
 
     parser.add_option('--host', default=None,
                       help="Run host address specification override. This will "
@@ -42,14 +42,14 @@ def main():
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger("SMQTK"),
+    bin_utils.initializeLogging(logging.getLogger("smqtk"),
                                 logging.INFO - (10*opts.debug_backend))
     bin_utils.initializeLogging(logging.getLogger("werkzeug"),
                                 logging.WARN - (20*opts.debug_server))
-    log = logging.getLogger("SMQTK.main")
+    log = logging.getLogger("smqtk.main")
 
     if opts.list:
-        from SMQTK.web import APPLICATIONS
+        from smqtk.web import APPLICATIONS
         log.info("")
         log.info("Available applications:")
         log.info("")
@@ -69,8 +69,8 @@ def main():
     if application_name is None:
         raise ValueError("No application name given!")
 
-    import SMQTK.web
-    App = getattr(SMQTK.web, application_name, None)
+    import smqtk.web
+    App = getattr(smqtk.web, application_name, None)
     if App is None:
         raise ValueError("No available application by the name of '%s'"
                          % application_name)

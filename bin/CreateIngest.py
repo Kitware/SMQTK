@@ -7,8 +7,8 @@ import glob
 import logging
 import os.path as osp
 
-from SMQTK.utils import bin_utils
-from SMQTK.utils.configuration import IngestConfiguration
+from smqtk.utils import bin_utils
+from smqtk.utils.configuration import IngestConfiguration
 
 
 def main():

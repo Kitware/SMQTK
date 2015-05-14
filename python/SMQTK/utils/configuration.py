@@ -7,9 +7,9 @@ import os.path as osp
 import smqtk_config
 
 from SMQTK.content_description import get_descriptors
-from SMQTK.Fusion.Atom import Atom
-from SMQTK.Fusion.Catalyst import get_catalysts
-from SMQTK.Fusion.Reactor import Reactor
+from SMQTK.fusion.Atom import Atom
+from SMQTK.fusion.catalyst import get_catalysts
+from SMQTK.fusion.Reactor import Reactor
 from SMQTK.indexing import get_indexers
 from SMQTK.utils import DataIngest, VideoIngest
 
@@ -246,7 +246,7 @@ class IngestConfiguration (object):
         :type work_dir: str
 
         :return: New fusion Catalyst instance.
-        :rtype: SMQTK.Fusion.Catalyst.Catalyst
+        :rtype: SMQTK.fusion.Catalyst.Catalyst
 
         """
         catalyst_type = get_catalysts()[catalyst_label]
@@ -275,7 +275,7 @@ class IngestConfiguration (object):
         :type catalyst_label: str
 
         :return: New SMQTK Reactor instance
-        :rtype: SMQTK.Fusion.Reactor.Reactor
+        :rtype: SMQTK.fusion.Reactor.Reactor
 
         """
         # Build from "fusion" section under ingest configuration

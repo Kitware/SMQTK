@@ -8,7 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-from SMQTK.Fusion.Catalyst import Catalyst
+from SMQTK.fusion.catalyst import Catalyst
 
 
 class Average (Catalyst):

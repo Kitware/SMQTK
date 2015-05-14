@@ -7,7 +7,6 @@ import json
 import logging
 import multiprocessing.pool
 
-from SMQTK.content_description import FeatureDescriptor
 from SMQTK.utils import bin_utils
 from SMQTK.utils.configuration import IngestConfiguration
 from SMQTK.utils.jsmin import jsmin

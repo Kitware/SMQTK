@@ -21,10 +21,10 @@ class Reactor (object):
     def __init__(self, atoms, catalyst, atom_catalysts=None):
         """
         :param atoms: Iterable of atoms to function over
-        :type atoms: collections.Iterable of SMQTK.Fusion.Atom.Atom
+        :type atoms: collections.Iterable of SMQTK.fusion.Atom.Atom
 
         :param catalyst: Catalyst implementation instance
-        :type catalyst: SMQTK.Fusion.Catalyst.Catalyst
+        :type catalyst: SMQTK.fusion.Catalyst.Catalyst
 
         :param atom_catalysts: Optional list catalyst instances to apply
             directly to the local output of a single atom. This must be the same
@@ -34,18 +34,18 @@ class Reactor (object):
             "sub-fusions", plus any atom results that didn't go through a
             sub-catalyst, are input to the final catalyst.
         :type atom_catalysts:
-            collections.Iterable of (None or SMQTK.Fusion.Catalyst.Catalyst)
+            collections.Iterable of (None or SMQTK.fusion.catalyst.catalyst)
 
         """
-        #: :type: tuple of SMQTK.Fusion.Atom.Atom
+        #: :type: tuple of SMQTK.fusion.Atom.Atom
         self._atom_list = tuple(atoms)
         self._catalyst = catalyst
 
         if atom_catalysts:
-            #: :type: tuple of (None or SMQTK.Fusion.Catalyst.Catalyst)
+            #: :type: tuple of (None or SMQTK.fusion.catalyst.catalyst)
             self._atom_catalysts = tuple(atom_catalysts)
         else:
-            #: :type: tuple of (None or SMQTK.Fusion.Catalyst.Catalyst)
+            #: :type: tuple of (None or SMQTK.fusion.catalyst.catalyst)
             self._atom_catalysts = (None,) * len(self._atom_list)
 
     @property

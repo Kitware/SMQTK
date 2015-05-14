@@ -32,8 +32,8 @@ class IqrSessionFusion (IqrSession):
         :param work_directory: Directory we are allowed to use for working files
         :type work_directory: str
 
-        :param reactor: Fusion reactor to drive online extension and indexing
-        :type reactor: SMQTK.Fusion.Reactor.Reactor
+        :param reactor: fusion reactor to drive online extension and indexing
+        :type reactor: SMQTK.fusion.Reactor.Reactor
 
         :param work_ingest: Ingest to add extension files to
         :type work_ingest: SMQTK.utils.DataIngest.DataIngest

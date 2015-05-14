@@ -185,22 +185,14 @@ class ColorDescriptor_Base (FeatureDescriptor):
         :param kmeans_k: Centroids to generate. Default of 1024
         :type kmeans_k: int
 
-        :param kmeans_iter: Number of times to run the kmeans algorithms, using
-            the centroids from the best run. Default of 5.
-        :type kmeans_iter: int
-
-        :param kmeans_threshold: Distortion difference termination threshold.
-            KMeans algorithm terminates during a run if the centroid distortion
-            since the last iteration is less than this threshold. Default of
-            1e-5.
-        :type kmeans_threshold: float
-
         :param flann_target_precision: Target precision percent to tune index
-            for. Default is 0.99 (99% accuracy).
+            for. Default is 0.90 (90% accuracy). For some codebooks, if this is
+            too close to 1.0, the library may overflow, causing an infinite
+            loop.
         :type flann_target_precision: float
 
         :param flann_sample_fraction: Fraction of input data to use for index
-            auto tuning. Default is 1.0 (100%).
+            auto tuning. Default is 0.75 (75%).
         :type flann_sample_fraction: float
 
         """
@@ -239,26 +231,6 @@ class ColorDescriptor_Base (FeatureDescriptor):
                     os.rename(tmp, descriptors_checkpoint)
 
             # Compute centroids (codebook) with kmeans
-            # - NOT performing whitening, as this transforms the feature space
-            #   in such a way that newly computed features cannot be applied to
-            #   the generated codebook as the same exact whitening
-            #   transformation would need to be applied in order for the
-            #   comparison to the codebook centroids to be valid.
-            # - Alternate kmeans implementations: OpenCV, sklearn, pyflann
-            # with SimpleTimer("Computing scipy.cluster.vq.kmeans...",
-            #                  self.log.debug):
-            #     codebook, distortion = scipy.cluster.vq.kmeans(
-            #         descriptors,
-            #         kwargs.get('kmeans_k', 1024),
-            #         kwargs.get('kmeans_iter', 5),
-            #         kwargs.get('kmeans_threshold', 1e-5)
-            #     )
-            #     self.log.debug("KMeans result distortion: %f", distortion)
-            # with SimpleTimer("Computing pyflann.FLANN.hierarchical_kmeans...",
-            #                  self.log.debug):
-            #     # results in 1009 clusters (should, anyway, given the
-            #     # function's comment)
-            #     codebook2 = flann.hierarchical_kmeans(descriptors, 64, 16, 5)
             with SimpleTimer("Computing sklearn.cluster.MiniBatchKMeans...",
                              self.log.info):
                 kmeans_k = kwargs.get('kmeans_k', 1024)

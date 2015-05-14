@@ -18,6 +18,7 @@ except ImportError:
     try:
         from colorDescriptor import DescriptorIO
     except ImportError:
+        DescriptorIO = None
         raise ImportError("Cannot find the DescriptorIO module provided by "
                           "ColorDescriptor. Read the README for dependencies!")
 
@@ -132,6 +133,7 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     #   introducing minimal numerical error.
     # noinspection PyUnresolvedReferences
     log.debug("normalizing histogram into relative frequency")
+    # noinspection PyUnresolvedReferences
     descriptors = descriptors / (numpy.matrix(descriptors).sum(axis=1) +
                                  sys.float_info.min).A
 

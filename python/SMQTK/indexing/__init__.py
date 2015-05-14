@@ -10,7 +10,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 import abc
 import logging
 import os
-import re
 
 
 class Indexer (object):

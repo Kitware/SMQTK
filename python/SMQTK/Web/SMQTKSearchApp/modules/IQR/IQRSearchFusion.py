@@ -95,6 +95,7 @@ class IQRSearchFusion (flask.Blueprint):
                 "uploader_post_url": self.mod_upload.upload_post_url(),
             }
             r.update(parent_app.nav_bar_content())
+            # noinspection PyUnresolvedReferences
             return flask.render_template("iqr_search_index.html", **r)
 
         @self.route('/iqr_session_info', methods=["GET"])

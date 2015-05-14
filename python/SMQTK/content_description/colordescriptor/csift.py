@@ -89,6 +89,7 @@ def _async_cd_process_helper(cd_util, detector_type, work_directory,
         ))
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_Base (FeatureDescriptor):
     """
     CSIFT colordescriptor feature descriptor
@@ -372,21 +373,25 @@ class ColorDescriptor_TCH (ColorDescriptor_Base):
 
 
 # ColorDescriptor descriptor combinations
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_CSIFT_Image (ColorDescriptor_CSIFT,
                                    ColorDescriptor_Image):
     """ CSIFT descriptor over image files """
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_CSIFT_Video (ColorDescriptor_CSIFT,
                                    ColorDescriptor_Video):
     """ CSIFT descriptor over video files """
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_TCH_Image (ColorDescriptor_TCH,
                                  ColorDescriptor_Image):
     """ TCH descriptor over image files """
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_TCH_Video (ColorDescriptor_TCH,
                                  ColorDescriptor_Video):
     """ TCH descriptor over video files """

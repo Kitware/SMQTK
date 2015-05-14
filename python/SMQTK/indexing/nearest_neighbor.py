@@ -20,6 +20,7 @@ from SMQTK.utils.distance_functions import (
 )
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class NearestNeighbor_HIK_Base (Indexer):
     """
     Indexer that ranks elements based on HIK distance metric to other elements
@@ -512,10 +513,10 @@ class NearestNeighbor_HIK_Centroids (NearestNeighbor_HIK_Base):
             See implementation for other possible RuntimeError causes.
 
         :param pos_ids: List of positive data IDs
-        :type pos_ids: collections.Iterable of int
+        :type pos_ids: collections.Iterable of int and collections.Sized[int]
 
         :param neg_ids: List of negative data IDs
-        :type neg_ids: collections.Iterable of int
+        :type neg_ids: collections.Iterable of int and collections.Sized[int]
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)
@@ -576,10 +577,10 @@ class NearestNeighbor_HIK_Centroids_FLANN_CS (NearestNeighbor_HIK_Base):
             See implementation for other possible RuntimeError causes.
 
         :param pos_ids: List of positive data IDs
-        :type pos_ids: collections.Iterable of int
+        :type pos_ids: collections.Iterable of int and collections.Sized[int]
 
         :param neg_ids: List of negative data IDs
-        :type neg_ids: collections.Iterable of int
+        :type neg_ids: collections.Iterable of int and collections.Sized[int]
 
         :return: Mapping of ingest ID to a rank.
         :rtype: dict of (int, float)

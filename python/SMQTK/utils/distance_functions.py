@@ -83,6 +83,7 @@ def histogram_intersection_dist_matrix(a, b):
         a = numpy.array([a])
     # TODO: Assert shape consistency
 
+    #: :type: numpy.core.multiarray.ndarray
     r = 1.0 - ((numpy.add(a, b) - numpy.abs(numpy.subtract(a, b))).sum(axis=1) * 0.5)
 
     if a_dim == 1:

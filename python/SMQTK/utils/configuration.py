@@ -7,9 +7,9 @@ import os.path as osp
 import smqtk_config
 
 from SMQTK.content_description import get_descriptors
-from SMQTK.fusion.Atom import Atom
+from SMQTK.fusion.atom import Atom
 from SMQTK.fusion.catalyst import get_catalysts
-from SMQTK.fusion.Reactor import Reactor
+from SMQTK.fusion.reactor import Reactor
 from SMQTK.indexing import get_indexers
 from SMQTK.utils import DataIngest, VideoIngest
 

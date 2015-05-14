@@ -11,10 +11,8 @@ import logging
 import multiprocessing.pool
 import numpy
 import os.path as osp
-import svm_hik
+import svm
 import svmutil
-
-from EventContentDescriptor.iqr_modules import svmtools
 
 from SMQTK.indexing import Indexer
 from SMQTK.utils import SimpleTimer
@@ -368,7 +366,7 @@ class SVMIndexer_HIK (Indexer):
             self._feature_mat[list(self._uid2idx_map[uid] for uid in uid_list), :]
 
         self.log.debug("Creating SVM problem")
-        svm_problem = svm_hik.svm_problem(labels, train_features.tolist())
+        svm_problem = svm.svm_problem(labels, train_features.tolist())
         self.log.debug("Creating SVM model")
         w1_weight = max(1.0, len(neg_ids)/float(len(pos_ids)))
         svm_model = svmutil.svm_train(svm_problem,
@@ -403,6 +401,7 @@ class SVMIndexer_HIK (Indexer):
         rho = svm_model.rho[0]
         probA = svm_model.probA[0]
         probB = svm_model.probB[0]
+        #: :type: numpy.core.multiarray.ndarray
         probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
 
         # Test if the probability of an adjudicated positive is below a

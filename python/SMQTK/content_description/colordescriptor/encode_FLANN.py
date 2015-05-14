@@ -307,26 +307,31 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
     feas = np.loadtxt(filein)
     cordx = feas[:, 1]
     cordy = feas[:, 2]
-    feas  = feas[:, 3]  # only the top component, we are looking
+    feas = feas[:, 3]  # only the top component, we are looking
     # hard quantization
     # global histogram
-    hist_csift_g, _ = np.histogram(feas, bins = bins_code)
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_g = np.histogram(feas, bins=bins_code)[0]
     hist_csift_g = hist_csift_g[np.newaxis]
     # 4 quadrants
     midx = np.ceil(cordx.max()/2)
     midy = np.ceil(cordy.max()/2)
-    lx = cordx<midx
-    rx = cordx>=midx
-    uy = cordy<midy
-    dy = cordy>=midy
-    logging.debug("LXUI: %s,%s"%(lx.__repr__(), uy.__repr__()))
-    logging.debug("Length LXUI: %s,%s"%(lx.shape, uy.shape))
-    logging.debug("feas dimensions: %s"%(feas.shape))
+    lx = cordx < midx
+    rx = cordx >= midx
+    uy = cordy < midy
+    dy = cordy >= midy
+    # logging.debug("LXUI: %s,%s" % (lx.__repr__(), uy.__repr__()))
+    # logging.debug("Length LXUI: %s,%s " % (lx.shape, uy.shape))
+    # logging.debug("feas dimensions: %" % (feas.shape,))
 
-    hist_csift_q1, _ = np.histogram(feas[lx&uy], bins = bins_code)
-    hist_csift_q2, _ = np.histogram(feas[rx&uy], bins = bins_code)
-    hist_csift_q3, _ = np.histogram(feas[lx&dy], bins = bins_code)
-    hist_csift_q4, _ = np.histogram(feas[rx&dy], bins = bins_code)
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q1 = np.histogram(feas[lx & uy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q2 = np.histogram(feas[rx & uy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q3 = np.histogram(feas[lx & dy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q4 = np.histogram(feas[rx & dy], bins=bins_code)[0]
     hist_csift_q1 = hist_csift_q1[np.newaxis]
     hist_csift_q2 = hist_csift_q2[np.newaxis]
     hist_csift_q3 = hist_csift_q3[np.newaxis]
@@ -334,18 +339,23 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
 
     # 3 layers
     ythird = np.ceil(cordy.max()/3)
-    l1 = cordy<=ythird
-    l2 = (cordy>ythird)&(cordy<=2*ythird)
-    l3 = cordy>2*ythird
-    hist_csift_l1, _ = np.histogram(feas[l1], bins = bins_code)
-    hist_csift_l2, _ = np.histogram(feas[l2], bins = bins_code)
-    hist_csift_l3, _ = np.histogram(feas[l3], bins = bins_code)
+    l1 = cordy <= ythird
+    l2 = (cordy > ythird) & (cordy <= 2*ythird)
+    l3 = cordy > 2*ythird
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l1 = np.histogram(feas[l1], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l2 = np.histogram(feas[l2], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l3 = np.histogram(feas[l3], bins=bins_code)[0]
     hist_csift_l1 = hist_csift_l1[np.newaxis]
     hist_csift_l2 = hist_csift_l2[np.newaxis]
     hist_csift_l3 = hist_csift_l3[np.newaxis]
     # concatenate
-    hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2, hist_csift_q3, hist_csift_q4, hist_csift_l1, hist_csift_l2, hist_csift_l3))
-    np.savetxt(fileout, hist_csift, fmt = '%g')
+    hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2,
+                            hist_csift_q3, hist_csift_q4, hist_csift_l1,
+                            hist_csift_l2, hist_csift_l3))
+    np.savetxt(fileout, hist_csift, fmt='%g')
     return hist_csift
 
 
@@ -362,39 +372,50 @@ def build_sp_hist2(feas, bins_code=np.arange(0, 4096+1)):
     """
     cordx = feas[:, 1]
     cordy = feas[:, 2]
-    feas  = feas[:, 3]  # only the top component, we are looking
+    feas = feas[:, 3]  # only the top component, we are looking
     # hard quantization
     # global histogram
-    hist_csift_g, _ = np.histogram(feas, bins = bins_code)
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_g = np.histogram(feas, bins=bins_code)[0]
     hist_csift_g = hist_csift_g[np.newaxis]
     # 4 quadrants
+    # noinspection PyTypeChecker
     midx = np.ceil(cordx.max()/2)
+    # noinspection PyTypeChecker
     midy = np.ceil(cordy.max()/2)
-    lx = cordx<midx
-    rx = cordx>=midx
-    uy = cordy<midy
-    dy = cordy>=midy
+    lx = cordx < midx
+    rx = cordx >= midx
+    uy = cordy < midy
+    dy = cordy >= midy
     # logging.error("LXUI: %s,%s", lx.__repr__(), uy.__repr__())
     # logging.error("Length LXUI: %s,%s", lx.shape, uy.shape)
     # logging.error("feas dimensions: %s", feas.shape)
 
-    hist_csift_q1, _ = np.histogram(feas[lx&uy], bins = bins_code)
-    hist_csift_q2, _ = np.histogram(feas[rx&uy], bins = bins_code)
-    hist_csift_q3, _ = np.histogram(feas[lx&dy], bins = bins_code)
-    hist_csift_q4, _ = np.histogram(feas[rx&dy], bins = bins_code)
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q1 = np.histogram(feas[lx & uy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q2 = np.histogram(feas[rx & uy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q3 = np.histogram(feas[lx & dy], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_q4 = np.histogram(feas[rx & dy], bins=bins_code)[0]
     hist_csift_q1 = hist_csift_q1[np.newaxis]
     hist_csift_q2 = hist_csift_q2[np.newaxis]
     hist_csift_q3 = hist_csift_q3[np.newaxis]
     hist_csift_q4 = hist_csift_q4[np.newaxis]
 
     # 3 layers
+    # noinspection PyTypeChecker
     ythird = np.ceil(cordy.max()/3)
-    l1 = cordy<=ythird
-    l2 = (cordy>ythird)&(cordy<=2*ythird)
-    l3 = cordy>2*ythird
-    hist_csift_l1, _ = np.histogram(feas[l1], bins = bins_code)
-    hist_csift_l2, _ = np.histogram(feas[l2], bins = bins_code)
-    hist_csift_l3, _ = np.histogram(feas[l3], bins = bins_code)
+    l1 = cordy <= ythird
+    l2 = (cordy > ythird) & (cordy <= 2*ythird)
+    l3 = cordy > 2*ythird
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l1 = np.histogram(feas[l1], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l2 = np.histogram(feas[l2], bins=bins_code)[0]
+    #: :type: numpy.core.multiarray.ndarray
+    hist_csift_l3 = np.histogram(feas[l3], bins=bins_code)[0]
     hist_csift_l1 = hist_csift_l1[np.newaxis]
     hist_csift_l2 = hist_csift_l2[np.newaxis]
     hist_csift_l3 = hist_csift_l3[np.newaxis]

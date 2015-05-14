@@ -1,5 +1,4 @@
 import unittest
-import sys
 
 # modified path since this is now being embeded in another project.
 from SMQTK.utils import jsmin
@@ -8,6 +7,7 @@ class JsTests(unittest.TestCase):
     def _minify(self, js):
         return jsmin.jsmin(js)
 
+    # noinspection PyMethodOverriding
     def assertEqual(self, thing1, thing2):
         if thing1 != thing2:
             print(repr(thing1), repr(thing2))

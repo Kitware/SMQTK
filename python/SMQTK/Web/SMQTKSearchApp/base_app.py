@@ -158,6 +158,7 @@ class SMQTKSearchApp (flask.Flask):
         @self.route('/')
         def smqtk_index():
             self.log.info("Session: %s", flask.session.items())
+            # noinspection PyUnresolvedReferences
             return flask.render_template("index.html", **self.nav_bar_content())
 
     def add_navigable_blueprint(self, bp):
@@ -180,9 +181,9 @@ class SMQTKSearchApp (flask.Flask):
         content.
 
         For example, when returning a flask.render_template() call:
-        >>> ret = {"things": "and stuff"}
-        >>> ret.update(smqtk_search_app.nav_bar_content())
-        >>> return flask.render_template("some_template.tmpl", **ret)
+        >> ret = {"things": "and stuff"}
+        >> ret.update(smqtk_search_app.nav_bar_content())
+        >> return flask.render_template("some_template.tmpl", **ret)
 
         :return: Dictionary of content required for proper display of the
             navigation bar. Contains keys of module names and values of module

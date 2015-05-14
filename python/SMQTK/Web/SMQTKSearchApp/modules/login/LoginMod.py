@@ -45,9 +45,10 @@ class LoginMod (flask.Blueprint):
         def login():
             # Render the login page, then continue on to a previously requested
             # page, or the home page.
+            # noinspection PyUnresolvedReferences
             return flask.render_template(
                 'login.html',
-                next=flask.request.args.get('next', '/home'),
+                next=flask.request.args.get('next', '/'),
                 username=flask.request.args.get('username', ''),
                 **parent_app.nav_bar_content()
             )

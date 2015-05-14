@@ -16,6 +16,7 @@ from SMQTK.utils import safe_create_dir, SimpleTimer
 from . import utils
 
 
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_Base (FeatureDescriptor):
     """
     Simple implementation of ColorDescriptor feature descriptor utility for
@@ -331,14 +332,16 @@ class ColorDescriptor_Base (FeatureDescriptor):
         #   creating tightly constrained bins. This would otherwise cause
         #   histograms between two inputs to be non-comparable (unaligned bins).
         # - See numpy note about ``bins`` to understand why the +1 is necessary
-        h, b = numpy.histogram(idxs,  # indices are all integers
-                               bins=numpy.arange(self._codebook.shape[0] + 1))
+        #: :type: numpy.core.multiarray.ndarray
+        h = numpy.histogram(idxs,  # indices are all integers
+                            bins=numpy.arange(self._codebook.shape[0] + 1))[0]
         # self.log.debug("Quantization histogram: %s", h)
         # Normalize histogram into relative frequencies
         # - Not using /= on purpose. h is originally int32 coming out of
         #   histogram. /= would keep int32 type when we want it to be
         #   transformed into a float type by the division.
         if h.sum():
+            # noinspection PyAugmentAssignment
             h = h / float(h.sum())
         else:
             h = numpy.zeros(h.shape, h.dtype)
@@ -634,6 +637,7 @@ def _create_image_descriptor_class(descriptor_type_str):
         "Given ColorDescriptor type was not valid! Given: %s. Expected one " \
         "of: %s" % (descriptor_type_str, valid_descriptor_types)
 
+    # noinspection PyPep8Naming
     class _cd_image_impl (ColorDescriptor_Image):
         def descriptor_type(self):
             """
@@ -654,6 +658,7 @@ def _create_video_descriptor_class(descriptor_type_str):
         "Given ColorDescriptor type was not valid! Given: %s. Expected one " \
         "of: %s" % (descriptor_type_str, valid_descriptor_types)
 
+    # noinspection PyPep8Naming
     class _cd_video_impl (ColorDescriptor_Video):
         def descriptor_type(self):
             """

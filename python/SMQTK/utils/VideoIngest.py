@@ -8,7 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import os.path as osp
-from SMQTK.utils import DataFile, DataIngest, VideoFile, safe_create_dir
+from SMQTK.utils import DataIngest, VideoFile, safe_create_dir
 
 
 class VideoIngest (DataIngest):

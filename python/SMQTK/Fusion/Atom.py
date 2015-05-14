@@ -60,7 +60,7 @@ class Atom (object):
         """
         Perform ranking for all indexers present in this atom. Returns a list of
         ranking dictionaries (see documentation for
-        SMQTK.Indexers.Indexer.rank_model) in the same number and order as
+        SMQTK.indexing.Indexer.rank_model) in the same number and order as
         indexers were provided to this atom during instantiation.
 
         :raises RuntimeError: No current model in one or more indexers.

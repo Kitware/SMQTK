@@ -12,7 +12,7 @@ import numpy
 import os.path as osp
 import pyflann
 
-from SMQTK.Indexers import Indexer
+from SMQTK.indexing import Indexer
 from SMQTK.utils import SimpleTimer
 from SMQTK.utils.distance_functions import (
     histogram_intersection_distance,

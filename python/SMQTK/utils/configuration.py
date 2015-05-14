@@ -10,7 +10,7 @@ from SMQTK.content_description import get_descriptors
 from SMQTK.Fusion.Atom import Atom
 from SMQTK.Fusion.Catalyst import get_catalysts
 from SMQTK.Fusion.Reactor import Reactor
-from SMQTK.Indexers import get_indexers
+from SMQTK.indexing import get_indexers
 from SMQTK.utils import DataIngest, VideoIngest
 
 

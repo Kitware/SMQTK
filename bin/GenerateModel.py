@@ -162,7 +162,7 @@ def main():
     # Don't do indexer model generation if a type was not provided
     if idxr_label:
         log.info("Loading indexer instance...")
-        #: :type: SMQTK.Indexers.Indexer
+        #: :type: SMQTK.indexing.Indexer
         indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
 
         # It is not guaranteed that the feature computation method is doing

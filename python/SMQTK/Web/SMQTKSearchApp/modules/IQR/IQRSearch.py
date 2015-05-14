@@ -460,7 +460,7 @@ class IQRSearch (flask.Blueprint):
                                       self._fd_type_str)
                 )
 
-                #: :type: SMQTK.Indexers.Indexer
+                #: :type: SMQTK.indexing.Indexer
                 indexer = self._ingest_config.new_indexer_instance(
                     self._idxr_type_str, self._fd_type_str,
                     work_dir=osp.join(sid_work_dir, "indexers",

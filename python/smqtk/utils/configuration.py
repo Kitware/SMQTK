@@ -293,5 +293,4 @@ class IngestConfiguration (object):
             atom_instances.append(Atom(descriptor, indexers))
 
             # TODO: Collect sub-catalyst instances if/when specified
-
         return Reactor(atom_instances, fusion_catalyst)

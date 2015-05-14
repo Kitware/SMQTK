@@ -70,6 +70,7 @@ def main():
         raise ValueError("No application name given!")
 
     import smqtk.web
+    # noinspection PyPep8Naming
     App = getattr(smqtk.web, application_name, None)
     if App is None:
         raise ValueError("No available application by the name of '%s'"

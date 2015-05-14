@@ -74,36 +74,37 @@ def main():
         "this script. Specific ingest used is determined by the ingest type " \
         "provided (-t/--type)."
     parser = bin_utils.SMQTKOptParser(description=description)
-    groupRequired = optparse.OptionGroup(parser, "Required Options")
-    groupOptional = optparse.OptionGroup(parser, "Optional")
+    group_required = optparse.OptionGroup(parser, "Required Options")
+    group_optional = optparse.OptionGroup(parser, "Optional")
 
-    groupRequired.add_option('-i', '--ingest',
-                             help="Ingest configuration to use.")
-    groupRequired.add_option('-d', '--feature-descriptor',
-                             help="Feature descriptor type for model and "
-                                  "feature generation.")
-    groupRequired.add_option('-I', '--indexer',
-                             help="Indexer type for model generation.")
+    group_required.add_option('-i', '--ingest',
+                              help="Ingest configuration to use.")
+    group_required.add_option('-d', '--feature-descriptor',
+                              help="Feature descriptor type for model and "
+                                   "feature generation.")
+    group_required.add_option('-I', '--indexer',
+                              help="Indexer type for model generation.")
 
-    groupOptional.add_option('--sys-json',
-                             help="Custom system configuration JSON file to "
-                                  "use. Otherwise we use the one specified in "
-                                  "the smqtk_config module.")
-    groupOptional.add_option('-l', '--list', action='store_true', default=False,
-                             help="List available ingest configurations. If "
-                                  "a valid ingest configuration has been "
-                                  "specified, we list available "
-                                  "FeatureDetector and Indexer configurations "
-                                  "available.")
-    groupOptional.add_option('-t', '--threads', type=int, default=None,
-                             help='Number of threads/processes to use for '
-                                  'processing.')
-    groupOptional.add_option('-v', '--verbose', action='store_true',
-                             default=False,
-                             help='Add debug messaged to output logging.')
+    group_optional.add_option('--sys-json',
+                              help="Custom system configuration JSON file to "
+                                   "use. Otherwise we use the one specified in "
+                                   "the smqtk_config module.")
+    group_optional.add_option('-l', '--list',
+                              action='store_true', default=False,
+                              help="List available ingest configurations. If "
+                                   "a valid ingest configuration has been "
+                                   "specified, we list available "
+                                   "FeatureDetector and Indexer configurations "
+                                   "available.")
+    group_optional.add_option('-t', '--threads', type=int, default=None,
+                              help='Number of threads/processes to use for '
+                                   'processing.')
+    group_optional.add_option('-v', '--verbose', action='store_true',
+                              default=False,
+                              help='Add debug messaged to output logging.')
 
-    parser.add_option_group(groupRequired)
-    parser.add_option_group(groupOptional)
+    parser.add_option_group(group_required)
+    parser.add_option_group(group_optional)
     opts, args = parser.parse_args()
 
     bin_utils.initializeLogging(logging.getLogger(),

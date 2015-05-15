@@ -397,7 +397,9 @@ class NearestNeighbor_HIK_Distance (NearestNeighbor_HIK_Base):
 
         # get the squared distances for positive and negative rows
         p = 1.0
+        # noinspection PyTypeChecker
         pos_sqrd_dists = npow(d[pindx, :], p)
+        # noinspection PyTypeChecker
         neg_sqrd_dists = npow(d[nindx, :], p)
         # sum + average both along rows to make (1xN) vector
         pos_dist = pos_sqrd_dists.sum(axis=0)

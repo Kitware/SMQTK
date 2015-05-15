@@ -106,6 +106,7 @@ def euclidian_distance(i, j):
     :rtype: float
 
     """
+    # noinspection PyTypeChecker
     return numpy.sqrt(numpy.power(i - j, 2.0).sum())
 
 

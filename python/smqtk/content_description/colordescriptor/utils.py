@@ -6,6 +6,7 @@ import logging
 import numpy
 import os
 import os.path as osp
+# noinspection PyPackageRequirements
 import PIL.Image
 import subprocess
 import sys

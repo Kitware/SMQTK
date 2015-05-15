@@ -1,4 +1,0 @@
-#!/bin/bash -x
-
-mpirun -np 4 python mpi_scheduler.py -w work_list -f DenseTrajectoriesDescriptor.py
-

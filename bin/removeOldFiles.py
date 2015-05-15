@@ -11,7 +11,7 @@ import time
 
 
 sf_log = logging.getLogger("smqtk.scan_files")
-is_log = logging.getLogger("smqtk.timed_scan")
+is_log = logging.getLogger("smqtk.interval_scan")
 
 
 def scan_files(base_dir, expire_seconds, action):

@@ -25,7 +25,18 @@ class FileElement (DataElement):
         # Cache variables for lazy lading
         self._md5_cache = None
 
-    @property
+    def __hash__(self):
+        return self.uuid()
+
+    def content_type(self):
+        return self._content_type
+
+    def md5(self):
+        if not self._md5_cache:
+            self._md5_cache = \
+                hashlib.md5(self.get_bytes()).hexdigest()
+        return self._md5_cache
+
     def uuid(self):
         """
         UUID for this data element. File data elements use the file MD5 sum as
@@ -35,16 +46,7 @@ class FileElement (DataElement):
         :rtype: basestring
 
         """
-        if not self._md5_cache:
-            self._md5_cache = \
-                hashlib.md5(self.get_bytes()).hexdigest()
-        return self._md5_cache
-
-    def __hash__(self):
-        return self.uuid
-
-    def content_type(self):
-        return self._content_type
+        return self.md5()
 
     def get_bytes(self):
         return open(self._filepath, 'rb').read()

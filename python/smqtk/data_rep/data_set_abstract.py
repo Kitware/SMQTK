@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import abc
+import logging
 
 
 class DataSet (object):
@@ -9,7 +10,12 @@ class DataSet (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractproperty
+    @property
+    def _log(self):
+        return logging.getLogger('.'.join([self.__module__,
+                                           self.__class__.__name__]))
+
+    @abc.abstractmethod
     def count(self):
         """
         :return: The number of data elements in this set.
@@ -28,6 +34,17 @@ class DataSet (object):
         :return: True if the given uuid matches an element in this set, or False
             if it does not.
         :rtype: bool
+
+        """
+        return
+
+    @abc.abstractmethod
+    def add_data(self, elem):
+        """
+        Add the given data element instance to this data set.
+
+        :param elem: Data element to add
+        :type elem: smqtk.data_rep.DataElement
 
         """
         return

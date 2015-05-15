@@ -137,7 +137,7 @@ class IngestConfiguration (object):
 
         :return: New instance of the given FeatureDescriptor type for this
             configuration instance.
-        :rtype: SMQTK.content_description.FeatureDescriptor
+        :rtype: SMQTK.content_description.ContentDescriptor
 
         """
         fd_type = get_descriptors()[fd_label]

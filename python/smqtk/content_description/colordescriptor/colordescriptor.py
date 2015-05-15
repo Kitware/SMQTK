@@ -10,14 +10,14 @@ import pyflann
 import sklearn.cluster
 import tempfile
 
-from smqtk.content_description import FeatureDescriptor
+from smqtk.content_description import ContentDescriptor
 from smqtk.utils import safe_create_dir, SimpleTimer
 
 from . import utils
 
 
 # noinspection PyAbstractClass,PyPep8Naming
-class ColorDescriptor_Base (FeatureDescriptor):
+class ColorDescriptor_Base (ContentDescriptor):
     """
     Simple implementation of ColorDescriptor feature descriptor utility for
     feature generation over images and videos.

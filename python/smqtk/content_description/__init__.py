@@ -24,7 +24,7 @@ def _async_feature_generator_helper(data, descriptor):
     :type data: DataFile
 
     :param descriptor: Feature descriptor that will generate the feature
-    :type descriptor: SMQTK.content_description.FeatureDescriptor
+    :type descriptor: SMQTK.content_description.ContentDescriptor
 
     :return: UID and associated feature vector
     :rtype: (int, numpy.core.multiarray.ndarray)
@@ -49,7 +49,7 @@ def _async_feature_generator_helper(data, descriptor):
         return None
 
 
-class FeatureDescriptor (object):
+class ContentDescriptor (object):
     """
     Base abstract Feature Descriptor interface
     """
@@ -272,4 +272,4 @@ def get_descriptors():
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "FEATURE_DESCRIPTOR_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, FeatureDescriptor)
+    return get_plugins(__name__, this_dir, helper_var, ContentDescriptor)

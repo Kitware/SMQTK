@@ -9,8 +9,8 @@ import os
 import re
 
 from smqtk.data_rep import DataElement, DataSet
+from smqtk.utils import safe_create_dir
 from smqtk.utils.file_utils import iter_directory_files, partition_string
-
 
 
 class FileSet (DataSet):
@@ -46,6 +46,9 @@ class FileSet (DataSet):
         self._root_dir = os.path.abspath(root_directory)
         self._md5_chunk = md5_chunk
 
+        self._log.debug("Initializing FileSet under root dir: %s",
+                        self._root_dir)
+
         #: :type: dict[object, smqtk.data_rep.DataElement]
         self._element_map = {}
         self._element_map_lock = multiprocessing.RLock()
@@ -63,20 +66,29 @@ class FileSet (DataSet):
         From the set root directory, find serialized files, deserialize them and
         store in instance mapping.
         """
-        with self._element_map_lock:
-            for fpath in iter_directory_files(self._root_dir, True):
-                m = self.SERIAL_FILE_RE.match(os.path.basename(fpath))
-                if m:
-                    with open(fpath) as f:
-                        #: :type: smqtk.data_rep.DataElement
-                        de = cPickle.load(f)
-                    self._element_map[de.uuid()] = de
+        if os.path.isdir(self._root_dir):
+            self._log.debug("Root directory exists, finding existing data "
+                            "elements...")
+            with self._element_map_lock:
+                for fpath in iter_directory_files(self._root_dir, True):
+                    m = self.SERIAL_FILE_RE.match(os.path.basename(fpath))
+                    if m:
+                        with open(fpath) as f:
+                            #: :type: smqtk.data_rep.DataElement
+                            de = cPickle.load(f)
+                        self._element_map[de.uuid()] = de
+                self._log.debug("Found %d elements", len(self._element_map))
+        else:
+            self._log.debug("Root dir doesn't exist, can't have existing "
+                            "elements")
 
     def _save_data_elements(self):
         """
         Serialize out data elements in mapping into the root directory.
         """
         with self._element_map_lock:
+            self._log.debug("Serializing data elements into: %s",
+                            self._root_dir)
             for uuid, de in self._element_map.iteritems():
                 md5 = de.md5()
                 # Leaving off trailing chunk so that we don't have a single
@@ -85,7 +97,7 @@ class FileSet (DataSet):
                     os.path.join(self._root_dir,
                                  *partition_string(md5, self._md5_chunk))
                 if not os.path.isdir(containing_dir):
-                    os.makedirs(containing_dir)
+                    safe_create_dir(containing_dir)
 
                 output_fname = os.path.join(
                     containing_dir,
@@ -100,6 +112,13 @@ class FileSet (DataSet):
         :rtype: int
         """
         return len(self._element_map)
+
+    def uuids(self):
+        """
+        :return: a tuple of UUIDs represented in this data set.
+        :rtype: list
+        """
+        return self._element_map.keys()
 
     def has_uuid(self, uuid):
         """
@@ -131,3 +150,6 @@ class FileSet (DataSet):
     def get_data(self, uuid):
         with self._element_map_lock:
             return self._element_map[uuid]
+
+
+DATA_SET_CLASS = FileSet

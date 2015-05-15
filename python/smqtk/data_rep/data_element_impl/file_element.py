@@ -2,6 +2,7 @@ __author__ = 'purg'
 
 import hashlib
 import mimetypes
+import os.path as osp
 
 from smqtk.data_rep import DataElement
 
@@ -19,7 +20,7 @@ class FileElement (DataElement):
         :type filepath: str
 
         """
-        self._filepath = filepath
+        self._filepath = osp.abspath(osp.expanduser(filepath))
         self._content_type = mimetypes.guess_type(filepath)[0]
 
         # Cache variables for lazy lading

@@ -24,15 +24,23 @@ class DataSet (object):
         return
 
     @abc.abstractmethod
+    def uuids(self):
+        """
+        :return: a tuple of uuids represented in this data set.
+        :rtype: list
+        """
+        return
+
+    @abc.abstractmethod
     def has_uuid(self, uuid):
         """
         Test if the given uuid refers to an element in this data set.
 
-        :param uuid: Unique ID to test for inclusion. This should match the type
-            that the set implementation expects or cares about.
+        :param uuid: Unique ID to test for inclusion. This should match the
+            type that the set implementation expects or cares about.
 
-        :return: True if the given uuid matches an element in this set, or False
-            if it does not.
+        :return: True if the given uuid matches an element in this set, or
+            False if it does not.
         :rtype: bool
 
         """
@@ -52,11 +60,11 @@ class DataSet (object):
     @abc.abstractmethod
     def get_data(self, uuid):
         """
-        Get the data element the given uuid references, or raise an exception if
-        the uuid does not reference any element in this set.
+        Get the data element the given uuid references, or raise an
+        exception if the uuid does not reference any element in this set.
 
-        :raises KeyError: If the given uuid does not refer to an element in this
-            data set.
+        :raises KeyError: If the given uuid does not refer to an element in
+            this data set.
 
         :param uuid: The uuid of the element to retrieve.
 

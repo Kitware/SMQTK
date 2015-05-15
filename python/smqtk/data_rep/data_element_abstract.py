@@ -63,5 +63,3 @@ class DataElement (object):
         :rtype: bytes
         """
         return
-
-    read = get_bytes

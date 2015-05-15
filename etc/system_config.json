@@ -1,6 +1,23 @@
 // Comments are allowed in JSON files used with the SMQTK system. They are
 // parsed out using the smqtk.utils.jsmin module.
 {
+    "DataSets": {
+        // name: {
+        //     "type": <class name from get_data_set_impls()>,
+        //     "init": {
+        //         kwargs to pass to constructor
+        //     }
+        // }
+        "example_image": {
+            "type": "FileSet",
+            "init": {
+                "root_directory":
+                    "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                "md5_chunk": 8
+            }
+        }
+    },
+
     "Ingests": {
         // relative to the SMQTK configured data directory
         "dir": "SMQTK_Ingests",

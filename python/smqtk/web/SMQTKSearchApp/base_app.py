@@ -8,7 +8,7 @@ import os.path
 
 from smqtk.utils import DatabaseInfo, SimpleTimer
 from smqtk.utils.configuration import IngestConfiguration
-from smqtk.utils.MongoSessions import MongoSessionInterface
+from smqtk.utils.mongo_sessions import MongoSessionInterface
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

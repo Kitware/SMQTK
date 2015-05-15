@@ -123,8 +123,8 @@ def flann_quantize_data(flann,
     else:
         fout = open(fileout_name, 'w')
 
-    def quantize_then_write(lines):
-        data = np.array(lines)
+    def quantize_then_write(lines_in):
+        data = np.array(lines_in)
         data = np.float64(data)
 
         if func_normalize:

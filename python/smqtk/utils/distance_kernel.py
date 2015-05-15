@@ -10,8 +10,8 @@ import logging
 import numpy as np
 from numpy.core.multiarray import ndarray
 
-from smqtk.utils.ReadWriteLock import ReadWriteLock
-from smqtk.utils.SimpleTimer import SimpleTimer
+from smqtk.utils import ReadWriteLock
+from smqtk.utils import SimpleTimer
 
 
 class DistanceKernel (object):

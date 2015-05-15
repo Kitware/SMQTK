@@ -42,15 +42,16 @@ def touch(fname):
         os.utime(fname, None)
 
 
-from .DatabaseInfo import DatabaseInfo
-from .DataFile import DataFile
-from .DataIngest import DataIngest
-from .DistanceKernel import DistanceKernel
-from .FeatureMemory import FeatureMemory, FeatureMemoryMap
-from .ReadWriteLock import ReaderUpdateException, DummyRWLock, ReadWriteLock
-from .SafeConfigCommentParser import SafeConfigCommentParser
-from .SignalHandler import SignalHandler
-from .SimpleTimer import SimpleTimer
-from .TimedCache import TimedCache
-from .VideoFile import VideoFile
-from .VideoIngest import VideoIngest
+from .database_info import DatabaseInfo
+from .datafile import DataFile
+from .dataingest import DataIngest
+from .distance_kernel import DistanceKernel
+from .feature_memory import FeatureMemory, FeatureMemoryMap
+from .proxy_manager import ProxyManager
+from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
+from .safe_config_comment_parser import SafeConfigCommentParser
+from .signal_handler import SignalHandler
+from .simple_timer import SimpleTimer
+from .timed_cache import TimedCache
+from .videofile import VideoFile
+from .videoingest import VideoIngest

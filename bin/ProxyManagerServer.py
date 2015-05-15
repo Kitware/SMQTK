@@ -22,7 +22,7 @@ import os.path as osp
 
 from smqtk.utils import bin_utils
 from smqtk.utils import SafeConfigCommentParser
-from smqtk.utils.ProxyManager import ProxyManager
+from smqtk.utils import ProxyManager
 
 
 def main():

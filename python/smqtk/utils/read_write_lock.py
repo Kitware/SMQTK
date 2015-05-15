@@ -8,7 +8,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 from collections import deque
 import multiprocessing
-#from multiprocessing import current_process
 from threading import current_thread
 import time
 

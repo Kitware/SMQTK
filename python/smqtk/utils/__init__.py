@@ -42,16 +42,25 @@ def touch(fname):
         os.utime(fname, None)
 
 
+###
+# In specific ordering for dependency resolution
+#
+
+# No internal util dependencies
+from .bin_utils import initializeLogging, SMQTKOptParser
 from .database_info import DatabaseInfo
-from .datafile import DataFile
-from .dataingest import DataIngest
-from .distance_kernel import DistanceKernel
-from .feature_memory import FeatureMemory, FeatureMemoryMap
-from .proxy_manager import ProxyManager
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .safe_config_comment_parser import SafeConfigCommentParser
 from .signal_handler import SignalHandler
 from .simple_timer import SimpleTimer
-from .timed_cache import TimedCache
+
+from .datafile import DataFile
 from .videofile import VideoFile
+from .dataingest import DataIngest
 from .videoingest import VideoIngest
+from .configuration import IngestConfiguration
+
+from .distance_kernel import DistanceKernel
+from .feature_memory import FeatureMemory, FeatureMemoryMap
+from .timed_cache import TimedCache
+from .proxy_manager import ProxyManager

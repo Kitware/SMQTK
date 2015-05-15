@@ -1,5 +1,5 @@
 // Comments are allowed in JSON files used with the SMQTK system. They are
-// parsed out using the SMQTK.utils.jsmin module.
+// parsed out using the smqtk.utils.jsmin module.
 {
     "Ingests": {
         // relative to the SMQTK configured data directory

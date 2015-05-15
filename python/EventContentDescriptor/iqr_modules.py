@@ -22,7 +22,7 @@ def iqr_model_train(matrix_kernel_train, labels_train, idx2clipid,
     @return: output as a dictionary with 'clipids_SV'
 
     """
-    log = logging.getLogger('SMQTK.iqr_model_train')
+    log = logging.getLogger('smqtk.iqr_model_train')
 
     # Precomputed kernels need to set serial number to each row of the kernel
     matrix_kernel_train = np.vstack((np.arange(1, len(matrix_kernel_train)+1),
@@ -79,7 +79,7 @@ def iqr_model_test(svm_model, matrix_kernel_test, clipids_test, sv_labels,
     @rtype: dictionary with 'probs' (np.array), 'clipids' (int list)
 
     """
-    log = logging.getLogger("SMQTK.iqr_model_test")
+    log = logging.getLogger("smqtk.iqr_model_test")
 
     weights = svmtools.get_SV_weights_nonlinear_svm(svm_model,
                                                     target_class=target_class)

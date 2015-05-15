@@ -22,7 +22,7 @@
                 // FeatureDescriptor settings for this ingest
                 "descriptors": {
                     // Relative to containing ingest directory
-                    "dir": "FeatureDescriptors",
+                    "dir": "ContentDescriptor",
                     "listing": {
                         "ColorDescriptor_Image_csift": {
                             "dir": "CSIFT"
@@ -79,7 +79,7 @@
                 "dir": "example_video",
                 "type": "video",
                 "descriptors": {
-                    "dir": "FeatureDescriptors",
+                    "dir": "ContentDescriptor",
                     "listing": {
                         "ColorDescriptor_Video_csift": {
                             "dir": "CSIFT"

@@ -454,14 +454,12 @@ class IQRSearch (flask.Blueprint):
             if not self._iqr_controller.has_session_uuid(sid):
                 sid_work_dir = osp.join(self.work_dir, sid)
 
-                #: :type: smqtk.content_description.FeatureDescriptor
                 descriptor = self._ingest_config.new_descriptor_instance(
                     self._fd_type_str,
                     work_dir=osp.join(sid_work_dir, 'descriptors',
                                       self._fd_type_str)
                 )
 
-                #: :type: smqtk.indexing.Indexer
                 indexer = self._ingest_config.new_indexer_instance(
                     self._idxr_type_str, self._fd_type_str,
                     work_dir=osp.join(sid_work_dir, "indexers",

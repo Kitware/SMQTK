@@ -127,7 +127,7 @@ class ContentDescriptor (object):
     @abc.abstractproperty
     def has_model(self):
         """
-        :return: True if this FeatureDescriptor instance has a valid mode, and
+        :return: True if this ContentDescriptor instance has a valid mode, and
             False if it doesn't.
         :rtype: bool
         """
@@ -250,7 +250,7 @@ class ContentDescriptor (object):
 
 def get_descriptors():
     """
-    Discover and return FeatureDescriptor classes found in the given plugin search
+    Discover and return ContentDescriptor classes found in the given plugin search
     directory. Keys in the returned map are the names of the discovered classes,
     and the paired values are the actual class type objects.
 
@@ -258,18 +258,18 @@ def get_descriptors():
     character ('_' prefixed files/directories are hidden, but not recommended).
 
     Within a module we first look for a helper variable by the name
-    ``FEATURE_DESCRIPTOR_CLASS``, which can either be a single class object or
+    ``CONTENT_DESCRIPTOR_CLASS``, which can either be a single class object or
     an iterable of class objects, to be exported. If the variable is set to
     None, we skip that module and do not import anything. If the variable is not
     present, we look for a class by the same name and casing as the module. If
     neither are found, the module is skipped.
 
-    :return: Map of discovered class object of type ``FeatureDescriptor`` whose
+    :return: Map of discovered class object of type ``ContentDescriptor`` whose
         keys are the string names of the classes.
     :rtype: dict of (str, type)
 
     """
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    helper_var = "FEATURE_DESCRIPTOR_CLASS"
+    helper_var = "CONTENT_DESCRIPTOR_CLASS"
     return get_plugins(__name__, this_dir, helper_var, ContentDescriptor)

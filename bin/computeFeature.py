@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Compute a feature vector for a given file with a chosen FeatureDescriptor type.
+Compute a feature vector for a given file with a chosen ContentDescriptor type.
 """
 
 import logging

@@ -52,7 +52,7 @@ def list_available_fds_idxrs(log, ingest_config):
     log.info("")
     log.info("For ingest configuration '%s'...", ingest_config.label)
     log.info("")
-    log.info("Available FeatureDescriptor types:")
+    log.info("Available ContentDescriptor types:")
     log.info("")
     for l in ingest_config.get_available_descriptor_labels():
         log.info("\t%s" % l)
@@ -132,7 +132,7 @@ def main():
             list_ingest_labels(log)
             exit(0)
         else:
-            # List available FeatureDescriptor and Indexer configurations
+            # List available ContentDescriptor and Indexer configurations
             # available for the given ingest config label.
             ingest_config = IngestConfiguration(ingest_label)
             list_available_fds_idxrs(log, ingest_config)
@@ -153,7 +153,7 @@ def main():
     ingest = ingest_config.new_ingest_instance()
 
     log.info("Loading descriptor instance...")
-    #: :type: smqtk.content_description.FeatureDescriptor
+    #: :type: smqtk.content_description.ContentDescriptor
     descriptor = ingest_config.new_descriptor_instance(fd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.PARALLEL = parallel

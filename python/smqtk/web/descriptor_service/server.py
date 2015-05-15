@@ -87,7 +87,7 @@ class DescriptorServiceServer (flask.Flask):
                                   os.environ.get(self.ENV_CONFIG, None),
                                   config_filepath))
 
-        #: :type: dict of ((str, str), smqtk.content_description.FeatureDescriptor)
+        #: :type: dict of ((str, str), smqtk.content_description.ContentDescriptor)
         descriptor_cache = {}
         descriptor_cache_lock = multiprocessing.RLock()
 

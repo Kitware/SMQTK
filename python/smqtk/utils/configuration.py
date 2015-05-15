@@ -21,7 +21,7 @@ class IngestConfiguration (object):
         etc/system_config.json
 
     Provides convenience methods to get the Ingest ingest instance as well
-    as factory methods to construct FeatureDescriptor and Indexer instances
+    as factory methods to construct ContentDescriptor and Indexer instances
     for a given type label.
 
     """
@@ -109,7 +109,7 @@ class IngestConfiguration (object):
 
     def get_available_descriptor_labels(self):
         """
-        :return: List of FeatureDescriptor configuration labels for this ingest
+        :return: List of ContentDescriptor configuration labels for this ingest
             configuration.
         :rtype: list of str
         """
@@ -120,11 +120,11 @@ class IngestConfiguration (object):
         Get a new descriptor instance.
 
         :raises KeyError: If the given label is not associated with a
-            FeatureDescriptor class type.
+            ContentDescriptor class type.
         :raises ValueError: If the given label is not represented in the system
             configuration.
 
-        :param fd_label: The FeatureDescriptor type label.
+        :param fd_label: The ContentDescriptor type label.
         :type fd_label: str
 
         :param data_dir: Data directory override, otherwise uses configured
@@ -135,14 +135,14 @@ class IngestConfiguration (object):
             directory.
         :type work_dir: str
 
-        :return: New instance of the given FeatureDescriptor type for this
+        :return: New instance of the given ContentDescriptor type for this
             configuration instance.
         :rtype: SMQTK.content_description.ContentDescriptor
 
         """
         fd_type = get_descriptors()[fd_label]
         if fd_label not in self.get_available_descriptor_labels():
-            raise ValueError("No configuration for FeatureDescriptor type '%s' "
+            raise ValueError("No configuration for ContentDescriptor type '%s' "
                              "in ingest configuration '%s'"
                              % (fd_label, self.label))
 
@@ -177,13 +177,13 @@ class IngestConfiguration (object):
         :raises KeyError: If the given Indexer label is not associated with an
             Indexer class type.
         :raises ValueError: If the given indexer label is not represented in the
-            system Indexer configuration. Also if the given FeatureDescriptor
-            label is not represented in the FeatureDescriptor configuration.
+            system Indexer configuration. Also if the given ContentDescriptor
+            label is not represented in the ContentDescriptor configuration.
 
         :param indexer_label: The Indexer type label.
         :type indexer_label: str
 
-        :param fd_label: The FeatureDescriptor type label.
+        :param fd_label: The ContentDescriptor type label.
         :type fd_label: str
 
         :param data_dir: Data directory override, otherwise uses configured
@@ -205,7 +205,7 @@ class IngestConfiguration (object):
                              "in ingest configuration '%s'"
                              % (indexer_label, self.label))
         if fd_label not in self.get_available_descriptor_labels():
-            raise ValueError("No configuration for FeatureDescriptor type '%s' "
+            raise ValueError("No configuration for ContentDescriptor type '%s' "
                              "in ingest configuration '%s'"
                              % (fd_label, self.label))
 

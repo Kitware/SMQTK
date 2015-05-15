@@ -18,8 +18,8 @@ class Atom (object):
 
     def __init__(self, descriptor, indexers):
         """
-        :param descriptor: FeatureDescriptor instance to contain
-        :type descriptor: smqtk.FeatureDescriptors.FeatureDescriptor
+        :param descriptor: ContentDescriptor instance to contain
+        :type descriptor: smqtk.content_description.ContentDescriptor
 
         :param indexers: One or more indexer instances to associate with the
             provided descriptor (i.e. have models generated with the given

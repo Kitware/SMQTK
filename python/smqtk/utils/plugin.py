@@ -66,6 +66,8 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
             # in the directory is not importable, the user should know.
             module = importlib.import_module('.%s' % module_name,
                                              package=base_module)
+            # Invoke reload in case the module changed between imports.
+            module = reload(module)
 
             # Look for magic variable for import guidance
             classes = []

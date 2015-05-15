@@ -27,7 +27,7 @@ class FileUploadMod (flask.Blueprint):
         Initialize uploading module
 
         :param parent_app: Parent Flask app
-        :type parent_app: smqtk.Web.SMQTKSearchApp.base_app.SMQTKSearchApp
+        :type parent_app: smqtk.Web.search_app.base_app.search_app
 
         :param working_directory: Directory for temporary file storage during
             upload up to the time a user takes control of the file.

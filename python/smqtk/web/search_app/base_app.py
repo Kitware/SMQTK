@@ -116,7 +116,7 @@ class SMQTKSearchApp (flask.Flask):
         #       and indexer types. In the future this should either be moved
         #       to something that can be chosen by the user or a
         #       multi-feature/indexer fusion system.
-        from .modules.IQR import IQRSearch, IQRSearchFusion
+        from .modules.iqr import IQRSearch, IQRSearchFusion
 
         with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
             ic_example_image = IngestConfiguration("example_image")

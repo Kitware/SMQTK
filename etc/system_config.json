@@ -18,6 +18,25 @@
         }
     },
 
+    "ContentDescriptors": {
+        // "name": {
+        //     "type": "typeName",
+        //     "init": {
+        //         "kwargs": "here"
+        //     }
+        // }
+        "CSIFT_Image_example": {
+            "type": "ColorDescriptor_Image_csift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image"
+            }
+        }
+    },
+
+
     "Ingests": {
         // relative to the SMQTK configured data directory
         "dir": "SMQTK_Ingests",

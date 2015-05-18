@@ -2,12 +2,50 @@
 Helper classes for access to JSON system configuration
 """
 
+import abc
 import smqtk_config
 
 from smqtk.data_rep.data_set_impl import get_data_set_impls
+from smqtk.content_description import get_descriptors
 
 
-class DataSetConfiguration (object):
+class ConfigurationInterface (object):
+    """
+    Abstract interface for constructing object instances based central on system
+    configuration JSON file.
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @classmethod
+    @abc.abstractmethod
+    def available_labels(cls):
+        """
+        :return: List of available string labels in system configuration.
+        :rtype: list[str]
+        """
+        return
+
+    @classmethod
+    @abc.abstractmethod
+    def new_inst(cls, label):
+        """
+        Construct a new instance of the type and with parameters associated with
+        the given label.
+
+        :param label: the configuration label
+        :type label: str
+
+        :raises KeyError: The given label does not exist in the system
+            configuration
+
+        :return: New instance of type and parameters associated with the given
+            label.
+
+        """
+        return
+
+
+class DataSetConfiguration (ConfigurationInterface):
     """
     Interface into data set configurations in common system configuration file
     """
@@ -38,6 +76,44 @@ class DataSetConfiguration (object):
         label_sect = cls.CFG_SECT[label]
         ds_cls = get_data_set_impls()[label_sect['type']]
         return ds_cls(**label_sect['init'])
+
+
+class ContentDescriptorConfiguration (ConfigurationInterface):
+    """
+    Interface into ContentDescriptor configurations in the common system
+    configuration file.
+    """
+
+    CFG_SECT = smqtk_config.SYSTEM_CONFIG['ContentDescriptors']
+
+    @classmethod
+    def available_labels(cls):
+        """
+        :return: List of available string labels in system configuration.
+        :rtype: list[str]
+        """
+        return cls.CFG_SECT.keys()
+
+    @classmethod
+    def new_inst(cls, label):
+        """
+        Construct a new instance of the type and with parameters associated with
+        the given label.
+
+        :param label: the configuration label
+        :type label: str
+
+        :raises KeyError: The given label does not exist in the system
+            configuration
+
+        :return: New instance of type and parameters associated with the given
+            label.
+        :rtype: smqtk.content_description.ContentDescriptor
+
+        """
+        label_sect = cls.CFG_SECT[label]
+        cd_cls = get_descriptors()[label_sect['type']]
+        return cd_cls(**label_sect['init'])
 
 
 # class IngestConfiguration (object):

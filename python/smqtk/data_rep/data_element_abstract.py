@@ -11,7 +11,7 @@ import tempfile
 def amend_mimetype():
     """ bump out jpe extension if present in map """
     if '.jpe' in mimetypes.types_map:
-        del mimetypes.types_map['jpe']
+        del mimetypes.types_map['.jpe']
 
 amend_mimetype()
 

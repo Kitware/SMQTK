@@ -11,6 +11,8 @@ import pyflann
 import sklearn.cluster
 import tempfile
 
+import smqtk_config
+
 from smqtk.content_description import ContentDescriptor
 from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
@@ -51,8 +53,22 @@ class ColorDescriptor_Base (ContentDescriptor):
     CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
     def __init__(self, model_directory, work_directory):
-        self._model_dir = model_directory
-        self._work_dir = work_directory
+        """
+        Initialize a new ColorDescriptor interface instance.
+
+        :param model_directory: Path to the directory to store/read data model
+            files on the local filesystem. Relative paths are treated relative
+            to ``smqtk_config.DATA_DIR``.
+        :type model_directory: str | unicode
+
+        :param work_directory: Path to the directory in which to place
+            temporary/working files. Relative paths are treated relative to
+            ``smqtk_config.WORD_DIR``.
+        :type work_directory: str | unicode
+
+        """
+        self._model_dir = osp.join(smqtk_config.DATA_DIR, model_directory)
+        self._work_dir = osp.join(smqtk_config.WORK_DIR, work_directory)
 
         # Cannot pre-load FLANN stuff because odd things happen when processing/
         # threading. Loading index file is fast anyway.

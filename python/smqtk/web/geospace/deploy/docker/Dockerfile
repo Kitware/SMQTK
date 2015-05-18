@@ -60,10 +60,7 @@ RUN mkdir -p /home/kwuser/.girder/logs
 # Memex's proxy can't use the git protocol
 #RUN git config --global url."https://".insteadOf git://
 
-RUN git clone git://github.com/memex-explorer/geoinfo_space.git && \
-    cd geoinfo_space && \
-    git checkout optimizations && \
-    git reset --hard
+RUN git clone git://github.com/memex-explorer/geoinfo_space.git
 
 WORKDIR /home/kwuser/geoinfo_space
 

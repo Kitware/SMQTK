@@ -7,6 +7,7 @@ import girder.api.rest
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description
+import girder.models
 
 # ----------------------------------------------------------------------------
 class Scraper(girder.api.rest.Resource):
@@ -44,7 +45,7 @@ class Geospace(girder.api.rest.Resource):
         search_radius = 1
 
         # TODO read it from the config file
-        db = pymongo.MongoClient('mongodb://localhost:27017/ist')
+        db = pymongo.MongoClient(girder.models.getDbConfig().get('isuri', 'mongodb://localhost:27017/ist'))
         database = db.get_default_database()
         coll = database['ads2']
 

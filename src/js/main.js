@@ -90,7 +90,7 @@ $(function () {
   // Scrap a URL for images and return list of images URL
   //--------------------------------------------------------------------------
   function scrapUrl(url, callback) {
-    $.ajax("../api/v1/scrape?url="+url+"")
+    $.ajax("api/v1/scrape?url="+url+"")
       .done(function(data) {
         if (callback !== undefined) {
           callback(data);
@@ -190,7 +190,7 @@ $(function () {
   // Query given a time duration
   //--------------------------------------------------------------------------
   myApp.queryData = function(timeRange, location, callback) {
-    var url = "../api/v1/data?limit=100000&duration=["+timeRange+"]";
+    var url = "api/v1/data?limit=100000&duration=["+timeRange+"]";
 
     if (location !== undefined || location !== null || location !== '') {
       url += "&location="+location.value+"&location_type="+location.type;
@@ -308,7 +308,7 @@ $(function () {
     }
   }
 
-  $.ajax( "../api/v1/data" )
+  $.ajax( "api/v1/data" )
     .done(function(range) {
       var format = d3.time.format("%Y-%m-%d %H:%M:%S"),
           min = new Date(range.duration.start.time * 1000),

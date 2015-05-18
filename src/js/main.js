@@ -68,16 +68,16 @@ $(function () {
 
     if (data) {
       data.forEach(function(item) {
-        key = item.field7 + '|' + item.field6;
+        key = item.loc[0] + '|' + item.loc[1];
         if (key in myApp.locationBin) {
           myApp.locationBin[key].binCount = 1 + myApp.locationBin[key].binCount;
-          myApp.locationBin[key].urls.push(item.field5);
+          myApp.locationBin[key].urls.push(item.url);
           if (myApp.locationBin[key].binCount > max) {
             max = myApp.locationBin[key].binCount
           }
         } else {
           item.binCount = 1;
-          item.urls = [item.field5];
+          item.urls = [item.url];
           myApp.locationBin[key] = item;
           newdata.push(item);
         }
@@ -90,7 +90,7 @@ $(function () {
   // Scrap a URL for images and return list of images URL
   //--------------------------------------------------------------------------
   function scrapUrl(url, callback) {
-    $.ajax("/api/v1/scrape?url="+url+"")
+    $.ajax("../api/v1/scrape?url="+url+"")
       .done(function(data) {
         if (callback !== undefined) {
           callback(data);
@@ -118,7 +118,7 @@ $(function () {
 
     myApp.pointFeature
       .data(aggdata.data)
-      .position(function (d) { return { x:d.field7, y:d.field6 } })
+      .position(function (d) { return { x:d.loc[0], y:d.loc[1] } })
       .style('radius', function (d) { return myApp.scale(d.binCount); })
       .style('stroke', false)
       .style('fillOpacity', 0.4)
@@ -127,12 +127,12 @@ $(function () {
         var i = 0, anchor = null;
 
         var currLocation = $("#search").val();
-        var clickedLocation = evt.data["field3"];
+        var clickedLocation = evt.data["place"];
         if (!currLocation || currLocation.length < 1 || currLocation !== myApp.location ||
           clickedLocation !== myApp.location) {
-          $("#search").val(evt.data["field3"])
+          $("#search").val(evt.data["place"])
           $("#search").trigger("geocode");
-          myApp.location = [evt.data["field6"], evt.data["field7"]];
+          myApp.location = evt.data["loc"];
           myApp.setLocationTypeToLatLon();
         }
         for (i = 0; i < evt.data.urls.length; ++i) {
@@ -151,7 +151,7 @@ $(function () {
               // Format the data
               var adsPerDay = {}, newData = [], i, time, month, inst, timeString, item;
               for (i = 0; i < data.length; ++i) {
-                time = new Date(data[i]["field4"]);
+                time = new Date(data[i]["time"]);
                 month = (time.getMonth() + 1);
                 if (month < 10) {
                   month = ("0" + month);
@@ -190,7 +190,7 @@ $(function () {
   // Query given a time duration
   //--------------------------------------------------------------------------
   myApp.queryData = function(timeRange, location, callback) {
-    var url = "/api/v1/data?limit=100000&duration=["+timeRange+"]";
+    var url = "../api/v1/data?limit=100000&duration=["+timeRange+"]";
 
     if (location !== undefined || location !== null || location !== '') {
       url += "&location="+location.value+"&location_type="+location.type;
@@ -308,11 +308,11 @@ $(function () {
     }
   }
 
-  $.ajax( "/api/v1/data" )
+  $.ajax( "../api/v1/data" )
     .done(function(range) {
       var format = d3.time.format("%Y-%m-%d %H:%M:%S"),
-          min = format.parse(range.duration.start.field4),
-          max = format.parse(range.duration.end.field4);
+          min = new Date(range.duration.start.time * 1000),
+          max = new Date(range.duration.end.time * 1000);
 
       // Set the date range
       $( "#slider" ).slider({

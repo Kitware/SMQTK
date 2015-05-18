@@ -38,7 +38,7 @@ class GeoApp():
 
     """Start the server and serve until stopped."""
     def start(self):
-        cherrypy.config['database']['uri'] = 'mongodb://localhost:27017/geoapp'
+        #cherrypy.config['database']['uri'] = 'mongodb://localhost:27017/geoapp'
         cherrypy.config['server.socket_port'] = 8001
         self.root = GeoAppRoot()
         # Create the girder services and place them at /girder
@@ -49,8 +49,8 @@ class GeoApp():
                 'tools.staticdir.on': 'True',
                 'tools.staticdir.dir': os.path.join(ROOT_DIR, 'src')
             },
-            '/girder/static': curConfig['/static'],
-            '/girder/static/lib/bootstrap/fonts': {
+            'girder/static': curConfig['/static'],
+            'girder/static/lib/bootstrap/fonts': {
                 'tools.staticdir.on': 'True',
                 'tools.staticdir.dir': os.path.join(
                     ROOT_DIR, 'built/lib/bootstrap/fonts')
@@ -64,8 +64,8 @@ class GeoApp():
         self.root.api = self.root.girder.api
         del self.root.girder.api
 
-        self.root.girder.updateHtmlVars({'staticRoot': '/girder/static'})
-        self.root.api.v1.updateHtmlVars({'staticRoot': '/girder/static'})
+        self.root.girder.updateHtmlVars({'staticRoot': 'girder/static'})
+        self.root.api.v1.updateHtmlVars({'staticRoot': 'girder/static'})
 
         info = {
             'config': appconf,

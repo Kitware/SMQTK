@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="src/js/geo.ext.min.js" type="text/javascript" charset="UTF8"></script>
+    <script src="src/js/geo.min.js"></script>
+    <script src="src/js/jquery-ui-1.11.3.custom/jquery-ui.js"></script>
+    <script src="http://maps.googleapis.com/maps/api/js?sensor=false&amp;libraries=places"></script>
+    <script src="src/js/jquery.geocomplete.min.js"></script>
+    <script src="src/js/bootstrap.min.js"></script>
+    <script src="src/js/vega.js"></script>
+    <script src="src/js/main.js"></script>
+    <link rel="stylesheet" href="src/css/bootstrap.min.css">
+    <link rel="stylesheet" href="src/css/font-awesome.min.css">
+    <!-- <link rel="stylesheet" href="src/jquery-ui-1.11.3.custom/jquery-ui.min.css" type="text/css" /> -->
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="src/main.css">
+</head>
+<body>
+    <div>
+        <div class="gs-header-wrapper">
+            <a class="gs-brand" href="#search/*">Memex-Geospace</a>
+            <div class="container-fluid gs-search-form">
+                <input id="search" type="text" class="form-control" placeholder="Search">
+            </div>
+            <div id="spinner" class="gs-search-indicator">
+                <button class="btn btn-default gs-spinner-icon">
+                    <span class="spinner"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+                </button>
+                <button class="btn btn-default gs-spinner-text">
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid gs-fill">
+    <div class="row gs-fill">
+    <div class="gs-geospace col-md-8">
+        <div id="map"></div>
+        <div class="gs-date-display btn btn-primary btn-md">
+            <div><span id="start"></span></div>
+            <div><span id="end"></span></div>
+        </div>
+        <div class="gs-control-center">
+            <div class="gs-player-panel">
+                <div class="gs-player container-fluid">
+                    <div class="gs-container">
+                        <div>
+                            <button type="button" id="button_bw" class="btn" onclick='myApp.buttonBackPress()'>
+                              <span class="glyphicon glyphicon-backward" aria-hidden="true"></span>
+                            </button>
+
+                            <button type="button" id="button_play" class="btn" onclick='myApp.buttonPlayPress()'>
+                              <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                            </button>
+
+                            <button type="button" id="button_stop" class="btn" onclick='myApp.buttonStopPress()'>
+                              <span class="glyphicon glyphicon-stop" aria-hidden="true"></span>
+                            </button>
+
+                            <button type="button" id="button_fw" class="btn" onclick='myApp.buttonForwardPress()'>
+                              <span class="glyphicon glyphicon-forward" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                        <div class="gs-slider gs-inilne-block">
+                            <div id="slider"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="gs-image-space col-md-4">
+        <div id="statistics"></div>
+        <div id="images"></div>
+    </div>
+    </div>
+    </div>
+</body>

@@ -10,7 +10,8 @@ import re
 
 from smqtk.data_rep import DataElement, DataSet
 from smqtk.utils import safe_create_dir
-from smqtk.utils.file_utils import iter_directory_files, partition_string
+from smqtk.utils.file_utils import iter_directory_files
+from smqtk.utils.string_utils import partition_string
 
 
 class FileSet (DataSet):

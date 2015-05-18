@@ -52,5 +52,38 @@ class FileElement (DataElement):
     def get_bytes(self):
         return open(self._filepath, 'rb').read()
 
+    def write_temp(self, temp_dir=None):
+        """
+        Write this data's bytes to a temporary file on disk, returning the path
+        to the written file, whose extension is guessed based on this data's
+        content type.
+
+        NOTE:
+            The file path returned should not be explicitly removed by the user.
+            Instead, the ``clean_temp()`` method should be called on this
+            object.
+
+        For FileElement instances, this returns the original data file's path.
+
+        :param temp_dir: Optional directory to write temporary file in,
+            otherwise we use the platform default temporary files directory.
+        :type temp_dir: None or basestring
+
+        :return: Path to the temporary file
+        :rtype: str
+
+        """
+        return self._filepath
+
+    def clean_temp(self):
+        """
+        Clean any temporary files created by this element. This does nothing if
+        no temporary files have been generated for this element.
+
+        For FileElement instance's this does nothing as the ``write_temp()``
+        method doesn't actually write any files.
+        """
+        return
+
 
 DATA_ELEMENT_CLASS = FileElement

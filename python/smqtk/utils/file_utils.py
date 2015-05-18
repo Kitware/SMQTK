@@ -34,32 +34,26 @@ def iter_directory_files(d, recurse=True):
                                "directory? :: '%s'" % f)
 
 
-def partition_string(s, segments):
+def exclusive_touch(file_path):
     """
-    Partition a string into a number of segments. If the given number of
-    segments does not divide evenly into the string's length, this function
-    behaves erratically.
+    Attempt to touch a file. If that file already exists, we return False.
+    If the file was touched and created, we return True. Other OSErrors
+    thrown beside the expected "file already exists" error are passed
+    upwards.
 
-    This is useful when partitioning an MD5 sum of a file to determine where it
-    should be placed in a directory tree system.
+    :param file_path: Path to the file to touch.
+    :type file_path: str
 
-    :param s: String to partition.
-    :type s: str
-
-    :param segments: Number of segments to splut the string into
-    :type segments: int
-
-    :return: A list of N segments. If the given number of segments does not
-        divide evenly into the string's length, this function behaves
-        erratically.
-    :rtype: list[str]
+    :return: True if we touched/created the file, false if we couldn't
+    :rtype: bool
 
     """
-    seg_len = len(s) // segments
-    tail = len(s) % segments
-    r = []
-    for i in range(segments):
-        r.append(s[i*seg_len:(i+1)*seg_len])
-    if tail:
-        r.append(s[-tail:])
-    return r
+    try:
+        fd = os.open(file_path, os.O_CREAT | os.O_EXCL)
+        os.close(fd)
+        return True
+    except OSError, ex:
+        if ex.errno == 17:  # File exists, could not touch.
+            return False
+        else:
+            raise

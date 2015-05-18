@@ -102,6 +102,10 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     os.close(tmp_fd)
 
     log.debug("launching executable subprocess")
+    # TODO: Perform harrislaplace detection method, if yields 0 descriptors, run
+    #       densesample method. When harrislaplace fails, this generally means
+    #       that there are no edge features in the image, e.g. a solid color
+    #       image.
     cmd = [cd_exe, img_filepath, '--output', tmp_path,
            # "harrislaplace" is another option here, but this can result in 0
            # descriptors for an image, and is also slower.

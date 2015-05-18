@@ -64,24 +64,6 @@ class ContentDescriptor (object):
     # - None means use all available cores.
     PARALLEL = None
 
-    def __init__(self, data_directory, work_directory):
-        """
-        Initialize a feature descriptor instance
-
-        :param data_directory: Feature descriptor data directory.
-        :type data_directory: str
-
-        :param work_directory: Work directory for this feature descriptor to use.
-        :type work_directory: str
-
-        """
-        # Directory that permanent data for this feature descriptor will be
-        # held, if any
-        self._data_dir = data_directory
-        # Directory that work for this feature descriptor should be put. This
-        # should be considered a temporary
-        self._work_dir = work_directory
-
     @property
     def log(self):
         """
@@ -95,64 +77,29 @@ class ContentDescriptor (object):
     def name(self):
         return self.__class__.__name__
 
-    @property
-    def data_directory(self):
+    @abc.abstractmethod
+    def valid_content_types(self):
         """
-        :return: Data directory for this feature descriptor
-        :rtype: str
-        """
-        if not os.path.isdir(self._data_dir):
-            safe_create_dir(self._data_dir)
-        return self._data_dir
-
-    @property
-    def work_directory(self):
-        """
-        :return: Work directory for this feature descriptor
-        :rtype: str
-        """
-        if not os.path.isdir(self._work_dir):
-            safe_create_dir(self._work_dir)
-        return self._work_dir
-
-    # @abc.abstractmethod
-    # def valid_content_types(self):
-    #     """
-    #     :return: A list valid MIME type content types that this descriptor can
-    #         handle.
-    #     :rtype: collections.Iterable[str]
-    #     """
-    #     return
-
-    @abc.abstractproperty
-    def has_model(self):
-        """
-        :return: True if this ContentDescriptor instance has a valid mode, and
-            False if it doesn't.
-        :rtype: bool
+        :return: A list valid MIME type content types that this descriptor can
+            handle.
+        :rtype: collections.Iterable[str]
         """
         return
 
     @abc.abstractmethod
-    def generate_model(self, data_list, parallel=None, **kwargs):
+    def generate_model(self, data_list, **kwargs):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
 
-        This method emits a warning message but does nothing if there is already
-        a model generated.
+        This method does nothing if there is already a model generated or if
+        this descriptor does not generate a model.
 
-        :param data_list: List of input data elements to generate model with.
-        :type data_list: list of smqtk.utils.DataFile.DataFile
-            or tuple of smqtk.utils.DataFile.DataFile
-
-        :param parallel: Optionally specification of how many processors to use
-            when pooling sub-tasks. If None, we attempt to use all available
-            cores.
-        :type parallel: int
+        :param data_list: List of input data elements to generate the model with
+        :type data_list: collections.Iterable[smqtk.data_rep.DataElement]
 
         """
-        return
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def compute_feature(self, data):
@@ -162,8 +109,8 @@ class ContentDescriptor (object):
 
         :raises RuntimeError: Feature extraction failure of some kind.
 
-        :param data: Some kind of input data for the feature descriptor. This is
-            descriptor dependent.
+        :param data: Some kind of input data for the feature descriptor.
+        :type data: smqtk.data_rep.DataElement
 
         :return: Feature vector.
         :rtype: numpy.ndarray
@@ -181,7 +128,7 @@ class ContentDescriptor (object):
 
         :param data: List of data elements to compute features for. These must
             have UIDs assigned for feature association in return value
-        :type data: list of SMQTK.utils.DataFile.DataFile
+        :type data: list[smqtk.data_rep.DataElement]
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -196,16 +143,8 @@ class ContentDescriptor (object):
         :rtype: dict of (int, numpy.core.multiarray.ndarray)
 
         """
-        # Make sure that all input data have associated UIDs
-        for item in data:
-            # Make sure data items have valid UIDs
-            if item.uid is None:
-                raise RuntimeError("Some data elements do not have UIDs "
-                                   "assigned to them.")
-            # args.append((item.uid, item, self))
         self.log.info("Async compute features processing %d elements",
                       len(data))
-
 
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
@@ -214,11 +153,12 @@ class ContentDescriptor (object):
         ar_map = {}
         with SimpleTimer("Starting pool...", self.log.debug):
             for d in data:
-                ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
-                                                 args=(d, self))
+                ar_map[d.uuid] = \
+                    pool.apply_async(_async_feature_generator_helper,
+                                     args=(d, self))
         pool.close()
 
-        #: :type: dict of (int, numpy.core.multiarray.ndarray)
+        #: :type: dict[int, numpy.core.multiarray.ndarray]
         r_dict = {}
         failures = False
         perc_T = 0.0

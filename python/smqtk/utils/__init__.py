@@ -16,9 +16,14 @@ def safe_create_dir(d):
     :param d: Directory filepath to create
     :type d: str
 
+    :return: The directory that was create, i.e. the directory that was passed
+        in (absolute form).
+    :rtype: str
+
     """
     import os
     import errno
+    d = os.path.abspath(os.path.expanduser(d))
     try:
         os.makedirs(d)
     except OSError, ex:
@@ -26,6 +31,7 @@ def safe_create_dir(d):
             pass
         else:
             raise
+    return d
 
 
 def touch(fname):

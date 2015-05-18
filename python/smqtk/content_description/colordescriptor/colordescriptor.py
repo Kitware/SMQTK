@@ -1,17 +1,20 @@
 import abc
 import logging
+import math
+import mimetypes
 import multiprocessing
 import multiprocessing.pool
 import numpy
 import os
 import os.path as osp
 import pyflann
-# import scipy.cluster.vq
 import sklearn.cluster
 import tempfile
 
 from smqtk.content_description import ContentDescriptor
-from smqtk.utils import safe_create_dir, SimpleTimer
+from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
+from smqtk.utils.string_utils import partition_string
+from smqtk.utils.video_utils import get_metadata_info
 
 from . import utils
 
@@ -33,7 +36,7 @@ class ColorDescriptor_Base (ContentDescriptor):
 
     """
 
-    # colordescriptor executable that should be on the PATH
+    # colorDescriptor executable that should be on the PATH
     PROC_COLORDESCRIPTOR = 'colorDescriptor'
 
     # Distance function to use in FLANN indexing. See FLANN documentation for
@@ -47,9 +50,10 @@ class ColorDescriptor_Base (ContentDescriptor):
     # basis).
     CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
-    def __init__(self, data_directory, work_directory):
-        super(ColorDescriptor_Base, self).__init__(data_directory,
-                                                   work_directory)
+    def __init__(self, model_directory, work_directory):
+        self._model_dir = model_directory
+        self._work_dir = work_directory
+
         # Cannot pre-load FLANN stuff because odd things happen when processing/
         # threading. Loading index file is fast anyway.
         self._codebook = None
@@ -58,12 +62,12 @@ class ColorDescriptor_Base (ContentDescriptor):
 
     @property
     def codebook_filepath(self):
-        return osp.join(self.data_directory,
+        return osp.join(self._model_dir,
                         "%s.codebook.npy" % (self.descriptor_type(),))
 
     @property
     def flann_index_filepath(self):
-        return osp.join(self.data_directory,
+        return osp.join(self._model_dir,
                         "%s.flann_index.dat" % (self.descriptor_type(),))
 
     @property
@@ -75,6 +79,10 @@ class ColorDescriptor_Base (ContentDescriptor):
         if self._codebook is None and has_model:
             self._codebook = numpy.load(self.codebook_filepath)
         return has_model
+
+    @property
+    def temp_dir(self):
+        return safe_create_dir(osp.join(self._work_dir, 'temp_files'))
 
     @abc.abstractmethod
     def descriptor_type(self):
@@ -89,9 +97,9 @@ class ColorDescriptor_Base (ContentDescriptor):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: DataFile elements to generate combined info and
+        :param data_items: Data elements to generate combined info and
             descriptor matrices for.
-        :type data_items: tuple of SMQTK.utils.DataFile.DataFile
+        :type data_items: tuple of smqtk.data_rep.DataElement
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -107,13 +115,13 @@ class ColorDescriptor_Base (ContentDescriptor):
         The directory that contains checkpoint material for a given data element
 
         :param data: Data element
-        :type data: SMQTK.utils.DataFile.DataFile
+        :type data: smqtk.data_rep.DataElement
 
         :return: directory path
         :rtype: str
 
         """
-        d = osp.join(self.work_directory, *data.split_md5sum(8))
+        d = osp.join(self._work_dir, *partition_string(data.md5(), 8))
         safe_create_dir(d)
         return d
 
@@ -123,7 +131,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         which for colorDescriptor consists of two matrices: info and descriptors
 
         :param data: Data element
-        :type data: SMQTK.utils.DataFile.DataFile
+        :type data: smqtk.data_rep.DataElement
 
         :param frame: frame within the data file
         :type frame: int
@@ -135,13 +143,13 @@ class ColorDescriptor_Base (ContentDescriptor):
         d = self._get_checkpoint_dir(data)
         if frame is not None:
             return (
-                osp.join(d, "%s.info.%d.npy" % (data.md5sum, frame)),
-                osp.join(d, "%s.descriptors.%d.npy" % (data.md5sum, frame))
+                osp.join(d, "%s.info.%d.npy" % (data.md5(), frame)),
+                osp.join(d, "%s.descriptors.%d.npy" % (data.md5(), frame))
             )
         else:
             return (
-                osp.join(d, "%s.info.npy" % data.md5sum),
-                osp.join(d, "%s.descriptors.npy" % data.md5sum)
+                osp.join(d, "%s.info.npy" % data.md5()),
+                osp.join(d, "%s.descriptors.npy" % data.md5())
             )
 
     def _get_checkpoint_feature_file(self, data):
@@ -150,7 +158,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         file relative to our current working directory.
 
         :param data: Data element
-        :type data: SMQTK.utils.DataFile.DataFile
+        :type data: smqtk.data_rep.DataElement
 
         :return: Standard path to where the feature checkpoint file for this
             given data element.
@@ -158,9 +166,9 @@ class ColorDescriptor_Base (ContentDescriptor):
 
         """
         return osp.join(self._get_checkpoint_dir(data),
-                        "%s.feature.npy" % data.md5sum)
+                        "%s.feature.npy" % data.md5())
 
-    def generate_model(self, data_list, parallel=None, **kwargs):
+    def generate_model(self, data_list, **kwargs):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
@@ -171,17 +179,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         method.
 
         :param data_list: List of input data elements to generate model with.
-        :type data_list: list of smqtk.utils.DataFile.DataFile
-            or tuple of smqtk.utils.DataFile.DataFile
-
-        :param parallel: Optionally specification of how many processors to use
-            when pooling sub-tasks. If None, we attempt to use all available
-            cores.
-        :type parallel: int
-
-
-        Additional optional key-word arguments
-        ======================================
+        :type data_list: list[smqtk.data_rep.DataElement]
+            or tuple[smqtk.data_rep.DataElement]
 
         :param kmeans_k: Centroids to generate. Default of 1024
         :type kmeans_k: int
@@ -210,8 +209,9 @@ class ColorDescriptor_Base (ContentDescriptor):
                           "descriptor '%s'.", self.descriptor_type())
 
             # generate descriptors
-            with SimpleTimer("Generating descriptor matrices...", self.log.info):
-                descriptors_checkpoint = osp.join(self.work_directory,
+            with SimpleTimer("Generating descriptor matrices...",
+                             self.log.info):
+                descriptors_checkpoint = osp.join(self._work_dir,
                                                   "model_descriptors.npy")
 
                 if osp.isfile(descriptors_checkpoint):
@@ -225,7 +225,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                             *data_list,
                             limit=self.CODEBOOK_DESCRIPTOR_LIMIT
                         )
-                    _, tmp = tempfile.mkstemp(dir=self.work_directory,
+                    _, tmp = tempfile.mkstemp(dir=self._work_dir,
                                               suffix='.npy')
                     self.log.debug("Saving model-gen info/descriptor matrix")
                     numpy.save(tmp, descriptors)
@@ -272,7 +272,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
 
-    def compute_feature(self, data, no_checkpoint=False):
+    def compute_feature(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
@@ -281,13 +281,7 @@ class ColorDescriptor_Base (ContentDescriptor):
 
         :param data: Some kind of input data for the feature descriptor. This is
             descriptor dependent.
-        :type data:
-            smqtk.utils.DataFile.DataFile or smqtk.utils.VideoFile.VideoFile
-
-        :param no_checkpoint: Normally, we produce a checkpoint file, which
-            contains the numpy feature vector for a given video so that it may
-            be loaded instead of re-computed if the same video is visited again.
-            If this is True, we do not save such a file to our work directory.
+        :type data: smqtk.data_rep.DataElement
 
         :return: Feature vector. This is a histogram of N bins where N is the
             number of centroids in the codebook. Bin values is percent
@@ -297,8 +291,6 @@ class ColorDescriptor_Base (ContentDescriptor):
         """
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         if osp.isfile(checkpoint_filepath):
-            # self.log.debug("Found checkpoint feature vector file, loading and "
-            #                "returning.")
             return numpy.load(checkpoint_filepath)
 
         if not self.has_model:
@@ -309,7 +301,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                                % (self.codebook_filepath,
                                   self.flann_index_filepath))
 
-        self.log.debug("Computing descriptors for data UID[%s]...", data.uid)
+        self.log.debug("Computing descriptors for data UID[%s]...", data.uuid)
         info, descriptors = self._generate_descriptor_matrices(data)
 
         # Quantization
@@ -347,25 +339,37 @@ class ColorDescriptor_Base (ContentDescriptor):
             h = numpy.zeros(h.shape, h.dtype)
         # self.log.debug("Normalized histogram: %s", h)
 
-        if not no_checkpoint:
-            self.log.debug("Saving checkpoint feature file")
-            if not osp.isdir(osp.dirname(checkpoint_filepath)):
-                safe_create_dir(osp.dirname(checkpoint_filepath))
-            numpy.save(checkpoint_filepath, h)
+        self.log.debug("Saving checkpoint feature file")
+        if not osp.isdir(osp.dirname(checkpoint_filepath)):
+            safe_create_dir(osp.dirname(checkpoint_filepath))
+        numpy.save(checkpoint_filepath, h)
 
         return h
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_Image (ColorDescriptor_Base):
+
+    def valid_content_types(self):
+        """
+        :return: A list valid MIME type content types that this descriptor can
+            handle.
+        :rtype: collections.Iterable[str]
+        """
+        return (
+            'image/bmp',
+            'image/jpeg',
+            'image/png',
+            'image/tiff',
+        )
 
     def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: DataFile elements to generate combined info and
+        :param data_items: Data elements to generate combined info and
             descriptor matrices for.
-        :type data_items: tuple of SMQTK.utils.DataFile.DataFile
+        :type data_items: tuple of smqtk.data_rep.DataElement
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -382,29 +386,40 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
         per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
 
         if len(data_items) == 1:
+            di = data_items[0]
             # Check for checkpoint files
             info_fp, desc_fp = \
-                self._get_standard_info_descriptors_filepath(data_items[0])
-            utils.generate_descriptors(
-                self.PROC_COLORDESCRIPTOR, data_items[0].filepath,
-                self.descriptor_type(), info_fp, desc_fp, per_item_limit
-            )
+                self._get_standard_info_descriptors_filepath(di)
+            # Save out data bytes to temporary file
+            temp_img_filepath = di.write_temp(self.temp_dir)
+            try:
+                # Generate descriptors
+                utils.generate_descriptors(
+                    self.PROC_COLORDESCRIPTOR, temp_img_filepath,
+                    self.descriptor_type(), info_fp, desc_fp, per_item_limit
+                )
+            finally:
+                # clean temp file
+                di.clean_temp()
             return numpy.load(info_fp), numpy.load(desc_fp)
         else:
             # compute and V-stack matrices for all given images
             pool = multiprocessing.Pool(processes=self.PARALLEL)
 
             # Mapping of UID to tuple containing:
-            #   (info_fp, desc_fp, async processing result)
+            #   (info_fp, desc_fp, async processing result, tmp_clean_method)
             r_map = {}
             with SimpleTimer("Computing descriptors async...", self.log.debug):
                 for di in data_items:
+                    # Creating temporary image file from data bytes
+                    tmp_img_fp = di.write_temp(self.temp_dir)
+
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di)
-                    args = (self.PROC_COLORDESCRIPTOR, di.filepath,
+                    args = (self.PROC_COLORDESCRIPTOR, tmp_img_fp,
                             self.descriptor_type(), info_fp, desc_fp)
                     r = pool.apply_async(utils.generate_descriptors, args)
-                    r_map[di.uid] = (info_fp, desc_fp, r)
+                    r_map[di.uuid] = (info_fp, desc_fp, r, di.clean_temp)
             pool.close()
 
             # Pass through results from descriptor generation, aggregating
@@ -419,7 +434,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             d_width = 384
 
             for uid in s_keys:
-                ifp, dfp, r = r_map[uid]
+                ifp, dfp, r, tmp_clean_method = r_map[uid]
 
                 # descriptor generation may have failed for this ingest UID
                 try:
@@ -430,6 +445,9 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                                      "model.", uid)
                     r_map[uid] = None
                     continue
+                finally:
+                    # Done with image file, so remove from filesystem
+                    tmp_clean_method()
 
                 if None in (i_width, d_width):
                     i_width = i_shape[1]
@@ -476,7 +494,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
         m[sR:sR+n.shape[0], :n.shape[1]] = n
 
 
-# noinspection PyAbstractClass
+# noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_Video (ColorDescriptor_Base):
 
     # # Custom higher limit for video since, ya know, they have multiple frames.
@@ -484,18 +502,34 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
     FRAME_EXTRACTION_PARAMS = {
         "second_offset": 0.0,       # Start at beginning
-        "second_interval": 0.5,       # Sample every 0.5 seconds
+        "second_interval": 0.5,     # Sample every 0.5 seconds
         "max_duration": 1.0,        # Cover full duration
-        "output_image_ext": 'png'   # Output PNG files
+        "output_image_ext": 'png',  # Output PNG files
+        "ffmpeg_exe": "ffmpeg",
     }
+
+    def valid_content_types(self):
+        """
+        :return: A list valid MIME type content types that this descriptor can
+            handle.
+        :rtype: collections.Iterable[str]
+        """
+        # At the moment, assuming ffmpeg can decode all video types, which it
+        # probably cannot, but we'll filter this down when it becomes relevant.
+        # noinspection PyUnresolvedReferences
+        # TODO: GIF support?
+        return sorted(
+            set([x for x in mimetypes.types_map.values()
+                 if x.startswith('video')])
+        )
 
     def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: DataFile elements to generate combined info and
+        :param data_items: Data elements to generate combined info and
             descriptor matrices for.
-        :type data_items: tuple of SMQTK.utils.VideoFile.VideoFile
+        :type data_items: tuple of smqtk.data_rep.DataElement
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -509,10 +543,14 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         # as normal, then subsample from the full video collection.
         per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
 
+        # If an odd number of jobs, favor descriptor extraction
+        descr_parallel = max(1, math.ceil(self.PARALLEL/2.0))
+        extract_parallel = max(1, math.floor(self.PARALLEL/2.0))
+
         # For each video, extract frames and submit colorDescriptor processing
         # jobs for each frame, combining all results into a single matrix for
         # return.
-        pool = multiprocessing.Pool(processes=self.PARALLEL)
+        pool = multiprocessing.Pool(processes=descr_parallel)
 
         # Mapping of [UID] to [frame] to tuple containing:
         #   (info_fp, desc_fp, async processing result)
@@ -520,11 +558,19 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         with SimpleTimer("Extracting frames and submitting descriptor jobs...",
                          self.log.debug):
             for di in data_items:
-                r_map[di.uid] = {}
+                r_map[di.uuid] = {}
+                tmp_vid_fp = di.write_temp(self.temp_dir)
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
-                p['second_offset'] = di.metadata().duration * p['second_offset']
-                p['max_duration'] = di.metadata().duration * p['max_duration']
-                fm = di.frame_map(**p)
+                vmd = get_metadata_info(tmp_vid_fp)
+                p['second_offset'] = vmd.duration * p['second_offset']
+                p['max_duration'] = vmd.duration * p['max_duration']
+                fm = video_utils.ffmpeg_extract_frame_map(
+                    tmp_vid_fp,
+                    parallel=extract_parallel,
+                    **p
+                )
+
+                # Compute descriptors for extracted frames.
                 for frame, imgPath in fm.iteritems():
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di, frame)
@@ -533,7 +579,10 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                         args=(self.PROC_COLORDESCRIPTOR, imgPath,
                               self.descriptor_type(), info_fp, desc_fp)
                     )
-                    r_map[di.uid][frame] = (info_fp, desc_fp, r)
+                    r_map[di.uuid][frame] = (info_fp, desc_fp, r)
+
+                # Clean temporary file while computing descriptors
+                di.clean_temp()
         pool.close()
 
         # Each result is a tuple of two ndarrays: info and descriptor matrices
@@ -576,6 +625,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                               running_height, ssi)
                 running_height += video_num_desc
         pool.join()
+        del pool
 
         with SimpleTimer("Building master descriptor matrices...",
                          self.log.debug):

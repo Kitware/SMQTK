@@ -2,6 +2,18 @@ __author__ = 'purg'
 
 import abc
 import logging
+import mimetypes
+import os
+import tempfile
+
+
+# noinspection PyUnresolvedReferences
+def amend_mimetype():
+    """ bump out jpe extension if present in map """
+    if '.jpe' in mimetypes.types_map:
+        del mimetypes.types_map['jpe']
+
+amend_mimetype()
 
 
 class DataElement (object):
@@ -20,6 +32,51 @@ class DataElement (object):
     def _log(self):
         return logging.getLogger('.'.join([self.__module__,
                                            self.__class__.__name__]))
+
+    def __del__(self):
+        self.clean_temp()
+
+    def write_temp(self, temp_dir=None):
+        """
+        Write this data's bytes to a temporary file on disk, returning the path
+        to the written file, whose extension is guessed based on this data's
+        content type.
+
+        NOTE:
+            The file path returned should not be explicitly removed by the user.
+            Instead, the ``clean_temp()`` method should be called on this
+            object.
+
+        :param temp_dir: Optional directory to write temporary file in,
+            otherwise we use the platform default temporary files directory.
+        :type temp_dir: None or basestring
+
+        :return: Path to the temporary file
+        :rtype: str
+
+        """
+        if not hasattr(self, '_temp_filepath'):
+            # noinspection PyAttributeOutsideInit
+            fd, self._temp_filepath = tempfile.mkstemp(
+                suffix=mimetypes.guess_extension(self.content_type()),
+                dir=temp_dir
+            )
+            os.close(fd)
+            with open(self._temp_filepath, 'wb') as ofile:
+                ofile.write(self.get_bytes())
+        return self._temp_filepath
+
+    def clean_temp(self):
+        """
+        Clean any temporary files created by this element. This does nothing if
+        no temporary files have been generated for this element.
+        """
+        if hasattr(self, "_temp_filepath"):
+            os.remove(self._temp_filepath)
+
+    ###
+    # Abstract methods
+    #
 
     @abc.abstractmethod
     def __hash__(self):

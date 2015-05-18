@@ -6,8 +6,9 @@ Compute a feature vector for a given file with a chosen ContentDescriptor type.
 import logging
 import numpy
 
+from smqtk.data_rep.data_element_impl.file_element import FileElement
 from smqtk.utils import bin_utils
-from smqtk.utils.configuration import IngestConfiguration
+from smqtk.utils.configuration import ContentDescriptorConfiguration
 
 
 def main():
@@ -22,55 +23,37 @@ def main():
                   "descriptor has/uses model files). The ingest configuration " \
                   "also informs where to put temporary working files. "
     parser = bin_utils.SMQTKOptParser(usage, description=description)
-    parser.add_option('-i', '--ingest-type',
-                      help='The ingest configuration to use.')
-    parser.add_option('-d', '--descriptor-type',
+    parser.add_option('-c', '--content-descriptor',
                       help='The descriptor type to use. This must be a type '
-                           'available in the given configuration')
+                           'available in system configuration')
     parser.add_option('-o', '--output-filepath',
                       help='Optional path to a file to output feature vector '
                            'to. Otherwise the feature vector is printed to '
                            'standard out. Output is saved in numpy binary '
                            'format (.npy suffix recommended).')
     parser.add_option('-l', '--list', action='store_true', default=False,
-                      help='List available types. If an ingest type was not '
-                           'provided, we list available ingest types. If an '
-                           'ingest type has been given, we list available '
-                           'feature descriptor types available within that '
-                           'ingest.')
+                      help='List available descriptor types.')
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Print additional debugging messages. All logging '
                            'goes to standard error.')
     opts, args = parser.parse_args()
 
     output_filepath = opts.output_filepath
-    ingest_type = opts.ingest_type
-    descriptor_type = opts.descriptor_type
+    descriptor_type = opts.content_descriptor
     verbose = opts.verbose
 
-    bin_utils.initializeLogging(logging.getLogger(),
-                                logging.INFO - (10*verbose))
+    llevel = logging.DEBUG if verbose else logging.INFO
+    bin_utils.initializeLogging(logging.getLogger(), llevel)
     log = logging.getLogger("main")
 
     if opts.list:
-        if ingest_type is None:
-            log.info("")
-            log.info("Available Ingest configurations:")
-            log.info("")
-            for il in IngestConfiguration.available_ingest_labels():
-                log.info("\t%s", il)
-            log.info("")
-            exit(0)
-
-        else:
-            ic = IngestConfiguration(ingest_type)
-            log.info("")
-            log.info("Available Descriptor types for ingest '%s':", ingest_type)
-            log.info("")
-            for dl in ic.get_available_descriptor_labels():
-                log.info("\t%s", dl)
-            log.info("")
-            exit(0)
+        log.info("")
+        log.info("Available ContentDescriptor types:")
+        log.info("")
+        for dl in ContentDescriptorConfiguration.available_labels():
+            log.info("\t%s", dl)
+        log.info("")
+        exit(0)
 
     if len(args) == 0:
         log.error("Failed to provide an input file path")
@@ -80,11 +63,9 @@ def main():
                     "computing for the first one.")
 
     input_filepath = args[0]
+    data_element = FileElement(input_filepath)
 
-    ingest_config = IngestConfiguration(ingest_type)
-    ic = ingest_config.new_ingest_instance()
-    data_element = ic.DATA_FILE_TYPE(input_filepath)
-    fd = ingest_config.new_descriptor_instance(descriptor_type)
+    fd = ContentDescriptorConfiguration.new_inst(descriptor_type)
     feat = fd.compute_feature(data_element)
 
     if output_filepath:

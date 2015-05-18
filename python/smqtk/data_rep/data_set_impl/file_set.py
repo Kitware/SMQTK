@@ -119,7 +119,7 @@ class FileSet (DataSet):
         :return: a tuple of UUIDs represented in this data set.
         :rtype: list
         """
-        return self._element_map.keys()
+        return set(self._element_map.keys())
 
     def has_uuid(self, uuid):
         """

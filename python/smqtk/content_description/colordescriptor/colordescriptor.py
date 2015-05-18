@@ -52,7 +52,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     # basis).
     CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
-    def __init__(self, model_directory, work_directory):
+    def __init__(self, model_directory, work_directory, random_seed=None):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -66,9 +66,15 @@ class ColorDescriptor_Base (ContentDescriptor):
             ``smqtk_config.WORD_DIR``.
         :type work_directory: str | unicode
 
+        :param random_seed: Optional value to seed components requiring random
+            operations.
+        :type random_seed: None or int
+
         """
         self._model_dir = osp.join(smqtk_config.DATA_DIR, model_directory)
         self._work_dir = osp.join(smqtk_config.WORK_DIR, work_directory)
+        self._rand_seed = random_seed
+        numpy.random.seed(self._rand_seed)
 
         # Cannot pre-load FLANN stuff because odd things happen when processing/
         # threading. Loading index file is fast anyway.
@@ -212,6 +218,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         :type flann_sample_fraction: float
 
         """
+        super(ColorDescriptor_Base, self).generate_model(data_list, **kwargs)
+
         if self.has_model:
             self.log.warn("ColorDescriptor model for descriptor type '%s' "
                           "already generated!", self.descriptor_type())
@@ -254,8 +262,8 @@ class ColorDescriptor_Base (ContentDescriptor):
                 kmeans_verbose = self.log.getEffectiveLevel <= logging.DEBUG
                 kmeans = sklearn.cluster.MiniBatchKMeans(
                     n_clusters=kmeans_k,
-                    batch_size=kmeans_k*3,
-                    random_state=133742,
+                    init_size=kmeans_k*3,
+                    random_state=self._rand_seed,
                     verbose=kmeans_verbose,
                     compute_labels=False,
                 )
@@ -317,7 +325,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                                % (self.codebook_filepath,
                                   self.flann_index_filepath))
 
-        self.log.debug("Computing descriptors for data UID[%s]...", data.uuid)
+        self.log.debug("Computing descriptors for data UID[%s]...", data.uuid())
         info, descriptors = self._generate_descriptor_matrices(data)
 
         # Quantization
@@ -368,16 +376,11 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
     def valid_content_types(self):
         """
-        :return: A list valid MIME type content types that this descriptor can
+        :return: A set valid MIME type content types that this descriptor can
             handle.
-        :rtype: collections.Iterable[str]
+        :rtype: set[str]
         """
-        return (
-            'image/bmp',
-            'image/jpeg',
-            'image/png',
-            'image/tiff',
-        )
+        return {'image/bmp', 'image/jpeg', 'image/png', 'image/tiff'}
 
     def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
@@ -435,7 +438,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                     args = (self.PROC_COLORDESCRIPTOR, tmp_img_fp,
                             self.descriptor_type(), info_fp, desc_fp)
                     r = pool.apply_async(utils.generate_descriptors, args)
-                    r_map[di.uuid] = (info_fp, desc_fp, r, di.clean_temp)
+                    r_map[di.uuid()] = (info_fp, desc_fp, r, di.clean_temp)
             pool.close()
 
             # Pass through results from descriptor generation, aggregating
@@ -526,18 +529,16 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
     def valid_content_types(self):
         """
-        :return: A list valid MIME type content types that this descriptor can
+        :return: A set valid MIME type content types that this descriptor can
             handle.
-        :rtype: collections.Iterable[str]
+        :rtype: set[str]
         """
         # At the moment, assuming ffmpeg can decode all video types, which it
         # probably cannot, but we'll filter this down when it becomes relevant.
         # noinspection PyUnresolvedReferences
         # TODO: GIF support?
-        return sorted(
-            set([x for x in mimetypes.types_map.values()
-                 if x.startswith('video')])
-        )
+        return set([x for x in mimetypes.types_map.values()
+                    if x.startswith('video')])
 
     def _generate_descriptor_matrices(self, *data_items, **kwargs):
         """
@@ -574,7 +575,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         with SimpleTimer("Extracting frames and submitting descriptor jobs...",
                          self.log.debug):
             for di in data_items:
-                r_map[di.uuid] = {}
+                r_map[di.uuid()] = {}
                 tmp_vid_fp = di.write_temp(self.temp_dir)
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
                 vmd = get_metadata_info(tmp_vid_fp)
@@ -595,7 +596,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                         args=(self.PROC_COLORDESCRIPTOR, imgPath,
                               self.descriptor_type(), info_fp, desc_fp)
                     )
-                    r_map[di.uuid][frame] = (info_fp, desc_fp, r)
+                    r_map[di.uuid()][frame] = (info_fp, desc_fp, r)
 
                 # Clean temporary file while computing descriptors
                 di.clean_temp()

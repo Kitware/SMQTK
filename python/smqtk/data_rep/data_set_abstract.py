@@ -26,8 +26,8 @@ class DataSet (object):
     @abc.abstractmethod
     def uuids(self):
         """
-        :return: a tuple of uuids represented in this data set.
-        :rtype: list
+        :return: a set of uuids represented in this data set.
+        :rtype: set
         """
         return
 

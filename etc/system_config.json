@@ -32,7 +32,10 @@
                 // to system DATA_DIR / WORK_DIR respectively.
                 "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
-                "random_seed": 42
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 256,
+                "flann_sample_fraction": 1.0
             }
         }
     },

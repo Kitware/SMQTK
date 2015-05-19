@@ -53,7 +53,10 @@ class ColorDescriptor_Base (ContentDescriptor):
     # basis).
     CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
-    def __init__(self, model_directory, work_directory, random_seed=None):
+    def __init__(self, model_directory, work_directory,
+                 kmeans_k=1024, flann_target_precision=0.95,
+                 flann_sample_fraction=0.75,
+                 random_seed=None):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -67,15 +70,38 @@ class ColorDescriptor_Base (ContentDescriptor):
             ``smqtk_config.WORD_DIR``.
         :type work_directory: str | unicode
 
+        :param kmeans_k: Centroids to generate. Default of 1024
+        :type kmeans_k: int
+
+        :param flann_target_precision: Target precision percent to tune index
+            for. Default is 0.90 (90% accuracy). For some codebooks, if this is
+            too close to 1.0, the FLANN library may non-deterministically
+            overflow, causing an infinite loop requiring a SIGKILL to stop.
+        :type flann_target_precision: float
+
+        :param flann_sample_fraction: Fraction of input data to use for index
+            auto tuning. Default is 0.75 (75%).
+        :type flann_sample_fraction: float
+
         :param random_seed: Optional value to seed components requiring random
             operations.
         :type random_seed: None or int
 
         """
+        # TODO: Because of the FLANN library non-deterministic overflow issue,
+        #       an alternative must be found before this can be put into
+        #       production. Suggest saving/using sk-learn MBKMeans class? Can
+        #       the class be regenerated from an existing codebook?
         self._model_dir = osp.join(smqtk_config.DATA_DIR, model_directory)
         self._work_dir = osp.join(smqtk_config.WORK_DIR, work_directory)
-        self._rand_seed = random_seed
-        numpy.random.seed(self._rand_seed)
+
+        self._kmeans_k = int(kmeans_k)
+        self._flann_target_precision = float(flann_target_precision)
+        self._flann_sample_fraction = float(flann_sample_fraction)
+        self._rand_seed = None if random_seed is None else int(random_seed)
+
+        if self._rand_seed is not None:
+            numpy.random.seed(self._rand_seed)
 
         # Cannot pre-load FLANN stuff because odd things happen when processing/
         # threading. Loading index file is fast anyway.
@@ -213,19 +239,6 @@ class ColorDescriptor_Base (ContentDescriptor):
         :type data_iter: list[smqtk.data_rep.DataElement]
             or tuple[smqtk.data_rep.DataElement]
 
-        :param kmeans_k: Centroids to generate. Default of 1024
-        :type kmeans_k: int
-
-        :param flann_target_precision: Target precision percent to tune index
-            for. Default is 0.90 (90% accuracy). For some codebooks, if this is
-            too close to 1.0, the library may overflow, causing an infinite
-            loop.
-        :type flann_target_precision: float
-
-        :param flann_sample_fraction: Fraction of input data to use for index
-            auto tuning. Default is 0.75 (75%).
-        :type flann_sample_fraction: float
-
         """
         super(ColorDescriptor_Base, self).generate_model(data_iter, **kwargs)
 
@@ -267,11 +280,10 @@ class ColorDescriptor_Base (ContentDescriptor):
             # Compute centroids (codebook) with kmeans
             with SimpleTimer("Computing sklearn.cluster.MiniBatchKMeans...",
                              self.log.info):
-                kmeans_k = kwargs.get('kmeans_k', 1024)
                 kmeans_verbose = self.log.getEffectiveLevel <= logging.DEBUG
                 kmeans = sklearn.cluster.MiniBatchKMeans(
-                    n_clusters=kmeans_k,
-                    init_size=kmeans_k*3,
+                    n_clusters=self._kmeans_k,
+                    init_size=self._kmeans_k*3,
                     random_state=self._rand_seed,
                     verbose=kmeans_verbose,
                     compute_labels=False,
@@ -293,8 +305,8 @@ class ColorDescriptor_Base (ContentDescriptor):
             log_level = 'warning'
         with SimpleTimer("Building FLANN index...", self.log.info):
             flann_params = flann.build_index(codebook, **{
-                "target_precision": kwargs.get("flann_target_precision", 0.90),
-                "sample_fraction": kwargs.get("flann_sample_fraction", 0.75),
+                "target_precision": self._flann_target_precision,
+                "sample_fraction": self._flann_sample_fraction,
                 "log_level": log_level,
                 "algorithm": "autotuned"
             })

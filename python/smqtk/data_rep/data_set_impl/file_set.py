@@ -159,17 +159,19 @@ class FileSet (DataSet):
         with self._element_map_lock:
             return uuid in self._element_map
 
-    def add_data(self, elem):
+    def add_data(self, *elems):
         """
-        Add the given data element instance to this data set.
+        Add the given data element(s) instance to this data set.
 
-        :param elem: Data element to add
-        :type elem: smqtk.data_rep.DataElement
+        :param elems: Data element(s) to add
+        :type elems: list[smqtk.data_rep.DataElement]
 
         """
-        assert isinstance(elem, DataElement)
+
         with self._element_map_lock:
-            self._element_map[elem.uuid()] = elem
+            for e in elems:
+                assert isinstance(e, DataElement)
+                self._element_map[e.uuid()] = e
 
     def get_data(self, uuid):
         with self._element_map_lock:

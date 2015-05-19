@@ -25,7 +25,7 @@
         //         "kwargs": "here"
         //     }
         // }
-        "CSIFT_Image_example": {
+        "CD_CSIFT_Image_example": {
             "type": "ColorDescriptor_Image_csift",
             "init": {
                 // This impl allows relative paths, to be interpreted relative
@@ -36,6 +36,15 @@
                 // model generation parameters
                 "kmeans_k": 256,
                 "flann_sample_fraction": 1.0
+            }
+        }
+    },
+
+    "Indexers": {
+        "SVM_HIK-CD_CSIFT": {
+            "type": "SVMIndexerHIK",
+            "init": {
+                "data_dir": "Indexers/SVM_HIK/cd_csift"
             }
         }
     },

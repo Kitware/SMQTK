@@ -14,6 +14,8 @@ import os.path as osp
 import svm
 import svmutil
 
+import smqtk_config
+
 from smqtk.indexing import Indexer
 from smqtk.utils import SimpleTimer
 from smqtk.utils.distance_functions import histogram_intersection_distance
@@ -30,7 +32,7 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
     return ij_hik
 
 
-class SVMIndexer_HIK (Indexer):
+class SVMIndexerHIK (Indexer):
     """
     Indexer using SVM classification model with Platt scaling
 
@@ -41,8 +43,8 @@ class SVMIndexer_HIK (Indexer):
     # Pick lowest % intersecting elements as auto-bg
     AUTO_NEG_PERCENT = 0.10
 
-    def __init__(self, data_dir, work_dir):
-        super(SVMIndexer_HIK, self).__init__(data_dir, work_dir)
+    def __init__(self, data_dir):
+        self.data_dir = osp.join(smqtk_config.DATA_DIR, data_dir)
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
@@ -60,7 +62,9 @@ class SVMIndexer_HIK (Indexer):
 
         # Templated to take the W1 integer weight argument, which should be
         # floor(num_negatives / num_positives), which a min value of 1
-        self.svm_train_params = '-q -t 5 -b 1 -c 2 -w1 %f  -g 0.0078125'
+        # - The ``-t 5`` parameter value is unique to the custom libSVM
+        #   implementation we build.
+        self.svm_train_params = '-q -t 5 -b 1 -c 2 -w1 %f -g 0.0078125'
 
         if self.has_model_files():
             self._load_model_files()
@@ -110,7 +114,7 @@ class SVMIndexer_HIK (Indexer):
             and 0 not in self._distance_mat.shape   # has dimensionality
         )
 
-    def generate_model(self, feature_map, parallel=None, **kwargs):
+    def generate_model(self, descriptor_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -124,9 +128,9 @@ class SVMIndexer_HIK (Indexer):
 
         :raises ValueError: The given feature map had no content.
 
-        :param feature_map: Mapping of integer IDs to feature data. All feature
+        :param descriptor_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
-        :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type descriptor_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -134,12 +138,14 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        super(SVMIndexer_HIK, self).generate_model(feature_map, parallel)
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer to reset "
+                               "to.")
 
-        num_features = len(feature_map)
-        ordered_uids = sorted(feature_map.keys())
+        num_features = len(descriptor_map)
+        ordered_uids = sorted(descriptor_map.keys())
 
-        sample_feature = feature_map[ordered_uids[0]]
+        sample_feature = descriptor_map[ordered_uids[0]]
         feature_len = len(sample_feature)
 
         # Pre-allocating arrays
@@ -152,7 +158,7 @@ class SVMIndexer_HIK (Indexer):
         )
 
         with SimpleTimer("Populating feature matrix", self.log.info):
-            for i, (uid, feat) in enumerate(feature_map.iteritems()):
+            for i, (uid, feat) in enumerate(descriptor_map.iteritems()):
                 self._uid_array[i] = uid
                 self._feature_mat[i] = feat
 
@@ -191,7 +197,8 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        super(SVMIndexer_HIK, self).extend_model(uid_feature_map, parallel)
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
         # Shortcut when we're not given anything to actually process
         if not uid_feature_map:
@@ -346,7 +353,8 @@ class SVMIndexer_HIK (Indexer):
         :rtype: dict of (int, float)
 
         """
-        super(SVMIndexer_HIK, self).rank_model(pos_ids, neg_ids)
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
         # Automatically support the negative IDs with the most distance UIDs
         # from the provided positive UIDs.
@@ -429,8 +437,10 @@ class SVMIndexer_HIK (Indexer):
         :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        super(SVMIndexer_HIK, self).reset()
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer to reset "
+                               "to.")
         self._load_model_files()
 
 
-INDEXER_CLASS = SVMIndexer_HIK
+INDEXER_CLASS = SVMIndexerHIK

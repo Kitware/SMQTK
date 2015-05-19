@@ -21,7 +21,7 @@ def _async_feature_generator_helper(data, descriptor):
     """
 
     :param data: Data to generate feature over
-    :type data: DataFile
+    :type data: smqtk.data_rep.DataElement
 
     :param descriptor: Feature descriptor that will generate the feature
     :type descriptor: SMQTK.content_description.ContentDescriptor

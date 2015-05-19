@@ -12,6 +12,7 @@ from smqtk.utils.configuration import (
     ConfigurationInterface,
     DataSetConfiguration,
     ContentDescriptorConfiguration,
+    IndexerConfiguration,
 )
 from smqtk.utils.jsmin import jsmin
 
@@ -132,25 +133,27 @@ def main():
         for l in ContentDescriptorConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
-        log.info("Indexer support comming soon!")
-        # log.info("Available Indexer types:")
-        # log.info("")
-        # for l in ingest_config.get_available_indexer_labels():
-        #     log.info("\t%s", l)
+        log.info("Available Indexer types:")
+        log.info("")
+        for l in IndexerConfiguration.available_labels():
+            log.info("\t%s", l)
         log.info("")
         exit(0)
 
     # Check given labels
     fail = False
     if dset_label not in DataSetConfiguration.available_labels():
-        log.error("Given data set label '%s' is associated to an existing "
+        log.error("Given label '%s' is NOT associated to an existing "
                   "data set configuration!", dset_label)
         fail = True
     if cd_label not in ContentDescriptorConfiguration.available_labels():
-        log.error("Given data set label '%s' is associated to an existing "
+        log.error("Given label '%s' is NOT associated to an existing "
                   "content descriptor configuration!", cd_label)
         fail = True
-    # TODO: Indexer block when config support completed
+    if idxr_label not in IndexerConfiguration.available_labels():
+        log.error("Given label '%s' is NOT associated to an existing "
+                  "indexer configuration!", idxr_label)
+        fail = True
     if fail:
         exit(1)
     del fail
@@ -170,7 +173,7 @@ def main():
     if idxr_label:
         log.info("Loading indexer instance...")
         #: :type: smqtk.indexing.Indexer
-        indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
+        indexer = IndexerConfiguration.new_inst(idxr_label)
 
         # It is not guaranteed that the feature computation method is doing
         # anything in parallel, but if it is, request that it perform serially
@@ -181,10 +184,11 @@ def main():
         # parallel processing might use multiprocessing.Pool instances, too.
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
-        fmap = descriptor.compute_descriptor_async(*(df for _, df
-                                                  in ingest.iteritems()),
-                                                parallel=parallel,
-                                                pool_type=NonDaemonicPool)
+        fmap = descriptor.compute_descriptor_async(
+            *(de for de in dset),
+            parallel=parallel,
+            pool_type=NonDaemonicPool
+        )
 
         indexer.generate_model(fmap, parallel=parallel)
 

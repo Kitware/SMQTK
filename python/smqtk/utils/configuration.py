@@ -7,6 +7,7 @@ import smqtk_config
 
 from smqtk.data_rep.data_set_impl import get_data_set_impls
 from smqtk.content_description import get_descriptors
+from smqtk.indexing import get_indexers
 
 
 class ConfigurationInterface (object):
@@ -74,7 +75,7 @@ class DataSetConfiguration (ConfigurationInterface):
             component.
         :rtype: dict
         """
-        return ConfigurationInterface.BASE_CONFIG[cls.CFG_SECT]
+        return cls.BASE_CONFIG[cls.CFG_SECT]
 
     @classmethod
     def available_labels(cls):
@@ -117,7 +118,7 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
             component.
         :rtype: dict
         """
-        return ConfigurationInterface.BASE_CONFIG[cls.CFG_SECT]
+        return cls.BASE_CONFIG[cls.CFG_SECT]
 
     @classmethod
     def available_labels(cls):
@@ -147,6 +148,52 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
         label_sect = cls.get_config_sect()[label]
         cd_cls = get_descriptors()[label_sect['type']]
         return cd_cls(**label_sect['init'])
+
+
+class IndexerConfiguration (ConfigurationInterface):
+    """
+    Interface into Indexer configurations in the common system configuration
+    file.
+    """
+
+    CFG_SECT = "Indexers"
+
+    @classmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return cls.BASE_CONFIG[cls.CFG_SECT]
+
+    @classmethod
+    def available_labels(cls):
+        """
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
+        """
+        return set(cls.get_config_sect())
+
+    @classmethod
+    def new_inst(cls, label):
+        """
+        Construct a new instance of the type and with parameters associated with
+        the given label.
+
+        :param label: the configuration label
+        :type label: str
+
+        :raises KeyError: The given label does not exist in the system
+            configuration
+
+        :return: New instance of type and parameters associated with the given
+            label.
+
+        """
+        label_sect = cls.get_config_sect()[label]
+        idxr_class = get_indexers()[label_sect['type']]
+        return idxr_class(**label_sect['init'])
 
 
 # class IngestConfiguration (object):

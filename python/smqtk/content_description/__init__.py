@@ -87,7 +87,7 @@ class ContentDescriptor (object):
         return
 
     @abc.abstractmethod
-    def generate_model(self, data_iter, **kwargs):
+    def generate_model(self, data_set, **kwargs):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
@@ -100,15 +100,15 @@ class ContentDescriptor (object):
         :raises ValueError: One or more input data elements did not conform to
             this descriptor's valid content set.
 
-        :param data_iter: Iterable of input data elements to generate the model
+        :param data_set: Set of input data elements to generate the model
             with.
-        :type data_iter: collections.Iterable[smqtk.data_rep.DataElement]
+        :type data_set: collections.Set[smqtk.data_rep.DataElement]
 
         """
-        valid_types = self.valid_content_types
+        valid_types = self.valid_content_types()
         invalid_types_found = set()
-        for di in data_iter:
-            if di.content_type not in valid_types:
+        for di in data_set:
+            if di.content_type() not in valid_types:
                 invalid_types_found.add(di.content_type())
         if invalid_types_found:
             self.log.error("Found one or more invalid content types among "
@@ -137,7 +137,7 @@ class ContentDescriptor (object):
         :rtype: numpy.ndarray
 
         """
-        ct = data.content_type
+        ct = data.content_type()
         if ct not in self.valid_content_types():
             self.log.error("Cannot compute descriptor of content type '%s'", ct)
             raise ValueError("Cannot compute descriptor of content type '%s'"

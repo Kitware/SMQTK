@@ -62,7 +62,23 @@ class FileSet (DataSet):
         """
         self._save_data_elements()
 
+    def __contains__(self, d):
+        """
+        :param d: DataElement to test for containment
+        :type d: smqtk.data_rep.DataElement
+
+        :return: True of this DataSet contains the given data element.
+        :rtype: bool
+
+        """
+        with self._element_map_lock:
+            return d.uuid() in self._element_map
+
     def __iter__(self):
+        """
+        :return: Generator over the DataElements contained in this set in UUID
+            order, if sortable. If not, then in no particular order.
+        """
         for k in sorted(self.uuids()):
             with self._element_map_lock:
                 yield self._element_map[k]

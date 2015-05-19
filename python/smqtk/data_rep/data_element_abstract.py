@@ -36,6 +36,8 @@ class DataElement (object):
     def __del__(self):
         self.clean_temp()
 
+    # TODO: __eq__/__ne__ methods?
+
     def write_temp(self, temp_dir=None):
         """
         Write this data's bytes to a temporary file on disk, returning the path

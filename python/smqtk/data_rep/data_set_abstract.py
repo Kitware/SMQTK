@@ -1,10 +1,11 @@
 __author__ = 'purg'
 
 import abc
+import collections
 import logging
 
 
-class DataSet (object):
+class DataSet (collections.Set):
     """
     Base abstract class for data sets.
     """
@@ -16,7 +17,24 @@ class DataSet (object):
                                            self.__class__.__name__]))
 
     def __len__(self):
+        """
+        :return: Number of elements in this DataSet.
+        :rtype: int
+        """
         return self.count()
+
+    @abc.abstractmethod
+    def __contains__(self, d):
+        """
+        :param d: DataElement to test for containment
+        :type d: smqtk.data_rep.DataElement
+
+        :return: True of this DataSet contains the given data element. Since,
+
+        :rtype: bool
+
+        """
+        return
 
     @abc.abstractmethod
     def __iter__(self):

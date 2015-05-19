@@ -62,6 +62,11 @@ class FileSet (DataSet):
         """
         self._save_data_elements()
 
+    def __iter__(self):
+        for k in sorted(self.uuids()):
+            with self._element_map_lock:
+                yield self._element_map[k]
+
     def _discover_data_elements(self):
         """
         From the set root directory, find serialized files, deserialize them and
@@ -112,14 +117,16 @@ class FileSet (DataSet):
         :return: The number of data elements in this set.
         :rtype: int
         """
-        return len(self._element_map)
+        with self._element_map_lock:
+            return len(self._element_map)
 
     def uuids(self):
         """
         :return: a tuple of UUIDs represented in this data set.
         :rtype: list
         """
-        return set(self._element_map.keys())
+        with self._element_map_lock:
+            return set(self._element_map.keys())
 
     def has_uuid(self, uuid):
         """

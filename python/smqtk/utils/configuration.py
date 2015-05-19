@@ -16,12 +16,27 @@ class ConfigurationInterface (object):
     """
     __metaclass__ = abc.ABCMeta
 
+    # This is the base JSON configuration dictionary. When using a custom
+    # configuration dictionary, it should be set here, and will be reflected in
+    # the use of the other configuration classes.
+    BASE_CONFIG = smqtk_config.SYSTEM_CONFIG
+
+    @classmethod
+    @abc.abstractmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return
+
     @classmethod
     @abc.abstractmethod
     def available_labels(cls):
         """
-        :return: List of available string labels in system configuration.
-        :rtype: list[str]
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
         """
         return
 
@@ -50,15 +65,24 @@ class DataSetConfiguration (ConfigurationInterface):
     Interface into data set configurations in common system configuration file
     """
 
-    CFG_SECT = smqtk_config.SYSTEM_CONFIG['DataSets']
+    CFG_SECT = 'DataSets'
+
+    @classmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return ConfigurationInterface.BASE_CONFIG[cls.CFG_SECT]
 
     @classmethod
     def available_labels(cls):
         """
-        :return: List of available string labels in system configuration.
-        :rtype: list[str]
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
         """
-        return cls.CFG_SECT.keys()
+        return set(cls.get_config_sect())
 
     @classmethod
     def new_inst(cls, label):
@@ -73,7 +97,7 @@ class DataSetConfiguration (ConfigurationInterface):
         :rtype: smqtk.data_rep.DataSet
 
         """
-        label_sect = cls.CFG_SECT[label]
+        label_sect = cls.get_config_sect()[label]
         ds_cls = get_data_set_impls()[label_sect['type']]
         return ds_cls(**label_sect['init'])
 
@@ -84,15 +108,24 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
     configuration file.
     """
 
-    CFG_SECT = smqtk_config.SYSTEM_CONFIG['ContentDescriptors']
+    CFG_SECT = 'ContentDescriptors'
+
+    @classmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return ConfigurationInterface.BASE_CONFIG[cls.CFG_SECT]
 
     @classmethod
     def available_labels(cls):
         """
-        :return: List of available string labels in system configuration.
-        :rtype: list[str]
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
         """
-        return cls.CFG_SECT.keys()
+        return set(cls.get_config_sect())
 
     @classmethod
     def new_inst(cls, label):
@@ -111,7 +144,7 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
         :rtype: smqtk.content_description.ContentDescriptor
 
         """
-        label_sect = cls.CFG_SECT[label]
+        label_sect = cls.get_config_sect()[label]
         cd_cls = get_descriptors()[label_sect['type']]
         return cd_cls(**label_sect['init'])
 

@@ -15,6 +15,17 @@ class DataSet (object):
         return logging.getLogger('.'.join([self.__module__,
                                            self.__class__.__name__]))
 
+    def __len__(self):
+        return self.count()
+
+    @abc.abstractmethod
+    def __iter__(self):
+        """
+        :return: Generator over the DataElements contained in this set in UUID
+            order, if sortable. If not, then in no particular order.
+        """
+        return
+
     @abc.abstractmethod
     def count(self):
         """

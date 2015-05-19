@@ -1,5 +1,6 @@
 import abc
 import logging
+import json
 import math
 import mimetypes
 import multiprocessing
@@ -93,6 +94,11 @@ class ColorDescriptor_Base (ContentDescriptor):
                         "%s.flann_index.dat" % (self.descriptor_type(),))
 
     @property
+    def flann_params_filepath(self):
+        return osp.join(self._model_dir,
+                        "%s.flann_params.json" % (self.descriptor_type(),))
+
+    @property
     def has_model(self):
         has_model = (osp.isfile(self.codebook_filepath)
                      and osp.isfile(self.flann_index_filepath))
@@ -115,13 +121,16 @@ class ColorDescriptor_Base (ContentDescriptor):
         return
 
     @abc.abstractmethod
-    def _generate_descriptor_matrices(self, *data_items, **kwargs):
+    def _generate_descriptor_matrices(self, num_items, item_iter, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: Data elements to generate combined info and
-            descriptor matrices for.
-        :type data_items: tuple of smqtk.data_rep.DataElement
+        :param num_items: Number of elements we will be iterating over.
+        :type num_items: int
+
+        :param item_iter: Iterable of data elements to generate combined info
+            and descriptor matrices for.
+        :type item_iter: collections.Iterable[smqtk.data_rep.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -190,7 +199,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         return osp.join(self._get_checkpoint_dir(data),
                         "%s.feature.npy" % data.md5())
 
-    def generate_model(self, data_list, **kwargs):
+    def generate_model(self, data_iter, **kwargs):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
@@ -200,8 +209,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         the "autotune" algorithm to intelligently pick the fastest indexing
         method.
 
-        :param data_list: List of input data elements to generate model with.
-        :type data_list: list[smqtk.data_rep.DataElement]
+        :param data_iter: List of input data elements to generate model with.
+        :type data_iter: list[smqtk.data_rep.DataElement]
             or tuple[smqtk.data_rep.DataElement]
 
         :param kmeans_k: Centroids to generate. Default of 1024
@@ -218,7 +227,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         :type flann_sample_fraction: float
 
         """
-        super(ColorDescriptor_Base, self).generate_model(data_list, **kwargs)
+        super(ColorDescriptor_Base, self).generate_model(data_iter, **kwargs)
 
         if self.has_model:
             self.log.warn("ColorDescriptor model for descriptor type '%s' "
@@ -246,7 +255,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                     self.log.debug("Computing model descriptors")
                     _, descriptors = \
                         self._generate_descriptor_matrices(
-                            *data_list,
+                            *data_iter,
                             limit=self.CODEBOOK_DESCRIPTOR_LIMIT
                         )
                     _, tmp = tempfile.mkstemp(dir=self._work_dir,
@@ -283,15 +292,18 @@ class ColorDescriptor_Base (ContentDescriptor):
         else:
             log_level = 'warning'
         with SimpleTimer("Building FLANN index...", self.log.info):
-            params = flann.build_index(codebook, **{
+            flann_params = flann.build_index(codebook, **{
                 "target_precision": kwargs.get("flann_target_precision", 0.90),
                 "sample_fraction": kwargs.get("flann_sample_fraction", 0.75),
                 "log_level": log_level,
                 "algorithm": "autotuned"
             })
-            # TODO: Save params dict as JSON?
         with SimpleTimer("Saving FLANN index to file...", self.log.debug):
+            # Save FLANN index data binary
             flann.save_index(self.flann_index_filepath)
+            # Save out log of parameters
+            with open(self.flann_params_filepath, 'w') as ofile:
+                json.dump(flann_params, ofile, indent=4, sort_keys=True)
 
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
@@ -382,13 +394,16 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
         """
         return {'image/bmp', 'image/jpeg', 'image/png', 'image/tiff'}
 
-    def _generate_descriptor_matrices(self, *data_items, **kwargs):
+    def _generate_descriptor_matrices(self, num_items, item_iter, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: Data elements to generate combined info and
-            descriptor matrices for.
-        :type data_items: tuple of smqtk.data_rep.DataElement
+        :param num_items: Number of elements we will be iterating over.
+        :type num_items: int
+
+        :param item_iter: Iterable of data elements to generate combined info
+            and descriptor matrices for.
+        :type item_iter: collections.Iterable[smqtk.data_rep.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -397,15 +412,16 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
         :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
 
         """
-        if not len(data_items):
+        if not num_items:
             raise ValueError("No data given to process.")
 
         inf = float('inf')
         descriptor_limit = kwargs.get('limit', inf)
-        per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
+        per_item_limit = numpy.floor(float(descriptor_limit) / num_items)
 
-        if len(data_items) == 1:
-            di = data_items[0]
+        if num_items == 1:
+            # because an iterable doesn't necessarily have a next() method
+            di = iter(item_iter).next()
             # Check for checkpoint files
             info_fp, desc_fp = \
                 self._get_standard_info_descriptors_filepath(di)
@@ -429,7 +445,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             #   (info_fp, desc_fp, async processing result, tmp_clean_method)
             r_map = {}
             with SimpleTimer("Computing descriptors async...", self.log.debug):
-                for di in data_items:
+                for di in item_iter:
                     # Creating temporary image file from data bytes
                     tmp_img_fp = di.write_temp(self.temp_dir)
 
@@ -540,13 +556,16 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         return set([x for x in mimetypes.types_map.values()
                     if x.startswith('video')])
 
-    def _generate_descriptor_matrices(self, *data_items, **kwargs):
+    def _generate_descriptor_matrices(self, num_items, item_iter, **kwargs):
         """
         Generate info and descriptor matrices based on ingest type.
 
-        :param data_items: Data elements to generate combined info and
-            descriptor matrices for.
-        :type data_items: tuple of smqtk.data_rep.DataElement
+        :param num_items: Number of elements we will be iterating over.
+        :type num_items: int
+
+        :param item_iter: Iterable of data elements to generate combined info
+            and descriptor matrices for.
+        :type item_iter: collections.Iterable[smqtk.data_rep.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -558,7 +577,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         descriptor_limit = kwargs.get('limit', float('inf'))
         # With videos, an "item" is one video, so, collect for a while video
         # as normal, then subsample from the full video collection.
-        per_item_limit = numpy.floor(float(descriptor_limit) / len(data_items))
+        per_item_limit = numpy.floor(float(descriptor_limit) / num_items)
 
         # If an odd number of jobs, favor descriptor extraction
         descr_parallel = max(1, math.ceil(self.PARALLEL/2.0))
@@ -574,7 +593,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         r_map = {}
         with SimpleTimer("Extracting frames and submitting descriptor jobs...",
                          self.log.debug):
-            for di in data_items:
+            for di in item_iter:
                 r_map[di.uuid()] = {}
                 tmp_vid_fp = di.write_temp(self.temp_dir)
                 p = dict(self.FRAME_EXTRACTION_PARAMS)

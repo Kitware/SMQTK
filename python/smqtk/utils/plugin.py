@@ -17,7 +17,7 @@ import os
 import re
 
 
-valid_module_file_re = re.compile("^[a-zA-Z].*(?:\.py)?$")
+valid_module_file_re = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
 
 
 def get_plugins(base_module, search_dir, helper_var, baseclass_type):

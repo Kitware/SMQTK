@@ -33,7 +33,7 @@ def _async_feature_generator_helper(data, descriptor):
     log = logging.getLogger("_async_feature_generator_helper")
     try:
         # log.debug("Generating feature for [%s] -> %s", data, data.filepath)
-        feat = descriptor.compute_feature(data)
+        feat = descriptor.compute_descriptor(data)
         # Invalid feature matrix if there are inf or NaN values
         # noinspection PyUnresolvedReferences
         if numpy.isnan(feat.sum()):
@@ -119,7 +119,7 @@ class ContentDescriptor (object):
                              "data: %s" % sorted(invalid_types_found))
 
     @abc.abstractmethod
-    def compute_feature(self, data):
+    def compute_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
@@ -143,7 +143,7 @@ class ContentDescriptor (object):
             raise ValueError("Cannot compute descriptor of content type '%s'"
                              % ct)
 
-    def compute_feature_async(self, *data, **kwds):
+    def compute_descriptor_async(self, *data, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
 

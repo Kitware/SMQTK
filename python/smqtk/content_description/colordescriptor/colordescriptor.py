@@ -326,7 +326,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
 
-    def compute_feature(self, data):
+    def compute_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.

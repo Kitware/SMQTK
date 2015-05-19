@@ -182,7 +182,7 @@ class IQRSearch (flask.Blueprint):
                 # Compute feature for data -- non-modifying
                 self.log.debug("[%s::%s] Computing feature for file",
                                iqr_sess.uuid, fid)
-                feat = iqr_sess.descriptor.compute_feature(upload_data)
+                feat = iqr_sess.descriptor.compute_descriptor(upload_data)
 
                 # Extend indexer model with feature data -- modifying
                 with iqr_sess:
@@ -482,7 +482,7 @@ class IQRSearch (flask.Blueprint):
                 self._iqr_controller.add_session(iqr_sess, sid)
                 # If there are things already in our extension ingest, extend
                 # the base indexer
-                feat_map = descriptor.compute_feature_async(*online_ingest.data_list())
+                feat_map = descriptor.compute_descriptor_async(*online_ingest.data_list())
                 indexer.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

@@ -164,7 +164,7 @@ class DescriptorServiceServer (flask.Flask):
                 with descriptor_cache_lock:
                     d = descriptor_cache[index]
                 with SimpleTimer("Computing descriptor...", self.log.debug):
-                    descriptor = d.compute_feature(df)
+                    descriptor = d.compute_descriptor(df)
                     message = "Descriptor computed of type '%s'" \
                               % descriptor_type
 

@@ -51,7 +51,7 @@ class Atom (object):
         self.log.debug("Computing features for data")
         feature_map = {}
         for d in data:
-            feature_map[d.uid] = self._descriptor.compute_feature(d)
+            feature_map[d.uid] = self._descriptor.compute_descriptor(d)
         self.log.debug("Extending indexer models")
         for i in self._indexer_list:
             i.extend_model(feature_map)

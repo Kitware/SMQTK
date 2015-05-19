@@ -66,7 +66,7 @@ def main():
     data_element = FileElement(input_filepath)
 
     fd = ContentDescriptorConfiguration.new_inst(descriptor_type)
-    feat = fd.compute_feature(data_element)
+    feat = fd.compute_descriptor(data_element)
 
     if output_filepath:
         numpy.save(output_filepath, feat)

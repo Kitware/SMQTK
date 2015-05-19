@@ -141,7 +141,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         """
         pass
 
-    def compute_feature(self, data):
+    def compute_descriptor(self, data):
         """
         Compute CSIFT colordescriptor feature given a VideoFile instance.
 

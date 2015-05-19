@@ -181,7 +181,7 @@ def main():
         # parallel processing might use multiprocessing.Pool instances, too.
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
-        fmap = descriptor.compute_feature_async(*(df for _, df
+        fmap = descriptor.compute_descriptor_async(*(df for _, df
                                                   in ingest.iteritems()),
                                                 parallel=parallel,
                                                 pool_type=NonDaemonicPool)

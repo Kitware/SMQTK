@@ -26,9 +26,6 @@ class FileElement (DataElement):
         # Cache variables for lazy lading
         self._md5_cache = None
 
-    def __hash__(self):
-        return self.uuid()
-
     def content_type(self):
         return self._content_type
 

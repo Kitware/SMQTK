@@ -33,6 +33,9 @@ class DataElement (object):
         return logging.getLogger('.'.join([self.__module__,
                                            self.__class__.__name__]))
 
+    def __hash__(self):
+        return self.uuid()
+
     def __del__(self):
         self.clean_temp()
 
@@ -57,7 +60,7 @@ class DataElement (object):
         :rtype: str
 
         """
-        if not hasattr(self, '_temp_filepath'):
+        if not hasattr(self, '_temp_filepath') or not self._temp_filepath:
             # noinspection PyAttributeOutsideInit
             fd, self._temp_filepath = tempfile.mkstemp(
                 suffix=mimetypes.guess_extension(self.content_type()),
@@ -75,14 +78,12 @@ class DataElement (object):
         """
         if hasattr(self, "_temp_filepath"):
             os.remove(self._temp_filepath)
+            # noinspection PyAttributeOutsideInit
+            self._temp_filepath = None
 
     ###
     # Abstract methods
     #
-
-    @abc.abstractmethod
-    def __hash__(self):
-        return
 
     @abc.abstractmethod
     def content_type(self):

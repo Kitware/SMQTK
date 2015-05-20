@@ -42,9 +42,9 @@ def main():
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger("smqtk"),
+    bin_utils.initialize_logging(logging.getLogger("smqtk"),
                                 logging.INFO - (10*opts.debug_backend))
-    bin_utils.initializeLogging(logging.getLogger("werkzeug"),
+    bin_utils.initialize_logging(logging.getLogger("werkzeug"),
                                 logging.WARN - (20*opts.debug_server))
     log = logging.getLogger("smqtk.main")
 

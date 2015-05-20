@@ -106,7 +106,7 @@ def main():
     parser.add_option_group(group_optional)
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger(),
+    bin_utils.initialize_logging(logging.getLogger(),
                                 logging.INFO - (10*opts.verbose))
     log = logging.getLogger("main")
 

@@ -43,7 +43,7 @@ def main():
     verbose = opts.verbose
 
     llevel = logging.DEBUG if verbose else logging.INFO
-    bin_utils.initializeLogging(logging.getLogger(), llevel)
+    bin_utils.initialize_logging(logging.getLogger(), llevel)
     log = logging.getLogger("main")
 
     if opts.list:

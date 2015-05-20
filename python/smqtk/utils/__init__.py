@@ -53,7 +53,7 @@ def touch(fname):
 #
 
 # No internal util dependencies
-from .bin_utils import initializeLogging, SMQTKOptParser
+from .bin_utils import initialize_logging, SMQTKOptParser
 from .database_info import DatabaseInfo
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .safe_config_comment_parser import SafeConfigCommentParser

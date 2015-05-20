@@ -16,8 +16,8 @@ class SMQTKOptParser (optparse.OptionParser):
         return self.epilog or ''
 
 
-def initializeLogging(logger, stream_level=logging.WARNING,
-                      output_filepath=None, file_level=None):
+def initialize_logging(logger, stream_level=logging.WARNING,
+                       output_filepath=None, file_level=None):
     """
     Standard logging initialization.
 

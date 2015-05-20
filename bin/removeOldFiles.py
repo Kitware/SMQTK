@@ -70,7 +70,7 @@ def interval_scan(interval, base_dir, expire_seconds, action):
 
 
 def main():
-    from smqtk.utils.bin_utils import initializeLogging, SMQTKOptParser
+    from smqtk.utils.bin_utils import initialize_logging, SMQTKOptParser
     parser = SMQTKOptParser()
     parser.add_option('-d', '--base-dir',
                       help='Starting directory for scan.')
@@ -86,7 +86,7 @@ def main():
     logging_level = logging.INFO
     if opts.verbose:
         logging_level = logging.DEBUG
-    initializeLogging(logging.getLogger("smqtk"), logging_level)
+    initialize_logging(logging.getLogger("smqtk"), logging_level)
 
     base_dir = opts.base_dir
     interval_seconds = opts.interval

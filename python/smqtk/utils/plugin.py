@@ -79,7 +79,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
                 elif (isinstance(classes, collections.Iterable)
                         and not isinstance(classes, basestring)):
                     classes = tuple(classes)
-                    log.debug("[%s] Loaded list of %d classes via helper",
+                    log.debug("[%s] Loaded list of %d class types via helper",
                               module_name, len(classes))
                     # check that all class types in iterable are types and
                     # are subclasses of the given base-type
@@ -90,10 +90,10 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
                             raise RuntimeError("[%s] Found element in list "
                                                "that is not a class or does "
                                                "not descend from required base "
-                                               "class '%s': %s",
-                                               module_name,
-                                               baseclass_type.__name__,
-                                               cls)
+                                               "class '%s': %s"
+                                               % (module_name,
+                                                  baseclass_type.__name__,
+                                                  cls))
                 elif issubclass(classes, baseclass_type):
                     log.debug("[%s] Loaded class type: %s", module_name,
                               classes.__name__)
@@ -114,9 +114,9 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
                                        "module name fallback. Set helper "
                                        "variable '%s' to None if this module "
                                        "shouldn't provide a %s plugin "
-                                       "implementation(s).",
-                                       module_name, helper_var,
-                                       baseclass_type.__name__)
+                                       "implementation(s)."
+                                       % (module_name, helper_var,
+                                          baseclass_type.__name__))
 
             else:
                 log.debug("[%s] Skipping module (no helper variable + no "

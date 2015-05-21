@@ -7,13 +7,7 @@ import os
 import tempfile
 
 
-# noinspection PyUnresolvedReferences
-def amend_mimetype():
-    """ bump out jpe extension if present in map """
-    if '.jpe' in mimetypes.types_map:
-        del mimetypes.types_map['.jpe']
-
-amend_mimetype()
+MIMETYPES = mimetypes.MimeTypes()
 
 
 class DataElement (object):
@@ -63,7 +57,7 @@ class DataElement (object):
         if not hasattr(self, '_temp_filepath') or not self._temp_filepath:
             # noinspection PyAttributeOutsideInit
             fd, self._temp_filepath = tempfile.mkstemp(
-                suffix=mimetypes.guess_extension(self.content_type()),
+                suffix=MIMETYPES.guess_extension(self.content_type()),
                 dir=temp_dir
             )
             os.close(fd)

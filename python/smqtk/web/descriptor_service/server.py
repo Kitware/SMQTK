@@ -8,15 +8,20 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import base64
 import flask
 import logging
+import mimetypes
 import multiprocessing
 import os
 import requests
 import tempfile
 
-from smqtk.utils.configuration import IngestConfiguration
-from smqtk.utils import DataFile, SimpleTimer
+from smqtk.utils import SimpleTimer
+from smqtk.utils.configuration import ContentDescriptorConfiguration
+
+
+MIMETYPES = mimetypes.MimeTypes()
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +31,7 @@ class DescriptorServiceServer (flask.Flask):
     """
     Simple server that takes in a specification of the following form:
 
-        /<model>/<descriptor_type>?uri=<file_uri>
+        /<descriptor_type>/<uri>[?...]
 
     Computes the requested descriptor for the given file and returns that via
     a JSON structure.
@@ -35,6 +40,8 @@ class DescriptorServiceServer (flask.Flask):
     {
         "success": <bool>,
         "descriptor": [ <float>, ... ]
+        "message": <string>,
+        "reference_uri": <uri>
     }
 
     """
@@ -87,7 +94,7 @@ class DescriptorServiceServer (flask.Flask):
                                   os.environ.get(self.ENV_CONFIG, None),
                                   config_filepath))
 
-        #: :type: dict of ((str, str), smqtk.content_description.ContentDescriptor)
+        # Cache of ContentDescriptor instances
         descriptor_cache = {}
         descriptor_cache_lock = multiprocessing.RLock()
 
@@ -99,42 +106,84 @@ class DescriptorServiceServer (flask.Flask):
         @self.route("/")
         def list_ingest_labels():
             return flask.jsonify({
-                "labels": IngestConfiguration.available_ingest_labels()
+                "labels": sorted(ContentDescriptorConfiguration
+                                 .available_labels())
             })
 
-        @self.route("/<string:ingest>/")
-        def list_descriptor_labels(ingest):
-            ic = IngestConfiguration(ingest)
-            return flask.jsonify({
-                "labels": ic.get_available_descriptor_labels()
-            })
+        @self.route("/<string:descriptor_label>/<path:uri>")
+        def compute_descriptor(descriptor_label, uri):
+            """
+            # Data modes for upload/use
+                - local filepath
+                - base64
+                - http/s URL
 
-        @self.route("/<string:ingest>/<string:descriptor_type>/<path:uri>")
-        def compute_descriptor(ingest, descriptor_type, uri):
+            The following sub-sections detail how different URI's can be used.
+
+            ## Local Filepath
+            The URI string must be prefixed with ``file://``, followed by the
+            full path to the data file to describe.
+
+            ## Base 64 data
+            The URI string must be prefixed with "base64://", followed by the
+            base64 encoded string. This mode also requires an additional
+            ``?content_type=`` to provide data content type information. This
+            mode saves the encoded data to temporary file for processing.
+
+            ## HTTP/S address
+            This is the default mode when the URI prefix is none of the above.
+            This uses the requests module to locally download a data file
+            for processing.
+
+            """
             success = True
             message = "Nothing has happened yet"
 
             # Resolve URI
-            # - If "file://" prefix, look for local file by the given
-            # - Otherwise, try to download from web to temp directory
             filepath = None
             remove_file = False
+
+            # TODO: Make this block construct a DataElement impl instance
+            #       Requires the construction of MemoryElement and WebElement
             if uri[:7] == "file://":
                 self.log.debug("Given local disk filepath")
-                filepath = uri[7:]
-                if not os.path.isfile(filepath):
+                _filepath = uri[7:]
+                if not os.path.isfile(_filepath):
                     success = False
                     message = "File URI did not point to an existing file on " \
                               "disk."
+                else:
+                    filepath = _filepath
+
+            elif uri[:9] == "base64://":
+                self.log.debug("Given base64 string")
+                content_type = flask.request.args.get('content_type', None)
+                self.log.debug("Content type: %s", content_type)
+                if not content_type:
+                    self.log.warning("No content-type with given base64 data")
+                    success = False
+                    message = "No content-type with given base64 content."
+                else:
+                    b64str = uri[9:]
+                    ext = MIMETYPES.guess_extension(content_type)
+                    fd, filepath = tempfile.mkstemp(suffix=ext)
+                    os.close(fd)
+                    self.log.debug("Saving image with type '%s' to: %s",
+                                   ext, filepath)
+                    with open(filepath, 'wb') as ofile:
+                        ofile.write(base64.decodestring(b64str))
+                    self.log.debug("Image file written.")
+                    remove_file = True
+
             else:
                 self.log.debug("Given URL")
                 r = requests.get(uri)
                 if r.ok:
-                    ext = r.headers['content-type'].rsplit('/', 1)[1]
-                    fd, filepath = tempfile.mkstemp(suffix='.'+ext)
-                    self.log.debug("Saving image with type '%s' to: %s",
-                                   r.headers['content-type'], filepath)
+                    ext = MIMETYPES.guess_extension(r.headers['content-type'])
+                    fd, filepath = tempfile.mkstemp(suffix=ext)
                     os.close(fd)
+                    self.log.debug("Saving image with type '%s' to: %s",
+                                   ext, filepath)
                     with open(filepath, 'wb') as ofile:
                         ofile.write(r.content)
                     self.log.debug("Image file written.")
@@ -148,25 +197,24 @@ class DescriptorServiceServer (flask.Flask):
 
             descriptor = None
             if filepath:
-                df = DataFile(filepath)
+                from smqtk.data_rep import get_data_element_impls
+                de = get_data_element_impls()['FileElement'](filepath)
 
-                # Get the descriptor instance, creating it if necessary
-                index = (ingest, descriptor_type)
-                self.log.debug("Index requested: %s", index)
-                if index not in descriptor_cache:
-                    ic = IngestConfiguration(ingest)
-                    self.log.debug("Creating descriptor for requested "
-                                   "index %s", index)
+                # Get the descriptor instance for the given label, creating it
+                # if necessary.
+                if descriptor_label not in descriptor_cache:
+                    self.log.debug("Creating descriptor '%s'", descriptor_label)
                     with descriptor_cache_lock:
-                        descriptor_cache[index] = \
-                            ic.new_descriptor_instance(descriptor_type)
-                self.log.debug("Getting descriptor for index: %s", index)
+                        descriptor_cache[descriptor_label] = \
+                            ContentDescriptorConfiguration\
+                            .new_inst(descriptor_label)
                 with descriptor_cache_lock:
-                    d = descriptor_cache[index]
+                    #: :type: smqtk.content_description.ContentDescriptor
+                    d = descriptor_cache[descriptor_label]
                 with SimpleTimer("Computing descriptor...", self.log.debug):
-                    descriptor = d.compute_descriptor(df)
+                    descriptor = d.compute_descriptor(de)
                     message = "Descriptor computed of type '%s'" \
-                              % descriptor_type
+                              % descriptor_label
 
                 if remove_file:
                     self.log.debug("Removing downloaded file.")

@@ -79,10 +79,10 @@ def main():
     if use_basic_auth:
         app.config["BASIC_AUTH_FORCE"] = True
         BasicAuth(app)
+    app.config['DEBUG'] = debug_server
 
     app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
-
 
 if __name__ == "__main__":
     main()

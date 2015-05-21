@@ -134,7 +134,7 @@ class ContentDescriptor (object):
         :type data: smqtk.data_rep.DataElement
 
         :return: Feature vector.
-        :rtype: numpy.ndarray
+        :rtype: numpy.core.multiarray.ndarray
 
         """
         ct = data.content_type()

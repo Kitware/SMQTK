@@ -7,7 +7,6 @@ import logging
 import os.path
 
 from smqtk.utils import DatabaseInfo, SimpleTimer
-from smqtk.utils.configuration import IngestConfiguration
 from smqtk.utils.mongo_sessions import MongoSessionInterface
 
 

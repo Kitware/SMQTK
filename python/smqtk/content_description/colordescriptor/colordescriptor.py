@@ -356,7 +356,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                                   self.flann_index_filepath))
 
         self.log.debug("Computing descriptors for data UID[%s]...", data.uuid())
-        info, descriptors = self._generate_descriptor_matrices(1, [data])
+        info, descriptors = self._generate_descriptor_matrices({data})
 
         # Quantization
         # - loaded the model at class initialization if we had one

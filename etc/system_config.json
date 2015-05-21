@@ -41,10 +41,20 @@
     },
 
     "Indexers": {
+        // For the moment, indexers carry a model that is data-set specific
+        // (contains all descriptors from data in that set with UUID references
+        // to that data). This will hopefully change to the more independent
+        // side of things in the future.
         "SVM_HIK-CD_CSIFT": {
             "type": "SVMIndexerHIK",
             "init": {
                 "data_dir": "Indexers/SVM_HIK/cd_csift"
+            }
+        },
+        "NBMultinomial-CD_CSIFT-imgX": {
+            "type": "NaiveBayesMultinomial",
+            "init": {
+                "data_dir": "Indexers/NaiveBayes/Multunomial-CD_CSIFT"
             }
         }
     },

@@ -9,6 +9,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 from . import Indexer
 
+import cPickle
 import os.path as osp
 import numpy
 from sklearn.naive_bayes import MultinomialNB
@@ -25,7 +26,7 @@ class NaiveBayesMultinomial (Indexer):
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
-        #: :type: numpy.core.multiarray.ndarray
+        #: :type: list[object]
         self._uid_array = None
         self._uid2idx_map = None
 
@@ -38,7 +39,7 @@ class NaiveBayesMultinomial (Indexer):
 
     @property
     def uid_list_filepath(self):
-        return osp.join(self.data_dir, "uid_list.npy")
+        return osp.join(self.data_dir, "uid_list.pickle")
 
     @property
     def feature_mat_filepath(self):
@@ -49,8 +50,9 @@ class NaiveBayesMultinomial (Indexer):
                 and osp.isfile(self.feature_mat_filepath))
 
     def _load_model_files(self):
-        #: :type: numpy.core.multiarray.ndarray
-        self._uid_array = numpy.load(self.uid_list_filepath)
+        with open(self.uid_list_filepath, 'rb') as infile:
+            #: :type: list[object]
+            self._uid_array = cPickle.load(infile)
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
 
@@ -105,19 +107,20 @@ class NaiveBayesMultinomial (Indexer):
         feature_len = len(sample_feature)
 
         # Pre-allocating arrays
-        self._uid_array = numpy.ndarray(num_features, dtype=int)
+        self._uid_array = []
         self._feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
 
         self.log.info("Populating feature matrix")
         for i, (uid, feat) in enumerate(descriptor_map.iteritems()):
-            self._uid_array[i] = uid
+            self._uid_array.append(uid)
             self._feature_mat[i] = feat
 
         with SimpleTimer("Saving data files", self.log.info):
             safe_create_dir(self.data_dir)
-            numpy.save(self.uid_list_filepath, self._uid_array)
+            with open(self.uid_list_filepath, 'wb') as ofile:
+                cPickle.dump(self._uid_array, ofile)
             numpy.save(self.feature_mat_filepath, self._feature_mat)
 
     def extend_model(self, uid_feature_map, parallel=None):
@@ -182,14 +185,14 @@ class NaiveBayesMultinomial (Indexer):
         num_features_after = num_features_before + len(uid_feature_map)
 
         with SimpleTimer("Resizing uid/feature matrices", self.log.debug):
-            self._uid_array.resize((num_features_after,))
             self._feature_mat.resize((num_features_after,
                                       self._feature_mat.shape[1]))
 
         with SimpleTimer("Adding to matrices", self.log.debug):
             for i in range(num_features_before, num_features_after):
                 i_uid = new_uids[i-num_features_before]
-                self._uid_array[i] = i_uid
+                self._uid_array.append(i_uid)
+                assert len(self._uid_array) == i+1
                 self._uid2idx_map[i_uid] = i
                 self._feature_mat[i] = uid_feature_map[i_uid]
 

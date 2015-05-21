@@ -34,7 +34,7 @@ class DataElement (object):
                                            self.__class__.__name__]))
 
     def __hash__(self):
-        return self.uuid()
+        return hash(self.uuid())
 
     def __del__(self):
         self.clean_temp()

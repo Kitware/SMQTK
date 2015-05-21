@@ -19,7 +19,7 @@ class DescriptorElement (object):
                                            self.__class__.__name__]))
 
     def __hash__(self):
-        return self.uuid()
+        return hash(self.uuid())
 
     def __eq__(self, other):
         if isinstance(other, DescriptorElement):

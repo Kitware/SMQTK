@@ -7,6 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import cPickle
 import logging
 import multiprocessing.pool
 import numpy
@@ -17,7 +18,7 @@ import svmutil
 import smqtk_config
 
 from smqtk.indexing import Indexer
-from smqtk.utils import SimpleTimer
+from smqtk.utils import safe_create_dir, SimpleTimer
 from smqtk.utils.distance_functions import histogram_intersection_distance
 
 
@@ -48,8 +49,9 @@ class SVMIndexerHIK (Indexer):
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
-        #: :type: numpy.core.multiarray.ndarray
+        #: :type: list[collections.Hashable]
         self._uid_array = None
+        #: :type: dict[object, int]
         self._uid2idx_map = None
 
         # Matrix of features
@@ -71,7 +73,7 @@ class SVMIndexerHIK (Indexer):
 
     @property
     def uid_list_filepath(self):
-        return osp.join(self.data_dir, "uid_list.npy")
+        return osp.join(self.data_dir, "uid_list.pickle")
 
     @property
     def feature_mat_filepath(self):
@@ -87,8 +89,9 @@ class SVMIndexerHIK (Indexer):
                 and osp.isfile(self.distance_mat_filepath))
 
     def _load_model_files(self):
-        #: :type: numpy.core.multiarray.ndarray
-        self._uid_array = numpy.load(self.uid_list_filepath)
+        with open(self.uid_list_filepath, 'rb') as ifile:
+            #: :type: list[collections.Hashable]
+            self._uid_array = cPickle.load(ifile)
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
         #: :type: numpy.core.multiarray.ndarray
@@ -138,9 +141,12 @@ class SVMIndexerHIK (Indexer):
         :type parallel: int
 
         """
-        if not self.has_model():
-            raise RuntimeError("No model available for this indexer to reset "
-                               "to.")
+        if self.has_model():
+            raise RuntimeError("WARNING: This implementation already has a "
+                               "model generated. These can take a long time to "
+                               "generate, thus we require external manual "
+                               "removal of modal files before we will generate "
+                               "a new model.")
 
         num_features = len(descriptor_map)
         ordered_uids = sorted(descriptor_map.keys())
@@ -149,7 +155,8 @@ class SVMIndexerHIK (Indexer):
         feature_len = len(sample_feature)
 
         # Pre-allocating arrays
-        self._uid_array = numpy.ndarray(num_features, dtype=int)
+        #: :type: list[collections.Hashable]
+        self._uid_array = []
         self._feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
@@ -159,7 +166,7 @@ class SVMIndexerHIK (Indexer):
 
         with SimpleTimer("Populating feature matrix", self.log.info):
             for i, (uid, feat) in enumerate(descriptor_map.iteritems()):
-                self._uid_array[i] = uid
+                self._uid_array.append(uid)
                 self._feature_mat[i] = feat
 
         with SimpleTimer("Computing HI matrix kernel", self.log.info):
@@ -172,9 +179,13 @@ class SVMIndexerHIK (Indexer):
                                                         self._feature_mat[j])
 
         with SimpleTimer("Saving data files", self.log.info):
-            numpy.save(self.uid_list_filepath, self._uid_array)
+            safe_create_dir(self.data_dir)
+            with open(self.uid_list_filepath, 'wb') as ofile:
+                cPickle.dump(self._uid_array, ofile)
             numpy.save(self.feature_mat_filepath, self._feature_mat)
             numpy.save(self.distance_mat_filepath, self._distance_mat)
+            # TODO: destruct and reload matrices in memmap mode
+            #       - see numpy.load() doc-string
 
     def extend_model(self, uid_feature_map, parallel=None):
         """
@@ -239,7 +250,6 @@ class SVMIndexerHIK (Indexer):
         num_features_after = num_features_before + len(uid_feature_map)
 
         with SimpleTimer("Resizing uid/feature matrices", self.log.debug):
-            self._uid_array.resize((num_features_after,))
             self._feature_mat.resize((num_features_after,
                                       self._feature_mat.shape[1]))
 
@@ -258,7 +268,8 @@ class SVMIndexerHIK (Indexer):
                          self.log.debug):
             for r in range(num_features_before, num_features_after):
                 r_uid = new_uids[r-num_features_before]
-                self._uid_array[r] = r_uid
+                self._uid_array.append(r_uid)
+                assert len(self._uid_array) == r+1
                 self._uid2idx_map[r_uid] = r
                 self._feature_mat[r] = uid_feature_map[r_uid]
                 for c in range(r+1):
@@ -321,7 +332,7 @@ class SVMIndexerHIK (Indexer):
         # given positive elements.
         #: :type: set of int
         auto_neg = set()
-        n = max(1, int(self._uid_array.size * self.AUTO_NEG_PERCENT))
+        n = max(1, int(len(self._uid_array) * self.AUTO_NEG_PERCENT))
         for p_UID in pos_uids:
             auto_neg.update(self._least_similar_uid(p_UID, n))
 

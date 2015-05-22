@@ -17,6 +17,9 @@ import os
 import requests
 import tempfile
 
+from smqtk.data_rep.data_element_impl.file_element import FileElement
+from smqtk.data_rep.data_element_impl.memory_element import MemoryElement
+from smqtk.data_rep.data_element_impl.url_element import UrlElement
 from smqtk.utils import SimpleTimer
 from smqtk.utils.configuration import ContentDescriptorConfiguration
 
@@ -79,7 +82,8 @@ class DescriptorServiceServer (flask.Flask):
 
         # Load from configuration file if given
         if config_filepath and os.path.isfile(config_filepath):
-            config_file_path = os.path.expanduser(os.path.abspath(config_filepath))
+            config_file_path = \
+                os.path.expanduser(os.path.abspath(config_filepath))
             self.log.info("Loading config from file (%s)...", config_file_path)
             self.config.from_pyfile(config_file_path)
             config_file_loaded = True
@@ -87,7 +91,8 @@ class DescriptorServiceServer (flask.Flask):
         self.log.debug("Config defaults loaded : %s", config_default_loaded)
         self.log.debug("Config from env loaded : %s", config_env_loaded)
         self.log.debug("Config from file loaded: %s", config_file_loaded)
-        if not (config_default_loaded or config_env_loaded or config_file_loaded):
+        if not (config_default_loaded or config_env_loaded
+                or config_file_loaded):
             raise RuntimeError("No configuration file specified for loading. "
                                "(%s=%s) (file=%s)"
                                % (self.ENV_CONFIG,
@@ -139,21 +144,19 @@ class DescriptorServiceServer (flask.Flask):
             success = True
             message = "Nothing has happened yet"
 
-            # Resolve URI
-            filepath = None
-            remove_file = False
+            # Data element to compute a descriptor for
+            de = None
 
-            # TODO: Make this block construct a DataElement impl instance
-            #       Requires the construction of MemoryElement and WebElement
+            # Resolve URI into DataElement instance
             if uri[:7] == "file://":
                 self.log.debug("Given local disk filepath")
-                _filepath = uri[7:]
-                if not os.path.isfile(_filepath):
+                filepath = uri[7:]
+                if not os.path.isfile(filepath):
                     success = False
                     message = "File URI did not point to an existing file on " \
                               "disk."
                 else:
-                    filepath = _filepath
+                    de = FileElement(filepath)
 
             elif uri[:9] == "base64://":
                 self.log.debug("Given base64 string")
@@ -165,41 +168,14 @@ class DescriptorServiceServer (flask.Flask):
                     message = "No content-type with given base64 content."
                 else:
                     b64str = uri[9:]
-                    ext = MIMETYPES.guess_extension(content_type)
-                    fd, filepath = tempfile.mkstemp(suffix=ext)
-                    os.close(fd)
-                    self.log.debug("Saving image with type '%s' to: %s",
-                                   ext, filepath)
-                    with open(filepath, 'wb') as ofile:
-                        ofile.write(base64.decodestring(b64str))
-                    self.log.debug("Image file written.")
-                    remove_file = True
+                    de = MemoryElement.from_base64(b64str, content_type)
 
             else:
                 self.log.debug("Given URL")
-                r = requests.get(uri)
-                if r.ok:
-                    ext = MIMETYPES.guess_extension(r.headers['content-type'])
-                    fd, filepath = tempfile.mkstemp(suffix=ext)
-                    os.close(fd)
-                    self.log.debug("Saving image with type '%s' to: %s",
-                                   ext, filepath)
-                    with open(filepath, 'wb') as ofile:
-                        ofile.write(r.content)
-                    self.log.debug("Image file written.")
-                    remove_file = True
-                else:
-                    self.log.debug("Request failed")
-                    success = False
-                    message = "Web request did not yield an OK response " \
-                              "(received %d :: %s)" \
-                              % (r.status_code, r.reason)
+                de = UrlElement(uri)
 
             descriptor = None
-            if filepath:
-                from smqtk.data_rep import get_data_element_impls
-                de = get_data_element_impls()['FileElement'](filepath)
-
+            if success:  # so far...
                 # Get the descriptor instance for the given label, creating it
                 # if necessary.
                 if descriptor_label not in descriptor_cache:
@@ -215,10 +191,6 @@ class DescriptorServiceServer (flask.Flask):
                     descriptor = d.compute_descriptor(de)
                     message = "Descriptor computed of type '%s'" \
                               % descriptor_label
-
-                if remove_file:
-                    self.log.debug("Removing downloaded file.")
-                    os.remove(filepath)
 
             return flask.jsonify({
                 "success": success,

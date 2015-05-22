@@ -27,9 +27,18 @@ class FileElement (DataElement):
         self._md5_cache = None
 
     def content_type(self):
+        """
+        :return: Standard type/subtype string for this data element, or None if
+            the content type is unknown.
+        :rtype: str or None
+        """
         return self._content_type
 
     def md5(self):
+        """
+        :return: MD5 hex string of the data content.
+        :rtype: str
+        """
         if not self._md5_cache:
             self._md5_cache = \
                 hashlib.md5(self.get_bytes()).hexdigest()
@@ -37,16 +46,21 @@ class FileElement (DataElement):
 
     def uuid(self):
         """
-        UUID for this data element. File data elements use the file MD5 sum as
-        its UUID.
+        UUID for this data element.
+
+        File data elements use the file MD5 sum as its UUID.
 
         :return: UUID value for this data element.
-        :rtype: basestring
+        :rtype: str
 
         """
         return self.md5()
 
     def get_bytes(self):
+        """
+        :return: Get the byte stream for this data element.
+        :rtype: bytes
+        """
         return open(self._filepath, 'rb').read()
 
     def write_temp(self, temp_dir=None):

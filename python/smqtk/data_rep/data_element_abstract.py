@@ -82,8 +82,8 @@ class DataElement (object):
     @abc.abstractmethod
     def content_type(self):
         """
-        :return: Standard type/subtype string for this data
-            element, or None if the content type is unknown.
+        :return: Standard type/subtype string for this data element, or None if
+            the content type is unknown.
         :rtype: str or None
         """
         return

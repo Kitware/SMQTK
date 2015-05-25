@@ -3,6 +3,8 @@ __author__ = 'purg'
 import hashlib
 import mimetypes
 import os.path as osp
+import time
+import uuid
 
 from smqtk.data_rep import DataElement
 
@@ -20,6 +22,9 @@ class DataFileElement (DataElement):
         :type filepath: str
 
         """
+        # Only keeping stringification of UUID, removing dashes
+        self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
+            .replace('-', '')
         self._filepath = osp.abspath(osp.expanduser(filepath))
         self._content_type = mimetypes.guess_type(filepath)[0]
 
@@ -54,7 +59,7 @@ class DataFileElement (DataElement):
         :rtype: str
 
         """
-        return self.md5()
+        return self._uuid
 
     def get_bytes(self):
         """

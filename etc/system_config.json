@@ -19,7 +19,7 @@
             "type": "DataFileSet",
             "init": {
                 "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_video/data",
-                "md5_chunk": 4
+                "md5_chunk": 8
             }
         }
     },

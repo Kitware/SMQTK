@@ -321,7 +321,7 @@ class IQRSearch (flask.Blueprint):
                     info["is_explicit"] = uid in self._explicit_uids
             else:
                 with self.get_current_iqr_session() as iqrs:
-                    if iqrs.extension_ds.has_uid(uid):
+                    if iqrs.extension_ds.has_uuid(uid):
                         de = iqrs.extension_ds.get_data(uid)
                         info["is_explicit"] = uid in self._explicit_uids
 

@@ -181,7 +181,10 @@ class IQRSearch (flask.Blueprint):
                 with iqr_sess:
                     self.log.debug("[%s::%s] Adding new file to extension "
                                    "ingest", iqr_sess.uuid, fid)
-                    upload_data = DataFileElement(upload_filepath)
+                    sess_upload = osp.join(iqr_sess.work_dir,
+                                           osp.basename(upload_filepath))
+                    os.rename(upload_filepath, sess_upload)
+                    upload_data = DataFileElement(sess_upload)
                     iqr_sess.extension_ds.add_data(upload_data)
 
                 # Compute feature for data -- non-modifying

@@ -592,8 +592,13 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         per_item_limit = numpy.floor(float(descriptor_limit) / len(data_set))
 
         # If an odd number of jobs, favor descriptor extraction
-        descr_parallel = max(1, math.ceil(self.PARALLEL/2.0))
-        extract_parallel = max(1, math.floor(self.PARALLEL/2.0))
+        if self.PARALLEL:
+            descr_parallel = max(1, math.ceil(self.PARALLEL/2.0))
+            extract_parallel = max(1, math.floor(self.PARALLEL/2.0))
+        else:
+            cpuc = multiprocessing.cpu_count()
+            descr_parallel = max(1, math.ceil(cpuc/2.0))
+            extract_parallel = max(1, math.floor(cpuc/2.0))
 
         # For each video, extract frames and submit colorDescriptor processing
         # jobs for each frame, combining all results into a single matrix for

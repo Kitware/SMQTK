@@ -59,8 +59,6 @@ class DataMemoryElement (DataElement):
         """
         UUID for this data element.
 
-        Memory elements use the byte's MD5 sum as the UUID.
-
         :return: UUID value for this data element. This return value should be
             hashable.
         :rtype: collections.Hashable

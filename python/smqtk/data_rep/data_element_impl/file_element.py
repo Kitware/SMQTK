@@ -53,8 +53,6 @@ class DataFileElement (DataElement):
         """
         UUID for this data element.
 
-        File data elements use the file MD5 sum as its UUID.
-
         :return: UUID value for this data element.
         :rtype: str
 

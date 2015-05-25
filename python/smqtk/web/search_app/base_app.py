@@ -130,15 +130,15 @@ class SMQTKSearchApp (flask.Flask):
             self.register_blueprint(self.mod_example_image)
             self.add_navigable_blueprint(self.mod_example_image)
 
-        # with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
-        #     self.mod_example_image_fusion = IQRSearchFusion(
-        #         "Image Search Fusion - Example Imagery",
-        #         self, ds_example_image,
-        #         "Average",
-        #         url_prefix='/image_example_fusion'
-        #     )
-        #     self.register_blueprint(self.mod_example_image_fusion)
-        #     self.add_navigable_blueprint(self.mod_example_image_fusion)
+        with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
+            self.mod_example_image_fusion = IQRSearchFusion(
+                "Image Search Fusion - Example Imagery",
+                self, ds_example_image,
+                "example_image",
+                url_prefix='/image_example_fusion'
+            )
+            self.register_blueprint(self.mod_example_image_fusion)
+            self.add_navigable_blueprint(self.mod_example_image_fusion)
 
         # with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
         #     ds_example_video = DataSetConfiguration.new_inst("example_video")

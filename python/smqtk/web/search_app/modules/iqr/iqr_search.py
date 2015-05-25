@@ -13,8 +13,7 @@ import os.path as osp
 import PIL.Image
 import random
 
-from smqtk.data_rep.data_element_impl.file_element import FileElement as DataFileElement
-from smqtk.data_rep.data_set_impl.file_set import FileSet as DataFileSet
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSession
 from smqtk.utils.configuration import (
     ContentDescriptorConfiguration,
@@ -37,7 +36,7 @@ class IQRSearch (flask.Blueprint):
         indexer.
 
         :param name: Name of this blueprint instance
-        :type name:
+        :type name: str
 
         :param parent_app: Parent containing flask app instance
         :type parent_app: smqtk.web.search_app.app.search_app
@@ -51,8 +50,8 @@ class IQRSearch (flask.Blueprint):
         :param indexer_type: indexer type string
         :type indexer_type: str
 
-        :param url_prefix:
-        :type url_prefix:
+        :param url_prefix: Web address prefix for this blueprint.
+        :type url_prefix: str
 
         :raises ValueError: Invalid Descriptor or indexer type
 
@@ -132,7 +131,7 @@ class IQRSearch (flask.Blueprint):
                     "negative_uids": tuple(iqrs.negative_ids),
                     "extension_ingest_contents":
                         dict((uid, str(df))
-                             for uid, df in iqrs.extension_ingest.iteritems()),
+                             for uid, df in iqrs.extension_ds.iteritems()),
                     "FeatureMemory": {
                     }
                 })
@@ -182,16 +181,8 @@ class IQRSearch (flask.Blueprint):
                 with iqr_sess:
                     self.log.debug("[%s::%s] Adding new file to extension "
                                    "ingest", iqr_sess.uuid, fid)
-                    # old_max_uid = iqr_sess.extension_ingest.max_uid()
-                    # upload_data = iqr_sess.extension_ingest.add_data_file(upload_filepath)
-                    # os.remove(upload_filepath)
-                    # new_max_uid = iqr_sess.extension_ingest.max_uid()
-                    # if old_max_uid == new_max_uid:
-                    #     # re-mark as a positive
-                    #     iqr_sess.adjudicate((upload_data.uid,))
-                    #     return "Already Ingested"
                     upload_data = DataFileElement(upload_filepath)
-                    iqr_sess.extension_ingest.add_data(upload_data)
+                    iqr_sess.extension_ds.add_data(upload_data)
 
                 # Compute feature for data -- non-modifying
                 self.log.debug("[%s::%s] Computing feature for file",
@@ -298,7 +289,7 @@ class IQRSearch (flask.Blueprint):
             """
             all_ids = self._data_set.uuids()
             with self.get_current_iqr_session() as iqrs:
-                all_ids.update(iqrs.extension_ingest.uuids())
+                all_ids.update(iqrs.extension_ds.uuids())
             all_ids = list(all_ids)
             random.shuffle(all_ids)
             return flask.jsonify({
@@ -330,9 +321,9 @@ class IQRSearch (flask.Blueprint):
                     info["is_explicit"] = uid in self._explicit_uids
             else:
                 with self.get_current_iqr_session() as iqrs:
-                    if iqrs.extension_ingest.has_uid(uid):
-                        de = iqrs.extension_ingest.get_data(uid)
-                        info["is_explicit"] = iqrs.extension_ingest.is_explicit(uid)
+                    if iqrs.extension_ds.has_uid(uid):
+                        de = iqrs.extension_ds.get_data(uid)
+                        info["is_explicit"] = uid in self._explicit_uids
 
             if not de:
                 info["success"] = False
@@ -471,21 +462,15 @@ class IQRSearch (flask.Blueprint):
                 descriptor = ContentDescriptorConfiguration.new_inst(self._fd_type_str)
                 indexer = IndexerConfiguration.new_inst(self._idxr_type_str)
 
-                # Custom ingest inheriting the same type as the base ingest
-                # NOTE: This assumes that the base ingest is static in regards
-                #       to content (required by starting_index being assigned
-                #       here).
-                online_ingest = DataFileSet(osp.join(sid_work_dir,
-                                                     'online-ingest'))
-
-                iqr_sess = IqrSession(sid_work_dir, descriptor, indexer,
-                                      online_ingest, sid)
+                iqr_sess = IqrSession(sid_work_dir, descriptor, indexer, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
 
                 # If there are things already in our extension ingest, extend
                 # the base indexer
                 feat_map = \
-                    descriptor.compute_descriptor_async(*tuple(online_ingest))
+                    descriptor.compute_descriptor_async(
+                        *tuple(iqr_sess.extension_ds)
+                    )
                 indexer.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

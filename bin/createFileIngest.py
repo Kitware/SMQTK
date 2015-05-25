@@ -7,7 +7,7 @@ import glob
 import logging
 import os.path as osp
 
-from smqtk.data_rep.data_element_impl.file_element import FileElement
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.utils import bin_utils
 from smqtk.utils.configuration import DataSetConfiguration
 import smqtk_config
@@ -39,7 +39,7 @@ def main():
         file_ds_labels = [
             l
             for l, dsc in smqtk_config.SYSTEM_CONFIG['DataSets'].iteritems()
-            if dsc['type'] == "FileSet"
+            if dsc['type'] == "DataFileSet"
         ]
 
         log.info("")
@@ -59,7 +59,7 @@ def main():
     log.debug("Script arguments:\n%s" % args)
 
     def ingest_file(fp):
-        fds.add_data(FileElement(fp))
+        fds.add_data(DataFileElement(fp))
 
     for f in args:
         f = osp.expanduser(f)

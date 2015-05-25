@@ -196,8 +196,8 @@ class NaiveBayesMultinomial (Indexer):
                 self._uid2idx_map[i_uid] = i
                 self._feature_mat[i] = uid_feature_map[i_uid]
 
-    def rank_model(self, pos_ids, neg_ids=()):
-        super(NaiveBayesMultinomial, self).rank_model(pos_ids, neg_ids)
+    def rank(self, pos_ids, neg_ids=()):
+        super(NaiveBayesMultinomial, self).rank(pos_ids, neg_ids)
 
         num_pos = len(pos_ids)
         num_neg = len(neg_ids)

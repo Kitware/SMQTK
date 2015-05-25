@@ -6,7 +6,7 @@ Compute a feature vector for a given file with a chosen ContentDescriptor type.
 import logging
 import numpy
 
-from smqtk.data_rep.data_element_impl.file_element import FileElement
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.utils import bin_utils
 from smqtk.utils.configuration import ContentDescriptorConfiguration
 
@@ -63,7 +63,7 @@ def main():
                     "computing for the first one.")
 
     input_filepath = args[0]
-    data_element = FileElement(input_filepath)
+    data_element = DataFileElement(input_filepath)
 
     fd = ContentDescriptorConfiguration.new_inst(descriptor_type)
     feat = fd.compute_descriptor(data_element)

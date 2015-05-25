@@ -7,7 +7,7 @@ import os.path as osp
 from smqtk.data_rep import DataElement
 
 
-class FileElement (DataElement):
+class DataFileElement (DataElement):
     """
     File-based data element
     """
@@ -97,4 +97,4 @@ class FileElement (DataElement):
         return
 
 
-DATA_ELEMENT_CLASS = FileElement
+DATA_ELEMENT_CLASS = DataFileElement

@@ -7,7 +7,7 @@ import os.path as osp
 from smqtk.data_rep import DescriptorElement
 
 
-class MemoryElement (DescriptorElement):
+class DescriptorMemoryElement (DescriptorElement):
     """
     In-memory representation of descriptor elements.
     """
@@ -41,7 +41,7 @@ class MemoryElement (DescriptorElement):
         return self._vector
 
 
-class FileElement (DescriptorElement):
+class DescriptorFileElement (DescriptorElement):
     """
     File-based storage of descriptor element.
 
@@ -100,6 +100,6 @@ class FileElement (DescriptorElement):
 
 
 DESCRIPTOR_ELEMENT_CLASS = [
-    MemoryElement,
-    FileElement,
+    DescriptorMemoryElement,
+    DescriptorFileElement,
 ]

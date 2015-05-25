@@ -81,7 +81,7 @@ class Indexer (object):
         return
 
     @abc.abstractmethod
-    def rank_model(self, pos_ids, neg_ids=()):
+    def rank(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range

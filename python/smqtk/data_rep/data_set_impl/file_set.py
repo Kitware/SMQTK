@@ -14,7 +14,7 @@ from smqtk.utils.file_utils import iter_directory_files
 from smqtk.utils.string_utils import partition_string
 
 
-class FileSet (DataSet):
+class DataFileSet (DataSet):
     """
     File-based data set. Data elements will all be file-based (DataFile type,
     see ``../data_element_impl/file_element.py``).
@@ -178,4 +178,4 @@ class FileSet (DataSet):
             return self._element_map[uuid]
 
 
-DATA_SET_CLASS = FileSet
+DATA_SET_CLASS = DataFileSet

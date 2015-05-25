@@ -10,7 +10,7 @@ from smqtk.data_rep import DataElement
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class UrlElement (DataElement):
+class DataUrlElement (DataElement):
     """
     Representation of data loadable via a web URL address.
     """

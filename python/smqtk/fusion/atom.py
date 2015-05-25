@@ -77,7 +77,7 @@ class Atom (object):
         """
         rank_results = []
         for i in self._indexer_list:
-            rank_results.append(i.rank_model(pos, neg))
+            rank_results.append(i.rank(pos, neg))
         return rank_results
 
     def reset(self):

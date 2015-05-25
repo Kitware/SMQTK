@@ -343,7 +343,7 @@ class SVMIndexerHIK (Indexer):
         self.log.debug("Post auto-negative selection: %s", auto_neg)
         return auto_neg
 
-    def rank_model(self, pos_ids, neg_ids=()):
+    def rank(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range

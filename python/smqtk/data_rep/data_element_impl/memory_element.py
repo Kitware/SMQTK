@@ -6,7 +6,7 @@ import hashlib
 from smqtk.data_rep import DataElement
 
 
-class MemoryElement (DataElement):
+class DataMemoryElement (DataElement):
     """
     In-memory representation of data stored in a byte list
     """
@@ -25,10 +25,10 @@ class MemoryElement (DataElement):
 
         :return: New MemoryElement instance containing the byte data in the
             given base64 string.
-        :rtype: MemoryElement
+        :rtype: DataMemoryElement
 
         """
-        return MemoryElement(base64.decodestring(b64_str), content_type)
+        return DataMemoryElement(base64.decodestring(b64_str), content_type)
 
     def __init__(self, bytes, content_type):
         self._bytes = bytes

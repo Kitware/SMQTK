@@ -15,6 +15,7 @@ import os.path as osp
 import shutil
 import uuid
 
+from smqtk.data_rep.data_set_impl.file_set import DataFileSet as DataFileSet
 from smqtk.utils import safe_create_dir
 
 
@@ -63,9 +64,11 @@ class IqrSession (object):
             + "[%s]" % self.uuid
         )
 
-    def __init__(self, work_directory, descriptor, indexer, work_ingest,
-                 session_uid=None):
+    def __init__(self, work_directory, descriptor, indexer, session_uid=None):
         """ Initialize IQR session
+
+        Extension data set is file based and located in the working directory
+        of this session instance.
 
         :param work_directory: Directory we are allowed to use for working files
         :type work_directory: str
@@ -75,9 +78,6 @@ class IqrSession (object):
 
         :param indexer: indexer to use for this IQR session
         :type indexer: smqtk.indexing.Indexer
-
-        :param work_ingest: Ingest to add extension files to
-        :type work_ingest: smqtk.data_rep.DataSet
 
         :param session_uid: Optional manual specification of session UUID.
         :type session_uid: str or uuid.UUID
@@ -100,7 +100,8 @@ class IqrSession (object):
         self.results = None
 
         # Ingest where extension images are placed
-        self.extension_ingest = work_ingest
+        self.extension_ds_dir = osp.join(work_directory, 'online-dataset')
+        self.extension_ds = DataFileSet(self.extension_ds_dir)
 
     def __del__(self):
         # Clean up working directory
@@ -196,7 +197,7 @@ class IqrSession (object):
                                    "adjudication.")
 
             id_probability_map = \
-                self.indexer.rank_model(self.positive_ids, self.negative_ids)
+                self.indexer.rank(self.positive_ids, self.negative_ids)
 
             if self.results is None:
                 self.results = IqrResultsDict()
@@ -225,12 +226,7 @@ class IqrSession (object):
             # clear contents of working directory
             shutil.rmtree(self.work_dir)
 
-            # Re-initialize extension ingest. Now that we're killed the IQR work
+            # Re-initialize extension ingest. Now that we've killed the IQR work
             # tree, this should initialize empty
-            if len(self.extension_ingest):
-                #: :type: smqtk.utils.DataIngest.DataIngest
-                self.extension_ingest = self.extension_ingest.__class__(
-                    self.extension_ingest.data_directory,
-                    self.extension_ingest.work_directory,
-                    starting_index=min(self.extension_ingest.uids())
-                )
+            if len(self.extension_ds):
+                self.extension_ds = DataFileSet(self.extension_ds_dir)

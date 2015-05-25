@@ -17,9 +17,9 @@ import os
 import requests
 import tempfile
 
-from smqtk.data_rep.data_element_impl.file_element import FileElement
-from smqtk.data_rep.data_element_impl.memory_element import MemoryElement
-from smqtk.data_rep.data_element_impl.url_element import UrlElement
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
+from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
+from smqtk.data_rep.data_element_impl.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
 from smqtk.utils.configuration import ContentDescriptorConfiguration
 
@@ -156,7 +156,7 @@ class DescriptorServiceServer (flask.Flask):
                     message = "File URI did not point to an existing file on " \
                               "disk."
                 else:
-                    de = FileElement(filepath)
+                    de = DataFileElement(filepath)
 
             elif uri[:9] == "base64://":
                 self.log.debug("Given base64 string")
@@ -168,11 +168,11 @@ class DescriptorServiceServer (flask.Flask):
                     message = "No content-type with given base64 content."
                 else:
                     b64str = uri[9:]
-                    de = MemoryElement.from_base64(b64str, content_type)
+                    de = DataMemoryElement.from_base64(b64str, content_type)
 
             else:
                 self.log.debug("Given URL")
-                de = UrlElement(uri)
+                de = DataUrlElement(uri)
 
             descriptor = None
             if success:  # so far...

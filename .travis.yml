@@ -4,6 +4,6 @@ python:
   - "2.7"
 before_install:
   - sudo apt-get update
-  - sudo apt-get install libblas3 libblas-dev liblapack3 liblapack-dev
+  - sudo apt-get install libblas-dev liblapack-dev
 install: pip install -r requirements.txt
 script: nosetests --with-doctest python/smqtk/

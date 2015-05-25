@@ -388,7 +388,8 @@ class IQRSearch (flask.Blueprint):
                 except Exception, ex:
                     return flask.jsonify({
                         "success": False,
-                        "message": "ERROR: " + str(ex)
+                        "message": "ERROR: %s: %s" % (type(ex).__name__,
+                                                      ex.message)
                     })
 
         @self.route("/iqr_ordered_results", methods=['GET'])

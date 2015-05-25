@@ -13,6 +13,7 @@ import os.path as osp
 import PIL.Image
 import random
 
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSessionFusion
 from smqtk.utils.configuration import FusionConfiguration
 from smqtk.utils.preview_cache import PreviewCache
@@ -155,12 +156,12 @@ class IQRSearchFusion (flask.Blueprint):
             :rtype: str
 
             """
-            iqr_sess = self.get_current_iqr_session()
             # TODO: Add status dict with a "GET" method branch for getting that
             #       status information.
 
             # Start the ingest of a FID when POST
             if flask.request.method == "POST":
+                iqr_sess = self.get_current_iqr_session()
                 fid = flask.request.form['fid']
 
                 self.log.debug("[%s::%s] Getting temporary filepath from "
@@ -172,21 +173,19 @@ class IQRSearchFusion (flask.Blueprint):
                 with iqr_sess:
                     self.log.debug("[%s::%s] Adding new file to extension "
                                    "ingest", iqr_sess.uuid, fid)
-                    old_max_uid = iqr_sess.extension_ds.max_uid()
-                    upload_data = iqr_sess.extension_ds.add_data_file(upload_filepath)
-                    os.remove(upload_filepath)
-                    new_max_uid = iqr_sess.extension_ds.max_uid()
-                    if old_max_uid == new_max_uid:
-                        # re-mark as a positive
-                        iqr_sess.adjudicate((upload_data.uid,))
-                        return "Already Ingested"
+                    sess_upload = osp.join(iqr_sess.work_dir,
+                                           osp.basename(upload_filepath))
+                    os.rename(upload_filepath, sess_upload)
+                    upload_data = DataFileElement(sess_upload)
+                    iqr_sess.extension_ds.add_data(upload_data)
 
+                # Extend reactor model with feature data -- modifying
                 with iqr_sess:
                     # Compute feature for data -- non-modifying
                     self.log.debug("[%s::%s] Computing feature for file",
                                    iqr_sess.uuid, fid)
-                    iqr_sess.reactor.extend(upload_data)
-                    iqr_sess.adjudicate((upload_data.uid,))
+                    iqr_sess.indexer.extend(upload_data)
+                    iqr_sess.adjudicate((upload_data.uuid(),))
 
                 return "Finished Ingestion"
 
@@ -310,7 +309,7 @@ class IQRSearchFusion (flask.Blueprint):
                     info["is_explicit"] = uid in self._explicit_uids
             else:
                 with self.get_current_iqr_session() as iqrs:
-                    if iqrs.extension_ds.has_uid(uid):
+                    if iqrs.extension_ds.has_uuid(uid):
                         de = iqrs.extension_ds.get_data(uid)
                         info["is_explicit"] = uid in self._explicit_uids
 
@@ -374,7 +373,8 @@ class IQRSearchFusion (flask.Blueprint):
                 except Exception, ex:
                     return flask.jsonify({
                         "success": False,
-                        "message": "ERROR: " + str(ex)
+                        "message": "ERROR: %s: %s" % (type(ex).__name__,
+                                                      ex.message)
                     })
 
         @self.route("/iqr_ordered_results", methods=['GET'])

@@ -138,8 +138,8 @@ class FileSet (DataSet):
 
     def uuids(self):
         """
-        :return: a tuple of UUIDs represented in this data set.
-        :rtype: list
+        :return: A new set of uuids represented in this data set.
+        :rtype: set
         """
         with self._element_map_lock:
             return set(self._element_map.keys())

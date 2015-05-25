@@ -136,7 +136,7 @@ class NaiveBayesMultinomial (Indexer):
 
         :param uid_feature_map: Mapping of integer IDs to features to extend this
             indexer's model with.
-        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type uid_feature_map: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available

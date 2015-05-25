@@ -43,9 +43,9 @@ def main():
     opts, args = parser.parse_args()
 
     bin_utils.initialize_logging(logging.getLogger("smqtk"),
-                                logging.INFO - (10*opts.debug_backend))
+                                 logging.INFO - (10*opts.debug_backend))
     bin_utils.initialize_logging(logging.getLogger("werkzeug"),
-                                logging.WARN - (20*opts.debug_server))
+                                 logging.WARN - (20*opts.debug_server))
     log = logging.getLogger("smqtk.main")
 
     if opts.list:

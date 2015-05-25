@@ -30,7 +30,6 @@ class DataSet (collections.Set):
         :type d: smqtk.data_rep.DataElement
 
         :return: True of this DataSet contains the given data element. Since,
-
         :rtype: bool
 
         """
@@ -55,7 +54,7 @@ class DataSet (collections.Set):
     @abc.abstractmethod
     def uuids(self):
         """
-        :return: a set of uuids represented in this data set.
+        :return: A new set of uuids represented in this data set.
         :rtype: set
         """
         return

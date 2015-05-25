@@ -147,7 +147,8 @@ def ffmpeg_extract_frame_map(video_filepath, second_offset=0,
     :type second_interval: float
 
     :param max_duration: Maximum number of seconds worth of extracted frames
-        (starting from the specified offset).
+        (starting from the specified offset). If <=0, we extract until the end
+        of the video.
     :type max_duration: float
 
     :param frames: Specific exact frame numbers within the video to extract.
@@ -198,11 +199,11 @@ def ffmpeg_extract_frame_map(video_filepath, second_offset=0,
 
         """
         _log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map'
-                                 '.frames_for_interval')
+                                 '.iter_frames_for_interval')
         num_frames = int(video_md.fps * video_md.duration)
         first_frame = second_offset * video_md.fps
         _log.debug("First frame: %f", first_frame)
-        if max_duration:
+        if max_duration > 0:
             cutoff_frame = min(float(num_frames),
                                (max_duration + second_offset) * video_md.fps)
         else:

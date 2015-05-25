@@ -24,7 +24,7 @@ class IqrResultsDict (dict):
     """
 
     def __setitem__(self, i, v):
-        super(IqrResultsDict, self).__setitem__(int(i), float(v))
+        super(IqrResultsDict, self).__setitem__(i, float(v))
 
     def update(self, other=None, **kwds):
         """
@@ -71,13 +71,13 @@ class IqrSession (object):
         :type work_directory: str
 
         :param descriptor: Descriptor to use for this IQR session
-        :type descriptor: SMQTK.content_description.ContentDescriptor
+        :type descriptor: smqtk.content_description.ContentDescriptor
 
         :param indexer: indexer to use for this IQR session
-        :type indexer: SMQTK.indexing.Indexer
+        :type indexer: smqtk.indexing.Indexer
 
         :param work_ingest: Ingest to add extension files to
-        :type work_ingest: SMQTK.utils.DataIngest.DataIngest
+        :type work_ingest: smqtk.data_rep.DataSet
 
         :param session_uid: Optional manual specification of session UUID.
         :type session_uid: str or uuid.UUID
@@ -96,7 +96,7 @@ class IqrSession (object):
 
         # Mapping of a clip ID to the probability of it being associated to
         # positive adjudications. This is None before any refinement occurs.
-        #: :type: None or dict of (int, float)
+        #: :type: None or dict of (collections.Hashable, float)
         self.results = None
 
         # Ingest where extension images are placed
@@ -146,16 +146,16 @@ class IqrSession (object):
         specific image IDs
 
         :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: collections.Iterable of int
+        :type new_positives: collections.Iterable of collections.Hashable
 
         :param new_negatives: New IDs of items to now be considered negative.
-        :type new_negatives: collections.Iterable of int
+        :type new_negatives: collections.Iterable of collections.Hashable
 
         :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: collections.Iterable of int
+        :type un_positives: collections.Iterable of collections.Hashable
 
         :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: collections.Iterable of int
+        :type un_negatives: collections.Iterable of collections.Hashable
 
         """
         with self.lock:
@@ -175,16 +175,16 @@ class IqrSession (object):
             at least one positive adjudication.
 
         :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: collections.Iterable of int
+        :type new_positives: collections.Iterable of collections.Hashable
 
         :param new_negatives: New IDs of items to now be considered negative.
-        :type new_negatives: collections.Iterable of int
+        :type new_negatives: collections.Iterable of collections.Hashable
 
         :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: collections.Iterable of int
+        :type un_positives: collections.Iterable of collections.Hashable
 
         :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: collections.Iterable of int
+        :type un_negatives: collections.Iterable of collections.Hashable
 
         """
         with self.lock:

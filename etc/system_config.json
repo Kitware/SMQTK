@@ -11,14 +11,20 @@
         "example_image": {
             "type": "FileSet",
             "init": {
-                "root_directory":
-                    "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
                 "md5_chunk": 8
             }
+        },
+        "example_video": {
+            "type": "FileSet",
+            "init": {
+                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_video/data",
+                "md5_chunk": 4
+            }
         }
-    },
+    }
 
-    "ContentDescriptors": {
+    ,"ContentDescriptors": {
         // "name": {
         //     "type": "typeName",
         //     "init": {
@@ -37,147 +43,63 @@
                 "kmeans_k": 256,
                 "flann_sample_fraction": 1.0
             }
+        },
+        "CD_CSIFT_Video_example": {
+            "type": "ColorDescriptor_Video_csift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 512,
+                "flann_sample_fraction": 1.0
+            }
         }
-    },
+    }
 
-    "Indexers": {
+    ,"Indexers": {
         // For the moment, indexers carry a model that is data-set specific
         // (contains all descriptors from data in that set with UUID references
         // to that data). This will hopefully change to the more independent
         // side of things in the future.
-        "SVM_HIK-CD_CSIFT": {
+        "SVM_HIK-CD_CSIFT-Image": {
             "type": "SVMIndexerHIK",
             "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift"
+                "data_dir": "Indexers/SVM_HIK/cd_csift/example_image"
             }
         },
-        "NBMultinomial-CD_CSIFT-imgX": {
-            "type": "NaiveBayesMultinomial",
+        "SVM_HIK-CD_CSIFT-Video": {
+            "type": "SVMIndexerHIK",
             "init": {
-                "data_dir": "Indexers/NaiveBayes/Multunomial-CD_CSIFT"
-            }
-        }
-    },
-
-
-    "Ingests": {
-        // relative to the SMQTK configured data directory
-        "dir": "SMQTK_Ingests",
-        // Available data ingests and their associated settings
-        "listing": {
-            "example_image": {
-                // relative to the ingest base directory
-                "dir": "example_image",
-
-                // As of now, there are only two supported types: "image" and "video".
-                // If something other than those two values are used here, we error.
-                "type": "image",
-
-                // Other settings may appear here as well as in specific
-                // descriptor/indexer types as needed. Currently, only
-                // data/work directory specifications are needed for instance
-                // construction.
-
-                // FeatureDescriptor settings for this ingest
-                "descriptors": {
-                    // Relative to containing ingest directory
-                    "dir": "ContentDescriptor",
-                    "listing": {
-                        "ColorDescriptor_Image_csift": {
-                            "dir": "CSIFT"
-                        },
-                        "ColorDescriptor_Image_transformedcolorhistogram": {
-                            "dir": "TCH"
-                        }
-                    }
-                },
-                // Indexer settings for this ingest
-                // - indexers operate on input features. Currently we assume
-                //   that indexers will only ever want features from one
-                //   consistent FeatureDetector type. Thus, the run-time data
-                //   and work directories for an Indexer type will have a
-                //   sub-directory under it for each Indexer-Descriptor pairing
-                //   instantiated.
-                "indexers": {
-                    "dir": "Indexers",
-                    "listing": {
-                        "SVMIndexer_HIK": {
-                            "dir": "SVM_HIK"
-                        },
-                        "NaiveBayes_Multinomial": {
-                            "dir": "NaiveBayes/Multinomial"
-                        }
-                    }
-                },
-                // Fusion settings
-                "fusion": {
-                    // Parameters defining construction of Reactor instance
-                    "catalysts": {
-                        "dir": "Fusion/Catalysts",
-                        "listing": {
-                            "Average": {
-                                "dir": "Average"
-                            }
-                        }
-                    },
-                    "atoms": [
-                        {
-                            "descriptor": "ColorDescriptor_Image_csift",
-                            "indexers": [
-                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
-                            ]
-                            // TODO: Need sub-catalyst parameter option
-                        }
-                        // Multiple atoms can be defined for each content
-                        // descriptor base available or wanted.
-                    ]
-                }
-            },
-
-            "example_video": {
-                "dir": "example_video",
-                "type": "video",
-                "descriptors": {
-                    "dir": "ContentDescriptor",
-                    "listing": {
-                        "ColorDescriptor_Video_csift": {
-                            "dir": "CSIFT"
-                        },
-                        "ColorDescriptor_Video_transformedcolorhistogram": {
-                            "dir": "TCH"
-                        }
-                    }
-                },
-                "indexers": {
-                    "dir": "Indexers",
-                    "listing": {
-                        "SVMIndexer_HIK": {
-                            "dir": "SVM_HIK"
-                        },
-                        "NaiveBayes_Multinomial": {
-                            "dir": "NaiveBayes/Multinomial"
-                        }
-                    }
-                },
-                "fusion": {
-                    "catalysts": {
-                        "dir": "Fusion/Catalysts",
-                        "listing": {
-                            "Average": {
-                                "dir": "Average"
-                            }
-                        }
-                    },
-                    "atoms": [
-                        {
-                            "descriptor": "ColorDescriptor_Image_csift",
-                            "indexers": [
-                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
-                            ]
-                        }
-                    ]
-                }
+                "data_dir": "Indexers/SVM_HIK/cd_csift/example_video"
             }
         }
     }
+
+    // Old fusion settings. Need to create a new configuration schema
+//    ,"fusion": {
+//        // Parameters defining construction of Reactor instance
+//        "catalysts": {
+//            "dir": "Fusion/Catalysts",
+//            "listing": {
+//                "Average": {
+//                    "dir": "Average"
+//                }
+//            }
+//        },
+//        "atoms": [
+//            {
+//                "descriptor": "ColorDescriptor_Image_csift",
+//                "indexers": [
+//                    "SVMIndexer_HIK",
+//                    "NaiveBayes_Multinomial"
+//                ]
+//                // TODO: Need sub-catalyst parameter option
+//            }
+//            // Multiple atoms can be defined for each content
+//            // descriptor base available or wanted.
+//        ]
+//    }
 }

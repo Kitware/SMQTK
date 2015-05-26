@@ -25,34 +25,6 @@ class Indexer (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data_dir, work_dir):
-        """
-        Initialize indexer with a given descriptor instance.
-
-        Construction of multiple indexer instances is expected to involve
-        providing a similar data directory but different work directories. The
-        data directory would only be read from except for when generating a
-        model which would error if there was already something there (read-only
-        enforcement).
-
-        :param data_dir: indexer data directory
-        :type data_dir: str
-
-        :param work_dir: Work directory for this indexer to use.
-        :type work_dir: str
-
-        """
-        self._data_dir = data_dir
-        self._work_dir = work_dir
-
-    @property
-    def name(self):
-        """
-        :return: Indexer type name
-        :rtype: str
-        """
-        return self.__class__.__name__
-
     @property
     def log(self):
         """
@@ -62,53 +34,17 @@ class Indexer (object):
         return logging.getLogger('.'.join((self.__module__,
                                            self.__class__.__name__)))
 
-    @property
-    def data_dir(self):
-        """
-        :return: This indexer type's base data directory
-        :rtype: str
-        """
-        if not os.path.isdir(self._data_dir):
-            os.makedirs(self._data_dir)
-        return self._data_dir
-
-    @property
-    def work_dir(self):
-        """
-        :return: This indexer type's base work directory
-        :rtype: str
-        """
-        if not os.path.isdir(self._work_dir):
-            os.makedirs(self._work_dir)
-        return self._work_dir
-
     @abc.abstractmethod
-    def has_model(self):
-        """
-        :return: True if this indexer has a valid initialized model for
-            extension and ranking (or doesn't need one to perform those tasks).
-        :rtype: bool
-        """
-        pass
-
-    @abc.abstractmethod
-    def generate_model(self, feature_map, parallel=None, **kwargs):
+    def generate_model(self, descriptor_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
 
-        :raises RuntimeError: Precaution error when there is an existing data
-            model for this indexer. Manually delete or move the existing
-            model before computing another one.
-
-            Specific implementations may error on other things. See the specific
-            implementations for more details.
-
         :raises ValueError: The given feature map had no content.
 
-        :param feature_map: Mapping of integer IDs to feature data. All feature
+        :param descriptor_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
-        :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type descriptor_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -116,19 +52,7 @@ class Indexer (object):
         :type parallel: int
 
         """
-        if self.has_model():
-            raise RuntimeError(
-                "\n"
-                "!!! Warning !!! Warning !!! Warning !!!\n"
-                "A model already exists for this indexer! "
-                "Make sure that you really want to do this by moving / "
-                "deleting the existing model (file(s)). Model location: "
-                "%s\n"
-                "!!! Warning !!! Warning !!! Warning !!!"
-                % self.data_dir
-            )
-        if not feature_map:
-            raise ValueError("The given feature_map has no content.")
+        return
 
     @abc.abstractmethod
     def extend_model(self, uid_feature_map, parallel=None):
@@ -140,15 +64,13 @@ class Indexer (object):
         indexer / descriptor combination, we will error. In the future, I
         would imagine a new model would be created.
 
-        :raises RuntimeError: No current model.
-
-            See implementation for other possible RuntimeError causes.
+        :raises RuntimeError: Unable to expand model.
 
         :raises ValueError: See implementation.
 
         :param uid_feature_map: Mapping of integer IDs to features to extend this
             indexer's model with.
-        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type uid_feature_map: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -156,19 +78,16 @@ class Indexer (object):
         :type parallel: int
 
         """
-        if not self.has_model():
-            raise RuntimeError("No model available for this indexer.")
+        return
 
     @abc.abstractmethod
-    def rank_model(self, pos_ids, neg_ids=()):
+    def rank(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
         of [0, 1], where 1.0 is the highest rank and 0.0 is the lowest rank.
 
-        :raises RuntimeError: No current model.
-
-            See implementation for other possible RuntimeError causes.
+        :raises RuntimeError: Unable to produce a rank mapping.
 
         :param pos_ids: List of positive data IDs
         :type pos_ids: collections.Iterable of int
@@ -180,8 +99,7 @@ class Indexer (object):
         :rtype: dict of (int, float)
 
         """
-        if not self.has_model():
-            raise RuntimeError("No model available for this indexer.")
+        return
 
     @abc.abstractmethod
     def reset(self):
@@ -189,12 +107,10 @@ class Indexer (object):
         Reset this indexer to its original state, i.e. removing any model
         extension that may have occurred.
 
-        :raises RuntimeError: Unable to reset due to lack of available model.
+        :raises RuntimeError: Unable to reset.
 
         """
-        if not self.has_model():
-            raise RuntimeError("No model available for this indexer to reset "
-                               "to.")
+        return
 
 
 def get_indexers():

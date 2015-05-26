@@ -8,7 +8,12 @@ import logging
 import multiprocessing.pool
 
 from smqtk.utils import bin_utils
-from smqtk.utils.configuration import IngestConfiguration
+from smqtk.utils.configuration import (
+    ConfigurationInterface,
+    DataSetConfiguration,
+    ContentDescriptorConfiguration,
+    IndexerConfiguration,
+)
 from smqtk.utils.jsmin import jsmin
 
 
@@ -36,14 +41,6 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
     Process = NonDaemonicProcess
 
 
-def list_ingest_labels(log):
-    log.info("")
-    log.info("Available ingest labels:")
-    log.info("")
-    for l in IngestConfiguration.available_ingest_labels():
-        log.info("\t%s", l)
-    log.info("")
-
 
 def list_available_fds_idxrs(log, ingest_config):
     """
@@ -52,7 +49,7 @@ def list_available_fds_idxrs(log, ingest_config):
     log.info("")
     log.info("For ingest configuration '%s'...", ingest_config.label)
     log.info("")
-    log.info("Available FeatureDescriptor types:")
+    log.info("Available ContentDescriptor types:")
     log.info("")
     for l in ingest_config.get_available_descriptor_labels():
         log.info("\t%s" % l)
@@ -77,13 +74,14 @@ def main():
     group_required = optparse.OptionGroup(parser, "Required Options")
     group_optional = optparse.OptionGroup(parser, "Optional")
 
-    group_required.add_option('-i', '--ingest',
-                              help="Ingest configuration to use.")
-    group_required.add_option('-d', '--feature-descriptor',
+    group_required.add_option('-d', '--data-set',
+                              help="Data set to use for model generation.")
+    group_required.add_option('-c', '--content-descriptor',
                               help="Feature descriptor type for model and "
                                    "feature generation.")
-    group_required.add_option('-I', '--indexer',
-                              help="Indexer type for model generation.")
+    group_required.add_option('-i', '--indexer',
+                              help="(Optional) Indexer type for model "
+                                   "generation.")
 
     group_optional.add_option('--sys-json',
                               help="Custom system configuration JSON file to "
@@ -98,7 +96,8 @@ def main():
                                    "available.")
     group_optional.add_option('-t', '--threads', type=int, default=None,
                               help='Number of threads/processes to use for '
-                                   'processing.')
+                                   'processing. By default we use all '
+                                   'available cores/threads.')
     group_optional.add_option('-v', '--verbose', action='store_true',
                               default=False,
                               help='Add debug messaged to output logging.')
@@ -107,12 +106,12 @@ def main():
     parser.add_option_group(group_optional)
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger(),
+    bin_utils.initialize_logging(logging.getLogger(),
                                 logging.INFO - (10*opts.verbose))
     log = logging.getLogger("main")
 
-    ingest_label = opts.ingest
-    fd_label = opts.feature_descriptor
+    dset_label = opts.data_set
+    cd_label = opts.content_descriptor
     idxr_label = opts.indexer
     parallel = opts.threads
 
@@ -120,50 +119,61 @@ def main():
     if opts.sys_json:
         with open(opts.sys_json) as json_file:
             json_config = json.loads(jsmin(json_file.read()))
-        IngestConfiguration.INGEST_CONFIG = json_config['Ingests']
+        ConfigurationInterface.BASE_CONFIG = json_config['Ingests']
 
     if opts.list:
-        if ingest_label is None:
-            list_ingest_labels(log)
-            exit(0)
-        elif ingest_label not in IngestConfiguration.available_ingest_labels():
-            log.error("Label '%s' is not a valid ingest configuration.",
-                      ingest_label)
-            list_ingest_labels(log)
-            exit(0)
-        else:
-            # List available FeatureDescriptor and Indexer configurations
-            # available for the given ingest config label.
-            ingest_config = IngestConfiguration(ingest_label)
-            list_available_fds_idxrs(log, ingest_config)
-            exit(0)
+        log.info("")
+        log.info("Available Data Sets:")
+        log.info("")
+        for l in DataSetConfiguration.available_labels():
+            log.info("\t%s" % l)
+        log.info("")
+        log.info("Available ContentDescriptor types:")
+        log.info("")
+        for l in ContentDescriptorConfiguration.available_labels():
+            log.info("\t%s" % l)
+        log.info("")
+        log.info("Available Indexer types:")
+        log.info("")
+        for l in IndexerConfiguration.available_labels():
+            log.info("\t%s", l)
+        log.info("")
+        exit(0)
 
-    # If we weren't given an index label, or if the one given was invalid, print
-    if (ingest_label is None or ingest_label not in
-            IngestConfiguration.available_ingest_labels()):
-        log.error("Invalid ingest configuration specified for use: %s",
-                  ingest_label)
-        list_ingest_labels(log)
+    # Check given labels
+    fail = False
+    if dset_label not in DataSetConfiguration.available_labels():
+        log.error("Given label '%s' is NOT associated to an existing "
+                  "data set configuration!", dset_label)
+        fail = True
+    if cd_label not in ContentDescriptorConfiguration.available_labels():
+        log.error("Given label '%s' is NOT associated to an existing "
+                  "content descriptor configuration!", cd_label)
+        fail = True
+    if idxr_label not in IndexerConfiguration.available_labels():
+        log.error("Given label '%s' is NOT associated to an existing "
+                  "indexer configuration!", idxr_label)
+        fail = True
+    if fail:
         exit(1)
+    del fail
 
-    ingest_config = IngestConfiguration(ingest_label)
-
-    log.info("Loading ingest instance...")
+    log.info("Loading data-set instance...")
     #: :type: DataIngest or VideoIngest
-    ingest = ingest_config.new_ingest_instance()
+    dset = DataSetConfiguration.new_inst(dset_label)
 
     log.info("Loading descriptor instance...")
-    #: :type: smqtk.content_description.FeatureDescriptor
-    descriptor = ingest_config.new_descriptor_instance(fd_label)
+    #: :type: smqtk.content_description.ContentDescriptor
+    descriptor = ContentDescriptorConfiguration.new_inst(cd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.PARALLEL = parallel
-    descriptor.generate_model(ingest.data_list())
+    descriptor.generate_model(dset)
 
     # Don't do indexer model generation if a type was not provided
     if idxr_label:
         log.info("Loading indexer instance...")
         #: :type: smqtk.indexing.Indexer
-        indexer = ingest_config.new_indexer_instance(idxr_label, fd_label)
+        indexer = IndexerConfiguration.new_inst(idxr_label)
 
         # It is not guaranteed that the feature computation method is doing
         # anything in parallel, but if it is, request that it perform serially
@@ -174,10 +184,11 @@ def main():
         # parallel processing might use multiprocessing.Pool instances, too.
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
-        fmap = descriptor.compute_feature_async(*(df for _, df
-                                                  in ingest.iteritems()),
-                                                parallel=parallel,
-                                                pool_type=NonDaemonicPool)
+        fmap = descriptor.compute_descriptor_async(
+            *(de for de in dset),
+            parallel=parallel,
+            pool_type=NonDaemonicPool
+        )
 
         indexer.generate_model(fmap, parallel=parallel)
 

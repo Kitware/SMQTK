@@ -42,10 +42,10 @@ def main():
                       help="List currently available applications for running.")
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger("smqtk"),
-                                logging.INFO - (10*opts.debug_backend))
-    bin_utils.initializeLogging(logging.getLogger("werkzeug"),
-                                logging.WARN - (20*opts.debug_server))
+    bin_utils.initialize_logging(logging.getLogger("smqtk"),
+                                 logging.INFO - (10*opts.debug_backend))
+    bin_utils.initialize_logging(logging.getLogger("werkzeug"),
+                                 logging.WARN - (20*opts.debug_server))
     log = logging.getLogger("smqtk.main")
 
     if opts.list:
@@ -79,10 +79,10 @@ def main():
     if use_basic_auth:
         app.config["BASIC_AUTH_FORCE"] = True
         BasicAuth(app)
+    app.config['DEBUG'] = debug_server
 
     app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
-
 
 if __name__ == "__main__":
     main()

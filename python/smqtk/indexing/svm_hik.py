@@ -7,6 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import cPickle
 import logging
 import multiprocessing.pool
 import numpy
@@ -14,8 +15,10 @@ import os.path as osp
 import svm
 import svmutil
 
+import smqtk_config
+
 from smqtk.indexing import Indexer
-from smqtk.utils import SimpleTimer
+from smqtk.utils import safe_create_dir, SimpleTimer
 from smqtk.utils.distance_functions import histogram_intersection_distance
 
 
@@ -30,7 +33,7 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
     return ij_hik
 
 
-class SVMIndexer_HIK (Indexer):
+class SVMIndexerHIK (Indexer):
     """
     Indexer using SVM classification model with Platt scaling
 
@@ -41,13 +44,14 @@ class SVMIndexer_HIK (Indexer):
     # Pick lowest % intersecting elements as auto-bg
     AUTO_NEG_PERCENT = 0.10
 
-    def __init__(self, data_dir, work_dir):
-        super(SVMIndexer_HIK, self).__init__(data_dir, work_dir)
+    def __init__(self, data_dir):
+        self.data_dir = osp.join(smqtk_config.DATA_DIR, data_dir)
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
-        #: :type: numpy.core.multiarray.ndarray
+        #: :type: list[collections.Hashable]
         self._uid_array = None
+        #: :type: dict[object, int]
         self._uid2idx_map = None
 
         # Matrix of features
@@ -60,14 +64,16 @@ class SVMIndexer_HIK (Indexer):
 
         # Templated to take the W1 integer weight argument, which should be
         # floor(num_negatives / num_positives), which a min value of 1
-        self.svm_train_params = '-q -t 5 -b 1 -c 2 -w1 %f  -g 0.0078125'
+        # - The ``-t 5`` parameter value is unique to the custom libSVM
+        #   implementation we build.
+        self.svm_train_params = '-q -t 5 -b 1 -c 2 -w1 %f -g 0.0078125'
 
         if self.has_model_files():
             self._load_model_files()
 
     @property
     def uid_list_filepath(self):
-        return osp.join(self.data_dir, "uid_list.npy")
+        return osp.join(self.data_dir, "uid_list.pickle")
 
     @property
     def feature_mat_filepath(self):
@@ -83,8 +89,9 @@ class SVMIndexer_HIK (Indexer):
                 and osp.isfile(self.distance_mat_filepath))
 
     def _load_model_files(self):
-        #: :type: numpy.core.multiarray.ndarray
-        self._uid_array = numpy.load(self.uid_list_filepath)
+        with open(self.uid_list_filepath, 'rb') as ifile:
+            #: :type: list[collections.Hashable]
+            self._uid_array = cPickle.load(ifile)
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
         #: :type: numpy.core.multiarray.ndarray
@@ -110,7 +117,7 @@ class SVMIndexer_HIK (Indexer):
             and 0 not in self._distance_mat.shape   # has dimensionality
         )
 
-    def generate_model(self, feature_map, parallel=None, **kwargs):
+    def generate_model(self, descriptor_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -124,9 +131,9 @@ class SVMIndexer_HIK (Indexer):
 
         :raises ValueError: The given feature map had no content.
 
-        :param feature_map: Mapping of integer IDs to feature data. All feature
+        :param descriptor_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
-        :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type descriptor_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -134,16 +141,22 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        super(SVMIndexer_HIK, self).generate_model(feature_map, parallel)
+        if self.has_model():
+            raise RuntimeError("WARNING: This implementation already has a "
+                               "model generated. These can take a long time to "
+                               "generate, thus we require external manual "
+                               "removal of modal files before we will generate "
+                               "a new model.")
 
-        num_features = len(feature_map)
-        ordered_uids = sorted(feature_map.keys())
+        num_features = len(descriptor_map)
+        ordered_uids = sorted(descriptor_map.keys())
 
-        sample_feature = feature_map[ordered_uids[0]]
+        sample_feature = descriptor_map[ordered_uids[0]]
         feature_len = len(sample_feature)
 
         # Pre-allocating arrays
-        self._uid_array = numpy.ndarray(num_features, dtype=int)
+        #: :type: list[collections.Hashable]
+        self._uid_array = []
         self._feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
@@ -152,8 +165,8 @@ class SVMIndexer_HIK (Indexer):
         )
 
         with SimpleTimer("Populating feature matrix", self.log.info):
-            for i, (uid, feat) in enumerate(feature_map.iteritems()):
-                self._uid_array[i] = uid
+            for i, (uid, feat) in enumerate(descriptor_map.iteritems()):
+                self._uid_array.append(uid)
                 self._feature_mat[i] = feat
 
         with SimpleTimer("Computing HI matrix kernel", self.log.info):
@@ -166,9 +179,13 @@ class SVMIndexer_HIK (Indexer):
                                                         self._feature_mat[j])
 
         with SimpleTimer("Saving data files", self.log.info):
-            numpy.save(self.uid_list_filepath, self._uid_array)
+            safe_create_dir(self.data_dir)
+            with open(self.uid_list_filepath, 'wb') as ofile:
+                cPickle.dump(self._uid_array, ofile)
             numpy.save(self.feature_mat_filepath, self._feature_mat)
             numpy.save(self.distance_mat_filepath, self._distance_mat)
+            # TODO: destruct and reload matrices in memmap mode
+            #       - see numpy.load() doc-string
 
     def extend_model(self, uid_feature_map, parallel=None):
         """
@@ -183,7 +200,7 @@ class SVMIndexer_HIK (Indexer):
 
         :param uid_feature_map: Mapping of integer IDs to features to extend this
             indexer's model with.
-        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type uid_feature_map: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -191,7 +208,8 @@ class SVMIndexer_HIK (Indexer):
         :type parallel: int
 
         """
-        super(SVMIndexer_HIK, self).extend_model(uid_feature_map, parallel)
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
         # Shortcut when we're not given anything to actually process
         if not uid_feature_map:
@@ -232,7 +250,6 @@ class SVMIndexer_HIK (Indexer):
         num_features_after = num_features_before + len(uid_feature_map)
 
         with SimpleTimer("Resizing uid/feature matrices", self.log.debug):
-            self._uid_array.resize((num_features_after,))
             self._feature_mat.resize((num_features_after,
                                       self._feature_mat.shape[1]))
 
@@ -251,7 +268,8 @@ class SVMIndexer_HIK (Indexer):
                          self.log.debug):
             for r in range(num_features_before, num_features_after):
                 r_uid = new_uids[r-num_features_before]
-                self._uid_array[r] = r_uid
+                self._uid_array.append(r_uid)
+                assert len(self._uid_array) == r+1
                 self._uid2idx_map[r_uid] = r
                 self._feature_mat[r] = uid_feature_map[r_uid]
                 for c in range(r+1):
@@ -314,7 +332,7 @@ class SVMIndexer_HIK (Indexer):
         # given positive elements.
         #: :type: set of int
         auto_neg = set()
-        n = max(1, int(self._uid_array.size * self.AUTO_NEG_PERCENT))
+        n = max(1, int(len(self._uid_array) * self.AUTO_NEG_PERCENT))
         for p_UID in pos_uids:
             auto_neg.update(self._least_similar_uid(p_UID, n))
 
@@ -325,7 +343,7 @@ class SVMIndexer_HIK (Indexer):
         self.log.debug("Post auto-negative selection: %s", auto_neg)
         return auto_neg
 
-    def rank_model(self, pos_ids, neg_ids=()):
+    def rank(self, pos_ids, neg_ids=()):
         """
         Rank the current model, returning a mapping of element IDs to a
         ranking valuation. This valuation should be a probability in the range
@@ -346,7 +364,8 @@ class SVMIndexer_HIK (Indexer):
         :rtype: dict of (int, float)
 
         """
-        super(SVMIndexer_HIK, self).rank_model(pos_ids, neg_ids)
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer.")
 
         # Automatically support the negative IDs with the most distance UIDs
         # from the provided positive UIDs.
@@ -429,8 +448,10 @@ class SVMIndexer_HIK (Indexer):
         :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        super(SVMIndexer_HIK, self).reset()
+        if not self.has_model():
+            raise RuntimeError("No model available for this indexer to reset "
+                               "to.")
         self._load_model_files()
 
 
-INDEXER_CLASS = SVMIndexer_HIK
+INDEXER_CLASS = SVMIndexerHIK

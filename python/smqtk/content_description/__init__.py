@@ -14,17 +14,17 @@ import numpy
 import os
 import traceback
 
-from smqtk.utils import safe_create_dir, SimpleTimer
+from smqtk.utils import SimpleTimer
 
 
 def _async_feature_generator_helper(data, descriptor):
     """
 
     :param data: Data to generate feature over
-    :type data: DataFile
+    :type data: smqtk.data_rep.DataElement
 
     :param descriptor: Feature descriptor that will generate the feature
-    :type descriptor: SMQTK.content_description.FeatureDescriptor
+    :type descriptor: SMQTK.content_description.ContentDescriptor
 
     :return: UID and associated feature vector
     :rtype: (int, numpy.core.multiarray.ndarray)
@@ -33,7 +33,7 @@ def _async_feature_generator_helper(data, descriptor):
     log = logging.getLogger("_async_feature_generator_helper")
     try:
         # log.debug("Generating feature for [%s] -> %s", data, data.filepath)
-        feat = descriptor.compute_feature(data)
+        feat = descriptor.compute_descriptor(data)
         # Invalid feature matrix if there are inf or NaN values
         # noinspection PyUnresolvedReferences
         if numpy.isnan(feat.sum()):
@@ -49,7 +49,7 @@ def _async_feature_generator_helper(data, descriptor):
         return None
 
 
-class FeatureDescriptor (object):
+class ContentDescriptor (object):
     """
     Base abstract Feature Descriptor interface
     """
@@ -64,24 +64,6 @@ class FeatureDescriptor (object):
     # - None means use all available cores.
     PARALLEL = None
 
-    def __init__(self, data_directory, work_directory):
-        """
-        Initialize a feature descriptor instance
-
-        :param data_directory: Feature descriptor data directory.
-        :type data_directory: str
-
-        :param work_directory: Work directory for this feature descriptor to use.
-        :type work_directory: str
-
-        """
-        # Directory that permanent data for this feature descriptor will be
-        # held, if any
-        self._data_dir = data_directory
-        # Directory that work for this feature descriptor should be put. This
-        # should be considered a temporary
-        self._work_dir = work_directory
-
     @property
     def log(self):
         """
@@ -95,83 +77,73 @@ class FeatureDescriptor (object):
     def name(self):
         return self.__class__.__name__
 
-    @property
-    def data_directory(self):
+    @abc.abstractmethod
+    def valid_content_types(self):
         """
-        :return: Data directory for this feature descriptor
-        :rtype: str
-        """
-        if not os.path.isdir(self._data_dir):
-            safe_create_dir(self._data_dir)
-        return self._data_dir
-
-    @property
-    def work_directory(self):
-        """
-        :return: Work directory for this feature descriptor
-        :rtype: str
-        """
-        if not os.path.isdir(self._work_dir):
-            safe_create_dir(self._work_dir)
-        return self._work_dir
-
-    # @abc.abstractmethod
-    # def valid_content_types(self):
-    #     """
-    #     :return: A list valid MIME type content types that this descriptor can
-    #         handle.
-    #     :rtype: collections.Iterable[str]
-    #     """
-    #     return
-
-    @abc.abstractproperty
-    def has_model(self):
-        """
-        :return: True if this FeatureDescriptor instance has a valid mode, and
-            False if it doesn't.
-        :rtype: bool
+        :return: A set valid MIME type content types that this descriptor can
+            handle.
+        :rtype: set[str]
         """
         return
 
     @abc.abstractmethod
-    def generate_model(self, data_list, parallel=None, **kwargs):
+    def generate_model(self, data_set, **kwargs):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
 
-        This method emits a warning message but does nothing if there is already
-        a model generated.
+        This method does nothing if there is already a model generated or if
+        this descriptor does not generate a model.
 
-        :param data_list: List of input data elements to generate model with.
-        :type data_list: list of smqtk.utils.DataFile.DataFile
-            or tuple of smqtk.utils.DataFile.DataFile
+        This abstract super method should be invoked for common error checking.
 
-        :param parallel: Optionally specification of how many processors to use
-            when pooling sub-tasks. If None, we attempt to use all available
-            cores.
-        :type parallel: int
+        :raises ValueError: One or more input data elements did not conform to
+            this descriptor's valid content set.
+
+        :param data_set: Set of input data elements to generate the model
+            with.
+        :type data_set: collections.Set[smqtk.data_rep.DataElement]
 
         """
-        return
+        valid_types = self.valid_content_types()
+        invalid_types_found = set()
+        for di in data_set:
+            if di.content_type() not in valid_types:
+                invalid_types_found.add(di.content_type())
+        if invalid_types_found:
+            self.log.error("Found one or more invalid content types among "
+                           "input:")
+            for t in sorted(invalid_types_found):
+                self.log.error("\t- '%s", t)
+            raise ValueError("Discovered invalid content type among input "
+                             "data: %s" % sorted(invalid_types_found))
 
     @abc.abstractmethod
-    def compute_feature(self, data):
+    def compute_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
 
-        :raises RuntimeError: Feature extraction failure of some kind.
+        This abstract super method should be invoked for common error checking.
 
-        :param data: Some kind of input data for the feature descriptor. This is
-            descriptor dependent.
+        :raises RuntimeError: Feature extraction failure of some kind.
+        :raises ValueError: Given data element content was not of a valid type
+            with respect to this descriptor.
+
+        :param data: Some kind of input data for the feature descriptor.
+        :type data: smqtk.data_rep.DataElement
 
         :return: Feature vector.
-        :rtype: numpy.ndarray
+        :rtype: numpy.core.multiarray.ndarray
 
         """
-        raise NotImplementedError()
+        ct = data.content_type()
+        if ct not in self.valid_content_types():
+            self.log.error("Cannot compute descriptor of content type '%s'", ct)
+            raise ValueError("Cannot compute descriptor of content type '%s'"
+                             % ct)
 
-    def compute_feature_async(self, *data, **kwds):
+    def compute_descriptor_async(self, *data, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
 
@@ -181,7 +153,7 @@ class FeatureDescriptor (object):
 
         :param data: List of data elements to compute features for. These must
             have UIDs assigned for feature association in return value
-        :type data: list of SMQTK.utils.DataFile.DataFile
+        :type data: list[smqtk.data_rep.DataElement]
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -196,16 +168,8 @@ class FeatureDescriptor (object):
         :rtype: dict of (int, numpy.core.multiarray.ndarray)
 
         """
-        # Make sure that all input data have associated UIDs
-        for item in data:
-            # Make sure data items have valid UIDs
-            if item.uid is None:
-                raise RuntimeError("Some data elements do not have UIDs "
-                                   "assigned to them.")
-            # args.append((item.uid, item, self))
         self.log.info("Async compute features processing %d elements",
                       len(data))
-
 
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
@@ -214,13 +178,15 @@ class FeatureDescriptor (object):
         ar_map = {}
         with SimpleTimer("Starting pool...", self.log.debug):
             for d in data:
-                ar_map[d.uid] = pool.apply_async(_async_feature_generator_helper,
-                                                 args=(d, self))
+                ar_map[d.uuid()] = \
+                    pool.apply_async(_async_feature_generator_helper,
+                                     args=(d, self))
         pool.close()
 
-        #: :type: dict of (int, numpy.core.multiarray.ndarray)
+        #: :type: dict[int, numpy.core.multiarray.ndarray]
         r_dict = {}
         failures = False
+        # noinspection PyPep8Naming
         perc_T = 0.0
         perc_inc = 0.1
         with SimpleTimer("Collecting async results...", self.log.debug):
@@ -250,26 +216,26 @@ class FeatureDescriptor (object):
 
 def get_descriptors():
     """
-    Discover and return FeatureDescriptor classes found in the given plugin search
-    directory. Keys in the returned map are the names of the discovered classes,
-    and the paired values are the actual class type objects.
+    Discover and return ContentDescriptor classes found in the given plugin
+    search directory. Keys in the returned map are the names of the discovered
+    classes, and the paired values are the actual class type objects.
 
     We look for modules (directories or files) that start with an alphanumeric
     character ('_' prefixed files/directories are hidden, but not recommended).
 
     Within a module we first look for a helper variable by the name
-    ``FEATURE_DESCRIPTOR_CLASS``, which can either be a single class object or
+    ``CONTENT_DESCRIPTOR_CLASS``, which can either be a single class object or
     an iterable of class objects, to be exported. If the variable is set to
     None, we skip that module and do not import anything. If the variable is not
     present, we look for a class by the same name and casing as the module. If
     neither are found, the module is skipped.
 
-    :return: Map of discovered class object of type ``FeatureDescriptor`` whose
+    :return: Map of discovered class object of type ``ContentDescriptor`` whose
         keys are the string names of the classes.
     :rtype: dict of (str, type)
 
     """
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    helper_var = "FEATURE_DESCRIPTOR_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, FeatureDescriptor)
+    helper_var = "CONTENT_DESCRIPTOR_CLASS"
+    return get_plugins(__name__, this_dir, helper_var, ContentDescriptor)

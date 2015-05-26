@@ -22,10 +22,6 @@ class Catalyst (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, data_dir, work_dir):
-        self._data_dir = data_dir
-        self._work_dir = work_dir
-
     @property
     def log(self):
         """
@@ -34,16 +30,6 @@ class Catalyst (object):
         """
         return logging.getLogger('.'.join((self.__module__,
                                            self.__class__.__name__)))
-
-    @property
-    def data_directory(self):
-        safe_create_dir(self._data_dir)
-        return self._data_dir
-
-    @property
-    def work_directory(self):
-        safe_create_dir(self._work_dir)
-        return self._work_dir
 
     @abc.abstractmethod
     def fuse(self, *rank_maps):

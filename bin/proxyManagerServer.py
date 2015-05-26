@@ -33,7 +33,7 @@ def main():
                       help='Add debugging log messages.')
     opts, args = parser.parse_args()
 
-    bin_utils.initializeLogging(logging.getLogger(),
+    bin_utils.initialize_logging(logging.getLogger(),
                                 logging.INFO - (10*opts.verbose))
 
     config_file = opts.config

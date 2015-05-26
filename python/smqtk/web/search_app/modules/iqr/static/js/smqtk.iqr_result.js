@@ -55,7 +55,7 @@ function IqrResult(container, rank, uid, probability) {
     this.header = $('<div/>');
     this.header.css('height', '24px');
     this.header.text("#" + (this.rank+1) + " | "
-                     + "UID: " + this.uid + " | "
+                     //+ "UID: " + this.uid + " | "
                      + (this.probability*100).toFixed(2) + "%");
 
     // adjudication icons / functionality
@@ -250,14 +250,14 @@ IqrResult.prototype.set_positive = function () {
         this.is_positive = true;
         this.is_negative = false;
 
-        post_data.add_pos = "["+this.uid+"]";
+        post_data.add_pos = "[\""+this.uid+"\"]";
         //adj_type = "positive";  // for alert_info below
     }
     else {
         // was positive, reset to neutral
         this.is_positive = false;
 
-        post_data.remove_pos = "["+this.uid+"]";
+        post_data.remove_pos = "[\""+this.uid+"\"]";
         //adj_type = 'neutral';  // for alert_info below
     }
 
@@ -287,14 +287,14 @@ IqrResult.prototype.set_negative = function () {
         this.is_positive = false;
         this.is_negative = true;
 
-        post_data.add_neg = '['+this.uid+']';
+        post_data.add_neg = '[\"'+this.uid+'\"]';
         // adj_type = "negative";  // for alert_info below
     }
     else {
         // was positive, reset to neutral
         this.is_negative = false;
 
-        post_data.remove_neg = '['+this.uid+']';
+        post_data.remove_neg = '[\"'+this.uid+'\"]';
         // adj_type = 'neutral';  // for alert_info below
     }
 

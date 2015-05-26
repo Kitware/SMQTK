@@ -9,21 +9,24 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 from . import Indexer
 
+import cPickle
 import os.path as osp
 import numpy
 from sklearn.naive_bayes import MultinomialNB
 
-from smqtk.utils import SimpleTimer
+import smqtk_config
+
+from smqtk.utils import safe_create_dir, SimpleTimer
 
 
-class NaiveBayes_Multinomial (Indexer):
+class NaiveBayesMultinomial (Indexer):
 
-    def __init__(self, data_dir, work_dir):
-        super(NaiveBayes_Multinomial, self).__init__(data_dir, work_dir)
+    def __init__(self, data_dir):
+        self.data_dir = osp.join(smqtk_config.DATA_DIR, data_dir)
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures
-        #: :type: numpy.core.multiarray.ndarray
+        #: :type: list[object]
         self._uid_array = None
         self._uid2idx_map = None
 
@@ -36,7 +39,7 @@ class NaiveBayes_Multinomial (Indexer):
 
     @property
     def uid_list_filepath(self):
-        return osp.join(self.data_dir, "uid_list.npy")
+        return osp.join(self.data_dir, "uid_list.pickle")
 
     @property
     def feature_mat_filepath(self):
@@ -47,8 +50,9 @@ class NaiveBayes_Multinomial (Indexer):
                 and osp.isfile(self.feature_mat_filepath))
 
     def _load_model_files(self):
-        #: :type: numpy.core.multiarray.ndarray
-        self._uid_array = numpy.load(self.uid_list_filepath)
+        with open(self.uid_list_filepath, 'rb') as infile:
+            #: :type: list[object]
+            self._uid_array = cPickle.load(infile)
         #: :type: numpy.core.multiarray.ndarray
         self._feature_mat = numpy.load(self.feature_mat_filepath)
 
@@ -70,7 +74,7 @@ class NaiveBayes_Multinomial (Indexer):
             and 0 not in self._feature_mat.shape  # has dimensionality
         )
 
-    def generate_model(self, feature_map, parallel=None, **kwargs):
+    def generate_model(self, descriptor_map, parallel=None, **kwargs):
         """
         Generate this indexers data-model using the given features,
         saving it to files in the configured data directory.
@@ -84,9 +88,9 @@ class NaiveBayes_Multinomial (Indexer):
 
         :raises ValueError: The given feature map had no content.
 
-        :param feature_map: Mapping of integer IDs to feature data. All feature
+        :param descriptor_map: Mapping of integer IDs to feature data. All feature
             data must be of the same size!
-        :type feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type descriptor_map: dict of (int, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -94,27 +98,29 @@ class NaiveBayes_Multinomial (Indexer):
         :type parallel: int
 
         """
-        super(NaiveBayes_Multinomial, self).generate_model(feature_map, parallel)
+        super(NaiveBayesMultinomial, self).generate_model(descriptor_map, parallel)
 
-        num_features = len(feature_map)
-        ordered_uids = sorted(feature_map.keys())
+        num_features = len(descriptor_map)
+        ordered_uids = sorted(descriptor_map.keys())
 
-        sample_feature = feature_map[ordered_uids[0]]
+        sample_feature = descriptor_map[ordered_uids[0]]
         feature_len = len(sample_feature)
 
         # Pre-allocating arrays
-        self._uid_array = numpy.ndarray(num_features, dtype=int)
+        self._uid_array = []
         self._feature_mat = numpy.zeros(
             (num_features, feature_len), dtype=sample_feature.dtype
         )
 
         self.log.info("Populating feature matrix")
-        for i, (uid, feat) in enumerate(feature_map.iteritems()):
-            self._uid_array[i] = uid
+        for i, (uid, feat) in enumerate(descriptor_map.iteritems()):
+            self._uid_array.append(uid)
             self._feature_mat[i] = feat
 
         with SimpleTimer("Saving data files", self.log.info):
-            numpy.save(self.uid_list_filepath, self._uid_array)
+            safe_create_dir(self.data_dir)
+            with open(self.uid_list_filepath, 'wb') as ofile:
+                cPickle.dump(self._uid_array, ofile)
             numpy.save(self.feature_mat_filepath, self._feature_mat)
 
     def extend_model(self, uid_feature_map, parallel=None):
@@ -130,7 +136,7 @@ class NaiveBayes_Multinomial (Indexer):
 
         :param uid_feature_map: Mapping of integer IDs to features to extend this
             indexer's model with.
-        :type uid_feature_map: dict of (int, numpy.core.multiarray.ndarray)
+        :type uid_feature_map: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -138,7 +144,7 @@ class NaiveBayes_Multinomial (Indexer):
         :type parallel: int
 
         """
-        super(NaiveBayes_Multinomial, self).extend_model(uid_feature_map, parallel)
+        super(NaiveBayesMultinomial, self).extend_model(uid_feature_map, parallel)
 
         # Shortcut when we're not given anything to actually process
         if not uid_feature_map:
@@ -179,67 +185,19 @@ class NaiveBayes_Multinomial (Indexer):
         num_features_after = num_features_before + len(uid_feature_map)
 
         with SimpleTimer("Resizing uid/feature matrices", self.log.debug):
-            self._uid_array.resize((num_features_after,))
             self._feature_mat.resize((num_features_after,
                                       self._feature_mat.shape[1]))
 
         with SimpleTimer("Adding to matrices", self.log.debug):
             for i in range(num_features_before, num_features_after):
                 i_uid = new_uids[i-num_features_before]
-                self._uid_array[i] = i_uid
+                self._uid_array.append(i_uid)
+                assert len(self._uid_array) == i+1
                 self._uid2idx_map[i_uid] = i
                 self._feature_mat[i] = uid_feature_map[i_uid]
 
-    # def _least_similar_uid(self, uid, N=1):
-    #     """
-    #     Return an array of N UIDs that are least similar to the feature for the
-    #     given UID. If N is greater than the total number of elements in this
-    #     indexer's model, we return a list of T ordered elements, where T is
-    #     the total number of in the model. I.e. we return an ordered list of all
-    #     UIDs by least similarity (the given UID will be the last element in the
-    #     list).
-    #
-    #     :param uid: UID to find the least similar UIDs for.
-    #     :type uid: int
-    #
-    #     :return: List of min(N, T) least similar UIDs.
-    #     :rtype: list of int
-    #
-    #     """
-    #     i = self._uid_idx_map[uid]
-    #     z = zip(self._uid_array, self._distrance_mat[i])
-    #     # Sort by least similarity, pick top N
-    #     return [e[0] for e in sorted(z, key=lambda f: f[1], reverse=1)[:N]]
-    #
-    # def _pick_auto_negatives(self, pos_uids):
-    #     """
-    #     Pick automatic negative UIDs based on distances from the given positive
-    #     UIDs.
-    #
-    #     :param pos_uids: List of positive UIDs
-    #     :type pos_uids: list of int
-    #
-    #     :return: List of automatically chosen negative UIDs
-    #     :rtype: list of int
-    #
-    #     """
-    #     # Pick automatic negatives that are the most distant elements from
-    #     # given positive elements.
-    #     #: :type: set of int
-    #     auto_neg = set()
-    #     n = int(self._uid_array.size * self.AUTO_NEG_PERCENT)
-    #     for p_UID in pos_uids:
-    #         auto_neg.update(self._least_similar_uid(p_UID, n))
-    #
-    #     # Cancel out any auto-picked negatives that conflict with given positive
-    #     # UIDs.
-    #     auto_neg.difference_update(pos_uids)
-    #
-    #     self.log.debug("Post auto-negative selection: %s", auto_neg)
-    #     return list(auto_neg)
-
-    def rank_model(self, pos_ids, neg_ids=()):
-        super(NaiveBayes_Multinomial, self).rank_model(pos_ids, neg_ids)
+    def rank(self, pos_ids, neg_ids=()):
+        super(NaiveBayesMultinomial, self).rank(pos_ids, neg_ids)
 
         num_pos = len(pos_ids)
         num_neg = len(neg_ids)
@@ -270,10 +228,10 @@ class NaiveBayes_Multinomial (Indexer):
         :raises RuntimeError: Unable to reset due to lack of available model.
 
         """
-        super(NaiveBayes_Multinomial, self).reset()
+        super(NaiveBayesMultinomial, self).reset()
         self._load_model_files()
 
 
 INDEXER_CLASS = [
-    NaiveBayes_Multinomial
+    NaiveBayesMultinomial
 ]

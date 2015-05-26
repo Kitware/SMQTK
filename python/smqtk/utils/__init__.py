@@ -10,15 +10,20 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 def safe_create_dir(d):
     """
-    Recursively create the given directory, ignoring the already-exists error if
-    thrown.
+    Recursively create the given directory, ignoring the already-exists
+    error if thrown.
 
     :param d: Directory filepath to create
     :type d: str
 
+    :return: The directory that was create, i.e. the directory that was passed
+        in (absolute form).
+    :rtype: str
+
     """
     import os
     import errno
+    d = os.path.abspath(os.path.expanduser(d))
     try:
         os.makedirs(d)
     except OSError, ex:
@@ -26,6 +31,7 @@ def safe_create_dir(d):
             pass
         else:
             raise
+    return d
 
 
 def touch(fname):
@@ -47,18 +53,12 @@ def touch(fname):
 #
 
 # No internal util dependencies
-from .bin_utils import initializeLogging, SMQTKOptParser
+from .bin_utils import initialize_logging, SMQTKOptParser
 from .database_info import DatabaseInfo
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .safe_config_comment_parser import SafeConfigCommentParser
 from .signal_handler import SignalHandler
 from .simple_timer import SimpleTimer
-
-from .datafile import DataFile
-from .videofile import VideoFile
-from .dataingest import DataIngest
-from .videoingest import VideoIngest
-from .configuration import IngestConfiguration
 
 from .distance_kernel import DistanceKernel
 from .feature_memory import FeatureMemory, FeatureMemoryMap

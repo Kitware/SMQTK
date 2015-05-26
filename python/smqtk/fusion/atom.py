@@ -18,8 +18,8 @@ class Atom (object):
 
     def __init__(self, descriptor, indexers):
         """
-        :param descriptor: FeatureDescriptor instance to contain
-        :type descriptor: smqtk.FeatureDescriptors.FeatureDescriptor
+        :param descriptor: ContentDescriptor instance to contain
+        :type descriptor: smqtk.content_description.ContentDescriptor
 
         :param indexers: One or more indexer instances to associate with the
             provided descriptor (i.e. have models generated with the given
@@ -51,7 +51,7 @@ class Atom (object):
         self.log.debug("Computing features for data")
         feature_map = {}
         for d in data:
-            feature_map[d.uid] = self._descriptor.compute_feature(d)
+            feature_map[d.uuid()] = self._descriptor.compute_descriptor(d)
         self.log.debug("Extending indexer models")
         for i in self._indexer_list:
             i.extend_model(feature_map)
@@ -77,7 +77,7 @@ class Atom (object):
         """
         rank_results = []
         for i in self._indexer_list:
-            rank_results.append(i.rank_model(pos, neg))
+            rank_results.append(i.rank(pos, neg))
         return rank_results
 
     def reset(self):

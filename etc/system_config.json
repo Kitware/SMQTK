@@ -1,124 +1,143 @@
 // Comments are allowed in JSON files used with the SMQTK system. They are
 // parsed out using the smqtk.utils.jsmin module.
 {
-    "Ingests": {
-        // relative to the SMQTK configured data directory
-        "dir": "SMQTK_Ingests",
-        // Available data ingests and their associated settings
-        "listing": {
-            "example_image": {
-                // relative to the ingest base directory
-                "dir": "example_image",
-
-                // As of now, there are only two supported types: "image" and "video".
-                // If something other than those two values are used here, we error.
-                "type": "image",
-
-                // Other settings may appear here as well as in specific
-                // descriptor/indexer types as needed. Currently, only
-                // data/work directory specifications are needed for instance
-                // construction.
-
-                // FeatureDescriptor settings for this ingest
-                "descriptors": {
-                    // Relative to containing ingest directory
-                    "dir": "FeatureDescriptors",
-                    "listing": {
-                        "ColorDescriptor_Image_csift": {
-                            "dir": "CSIFT"
-                        },
-                        "ColorDescriptor_Image_transformedcolorhistogram": {
-                            "dir": "TCH"
-                        }
-                    }
-                },
-                // Indexer settings for this ingest
-                // - indexers operate on input features. Currently we assume
-                //   that indexers will only ever want features from one
-                //   consistent FeatureDetector type. Thus, the run-time data
-                //   and work directories for an Indexer type will have a
-                //   sub-directory under it for each Indexer-Descriptor pairing
-                //   instantiated.
-                "indexers": {
-                    "dir": "Indexers",
-                    "listing": {
-                        "SVMIndexer_HIK": {
-                            "dir": "SVM_HIK"
-                        },
-                        "NaiveBayes_Multinomial": {
-                            "dir": "NaiveBayes/Multinomial"
-                        }
-                    }
-                },
-                // Fusion settings
-                "fusion": {
-                    // Parameters defining construction of Reactor instance
-                    "catalysts": {
-                        "dir": "Fusion/Catalysts",
-                        "listing": {
-                            "Average": {
-                                "dir": "Average"
-                            }
-                        }
-                    },
-                    "atoms": [
-                        {
-                            "descriptor": "ColorDescriptor_Image_csift",
-                            "indexers": [
-                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
-                            ]
-                            // TODO: Need sub-catalyst parameter option
-                        }
-                        // Multiple atoms can be defined for each content
-                        // descriptor base available or wanted.
-                    ]
-                }
-            },
-
-            "example_video": {
-                "dir": "example_video",
-                "type": "video",
-                "descriptors": {
-                    "dir": "FeatureDescriptors",
-                    "listing": {
-                        "ColorDescriptor_Video_csift": {
-                            "dir": "CSIFT"
-                        },
-                        "ColorDescriptor_Video_transformedcolorhistogram": {
-                            "dir": "TCH"
-                        }
-                    }
-                },
-                "indexers": {
-                    "dir": "Indexers",
-                    "listing": {
-                        "SVMIndexer_HIK": {
-                            "dir": "SVM_HIK"
-                        },
-                        "NaiveBayes_Multinomial": {
-                            "dir": "NaiveBayes/Multinomial"
-                        }
-                    }
-                },
-                "fusion": {
-                    "catalysts": {
-                        "dir": "Fusion/Catalysts",
-                        "listing": {
-                            "Average": {
-                                "dir": "Average"
-                            }
-                        }
-                    },
-                    "atoms": [
-                        {
-                            "descriptor": "ColorDescriptor_Image_csift",
-                            "indexers": [
-                                "SVMIndexer_HIK", "NaiveBayes_Multinomial"
-                            ]
-                        }
-                    ]
-                }
+    "DataSets": {
+        // name: {
+        //     "type": <class name from get_data_set_impls()>,
+        //     "init": {
+        //         kwargs to pass to constructor
+        //     }
+        // }
+        "example_image": {
+            "type": "DataFileSet",
+            "init": {
+                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                "md5_chunk": 8
             }
+        },
+        "example_video": {
+            "type": "DataFileSet",
+            "init": {
+                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_video/data",
+                "md5_chunk": 8
+            }
+        }
+    },
+
+    "ContentDescriptors": {
+        // "name": {
+        //     "type": "typeName",
+        //     "init": {
+        //         "kwargs": "here"
+        //     }
+        // }
+        "CD_CSIFT_Image_example": {
+            "type": "ColorDescriptor_Image_csift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 256,
+                "flann_sample_fraction": 1.0
+            }
+        },
+        "CD_RGSIFT_Image_example": {
+            "type": "ColorDescriptor_Image_rgsift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
+                "work_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 256,
+                "flann_sample_fraction": 1.0
+            }
+        },
+        "CD_CSIFT_Video_example": {
+            "type": "ColorDescriptor_Video_csift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 512,
+                "flann_sample_fraction": 1.0
+            }
+        }
+    },
+
+    "Indexers": {
+        // For the moment, indexers carry a model that is data-set specific
+        // (contains all descriptors from data in that set with UUID references
+        // to that data). This will hopefully change to the more independent
+        // side of things in the future.
+        "SVM_HIK-CD_CSIFT-Image": {
+            // Model trained using CD_CSIFT_Image_example descriptors
+            // Indexes over example_image data set
+            "type": "SVMIndexerHIK",
+            "init": {
+                "data_dir": "Indexers/SVM_HIK/cd_csift/example_image"
+            }
+        },
+        "SVM_HIK-CD_RGSIFT-Image": {
+            // Model trained using CD_RGSIFT_Image_example descriptors
+            // Indexes over example_image data set
+            "type": "SVMIndexerHIK",
+            "init": {
+                "data_dir": "Indexers/SVM_HIK/cd_rgsift/example_image"
+            }
+        },
+        "SVM_HIK-CD_CSIFT-Video": {
+            // Model trained using CD_CSIFT_Video_example descriptors
+            // Indexes over example_video data set
+            "type": "SVMIndexerHIK",
+            "init": {
+                "data_dir": "Indexers/SVM_HIK/cd_csift/example_video"
+            }
+        }
+    },
+
+    "Fusion": {
+        // <label>: {
+        //      "catalyst": {
+        //          "type: <class_label>,
+        //          "init": {
+        //              <constructor_kwargs>
+        //          }
+        //      },
+        //      "atoms": [
+        //          {
+        //              "descriptor": <cd_label>,
+        //              "indexers": [ <i_label>, ... ]
+        //              // TODO: Need sub-catalyst parameter option for per-atom fusion
+        //          }, ...
+        //      ]
+        //  }, ...
+        "example_image": {
+            "catalyst": {
+                "type": "Average",
+                "init": {}
+            },
+            "atoms": [
+                {
+                    "descriptor": "CD_CSIFT_Image_example",
+                    "indexers": [
+                        "SVM_HIK-CD_CSIFT-Image"
+                    ]
+                },
+                {
+                    "descriptor": "CD_RGSIFT_Image_example",
+                    "indexers": [
+                        "SVM_HIK-CD_RGSIFT-Image"
+                    ]
+                }
+            ]
         }
     }
 }

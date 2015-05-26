@@ -7,7 +7,7 @@ import logging
 import os.path
 
 from smqtk.utils import DatabaseInfo, SimpleTimer
-from smqtk.utils.configuration import IngestConfiguration
+from smqtk.utils.configuration import DataSetConfiguration
 from smqtk.utils.mongo_sessions import MongoSessionInterface
 
 
@@ -119,11 +119,12 @@ class SMQTKSearchApp (flask.Flask):
         from .modules.iqr import IQRSearch, IQRSearchFusion
 
         with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
-            ic_example_image = IngestConfiguration("example_image")
+            ds_example_image = DataSetConfiguration.new_inst("example_image")
+
             self.mod_example_image = IQRSearch(
                 "Image Search - Example Imagery",
-                self, ic_example_image,
-                "ColorDescriptor_Image_csift", "SVMIndexer_HIK",
+                self, ds_example_image,
+                "CD_CSIFT_Image_example", "SVM_HIK-CD_CSIFT-Image",
                 url_prefix='/image_example'
             )
             self.register_blueprint(self.mod_example_image)
@@ -132,23 +133,23 @@ class SMQTKSearchApp (flask.Flask):
         with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
             self.mod_example_image_fusion = IQRSearchFusion(
                 "Image Search Fusion - Example Imagery",
-                self, ic_example_image,
-                "Average",
+                self, ds_example_image,
+                "example_image",
                 url_prefix='/image_example_fusion'
             )
             self.register_blueprint(self.mod_example_image_fusion)
             self.add_navigable_blueprint(self.mod_example_image_fusion)
 
-        with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
-            ic_example_video = IngestConfiguration("example_video")
-            self.mod_example_video = IQRSearch(
-                "Video Search - Example Videos",
-                self, ic_example_video,
-                "ColorDescriptor_Video_csift", "SVMIndexer_HIK",
-                url_prefix='/video_example'
-            )
-            self.register_blueprint(self.mod_example_video)
-            self.add_navigable_blueprint(self.mod_example_video)
+        # with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
+        #     ds_example_video = DataSetConfiguration.new_inst("example_video")
+        #     self.mod_example_video = IQRSearch(
+        #         "Video Search - Example Videos",
+        #         self, ds_example_video,
+        #         "CD_CSIFT_Video_example", "SVM_HIK-CD_CSIFT-Video",
+        #         url_prefix='/video_example'
+        #     )
+        #     self.register_blueprint(self.mod_example_video)
+        #     self.add_navigable_blueprint(self.mod_example_video)
 
         #
         # Basic routing

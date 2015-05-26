@@ -158,14 +158,14 @@ class DistanceKernel (object):
         """
         # TODO: Possibly add checks for the id arrays like there is for the
         #       bgclipid array (int-able contents)
-        assert np.shape(row_id_index_map)[0] == np.shape(kernel_mat)[0], \
+        assert row_id_index_map.shape[0] == kernel_mat.shape[0], \
             "Length of row index map and kernel row count did not match! " \
             "(row index map: %d, kernel row count: %d)" \
-            % (np.shape(row_id_index_map)[0], np.shape(kernel_mat)[0])
-        assert np.shape(col_id_index_map)[0] == np.shape(kernel_mat)[1], \
+            % (row_id_index_map.shape[0], kernel_mat.shape[0])
+        assert col_id_index_map.shape[0] == kernel_mat.shape[1], \
             "Length of col index map and kernel col count did not match! " \
             "(col index map: %d, kernel col count: %d)" \
-            % (np.shape(col_id_index_map)[0], np.shape(kernel_mat)[1])
+            % (col_id_index_map.shape[0], kernel_mat.shape[1])
 
         self._row_id_index_map = row_id_index_map
         self._col_id_index_map = col_id_index_map

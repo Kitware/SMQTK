@@ -11,7 +11,7 @@ import json
 import os
 
 # for JSON comment stripping
-from SMQTK.utils.jsmin import jsmin
+from smqtk.utils.jsmin import jsmin
 
 
 # use "0.0.0.0" for public use

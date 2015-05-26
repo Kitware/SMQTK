@@ -13,11 +13,12 @@ import multiprocessing.pool
 import numpy
 import os
 import os.path as osp
+# noinspection PyPackageRequirements
 import PIL.Image
 import subprocess
 import tempfile
 
-from smqtk.content_description import FeatureDescriptor
+from smqtk.content_description import ContentDescriptor
 
 from .utils import DescriptorIO
 from . import encode_FLANN
@@ -90,7 +91,7 @@ def _async_cd_process_helper(cd_util, detector_type, work_directory,
 
 
 # noinspection PyAbstractClass,PyPep8Naming
-class ColorDescriptor_Base (FeatureDescriptor):
+class ColorDescriptor_Base (ContentDescriptor):
     """
     CSIFT colordescriptor feature descriptor
 
@@ -140,7 +141,7 @@ class ColorDescriptor_Base (FeatureDescriptor):
         """
         pass
 
-    def compute_feature(self, data):
+    def compute_descriptor(self, data):
         """
         Compute CSIFT colordescriptor feature given a VideoFile instance.
 

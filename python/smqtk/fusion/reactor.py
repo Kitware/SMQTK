@@ -65,11 +65,20 @@ class Reactor (object):
         :type data: list of SMQTK.utils.DataFile.DataFile
 
         """
-        tp = multiprocessing.pool.ThreadPool()
+        ###
+        # Async
+        #
+        # tp = multiprocessing.pool.ThreadPool()
+        # for a in self._atom_list:
+        #     tp.apply_async(a.extend, args=data)
+        # tp.close()
+        # tp.join()
+
+        ###
+        # Sync
+        #
         for a in self._atom_list:
-            tp.apply_async(a.extend, args=data)
-        tp.close()
-        tp.join()
+            a.extend(*data)
 
     def rank(self, pos, neg=()):
         """
@@ -90,34 +99,46 @@ class Reactor (object):
         # rank dicts to fuse using global catalyst
         ranks = []
 
-        # async result objects yielding rank matrices
-        ar = []
-        ar2 = []
+        ###
+        # Async version -- buggy with because of numpy
+        #
+        # # async result objects yielding rank matrices
+        # ar = []
+        # ar2 = []
+        #
+        # # pairs of catalyst and async result objects that should be fused and
+        # # added to ``ranks`` list
+        # cr_pairs = []
+        #
+        # tp = multiprocessing.pool.ThreadPool()
+        #
+        # for a, c in zip(self._atom_list, self._atom_catalysts):
+        #     if c:
+        #         cr_pairs.append([c, tp.apply_async(a.rank, (pos, neg))])
+        #     else:
+        #         ar.append(tp.apply_async(a.rank, (pos, neg)))
+        #
+        # # fuse atoms that have sub-catalysts
+        # for c, r in cr_pairs:
+        #     ar2.append(tp.apply_async(c.fuse, args=r.get()))
+        #
+        # for r in ar:
+        #     ranks.extend(r.get())
+        # for r in ar2:
+        #     ranks.append(r.get())
+        #
+        # tp.close()
+        # tp.join()
+        # del tp
 
-        # pairs of catalyst and async result objects that should be fused and
-        # added to ``ranks`` list
-        cr_pairs = []
-
-        tp = multiprocessing.pool.ThreadPool()
-
+        ###
+        # Synchronous version
+        #
         for a, c in zip(self._atom_list, self._atom_catalysts):
             if c:
-                cr_pairs.append([c, tp.apply_async(a.rank, (pos, neg))])
+                ranks.append(c.fuse(*a.rank(pos, neg)))
             else:
-                ar.append(tp.apply_async(a.rank, (pos, neg)))
-
-        # fuse atoms that have sub-catalysts
-        for c, r in cr_pairs:
-            ar2.append(tp.apply_async(c.fuse, args=r.get()))
-
-        for r in ar:
-            ranks.extend(r.get())
-        for r in ar2:
-            ranks.append(r.get())
-
-        tp.close()
-        tp.join()
-        del tp
+                ranks.extend(a.rank(pos, neg))
 
         return self._catalyst.fuse(*ranks)
 

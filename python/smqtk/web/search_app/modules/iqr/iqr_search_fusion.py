@@ -6,13 +6,17 @@ import base64
 import flask
 import json
 import logging
+import multiprocessing
 import os
 import os.path as osp
+# noinspection PyPackageRequirements
 import PIL.Image
 import random
 
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSessionFusion
-
+from smqtk.utils.configuration import FusionConfiguration
+from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 
 
@@ -21,27 +25,27 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class IQRSearchFusion (flask.Blueprint):
 
-    def __init__(self, name, parent_app, ingest_config, reactor_catalyst_type,
+    def __init__(self, name, parent_app, data_set,
+                 fusion_setting,
                  url_prefix=None):
         """
-        Initialize a generic IQR Search module with a single descriptor and
-        indexer.
+        Initialize a generic IQR Search module that uses descriptor/index
+        fusion.
 
         :param name: Name of this blueprint instance
-        :type name:
+        :type name: str
 
         :param parent_app: Parent containing flask app instance
         :type parent_app: smqtk.web.search_app.app.search_app
 
-        :param ingest_config: Ingest configuration instance
-        :type ingest_config: SMQTK.utils.configuration.IngestConfiguration
+        :param data_set: Data set to work over
+        :type data_set: SMQTK.data_rep.DataSet
 
-        :param reactor_catalyst_type: Catalyst type to be used in fusion Reactor
-            instance.
-        :type reactor_catalyst_type: str
+        :param fusion_setting: Fusion setting to use.
+        :type fusion_setting: str
 
-        :param url_prefix:
-        :type url_prefix:
+        :param url_prefix: Web address prefix for this blueprint.
+        :type url_prefix: str
 
         :raises ValueError: Invalid Descriptor or indexer type
 
@@ -55,14 +59,17 @@ class IQRSearchFusion (flask.Blueprint):
 
         # Make sure that the configured descriptor/indexer types exist, as
         # we as their system configuration sections
-        if reactor_catalyst_type not in ingest_config.get_available_catalyst_labels():
-            raise ValueError("'%s' not a valid catalyst type for ingest '%s'"
-                             % (reactor_catalyst_type, ingest_config.label))
+        if fusion_setting not in FusionConfiguration.available_labels():
+            raise ValueError("'%s' not a valid fusion setting."
+                             % fusion_setting)
 
         self._parent_app = parent_app
-        self._ingest_config = ingest_config
-        self._ingest = ingest_config.new_ingest_instance()
-        self._reactor_catalyst_type_str = reactor_catalyst_type
+        self._data_set = data_set
+        self._fusion_setting = fusion_setting
+
+        self._explicit_uids = set()
+        self._explicit_uids_lock = multiprocessing.RLock()
+        # TODO: Read in dict from save file
 
         # Uploader Sub-Module
         self.upload_work_dir = os.path.join(self.work_dir, "uploads")
@@ -81,6 +88,10 @@ class IQRSearchFusion (flask.Blueprint):
         # Two levels: SID -> FID
         self._ingest_progress_locks = {}
         self._ingest_progress = {}
+
+        # Preview Image Caching
+        # TODO: Initialize this into static directory that is being served.
+        self._preview_cache = PreviewCache(osp.join(self.work_dir, "Previews"))
 
         #
         # Routing
@@ -112,7 +123,7 @@ class IQRSearchFusion (flask.Blueprint):
                     "negative_uids": tuple(iqrs.negative_ids),
                     "extension_ingest_contents":
                         dict((uid, str(df))
-                             for uid, df in iqrs.extension_ingest.iteritems()),
+                             for uid, df in iqrs.extension_ds.iteritems()),
                     "FeatureMemory": {
                     }
                 })
@@ -145,12 +156,12 @@ class IQRSearchFusion (flask.Blueprint):
             :rtype: str
 
             """
-            iqr_sess = self.get_current_iqr_session()
             # TODO: Add status dict with a "GET" method branch for getting that
             #       status information.
 
             # Start the ingest of a FID when POST
             if flask.request.method == "POST":
+                iqr_sess = self.get_current_iqr_session()
                 fid = flask.request.form['fid']
 
                 self.log.debug("[%s::%s] Getting temporary filepath from "
@@ -162,21 +173,19 @@ class IQRSearchFusion (flask.Blueprint):
                 with iqr_sess:
                     self.log.debug("[%s::%s] Adding new file to extension "
                                    "ingest", iqr_sess.uuid, fid)
-                    old_max_uid = iqr_sess.extension_ingest.max_uid()
-                    upload_data = iqr_sess.extension_ingest.add_data_file(upload_filepath)
-                    os.remove(upload_filepath)
-                    new_max_uid = iqr_sess.extension_ingest.max_uid()
-                    if old_max_uid == new_max_uid:
-                        # re-mark as a positive
-                        iqr_sess.adjudicate((upload_data.uid,))
-                        return "Already Ingested"
+                    sess_upload = osp.join(iqr_sess.work_dir,
+                                           osp.basename(upload_filepath))
+                    os.rename(upload_filepath, sess_upload)
+                    upload_data = DataFileElement(sess_upload)
+                    iqr_sess.extension_ds.add_data(upload_data)
 
+                # Extend reactor model with feature data -- modifying
                 with iqr_sess:
                     # Compute feature for data -- non-modifying
                     self.log.debug("[%s::%s] Computing feature for file",
                                    iqr_sess.uuid, fid)
-                    iqr_sess.reactor.extend(upload_data)
-                    iqr_sess.adjudicate((upload_data.uid,))
+                    iqr_sess.indexer.extend(upload_data)
+                    iqr_sess.adjudicate((upload_data.uuid(),))
 
                 return "Finished Ingestion"
 
@@ -232,7 +241,7 @@ class IQRSearchFusion (flask.Blueprint):
                     is_neg: <bool>
                 }
             """
-            ingest_uid = int(flask.request.args['uid'])
+            ingest_uid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
                 return flask.jsonify({
                     "is_pos": ingest_uid in iqrs.positive_ids,
@@ -267,9 +276,10 @@ class IQRSearchFusion (flask.Blueprint):
                     uids: list of int
                 }
             """
-            all_ids = self._ingest.uids()
+            all_ids = self._data_set.uuids()
             with self.get_current_iqr_session() as iqrs:
-                all_ids.extend(iqrs.extension_ingest.uids())
+                all_ids.update(iqrs.extension_ds.uuids())
+            all_ids = list(all_ids)
             random.shuffle(all_ids)
             return flask.jsonify({
                 "uids": all_ids
@@ -282,7 +292,7 @@ class IQRSearchFusion (flask.Blueprint):
             Return the base64 preview image data for the data file associated
             with the give UID.
             """
-            uid = int(flask.request.args['uid'])
+            uid = flask.request.args['uid']
             info = {
                 "success": True,
                 "message": None,
@@ -292,23 +302,24 @@ class IQRSearchFusion (flask.Blueprint):
                 "ext": None,
             }
 
-            df = None
-            if self._ingest.has_uid(uid):
-                df = self._ingest.get_data(uid)
-                info["is_explicit"] = self._ingest.is_explicit(uid)
+            de = None
+            if self._data_set.has_uuid(uid):
+                de = self._data_set.get_data(uid)
+                with self._explicit_uids_lock:
+                    info["is_explicit"] = uid in self._explicit_uids
             else:
                 with self.get_current_iqr_session() as iqrs:
-                    if iqrs.extension_ingest.has_uid(uid):
-                        df = iqrs.extension_ingest.get_data(uid)
-                        info["is_explicit"] = iqrs.extension_ingest.is_explicit(uid)
+                    if iqrs.extension_ds.has_uuid(uid):
+                        de = iqrs.extension_ds.get_data(uid)
+                        info["is_explicit"] = uid in self._explicit_uids
 
-            if not df:
+            if not de:
                 info["success"] = False
-                info["message"] = "UID not part of the ingest"
+                info["message"] = "UUID not part of the active data set!"
             else:
                 # TODO: Have data-file return an HTML chunk for implementation
                 #       defined visualization?
-                img_path = df.get_preview_image()
+                img_path = self._preview_cache.get_preview_image(de)
                 img = PIL.Image.open(img_path)
                 info["shape"] = img.size
                 with open(img_path, 'rb') as img_file:
@@ -329,13 +340,9 @@ class IQRSearchFusion (flask.Blueprint):
                 "success": bool
             }
             """
-            uid = int(flask.request.form['uid'])
-            if self._ingest.has_uid(uid):
-                self._ingest.set_explicit(uid)
-            else:
-                with self.get_current_iqr_session() as iqrs:
-                    if iqrs.extension_ingest.has_uid(uid):
-                        iqrs.extension_ingest.set_explicit(uid)
+            uid = flask.request.form['uid']
+            self._explicit_uids.add(uid)
+            # TODO: Save out dict
 
             return flask.jsonify({'success': True})
 
@@ -366,7 +373,8 @@ class IQRSearchFusion (flask.Blueprint):
                 except Exception, ex:
                     return flask.jsonify({
                         "success": False,
-                        "message": "ERROR: " + str(ex)
+                        "message": "ERROR: %s: %s" % (type(ex).__name__,
+                                                      ex.message)
                     })
 
         @self.route("/iqr_ordered_results", methods=['GET'])
@@ -441,25 +449,14 @@ class IQRSearchFusion (flask.Blueprint):
             if not self._iqr_controller.has_session_uuid(sid):
                 sid_work_dir = osp.join(self.work_dir, sid)
 
-                # Custom ingest inheriting the same type as the base ingest
-                # NOTE: This assumes that the base ingest is static in regards
-                #       to content (required by starting_index being assigned
-                #       here).
-                online_ingest = self._ingest_config.new_ingest_instance(
-                    data_dir=osp.join(sid_work_dir, 'online-ingest'),
-                    work_dir=osp.join(sid_work_dir, 'online-ingest-work'),
-                    starting_index=self._ingest.max_uid() + 1
-                )
+                reactor = FusionConfiguration.new_inst(self._fusion_setting)
 
-                reactor = self._ingest_config.new_reactor(self._reactor_catalyst_type_str)
-
-                iqr_sess = IqrSessionFusion(sid_work_dir, reactor,
-                                            online_ingest, sid)
+                iqr_sess = IqrSessionFusion(sid_work_dir, reactor, sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
                 # If there are things already in our extension ingest, extend
                 # the base indexer
                 self.log.debug("Extending reactor with existing online ingest "
                                "content")
-                reactor.extend(*online_ingest.data_list())
+                reactor.extend(*tuple(iqr_sess.extension_ds))
 
             return self._iqr_controller.get_session(sid)

@@ -5,5 +5,5 @@ python:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libblas-dev liblapack-dev
-install: pip install -q -r requirements.txt
+install: pip install -r requirements.txt
 script: nosetests --with-doctest python/smqtk/

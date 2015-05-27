@@ -33,12 +33,16 @@ class DataMemoryElement (DataElement):
         return DataMemoryElement(base64.decodestring(b64_str), content_type)
 
     def __init__(self, bytes, content_type):
+        super(DataMemoryElement, self).__init__()
+
         # Only keeping stringification of UUID, removing dashes
         self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
             .replace('-', '')
         self._bytes = bytes
         self._content_type = content_type
-        self._md5 = hashlib.md5(self._bytes).hexdigest()
+
+        # since we have the bytes right now, short circuiting the MD5 cache
+        self._md5_cache = hashlib.md5(self._bytes).hexdigest()
 
     def content_type(self):
         """
@@ -47,13 +51,6 @@ class DataMemoryElement (DataElement):
         :rtype: str or None
         """
         return self._content_type
-
-    def md5(self):
-        """
-        :return: MD5 hex string of the data content.
-        :rtype: str
-        """
-        return self._md5
 
     def uuid(self):
         """

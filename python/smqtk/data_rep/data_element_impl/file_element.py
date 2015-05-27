@@ -22,17 +22,16 @@ class DataFileElement (DataElement):
         :type filepath: str
 
         """
+        super(DataFileElement, self).__init__()
+
         # Only keeping stringification of UUID, removing dashes
         self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
             .replace('-', '')
         self._filepath = osp.abspath(osp.expanduser(filepath))
         self._content_type = mimetypes.guess_type(filepath)[0]
 
-        # Cache variables for lazy lading
-        self._md5_cache = None
-
     def __repr__(self):
-        return "%s{uuid: %s, md5: %s, filepath: %s" \
+        return "%s{uuid: %s, md5: %s, filepath: %s}" \
                % (self.__class__.__name__, self.uuid(), self.md5(),
                   self._filepath)
 
@@ -43,16 +42,6 @@ class DataFileElement (DataElement):
         :rtype: str or None
         """
         return self._content_type
-
-    def md5(self):
-        """
-        :return: MD5 hex string of the data content.
-        :rtype: str
-        """
-        if not self._md5_cache:
-            self._md5_cache = \
-                hashlib.md5(self.get_bytes()).hexdigest()
-        return self._md5_cache
 
     def uuid(self):
         """

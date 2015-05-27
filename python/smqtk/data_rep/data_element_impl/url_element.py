@@ -18,6 +18,12 @@ class DataUrlElement (DataElement):
     """
 
     def __init__(self, url_address):
+        """
+        :param url_address: Web address of element
+        :type url_address: str
+        """
+        super(DataUrlElement, self).__init__()
+
         # Only keeping stringification of UUID, removing dashes
         self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
             .replace('-', '')

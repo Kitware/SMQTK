@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import abc
+import hashlib
 import logging
 import mimetypes
 import os
@@ -24,6 +25,9 @@ class DataElement (object):
     """
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self):
+        self._md5_cache = None
+
     @property
     def _log(self):
         return logging.getLogger('.'.join([self.__module__,
@@ -36,6 +40,15 @@ class DataElement (object):
         self.clean_temp()
 
     # TODO: __eq__/__ne__ methods?
+
+    def md5(self):
+        """
+        :return: MD5 hex string of the data content.
+        :rtype: str
+        """
+        if not self._md5_cache:
+            self._md5_cache = hashlib.md5(self.get_bytes()).hexdigest()
+        return self._md5_cache
 
     def write_temp(self, temp_dir=None):
         """
@@ -91,14 +104,6 @@ class DataElement (object):
         :return: Standard type/subtype string for this data element, or None if
             the content type is unknown.
         :rtype: str or None
-        """
-        return
-
-    @abc.abstractmethod
-    def md5(self):
-        """
-        :return: MD5 hex string of the data content.
-        :rtype: str
         """
         return
 

@@ -15,12 +15,12 @@ before_install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION
+  - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION numpy scipy scikit-learn
   - source activate test-env
 
 # "Install" of SMQTK + immediate deps
 install:
-  - conda install -n test-env $(cat requirements.txt)
+  - pip install -r requirements.txt
 
 # Run tests here
 script:

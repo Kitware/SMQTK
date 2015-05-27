@@ -20,7 +20,8 @@ import re
 valid_module_file_re = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
 
 
-def get_plugins(base_module, search_dir, helper_var, baseclass_type):
+def get_plugins(base_module, search_dir, helper_var, baseclass_type,
+                filter_func=None):
     """
     Discover and return classes found in the given plugin search directory. Keys
     in the returned map are the names of the discovered classes, and the paired
@@ -48,6 +49,11 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
     :param baseclass_type: Class type that discovered classes should descend
         from (inherit from).
     :type baseclass_type: type
+
+    :param filter_func: Optional function that, given an imported class, return
+        a boolean determining whether this class type should be included in the
+        returned map.
+    :type filter_func: (type) -> bool
 
     :return: Map of discovered class object of type ``baseclass_type`` whose
         keys are the string names of the classes.
@@ -123,6 +129,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type):
                           "module-named class)", module_name)
 
             for cls in classes:
-                class_map[cls.__name__] = cls
+                if filter_func is None or filter_func(cls):
+                    class_map[cls.__name__] = cls
 
     return class_map

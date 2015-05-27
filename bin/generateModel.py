@@ -142,15 +142,15 @@ def main():
 
     # Check given labels
     fail = False
-    if dset_label not in DataSetConfiguration.available_labels():
+    if dset_label and dset_label not in DataSetConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
                   "data set configuration!", dset_label)
         fail = True
-    if cd_label not in ContentDescriptorConfiguration.available_labels():
+    if cd_label and cd_label not in ContentDescriptorConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
                   "content descriptor configuration!", cd_label)
         fail = True
-    if idxr_label not in IndexerConfiguration.available_labels():
+    if idxr_label and idxr_label not in IndexerConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
                   "indexer configuration!", idxr_label)
         fail = True

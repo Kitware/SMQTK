@@ -19,7 +19,12 @@ from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
 from smqtk.utils.video_utils import get_metadata_info
 
-from . import utils
+
+# Attempt importing utilities module. If not, flag descriptor as unusable.
+try:
+    from . import utils
+except ImportError:
+    utils = None
 
 
 # noinspection PyAbstractClass,PyPep8Naming
@@ -52,6 +57,43 @@ class ColorDescriptor_Base (ContentDescriptor):
     # greater, we randomly sample down to this count (occurs on a per element
     # basis).
     CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
+
+    @classmethod
+    def is_usable(cls):
+        """
+        Check whether this descriptor is available for use.
+
+        :return: Boolean determination of whether this implementation is usable.
+        :rtype: bool
+
+        """
+        log = logging.getLogger('.'.join([cls.__module__,
+                                          cls.__name__,
+                                          "is_usable"]))
+
+        # Check for colorDescriptor executable on the path
+        import subprocess
+        try:
+            # This should try to print out the CLI options return with code 1.
+            subprocess.call(['colorDescriptor', '-h'],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+        except OSError:
+            log.warn("Could not locate colorDescriptor executable. Make sure "
+                     "that its on the PATH! See "
+                     "smqtk/content_description/colordescriptor/INSTALL.md "
+                     "for help.")
+            return False
+
+        # Checking if DescriptorIO is importable
+        if utils is None:
+            log.warn("Could not import DescriptorIO. Make sure that the "
+                     "colorDescriptor package is on the PYTHONPATH! See "
+                     "smqtk/content_description/colordescriptor/INSTALL.md "
+                     "for help.")
+            return False
+
+        return True
 
     def __init__(self, model_directory, work_directory,
                  kmeans_k=1024, flann_target_precision=0.95,

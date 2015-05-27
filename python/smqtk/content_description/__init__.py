@@ -77,6 +77,28 @@ class ContentDescriptor (object):
     def name(self):
         return self.__class__.__name__
 
+    # noinspection PyMethodParameters
+    @abc.abstractmethod
+    def is_usable(cls):
+        """
+        Check whether this descriptor is available for use.
+
+        Since certain ContentDescriptor implementations may require additional
+        dependencies that may not yet be available on the system, this method
+        should check for those dependencies and return a boolean saying if the
+        implementation is usable.
+
+        NOTES:
+            - This should be a class method
+            - When not available, this should emit a warning message pointing to
+                documentation on how to get/install required dependencies.
+
+        :return: Boolean determination of whether this implementation is usable.
+        :rtype: bool
+
+        """
+        return
+
     @abc.abstractmethod
     def valid_content_types(self):
         """
@@ -238,4 +260,5 @@ def get_descriptors():
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CONTENT_DESCRIPTOR_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, ContentDescriptor)
+    return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
+                       lambda cls: cls.is_usable())

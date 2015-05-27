@@ -6,6 +6,11 @@ python:
 # Environment setup
 before_install:
   - sudo apt-get update -qq
+
+  # system package install
+  - sudo apt-get install cmake
+
+  # Setup local conda python
   - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -14,13 +19,22 @@ before_install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-
   - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION numpy scipy scikit-learn
   - source activate test-env
 
 # "Install" of SMQTK + immediate deps
 install:
   - pip install -r requirements.txt
+
+  # Build components of SMQTK
+  - mkdir _build
+  - pushd _build
+  - cmake .. && make
+  - popd
+
+  # Environment var export
+  - export PATH=$PWD/_build/TPL/install/bin:$PATH
+  - export PYTHONPATH=$PWD/_build/python:$PWD/_build/TPL/install/lib/python2.7/site-packages:$PYTHONPATH
 
 # Run tests here
 script:

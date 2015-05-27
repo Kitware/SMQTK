@@ -1,9 +1,27 @@
 language: python
-sudo: True
+
 python:
   - "2.7"
+
+# Environment setup
 before_install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq libblas-dev liblapack-dev
-install: pip install -r requirements.txt
-script: nosetests --with-doctest python/smqtk/
+  - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION
+  - source activate test-env
+
+# "Install" of SMQTK + immediate deps
+install:
+  - conda install -n test-env $(cat requirements.txt)
+
+# Run tests here
+script:
+  - nosetests --with-doctest python/smqtk/

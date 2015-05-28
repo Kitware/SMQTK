@@ -12,9 +12,13 @@ class DescriptorMemoryElement (DescriptorElement):
     In-memory representation of descriptor elements.
     """
 
-    def __init__(self, uuid, vector):
+    def __init__(self, source_descriptor, uuid, vector):
         """
         Initialize in-memory descriptor element.
+
+        :param source_descriptor: ContentDescriptor that generated this
+            descriptor.
+        :type source_descriptor: smqtk.content_description.ContentDescriptor
 
         :param uuid: Unique ID value for this vector
         :type uuid: collections.Hashable
@@ -23,6 +27,7 @@ class DescriptorMemoryElement (DescriptorElement):
         :type vector: numpy.core.multiarray.ndarray
 
         """
+        super(DescriptorMemoryElement, self).__init__(source_descriptor)
         self._uuid = uuid
         self._vector = vector
 
@@ -55,9 +60,13 @@ class DescriptorFileElement (DescriptorElement):
 
     """
 
-    def __init__(self, uuid, vector, save_dir):
+    def __init__(self, source_descriptor, uuid, vector, save_dir):
         """
         Initialize a file-base descriptor element.
+
+        :param source_descriptor: ContentDescriptor that generated this
+            descriptor.
+        :type source_descriptor: smqtk.content_description.ContentDescriptor
 
         :param uuid: uuid for this descriptor
         :type uuid: collections.Hashable
@@ -69,6 +78,8 @@ class DescriptorFileElement (DescriptorElement):
         :type save_dir: str | unicode
 
         """
+        super(DescriptorFileElement, self).__init__(source_descriptor)
+
         self._save_dir = osp.abspath(osp.expanduser(save_dir))
 
         # Saving components

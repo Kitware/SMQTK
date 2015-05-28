@@ -13,6 +13,14 @@ class DescriptorElement (object):
     """
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self, source_descriptor):
+        """
+        :param source_descriptor: ContentDescriptor that generated this
+            descriptor.
+        :type source_descriptor: smqtk.content_description.ContentDescriptor
+        """
+        self._source_descriptor_label = source_descriptor.__class__.__name__
+
     @property
     def _log(self):
         return logging.getLogger('.'.join([self.__module__,
@@ -32,6 +40,14 @@ class DescriptorElement (object):
 
     def __ne__(self, other):
         return not (self == other)
+
+    def type(self):
+        """
+        :return: Type label type of the ContentDescriptor that generated this
+            vector.
+        :rtype: str
+        """
+        return self._source_descriptor_label
 
     ###
     # Abstract methods

@@ -165,7 +165,7 @@ class ContentDescriptor (object):
             raise ValueError("Cannot compute descriptor of content type '%s'"
                              % ct)
 
-    def compute_descriptor_async(self, *data, **kwds):
+    def compute_descriptor_async(self, data_iter, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
 
@@ -173,9 +173,10 @@ class ContentDescriptor (object):
         parallel factor as this method can take that specification as an
         argument.
 
-        :param data: List of data elements to compute features for. These must
-            have UIDs assigned for feature association in return value
-        :type data: list[smqtk.data_rep.DataElement]
+        :param data_iter: Iterable of data elements to compute features for.
+            These must have UIDs assigned for feature association in return
+            value.
+        :type data_iter: collections.Iterable[smqtk.data_rep.DataElement]
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -187,11 +188,10 @@ class ContentDescriptor (object):
         :type pool_type: type
 
         :return: Mapping of data UID to computed feature vector
-        :rtype: dict of (int, numpy.core.multiarray.ndarray)
+        :rtype: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
 
         """
-        self.log.info("Async compute features processing %d elements",
-                      len(data))
+        self.log.info("Async compute features")
 
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
@@ -199,7 +199,7 @@ class ContentDescriptor (object):
         #: :type: dict of (int, multiprocessing.pool.ApplyResult)
         ar_map = {}
         with SimpleTimer("Starting pool...", self.log.debug):
-            for d in data:
+            for d in data_iter:
                 ar_map[d.uuid()] = \
                     pool.apply_async(_async_feature_generator_helper,
                                      args=(d, self))
@@ -261,4 +261,4 @@ def get_descriptors():
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CONTENT_DESCRIPTOR_CLASS"
     return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
-                       lambda cls: cls.is_usable())
+                       lambda c: c.is_usable())

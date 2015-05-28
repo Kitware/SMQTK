@@ -185,7 +185,7 @@ def main():
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
         fmap = descriptor.compute_descriptor_async(
-            *(de for de in dset),
+            dset,
             parallel=parallel,
             pool_type=NonDaemonicPool
         )

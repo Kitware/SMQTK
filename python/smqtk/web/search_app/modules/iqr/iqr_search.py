@@ -486,9 +486,7 @@ class IQRSearch (flask.Blueprint):
                 # If there are things already in our extension ingest, extend
                 # the base indexer
                 feat_map = \
-                    descriptor.compute_descriptor_async(
-                        *tuple(iqr_sess.extension_ds)
-                    )
+                    descriptor.compute_descriptor_async(iqr_sess.extension_ds)
                 indexer.extend_model(feat_map)
 
             return self._iqr_controller.get_session(sid)

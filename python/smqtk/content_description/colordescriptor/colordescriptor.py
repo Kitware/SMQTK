@@ -123,6 +123,10 @@ class ColorDescriptor_Base (ContentDescriptor):
             auto tuning. Default is 0.75 (75%).
         :type flann_sample_fraction: float
 
+        :param use_spatial_pyramid: Use spacial pyramids when quantizing low
+            level descriptors during feature computation.
+        :type use_spatial_pyramid: bool
+
         :param random_seed: Optional value to seed components requiring random
             operations.
         :type random_seed: None or int
@@ -391,8 +395,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         super(ColorDescriptor_Base, self).compute_descriptor(data)
 
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
-        if osp.isfile(checkpoint_filepath):
-            return numpy.load(checkpoint_filepath)
+        # if osp.isfile(checkpoint_filepath):
+        #     return numpy.load(checkpoint_filepath)
 
         if not self.has_model:
             raise RuntimeError("No model currently loaded! Check the existence "

@@ -55,11 +55,6 @@ class ContentDescriptor (object):
     """
     __metaclass__ = abc.ABCMeta
 
-    # TODO: Input data type white-list + black-lis?
-    #       - Requires data objects to specify what data type they are.
-    #       - function for telling a user whether it will accept a data element
-    #         or not. Ideally a static/class method.
-
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
     PARALLEL = None

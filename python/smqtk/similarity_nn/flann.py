@@ -37,7 +37,7 @@ class FlannSimilarity (SimilarityNN):
 
     def __init__(self, content_descriptor, temp_dir, autotune=False,
                  target_precision=0.95, sample_fraction=0.1,
-                 distance_method='chi_square'):
+                 distance_method='chi_square', random_seed=None):
         """
         Initialize FLANN index properties. Index is of course not build yet (no
         data).
@@ -110,6 +110,8 @@ class FlannSimilarity (SimilarityNN):
         #: :type: set[collections.Hashable]
         self._uuid_cache = set()
 
+        self._rand_seed = None if random_seed is None else int(random_seed)
+
     def _restore_index(self):
         """
         If we think we're suppose to have an index, check the recorded PID with
@@ -179,17 +181,19 @@ class FlannSimilarity (SimilarityNN):
                                                        dir=self._temp_dir)
         os.close(fd)
         self._log.debug("Building FLANN index")
+        params = {
+            "algorithm": self._build_autotune,
+            "target_precision": self._build_target_precision,
+            "sample_fraction": self._build_sample_frac,
+            "log_level": ("info"
+                          if self._log.getEffectiveLevel() <= logging.DEBUG
+                          else "warn")
+        }
+        if self._rand_seed is not None:
+            params['random_seed'] = self._rand_seed
         pyflann.set_distance_type(self._distance_method)
         self._flann = pyflann.FLANN()
-        self._flann_build_params = \
-            self._flann.build_index(pts_array, **{
-                "algorithm": self._build_autotune,
-                "target_precision": self._build_target_precision,
-                "sample_fraction": self._build_sample_frac,
-                "log_level": ("info"
-                              if self._log.getEffectiveLevel() <= logging.DEBUG
-                              else "warn")
-            })
+        self._flann_build_params = self._flann.build_index(pts_array, **params)
 
         # Saving out index cache
         self._log.debug("Saving index to cache file: %s",
@@ -233,8 +237,9 @@ class FlannSimilarity (SimilarityNN):
         else:
             vec = self._content_descriptor.compute_descriptor(d)
 
+        # FLANN asserts that we query for <= index size, thus the use of min()
         #: :type: numpy.core.multiarray.ndarray
-        idxs = self._flann.nn_index(vec, N)[0]
+        idxs = self._flann.nn_index(vec, min(N, len(self._descr_cache)))[0]
         # When N>1, return value is a 2D array for some reason
         if len(idxs.shape) > 1:
             idxs = idxs[0]

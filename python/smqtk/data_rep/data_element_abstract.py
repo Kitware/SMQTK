@@ -6,6 +6,8 @@ import mimetypes
 import os
 import tempfile
 
+from smqtk.utils import safe_create_dir
+
 
 MIMETYPES = mimetypes.MimeTypes()
 
@@ -48,13 +50,15 @@ class DataElement (object):
 
         :param temp_dir: Optional directory to write temporary file in,
             otherwise we use the platform default temporary files directory.
-        :type temp_dir: None or basestring
+        :type temp_dir: None or str
 
         :return: Path to the temporary file
         :rtype: str
 
         """
         if not hasattr(self, '_temp_filepath') or not self._temp_filepath:
+            if temp_dir:
+                safe_create_dir(temp_dir)
             # noinspection PyAttributeOutsideInit
             fd, self._temp_filepath = tempfile.mkstemp(
                 suffix=MIMETYPES.guess_extension(self.content_type()),

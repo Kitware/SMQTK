@@ -10,6 +10,7 @@ import os
 import os.path as osp
 import pyflann
 import sklearn.cluster
+import sys
 import tempfile
 
 import smqtk_config
@@ -397,40 +398,95 @@ class ColorDescriptor_Base (ContentDescriptor):
         self.log.debug("Computing descriptors for data UID[%s]...", data.uuid())
         info, descriptors = self._generate_descriptor_matrices({data})
 
-        # Quantization
-        # - loaded the model at class initialization if we had one
-        self.log.debug("Quantizing descriptors")
-        pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
-        flann = pyflann.FLANN()
-        flann.load_index(self.flann_index_filepath, self._codebook)
-        try:
-            idxs, dists = flann.nn_index(descriptors)
-        except AssertionError:
+        use_spatial = True
+        if not use_spatial:
+            ###
+            # Codebook Quantization
+            #
+            # - loaded the model at class initialization if we had one
+            self.log.debug("Quantizing descriptors")
+            pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
+            flann = pyflann.FLANN()
+            flann.load_index(self.flann_index_filepath, self._codebook)
+            try:
+                idxs, dists = flann.nn_index(descriptors)
+            except AssertionError:
 
-            self.log.error("Codebook shape  : %s", self._codebook.shape)
-            self.log.error("Descriptor shape: %s", descriptors.shape)
+                self.log.error("Codebook shape  : %s", self._codebook.shape)
+                self.log.error("Descriptor shape: %s", descriptors.shape)
 
-            raise
+                raise
 
-        # Create histogram
-        # - Using explicit bin slots to prevent numpy from automatically
-        #   creating tightly constrained bins. This would otherwise cause
-        #   histograms between two inputs to be non-comparable (unaligned bins).
-        # - See numpy note about ``bins`` to understand why the +1 is necessary
-        #: :type: numpy.core.multiarray.ndarray
-        h = numpy.histogram(idxs,  # indices are all integers
-                            bins=numpy.arange(self._codebook.shape[0] + 1))[0]
-        # self.log.debug("Quantization histogram: %s", h)
-        # Normalize histogram into relative frequencies
-        # - Not using /= on purpose. h is originally int32 coming out of
-        #   histogram. /= would keep int32 type when we want it to be
-        #   transformed into a float type by the division.
-        if h.sum():
-            # noinspection PyAugmentAssignment
-            h = h / float(h.sum())
+            # Create histogram
+            # - Using explicit bin slots to prevent numpy from automatically
+            #   creating tightly constrained bins. This would otherwise cause
+            #   histograms between two inputs to be non-comparable (unaligned
+            #   bins).
+            # - See numpy note about ``bins`` to understand why the +1 is
+            #   necessary
+            #: :type: numpy.core.multiarray.ndarray
+            h = numpy.histogram(idxs,  # indices are all integers
+                                bins=numpy.arange(self._codebook.shape[0]+1))[0]
+            # self.log.debug("Quantization histogram: %s", h)
+            # Normalize histogram into relative frequencies
+            # - Not using /= on purpose. h is originally int32 coming out of
+            #   histogram. /= would keep int32 type when we want it to be
+            #   transformed into a float type by the division.
+            if h.sum():
+                # noinspection PyAugmentAssignment
+                h = h / float(h.sum())
+            else:
+                h = numpy.zeros(h.shape, h.dtype)
+            # self.log.debug("Normalized histogram: %s", h)
+
         else:
-            h = numpy.zeros(h.shape, h.dtype)
-        # self.log.debug("Normalized histogram: %s", h)
+            ###
+            # Spatial Pyramid Quantization
+            #
+            self.log.debug("Quantizing descriptors using spatial pyramid")
+            ##
+            # Quantization factor - number of nearest codes to be saved
+            q_factor = 10
+            ##
+            # Concatenating spatial information to descriptor vectors to format:
+            #   [ x y <descriptor> ]
+            self.log.debug("Creating combined descriptor matrix")
+            m = numpy.concatenate((info[:, :2],
+                                   descriptors), axis=1)
+            ##
+            # Creating quantized vectors, consisting vector:
+            #   [ x y c_1 ... c_qf dist_1 ... dist_qf ]
+            # which has a total size of 2+(qf*2)
+            #
+            # Sangmin's code included the distances in the quantized vector, but
+            # then also passed this vector into numpy's histogram function with
+            # integral bins, causing the [0,1] to be heavily populated, which
+            # doesn't make sense to do.
+            #   idxs, dists = flann.nn_index(m[:, 2:], q_factor)
+            #   q = numpy.concatenate([m[:, :2], idxs, dists], axis=1)
+            self.log.debug("Computing nearest neighbors")
+            pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
+            flann = pyflann.FLANN()
+            flann.load_index(self.flann_index_filepath, self._codebook)
+            idxs = flann.nn_index(m[:, 2:], q_factor)[0]
+            self.log.debug("Creating quantization matrix")
+            q = numpy.concatenate([m[:, :2], idxs], axis=1)
+            ##
+            # Build spatial pyramid from quantized matrix
+            self.log.debug("Building spatial pyramid histograms")
+            hist_sp = self._build_sp_hist(q, self._codebook.shape[0])
+            ##
+            # Combine each quadrants into single vector
+            self.log.debug("Combining global+thirds into final histogram.")
+            f = sys.float_info.min  # so as we don't div by 0 accidentally
+            rf_norm = lambda h: h / (float(h.sum()) + f)
+            h = numpy.concatenate([rf_norm(hist_sp[0]),
+                                   rf_norm(hist_sp[5]),
+                                   rf_norm(hist_sp[6]),
+                                   rf_norm(hist_sp[7])],
+                                  axis=1)
+            # noinspection PyAugmentAssignment
+            h /= h.sum()
 
         self.log.debug("Saving checkpoint feature file")
         if not osp.isdir(osp.dirname(checkpoint_filepath)):
@@ -438,6 +494,90 @@ class ColorDescriptor_Base (ContentDescriptor):
         numpy.save(checkpoint_filepath, h)
 
         return h
+
+    @staticmethod
+    def _build_sp_hist(feas, bins):
+        """
+        Build spatial pyramid from quantized data. We expect feature matrix
+        to be in the following format:
+
+            [[ x y c_1 ... c_n dist_1 ... dist_n ]
+             [ ... ]
+             ... ]
+
+        NOTES:
+            - See encode_FLANN.py for original implementation this was adapted
+                from.
+
+        :param feas: Feature matrix with the above format.
+        :type feas: numpy.core.multiarray.ndarray
+
+        :param bins: number of bins for the spatial histograms. This should
+            probably be the size of the codebook used when generating quantized
+            descriptors.
+        :type bins: int
+
+        :return: Matrix of 8 rows representing the histograms for the different
+            spatial regions
+        :rtype: numpy.core.multiarray.ndarray
+
+        """
+        bins = numpy.arange(0, bins+1)
+        cordx = feas[:, 0]
+        cordy = feas[:, 1]
+        feas = feas[:, 2:]
+
+        # hard quantization
+        # global histogram
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_g = numpy.histogram(feas, bins=bins)[0]
+        hist_sp_g = hist_sp_g[numpy.newaxis]
+        # 4 quadrants
+        # noinspection PyTypeChecker
+        midx = numpy.ceil(cordx.max()/2)
+        # noinspection PyTypeChecker
+        midy = numpy.ceil(cordy.max()/2)
+        lx = cordx < midx
+        rx = cordx >= midx
+        uy = cordy < midy
+        dy = cordy >= midy
+        # logging.error("LXUI: %s,%s", lx.__repr__(), uy.__repr__())
+        # logging.error("Length LXUI: %s,%s", lx.shape, uy.shape)
+        # logging.error("feas dimensions: %s", feas.shape)
+
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_q1 = numpy.histogram(feas[lx & uy], bins=bins)[0]
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_q2 = numpy.histogram(feas[rx & uy], bins=bins)[0]
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_q3 = numpy.histogram(feas[lx & dy], bins=bins)[0]
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_q4 = numpy.histogram(feas[rx & dy], bins=bins)[0]
+        hist_sp_q1 = hist_sp_q1[numpy.newaxis]
+        hist_sp_q2 = hist_sp_q2[numpy.newaxis]
+        hist_sp_q3 = hist_sp_q3[numpy.newaxis]
+        hist_sp_q4 = hist_sp_q4[numpy.newaxis]
+
+        # 3 layers
+        # noinspection PyTypeChecker
+        ythird = numpy.ceil(cordy.max()/3)
+        l1 = cordy <= ythird
+        l2 = (cordy > ythird) & (cordy <= 2*ythird)
+        l3 = cordy > 2*ythird
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_l1 = numpy.histogram(feas[l1], bins=bins)[0]
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_l2 = numpy.histogram(feas[l2], bins=bins)[0]
+        #: :type: numpy.core.multiarray.ndarray
+        hist_sp_l3 = numpy.histogram(feas[l3], bins=bins)[0]
+        hist_sp_l1 = hist_sp_l1[numpy.newaxis]
+        hist_sp_l2 = hist_sp_l2[numpy.newaxis]
+        hist_sp_l3 = hist_sp_l3[numpy.newaxis]
+        # concatenate
+        hist_sp = numpy.vstack((hist_sp_g, hist_sp_q1, hist_sp_q2,
+                                hist_sp_q3, hist_sp_q4, hist_sp_l1,
+                                hist_sp_l2, hist_sp_l3))
+        return hist_sp
 
 
 # noinspection PyAbstractClass,PyPep8Naming

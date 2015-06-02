@@ -22,7 +22,7 @@ class Average (Catalyst):
         between [0,1]), fuse by some manner unto a single comprehensive mapping
         of UID to probability value.
 
-        >>> c = Average('unused_data', 'unused_work')
+        >>> c = Average()
         >>> rm_1 = {0: 0., \
                     1: 0., \
                     2: 0.}
@@ -30,9 +30,12 @@ class Average (Catalyst):
                     1: 1., \
                     2: 1.}
         >>> rm_final = c.fuse(rm_1, rm_2)
-        >>> assert rm_final[0] == 0.5
-        >>> assert rm_final[1] == 0.5
-        >>> assert rm_final[2] == 0.5
+        >>> rm_final[0]
+        0.5
+        >>> rm_final[1]
+        0.5
+        >>> rm_final[2]
+        0.5
 
         :raises ValueError: No ranking maps given.
 

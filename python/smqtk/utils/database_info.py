@@ -45,7 +45,7 @@ class DatabaseInfo (object):
         """
         Create an exact duplicate of this object. This is a deep copy.
 
-        >>> dbi = DatabaseInfo('localhost', 12345, 'foobar', 'baz')
+        >>> dbi = DatabaseInfo('localhost', 12345, 'foobar')
         >>> dbi2 = dbi.copy()
         >>> dbi.host == dbi2.host
         True
@@ -73,7 +73,7 @@ class DatabaseInfo (object):
         """
         >>> dbi = DatabaseInfo('localhost', 12345, 'foobar')
         >>> print dbi
-        DatabaseInfo{host: localhost, port: 12345, name: foobar, collection: None}
+        DatabaseInfo{host: localhost, port: 12345, name: foobar}
 
         """
         return "DatabaseInfo{host: %s, port: %d, name: %s}" \

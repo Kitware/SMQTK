@@ -3,6 +3,7 @@ flask-basicauth
 flask-login
 gevent
 imageio
+nose
 Pillow
 pymongo
 requests

@@ -19,6 +19,7 @@ function IqrResult(container, rank, uid, probability) {
     this.probability = probability;
 
     this.image_preview_data = null;
+    this.static_view_link = null;
     this.image_loaded = false;
     this.is_explicit = false;
     // this is 1 if height > width, 0 if otherwise
@@ -219,6 +220,7 @@ IqrResult.prototype.update_view = function (server_update) {
                 else {
                     inst.image_preview_data =
                         'data:image/'+data.ext+';base64,'+ data.data;
+                    inst.static_view_link = data.static_file_link
                     inst.image_loaded = true;
                     inst.is_explicit = inst.e_marked_servereide =
                         data.is_explicit;
@@ -392,7 +394,7 @@ IqrResult.prototype.display_full_image = function () {
             }
         }
         // TODO: Should make this better...
-        //       like open a webpage instead of just opening image data...
-        window.open(this.image_preview_data);
+        //       like open a webpage instead of just opening static data...
+        window.open(this.static_view_link);
     }
 };

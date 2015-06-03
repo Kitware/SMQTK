@@ -428,6 +428,11 @@ class ColorDescriptor_Base (ContentDescriptor):
             #   bins).
             # - See numpy note about ``bins`` to understand why the +1 is
             #   necessary
+            # - Learned from spatial implementation that we could feed multiple
+            #   neighbors per descriptor into here, leading to a more populated
+            #   histogram.
+            #   - Could also possibly weight things based on dist from
+            #     descriptor?
             #: :type: numpy.core.multiarray.ndarray
             h = numpy.histogram(idxs,  # indices are all integers
                                 bins=numpy.arange(self._codebook.shape[0]+1))[0]

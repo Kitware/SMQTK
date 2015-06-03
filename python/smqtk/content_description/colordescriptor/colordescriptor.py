@@ -96,7 +96,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     def __init__(self, model_directory, work_directory,
                  kmeans_k=1024, flann_target_precision=0.95,
                  flann_sample_fraction=0.75,
-                 random_seed=None):
+                 random_seed=None, use_spatial_pyramid=False):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -138,6 +138,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         self._kmeans_k = int(kmeans_k)
         self._flann_target_precision = float(flann_target_precision)
         self._flann_sample_fraction = float(flann_sample_fraction)
+        self._use_sp = use_spatial_pyramid
         self._rand_seed = None if random_seed is None else int(random_seed)
 
         if self._rand_seed is not None:
@@ -262,8 +263,12 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: str
 
         """
-        return osp.join(self._get_checkpoint_dir(data),
-                        "%s.feature.npy" % data.md5())
+        if self._use_sp:
+            return osp.join(self._get_checkpoint_dir(data),
+                            "%s.feature.sp.npy" % data.md5())
+        else:
+            return osp.join(self._get_checkpoint_dir(data),
+                            "%s.feature.npy" % data.md5())
 
     def generate_model(self, data_set, **kwargs):
         """
@@ -398,8 +403,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         self.log.debug("Computing descriptors for data UID[%s]...", data.uuid())
         info, descriptors = self._generate_descriptor_matrices({data})
 
-        use_spatial = True
-        if not use_spatial:
+        if not self._use_sp:
             ###
             # Codebook Quantization
             #

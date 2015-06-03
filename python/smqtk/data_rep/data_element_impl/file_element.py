@@ -31,6 +31,11 @@ class DataFileElement (DataElement):
         # Cache variables for lazy lading
         self._md5_cache = None
 
+    def __repr__(self):
+        return "%s{uuid: %s, md5: %s, filepath: %s" \
+               % (self.__class__.__name__, self.uuid(), self.md5(),
+                  self._filepath)
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if
@@ -81,13 +86,16 @@ class DataFileElement (DataElement):
 
         :param temp_dir: Optional directory to write temporary file in,
             otherwise we use the platform default temporary files directory.
-        :type temp_dir: None or basestring
+        :type temp_dir: None or str
 
         :return: Path to the temporary file
         :rtype: str
 
         """
-        return self._filepath
+        if temp_dir:
+            return super(DataFileElement, self).write_temp(temp_dir=temp_dir)
+        else:
+            return self._filepath
 
     def clean_temp(self):
         """
@@ -97,7 +105,7 @@ class DataFileElement (DataElement):
         For FileElement instance's this does nothing as the ``write_temp()``
         method doesn't actually write any files.
         """
-        return
+        return super(DataFileElement, self).clean_temp()
 
 
 DATA_ELEMENT_CLASS = DataFileElement

@@ -101,6 +101,11 @@ class IQRSearch (flask.Blueprint):
         # TODO: Initialize this into static directory that is being served.
         self._preview_cache = PreviewCache(osp.join(self.work_dir, "Previews"))
 
+        # Directory to write data for static viewing
+        self._static_data_dir = os.path.join(self.static_folder, 'tmp_data')
+        # Cache mapping of written static files for data elements
+        self._static_cache = {}
+
         #
         # Routing
         #
@@ -315,8 +320,10 @@ class IQRSearch (flask.Blueprint):
                 "shape": None,  # (width, height)
                 "data": None,
                 "ext": None,
+                "static_file_link": None,
             }
 
+            #: :type: smqtk.data_rep.DataElement
             de = None
             if self._data_set.has_uuid(uid):
                 de = self._data_set.get_data(uid)
@@ -340,6 +347,13 @@ class IQRSearch (flask.Blueprint):
                 with open(img_path, 'rb') as img_file:
                     info["data"] = base64.encodestring(img_file.read())
                 info["ext"] = osp.splitext(img_path)[1].lstrip('.')
+
+                if de.uuid() not in self._static_cache:
+                    self._static_cache[de.uuid()] = \
+                        de.write_temp(self._static_data_dir)
+                info['static_file_link'] = 'static/' \
+                    + os.path.relpath(self._static_cache[de.uuid()],
+                                      self.static_folder)
 
             return flask.jsonify(info)
 

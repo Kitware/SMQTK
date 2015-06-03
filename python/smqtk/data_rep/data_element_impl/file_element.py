@@ -31,6 +31,11 @@ class DataFileElement (DataElement):
         # Cache variables for lazy lading
         self._md5_cache = None
 
+    def __repr__(self):
+        return "%s{uuid: %s, md5: %s, filepath: %s" \
+               % (self.__class__.__name__, self.uuid(), self.md5(),
+                  self._filepath)
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if

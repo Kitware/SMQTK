@@ -112,6 +112,9 @@ class DataFileSet (DataSet):
             self._log.debug("Serializing data elements into: %s",
                             self._root_dir)
             for uuid, de in self._element_map.iteritems():
+                # Remove any temporary files an element may have generated
+                de.clean_temp()
+
                 md5 = de.md5()
                 # Leaving off trailing chunk so that we don't have a single
                 # directory per md5-sum.
@@ -127,6 +130,7 @@ class DataFileSet (DataSet):
                 )
                 with open(output_fname, 'wb') as ofile:
                     cPickle.dump(de, ofile)
+            self._log.debug("Serializing data elements -- Done")
 
     def count(self):
         """

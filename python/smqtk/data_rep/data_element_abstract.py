@@ -75,9 +75,11 @@ class DataElement (object):
         no temporary files have been generated for this element.
         """
         if hasattr(self, "_temp_filepath"):
-            os.remove(self._temp_filepath)
-            # noinspection PyAttributeOutsideInit
-            self._temp_filepath = None
+            try:
+                if os.path.isfile(self._temp_filepath):
+                    os.remove(self._temp_filepath)
+            finally:
+                del self._temp_filepath
 
     ###
     # Abstract methods

@@ -116,40 +116,17 @@ class SMQTKSearchApp (flask.Flask):
         #       and indexer types. In the future this should either be moved
         #       to something that can be chosen by the user or a
         #       multi-feature/indexer fusion system.
-        from .modules.iqr import IQRSearch, IQRSearchFusion
+        from .modules.iqr import IQRSearch
 
-        with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
-            ds_example_image = DataSetConfiguration.new_inst("example_image")
-
-            self.mod_example_image = IQRSearch(
-                "Image Search - Example Imagery",
-                self, ds_example_image,
-                "CD_CSIFT_Image_example", "SVM_HIK-CD_CSIFT-Image",
-                url_prefix='/image_example'
+        with SimpleTimer("Loading UCF 1k sample", self.log.info):
+            ds_ucf1k = DataSetConfiguration.new_inst("ucf1k")
+            self.mod_ucf1k = IQRSearch(
+                "VideoSearch UCF 1k sample", self, ds_ucf1k,
+                'CD_CSIFT_Video_UCF1k', 'SVM_HIK-CD_CSIFT-Video-UCF_1k_sample',
+                url_prefix='/video_ucf_1k'
             )
-            self.register_blueprint(self.mod_example_image)
-            self.add_navigable_blueprint(self.mod_example_image)
-
-        with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
-            self.mod_example_image_fusion = IQRSearchFusion(
-                "Image Search Fusion - Example Imagery",
-                self, ds_example_image,
-                "example_image",
-                url_prefix='/image_example_fusion'
-            )
-            self.register_blueprint(self.mod_example_image_fusion)
-            self.add_navigable_blueprint(self.mod_example_image_fusion)
-
-        # with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
-        #     ds_example_video = DataSetConfiguration.new_inst("example_video")
-        #     self.mod_example_video = IQRSearch(
-        #         "Video Search - Example Videos",
-        #         self, ds_example_video,
-        #         "CD_CSIFT_Video_example", "SVM_HIK-CD_CSIFT-Video",
-        #         url_prefix='/video_example'
-        #     )
-        #     self.register_blueprint(self.mod_example_video)
-        #     self.add_navigable_blueprint(self.mod_example_video)
+            self.register_blueprint(self.mod_ucf1k)
+            self.add_navigable_blueprint(self.mod_ucf1k)
 
         #
         # Basic routing

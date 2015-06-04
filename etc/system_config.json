@@ -8,17 +8,10 @@
         //         kwargs to pass to constructor
         //     }
         // }
-        "example_image": {
+        "ucf1k": {
             "type": "DataFileSet",
             "init": {
-                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
-                "md5_chunk": 8
-            }
-        },
-        "example_video": {
-            "type": "DataFileSet",
-            "init": {
-                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_video/data",
+                "root_directory": "/home/purg/dev/smqtk/source/data/FileDataSets/ucf1k/data",
                 "md5_chunk": 8
             }
         }
@@ -31,42 +24,14 @@
         //         "kwargs": "here"
         //     }
         // }
-        "CD_CSIFT_Image_example": {
-            "type": "ColorDescriptor_Image_csift",
-            "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
-                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
-                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
-                "random_seed": 42,
-                // model generation parameters
-                "kmeans_k": 256,
-                "flann_sample_fraction": 1.0
-            }
-        },
-        "CD_RGSIFT_Image_example": {
-            "type": "ColorDescriptor_Image_rgsift",
-            "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
-                "model_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
-                "work_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
-                "random_seed": 42,
-                // model generation parameters
-                "kmeans_k": 256,
-                "flann_sample_fraction": 1.0
-            }
-        },
-        "CD_CSIFT_Video_example": {
+        "CD_CSIFT_Video_UCF1k": {
             "type": "ColorDescriptor_Video_csift",
             "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
-                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
-                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/ucf1k",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/ucf1k",
                 "random_seed": 42,
                 // model generation parameters
-                "kmeans_k": 512,
+                "kmeans_k": 1024,
                 "flann_sample_fraction": 1.0
             }
         }
@@ -77,28 +42,10 @@
         // (contains all descriptors from data in that set with UUID references
         // to that data). This will hopefully change to the more independent
         // side of things in the future.
-        "SVM_HIK-CD_CSIFT-Image": {
-            // Model trained using CD_CSIFT_Image_example descriptors
-            // Indexes over example_image data set
+        "SVM_HIK-CD_CSIFT-Video-UCF_1k_sample": {
             "type": "SVMIndexerHIK",
             "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift/example_image"
-            }
-        },
-        "SVM_HIK-CD_RGSIFT-Image": {
-            // Model trained using CD_RGSIFT_Image_example descriptors
-            // Indexes over example_image data set
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_rgsift/example_image"
-            }
-        },
-        "SVM_HIK-CD_CSIFT-Video": {
-            // Model trained using CD_CSIFT_Video_example descriptors
-            // Indexes over example_video data set
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift/example_video"
+                "data_dir": "Indexers/SVM_HIK/cd_csift/ucf1k"
             }
         }
     },

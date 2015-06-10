@@ -1,9 +1,11 @@
+coverage
 flask
 flask-basicauth
 flask-login
 gevent
 imageio
 nose
+nose-exclude
 Pillow
 pymongo
 requests

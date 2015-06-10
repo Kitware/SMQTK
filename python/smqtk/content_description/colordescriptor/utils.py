@@ -20,8 +20,16 @@ except ImportError:
         from colorDescriptor import DescriptorIO
     except ImportError:
         DescriptorIO = None
-        raise ImportError("Cannot find the DescriptorIO module provided by "
-                          "ColorDescriptor. Read the README for dependencies!")
+
+
+def has_colordescriptor_module():
+    """
+    :return: Boolean describing whether the required colorDescriptor module was
+        found or not. If not found, the base descriptor functionality does not
+        exist.
+    :rtype: bool
+    """
+    return DescriptorIO is not None
 
 
 def generate_descriptors(cd_exe, img_filepath, descriptor_type,
@@ -41,6 +49,8 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     Matrices are saved in numpy binary format (.npy). ``numpy.load`` function
     should be used to load matrices back in.
 
+    :raises ImportError: The required python module for colorDescriptor IO is
+        not available.
     :raises RuntimeError: Failed to generate output files or matrices for the '
         given input.
 
@@ -77,6 +87,10 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     :rtype: ((int, int), (int, int))
 
     """
+    if not has_colordescriptor_module():
+        raise ImportError("Cannot find the DescriptorIO module provided by "
+                          "ColorDescriptor. Read the README for dependencies!")
+
     log = logging.getLogger("ColorDescriptor::generate_descriptors{%s,%s}"
                             % (descriptor_type, osp.basename(img_filepath)))
 

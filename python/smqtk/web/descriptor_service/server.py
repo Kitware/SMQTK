@@ -36,6 +36,9 @@ class DescriptorServiceServer (flask.Flask):
 
         /<descriptor_type>/<uri>[?...]
 
+    See the docstring for the ``compute_descriptor()`` method for complete rules
+    on how to form a calling URL.
+
     Computes the requested descriptor for the given file and returns that via
     a JSON structure.
 
@@ -188,14 +191,20 @@ class DescriptorServiceServer (flask.Flask):
                     #: :type: smqtk.content_description.ContentDescriptor
                     d = descriptor_cache[descriptor_label]
                 with SimpleTimer("Computing descriptor...", self.log.debug):
-                    descriptor = d.compute_descriptor(de)
-                    message = "Descriptor computed of type '%s'" \
-                              % descriptor_label
+                    try:
+                        descriptor = d.compute_descriptor(de).tolist()
+                        message = "Descriptor computed of type '%s'" \
+                                  % descriptor_label
+                    except ValueError, ex:
+                        success = False
+                        message = "Descriptor '%s' had an issue with the input " \
+                                  "data: %s" \
+                                  % (descriptor_label, str(ex))
 
             return flask.jsonify({
                 "success": success,
                 "message": message,
-                "descriptor": descriptor.tolist(),
+                "descriptor": descriptor,
                 "reference_uri": uri
             })
 

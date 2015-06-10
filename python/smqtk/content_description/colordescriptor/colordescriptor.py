@@ -382,6 +382,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: numpy.ndarray
 
         """
+        super(ColorDescriptor_Base, self).compute_descriptor(data)
+
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         if osp.isfile(checkpoint_filepath):
             return numpy.load(checkpoint_filepath)

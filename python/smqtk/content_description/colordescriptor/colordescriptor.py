@@ -21,10 +21,7 @@ from smqtk.utils.video_utils import get_metadata_info
 
 
 # Attempt importing utilities module. If not, flag descriptor as unusable.
-try:
-    from . import utils
-except ImportError:
-    utils = None
+from . import utils
 
 
 # noinspection PyAbstractClass,PyPep8Naming
@@ -86,7 +83,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             return False
 
         # Checking if DescriptorIO is importable
-        if utils is None:
+        if not utils.has_colordescriptor_module():
             log.warn("Could not import DescriptorIO. Make sure that the "
                      "colorDescriptor package is on the PYTHONPATH! See "
                      "smqtk/content_description/colordescriptor/INSTALL.md "

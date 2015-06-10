@@ -12,8 +12,29 @@ In order to run provided SMQTKSearchApp web application, the following are  addi
     * MongoDB is required for the Web application for session storage.
       This allows the Flask application API to modify session contents when within AJAX routines.
       This required for asynchronous user-session state interaction/modification.
-    * This is not a perminent requirement as other mediums can be used for this purpose, however they would need implementation.
-    
+    * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
+
+### Installing Python dependencies
+There are two files that list required python packages:
+
+  * requirements.conda.txt
+  * requirements.pip.txt
+
+Required packages have been split up this way because conda does not provide all packages that pip can.
+While conda is generally considered the preferred method of acquiring python dependencies due to their pre-built nature, some of our requirements are not available through conda.
+
+#### Installing with Conda and Pip
+The three-step python dependency installation using both conda and pip will look like the following, filling in `<...>` spaces with appropriate:
+
+    $ conda create -n <env_name> --file requirements.conda.txt
+    $ . activate <env_name>
+    $ pip install -r requirements.pip.txt
+
+#### Installing with just Pip
+If installation of python dependencies via pip only is desired, or if local compilation of packages is desired, the following is recommended:
+
+    $ pip install -r requirements.conda.txt -r requirements.pip.txt
+
 ### Additional Descriptor Dependencies
 Descriptors implemented in SMQTK may require additional dependencies in order to run.
 This may be because a descriptor required additional libraries or tools on the system. 
@@ -47,7 +68,7 @@ To load the file, we would do the following:
 
     from smqtk.data_rep.data_element_impl.file_element import DataFileElement
     e = DataFileElement('foo.png')
-    
+
 We can now use `e` as the data source for descriptor computation
 
 ### Initializing a Content Descriptor
@@ -59,11 +80,11 @@ We know, because we looked at the constructor for this class type, that it takes
 
     from smqtk.content_description import get_descriptors
     cd = get_descriptors()['ColorDescriptor_Image_csift']("model", "/tmp")
-    
+
 This instance can now be used to compute descriptor vectors for new data.
 
     vec = cd.compute_descriptor(e)
-    
+
 Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used.
 
 

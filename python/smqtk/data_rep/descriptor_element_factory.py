@@ -19,7 +19,35 @@ class DescriptorElementFactory (object):
         self._init_params = init_params
 
     def new_descriptor(self, type_str, uuid):
+        """
+        Create a new DescriptorElement instance of the configured implementation
+
+        :param type_str: Type of descriptor. This is usually the name of the
+            content descriptor that generated this vector.
+        :type type_str: str
+
+        :param uuid: UUID to associate with the descriptor
+        :type uuid: collections.Hashable
+
+        :return: New DescriptorElement instance
+        :rtype: smqtk.data_rep.DescriptorElement
+
+        """
         return self._d_type(type_str, uuid, **self._init_params)
 
     def __call__(self, type_str, uuid):
+        """
+        Create a new DescriptorElement instance of the configured implementation
+
+        :param type_str: Type of descriptor. This is usually the name of the
+            content descriptor that generated this vector.
+        :type type_str: str
+
+        :param uuid: UUID to associate with the descriptor
+        :type uuid: collections.Hashable
+
+        :return: New DescriptorElement instance
+        :rtype: smqtk.data_rep.DescriptorElement
+
+        """
         return self.new_descriptor(type_str, uuid)

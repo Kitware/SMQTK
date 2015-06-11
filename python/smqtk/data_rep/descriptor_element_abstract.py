@@ -26,6 +26,7 @@ class DescriptorElement (object):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
+        :type uuid: collections.Hashable
 
         """
         self._type_label = type_str

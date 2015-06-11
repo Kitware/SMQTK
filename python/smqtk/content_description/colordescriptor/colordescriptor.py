@@ -36,7 +36,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     in an indexer.
 
     Codebook generated via kmeans given a set of input data. FLANN index model
-    used for quantization, buily using auto-tuning (picks the best indexing
+    used for quantization, built using auto-tuning (picks the best indexing
     algorithm of linear, kdtree, kmeans, or combined), and using the Chi-Squared
     distance function.
 
@@ -375,7 +375,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
 
-    def compute_descriptor(self, data):
+    def _compute_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
@@ -392,7 +392,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: numpy.ndarray
 
         """
-        super(ColorDescriptor_Base, self).compute_descriptor(data)
+        super(ColorDescriptor_Base, self)._compute_descriptor(data)
 
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         # if osp.isfile(checkpoint_filepath):

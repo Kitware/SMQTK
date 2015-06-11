@@ -155,6 +155,13 @@ class ColorDescriptor_Base (ContentDescriptor):
             self._codebook = numpy.load(self.codebook_filepath)
 
     @property
+    def name(self):
+        if self._use_sp:
+            return '_'.join([self.__class__.__name__, 'spatial'])
+        else:
+            return self.__class__.__name__
+
+    @property
     def codebook_filepath(self):
         safe_create_dir(self._model_dir)
         return osp.join(self._model_dir,

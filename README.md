@@ -66,8 +66,8 @@ This allows data to be located anywhere from the local file system to data bases
 For this example, let assume we have a file `foo.png` that we want to compute a descriptor for.
 To load the file, we would do the following:
 
-    from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-    e = DataFileElement('foo.png')
+    >>> from smqtk.data_rep.data_element_impl.file_element import DataFileElement
+    >>> e = DataFileElement('foo.png')
 
 We can now use `e` as the data source for descriptor computation
 
@@ -78,12 +78,13 @@ If the name of the implementation is known, we can use the general class type ac
 For the sake of this example, say we want to use the Image CSIFT descriptor as provided by the ColorDescriptor package.
 We know, because we looked at the constructor for this class type, that it takes a model directory and a directory to place temporary intermediate working files.
 
-    from smqtk.content_description import get_descriptors
-    cd = get_descriptors()['ColorDescriptor_Image_csift']("model", "/tmp")
+    >>> from smqtk.content_description import get_descriptors
+    >>> cd = get_descriptors()['ColorDescriptor_Image_csift']("model", "/tmp")
 
 This instance can now be used to compute descriptor vectors for new data.
 
-    vec = cd.compute_descriptor(e)
+    >>> descr_elem = cd.compute_descriptor(e)
+    >>> vec = descr_elem.vector()
 
 Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used.
 

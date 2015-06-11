@@ -8,20 +8,20 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import base64
 import flask
 import logging
 import mimetypes
 import multiprocessing
 import os
-import requests
-import tempfile
 
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
 from smqtk.data_rep.data_element_impl.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
-from smqtk.utils.configuration import ContentDescriptorConfiguration
+from smqtk.utils.configuration import (
+    ContentDescriptorConfiguration,
+    DescriptorFactoryConfiguration,
+)
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -50,10 +50,22 @@ class DescriptorServiceServer (flask.Flask):
         "reference_uri": <uri>
     }
 
+    # Additional Configuration
+
+    ## DescriptorElementFactory type
+    We will look for an environment variable `DSS_DE_FACTORY` for a string that
+    corresponds to a label present in `DescriptorElementFactories` section
+    of the `system_config.json` configuration file. If this is not found we will
+    error requesting it's presence.
+
     """
 
     # Optional environment variable that can point to a configuration file
     ENV_CONFIG = "DescriptorService_CONFIG"
+
+    # Environment variable to look at for descriptor element factory
+    #   configuration
+    ENV_DSS_DE_FACTORY = "DSS_DE_FACTORY"
 
     @property
     def log(self):
@@ -101,6 +113,16 @@ class DescriptorServiceServer (flask.Flask):
                                % (self.ENV_CONFIG,
                                   os.environ.get(self.ENV_CONFIG, None),
                                   config_filepath))
+
+        # Descriptor factory setup
+        if self.ENV_DSS_DE_FACTORY not in os.environ:
+            raise RuntimeError("Missing environment configuration variable "
+                               "`%s`, which should be set to the configuration "
+                               "label of the DescriptorElementFactory to use."
+                               % self.ENV_DSS_DE_FACTORY)
+        de_factory_label = os.environ[self.ENV_DSS_DE_FACTORY]
+        descr_elem_factory = \
+            DescriptorFactoryConfiguration.new_inst(de_factory_label)
 
         # Cache of ContentDescriptor instances
         descriptor_cache = {}
@@ -192,7 +214,8 @@ class DescriptorServiceServer (flask.Flask):
                     d = descriptor_cache[descriptor_label]
                 with SimpleTimer("Computing descriptor...", self.log.debug):
                     try:
-                        descriptor = d.compute_descriptor(de).tolist()
+                        descr_elem = d.compute_descriptor(de, descr_elem_factory)
+                        descriptor = descr_elem.vector().tolist()
                         message = "Descriptor computed of type '%s'" \
                                   % descriptor_label
                     except ValueError, ex:

@@ -129,8 +129,8 @@ class ContentDescriptor (object):
             with such storage.
         :type overwrite: bool
 
-        :return: Feature vector.
-        :rtype: numpy.core.multiarray.ndarray
+        :return: Result descriptor element.
+        :rtype: smqtk.data_rep.DescriptorElement
 
         """
         # Check content type against listed valid types
@@ -149,6 +149,8 @@ class ContentDescriptor (object):
         if overwrite or not descr_elem.has_vector():
             vec = self._compute_descriptor(data)
             descr_elem.set_vector(vec)
+        else:
+            self.log.debug("Found existing vector in generated element.")
 
         return descr_elem
 

@@ -3,8 +3,6 @@ __author__ = 'purg'
 import hashlib
 import mimetypes
 import requests
-import time
-import uuid
 
 from smqtk.data_rep import DataElement
 
@@ -24,9 +22,6 @@ class DataUrlElement (DataElement):
         """
         super(DataUrlElement, self).__init__()
 
-        # Only keeping stringification of UUID, removing dashes
-        self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
-            .replace('-', '')
         self._url = url_address
         self._md5_cache = None
 
@@ -61,7 +56,7 @@ class DataUrlElement (DataElement):
         :rtype: collections.Hashable
 
         """
-        return self._uuid
+        return self.md5()
 
     def get_bytes(self):
         """

@@ -2,8 +2,6 @@ __author__ = 'purg'
 
 import base64
 import hashlib
-import time
-import uuid
 
 from smqtk.data_rep import DataElement
 
@@ -35,9 +33,6 @@ class DataMemoryElement (DataElement):
     def __init__(self, bytes, content_type):
         super(DataMemoryElement, self).__init__()
 
-        # Only keeping stringification of UUID, removing dashes
-        self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
-            .replace('-', '')
         self._bytes = bytes
         self._content_type = content_type
 
@@ -61,7 +56,7 @@ class DataMemoryElement (DataElement):
         :rtype: collections.Hashable
 
         """
-        return self._uuid
+        return self.md5()
 
     def get_bytes(self):
         """

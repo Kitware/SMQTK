@@ -6,6 +6,8 @@ import abc
 import smqtk_config
 
 from smqtk.data_rep.data_set_impl import get_data_set_impls
+from smqtk.data_rep.descriptor_element_impl import get_descriptor_element_impls
+from smqtk.data_rep.descriptor_element_factory import DescriptorElementFactory
 from smqtk.content_description import get_descriptors
 from smqtk.indexing import get_indexers
 
@@ -101,6 +103,53 @@ class DataSetConfiguration (ConfigurationInterface):
         label_sect = cls.get_config_sect()[label]
         ds_cls = get_data_set_impls()[label_sect['type']]
         return ds_cls(**label_sect['init'])
+
+
+class DescriptorFactoryConfiguration (ConfigurationInterface):
+    """
+    Interface into DescriptorElementFactory configurations in the common system
+    configuration file.
+    """
+
+    CFG_SECT = "DescriptorElementFactories"
+
+    @classmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return cls.BASE_CONFIG[cls.CFG_SECT]
+
+    @classmethod
+    def available_labels(cls):
+        """
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
+        """
+        return cls.get_config_sect().keys()
+
+    @classmethod
+    def new_inst(cls, label):
+        """
+        Construct a new instance of the type and with parameters associated with
+        the given label.
+
+        :param label: the configuration label
+        :type label: str
+
+        :raises KeyError: The given label does not exist in the system
+            configuration
+
+        :return: New instance of type and parameters associated with the given
+            label.
+
+        """
+        label_sect = cls.get_config_sect()[label]
+        d_type = get_descriptor_element_impls()[label_sect['type']]
+        init_params = label_sect['init']
+        return DescriptorElementFactory(d_type, init_params)
 
 
 class ContentDescriptorConfiguration (ConfigurationInterface):

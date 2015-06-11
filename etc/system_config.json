@@ -24,6 +24,29 @@
         }
     },
 
+    "DescriptorElementFactories": {
+        // For a list of available descriptor types, see the
+        // smqtk.data_rep.descriptor_element_impl module.
+
+        // Memory-based descriptor storage
+        "MemoryDescriptorFactory": {
+            "type": "DescriptorMemoryElement",
+            "init": {
+                // Other descriptor implementation construction parameters,
+                // i.e. parameters other than the type string and UUID, should
+                // be set here.
+            }
+        },
+
+        // File-based descriptor storage
+        "LocalDiskFactory": {
+            "type": "DescriptorFileElement",
+            "init": {
+                "save_dir": "/Users/purg/dev/smqtk/source/work/LocalDescriptors"
+            }
+        }
+    },
+
     "ContentDescriptors": {
         // "name": {
         //     "type": "typeName",
@@ -118,6 +141,7 @@
     },
 
     "Fusion": {
+        // TODO: This is outdated for new similarity and IQR indexing structures
         // <label>: {
         //      "catalyst": {
         //          "type: <class_label>,

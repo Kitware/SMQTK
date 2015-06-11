@@ -1,10 +1,10 @@
 __author__ = 'purg'
 
-import cPickle
 import numpy
 import os.path as osp
 
 from smqtk.data_rep import DescriptorElement
+from smqtk.utils import safe_create_dir
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -12,38 +12,37 @@ class DescriptorMemoryElement (DescriptorElement):
     In-memory representation of descriptor elements.
     """
 
-    def __init__(self, source_descriptor, uuid, vector):
+    # In-memory cache of descriptor vectors
+    MEMORY_CACHE = {}
+
+    def has_vector(self):
         """
-        Initialize in-memory descriptor element.
-
-        :param source_descriptor: ContentDescriptor that generated this
-            descriptor.
-        :type source_descriptor: smqtk.content_description.ContentDescriptor
-
-        :param uuid: Unique ID value for this vector
-        :type uuid: collections.Hashable
-
-        :param vector: Numpy ndarray to store
-        :type vector: numpy.core.multiarray.ndarray
-
+        :return: Whether or not this container current has a descriptor vector
+            stored.
+        :rtype: bool
         """
-        super(DescriptorMemoryElement, self).__init__(source_descriptor)
-        self._uuid = uuid
-        self._vector = vector
-
-    def uuid(self):
-        """
-        :return: Unique ID for this vector.
-        :rtype: collections.Hashable
-        """
-        return self._uuid
+        return self.uuid() in DescriptorMemoryElement.MEMORY_CACHE
 
     def vector(self):
         """
-        :return: The descriptor vector as a numpy array.
-        :rtype: numpy.core.multiarray.ndarray
+        :return: Get the stored descriptor vector as a numpy array. This returns
+            None of there is no vector stored in this container.
+        :rtype: numpy.core.multiarray.ndarray or None
         """
-        return self._vector
+        return DescriptorMemoryElement.MEMORY_CACHE.get(self.uuid(), None)
+
+    def set_vector(self, new_vec):
+        """
+        Set the contained vector.
+
+        If this container already stores a descriptor vector, this will
+        overwrite it.
+
+        :param new_vec: New vector to contain.
+        :type new_vec: numpy.core.multiarray.ndarray
+
+        """
+        DescriptorMemoryElement.MEMORY_CACHE[self.uuid()] = new_vec
 
 
 class DescriptorFileElement (DescriptorElement):
@@ -60,45 +59,38 @@ class DescriptorFileElement (DescriptorElement):
 
     """
 
-    def __init__(self, source_descriptor, uuid, vector, save_dir):
+    def __init__(self, type_str, uuid, save_dir):
         """
         Initialize a file-base descriptor element.
 
-        :param source_descriptor: ContentDescriptor that generated this
-            descriptor.
-        :type source_descriptor: smqtk.content_description.ContentDescriptor
+        :param type_str: Type of descriptor. This is usually the name of the
+            content descriptor that generated this vector.
+        :type type_str: str
 
         :param uuid: uuid for this descriptor
         :type uuid: collections.Hashable
 
-        :param vector: Numpy array.
-        :type vector: numpy.core.multiarray.ndarray
-
-        :param save_dir: Directory to save this element's contents.
+        :param save_dir: Directory to save this element's contents. If this path
+            is relative, we assume relative to the current working directory.
         :type save_dir: str | unicode
 
         """
-        super(DescriptorFileElement, self).__init__(source_descriptor)
+        super(DescriptorFileElement, self).__init__(type_str, uuid)
 
         self._save_dir = osp.abspath(osp.expanduser(save_dir))
 
         # Saving components
-        self._uuid_filepath = osp.join(self._save_dir,
-                                       "%s.uuid.pickle" % str(uuid))
         self._vec_filepath = osp.join(self._save_dir,
-                                      "%s.vactor.npy" % str(uuid))
+                                      "%s.%s.vector.npy" % (self._type_label,
+                                                            str(uuid)))
 
-        numpy.save(self._vec_filepath, vector)
-        with open(self._uuid_filepath, 'wb') as ofile:
-            cPickle.dump(uuid, ofile)
-
-    def uuid(self):
+    def has_vector(self):
         """
-        :return: Unique ID for this vector.
-        :rtype: collections.Hashable
+        :return: Whether or not this container current has a descriptor vector
+            stored.
+        :rtype: bool
         """
-        with open(self._uuid_filepath, 'rb') as uuid_file:
-            return cPickle.load(uuid_file)
+        return osp.isfile(self._vec_filepath)
 
     def vector(self):
         """
@@ -107,7 +99,24 @@ class DescriptorFileElement (DescriptorElement):
         """
         # TODO: Load as memmap?
         #       i.e. modifications by user to vector will be reflected on disk.
-        return numpy.load(self._vec_filepath)
+        if self.has_vector():
+            return numpy.load(self._vec_filepath)
+        else:
+            return None
+
+    def set_vector(self, new_vec):
+        """
+        Set the contained vector.
+
+        If this container already stores a descriptor vector, this will
+        overwrite it.
+
+        :param new_vec: New vector to contain.
+        :type new_vec: numpy.core.multiarray.ndarray
+
+        """
+        safe_create_dir(osp.dirname(self._vec_filepath))
+        numpy.save(self._vec_filepath, new_vec)
 
 
 DESCRIPTOR_ELEMENT_CLASS = [

@@ -38,7 +38,9 @@ class DataFileSet (DataSet):
         """
         Initialize a new or existing file set from a root directory.
 
-        :param root_directory: Directory that this file set is based in.
+        :param root_directory: Directory that this file set is based in. If
+            relative, it is interpreted as relative to the DATA_DIR path set
+            in the `smqtk_config` module.
         :type root_directory: str
 
         :param md5_chunk: Number of segments to split data element MD5 sum into

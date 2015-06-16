@@ -16,7 +16,9 @@ class DataFileElement (DataElement):
         """
         Create a new FileElement.
 
-        :param filepath: Path to the file to wrap.
+        :param filepath: Path to the file to wrap.  If relative, it is
+            interpreted as relative to the WORK_DIR path set in the
+            `smqtk_config` module.
         :type filepath: str
 
         """

@@ -190,7 +190,7 @@ class ContentDescriptor (object):
         :type pool_type: type
 
         :return: Mapping of data UID to computed feature vector
-        :rtype: dict of (collections.Hashable, numpy.core.multiarray.ndarray)
+        :rtype: dict[collections.Hashable, smqtk.data_rep.DescriptorElement]
 
         """
         self.log.info("Async compute features")

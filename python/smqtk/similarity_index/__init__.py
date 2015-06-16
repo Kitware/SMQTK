@@ -7,41 +7,15 @@ import abc
 import logging
 
 
-class SimilarityNN (object):
+class SimilarityIndex (object):
     """
-    Common interface for content-based nearest-neighbor computation.
-
-    For what we're trying to go for as being a simplified API, base DataElement
-    instances are used when interacting with these classes. Thus, since
-    similarity is computed via descriptors, a SimilarityNN instance must be
-    constructed with a ContentDescriptor instance that it should use for feature
-    computation. This being the case, if the ContentDescriptor implementation
-    being used does not have caching mechanisms, redundant descriptor
-    computation may occur with respect to what else may be going on in the
-    system.
-
+    Common interface for descriptor-based nearest-neighbor computation.
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, content_descriptor):
-        """
-        Initialize this similarity indexer to compute similarity based on the
-        given content descriptor.
-
-        :param content_descriptor: Content descriptor instance to provide
-            descriptors
-        :type content_descriptor: smqtk.content_description.ContentDescriptor
-
-        """
-        self._content_descriptor = content_descriptor
-
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
-
+    @classmethod
     @abc.abstractmethod
-    def is_usable(self):
+    def is_usable(cls):
         """
         Check whether this implementation is available for use.
 
@@ -61,36 +35,48 @@ class SimilarityNN (object):
         """
         return
 
+    @property
+    def _log(self):
+        return logging.getLogger('.'.join([self.__module__,
+                                           self.__class__.__name__]))
+
     @abc.abstractmethod
-    def build_index(self, data):
+    def count(self):
         """
-        Build the index over the given data elements.
+        :return: Number of elements in this index.
+        :rtype: int
+        """
+        return
+
+    @abc.abstractmethod
+    def build_index(self, descriptors):
+        """
+        Build the index over the descriptor data elements.
 
         Subsequent calls to this method should rebuild the index, not add to it.
 
         :raises ValueError: No data available in the given iterable.
 
-        :param data: Iterable of data elements to build index over.
-        :type data: collections.Iterable[smqtk.data_rep.DataElement]
+        :param descriptors: Iterable of descriptor elements to build index over.
+        :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
         return
 
     @abc.abstractmethod
-    def add_to_index(self, data):
+    def nn(self, d, n=1):
         """
-        Add the given data element to the index.
+        Return the nearest `N` neighbors to the given descriptor element.
 
-        :param data: New data element to add to our index.
-        :type data: smqtk.data_rep.DataElement
+        :param d: Descriptor element to compute the neighbors of.
+        :type d: smqtk.data_rep.DescriptorElement
 
-        """
-        return
+        :param n: Number of nearest neighbors to find.
+        :type n: int
 
-    @abc.abstractmethod
-    def nn(self, d, N=1):
-        """
-        Return the nearest N neighbors to the given data element.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
+        :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
         return
@@ -131,5 +117,5 @@ def get_similarity_nn():
             return False
         return True
 
-    return get_plugins(__name__, this_dir, helper_var, SimilarityNN,
+    return get_plugins(__name__, this_dir, helper_var, SimilarityIndex,
                        class_filter)

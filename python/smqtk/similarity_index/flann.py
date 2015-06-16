@@ -6,7 +6,7 @@ import numpy
 import os
 import tempfile
 
-from smqtk.similarity_nn import SimilarityNN
+from smqtk.similarity_index import SimilarityIndex
 from smqtk.utils import safe_create_dir
 
 try:
@@ -15,7 +15,7 @@ except ImportError:
     pyflann = None
 
 
-class FlannSimilarity (SimilarityNN):
+class FlannSimilarity (SimilarityIndex):
     """
     Nearest-neighbor computation using the FLANN library (pyflann module).
 
@@ -35,9 +35,9 @@ class FlannSimilarity (SimilarityNN):
         # work. This assumption will probably be invalidated in the future...
         return pyflann is not None
 
-    def __init__(self, content_descriptor, temp_dir, autotune=False,
+    def __init__(self, temp_dir, autotune=False,
                  target_precision=0.95, sample_fraction=0.1,
-                 distance_method='chi_square', random_seed=None):
+                 distance_method='hik', random_seed=None):
         """
         Initialize FLANN index properties. Index is of course not build yet (no
         data).
@@ -50,9 +50,6 @@ class FlannSimilarity (SimilarityNN):
         See the MATLAB section for detailed descriptions (python section will
         just point you to the MATLAB section).
 
-        :param content_descriptor: Content descriptor instance to provide
-            descriptors
-        :type content_descriptor: smqtk.content_description.ContentDescriptor
         :param temp_dir: Directory to use for working file storage, mainly for
             saving and loading indices for multiprocess transitions
         :type temp_dir: str
@@ -74,8 +71,6 @@ class FlannSimilarity (SimilarityNN):
         :type distance_method: str
 
         """
-        super(FlannSimilarity, self).__init__(content_descriptor)
-
         self._temp_dir = os.path.abspath(os.path.expanduser(temp_dir))
 
         self._build_autotune = bool(autotune)
@@ -100,15 +95,11 @@ class FlannSimilarity (SimilarityNN):
         # reloaded from cache.
         self._pid = None
 
-        # Cache of descriptors we're indexing over, mapped from data elem UUID.
-        # This should be preserved when forking processes.
-        #: :type: list[numpy.core.multiarray.ndarray]
+        # Cache of descriptors we're indexing over.
+        # - This should be preserved when forking processes, i.e. shouldn't have
+        #   to save to file like we do with FLANN index.
+        #: :type: list[smqtk.data_rep.DescriptorElement]
         self._descr_cache = None
-        #: :type: list[smqtk.data_rep.DataElement]
-        self._elem_cache = None
-        # UUID set cache for quick existence check
-        #: :type: set[collections.Hashable]
-        self._uuid_cache = set()
 
         self._rand_seed = None if random_seed is None else int(random_seed)
 
@@ -124,14 +115,22 @@ class FlannSimilarity (SimilarityNN):
                 and self._pid != multiprocessing.current_process().pid:
             pyflann.set_distance_type(self._distance_method)
             self._flann = pyflann.FLANN()
-            pts_array = numpy.array(self._descr_cache,
-                                    dtype=self._descr_cache[0].dtype)
+
+            pts_array = [d.vector() for d in self._descr_cache]
+            pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
             self._flann.load_index(self._flann_index_cache, pts_array)
             self._pid = multiprocessing.current_process().pid
 
-    def build_index(self, data):
+    def count(self):
         """
-        Build the index over the given data elements.
+        :return: Number of elements in this index.
+        :rtype: int
+        """
+        return len(self._descr_cache) if self._descr_cache else 0
+
+    def build_index(self, descriptors):
+        """
+        Build the index over the descriptors data elements.
 
         Subsequent calls to this method should rebuild the index, not add to it.
 
@@ -142,8 +141,10 @@ class FlannSimilarity (SimilarityNN):
                 a main or child process rebuild's the index, as we clear the old
                 cache away.
 
-        :param data: Iterable of data elements to build index over.
-        :type data: collections.Iterable[smqtk.data_rep.DataElement]
+        :raises ValueError: No data available in the given iterable.
+
+        :param descriptors: Iterable of descriptors elements to build index over.
+        :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
         # If there is already an index, clear the cache file if we are in the
@@ -157,22 +158,17 @@ class FlannSimilarity (SimilarityNN):
 
         # Compute descriptors for data elements
         self._log.debug("Computing descriptors for data")
-        uid2vec = \
-            self._content_descriptor.compute_descriptor_async(data)
+        # uid2vec = \
+        #     self._content_descriptor.compute_descriptor_async(data)
         # Translate returned mapping into cache lists
-        self._descr_cache = []
-        self._elem_cache = []
-        self._uuid_cache = set()
-        for de in data:
-            self._elem_cache.append(de)
-            self._uuid_cache.add(de.uuid())
-            self._descr_cache.append(uid2vec[de.uuid()])
+        self._descr_cache = [d for d in sorted(descriptors,
+                                               key=lambda e: e.uuid())]
         if not self._descr_cache:
             raise ValueError("No data provided in given iterable.")
 
         # numpy array version for FLANN
-        pts_array = numpy.array(self._descr_cache,
-                                dtype=self._descr_cache[0].dtype)
+        pts_array = [d.vector() for d in self._descr_cache]
+        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
 
         # Reset PID/FLANN/saved cache
         self._pid = multiprocessing.current_process().pid
@@ -200,50 +196,49 @@ class FlannSimilarity (SimilarityNN):
                         self._flann_index_cache)
         self._flann.save_index(self._flann_index_cache)
 
-    def add_to_index(self, data):
+    def nn(self, d, n=1):
         """
-        Add the given data element to the index.
+        Return the nearest `N` neighbors to the given descriptor element.
 
-        :param data: New data element to add to our index.
-        :type data: smqtk.data_rep.DataElement
+        :param d: Descriptor element to compute the neighbors of.
+        :type d: smqtk.data_rep.DescriptorElement
+
+        :param n: Number of nearest neighbors to find.
+        :type n: int
+
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
+        :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
         self._restore_index()
+        vec = d.vector()
 
-        # If the uuid of the given data is already in the index, do nothing
-        if data.uuid() in self._uuid_cache:
-            self._log.debug("Index already contains data element UUID[%s]",
-                            str(data.uuid()))
-            return
-
-        # add new content's descriptor to cache, rebuild FLANN index from
-        # existing params, but new descriptor point set.
-        vec = self._content_descriptor.compute_descriptor(data)
-        self._descr_cache.append(vec)
-        self._elem_cache.append(data)
-        self._uuid_cache.add(data.uuid())
-
-        pyflann.set_distance_type(self._distance_method)
-        pts_array = numpy.array(self._descr_cache,
-                                dtype=self._descr_cache[0].dtype)
-        self._flann.build_index(pts_array, **self._flann_build_params)
-
-    def nn(self, d, N=1):
-        self._restore_index()
-
-        if d.uuid() in self._uuid_cache:
-            i = self._elem_cache.index(d)
-            vec = self._descr_cache[i]
-        else:
-            vec = self._content_descriptor.compute_descriptor(d)
-
+        # If the distance method is HIK, we need to treat it special since that
+        # method produces a similarity score, not a distance score.
+        #   -
+        #
         # FLANN asserts that we query for <= index size, thus the use of min()
-        #: :type: numpy.core.multiarray.ndarray
-        idxs = self._flann.nn_index(vec, min(N, len(self._descr_cache)))[0]
-        # When N>1, return value is a 2D array for some reason
+        if self._distance_method == 'hik':
+            #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+            idxs, dists = self._flann.nn_index(vec, len(self._descr_cache),
+                                               **self._flann_build_params)
+
+        else:
+            #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+            idxs, dists = self._flann.nn_index(vec,
+                                               min(n, len(self._descr_cache)),
+                                               **self._flann_build_params)
+
+        # When N>1, return value is a 2D array. Since this method limits query
+        #   to a single descriptor, we reduce to 1D arrays.
         if len(idxs.shape) > 1:
             idxs = idxs[0]
-        return [self._elem_cache[i] for i in idxs]
+            dists = dists[0]
+        if self._distance_method == 'hik':
+            idxs = tuple(reversed(idxs))[:n]
+            dists = tuple(reversed(dists))[:n]
+        return [self._descr_cache[i] for i in idxs], dists
 
 
 SIMILARITY_NN_CLASS = FlannSimilarity

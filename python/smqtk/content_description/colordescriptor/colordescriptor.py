@@ -114,7 +114,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         :type kmeans_k: int
 
         :param flann_target_precision: Target precision percent to tune index
-            for. Default is 0.90 (90% accuracy). For some codebooks, if this is
+            for. Default is 0.95 (95% accuracy). For some codebooks, if this is
             too close to 1.0, the FLANN library may non-deterministically
             overflow, causing an infinite loop requiring a SIGKILL to stop.
         :type flann_target_precision: float

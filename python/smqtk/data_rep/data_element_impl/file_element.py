@@ -3,6 +3,7 @@ __author__ = 'purg'
 import mimetypes
 import os.path as osp
 
+from smqtk_config import WORK_DIR
 from smqtk.data_rep import DataElement
 
 
@@ -15,13 +16,16 @@ class DataFileElement (DataElement):
         """
         Create a new FileElement.
 
-        :param filepath: Path to the file to wrap.
+        :param filepath: Path to the file to wrap.  If relative, it is
+            interpreted as relative to the WORK_DIR path set in the
+            `smqtk_config` module.
         :type filepath: str
 
         """
         super(DataFileElement, self).__init__()
 
-        self._filepath = osp.abspath(osp.expanduser(filepath))
+        self._filepath = osp.abspath(osp.join(WORK_DIR,
+                                              osp.expanduser(filepath)))
         self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):

@@ -8,6 +8,8 @@ import os
 
 import re
 
+from smqtk_config import DATA_DIR
+
 from smqtk.data_rep import DataElement, DataSet
 from smqtk.utils import safe_create_dir
 from smqtk.utils.file_utils import iter_directory_files
@@ -36,7 +38,9 @@ class DataFileSet (DataSet):
         """
         Initialize a new or existing file set from a root directory.
 
-        :param root_directory: Directory that this file set is based in.
+        :param root_directory: Directory that this file set is based in. If
+            relative, it is interpreted as relative to the DATA_DIR path set
+            in the `smqtk_config` module.
         :type root_directory: str
 
         :param md5_chunk: Number of segments to split data element MD5 sum into
@@ -44,7 +48,12 @@ class DataFileSet (DataSet):
         :type md5_chunk: int
 
         """
-        self._root_dir = os.path.abspath(root_directory)
+        self._root_dir = os.path.abspath(
+            os.path.join(
+                DATA_DIR,
+                os.path.expanduser(root_directory)
+            )
+        )
         self._md5_chunk = md5_chunk
 
         self._log.debug("Initializing FileSet under root dir: %s",

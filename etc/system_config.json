@@ -11,14 +11,16 @@
         "example_image": {
             "type": "DataFileSet",
             "init": {
-                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                // DataFileSet implementation interprets relative paths to the
+                // DATA_DIR variable as configured in smqtk_config module.
+                "root_directory": "FileDataSets/example_image/data",
                 "md5_chunk": 8
             }
         },
         "example_video": {
             "type": "DataFileSet",
             "init": {
-                "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_video/data",
+                "root_directory": "FileDataSets/example_video/data",
                 "md5_chunk": 8
             }
         }
@@ -32,6 +34,9 @@
         "MemoryDescriptorFactory": {
             "type": "DescriptorMemoryElement",
             "init": {
+                // No initialization parameters for this factory, simply stores
+                // vectors in local RAM.
+                //
                 // Other descriptor implementation construction parameters,
                 // i.e. parameters other than the type string and UUID, should
                 // be set here.
@@ -42,7 +47,10 @@
         "LocalDiskFactory": {
             "type": "DescriptorFileElement",
             "init": {
-                "save_dir": "/Users/purg/dev/smqtk/source/work/LocalDescriptors"
+                // DescriptorFileElement implementation interprets relative
+                // paths to the WORK_DIR variable as configured in smqtk_config
+                // module.
+                "save_dir": "LocalDescriptors"
             }
         }
     },

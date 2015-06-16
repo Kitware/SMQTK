@@ -77,8 +77,8 @@ class ContentDescriptor (object):
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
 
-        This method does nothing if there is already a model generated or if
-        this descriptor does not generate a model.
+        This method should do nothing if there is already a model generated or
+        if this descriptor does not generate a model.
 
         This abstract super method should be invoked for common error checking.
 

@@ -3,6 +3,7 @@ __author__ = 'purg'
 import mimetypes
 import os.path as osp
 
+from smqtk_config import WORK_DIR
 from smqtk.data_rep import DataElement
 
 
@@ -21,7 +22,8 @@ class DataFileElement (DataElement):
         """
         super(DataFileElement, self).__init__()
 
-        self._filepath = osp.abspath(osp.expanduser(filepath))
+        self._filepath = osp.abspath(osp.join(WORK_DIR,
+                                              osp.expanduser(filepath)))
         self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):

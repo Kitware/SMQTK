@@ -16,8 +16,8 @@ def safe_create_dir(d):
     :param d: Directory filepath to create
     :type d: str
 
-    :return: The directory that was create, i.e. the directory that was passed
-        in (absolute form).
+    :return: The directory that was created, i.e. the directory that was passed
+        (in absolute form).
     :rtype: str
 
     """

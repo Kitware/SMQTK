@@ -23,9 +23,15 @@ class DataSet (collections.Set):
         """
         return self.count()
 
+    def __getitem__(self, uuid):
+        return self.get_data(uuid)
+
     @abc.abstractmethod
     def __contains__(self, d):
         """
+        Different than has_uuid() because this takes another DataElement
+        instance, not a UUID.
+
         :param d: DataElement to test for containment
         :type d: smqtk.data_rep.DataElement
 

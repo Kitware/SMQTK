@@ -24,6 +24,29 @@
         }
     },
 
+    "DescriptorElementFactories": {
+        // For a list of available descriptor types, see the
+        // smqtk.data_rep.descriptor_element_impl module.
+
+        // Memory-based descriptor storage
+        "MemoryDescriptorFactory": {
+            "type": "DescriptorMemoryElement",
+            "init": {
+                // Other descriptor implementation construction parameters,
+                // i.e. parameters other than the type string and UUID, should
+                // be set here.
+            }
+        },
+
+        // File-based descriptor storage
+        "LocalDiskFactory": {
+            "type": "DescriptorFileElement",
+            "init": {
+                "save_dir": "/Users/purg/dev/smqtk/source/work/LocalDescriptors"
+            }
+        }
+    },
+
     "ContentDescriptors": {
         // "name": {
         //     "type": "typeName",
@@ -42,6 +65,20 @@
                 // model generation parameters
                 "kmeans_k": 256,
                 "flann_sample_fraction": 1.0
+            }
+        },
+        "CD_CSIFT_Image_example_spatial": {
+            "type": "ColorDescriptor_Image_csift",
+            "init": {
+                // This impl allows relative paths, to be interpreted relative
+                // to system DATA_DIR / WORK_DIR respectively.
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "random_seed": 42,
+                // model generation parameters
+                "kmeans_k": 256,
+                "flann_sample_fraction": 1.0,
+                "use_spatial_pyramid": 1
             }
         },
         "CD_RGSIFT_Image_example": {
@@ -104,6 +141,7 @@
     },
 
     "Fusion": {
+        // TODO: This is outdated for new similarity and IQR indexing structures
         // <label>: {
         //      "catalyst": {
         //          "type: <class_label>,

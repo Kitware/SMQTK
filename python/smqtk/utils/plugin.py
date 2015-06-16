@@ -60,7 +60,8 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
     :rtype: dict of (str, type)
 
     """
-    log = logging.getLogger("getPlugins[%s]" % base_module)
+    log = logging.getLogger('.'.join([__name__,
+                                      "getPlugins[%s]" % base_module]))
     log.debug("Getting plugins for module '%s'", base_module)
     class_map = {}
     for file_name in os.listdir(search_dir):

@@ -36,7 +36,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     in an indexer.
 
     Codebook generated via kmeans given a set of input data. FLANN index model
-    used for quantization, buily using auto-tuning (picks the best indexing
+    used for quantization, built using auto-tuning (picks the best indexing
     algorithm of linear, kdtree, kmeans, or combined), and using the Chi-Squared
     distance function.
 
@@ -123,6 +123,10 @@ class ColorDescriptor_Base (ContentDescriptor):
             auto tuning. Default is 0.75 (75%).
         :type flann_sample_fraction: float
 
+        :param use_spatial_pyramid: Use spacial pyramids when quantizing low
+            level descriptors during feature computation.
+        :type use_spatial_pyramid: bool
+
         :param random_seed: Optional value to seed components requiring random
             operations.
         :type random_seed: None or int
@@ -149,6 +153,13 @@ class ColorDescriptor_Base (ContentDescriptor):
         self._codebook = None
         if self.has_model:
             self._codebook = numpy.load(self.codebook_filepath)
+
+    @property
+    def name(self):
+        if self._use_sp:
+            return '_'.join([self.__class__.__name__, 'spatial'])
+        else:
+            return self.__class__.__name__
 
     @property
     def codebook_filepath(self):
@@ -371,7 +382,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
 
-    def compute_descriptor(self, data):
+    def _compute_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
@@ -388,11 +399,11 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: numpy.ndarray
 
         """
-        super(ColorDescriptor_Base, self).compute_descriptor(data)
+        super(ColorDescriptor_Base, self)._compute_descriptor(data)
 
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
-        if osp.isfile(checkpoint_filepath):
-            return numpy.load(checkpoint_filepath)
+        # if osp.isfile(checkpoint_filepath):
+        #     return numpy.load(checkpoint_filepath)
 
         if not self.has_model:
             raise RuntimeError("No model currently loaded! Check the existence "

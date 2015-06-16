@@ -195,6 +195,10 @@ def flann_quantize_data2(flann, in_descriptors, func_normalize=None,
     quantized = None
 
     # Quantization helper function
+    # Finds k nearest neighbors to descriptor, creating a vector that is of the
+    # format:
+    #   [ frm x y nn_1 ... nn_k dist_1 ... dist_k ]
+    # which has a total size of (k*2)+3
     # noinspection PyShadowingNames
     def quantize_then_write(rows, quantized):
         data = np.matrix(rows)

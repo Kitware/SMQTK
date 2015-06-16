@@ -17,48 +17,11 @@ import traceback
 from smqtk.utils import SimpleTimer
 
 
-def _async_feature_generator_helper(data, descriptor):
-    """
-
-    :param data: Data to generate feature over
-    :type data: smqtk.data_rep.DataElement
-
-    :param descriptor: Feature descriptor that will generate the feature
-    :type descriptor: SMQTK.content_description.ContentDescriptor
-
-    :return: UID and associated feature vector
-    :rtype: (int, numpy.core.multiarray.ndarray)
-
-    """
-    log = logging.getLogger("_async_feature_generator_helper")
-    try:
-        # log.debug("Generating feature for [%s] -> %s", data, data.filepath)
-        feat = descriptor.compute_descriptor(data)
-        # Invalid feature matrix if there are inf or NaN values
-        # noinspection PyUnresolvedReferences
-        if numpy.isnan(feat.sum()):
-            log.error("[%s] Computed feature has NaN values.", data)
-            return None
-        return feat
-    except Exception, ex:
-        log.error("[%s] Failed feature generation\n"
-                  "Error: %s\n"
-                  "Traceback:\n"
-                  "%s",
-                  data, str(ex), traceback.format_exc())
-        return None
-
-
 class ContentDescriptor (object):
     """
     Base abstract Feature Descriptor interface
     """
     __metaclass__ = abc.ABCMeta
-
-    # TODO: Input data type white-list + black-lis?
-    #       - Requires data objects to specify what data type they are.
-    #       - function for telling a user whether it will accept a data element
-    #         or not. Ideally a static/class method.
 
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
@@ -140,11 +103,10 @@ class ContentDescriptor (object):
             raise ValueError("Discovered invalid content type among input "
                              "data: %s" % sorted(invalid_types_found))
 
-    @abc.abstractmethod
-    def compute_descriptor(self, data):
+    def compute_descriptor(self, data, descr_factory, overwrite=False):
         """
-        Given some kind of data, process and return a feature vector as a Numpy
-        array.
+        Given some kind of data, return a descriptor element containing a
+        descriptor vector.
 
         This abstract super method should be invoked for common error checking.
 
@@ -155,17 +117,45 @@ class ContentDescriptor (object):
         :param data: Some kind of input data for the feature descriptor.
         :type data: smqtk.data_rep.DataElement
 
-        :return: Feature vector.
-        :rtype: numpy.core.multiarray.ndarray
+        :param descr_factory: Factory instance to produce the wrapping
+            descriptor element instance.
+        :type descr_factory: smqtk.data_rep.DescriptorElementFactory
+
+        :param overwrite: Whether or not to force re-computation of a descriptor
+            vector for the given data even when there exists a precomputed
+            vector in the generated DescriptorElement as generated from the
+            provided factory. This will overwrite the persistently stored vector
+            if the provided factory produces a DescriptorElement implementation
+            with such storage.
+        :type overwrite: bool
+
+        :return: Result descriptor element.
+        :rtype: smqtk.data_rep.DescriptorElement
 
         """
+        # Check content type against listed valid types
         ct = data.content_type()
         if ct not in self.valid_content_types():
             self.log.error("Cannot compute descriptor of content type '%s'", ct)
             raise ValueError("Cannot compute descriptor of content type '%s'"
                              % ct)
 
-    def compute_descriptor_async(self, *data, **kwds):
+        # Produce the descriptor element container via the provided factory
+        # - If the generated element already contains a vector, because the
+        #   implementation provides some kind of persistent caching mechanism or
+        #   something, don't compute another descriptor vector unless the
+        #   overwrite flag is True
+        descr_elem = descr_factory.new_descriptor(self.name, data.uuid())
+        if overwrite or not descr_elem.has_vector():
+            vec = self._compute_descriptor(data)
+            descr_elem.set_vector(vec)
+        else:
+            self.log.debug("Found existing vector in generated element.")
+
+        return descr_elem
+
+    def compute_descriptor_async(self, data_iter, descr_factory,
+                                 overwrite=False, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
 
@@ -173,9 +163,22 @@ class ContentDescriptor (object):
         parallel factor as this method can take that specification as an
         argument.
 
-        :param data: List of data elements to compute features for. These must
-            have UIDs assigned for feature association in return value
-        :type data: list[smqtk.data_rep.DataElement]
+        :param data_iter: Iterable of data elements to compute features for.
+            These must have UIDs assigned for feature association in return
+            value.
+        :type data_iter: collections.Iterable[smqtk.data_rep.DataElement]
+
+        :param descr_factory: Factory instance to produce the wrapping
+            descriptor element instances.
+        :type descr_factory: smqtk.data_rep.DescriptorElementFactory
+
+        :param overwrite: Whether or not to force re-computation of a descriptor
+            vectors for the given data even when there exists precomputed
+            vectors in the generated DescriptorElements as generated from the
+            provided factory. This will overwrite the persistently stored
+            vectors if the provided factory produces a DescriptorElement
+            implementation such storage.
+        :type overwrite: bool
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
@@ -187,26 +190,32 @@ class ContentDescriptor (object):
         :type pool_type: type
 
         :return: Mapping of data UID to computed feature vector
-        :rtype: dict of (int, numpy.core.multiarray.ndarray)
+        :rtype: dict[collections.Hashable, smqtk.data_rep.DescriptorElement]
 
         """
-        self.log.info("Async compute features processing %d elements",
-                      len(data))
+        self.log.info("Async compute features")
 
+        # Mapping of DataElement UUID to async processing result
+        #: :type: dict[collections.Hashable, multiprocessing.pool.ApplyResult]
+        ar_map = {}
+        # Mapping of DataElement UUID to the DescriptorElement for it.
+        #: :type: dict[collections.Hashable, smqtk.data_rep.DescriptorElement]
+        de_map = {}
+
+        # Queue up descriptor generation for descriptor elements that
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
         pool = pool_t(processes=parallel)
-        #: :type: dict of (int, multiprocessing.pool.ApplyResult)
-        ar_map = {}
-        with SimpleTimer("Starting pool...", self.log.debug):
-            for d in data:
-                ar_map[d.uuid()] = \
-                    pool.apply_async(_async_feature_generator_helper,
-                                     args=(d, self))
+        with SimpleTimer("Queuing descriptor computation...", self.log.debug):
+            for d in data_iter:
+                de_map[d.uuid()] = descr_factory.new_descriptor(self.name,
+                                                                d.uuid())
+                if overwrite or not de_map[d.uuid()].has_vector():
+                    ar_map[d.uuid()] = \
+                        pool.apply_async(_async_feature_generator_helper,
+                                         args=(self, d))
         pool.close()
 
-        #: :type: dict[int, numpy.core.multiarray.ndarray]
-        r_dict = {}
         failures = False
         # noinspection PyPep8Naming
         perc_T = 0.0
@@ -218,13 +227,13 @@ class ContentDescriptor (object):
                     failures = True
                     continue
                 else:
-                    r_dict[uid] = feat
+                    de_map[uid].set_vector(feat)
 
-                perc = float(i+1)/len(ar_map)
+                perc = float(i + 1) / len(ar_map)
                 if perc >= perc_T:
                     self.log.debug("Progress: [%d/%d] %3.3f%%",
-                                   i+1, len(ar_map),
-                                   float(i+1)/(len(ar_map)) * 100)
+                                   i + 1, len(ar_map),
+                                   float(i + 1) / (len(ar_map)) * 100)
                     perc_T += perc_inc
         pool.join()
 
@@ -233,7 +242,59 @@ class ContentDescriptor (object):
             raise RuntimeError("Failure occurred during data feature "
                                "computation. See logging.")
 
-        return r_dict
+        return de_map
+
+    @abc.abstractmethod
+    def _compute_descriptor(self, data):
+        """
+        Internal method that defines the generation of the descriptor vector for
+        a given data element. This returns a numpy array.
+
+        This method is only called if the data element has been verified to be
+        of a valid content type for this descriptor implementation.
+
+        :raises RuntimeError: Feature extraction failure of some kind.
+
+        :param data: Some kind of input data for the feature descriptor.
+        :type data: smqtk.data_rep.DataElement
+
+        :return: Feature vector.
+        :rtype: numpy.core.multiarray.ndarray
+
+        """
+        return
+
+
+def _async_feature_generator_helper(cd_inst, data):
+    """
+    Helper method for asynchronously producing a descriptor vector.
+
+    :param data: Data to generate feature over
+    :type data: smqtk.data_rep.DataElement
+
+    :param cd_inst: Content descriptor that will generate the feature
+    :type cd_inst: SMQTK.content_description.ContentDescriptor
+
+    :return: UID and associated feature vector
+    :rtype: (int, numpy.core.multiarray.ndarray)
+    """
+    log = logging.getLogger("_async_feature_generator_helper")
+    try:
+        # noinspection PyProtectedMember
+        feat = cd_inst._compute_descriptor(data)
+        # Invalid feature matrix if there are inf or NaN values
+        # noinspection PyUnresolvedReferences
+        if numpy.isnan(feat.sum()):
+            log.error("[%s] Computed feature has NaN values.", data)
+            return None
+        return feat
+    except Exception, ex:
+        log.error("[%s] Failed feature generation\n"
+                  "Error: %s\n"
+                  "Traceback:\n"
+                  "%s",
+                  data, str(ex), traceback.format_exc())
+        return None
 
 
 def get_descriptors():
@@ -261,4 +322,4 @@ def get_descriptors():
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CONTENT_DESCRIPTOR_CLASS"
     return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
-                       lambda cls: cls.is_usable())
+                       lambda c: c.is_usable())

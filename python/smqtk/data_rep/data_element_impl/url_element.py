@@ -29,6 +29,9 @@ class DataUrlElement (DataElement):
         if not (self._url[:7] == "http://" or self._url[:8] == "https://"):
             self._url = "http://" + self._url
 
+        # Check that the URL is valid, i.e. actually points to something
+        requests.get(self._url).raise_for_status()
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if

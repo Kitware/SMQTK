@@ -14,6 +14,8 @@ class DescriptorElement (object):
     This structure supports implementations that cache descriptor vectors on a
     per-UUID basis.
 
+    Element implementations should be picklable for standard serialization.
+
     """
     __metaclass__ = abc.ABCMeta
 

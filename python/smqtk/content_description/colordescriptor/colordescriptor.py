@@ -65,24 +65,25 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: bool
 
         """
-        log = logging.getLogger('.'.join([cls.__module__,
-                                          cls.__name__,
+        log = logging.getLogger('.'.join([ColorDescriptor_Base.__module__,
+                                          ColorDescriptor_Base.__name__,
                                           "is_usable"]))
 
-        if not hasattr(cls, "_is_usable_cache"):
+        if not hasattr(ColorDescriptor_Base, "_is_usable_cache"):
             # Check for colorDescriptor executable on the path
             import subprocess
             try:
-                # This should try to print out the CLI options return with code 1.
+                # This should try to print out the CLI options return with code
+                # 1.
                 subprocess.call(['colorDescriptor', '-h'],
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
             except OSError:
-                log.warn("Could not locate colorDescriptor executable. Make sure "
-                         "that its on the PATH! See "
+                log.warn("Could not locate colorDescriptor executable. Make "
+                         "sure that its on the PATH! See "
                          "smqtk/content_description/colordescriptor/INSTALL.md "
                          "for help.")
-                cls._is_usable_cache = False
+                ColorDescriptor_Base._is_usable_cache = False
 
             # Checking if DescriptorIO is importable
             if not utils.has_colordescriptor_module():
@@ -90,11 +91,11 @@ class ColorDescriptor_Base (ContentDescriptor):
                          "colorDescriptor package is on the PYTHONPATH! See "
                          "smqtk/content_description/colordescriptor/INSTALL.md "
                          "for help.")
-                cls._is_usable_cache = False
+                ColorDescriptor_Base._is_usable_cache = False
 
-            cls._is_usable_cache = True
+            ColorDescriptor_Base._is_usable_cache = True
 
-        return cls._is_usable_cache
+        return ColorDescriptor_Base._is_usable_cache
 
     def __init__(self, model_directory, work_directory,
                  kmeans_k=1024, flann_target_precision=0.95,

@@ -132,5 +132,8 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
             for cls in classes:
                 if filter_func is None or filter_func(cls):
                     class_map[cls.__name__] = cls
+                else:
+                    log.debug('[%s] Removed class type "%s" due to filter '
+                              'failure.', module_name, cls.__name__)
 
     return class_map

@@ -15,8 +15,14 @@ def partition_string(s, segments):
     ['foo', 'bar']
     >>> partition_string("foobar", 4)
     ['fo', 'ob', 'a', 'r']
+    >>> partition_string("foobar", 6)
+    ['f', 'o', 'o', 'b', 'a', 'r']
     >>> partition_string('d7ca25c5-b886-4a1b-87fe-5945313d350b', 11)
     ['d7ca', '25c5', '-b88', '6-4', 'a1b', '-87', 'fe-', '594', '531', '3d3', '50b']
+    >>> partition_string('a', 2)
+    Traceback (most recent call last):
+        ...
+    AssertionError: Cannot split given string into more segments than there are characters in the string!
 
     :raises AssertionError: Segmentation value greater than the length of the
         string.

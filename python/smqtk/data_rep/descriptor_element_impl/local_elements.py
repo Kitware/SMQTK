@@ -5,6 +5,7 @@ import os.path as osp
 
 from smqtk.data_rep import DescriptorElement
 from smqtk.utils import safe_create_dir
+from smqtk_config import WORK_DIR
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -71,13 +72,15 @@ class DescriptorFileElement (DescriptorElement):
         :type uuid: collections.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
-            is relative, we assume relative to the current working directory.
+            is relative, we interpret as relative to the WORK_DIR path set in
+            the `smqtk_config` module.
         :type save_dir: str | unicode
 
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
 
-        self._save_dir = osp.abspath(osp.expanduser(save_dir))
+        self._save_dir = osp.abspath(osp.join(WORK_DIR,
+                                              osp.expanduser(save_dir)))
 
         # Saving components
         self._vec_filepath = osp.join(self._save_dir,

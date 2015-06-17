@@ -7,6 +7,20 @@ import abc
 import logging
 
 
+class SimilarityIndexStateSaveError (Exception):
+    """
+    Exception for when as index was unable to be saved.
+    """
+    pass
+
+
+class SimilarityIndexStateLoadError (Exception):
+    """
+    Exception for when an index state cannot be loaded for whatever reason
+    """
+    pass
+
+
 class SimilarityIndex (object):
     """
     Common interface for descriptor-based nearest-neighbor computation.
@@ -59,6 +73,31 @@ class SimilarityIndex (object):
 
         :param descriptors: Iterable of descriptor elements to build index over.
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
+
+        """
+        return
+
+    @abc.abstractmethod
+    def save_index(self):
+        """
+        Save the current index state to a configured location. This
+        configuration should be set at instance construction.
+
+        This will overwrite a previously saved state given the same
+        configuration.
+
+        :raises SimilarityIndexStateSaveError: Unable to save the current index
+            state for some reason.
+
+        """
+        return
+
+    @abc.abstractmethod
+    def load_index(self):
+        """
+        Load a saved index state based on the current configuration.
+
+        :raises SimilarityIndexStateLoadError: Could not load index state.
 
         """
         return

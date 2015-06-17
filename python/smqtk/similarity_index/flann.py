@@ -1,13 +1,21 @@
 __author__ = 'purg'
 
+import cPickle
 import logging
 import multiprocessing
 import numpy
 import os
+import os.path as osp
 import tempfile
 
-from smqtk.similarity_index import SimilarityIndex
+from smqtk.similarity_index import (
+    SimilarityIndex,
+    SimilarityIndexStateLoadError,
+    SimilarityIndexStateSaveError,
+)
 from smqtk.utils import safe_create_dir
+
+from smqtk_config import DATA_DIR, WORK_DIR
 
 try:
     import pyflann
@@ -35,7 +43,7 @@ class FlannSimilarity (SimilarityIndex):
         # work. This assumption will probably be invalidated in the future...
         return pyflann is not None
 
-    def __init__(self, temp_dir, autotune=False,
+    def __init__(self, save_dir, temp_dir=tempfile.gettempdir(), autotune=False,
                  target_precision=0.95, sample_fraction=0.1,
                  distance_method='hik', random_seed=None):
         """
@@ -50,8 +58,15 @@ class FlannSimilarity (SimilarityIndex):
         See the MATLAB section for detailed descriptions (python section will
         just point you to the MATLAB section).
 
+        :param save_dir: Directory to use for save/load index file operations.
+            If relative, interpreted against DATA_DIR as configured in
+            `smqtk_config` module.
+        :type save_dir: str
         :param temp_dir: Directory to use for working file storage, mainly for
-            saving and loading indices for multiprocess transitions
+            saving and loading indices for multiprocess transitions. By default,
+            this is the platform specific standard temporary file directory. If
+            given a relative path, it is interpreted against WORK_DIR as
+            configured in `smqtk_config` module.
         :type temp_dir: str
         :param autotune: Whether or not to perform parameter auto-tuning when
             building the index. If this is False, then the `target_precision`
@@ -71,7 +86,14 @@ class FlannSimilarity (SimilarityIndex):
         :type distance_method: str
 
         """
-        self._temp_dir = os.path.abspath(os.path.expanduser(temp_dir))
+        self._save_dir = osp.abspath(osp.join(DATA_DIR,
+                                              osp.expanduser(save_dir)))
+        self._temp_dir = osp.abspath(osp.join(WORK_DIR,
+                                              osp.expanduser(temp_dir)))
+
+        # Standard save files relative to save directory
+        self._sf_flann_index = osp.join(self._save_dir, "flann.index")
+        self._sf_state = osp.join(self._save_dir, "flann.state.pickle")
 
         self._build_autotune = bool(autotune)
         self._build_target_precision = float(target_precision)
@@ -95,7 +117,8 @@ class FlannSimilarity (SimilarityIndex):
         # reloaded from cache.
         self._pid = None
 
-        # Cache of descriptors we're indexing over.
+        # In-order cache of descriptors we're indexing over.
+        # - flann.nn_index will spit out indices into this list
         # - This should be preserved when forking processes, i.e. shouldn't have
         #   to save to file like we do with FLANN index.
         #: :type: list[smqtk.data_rep.DescriptorElement]
@@ -195,6 +218,62 @@ class FlannSimilarity (SimilarityIndex):
         self._log.debug("Saving index to cache file: %s",
                         self._flann_index_cache)
         self._flann.save_index(self._flann_index_cache)
+
+    def save_index(self):
+        """
+        Save the current index state to a configured location. This
+        configuration should be set at instance construction.
+
+        This will overwrite previously saved state date given the same
+        configuration.
+
+        :raises SimilarityIndexStateSaveError: Unable to save the current index
+            state for some reason.
+
+        """
+        self._restore_index()
+        if self._flann is None:
+            raise SimilarityIndexStateSaveError("No index built yet to save")
+
+        safe_create_dir(self._save_dir)
+        self._flann.save_index(self._sf_flann_index)
+
+        state = {
+            "flann_params": self._flann_build_params,
+            "descr_cache": self._descr_cache,
+            "distance_method": self._distance_method,
+            "rand_seed": self._rand_seed
+        }
+        with open(self._sf_state, 'wb') as f:
+            cPickle.dump(state, f)
+
+    def load_index(self):
+        """
+        Load a saved index state based on the current configuration.
+
+        :raises SimilarityIndexStateLoadError: Could not load index state.
+
+        """
+        self._restore_index()
+
+        if False in (osp.isfile(self._sf_flann_index),
+                     osp.isfile(self._sf_state)):
+            raise SimilarityIndexStateLoadError("In complete index save state")
+
+        with open(self._sf_state, 'rb') as f:
+            state = cPickle.load(f)
+
+        self._distance_method = state['distance_method']
+        self._rand_seed = state['rand_seed']
+        self._descr_cache = state['descr_cache']
+        self._flann_build_params = state['flann_params']
+
+        pts_array = [d.vector() for d in self._descr_cache]
+        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
+
+        pyflann.set_distance_type(self._distance_method)
+        self._flann = pyflann.FLANN()
+        self._flann.load_index(self._sf_flann_index, pts_array)
 
     def nn(self, d, n=1):
         """

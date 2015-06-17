@@ -13,6 +13,7 @@ import logging
 import mimetypes
 import multiprocessing
 import os
+import requests
 
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
@@ -120,13 +121,19 @@ class DescriptorServiceServer (flask.Flask):
                                "`%s`, which should be set to the configuration "
                                "label of the DescriptorElementFactory to use."
                                % self.ENV_DSS_DE_FACTORY)
-        de_factory_label = os.environ[self.ENV_DSS_DE_FACTORY]
-        descr_elem_factory = \
-            DescriptorFactoryConfiguration.new_inst(de_factory_label)
+        self.de_factory_label = os.environ.get(self.ENV_DSS_DE_FACTORY,
+                                               "MemoryDescriptorFactory")
+        self.log.info("Using Descriptor factory: \"%s\"", self.de_factory_label)
+        try:
+            self.descr_elem_factory = \
+                DescriptorFactoryConfiguration.new_inst(self.de_factory_label)
+        except KeyError:
+            raise ValueError("Invalid factory label set to %s: \"%s\""
+                             % (self.ENV_DSS_DE_FACTORY, self.de_factory_label))
 
         # Cache of ContentDescriptor instances
-        descriptor_cache = {}
-        descriptor_cache_lock = multiprocessing.RLock()
+        self.descriptor_cache = {}
+        self.descriptor_cache_lock = multiprocessing.RLock()
 
         #
         # Security
@@ -138,6 +145,82 @@ class DescriptorServiceServer (flask.Flask):
             return flask.jsonify({
                 "labels": sorted(ContentDescriptorConfiguration
                                  .available_labels())
+            })
+
+        @self.route("/all/content_types")
+        def all_content_types():
+            """
+            Of available descriptors, what content types are processable, and
+            what types are associated to which available descriptor generator.
+            """
+            r = {}
+            all_types = set()
+            for l in ContentDescriptorConfiguration.available_labels():
+                d = self.get_descriptor_inst(l)
+                all_types.update(d.valid_content_types())
+                r[l] = sorted(d.valid_content_types())
+
+            return flask.jsonify({
+                "all": sorted(all_types),
+                "labels": r
+            })
+
+        @self.route("/all/compute/<path:uri>")
+        def all_compute(uri):
+            """
+            Compute descriptors over the specified content for all generators
+            that function over the data's content type.
+
+            # JSON Return format
+                {
+                    "success": <bool>
+
+                    "content_type": <str>
+
+                    "message": <str>
+
+                    "descriptors": {  "<label>":  <list[float]>, ... } | None
+
+                    "reference_uri": <str>
+                }
+
+            """
+            message = "execution nominal"
+
+            data_elem = None
+            try:
+                data_elem = self.resolve_data_element(uri)
+            except ValueError, ex:
+                message = "Failed URI resolution: %s" % str(ex)
+
+            descriptors = {}
+            finished_loop = False
+            if data_elem:
+                for l in ContentDescriptorConfiguration.available_labels():
+                    if data_elem.content_type() \
+                            in self.get_descriptor_inst(l).valid_content_types():
+                        d = None
+                        try:
+                            d = self.generate_descriptor(data_elem, l)
+                        except RuntimeError, ex:
+                            message = "Descriptor extraction failure: %s" \
+                                      % str(ex)
+                        except ValueError, ex:
+                            message = "Data content type issue: %s" % str(ex)
+
+                        descriptors[l] = d and d.vector().tolist()
+                if not descriptors:
+                    message = "No descriptors can handle URI content type: %s" \
+                              % data_elem.content_type
+                else:
+                    finished_loop = True
+
+            return flask.jsonify({
+                "success": finished_loop,
+                "content_type": data_elem.content_type(),
+                "message": message,
+                "descriptors": descriptors,
+                "reference_uri": uri
             })
 
         @self.route("/<string:descriptor_label>/<path:uri>")
@@ -165,71 +248,124 @@ class DescriptorServiceServer (flask.Flask):
             This uses the requests module to locally download a data file
             for processing.
 
+            # JSON Return format
+                {
+                    "success": <bool>
+
+                    "message": <str>
+
+                    "descriptor": <None|list[float]>
+
+                    "reference_uri": <str>
+                }
+
+            :type descriptor_label: str
+            :type uri: str
+
             """
-            success = True
-            message = "Nothing has happened yet"
-
-            # Data element to compute a descriptor for
-            de = None
-
-            # Resolve URI into DataElement instance
-            if uri[:7] == "file://":
-                self.log.debug("Given local disk filepath")
-                filepath = uri[7:]
-                if not os.path.isfile(filepath):
-                    success = False
-                    message = "File URI did not point to an existing file on " \
-                              "disk."
-                else:
-                    de = DataFileElement(filepath)
-
-            elif uri[:9] == "base64://":
-                self.log.debug("Given base64 string")
-                content_type = flask.request.args.get('content_type', None)
-                self.log.debug("Content type: %s", content_type)
-                if not content_type:
-                    self.log.warning("No content-type with given base64 data")
-                    success = False
-                    message = "No content-type with given base64 content."
-                else:
-                    b64str = uri[9:]
-                    de = DataMemoryElement.from_base64(b64str, content_type)
-
-            else:
-                self.log.debug("Given URL")
-                de = DataUrlElement(uri)
-
+            message = "execution nominal"
             descriptor = None
-            if success:  # so far...
-                # Get the descriptor instance for the given label, creating it
-                # if necessary.
-                if descriptor_label not in descriptor_cache:
-                    self.log.debug("Creating descriptor '%s'", descriptor_label)
-                    with descriptor_cache_lock:
-                        descriptor_cache[descriptor_label] = \
-                            ContentDescriptorConfiguration\
-                            .new_inst(descriptor_label)
-                with descriptor_cache_lock:
-                    #: :type: smqtk.content_description.ContentDescriptor
-                    d = descriptor_cache[descriptor_label]
-                with SimpleTimer("Computing descriptor...", self.log.debug):
-                    try:
-                        descr_elem = d.compute_descriptor(de, descr_elem_factory)
-                        descriptor = descr_elem.vector().tolist()
-                        message = "Descriptor computed of type '%s'" \
-                                  % descriptor_label
-                    except ValueError, ex:
-                        success = False
-                        message = "Descriptor '%s' had an issue with the input " \
-                                  "data: %s" \
-                                  % (descriptor_label, str(ex))
+
+            de = None
+            try:
+                de = self.resolve_data_element(uri)
+            except ValueError, ex:
+                message = "URI resolution issue: %s" % str(ex)
+
+            if de:
+                try:
+                    descriptor = self.generate_descriptor(de, descriptor_label)
+                except RuntimeError, ex:
+                    message = "Descriptor extraction failure: %s" % str(ex)
+                except ValueError, ex:
+                    message = "Data content type issue: %s" % str(ex)
 
             return flask.jsonify({
-                "success": success,
+                "success": descriptor is not None,
                 "message": message,
-                "descriptor": descriptor,
+                "descriptor":
+                    (descriptor is not None and descriptor.vector().tolist())
+                    or None,
                 "reference_uri": uri
             })
+
+    def get_descriptor_inst(self, label):
+        """
+        Get the cached content descriptor instance for a configuration label
+        :type label: str
+        :rtype: smqtk.content_description.ContentDescriptor
+        """
+        with self.descriptor_cache_lock:
+            if label not in self.descriptor_cache:
+                self.log.debug("Caching descriptor '%s'", label)
+                self.descriptor_cache[label] = \
+                    ContentDescriptorConfiguration.new_inst(label)
+
+            return self.descriptor_cache[label]
+
+    def resolve_data_element(self, uri):
+        """
+        Given the URI to some data, resolve it down to a DataElement instance.
+
+        :raises ValueError: Issue with the given URI regarding either URI source
+            resolution or data resolution.
+
+        :param uri: URI to data
+        :type uri: str
+        :return: DataElement instance wrapping given URI to data.
+        :rtype: smqtk.data_rep.DataElement
+
+        """
+        # Resolve URI into appropriate DataElement instance
+        if uri[:7] == "file://":
+            self.log.debug("Given local disk filepath")
+            filepath = uri[7:]
+            if not os.path.isfile(filepath):
+                raise ValueError("File URI did not point to an existing file "
+                                 "on disk.")
+            else:
+                de = DataFileElement(filepath)
+
+        elif uri[:9] == "base64://":
+            self.log.debug("Given base64 string")
+            content_type = flask.request.args.get('content_type', None)
+            self.log.debug("Content type: %s", content_type)
+            if not content_type:
+                raise ValueError("No content-type with given base64 data")
+            else:
+                b64str = uri[9:]
+                de = DataMemoryElement.from_base64(b64str, content_type)
+
+        else:
+            self.log.debug("Given URL")
+            try:
+                de = DataUrlElement(uri)
+            except requests.HTTPError, ex:
+                raise ValueError("Failed to initialize URL element due to "
+                                 "HTTPError: %s" % str(ex))
+
+        return de
+
+    def generate_descriptor(self, de, cd_label):
+        """
+        Generate a descriptor for the content pointed to by the given URI using
+        the specified descriptor generator.
+
+        :raises ValueError: Content type mismatch given the descriptor generator
+        :raises RuntimeError: Descriptor extraction failure.
+
+        :type de: smqtk.data_rep.DataElement
+        :type cd_label: str
+
+        :return: Generated descriptor element instance with vector information.
+        :rtype: smqtk.data_rep.DescriptorElement
+
+        """
+        with SimpleTimer("Computing descriptor...", self.log.debug):
+            cd = self.get_descriptor_inst(cd_label)
+            descriptor = cd.compute_descriptor(de, self.descr_elem_factory)
+
+        return descriptor
 
     def run(self, host=None, port=None, debug=False, **options):
         """

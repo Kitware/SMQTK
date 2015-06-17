@@ -65,33 +65,37 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: bool
 
         """
-        log = logging.getLogger('.'.join([cls.__module__,
-                                          cls.__name__,
+        log = logging.getLogger('.'.join([ColorDescriptor_Base.__module__,
+                                          ColorDescriptor_Base.__name__,
                                           "is_usable"]))
 
-        # Check for colorDescriptor executable on the path
-        import subprocess
-        try:
-            # This should try to print out the CLI options return with code 1.
-            subprocess.call(['colorDescriptor', '-h'],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-        except OSError:
-            log.warn("Could not locate colorDescriptor executable. Make sure "
-                     "that its on the PATH! See "
-                     "smqtk/content_description/colordescriptor/INSTALL.md "
-                     "for help.")
-            return False
+        if not hasattr(ColorDescriptor_Base, "_is_usable_cache"):
+            # Check for colorDescriptor executable on the path
+            import subprocess
+            try:
+                # This should try to print out the CLI options return with code
+                # 1.
+                subprocess.call(['colorDescriptor', '-h'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+            except OSError:
+                log.warn("Could not locate colorDescriptor executable. Make "
+                         "sure that its on the PATH! See "
+                         "smqtk/content_description/colordescriptor/INSTALL.md "
+                         "for help.")
+                ColorDescriptor_Base._is_usable_cache = False
 
-        # Checking if DescriptorIO is importable
-        if not utils.has_colordescriptor_module():
-            log.warn("Could not import DescriptorIO. Make sure that the "
-                     "colorDescriptor package is on the PYTHONPATH! See "
-                     "smqtk/content_description/colordescriptor/INSTALL.md "
-                     "for help.")
-            return False
+            # Checking if DescriptorIO is importable
+            if not utils.has_colordescriptor_module():
+                log.warn("Could not import DescriptorIO. Make sure that the "
+                         "colorDescriptor package is on the PYTHONPATH! See "
+                         "smqtk/content_description/colordescriptor/INSTALL.md "
+                         "for help.")
+                ColorDescriptor_Base._is_usable_cache = False
 
-        return True
+            ColorDescriptor_Base._is_usable_cache = True
+
+        return ColorDescriptor_Base._is_usable_cache
 
     def __init__(self, model_directory, work_directory,
                  kmeans_k=1024, flann_target_precision=0.95,

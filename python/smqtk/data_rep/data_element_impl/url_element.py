@@ -17,8 +17,12 @@ class DataUrlElement (DataElement):
 
     def __init__(self, url_address):
         """
+        :raises requests.exceptions.HTTPError: URL address provided does not
+            resolve into a valid GET request.
+
         :param url_address: Web address of element
         :type url_address: str
+
         """
         super(DataUrlElement, self).__init__()
 
@@ -28,6 +32,9 @@ class DataUrlElement (DataElement):
         # make sure that url has a http:// or https:// prefix
         if not (self._url[:7] == "http://" or self._url[:8] == "https://"):
             self._url = "http://" + self._url
+
+        # Check that the URL is valid, i.e. actually points to something
+        requests.get(self._url).raise_for_status()
 
     def content_type(self):
         """

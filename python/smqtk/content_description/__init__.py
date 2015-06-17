@@ -110,7 +110,7 @@ class ContentDescriptor (object):
 
         This abstract super method should be invoked for common error checking.
 
-        :raises RuntimeError: Feature extraction failure of some kind.
+        :raises RuntimeError: Descriptor extraction failure of some kind.
         :raises ValueError: Given data element content was not of a valid type
             with respect to this descriptor.
 
@@ -189,7 +189,7 @@ class ContentDescriptor (object):
             use a normal multiprocessing.pool.Pool instance.
         :type pool_type: type
 
-        :return: Mapping of data UID to computed feature vector
+        :return: Mapping of data element UUID to computed descriptor element.
         :rtype: dict[collections.Hashable, smqtk.data_rep.DescriptorElement]
 
         """

@@ -13,6 +13,7 @@ import logging
 import mimetypes
 import multiprocessing
 import os
+import requests
 
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
@@ -174,6 +175,8 @@ class DescriptorServiceServer (flask.Flask):
                 {
                     "success": <bool>
 
+                    "content_type": <str>
+
                     "message": <str>
 
                     "descriptors": {  "<label>":  <list[float]>, ... } | None
@@ -206,10 +209,15 @@ class DescriptorServiceServer (flask.Flask):
                             message = "Data content type issue: %s" % str(ex)
 
                         descriptors[l] = d and d.vector().tolist()
-                finished_loop = True
+                if not descriptors:
+                    message = "No descriptors can handle URI content type: %s" \
+                              % data_elem.content_type
+                else:
+                    finished_loop = True
 
             return flask.jsonify({
                 "success": finished_loop,
+                "content_type": data_elem.content_type(),
                 "message": message,
                 "descriptors": descriptors,
                 "reference_uri": uri
@@ -330,7 +338,11 @@ class DescriptorServiceServer (flask.Flask):
 
         else:
             self.log.debug("Given URL")
-            de = DataUrlElement(uri)
+            try:
+                de = DataUrlElement(uri)
+            except requests.HTTPError, ex:
+                raise ValueError("Failed to initialize URL element due to "
+                                 "HTTPError: %s" % str(ex))
 
         return de
 

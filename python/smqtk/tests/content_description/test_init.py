@@ -5,6 +5,7 @@ import multiprocessing.pool
 import nose.tools as ntools
 import numpy
 import unittest
+import warnings
 
 from smqtk.content_description import ContentDescriptor
 from smqtk.content_description import get_descriptors
@@ -63,7 +64,9 @@ class TestAsyncHelper (unittest.TestCase):
     def test_nan_data(self):
         # Makes a vector of NaN values. A vector of not-zeros makes a vector of
         # inf values.
-        expected_vector = numpy.zeros(10) / 0
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            expected_vector = numpy.zeros(10) / 0
 
         cd = DummyContentDescriptor()
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
@@ -73,7 +76,9 @@ class TestAsyncHelper (unittest.TestCase):
         ntools.assert_is_none(v)
 
     def test_inf_data(self):
-        expected_vector = numpy.arange(1, 10) / 0.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            expected_vector = numpy.arange(1, 10) / 0.
 
         cd = DummyContentDescriptor()
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
@@ -285,3 +290,41 @@ class TestContentDescriptorAbstract (unittest.TestCase):
 
         ntools.assert_in(expected_uuids[0], de_map)
         ntools.assert_in(expected_uuids[1], de_map)
+
+    @mock.patch('smqtk.content_description.multiprocessing.Pool')
+    def test_computeDescriptorAsync_failure(self, mPool):
+        expected_uuids = [1, 2]
+
+        # Set up mocks
+        mAsyncResult = mock.Mock(spec=multiprocessing.pool.ApplyResult)
+        mAsyncResult().get.return_value = None
+
+        mPool().apply_async.return_value = mAsyncResult()
+
+        mDataElement0 = mock.Mock(spec=smqtk.data_rep.DataElement)
+        m_d0 = mDataElement0()
+        m_d0.uuid.return_value = expected_uuids[0]
+
+        mDataElement1 = mock.Mock(spec=smqtk.data_rep.DataElement)
+        m_d1 = mDataElement1()
+        m_d1.uuid.return_value = expected_uuids[1]
+
+        mDescrElement = mock.Mock(spec=smqtk.data_rep.DescriptorElement)
+        mDescrElement().has_vector.return_value = False
+
+        mDescriptorFactory = mock.Mock(spec=smqtk.data_rep.DescriptorElementFactory)
+        mDescriptorFactory().new_descriptor.return_value = mDescrElement()
+
+        # The call
+        cd = DummyContentDescriptor()
+        ntools.assert_raises(RuntimeError, cd.compute_descriptor_async,
+                             [m_d0, m_d1], mDescriptorFactory())
+
+        # Check mocks
+        ntools.assert_equals(mPool().apply_async.call_count, 2)
+        mPool().apply_async.assert_has_calls([
+            mock.call(_async_feature_generator_helper, args=(cd, m_d0)),
+            mock.call(_async_feature_generator_helper, args=(cd, m_d1)),
+        ])
+        ntools.assert_equals(mAsyncResult().get.call_count, 2)
+        ntools.assert_false(mDescrElement().set_vector.called)

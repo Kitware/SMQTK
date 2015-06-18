@@ -12,7 +12,9 @@ class DescriptorElementFactory (object):
         :param d_type: Type of descriptor element this factory should produce.
         :type d_type: type
         :param init_params: Initialization parameter dictionary that should
-            contain all
+            contain all additional construction parameters for the provided type
+            except for the expected `type_str` and `uuid` arguments that should
+            be the first and second positional arguments respectively.
         :type init_params: dict
         """
         self._d_type = d_type

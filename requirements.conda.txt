@@ -1,6 +1,7 @@
 coverage
 flask
 flask-login
+mock
 nose
 numpy
 Pillow

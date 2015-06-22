@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import numpy
+import os
 import os.path as osp
 
 from smqtk.data_rep import DescriptorElement
@@ -60,7 +61,7 @@ class DescriptorFileElement (DescriptorElement):
 
     """
 
-    def __init__(self, type_str, uuid, save_dir):
+    def __init__(self, type_str, uuid, save_dir, work_relative=False):
         """
         Initialize a file-base descriptor element.
 
@@ -76,11 +77,20 @@ class DescriptorFileElement (DescriptorElement):
             the `smqtk_config` module.
         :type save_dir: str | unicode
 
+        :param work_relative: If true, we should interpret ``root_directory`` as
+            relative to the configured WORK_DIR parameter in the
+            ``smqtk_config`` module.
+        :type work_relative: bool
+
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
 
-        self._save_dir = osp.abspath(osp.join(WORK_DIR,
-                                              osp.expanduser(save_dir)))
+        self._save_dir = osp.abspath(
+            osp.join(
+                WORK_DIR if work_relative else os.getcwd(),
+                osp.expanduser(save_dir)
+            )
+        )
 
         # Saving components
         self._vec_filepath = osp.join(self._save_dir,

@@ -34,23 +34,28 @@ class DataFileSet (DataSet):
     # - yields two groups, the first is the UUID, the second is the MD5 sum
     SERIAL_FILE_RE = re.compile("UUID_(\w+).MD5_(\w+).dataElement")
 
-    def __init__(self, root_directory, md5_chunk=8):
+    def __init__(self, root_directory, md5_chunk=8, data_relative=False):
         """
         Initialize a new or existing file set from a root directory.
 
-        :param root_directory: Directory that this file set is based in. If
-            relative, it is interpreted as relative to the DATA_DIR path set
-            in the `smqtk_config` module.
+        :param root_directory: Directory that this file set is based in. For
+            relative path resolution, see the ``work_relative`` parameter
+            description.
         :type root_directory: str
 
         :param md5_chunk: Number of segments to split data element MD5 sum into
             when saving element serializations.
         :type md5_chunk: int
 
+        :param data_relative: If true, we should interpret ``root_directory`` as
+            relative to the configured WORK_DIR parameter in the
+            ``smqtk_config`` module.
+        :type data_relative: bool
+
         """
         self._root_dir = os.path.abspath(
             os.path.join(
-                DATA_DIR,
+                DATA_DIR if data_relative else os.getcwd(),
                 os.path.expanduser(root_directory)
             )
         )

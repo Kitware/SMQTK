@@ -1,6 +1,7 @@
 SMQTK
 =====
 ![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
+
 Social Multimedia Query ToolKit aims to provide a simple and easy to use interface for content descriptor generation for machine learning, content similarity computation (kNN implementations), and ranking for online Iterative Query Refinement (IQR) adjudications.
 
 

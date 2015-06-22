@@ -8,8 +8,6 @@ import unittest
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
 
-import smqtk_config
-
 
 class TestDataFileElement (unittest.TestCase):
 
@@ -18,11 +16,11 @@ class TestDataFileElement (unittest.TestCase):
         d = DataFileElement(fp)
         ntools.assert_equal(d._filepath, fp)
 
-    def test_init_relFilepath(self):
+    def test_init_relFilepath_normal(self):
         fp = 'foo.txt'
         d = DataFileElement(fp)
         ntools.assert_equal(d._filepath,
-                            os.path.join(smqtk_config.WORK_DIR, fp))
+                            os.path.join(os.getcwd(), fp))
 
     def test_content_type(self):
         d = DataFileElement('foo.txt')

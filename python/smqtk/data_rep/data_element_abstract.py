@@ -1,7 +1,6 @@
 __author__ = 'purg'
 
 import abc
-from collections import deque
 import hashlib
 import logging
 import mimetypes
@@ -29,7 +28,7 @@ class DataElement (object):
 
     def __init__(self):
         self._md5_cache = None
-        self._temp_filepath_stack = deque()
+        self._temp_filepath_stack = []
 
     @property
     def _log(self):
@@ -116,7 +115,7 @@ class DataElement (object):
             for fp in self._temp_filepath_stack:
                 if os.path.isfile(fp):
                     os.remove(fp)
-            self._temp_filepath_stack.clear()
+            self._temp_filepath_stack = []
 
     ###
     # Abstract methods

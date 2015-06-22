@@ -1,10 +1,12 @@
 __author__ = 'purg'
 
 import abc
+from collections import deque
 import hashlib
 import logging
 import mimetypes
 import os
+import os.path as osp
 import tempfile
 
 from smqtk.utils import safe_create_dir
@@ -27,6 +29,7 @@ class DataElement (object):
 
     def __init__(self):
         self._md5_cache = None
+        self._temp_filepath_stack = deque()
 
     @property
     def _log(self):
@@ -63,36 +66,57 @@ class DataElement (object):
 
         :param temp_dir: Optional directory to write temporary file in,
             otherwise we use the platform default temporary files directory.
+            If this is an empty string, we count it the same as having provided
+            None.
         :type temp_dir: None or str
 
         :return: Path to the temporary file
         :rtype: str
 
         """
-        if not hasattr(self, '_temp_filepath') or not self._temp_filepath:
-            if temp_dir:
-                safe_create_dir(temp_dir)
-            # noinspection PyAttributeOutsideInit
-            fd, self._temp_filepath = tempfile.mkstemp(
+        # Write a new temp file if there aren't any in the stack, or if the none
+        # of the entries' base directory is the provided temp_dir (when one is
+        # provided).
+
+        def write_temp(d):
+            """ Returns path to file written. Always creates new file. """
+            if d:
+                safe_create_dir(d)
+            fd, fp = tempfile.mkstemp(
                 suffix=MIMETYPES.guess_extension(self.content_type()),
-                dir=temp_dir
+                dir=d
             )
             os.close(fd)
-            with open(self._temp_filepath, 'wb') as ofile:
-                ofile.write(self.get_bytes())
-        return self._temp_filepath
+            with open(fp, 'wb') as f:
+                f.write(self.get_bytes())
+            return fp
+
+        if temp_dir:
+            abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))
+            # Check if dir is the base of any path in the current stack.
+            for tf in self._temp_filepath_stack:
+                if osp.dirname(tf) == abs_temp_dir:
+                    return tf
+            # nothing in stack with given base directory, create new temp file
+            self._temp_filepath_stack.append(write_temp(temp_dir))
+
+        elif not self._temp_filepath_stack:
+            # write new temp file to platform specific temp directory
+            self._temp_filepath_stack.append(write_temp(None))
+
+        # return last written temp file.
+        return self._temp_filepath_stack[-1]
 
     def clean_temp(self):
         """
         Clean any temporary files created by this element. This does nothing if
         no temporary files have been generated for this element.
         """
-        if hasattr(self, "_temp_filepath"):
-            try:
-                if os.path.isfile(self._temp_filepath):
-                    os.remove(self._temp_filepath)
-            finally:
-                del self._temp_filepath
+        if len(self._temp_filepath_stack):
+            for fp in self._temp_filepath_stack:
+                if os.path.isfile(fp):
+                    os.remove(fp)
+            self._temp_filepath_stack.clear()
 
     ###
     # Abstract methods

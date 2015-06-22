@@ -16,6 +16,9 @@ class DescriptorElement (object):
 
     Element implementations should be picklable for standard serialization.
 
+    Descriptor element equality based on shared descriptor type and vector
+    equality.
+
     """
     __metaclass__ = abc.ABCMeta
 
@@ -46,9 +49,10 @@ class DescriptorElement (object):
         if isinstance(other, DescriptorElement):
             b = self.vector() == other.vector()
             if isinstance(b, numpy.core.multiarray.ndarray):
-                return b.all()
+                vec_equal = b.all()
             else:
-                return b
+                vec_equal = b
+            return vec_equal and (self.type() == other.type())
         return False
 
     def __ne__(self, other):

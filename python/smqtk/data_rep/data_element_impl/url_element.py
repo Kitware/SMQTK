@@ -45,15 +45,6 @@ class DataUrlElement (DataElement):
         # return MIMETYPES.guess_type(self._url)[0]
         return requests.get(self._url).headers['content-type']
 
-    def md5(self):
-        """
-        :return: MD5 hex string of the data content.
-        :rtype: str
-        """
-        if not self._md5_cache:
-            self._md5_cache = hashlib.md5(self.get_bytes()).hexdigest()
-        return self._md5_cache
-
     def uuid(self):
         """
         UUID for this data element.

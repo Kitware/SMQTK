@@ -7,6 +7,9 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import errno
+import os
+
 
 def safe_create_dir(d):
     """
@@ -21,8 +24,6 @@ def safe_create_dir(d):
     :rtype: str
 
     """
-    import os
-    import errno
     d = os.path.abspath(os.path.expanduser(d))
     try:
         os.makedirs(d)
@@ -43,7 +44,6 @@ def touch(fname):
     :type fname: str
 
     """
-    import os
     with open(fname, 'a'):
         os.utime(fname, None)
 

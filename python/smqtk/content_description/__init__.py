@@ -159,7 +159,7 @@ class ContentDescriptor (object):
         """
         Asynchronously compute feature data for multiple data items.
 
-        This function does not use the class attribute PARALLEL for determining
+        This function does NOT use the class attribute PARALLEL for determining
         parallel factor as this method can take that specification as an
         argument.
 
@@ -276,7 +276,7 @@ def _async_feature_generator_helper(cd_inst, data):
     :type cd_inst: SMQTK.content_description.ContentDescriptor
 
     :return: UID and associated feature vector
-    :rtype: (int, numpy.core.multiarray.ndarray)
+    :rtype: numpy.core.multiarray.ndarray or None
     """
     log = logging.getLogger("_async_feature_generator_helper")
     try:
@@ -286,6 +286,9 @@ def _async_feature_generator_helper(cd_inst, data):
         # noinspection PyUnresolvedReferences
         if numpy.isnan(feat.sum()):
             log.error("[%s] Computed feature has NaN values.", data)
+            return None
+        elif float('inf') in feat:
+            log.error("[%s] Computed feature has infinite values", data)
             return None
         return feat
     except Exception, ex:

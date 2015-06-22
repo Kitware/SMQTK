@@ -69,7 +69,9 @@ class DataFileElement (DataElement):
             Instead, the ``clean_temp()`` method should be called on this
             object.
 
-        For FileElement instances, this returns the original data file's path.
+        For FileElement instances, this returns the original data file's path
+        unless a `temp_dir` is specified that is not the directory that contains
+        the original file.
 
         :param temp_dir: Optional directory to write temporary file in,
             otherwise we use the platform default temporary files directory.
@@ -80,9 +82,10 @@ class DataFileElement (DataElement):
 
         """
         if temp_dir:
-            return super(DataFileElement, self).write_temp(temp_dir=temp_dir)
-        else:
-            return self._filepath
+            abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))
+            if abs_temp_dir != osp.dirname(self._filepath):
+                return super(DataFileElement, self).write_temp(temp_dir)
+        return self._filepath
 
     def clean_temp(self):
         """
@@ -92,6 +95,7 @@ class DataFileElement (DataElement):
         For FileElement instance's this does nothing as the ``write_temp()``
         method doesn't actually write any files.
         """
+        # does the right thing regardless of what happened in write_temp
         return super(DataFileElement, self).clean_temp()
 
 

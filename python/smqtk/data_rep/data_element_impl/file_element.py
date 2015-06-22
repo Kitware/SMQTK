@@ -83,7 +83,7 @@ class DataFileElement (DataElement):
         """
         if temp_dir:
             abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))
-            if abs_temp_dir == osp.dirname(self._filepath):
+            if abs_temp_dir != osp.dirname(self._filepath):
                 return super(DataFileElement, self).write_temp(temp_dir)
         return self._filepath
 

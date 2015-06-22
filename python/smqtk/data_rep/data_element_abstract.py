@@ -112,10 +112,11 @@ class DataElement (object):
         Clean any temporary files created by this element. This does nothing if
         no temporary files have been generated for this element.
         """
-        for fp in self._temp_filepath_stack:
-            if os.path.isfile(fp):
-                os.remove(fp)
-        self._temp_filepath_stack.clear()
+        if len(self._temp_filepath_stack):
+            for fp in self._temp_filepath_stack:
+                if os.path.isfile(fp):
+                    os.remove(fp)
+            self._temp_filepath_stack.clear()
 
     ###
     # Abstract methods

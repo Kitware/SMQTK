@@ -11,17 +11,19 @@
         "example_image": {
             "type": "DataFileSet",
             "init": {
-                // DataFileSet implementation interprets relative paths to the
-                // DATA_DIR variable as configured in smqtk_config module.
                 "root_directory": "FileDataSets/example_image/data",
-                "md5_chunk": 8
+                "md5_chunk": 8,
+                // Tells implementation to interpret relative paths to the
+                // DATA_DIR variable as configured in smqtk_config module.
+                "data_relative": 1
             }
         },
         "example_video": {
             "type": "DataFileSet",
             "init": {
                 "root_directory": "FileDataSets/example_video/data",
-                "md5_chunk": 8
+                "md5_chunk": 8,
+                "data_relative": 1
             }
         }
     },
@@ -47,10 +49,10 @@
         "LocalDiskFactory": {
             "type": "DescriptorFileElement",
             "init": {
-                // DescriptorFileElement implementation interprets relative
-                // paths to the WORK_DIR variable as configured in smqtk_config
-                // module.
-                "save_dir": "LocalDescriptors"
+                "save_dir": "LocalDescriptors",
+                // Tells implementation to interpret relative paths to the
+                // WORK_DIR variable as configured in smqtk_config module.
+                "work_relative": 1
             }
         }
     },

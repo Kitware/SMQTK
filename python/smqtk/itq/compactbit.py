@@ -11,17 +11,19 @@ def compactbit(b):
     nSamples, nbits = b.shape
     nwords = math.ceil( nbits/8 )
     cb = np.zeros((nSamples,nwords), dtype=np.uint8)
-    cc = np.zeros((nSamples,1), dy=np.uint8)
+    cc = np.zeros(nSamples, dtype=np.uint8)
 
     for j in range(nbits):
 
         i = j%8
-        w = math.ceil(j/8)
+        w = j/8
 
-        if i==0 and w > 0 :
-            cb[:,w] = cc
+        if i==0 :
             cc = 0
-        else:
-            cc = cc + cb[:,j] * (1<<i)
+
+        cc = cc + b[:,j] * (1<<(7-i))
+
+        if i==7:
+            cb[:,w] = cc
 
     return cb

@@ -30,10 +30,17 @@ class FlannSimilarity (SimilarityIndex):
     This implementation uses in-memory data structures, and thus has an index
     size limit based on how much memory the running machine has available.
 
-    NOTE: Normally, FLANN indices don't play well with multiprocessing due to
-        being C structures and don't transfer into new processes memory space.
+    NOTE ON MULTIPROCESSING
+        Normally, FLANN indices don't play well when multiprocessing due to
+        the underlying index being a C structure, which doesn't auto-magically
+        transfer to forked processes like python structure data does.
         However, FLANN can serialize an index, and so this processes uses
-        temporary storage space to serialize
+        a temporary file (per index FlannSimilarity instance) to make a back-up
+        of the index for recovery when we discover that we're working in a
+        different process. This temporary file, however, is deleted upon garbage
+        collection of the instance in the parent process, so be sure that there
+        is a reference to the parent instance while multiprocessing forking new
+        processes.
 
     """
 
@@ -41,14 +48,17 @@ class FlannSimilarity (SimilarityIndex):
     def is_usable(cls):
         # Assuming that if the pyflann module is available, then it's going to
         # work. This assumption will probably be invalidated in the future...
+        # TODO: check that underlying library is found/valid
         return pyflann is not None
 
     def __init__(self, save_dir, temp_dir=tempfile.gettempdir(), autotune=False,
                  target_precision=0.95, sample_fraction=0.1,
-                 distance_method='hik', random_seed=None):
+                 distance_method='hik', random_seed=None,
+                 config_relative=False):
         """
-        Initialize FLANN index properties. Index is of course not build yet (no
-        data).
+        Initialize FLANN index properties. Does not contain a queryable index
+        until one is built via the ``build_index`` method, or loaded from save
+        file via the ``load_index`` method.
 
         Optional parameters are for when building the index. Documentation on
         their meaning can be found in the FLANN documentation PDF:
@@ -85,11 +95,22 @@ class FlannSimilarity (SimilarityIndex):
             include "hik", "chi_square" (default), and "euclidean".
         :type distance_method: str
 
+        :param random_seed: Integer to use as the random number generator seed.
+        :type random_seed: int
+
+        :param config_relative: If true, interpret relative paths given to the
+            ``save_dir`` and ``temp_dir`` parameters as relative to the
+            ``DATA_DIR`` and ``WORK_DIR`` smqtk_config parameters, respectively.
+
         """
-        self._save_dir = osp.abspath(osp.join(DATA_DIR,
-                                              osp.expanduser(save_dir)))
-        self._temp_dir = osp.abspath(osp.join(WORK_DIR,
-                                              osp.expanduser(temp_dir)))
+        self._save_dir = osp.abspath(osp.join(
+            DATA_DIR if config_relative else os.getcwd(),
+            osp.expanduser(save_dir)
+        ))
+        self._temp_dir = osp.abspath(osp.join(
+            WORK_DIR if config_relative else os.getcwd(),
+            osp.expanduser(temp_dir)
+        ))
 
         # Standard save files relative to save directory
         self._sf_flann_index = osp.join(self._save_dir, "flann.index")
@@ -108,14 +129,16 @@ class FlannSimilarity (SimilarityIndex):
         # re-building index when adding to it.
         #: :type: dict
         self._flann_build_params = None
-        # Path to the file that is the serialization of our index. This is None
-        # before index construction
+        # Path to the file that is the temporary cache serialization of our
+        # index for multiprocessing recovery. This is None before index
+        # construction. This is deleted upon parent process instance deletion.
         #: :type: None or str
         self._flann_index_cache = None
         # The process ID that the currently set FLANN instance was build/loaded
         # on. If this differs from the current process ID, the index should be
         # reloaded from cache.
         self._pid = None
+        self._is_child_proc = False
 
         # In-order cache of descriptors we're indexing over.
         # - flann.nn_index will spit out indices into this list
@@ -143,6 +166,14 @@ class FlannSimilarity (SimilarityIndex):
             pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
             self._flann.load_index(self._flann_index_cache, pts_array)
             self._pid = multiprocessing.current_process().pid
+            self._is_child_proc = True
+
+    def __del__(self):
+        if not self._is_child_proc:
+            do_remove = (self._flann_index_cache
+                         and os.path.isfile(self._flann_index_cache))
+            if do_remove:
+                os.remove(self._flann_index_cache)
 
     def count(self):
         """

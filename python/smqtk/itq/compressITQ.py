@@ -18,7 +18,7 @@ def compressITQ(X, bit, num_iter=50):
 
     :return: [C,R,V]
        C: 2D numpy array, n*bit binary matrix,
-       R: 2D numpy array, the c*c rotation matrix found by ITQ
+       R: 2D numpy array, d*bit rotation matrix found by ITQ
        V: Mean vector that needs to be subtracted from new descriptors
 
     """

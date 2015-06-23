@@ -5,8 +5,18 @@ import numpy as np
 def compactbit(b):
     """
     converts array to compacted string
+
+    NOTE: Turns out this is equivalently performed by doing:
+
+        >>> b = np.random.randint(0, 2, [100, 32]).astype(np.uint8)
+        >>> cb1 = compactbit(b)
+        >>> cb2 = np.packbits(b).reshape([b.shape[0], math.ceil(b.shape[1] / 8.)])
+        >>> np.array_equal(cb1, cb2)
+        True
+
     :param b: bits array
     :return: cb: compacted string of bits (using words of 'word' bits)
+
     """
     nSamples, nbits = b.shape
     nwords = math.ceil(nbits / 8)

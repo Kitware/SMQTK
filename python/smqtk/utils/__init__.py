@@ -8,6 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import errno
+import operator as op
 import os
 
 
@@ -46,6 +47,32 @@ def touch(fname):
     """
     with open(fname, 'a'):
         os.utime(fname, None)
+
+
+def ncr(n, r):
+    """
+    N-choose-r method, returning the number of combinations possible in integer
+    form.
+
+    From dheerosaur:
+        http://stackoverflow.com/questions/4941753/is-there-a-math-ncr-function-in-python
+
+    :param n: Selection pool size.
+    :type n: int
+
+    :param r: permutation selection size.
+    :type r: int
+
+    :return: Number of n-choose-r permutations for the given n and r.
+    :rtype: int
+
+    """
+    r = min(r, n - r)
+    if r == 0:
+        return 1
+    numer = reduce(op.mul, xrange(n, n - r, -1))
+    denom = reduce(op.mul, xrange(1, r + 1))
+    return numer // denom
 
 
 ###

@@ -92,7 +92,7 @@ def histogram_intersection_dist_matrix(a, b):
         return r
 
 
-def euclidian_distance(i, j):
+def euclidean_distance(i, j):
     """
     Compute euclidian distance between two N-dimensional point vectors.
 
@@ -113,8 +113,9 @@ def euclidian_distance(i, j):
 def cosine_similarity(i, j):
     """
     Angular similarity between vectors i and j. Results in a value between 1,
-    here i and j are exactly the same, to -1, meaning exactly opposite. 0
-    indicates orthogonality.
+    where i and j are exactly the same, to -1, meaning exactly opposite. 0
+    indicates orthogonality. Negative values will only be returned if input
+    vectors can have negative values.
 
     See: http://en.wikipedia.org/wiki/Cosine_similarity
 

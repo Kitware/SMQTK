@@ -32,7 +32,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         # which if we don't have, nothing will work.
         return True
 
-    def __init__(self, bit_length, itq_iterations=50, distance_method='cosine'):
+    def __init__(self, bit_length, itq_iterations=50, distance_method='cosine',
+                 random_seed=None):
         """
         Initialize ITQ similarity index instance (not the index itself).
 
@@ -54,6 +55,9 @@ class ITQSimilarityIndex (SimilarityIndex):
                     descriptors.
         :type distance_method: str
 
+        :param random_seed: Integer to use as the random number generator seed.
+        :type random_seed: int
+
         """
         assert bit_length > 0, "Must be given a bit length greater than 1 " \
                                "(one)!"
@@ -64,6 +68,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         self._bit_len = int(bit_length)
         # Number of iterations ITQ performs
         self._itq_iter_num = itq_iterations
+        # Optional fixed random seed
+        self._rand_seed = None if random_seed is None else int(random_seed)
 
         # Vector of mean feature values. Centers "train" set, used to "center"
         # additional descriptors when computing nearest neighbors.
@@ -177,6 +183,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       - Harry was also working on an iterative training approach so
         #           that we only have to have a limited number of vectors in
         #           memory at a time.
+        if self._rand_seed:
+            numpy.random.seed(self._rand_seed)
 
         with SimpleTimer("Creating descriptor matrix", self._log.info):
             x = []
@@ -191,21 +199,20 @@ class ITQSimilarityIndex (SimilarityIndex):
         with SimpleTimer("Centering data", self._log.info):
             # center the data, VERY IMPORTANT for ITQ to work
             self._mean_vector = numpy.mean(x, axis=0)
-            x = x - numpy.matlib.repmat(self._mean_vector, x.shape[0], 1)
+            # x = x - numpy.matlib.repmat(self._mean_vector, x.shape[0], 1)
+            x -= self._mean_vector
 
         # PCA
-        # TODO: I think this section is incorrect compared to UNC-CH MATLAB code
         with SimpleTimer("Computing PCA transformation", self._log.info):
+            # numpy and matlab observation format is flipped, thus added
+            # transpose
             c = numpy.cov(x.transpose())
-            pc, l, v2 = numpy.linalg.svd(c)
-            pc_vec = pc[:, :self._bit_len]
-            # adjust input data given PC vector
-            xx = numpy.dot(x, pc_vec)
-
-            # c = numpy.cov(x)
-            # pc, l = numpy.linalg.eig(c)
-            # pc_vec = pc[:self._bit_len]
-            # xx = x * pc_vec
+            l, pc = numpy.linalg.eig(c)
+            # ordered by greatest eigenvalue magnitude, keeping top ``bit_len``
+            top_pairs = sorted(zip(l, pc.transpose()), reverse=1)[:self._bit_len]
+            # Eigenvectors of top ``bit_len`` magnitude eigenvalues
+            pc_top = numpy.array([p[1] for p in top_pairs]).transpose()
+            xx = numpy.dot(x, pc_top)
 
         # ITQ to find optimal rotation.
         #   `c` is the output codes for matrix `x`
@@ -214,10 +221,11 @@ class ITQSimilarityIndex (SimilarityIndex):
                          self._log.info):
             c, self._r = self._find_itq_rotation(xx, self._itq_iter_num)
             # De-adjust rotation with PC vector
-            self._r = numpy.dot(pc_vec, self._r)
+            self._r = numpy.dot(pc_top, self._r)
 
-        # Converting bit-vectors proved faster than creating new codes over
-        # again (~0.01s vs ~0.04s for size 80 vectors).
+        # Populating small-code hash-table
+        #   - Converting bit-vectors proved faster than creating new codes over
+        #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
             for code_vec, descr in zip(c, self._descr_cache):
@@ -245,7 +253,7 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         :return: The descriptor's vector and the compacted N-bit small-code as
             an integer.
-        :rtype: int
+        :rtype: numpy.core.multiarray.ndarray, int
 
         """
         v = descriptor.vector()

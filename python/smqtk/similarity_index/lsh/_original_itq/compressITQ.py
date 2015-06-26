@@ -3,7 +3,8 @@
 
 import numpy as np
 import numpy.matlib
-import ITQ
+
+from smqtk.similarity_index.lsh.itq import ITQ
 
 
 def compressITQ(X, bit, num_iter=50):

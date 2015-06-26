@@ -131,7 +131,7 @@ def get_similarity_nn():
     character ('_' prefixed files/directories are hidden, but not recommended).
 
     Within a module we first look for a helper variable by the name
-    ``SIMILARITY_NN_CLASS``, which can either be a single class object or
+    ``SIMILARITY_INDEX_CLASS``, which can either be a single class object or
     an iterable of class objects, to be exported. If the variable is set to
     None, we skip that module and do not import anything. If the variable is not
     present, we look for a class by the same name and casing as the module. If
@@ -145,7 +145,7 @@ def get_similarity_nn():
     from smqtk.utils.plugin import get_plugins
     import os
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    helper_var = "SIMILARITY_NN_CLASS"
+    helper_var = "SIMILARITY_INDEX_CLASS"
 
     def class_filter(cls):
         log = logging.getLogger('.'.join([__name__, 'get_similarity_nn',

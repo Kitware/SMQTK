@@ -351,4 +351,4 @@ class FlannSimilarity (SimilarityIndex):
         return [self._descr_cache[i] for i in idxs], dists
 
 
-SIMILARITY_NN_CLASS = FlannSimilarity
+SIMILARITY_INDEX_CLASS = FlannSimilarity

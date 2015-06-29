@@ -70,11 +70,17 @@ class DataFileSet (DataSet):
 
         self._discover_data_elements()
 
+        # Flag for when new elements have been added to the data set, which
+        # triggers a filesystem serialization dump upon instance garbage
+        # collection.
+        self._new_elem_added = False
+
     def __del__(self):
         """
         Serialize out element contents on deletion.
         """
-        self._save_data_elements()
+        if self._new_elem_added:
+            self._save_data_elements()
 
     def __contains__(self, d):
         """
@@ -185,11 +191,11 @@ class DataFileSet (DataSet):
         :type elems: list[smqtk.data_rep.DataElement]
 
         """
-
         with self._element_map_lock:
             for e in elems:
                 assert isinstance(e, DataElement)
                 self._element_map[e.uuid()] = e
+                self._new_elem_added = True
 
     def get_data(self, uuid):
         with self._element_map_lock:

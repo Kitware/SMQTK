@@ -684,9 +684,9 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             self.log.debug("Constructing information for super matrices...")
             s_keys = sorted(r_map.keys())
             running_height = 0  # info and desc heights congruent
-            # Known constants
-            i_width = 5
-            d_width = 384
+
+            i_width = None
+            d_width = None
 
             for uid in s_keys:
                 ifp, dfp, r, tmp_clean_method = r_map[uid]
@@ -694,19 +694,23 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                 # descriptor generation may have failed for this ingest UID
                 try:
                     i_shape, d_shape = r.get()
-                except RuntimeError:
+                except RuntimeError, ex:
                     self.log.warning("Descriptor generation failed for "
-                                     "UID[%d], skipping its inclusion in "
-                                     "model.", uid)
+                                     "UID[%s], skipping its inclusion in "
+                                     "model: %s", uid, str(ex))
                     r_map[uid] = None
                     continue
                 finally:
                     # Done with image file, so remove from filesystem
                     tmp_clean_method()
 
-                if None in (i_width, d_width):
+                if d_width is None and d_shape[0] != 0:
                     i_width = i_shape[1]
                     d_width = d_shape[1]
+
+                # skip this result if it generated no descriptors
+                if d_shape[1] == 0:
+                    continue
 
                 ssi = None
                 if i_shape[0] > per_item_limit:
@@ -715,6 +719,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                         numpy.random.permutation(i_shape[0])[:per_item_limit]
                     )
 
+                # Only keep this if any descriptors were generated
                 r_map[uid] = (ifp, dfp, running_height, ssi)
                 running_height += min(i_shape[0], per_item_limit)
             pool.join()
@@ -839,7 +844,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     )
                     r_map[di.uuid()][frame] = (info_fp, desc_fp, r)
 
-                # Clean temporary file while computing descriptors
+                # Clean temporary video file file while computing descriptors
+                # This does not remove the extracted frames that the underlying
+                #   detector/descriptor is working on.
                 di.clean_temp()
         pool.close()
 
@@ -847,9 +854,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         with SimpleTimer("Collecting shape information for super matrices...",
                          self.log.debug):
             running_height = 0
-            # Known constants
-            i_width = 5
-            d_width = 384
+
+            i_width = None
+            d_width = None
 
             # Transform r_map[uid] into:
             #   (info_mat_files, desc_mat_files, sR, ssi_list)
@@ -861,14 +868,29 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 video_desc_mat_fps = []  # ordered list of frame desc mat files
                 for frame in sorted(r_map[uid]):
                     ifp, dfp, r = r_map[uid][frame]
-                    i_shape, d_shape = r.get()
-                    if None in (i_width, d_width):
+
+                    # Descriptor generation may have failed for this UID
+                    try:
+                        i_shape, d_shape = r.get()
+                    except RuntimeError, ex:
+                        self.log.warning('Descriptor generation failed for '
+                                         'frame %d in video UID[%s]: %s',
+                                         frame, uid, str(ex))
+                        r_map[uid] = None
+                        continue
+
+                    if d_width is None and d_shape[0] != 0:
                         i_width = i_shape[1]
                         d_width = d_shape[1]
 
+                    # Skip if there were no descriptors generated for this
+                    # frame
+                    if d_shape[1] == 0:
+                        continue
+
                     video_info_mat_fps.append(ifp)
                     video_desc_mat_fps.append(dfp)
-                    video_num_desc += i_shape[0]
+                    video_num_desc += d_shape[0]
 
                 # If combined descriptor height exceeds the per-item limit,
                 # generate a random subsample index list

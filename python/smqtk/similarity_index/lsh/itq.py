@@ -14,8 +14,12 @@ from smqtk.similarity_index import (
     SimilarityIndexStateSaveError,
 )
 from smqtk.similarity_index.lsh.code_index.memory import MemoryCodeIndex
-from smqtk.utils import bit_utils, SimpleTimer
-from smqtk.utils import distance_functions
+from smqtk.utils import (
+    bit_utils,
+    distance_functions,
+    safe_create_dir,
+    SimpleTimer
+)
 
 class ITQSimilarityIndex (SimilarityIndex):
     """
@@ -281,7 +285,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         if self._r is None:
             raise SimilarityIndexStateSaveError("No index build yet to save.")
 
-        save_file = osp.join(dir_path, self._save_file)
         state = {
             "bit_len": self._bit_len,
             "itq_iter": self._itq_iter_num,
@@ -291,6 +294,9 @@ class ITQSimilarityIndex (SimilarityIndex):
             "code_index": self._code_index,  # should be picklable
             "distance_method": self._dist_method
         }
+
+        safe_create_dir(dir_path)
+        save_file = osp.join(dir_path, self._save_file)
         with open(save_file, 'wb') as f:
             cPickle.dump(state, f)
 

@@ -20,7 +20,16 @@ class MemoryCodeIndex (CodeIndex):
         return True
 
     def __init__(self):
+        self._num_descr = 0
         self._table = {}
+
+    def count(self):
+        """
+        :return: Number of descriptor elements stored in this index. This is not
+            necessarily the number of codes stored in the index.
+        :rtype: int
+        """
+        return self._num_descr
 
     def add_descriptor(self, code, descriptor):
         """
@@ -34,6 +43,7 @@ class MemoryCodeIndex (CodeIndex):
 
         """
         self._table.setdefault(code, []).append(descriptor)
+        self._num_descr += 1
 
     def get_descriptors(self, code):
         """
@@ -49,3 +59,6 @@ class MemoryCodeIndex (CodeIndex):
 
         """
         return self._table.get(code, [])
+
+
+CODE_INDEX_CLASS = MemoryCodeIndex

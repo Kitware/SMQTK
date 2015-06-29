@@ -24,6 +24,18 @@ class CodeIndex (object):
         return
 
     @abc.abstractmethod
+    def count(self):
+        """
+        :return: Number of descriptor elements stored in this index. This is not
+            necessarily the number of codes stored in the index.
+        :rtype: int
+        """
+        return
+
+    def __len__(self):
+        return self.count()
+
+    @abc.abstractmethod
     def get_descriptors(self, code):
         """
         Get iterable of descriptors associated to this code. This may be empty.

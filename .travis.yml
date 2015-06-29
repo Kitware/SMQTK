@@ -38,4 +38,4 @@ install:
 
 # Run tests here
 script:
-  - nosetests --with-doctest --with-coverage --cover-package=smqtk --exclude-dir-file=nose_exclude_dirs.txt python/smqtk
+  - sh ./run_tests.sh

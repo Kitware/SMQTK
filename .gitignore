@@ -2,6 +2,12 @@
 *.pyc
 *.pyo
 
+# ColorDescriptor generated errors log file
+errors.log
+
+# Coverage report
+.coverage
+
 # External data and generated files directories
 /data
 /work

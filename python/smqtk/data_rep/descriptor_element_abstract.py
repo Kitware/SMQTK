@@ -58,6 +58,10 @@ class DescriptorElement (object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __repr__(self):
+        return "%s{type: %s, uuid: %s}" % (self.__class__.__name__, self.type(),
+                                           self.uuid())
+
     def uuid(self):
         """
         :return: Unique ID for this vector.

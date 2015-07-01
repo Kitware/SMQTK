@@ -128,6 +128,8 @@
         }
     },
 
+    // Deprecated components below
+
     "Indexers": {
         // For the moment, indexers carry a model that is data-set specific
         // (contains all descriptors from data in that set with UUID references

@@ -244,7 +244,7 @@ class LSHCodeIndexConfiguration (ConfigurationInterface):
 
 
 ###
-# Deprecated soon
+# Deprecating soon
 #
 
 class IndexerConfiguration (ConfigurationInterface):

@@ -46,18 +46,18 @@ class ITQSimilarityIndex (SimilarityIndex):
         # which if we don't have, nothing will work.
         return True
 
-    def __init__(self, bit_length=8, index_inst=MemoryCodeIndex(),
+    def __init__(self, index_inst=MemoryCodeIndex(), bit_length=8,
                  itq_iterations=50, distance_method='cosine', random_seed=None):
         """
         Initialize ITQ similarity index instance (not the index itself).
 
-        :param bit_length: Number of bits used to represent descriptors (hash
-            code). This must be greater than 0.
-        :type bit_length: int
-
         :param index_inst: CodeIndex instance to use for small-code / descriptor
             indexing.
         :type index_inst: smqtk.similarity_index.lsh.code_index.CodeIndex
+
+        :param bit_length: Number of bits used to represent descriptors (hash
+            code). This must be greater than 0.
+        :type bit_length: int
 
         :param itq_iterations: Number of iterations for the ITQ algorithm to
             perform. This must be greater than 0.

@@ -21,6 +21,9 @@ from smqtk.utils import (
     SimpleTimer
 )
 
+# import rtree
+
+
 class ITQSimilarityIndex (SimilarityIndex):
     """
     Nearest neighbor implementation using Iterative Quantization (ITQ), a method
@@ -109,6 +112,9 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         self._dist_method = distance_method
         self._dist_func = self._get_dist_func(distance_method)
+
+        # #: :type: rtree.index.Rtree
+        # self._code_rt = None
 
     @staticmethod
     def _get_dist_func(distance_method):
@@ -262,11 +268,20 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
+            # props = rtree.index.Property()
+            # props.dimension = self._bit_len
+            # # Interleaved so we can just specify coord as the bit-vector
+            # # concatenated with itself.
+            # #: :type: rtree.index.Rtree
+            # self._code_rt = rtree.index.Rtree(interleaved=True,
+            #                                   properties=props)
+
             for code_vec, descr in zip(c, descr_cache):
                 packed = bit_utils.bit_vector_to_int(code_vec)
                 self._code_index.add_descriptor(packed, descr)
 
-        pass
+                # coord = tuple(code_vec) + tuple(code_vec)
+                # self._code_rt.insert(packed, coord)
 
     def save_index(self, dir_path):
         """
@@ -332,21 +347,24 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         Generate the small-code for the given descriptor.
 
-        This only works if we have an index loaded.
+        This only works if we have an index loaded, meaning we have a rotation
+        matrix.
 
         :param descriptor: Descriptor to generate the small code for.
         :type descriptor: smqtk.data_rep.DescriptorElement
 
-        :return: The descriptor's vector and the compacted N-bit small-code as
-            an integer.
-        :rtype: numpy.core.multiarray.ndarray, int
+        :return: The descriptor's vector, the n-bit vector, and the compacted
+            N-bit small-code as an integer.
+        :rtype: numpy.core.multiarray.ndarray[float],
+                numpy.core.multiarray.ndarray[numpy.uint8],
+                int
 
         """
         v = descriptor.vector()
         z = numpy.dot(v - self._mean_vector, self._r)
         b = numpy.zeros(z.shape, dtype=numpy.uint8)
         b[z >= 0] = 1
-        return v, bit_utils.bit_vector_to_int(b)
+        return v, b, bit_utils.bit_vector_to_int(b)
 
     def _neighbor_codes(self, c, d):
         """
@@ -388,7 +406,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
-        d_vec, d_sc = self.get_small_code(d)
+        d_vec, _, d_sc = self.get_small_code(d)
 
         # Process:
         #   Collect codes/descriptors from incrementally more distance bins
@@ -405,17 +423,34 @@ class ITQSimilarityIndex (SimilarityIndex):
             for c in codes:
                 neighbors.extend(self._code_index.get_descriptors(c))
             h_dist += 1
-        neighbors = neighbors[:n]
 
         # Compute fine-grain distance measurements for collected elements + sort
         distances = []
         for d_elem in neighbors:
             distances.append(self._dist_func(d_vec, d_elem.vector()))
 
-        t = zip(neighbors, distances)
-        for i, (d_elem, dist) in enumerate(sorted(zip(neighbors, distances),
-                                                  key=lambda e: e[1])):
-            neighbors[i] = d_elem
-            distances[i] = dist
+        ordered = sorted(zip(distances, neighbors), key=lambda p: p[0])
+        distances, neighbors = zip(*ordered)
 
-        return neighbors, distances
+        return neighbors[:n], distances[:n]
+
+    # def nn_rtree(self, d, n=1):
+    #     # There is some issue with the nearest neighbor query returning
+    #     # duplicates.
+    #     d_vec, d_bv, d_sc = self.get_small_code(d)
+    #
+    #     neighbor_codes = self._code_rt.nearest(tuple(d_bv) + tuple(d_bv), n)
+    #     neighbors_v2 = []
+    #     for nc in neighbor_codes:
+    #         neighbors_v2.extend(self._code_index.get_descriptors(nc))
+    #         if len(neighbors_v2) >= n:
+    #             break
+    #
+    #     distances_v2 = []
+    #     for d_elem in neighbors_v2:
+    #         distances_v2.append(self._dist_func(d_vec, d_elem.vector()))
+    #
+    #     ordered_v2 = sorted(zip(distances_v2, neighbors_v2), key=lambda p: p[0])
+    #     distances_v2, neighbors_v2 = zip(*ordered_v2)
+    #
+    #     return neighbors_v2[:n], distances_v2[:n]

@@ -1,16 +1,27 @@
 """
-Future home of IQR LSH implementation based on Chapel Hill paper / sample code.
+Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 """
 __author__ = 'purg'
 
+import cPickle
+import os.path as osp
 import numpy
 import numpy.matlib
 
 from smqtk.similarity_index import (
     SimilarityIndex,
+    SimilarityIndexStateLoadError,
+    SimilarityIndexStateSaveError,
 )
-from smqtk.utils import bit_utils, SimpleTimer
-from smqtk.utils import distance_functions
+from smqtk.similarity_index.lsh.code_index.memory import MemoryCodeIndex
+from smqtk.utils import (
+    bit_utils,
+    distance_functions,
+    safe_create_dir,
+    SimpleTimer
+)
+
+# import rtree
 
 
 class ITQSimilarityIndex (SimilarityIndex):
@@ -38,10 +49,14 @@ class ITQSimilarityIndex (SimilarityIndex):
         # which if we don't have, nothing will work.
         return True
 
-    def __init__(self, bit_length, itq_iterations=50, distance_method='cosine',
-                 random_seed=None):
+    def __init__(self, index_inst=MemoryCodeIndex(), bit_length=8,
+                 itq_iterations=50, distance_method='cosine', random_seed=None):
         """
         Initialize ITQ similarity index instance (not the index itself).
+
+        :param index_inst: CodeIndex instance to use for small-code / descriptor
+            indexing.
+        :type index_inst: smqtk.similarity_index.lsh.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
             code). This must be greater than 0.
@@ -70,6 +85,9 @@ class ITQSimilarityIndex (SimilarityIndex):
         assert itq_iterations > 0, "Must be given a number of iterations " \
                                    "greater than 1 (one)!"
 
+        # Index save/load directory and standard saved filepath
+        self._save_file = "itq_index.pickle"
+
         # Number of bits we convert descriptors into
         self._bit_len = int(bit_length)
         # Number of iterations ITQ performs
@@ -82,14 +100,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         #: :type: numpy.core.multiarray.ndarray
         self._mean_vector = None
 
-        # Index descriptor elements we are indexing. This will be index aligned
-        # with the proceeding _c matrix.
-        #   - This is probably OK to keep along side the ``_code_table`` since
-        #       they'll just be sharing references, not copies, of the
-        #       descriptor elements.
-        #: :type: list[smqtk.data_rep.DescriptorElement]
-        self._descr_cache = []
-
         # rotation matrix of shape [d, b], found by ITQ process, to use to
         # transform new descriptors into binary hash decision vector.
         #: :type: numpy.core.multiarray.ndarray[float] | None
@@ -97,20 +107,30 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         # Hash table mapping small-codes to a list of DescriptorElements mapped
         # by that code
-        #: :type: dict[int, list[smqtk.data_rep.DescriptorElement]]
-        self._code_table = {}
+        #: :type: smqtk.similarity_index.lsh.code_index.CodeIndex
+        self._code_index = index_inst
 
+        self._dist_method = distance_method
+        self._dist_func = self._get_dist_func(distance_method)
+
+        # #: :type: rtree.index.Rtree
+        # self._code_rt = None
+
+    @staticmethod
+    def _get_dist_func(distance_method):
+        """
+        Return appropriate distance function given a string label
+        """
         if distance_method == "euclidean":
             #: :type: (ndarray, ndarray) -> ndarray
-            self._dist_func = distance_functions.euclidean_distance
+            return distance_functions.euclidean_distance
         elif distance_method == "cosine":
             # Inverse of cosine similarity function return
             #: :type: (ndarray, ndarray) -> ndarray
-            self._dist_func = \
-                lambda i, j: 1.0 - distance_functions.cosine_similarity(i, j)
+            return lambda i, j: 1.0 - distance_functions.cosine_similarity(i, j)
         elif distance_method == 'hik':
             #: :type: (ndarray, ndarray) -> ndarray
-            self._dist_func = distance_functions.histogram_intersection_distance
+            return distance_functions.histogram_intersection_distance
         else:
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
@@ -120,7 +140,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return len(self._descr_cache)
+        return self._code_index.count()
 
     @staticmethod
     def _find_itq_rotation(v, n_iter):
@@ -194,9 +214,10 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         with SimpleTimer("Creating descriptor matrix", self._log.info):
             x = []
-            self._descr_cache = []
+            #: :type: list[smqtk.data_rep.DescriptorElement]
+            descr_cache = []
             for d in descriptors:
-                self._descr_cache.append(d)
+                descr_cache.append(d)
                 x.append(d.vector())
             if not x:
                 raise ValueError("No descriptors given!")
@@ -213,9 +234,22 @@ class ITQSimilarityIndex (SimilarityIndex):
             # numpy and matlab observation format is flipped, thus added
             # transpose
             c = numpy.cov(x.transpose())
+
+            # Direct translation
             l, pc = numpy.linalg.eig(c)
             # ordered by greatest eigenvalue magnitude, keeping top ``bit_len``
-            top_pairs = sorted(zip(l, pc.transpose()), reverse=1)[:self._bit_len]
+            top_pairs = sorted(zip(l, pc.transpose()),
+                               key=lambda p: p[0],
+                               reverse=1
+                               )[:self._bit_len]
+
+            # # Harry translation -- Uses singluar values / vectors, not eigen
+            # pc, l, _ = numpy.linalg.svd(c)
+            # top_pairs = sorted(zip(l, pc),
+            #                    key=lambda p: p[0],
+            #                    reverse=1
+            #                    )[:self._bit_len]
+
             # Eigenvectors of top ``bit_len`` magnitude eigenvalues
             pc_top = numpy.array([p[1] for p in top_pairs]).transpose()
             xx = numpy.dot(x, pc_top)
@@ -234,39 +268,103 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
-            for code_vec, descr in zip(c, self._descr_cache):
+            # props = rtree.index.Property()
+            # props.dimension = self._bit_len
+            # # Interleaved so we can just specify coord as the bit-vector
+            # # concatenated with itself.
+            # #: :type: rtree.index.Rtree
+            # self._code_rt = rtree.index.Rtree(interleaved=True,
+            #                                   properties=props)
+
+            for code_vec, descr in zip(c, descr_cache):
                 packed = bit_utils.bit_vector_to_int(code_vec)
-                self._code_table.setdefault(packed, []).append(descr)
+                self._code_index.add_descriptor(packed, descr)
 
-        pass
+                # coord = tuple(code_vec) + tuple(code_vec)
+                # self._code_rt.insert(packed, coord)
 
-    def save_index(self):
-        # TODO
-        raise NotImplementedError()
+    def save_index(self, dir_path):
+        """
+        Save the current index state to a given location.
 
-    def load_index(self):
-        # TODO
-        raise NotImplementedError()
+        This will overwrite a previously saved state given the same
+        configuration.
+
+        :raises SimilarityIndexStateSaveError: Unable to save the current index
+            state for some reason.
+
+        :param dir_path: Path to the directory to save the index to.
+        :type dir_path: str
+
+        """
+        if self._r is None:
+            raise SimilarityIndexStateSaveError("No index build yet to save.")
+
+        state = {
+            "bit_len": self._bit_len,
+            "itq_iter": self._itq_iter_num,
+            "rand_seed": self._rand_seed,
+            "mean_vector": self._mean_vector,
+            "rotation": self._r,
+            "code_index": self._code_index,  # should be picklable
+            "distance_method": self._dist_method
+        }
+
+        safe_create_dir(dir_path)
+        save_file = osp.join(dir_path, self._save_file)
+        with open(save_file, 'wb') as f:
+            cPickle.dump(state, f)
+
+    def load_index(self, dir_path):
+        """
+        Load a saved index state from a given location.
+
+        :raises SimilarityIndexStateLoadError: Could not load index state.
+
+        :param dir_path: Path to the directory to load the index to.
+        :type dir_path: str
+
+        """
+        save_file = osp.join(dir_path, self._save_file)
+
+        if not osp.isfile(save_file):
+            raise SimilarityIndexStateLoadError("Expected safe file not found: "
+                                                "%s" % save_file)
+
+        with open(save_file, 'rb') as f:
+            state = cPickle.load(f)
+
+        self._bit_len = state['bit_len']
+        self._itq_iter_num = state['itq_iter']
+        self._rand_seed = state['rand_seed']
+        self._mean_vector = state['mean_vector']
+        self._r = state['rotation']
+        self._code_index = state['code_index']
+        self._dist_method = state['distance_method']
+        self._dist_func = self._get_dist_func(self._dist_method)
 
     def get_small_code(self, descriptor):
         """
         Generate the small-code for the given descriptor.
 
-        This only works if we have an index loaded.
+        This only works if we have an index loaded, meaning we have a rotation
+        matrix.
 
         :param descriptor: Descriptor to generate the small code for.
         :type descriptor: smqtk.data_rep.DescriptorElement
 
-        :return: The descriptor's vector and the compacted N-bit small-code as
-            an integer.
-        :rtype: numpy.core.multiarray.ndarray, int
+        :return: The descriptor's vector, the n-bit vector, and the compacted
+            N-bit small-code as an integer.
+        :rtype: numpy.core.multiarray.ndarray[float],
+                numpy.core.multiarray.ndarray[numpy.uint8],
+                int
 
         """
         v = descriptor.vector()
         z = numpy.dot(v - self._mean_vector, self._r)
         b = numpy.zeros(z.shape, dtype=numpy.uint8)
         b[z >= 0] = 1
-        return v, bit_utils.bit_vector_to_int(b)
+        return v, b, bit_utils.bit_vector_to_int(b)
 
     def _neighbor_codes(self, c, d):
         """
@@ -308,7 +406,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
-        d_vec, d_sc = self.get_small_code(d)
+        d_vec, _, d_sc = self.get_small_code(d)
 
         # Process:
         #   Collect codes/descriptors from incrementally more distance bins
@@ -323,19 +421,36 @@ class ITQSimilarityIndex (SimilarityIndex):
             # Get codes of hamming dist, ``h_dist``, from ``d``'s code
             codes = self._neighbor_codes(d_sc, h_dist)
             for c in codes:
-                neighbors.extend(self._code_table.get(c, []))
+                neighbors.extend(self._code_index.get_descriptors(c))
             h_dist += 1
-        neighbors = neighbors[:n]
 
         # Compute fine-grain distance measurements for collected elements + sort
         distances = []
         for d_elem in neighbors:
             distances.append(self._dist_func(d_vec, d_elem.vector()))
 
-        t = zip(neighbors, distances)
-        for i, (d_elem, dist) in enumerate(sorted(zip(neighbors, distances),
-                                                  key=lambda e: e[1])):
-            neighbors[i] = d_elem
-            distances[i] = dist
+        ordered = sorted(zip(distances, neighbors), key=lambda p: p[0])
+        distances, neighbors = zip(*ordered)
 
-        return neighbors, distances
+        return neighbors[:n], distances[:n]
+
+    # def nn_rtree(self, d, n=1):
+    #     # There is some issue with the nearest neighbor query returning
+    #     # duplicates.
+    #     d_vec, d_bv, d_sc = self.get_small_code(d)
+    #
+    #     neighbor_codes = self._code_rt.nearest(tuple(d_bv) + tuple(d_bv), n)
+    #     neighbors_v2 = []
+    #     for nc in neighbor_codes:
+    #         neighbors_v2.extend(self._code_index.get_descriptors(nc))
+    #         if len(neighbors_v2) >= n:
+    #             break
+    #
+    #     distances_v2 = []
+    #     for d_elem in neighbors_v2:
+    #         distances_v2.append(self._dist_func(d_vec, d_elem.vector()))
+    #
+    #     ordered_v2 = sorted(zip(distances_v2, neighbors_v2), key=lambda p: p[0])
+    #     distances_v2, neighbors_v2 = zip(*ordered_v2)
+    #
+    #     return neighbors_v2[:n], distances_v2[:n]

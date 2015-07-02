@@ -24,6 +24,12 @@ class SimilarityIndexStateLoadError (Exception):
 class SimilarityIndex (object):
     """
     Common interface for descriptor-based nearest-neighbor computation.
+
+    Current the save/load index methods are file-system based, requiring some
+    method of serializing the index to a set of known files. Depending on the
+    implementation, one or more than one file will be written in order to
+    encapsulate the index state.
+
     """
     __metaclass__ = abc.ABCMeta
 
@@ -78,10 +84,9 @@ class SimilarityIndex (object):
         return
 
     @abc.abstractmethod
-    def save_index(self):
+    def save_index(self, dir_path):
         """
-        Save the current index state to a configured location. This
-        configuration should be set at instance construction.
+        Save the current index state to a given location.
 
         This will overwrite a previously saved state given the same
         configuration.
@@ -89,15 +94,21 @@ class SimilarityIndex (object):
         :raises SimilarityIndexStateSaveError: Unable to save the current index
             state for some reason.
 
+        :param dir_path: Path to the directory to save the index to.
+        :type dir_path: str
+
         """
         return
 
     @abc.abstractmethod
-    def load_index(self):
+    def load_index(self, dir_path):
         """
-        Load a saved index state based on the current configuration.
+        Load a saved index state from a given location.
 
         :raises SimilarityIndexStateLoadError: Could not load index state.
+
+        :param dir_path: Path to the directory to load the index to.
+        :type dir_path: str
 
         """
         return

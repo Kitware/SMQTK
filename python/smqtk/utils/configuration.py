@@ -10,6 +10,7 @@ from smqtk.data_rep.descriptor_element_impl import get_descriptor_element_impls
 from smqtk.data_rep.descriptor_element_factory import DescriptorElementFactory
 from smqtk.content_description import get_descriptors
 from smqtk.indexing import get_indexers
+from smqtk.similarity_index.lsh.code_index import get_index_types
 
 
 class ConfigurationInterface (object):
@@ -198,6 +199,53 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
         cd_cls = get_descriptors()[label_sect['type']]
         return cd_cls(**label_sect['init'])
 
+
+class LSHCodeIndexConfiguration (ConfigurationInterface):
+
+    CFG_SECT = 'LSHCodeIndices'
+
+    @classmethod
+    def get_config_sect(cls):
+        """
+        :return: Dictionary configuration block for this configuration
+            component.
+        :rtype: dict
+        """
+        return cls.BASE_CONFIG[cls.CFG_SECT]
+
+    @classmethod
+    def available_labels(cls):
+        """
+        :return: Set of available string labels in system configuration.
+        :rtype: set[str]
+        """
+        return set(cls.get_config_sect())
+
+    @classmethod
+    def new_inst(cls, label):
+        """
+        Construct a new instance of the type and with parameters associated with
+        the given label.
+
+        :param label: the configuration label
+        :type label: str
+
+        :raises KeyError: The given label does not exist in the system
+            configuration
+
+        :return: New instance of type and parameters associated with the given
+            label.
+        :rtype: smqtk.content_description.ContentDescriptor
+
+        """
+        label_sect = cls.get_config_sect()[label]
+        cd_cls = get_index_types()[label_sect['type']]
+        return cd_cls(**label_sect['init'])
+
+
+###
+# Deprecating soon
+#
 
 class IndexerConfiguration (ConfigurationInterface):
     """

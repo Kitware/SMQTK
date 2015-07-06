@@ -11,6 +11,7 @@ from smqtk.utils import bin_utils
 from smqtk.utils.configuration import (
     ConfigurationInterface,
     DataSetConfiguration,
+    DescriptorFactoryConfiguration,
     ContentDescriptorConfiguration,
     IndexerConfiguration,
 )
@@ -76,9 +77,12 @@ def main():
 
     group_required.add_option('-d', '--data-set',
                               help="Data set to use for model generation.")
+    group_required.add_option('-f', '--descriptor-factory',
+                              help="Descriptor factory configuration label to "
+                                   "use for descriptor storage.")
     group_required.add_option('-c', '--content-descriptor',
-                              help="Feature descriptor type for model and "
-                                   "feature generation.")
+                              help="Content descriptor type for model and "
+                                   "descriptor generation.")
     group_required.add_option('-i', '--indexer',
                               help="(Optional) Indexer type for model "
                                    "generation.")
@@ -107,10 +111,11 @@ def main():
     opts, args = parser.parse_args()
 
     bin_utils.initialize_logging(logging.getLogger(),
-                                logging.INFO - (10*opts.verbose))
+                                 logging.INFO - (10 * opts.verbose))
     log = logging.getLogger("main")
 
     dset_label = opts.data_set
+    descr_fac_label = opts.descriptor_factory
     cd_label = opts.content_descriptor
     idxr_label = opts.indexer
     parallel = opts.threads
@@ -124,17 +129,18 @@ def main():
     if opts.list:
         log.info("")
         log.info("Available Data Sets:")
-        log.info("")
         for l in DataSetConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
-        log.info("Available ContentDescriptor types:")
+        log.info("Available Descriptor Factory types:")
+        for l in DescriptorFactoryConfiguration.available_labels():
+            log.info("\t%s" % l)
         log.info("")
+        log.info("Available ContentDescriptor types:")
         for l in ContentDescriptorConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
         log.info("Available Indexer types:")
-        log.info("")
         for l in IndexerConfiguration.available_labels():
             log.info("\t%s", l)
         log.info("")
@@ -154,16 +160,19 @@ def main():
         log.error("Given label '%s' is NOT associated to an existing "
                   "indexer configuration!", idxr_label)
         fail = True
+    if idxr_label and descr_fac_label and \
+            descr_fac_label not in DescriptorFactoryConfiguration.available_labels():
+        log.error("Given label '%s' is NOT associated with an existing "
+                  "descriptor factory configuration!", descr_fac_label)
+        fail = True
     if fail:
         exit(1)
     del fail
 
     log.info("Loading data-set instance...")
-    #: :type: DataIngest or VideoIngest
     dset = DataSetConfiguration.new_inst(dset_label)
 
     log.info("Loading descriptor instance...")
-    #: :type: smqtk.content_description.ContentDescriptor
     descriptor = ContentDescriptorConfiguration.new_inst(cd_label)
     # Generate any model files needed by the chosen descriptor
     descriptor.PARALLEL = parallel
@@ -172,7 +181,8 @@ def main():
     # Don't do indexer model generation if a type was not provided
     if idxr_label:
         log.info("Loading indexer instance...")
-        #: :type: smqtk.indexing.Indexer
+
+        d_factory = DescriptorFactoryConfiguration.new_inst(descr_fac_label)
         indexer = IndexerConfiguration.new_inst(idxr_label)
 
         # It is not guaranteed that the feature computation method is doing
@@ -185,7 +195,7 @@ def main():
         # Pools don't usually allow daemonic processes, so this custom top-level
         # pool allows worker processes to spawn pools themselves.
         fmap = descriptor.compute_descriptor_async(
-            dset,
+            dset, d_factory,
             parallel=parallel,
             pool_type=NonDaemonicPool
         )

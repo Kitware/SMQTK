@@ -1,15 +1,16 @@
 __author__ = 'purg'
 
 import logging
-import multiprocessing
 import solr
 from smqtk.data_rep import DescriptorElement
+import time
+import uuid
 
 
 class SolrDescriptorElement (DescriptorElement):
 
-    def __init__(self, type_str, uuid, solr_conn_addr, vector_field,
-                 uuid_header='', timeout=10, persistent_connection=False):
+    def __init__(self, type_str, uid, solr_conn_addr, vector_field,
+                 timeout=10, persistent_connection=False, commit_on_set=True):
         """
         Initialize a new Solr-stored descriptor element.
 
@@ -17,8 +18,8 @@ class SolrDescriptorElement (DescriptorElement):
             content descriptor that generated this vector.
         :type type_str: str
 
-        :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :param uid: Unique ID reference of the descriptor.
+        :type uid: collections.Hashable
 
         :param solr_conn_addr: HTTP(S) address for the Solr index to use
         :type solr_conn_addr: str
@@ -26,11 +27,6 @@ class SolrDescriptorElement (DescriptorElement):
         :param vector_field: Solr index field to store the descriptor vector of
             floats in.
         :type vector_field: str
-
-        :param uuid_header: Custom string to append to the beginning of the UUID
-            when forming the ID of the stored descriptor entry. By default there
-            no header string (empty string).
-        :type uuid_header: str
 
         :param timeout: Whether or not the Solr connection should
             be persistent or not.
@@ -40,50 +36,81 @@ class SolrDescriptorElement (DescriptorElement):
             interactions.
         :type persistent_connection: bool
 
+        :param commit_on_set: Immediately commit changes when a vector is set.
+        :type commit_on_set: booc
+
         """
-        super(SolrDescriptorElement, self).__init__(type_str, uuid)
+        super(SolrDescriptorElement, self).__init__(type_str, uid)
 
-        self._lock = multiprocessing.RLock()
+        self.vector_field = vector_field
+        self.commit_on_set = commit_on_set
+        self.solr = solr.Solr(solr_conn_addr,
+                              persistent=persistent_connection,
+                              timeout=timeout, debug=self._is_debug())
 
+    def _is_debug(self):
         is_debug = False
         if self._log.getEffectiveLevel() <= logging.DEBUG:
             is_debug = True
+        return is_debug
 
-        self.uuid_header = uuid_header
-        self.vector_field = vector_field
-        self.solr = solr.Solr(solr_conn_addr,
-                              persistent=persistent_connection,
-                              timeout=timeout, debug=is_debug)
+    def __getstate__(self):
+        return {
+            "type_label": self._type_label,
+            "uuid": self._uuid,
+            "vector_field": self.vector_field,
+            "commit_on_set": self.commit_on_set,
+            "solr_url": self.solr.url,
+            "solr_persistent": self.solr.persistent,
+            "solr_timeout": self.solr.timeout,
+        }
+
+    def __setstate__(self, state):
+        self._type_label = state['type_label']
+        self._uuid = state['uuid']
+        self.vector_field = state['vector_field']
+        self.commit_on_set = state['commit_on_set']
+        self.solr = solr.Solr(state['solr_url'],
+                              persistent=state['solr_persistent'],
+                              timeout=state['solr_timeout'],
+                              debug=self._is_debug())
 
     def __repr__(self):
         return super(SolrDescriptorElement, self).__repr__() + \
-            '[url: %s, vector_field: %s, uuid_header: %s, timeout: %d, ' \
+            '[url: %s, vector_field: %s, timeout: %d, ' \
             'persistent: %s]' \
-            % (self.solr.url, self.vector_field, self.uuid_header,
+            % (self.solr.url, self.vector_field,
                self.solr.timeout, self.solr.persistent)
 
-    def _make_id(self):
-        return self.uuid_header + str(self.uuid())
+    def _query_str(self):
+        """
+        :return: Standard solr query string for this element's unique
+            combination of keys.
+        :rtype: str
+        """
+        return "type:%s AND uuid:%s" % (self.type(), str(self.uuid()))
+
+    def _base_doc(self):
+        return {
+            'id': uuid.uuid1(clock_seq=int(time.time() * 1000000)),
+            'type': self.type(),
+            'uuid': str(self.uuid()),
+        }
+
+    def _get_existing_doc(self):
+        """
+        :return: An existing document dict. If there isn't one for our type/uuid
+            we return None.
+        :rtype: None | dict
+        """
+        r = self.solr.select(self._query_str())
+        if r.numFound == 1:
+            return r.results[0]
+        else:
+            return None
 
     def has_vector(self):
-        with self._lock:
-            d_id = self._make_id()
-            #: :type: solr.core.Response
-            r = self.solr.select('id:%s' % d_id)
-            if r.numFound == 1:
-                if self.vector_field in r.results[0]:
-                    return True
-                else:
-                    self._log.warn("Descriptor vector field not found! ('%s'",
-                                   self.vector_field)
-                    return False
-            elif r.numFound > 1:
-                self._log.warn("Found more than one entry for constructed id: "
-                               "%s" % d_id)
-                return False
-            else:
-                self._log.warn("No descriptor found for given id[%s]" % d_id)
-                return False
+        return bool(self._get_existing_doc())
 
     def set_vector(self, new_vec):
         """
@@ -96,18 +123,17 @@ class SolrDescriptorElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        with self._lock:
-            self.solr.add({
-                'id': self._make_id(),
-                self.vector_field: new_vec,
-            }, commit=True)
+        doc = self._get_existing_doc()
+        if doc is None:
+            doc = self._base_doc()
+        doc[self.vector_field] = new_vec.tolist()
+        self.solr.add(doc, commit=self.commit_on_set)
 
     def vector(self):
-        with self._lock:
-            #: :type: solr.core.Response
-            r = self.solr.select('id:%s' % self._make_id())
-            assert r.numFound == 1
-            return r.results[0][self.vector_field]
+        doc = self._get_existing_doc()
+        if doc is None:
+            return None
+        return doc[self.vector_field]
 
 
 DESCRIPTOR_ELEMENT_CLASS = SolrDescriptorElement

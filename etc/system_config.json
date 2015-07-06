@@ -63,6 +63,8 @@
             "type": "SolrDescriptorElement",
             "init": {
                 "solr_conn_addr": "http://localhost:8983/solr",
+                "type_field": "type_s",
+                "uuid_field": "uuid_s",
                 "vector_field": "descriptor_fs",
                 "persistent_connection": 0
             }

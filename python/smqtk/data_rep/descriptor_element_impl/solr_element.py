@@ -9,7 +9,8 @@ import uuid
 
 class SolrDescriptorElement (DescriptorElement):
 
-    def __init__(self, type_str, uid, solr_conn_addr, vector_field,
+    def __init__(self, type_str, uid, solr_conn_addr, type_field, uuid_field,
+                 vector_field,
                  timeout=10, persistent_connection=False, commit_on_set=True):
         """
         Initialize a new Solr-stored descriptor element.
@@ -24,6 +25,14 @@ class SolrDescriptorElement (DescriptorElement):
         :param solr_conn_addr: HTTP(S) address for the Solr index to use
         :type solr_conn_addr: str
 
+        :param type_field: Solr index field to store descriptor type string
+            value.
+        :type type_field: str
+
+        :param uuid_field: Solr index field to store descriptor UUID string
+            value in.
+        :type uuid_field: str
+
         :param vector_field: Solr index field to store the descriptor vector of
             floats in.
         :type vector_field: str
@@ -37,11 +46,13 @@ class SolrDescriptorElement (DescriptorElement):
         :type persistent_connection: bool
 
         :param commit_on_set: Immediately commit changes when a vector is set.
-        :type commit_on_set: booc
+        :type commit_on_set: bool
 
         """
         super(SolrDescriptorElement, self).__init__(type_str, uid)
 
+        self.type_field = type_field
+        self.uuid_field = uuid_field
         self.vector_field = vector_field
         self.commit_on_set = commit_on_set
         self.solr = solr.Solr(solr_conn_addr,
@@ -59,6 +70,8 @@ class SolrDescriptorElement (DescriptorElement):
             "type_label": self._type_label,
             "uuid": self._uuid,
             "vector_field": self.vector_field,
+            "type_field": self.type_field,
+            "uuid_field": self.uuid_field,
             "commit_on_set": self.commit_on_set,
             "solr_url": self.solr.url,
             "solr_persistent": self.solr.persistent,
@@ -69,6 +82,8 @@ class SolrDescriptorElement (DescriptorElement):
         self._type_label = state['type_label']
         self._uuid = state['uuid']
         self.vector_field = state['vector_field']
+        self.type_field = state['type_field']
+        self.uuid_field = state['uuid_field']
         self.commit_on_set = state['commit_on_set']
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
@@ -88,13 +103,14 @@ class SolrDescriptorElement (DescriptorElement):
             combination of keys.
         :rtype: str
         """
-        return "type:%s AND uuid:%s" % (self.type(), str(self.uuid()))
+        return "%s:%s AND %s:%s" % (self.type_field, self.type(),
+                                    self.uuid_field, str(self.uuid()))
 
     def _base_doc(self):
         return {
             'id': uuid.uuid1(clock_seq=int(time.time() * 1000000)),
-            'type': self.type(),
-            'uuid': str(self.uuid()),
+            self.type_field: self.type(),
+            self.uuid_field: str(self.uuid()),
         }
 
     def _get_existing_doc(self):

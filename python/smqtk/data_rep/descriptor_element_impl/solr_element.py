@@ -100,7 +100,7 @@ class SolrDescriptorElement (DescriptorElement):
             self.solr.add({
                 'id': self._make_id(),
                 self.vector_field: new_vec,
-            })
+            }, commit=True)
 
     def vector(self):
         with self._lock:

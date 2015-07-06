@@ -31,6 +31,9 @@
     "DescriptorElementFactories": {
         // For a list of available descriptor types, see the
         // smqtk.data_rep.descriptor_element_impl module.
+        //
+        // ``init`` block should not specify type_str or uuid construction
+        // parameters.
 
         // Memory-based descriptor storage
         "MemoryDescriptorFactory": {
@@ -53,6 +56,15 @@
                 // Tells implementation to interpret relative paths to the
                 // WORK_DIR variable as configured in smqtk_config module.
                 "work_relative": 1
+            }
+        },
+
+        "LocalSolrFactory": {
+            "type": "SolrDescriptorElement",
+            "init": {
+                "solr_conn_addr": "http://localhost:8983/solr",
+                "vector_field": "descriptor_fs",
+                "persistent_connection": 0
             }
         }
     },

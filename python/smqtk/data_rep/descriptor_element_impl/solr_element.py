@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import logging
+import numpy
 import solr
 from smqtk.data_rep import DescriptorElement
 import time
@@ -57,13 +58,9 @@ class SolrDescriptorElement (DescriptorElement):
         self.commit_on_set = commit_on_set
         self.solr = solr.Solr(solr_conn_addr,
                               persistent=persistent_connection,
-                              timeout=timeout, debug=self._is_debug())
-
-    def _is_debug(self):
-        is_debug = False
-        if self._log.getEffectiveLevel() <= logging.DEBUG:
-            is_debug = True
-        return is_debug
+                              timeout=timeout,
+                              # debug=True
+                              )
 
     def __getstate__(self):
         return {
@@ -88,7 +85,8 @@ class SolrDescriptorElement (DescriptorElement):
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
                               timeout=state['solr_timeout'],
-                              debug=self._is_debug())
+                              # debug=True
+                              )
 
     def __repr__(self):
         return super(SolrDescriptorElement, self).__repr__() + \
@@ -149,7 +147,8 @@ class SolrDescriptorElement (DescriptorElement):
         doc = self._get_existing_doc()
         if doc is None:
             return None
-        return doc[self.vector_field]
+        # Vectors stored as lists in solr doc
+        return numpy.array(doc[self.vector_field])
 
 
 DESCRIPTOR_ELEMENT_CLASS = SolrDescriptorElement

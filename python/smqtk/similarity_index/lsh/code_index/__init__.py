@@ -1,13 +1,25 @@
 __author__ = 'purg'
 
 import abc
+import logging
 
 
 class CodeIndex (object):
     """
     Abstract base class for LSH small-code index storage
+
+    Implementations should be picklable for serialization.
+
     """
     __metaclass__ = abc.ABCMeta
+
+    @property
+    def _log(self):
+        return logging.getLogger('.'.join([self.__module__,
+                                           self.__class__.__name__]))
+
+    def __len__(self):
+        return self.count()
 
     @classmethod
     @abc.abstractmethod
@@ -32,8 +44,25 @@ class CodeIndex (object):
         """
         return
 
-    def __len__(self):
-        return self.count()
+    @abc.abstractmethod
+    def add_descriptor(self, code, descriptor):
+        """
+        Add a descriptor to this index given a matching small-code.
+
+        Adding the same descriptor multiple times under the same code should not
+        add multiple copies of the descriptor in the index.
+
+        :param code: bit-hash of the given descriptor in integer form
+        :type code: int
+
+        :param descriptor: Descriptor to index
+        :type descriptor: smqtk.data_rep.DescriptorElement
+
+        """
+        return
+
+    def __setitem__(self, code, descriptor):
+        self.add_descriptor(code, descriptor)
 
     @abc.abstractmethod
     def get_descriptors(self, code):
@@ -53,23 +82,6 @@ class CodeIndex (object):
 
     def __getitem__(self, code):
         return self.get_descriptors(code)
-
-    @abc.abstractmethod
-    def add_descriptor(self, code, descriptor):
-        """
-        Add a descriptor to this index given a matching small-code
-
-        :param code: bit-hash of the given descriptor in integer form
-        :type code: int
-
-        :param descriptor: Descriptor to index
-        :type descriptor: smqtk.data_rep.DescriptorElement
-
-        """
-        return
-
-    def __setitem__(self, code, descriptor):
-        self.add_descriptor(code, descriptor)
 
 
 def get_index_types():

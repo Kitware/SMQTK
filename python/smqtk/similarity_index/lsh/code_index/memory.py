@@ -5,10 +5,7 @@ from . import CodeIndex
 
 class MemoryCodeIndex (CodeIndex):
     """
-    Local RAM memory based index.
-
-    Serializable via pickle.
-
+    Local RAM memory based index. This implementation cannot save state.
     """
 
     @classmethod
@@ -21,6 +18,7 @@ class MemoryCodeIndex (CodeIndex):
 
     def __init__(self):
         self._num_descr = 0
+        # Mapping of code to a dictionary mapping descrUUID->Descriptor
         self._table = {}
 
     def count(self):
@@ -42,7 +40,7 @@ class MemoryCodeIndex (CodeIndex):
         :type descriptor: smqtk.data_rep.DescriptorElement
 
         """
-        self._table.setdefault(code, []).append(descriptor)
+        self._table.setdefault(code, {})[descriptor.uuid()] = descriptor
         self._num_descr += 1
 
     def get_descriptors(self, code):
@@ -58,7 +56,7 @@ class MemoryCodeIndex (CodeIndex):
         :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return self._table.get(code, [])
+        return self._table.get(code, {}).values()
 
 
 CODE_INDEX_CLASS = MemoryCodeIndex

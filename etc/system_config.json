@@ -66,6 +66,7 @@
                 "type_field": "type_s",
                 "uuid_field": "uuid_s",
                 "vector_field": "descriptor_fs",
+                "timestamp_field": "timestamp_f",
                 "persistent_connection": 0
             }
         }

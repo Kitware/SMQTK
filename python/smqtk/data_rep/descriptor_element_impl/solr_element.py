@@ -1,17 +1,25 @@
 __author__ = 'purg'
 
-import logging
 import numpy
 import solr
 from smqtk.data_rep import DescriptorElement
 import time
-import uuid
 
 
 class SolrDescriptorElement (DescriptorElement):
+    """
+    Descriptor element that uses a Solr instance as the backend storage medium.
 
-    def __init__(self, type_str, uid, solr_conn_addr, type_field, uuid_field,
-                 vector_field,
+    Fields where data is stored in the Solr documents are specified at
+    construction time. We additionally set the ``id`` field to a string UUID.
+    ``id`` is set because it is a common, required field for unique
+    identification of documents. The value set to the ``id`` field is
+    reproducible from this object's key attributes.
+
+    """
+
+    def __init__(self, type_str, uid, solr_conn_addr,
+                 type_field, uuid_field, vector_field, timestamp_field,
                  timeout=10, persistent_connection=False, commit_on_set=True):
         """
         Initialize a new Solr-stored descriptor element.
@@ -38,6 +46,10 @@ class SolrDescriptorElement (DescriptorElement):
             floats in.
         :type vector_field: str
 
+        :param timestamp_field: Solr index field to store floating-point UNIX
+            timestamps.
+        :type timestamp_field: str
+
         :param timeout: Whether or not the Solr connection should
             be persistent or not.
         :type timeout: int
@@ -55,6 +67,7 @@ class SolrDescriptorElement (DescriptorElement):
         self.type_field = type_field
         self.uuid_field = uuid_field
         self.vector_field = vector_field
+        self.timestamp_field = timestamp_field
         self.commit_on_set = commit_on_set
         self.solr = solr.Solr(solr_conn_addr,
                               persistent=persistent_connection,
@@ -66,9 +79,10 @@ class SolrDescriptorElement (DescriptorElement):
         return {
             "type_label": self._type_label,
             "uuid": self._uuid,
-            "vector_field": self.vector_field,
             "type_field": self.type_field,
             "uuid_field": self.uuid_field,
+            "vector_field": self.vector_field,
+            "timestamp_field": self.timestamp_field,
             "commit_on_set": self.commit_on_set,
             "solr_url": self.solr.url,
             "solr_persistent": self.solr.persistent,
@@ -78,9 +92,10 @@ class SolrDescriptorElement (DescriptorElement):
     def __setstate__(self, state):
         self._type_label = state['type_label']
         self._uuid = state['uuid']
-        self.vector_field = state['vector_field']
         self.type_field = state['type_field']
         self.uuid_field = state['uuid_field']
+        self.vector_field = state['vector_field']
+        self.timestamp_field = state['timestamp_field']
         self.commit_on_set = state['commit_on_set']
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
@@ -90,25 +105,17 @@ class SolrDescriptorElement (DescriptorElement):
 
     def __repr__(self):
         return super(SolrDescriptorElement, self).__repr__() + \
-            '[url: %s, vector_field: %s, timeout: %d, ' \
+            '[url: %s, timeout: %d, ' \
             'persistent: %s]' \
-            % (self.solr.url, self.vector_field,
-               self.solr.timeout, self.solr.persistent)
-
-    def _query_str(self):
-        """
-        :return: Standard solr query string for this element's unique
-            combination of keys.
-        :rtype: str
-        """
-        return "%s:%s AND %s:%s" % (self.type_field, self.type(),
-                                    self.uuid_field, str(self.uuid()))
+            % (self.solr.url, self.solr.timeout, self.solr.persistent)
 
     def _base_doc(self):
+        t = self.type()
+        suuid = str(self.uuid())
         return {
-            'id': uuid.uuid1(clock_seq=int(time.time() * 1000000)),
-            self.type_field: self.type(),
-            self.uuid_field: str(self.uuid()),
+            'id': '-'.join([t, suuid]),
+            self.type_field: t,
+            self.uuid_field: suuid,
         }
 
     def _get_existing_doc(self):
@@ -117,7 +124,11 @@ class SolrDescriptorElement (DescriptorElement):
             we return None.
         :rtype: None | dict
         """
-        r = self.solr.select(self._query_str())
+        b_doc = self._base_doc()
+        r = self.solr.select("id:%s AND %s:%s AND %s:%s"
+                             % (b_doc['id'],
+                                self.type_field, b_doc[self.type_field],
+                                self.uuid_field, b_doc[self.uuid_field]))
         if r.numFound == 1:
             return r.results[0]
         else:
@@ -137,10 +148,9 @@ class SolrDescriptorElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        doc = self._get_existing_doc()
-        if doc is None:
-            doc = self._base_doc()
+        doc = self._base_doc()
         doc[self.vector_field] = new_vec.tolist()
+        doc[self.timestamp_field] = time.time()
         self.solr.add(doc, commit=self.commit_on_set)
 
     def vector(self):

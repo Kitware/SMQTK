@@ -81,8 +81,12 @@ class DataElement (object):
             """ Returns path to file written. Always creates new file. """
             if d:
                 safe_create_dir(d)
+            ext = MIMETYPES.guess_extension(self.content_type())
+            # Exceptions because mimetypes is apparently REALLY OLD
+            if ext == '.jpe':
+                ext = '.jpg'
             fd, fp = tempfile.mkstemp(
-                suffix=MIMETYPES.guess_extension(self.content_type()),
+                suffix=ext,
                 dir=d
             )
             os.close(fd)

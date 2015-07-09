@@ -6,6 +6,7 @@ import os.path as osp
 
 from smqtk.data_rep import DescriptorElement
 from smqtk.utils import safe_create_dir
+from smqtk.utils.string_utils import partition_string
 from smqtk_config import WORK_DIR
 
 
@@ -61,7 +62,8 @@ class DescriptorFileElement (DescriptorElement):
 
     """
 
-    def __init__(self, type_str, uuid, save_dir, work_relative=False):
+    def __init__(self, type_str, uuid, save_dir, work_relative=False,
+                 subdir_split=None):
         """
         Initialize a file-base descriptor element.
 
@@ -82,6 +84,15 @@ class DescriptorFileElement (DescriptorElement):
             ``smqtk_config`` module.
         :type work_relative: bool
 
+        :param subdir_split: If a positive integer, this will cause us to store
+            the vector file in a subdirectory under the ``save_dir`` that was
+            specified. The integer value specifies the number of splits that we
+            will make in the stringification of this descriptor's UUID. If there
+            happen to be dashes in this stringification, we will remove them
+            (as would happen if given an uuid.UUID instance as the uuid
+            element).
+        :type subdir_split: None | int
+
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
 
@@ -93,7 +104,15 @@ class DescriptorFileElement (DescriptorElement):
         )
 
         # Saving components
-        self._vec_filepath = osp.join(self._save_dir,
+        if subdir_split and int(subdir_split) > 0:
+            save_dir = osp.join(self._save_dir,
+                                *partition_string(str(uuid).replace('-', ''),
+                                                  int(subdir_split))
+                                )
+        else:
+            save_dir = self._save_dir
+
+        self._vec_filepath = osp.join(save_dir,
                                       "%s.%s.vector.npy" % (self._type_label,
                                                             str(uuid)))
 

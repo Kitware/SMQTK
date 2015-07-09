@@ -21,8 +21,6 @@ from smqtk.utils import (
     SimpleTimer
 )
 
-# import rtree
-
 
 class ITQSimilarityIndex (SimilarityIndex):
     """
@@ -119,9 +117,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         self._dist_method = distance_method
         self._dist_func = self._get_dist_func(distance_method)
 
-        # #: :type: rtree.index.Rtree
-        # self._code_rt = None
-
     @staticmethod
     def _get_dist_func(distance_method):
         """
@@ -168,7 +163,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :return: [b, r]
            b: 2D numpy array, n*c binary matrix,
            r: 2D numpy array, the c*c rotation matrix found by ITQ
-        :rtype: (numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray)
+        :rtype: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
 
         """
         #initialize with an orthogonal random rotation
@@ -279,21 +274,12 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
-            # props = rtree.index.Property()
-            # props.dimension = self._bit_len
-            # # Interleaved so we can just specify coord as the bit-vector
-            # # concatenated with itself.
-            # #: :type: rtree.index.Rtree
-            # self._code_rt = rtree.index.Rtree(interleaved=True,
-            #                                   properties=props)
 
             self._code_index = self._index_factory()
-            for code_vec, descr in zip(c, descr_cache):
-                packed = bit_utils.bit_vector_to_int(code_vec)
-                self._code_index.add_descriptor(packed, descr)
-
-                # coord = tuple(code_vec) + tuple(code_vec)
-                # self._code_rt.insert(packed, coord)
+            self._code_index.add_many_descriptors(
+                (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
+                for i in xrange(c.shape[0])
+            )
 
     def save_index(self, dir_path):
         """
@@ -431,9 +417,14 @@ class ITQSimilarityIndex (SimilarityIndex):
         h_dist = 0
         while len(neighbors) < termination_count and h_dist <= self._bit_len:
             # Get codes of hamming dist, ``h_dist``, from ``d``'s code
-            codes = self._neighbor_codes(d_sc, h_dist)
-            for c in codes:
-                neighbors.extend(self._code_index.get_descriptors(c))
+            # codes = self._neighbor_codes(d_sc, h_dist)
+            # for c in codes:
+            #     neighbors.extend(self._code_index.get_descriptors(c))
+            neighbors.extend(
+                self._code_index.get_descriptors(
+                    self._neighbor_codes(d_sc, h_dist)
+                )
+            )
             h_dist += 1
 
         # Compute fine-grain distance measurements for collected elements + sort
@@ -445,24 +436,3 @@ class ITQSimilarityIndex (SimilarityIndex):
         distances, neighbors = zip(*ordered)
 
         return neighbors[:n], distances[:n]
-
-    # def nn_rtree(self, d, n=1):
-    #     # There is some issue with the nearest neighbor query returning
-    #     # duplicates.
-    #     d_vec, d_bv, d_sc = self.get_small_code(d)
-    #
-    #     neighbor_codes = self._code_rt.nearest(tuple(d_bv) + tuple(d_bv), n)
-    #     neighbors_v2 = []
-    #     for nc in neighbor_codes:
-    #         neighbors_v2.extend(self._code_index.get_descriptors(nc))
-    #         if len(neighbors_v2) >= n:
-    #             break
-    #
-    #     distances_v2 = []
-    #     for d_elem in neighbors_v2:
-    #         distances_v2.append(self._dist_func(d_vec, d_elem.vector()))
-    #
-    #     ordered_v2 = sorted(zip(distances_v2, neighbors_v2), key=lambda p: p[0])
-    #     distances_v2, neighbors_v2 = zip(*ordered_v2)
-    #
-    #     return neighbors_v2[:n], distances_v2[:n]

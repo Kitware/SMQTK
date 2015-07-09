@@ -65,14 +65,28 @@ class CodeIndex (object):
         self.add_descriptor(code, descriptor)
 
     @abc.abstractmethod
-    def get_descriptors(self, code):
+    def add_many_descriptors(self, code_descriptor_pairs):
         """
-        Get iterable of descriptors associated to this code. This may be empty.
+        Add multiple code/descriptor pairs.
 
-        Runtime: O(1)
+        :param code_descriptor_pairs: Iterable of integer code and paired
+            descriptor tuples to add to this index.
+        :type code_descriptor_pairs:
+            collections.Iterable[(int, smqtk.data_rep.DescriptorElement)]
 
-        :param code: Integer code bits
-        :type code: int
+        """
+        return
+
+    @abc.abstractmethod
+    def get_descriptors(self, code_or_codes):
+        """
+        Get iterable of descriptors associated to this code or iterable of
+        codes. This may return an empty iterable.
+
+        Runtime: O(n) where n is the number of codes provided.
+
+        :param code_or_codes: An integer or iterable of integer bit-codes.
+        :type code_or_codes: collections.Iterable[int] | int
 
         :return: Iterable of descriptors
         :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]

@@ -48,7 +48,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     # Distance function to use in FLANN indexing. See FLANN documentation for
     # available distance function types (under the MATLAB section reference for
     # valid string identifiers)
-    FLANN_DISTANCE_FUNCTION = 'chi_square'
+    FLANN_DISTANCE_FUNCTION = 'hik'
 
     # Total number of descriptors to use from input data to generate codebook
     # model. Fewer than this may be used if the data set is small, but if it is

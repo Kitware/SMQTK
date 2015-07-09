@@ -83,7 +83,7 @@ class DataElement (object):
                 safe_create_dir(d)
             ext = MIMETYPES.guess_extension(self.content_type())
             # Exceptions because mimetypes is apparently REALLY OLD
-            if ext == '.jpe':
+            if ext in {'.jpe', '.jfif'}:
                 ext = '.jpg'
             fd, fp = tempfile.mkstemp(
                 suffix=ext,

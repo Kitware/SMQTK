@@ -1,13 +1,25 @@
 __author__ = 'purg'
 
 import abc
+import logging
 
 
 class CodeIndex (object):
     """
     Abstract base class for LSH small-code index storage
+
+    Implementations should be picklable for serialization.
+
     """
     __metaclass__ = abc.ABCMeta
+
+    @property
+    def _log(self):
+        return logging.getLogger('.'.join([self.__module__,
+                                           self.__class__.__name__]))
+
+    def __len__(self):
+        return self.count()
 
     @classmethod
     @abc.abstractmethod
@@ -32,32 +44,13 @@ class CodeIndex (object):
         """
         return
 
-    def __len__(self):
-        return self.count()
-
-    @abc.abstractmethod
-    def get_descriptors(self, code):
-        """
-        Get iterable of descriptors associated to this code. This may be empty.
-
-        Runtime: O(1)
-
-        :param code: Integer code bits
-        :type code: int
-
-        :return: Iterable of descriptors
-        :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
-
-        """
-        return
-
-    def __getitem__(self, code):
-        return self.get_descriptors(code)
-
     @abc.abstractmethod
     def add_descriptor(self, code, descriptor):
         """
-        Add a descriptor to this index given a matching small-code
+        Add a descriptor to this index given a matching small-code.
+
+        Adding the same descriptor multiple times under the same code should not
+        add multiple copies of the descriptor in the index.
 
         :param code: bit-hash of the given descriptor in integer form
         :type code: int
@@ -70,6 +63,39 @@ class CodeIndex (object):
 
     def __setitem__(self, code, descriptor):
         self.add_descriptor(code, descriptor)
+
+    @abc.abstractmethod
+    def add_many_descriptors(self, code_descriptor_pairs):
+        """
+        Add multiple code/descriptor pairs.
+
+        :param code_descriptor_pairs: Iterable of integer code and paired
+            descriptor tuples to add to this index.
+        :type code_descriptor_pairs:
+            collections.Iterable[(int, smqtk.data_rep.DescriptorElement)]
+
+        """
+        return
+
+    @abc.abstractmethod
+    def get_descriptors(self, code_or_codes):
+        """
+        Get iterable of descriptors associated to this code or iterable of
+        codes. This may return an empty iterable.
+
+        Runtime: O(n) where n is the number of codes provided.
+
+        :param code_or_codes: An integer or iterable of integer bit-codes.
+        :type code_or_codes: collections.Iterable[int] | int
+
+        :return: Iterable of descriptors
+        :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
+
+        """
+        return
+
+    def __getitem__(self, code):
+        return self.get_descriptors(code)
 
 
 def get_index_types():

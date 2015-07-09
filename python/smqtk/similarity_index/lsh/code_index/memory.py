@@ -5,10 +5,7 @@ from . import CodeIndex
 
 class MemoryCodeIndex (CodeIndex):
     """
-    Local RAM memory based index.
-
-    Serializable via pickle.
-
+    Local RAM memory based index. This implementation cannot save state.
     """
 
     @classmethod
@@ -21,6 +18,7 @@ class MemoryCodeIndex (CodeIndex):
 
     def __init__(self):
         self._num_descr = 0
+        # Mapping of code to a dictionary mapping descrUUID->Descriptor
         self._table = {}
 
     def count(self):
@@ -42,23 +40,45 @@ class MemoryCodeIndex (CodeIndex):
         :type descriptor: smqtk.data_rep.DescriptorElement
 
         """
-        self._table.setdefault(code, []).append(descriptor)
+        self._table.setdefault(code, {})[descriptor.uuid()] = descriptor
         self._num_descr += 1
 
-    def get_descriptors(self, code):
+    def add_many_descriptors(self, code_descriptor_pairs):
         """
-        Get iterable of descriptors associated to this code. This may be empty.
+        Add multiple code/descriptor pairs.
 
-        Runtime: O(1)
+        :param code_descriptor_pairs: Iterable of integer code and paired
+            descriptor tuples to add to this index.
+        :type code_descriptor_pairs:
+            collections.Iterable[(int, smqtk.data_rep.DescriptorElement)]
 
-        :param code: Integer code bits
-        :type code: int
+        """
+        for c, d in code_descriptor_pairs:
+            self.add_descriptor(c, d)
+
+    def get_descriptors(self, code_or_codes):
+        """
+        Get iterable of descriptors associated to this code or iterable of
+        codes. This may return an empty iterable.
+
+        Runtime: O(n) where n is the number of codes provided.
+
+        :param code_or_codes: An integer or iterable of integer bit-codes.
+        :type code_or_codes: collections.Iterable[int] | int
 
         :return: Iterable of descriptors
         :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return self._table.get(code, [])
+        if hasattr(code_or_codes, '__iter__'):
+            # noinspection PyTypeChecker
+            # -> I literally just checked for __iter__
+            for c in code_or_codes:
+                for v in self._table.get(c, {}).values():
+                    yield v
+        else:  # assuming int
+            for v in self._table.get(code_or_codes, {}).itervalues():
+                yield v
 
 
 CODE_INDEX_CLASS = MemoryCodeIndex

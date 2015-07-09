@@ -52,6 +52,8 @@ def bit_vector_to_int(v):
     Transform a numpy vector representing a sequence of binary bits [0 | >0]
     into an integer representation.
 
+    Not compatible with numpy.uint64 type for some reason.
+
     :param v: 1D Vector of bits
     :type v: numpy.core.multiarray.ndarray
 
@@ -59,6 +61,6 @@ def bit_vector_to_int(v):
 
     """
     c = 0
-    for i, b in enumerate(v):
-        c += b << (v.size - i - 1)
+    for b in v:
+        c = (c << 1) | b
     return c

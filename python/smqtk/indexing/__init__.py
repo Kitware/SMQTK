@@ -42,9 +42,10 @@ class Indexer (object):
 
         :raises ValueError: The given feature map had no content.
 
-        :param descriptor_map: Mapping of integer IDs to feature data. All feature
-            data must be of the same size!
-        :type descriptor_map: dict of (int, numpy.core.multiarray.ndarray)
+        :param descriptor_map: Mapping of hashable IDs to descriptor data. All
+            descriptor vector data must be of the same size!
+        :type descriptor_map: dict[collections.Hashable,
+                                   smqtk.data_rep.DescriptorElement]
 
         :param parallel: Optionally specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available

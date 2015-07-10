@@ -378,6 +378,7 @@ class ColorDescriptor_Base (ContentDescriptor):
                 "target_precision": self._flann_target_precision,
                 "sample_fraction": self._flann_sample_fraction,
                 "log_level": log_level,
+                "algorithm": "autotuned"
             }
             if self._flann_autotune:
                 p['algorithm'] = "autotuned"
@@ -419,7 +420,9 @@ class ColorDescriptor_Base (ContentDescriptor):
 
         if not self.has_model:
             raise RuntimeError("No model currently loaded! Check the existence "
-                               "or, or generate, model files!\n"
+                               "or generate, model files! It's also possible\n"
+                               "that there is a mismatch between the model in "
+                               "the model you passed with what you told me it was!\n"
                                "Codebook path: %s\n"
                                "FLANN Index path: %s"
                                % (self.codebook_filepath,

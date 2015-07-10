@@ -100,6 +100,7 @@ class ColorDescriptor_Base (ContentDescriptor):
     def __init__(self, model_directory, work_directory,
                  kmeans_k=1024, flann_target_precision=0.95,
                  flann_sample_fraction=0.75,
+                 flann_autotune=False,
                  random_seed=None, use_spatial_pyramid=False):
         """
         Initialize a new ColorDescriptor interface instance.
@@ -127,6 +128,10 @@ class ColorDescriptor_Base (ContentDescriptor):
             auto tuning. Default is 0.75 (75%).
         :type flann_sample_fraction: float
 
+        :param flann_autotune: Have FLANN module use auto-tuning algorithm to
+            find an optimal index representation and parameter set.
+        :type flann_autotune: bool
+
         :param use_spatial_pyramid: Use spacial pyramids when quantizing low
             level descriptors during feature computation.
         :type use_spatial_pyramid: bool
@@ -146,6 +151,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         self._kmeans_k = int(kmeans_k)
         self._flann_target_precision = float(flann_target_precision)
         self._flann_sample_fraction = float(flann_sample_fraction)
+        self._flann_autotune = bool(flann_autotune)
         self._use_sp = use_spatial_pyramid
         self._rand_seed = None if random_seed is None else int(random_seed)
 
@@ -292,8 +298,8 @@ class ColorDescriptor_Base (ContentDescriptor):
 
         For colorDescriptor, we generate raw features over the ingest data,
         compute a codebook via kmeans, and then create an index with FLANN via
-        the "autotune" algorithm to intelligently pick the fastest indexing
-        method.
+        the "autotune" or linear algorithm to intelligently pick the fastest
+        indexing method.
 
         :param num_elements: Number of data elements in the iterator
         :type num_elements: int
@@ -371,8 +377,9 @@ class ColorDescriptor_Base (ContentDescriptor):
                 "target_precision": self._flann_target_precision,
                 "sample_fraction": self._flann_sample_fraction,
                 "log_level": log_level,
-                "algorithm": "autotuned"
             }
+            if self._flann_autotune:
+                p['algorithm'] = "autotuned"
             if self._rand_seed is not None:
                 p['random_seed'] = self._rand_seed
             flann_params = flann.build_index(codebook, **p)

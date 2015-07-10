@@ -27,7 +27,6 @@ class DataUrlElement (DataElement):
         super(DataUrlElement, self).__init__()
 
         self._url = url_address
-        self._md5_cache = None
 
         # make sure that url has a http:// or https:// prefix
         if not (self._url[:7] == "http://" or self._url[:8] == "https://"):
@@ -44,17 +43,6 @@ class DataUrlElement (DataElement):
         """
         # return MIMETYPES.guess_type(self._url)[0]
         return requests.get(self._url).headers['content-type']
-
-    def uuid(self):
-        """
-        UUID for this data element.
-
-        :return: UUID value for this data element. This return value should be
-            hashable.
-        :rtype: collections.Hashable
-
-        """
-        return self.md5()
 
     def get_bytes(self):
         """

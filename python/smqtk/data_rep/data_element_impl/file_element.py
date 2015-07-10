@@ -38,16 +38,6 @@ class DataFileElement (DataElement):
         """
         return self._content_type
 
-    def uuid(self):
-        """
-        UUID for this data element.
-
-        :return: UUID value for this data element.
-        :rtype: str
-
-        """
-        return self.md5()
-
     def get_bytes(self):
         """
         :return: Get the byte stream for this data element.

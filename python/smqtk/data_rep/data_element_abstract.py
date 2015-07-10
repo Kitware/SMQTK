@@ -28,6 +28,7 @@ class DataElement (object):
 
     def __init__(self):
         self._md5_cache = None
+        self._sha1_cache = None
         self._temp_filepath_stack = []
 
     @property
@@ -51,6 +52,15 @@ class DataElement (object):
         if not self._md5_cache:
             self._md5_cache = hashlib.md5(self.get_bytes()).hexdigest()
         return self._md5_cache
+
+    def sha1(self):
+        """
+        :return: SHA1 hex string of the data content.
+        :rtype: str
+        """
+        if not self._sha1_cache:
+            self._sha1_cache = hashlib.sha1(self.get_bytes()).hexdigest()
+        return self._sha1_cache
 
     def write_temp(self, temp_dir=None):
         """
@@ -121,6 +131,23 @@ class DataElement (object):
                     os.remove(fp)
             self._temp_filepath_stack = []
 
+    def uuid(self):
+        """
+        UUID for this data element. This many take different forms from integers
+        to strings to a uuid.UUID instance. This must return a hashable data
+        type.
+
+        By default, this ends up being the stringification of the SHA1 hash of
+        this data's bytes. Specific implementations may provide other UUIDs,
+        however.
+
+        :return: UUID value for this data element. This return value should be
+            hashable.
+        :rtype: collections.Hashable
+
+        """
+        return self.sha1()
+
     ###
     # Abstract methods
     #
@@ -131,20 +158,6 @@ class DataElement (object):
         :return: Standard type/subtype string for this data element, or None if
             the content type is unknown.
         :rtype: str or None
-        """
-        return
-
-    @abc.abstractmethod
-    def uuid(self):
-        """
-        UUID for this data element. This many take different forms from integers
-        to strings to a uuid.UUID instance. This must return a hashable data
-        type.
-
-        :return: UUID value for this data element. This return value should be
-            hashable.
-        :rtype: collections.Hashable
-
         """
         return
 

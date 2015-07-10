@@ -1,11 +1,8 @@
 __author__ = 'purg'
 
 import cPickle
-
 import multiprocessing
-
 import os
-
 import re
 
 from smqtk_config import DATA_DIR
@@ -28,13 +25,13 @@ class DataFileSet (DataSet):
     """
 
     # Filename template for serialized files. Requires template
-    SERIAL_FILE_TEMPLATE = "UUID_%s.MD5_%s.dataElement"
+    SERIAL_FILE_TEMPLATE = "UUID_%s.SHA1_%s.dataElement"
 
     # Regex for matching file names as valid FileSet serialized elements
-    # - yields two groups, the first is the UUID, the second is the MD5 sum
-    SERIAL_FILE_RE = re.compile("UUID_(\w+).MD5_(\w+).dataElement")
+    # - yields two groups, the first is the UUID, the second is the SHA1 sum
+    SERIAL_FILE_RE = re.compile("UUID_(\w+).SHA1_(\w+).dataElement")
 
-    def __init__(self, root_directory, md5_chunk=8, data_relative=False):
+    def __init__(self, root_directory, sha1_chunk=10, data_relative=False):
         """
         Initialize a new or existing file set from a root directory.
 
@@ -43,9 +40,9 @@ class DataFileSet (DataSet):
             description.
         :type root_directory: str
 
-        :param md5_chunk: Number of segments to split data element MD5 sum into
-            when saving element serializations.
-        :type md5_chunk: int
+        :param sha1_chunk: Number of segments to split data element SHA1 sum
+            into when saving element serializations.
+        :type sha1_chunk: int
 
         :param data_relative: If true, we should interpret ``root_directory`` as
             relative to the configured WORK_DIR parameter in the
@@ -59,7 +56,7 @@ class DataFileSet (DataSet):
                 os.path.expanduser(root_directory)
             )
         )
-        self._md5_chunk = md5_chunk
+        self._sha1_chunk = sha1_chunk
 
         self._log.debug("Initializing FileSet under root dir: %s",
                         self._root_dir)
@@ -135,18 +132,18 @@ class DataFileSet (DataSet):
                 # Remove any temporary files an element may have generated
                 de.clean_temp()
 
-                md5 = de.md5()
+                sha1 = de.sha1()
                 # Leaving off trailing chunk so that we don't have a single
-                # directory per md5-sum.
+                # directory per sha1-sum.
                 containing_dir = \
                     os.path.join(self._root_dir,
-                                 *partition_string(md5, self._md5_chunk))
+                                 *partition_string(sha1, self._sha1_chunk))
                 if not os.path.isdir(containing_dir):
                     safe_create_dir(containing_dir)
 
                 output_fname = os.path.join(
                     containing_dir,
-                    self.SERIAL_FILE_TEMPLATE % (str(uuid), md5)
+                    self.SERIAL_FILE_TEMPLATE % (str(uuid), sha1)
                 )
                 with open(output_fname, 'wb') as ofile:
                     cPickle.dump(de, ofile)

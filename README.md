@@ -1,4 +1,4 @@
-SMQTK
+S1MQTK
 =====
 ![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
 
@@ -6,21 +6,42 @@ Social Multimedia Query ToolKit aims to provide a simple and easy to use interfa
 
 
 ## Dependencies
-In order to provide basic functionality, the python packages listed in the ``requirements.txt`` are required.
+In order to provide basic functionality:
+
+* Build SMQTK via CMAKE.
+  * Currently, a naive CMake configuration (no modifications to options) is acceptable for basic functionality.
+  * Requred because of a generated python configuration file.
+    * template files:
+      * python/smqtk\_config.build.py.in
+      * python/smqtk\_config.install.py.in
+    * A manually constructed `smqtk_config.py` may be placed in the `<source>/python/` directory if desired.
+* Install python packages detailed in the `requirements.*.txt` files.
 
 In order to run provided SMQTKSearchApp web application, the following are  additionally required:
 
 * MongoDB
-    * MongoDB is required for the Web application for session storage.
-      This allows the Flask application API to modify session contents when within AJAX routines.
-      This required for asynchronous user-session state interaction/modification.
-    * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
+  * MongoDB is required for the Web application for session storage.
+    This allows the Flask application API to modify session contents when within AJAX routines.
+    This required for asynchronous user-session state interaction/modification.
+  * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
+
+### CMake Build
+Navagate to where the build products should be located.
+It is recommended that this not be the source tree.
+Build products include some C/C++ libraries, python modules and generated scripts.
+
+If the desired build directory, and run the following, filling in ``<...>`` with appropriate values:
+
+    $ cmake <source_dir_path>
+
+Optionally, the `ccmake` command line utility, or the GUI version, may be run in order to modify options for building additional modules.
+Currently, the selection is very minimal, but may be expanded over time.
 
 ### Installing Python dependencies
 There are two files that list required python packages:
 
-  * requirements.conda.txt
-  * requirements.pip.txt
+* requirements.conda.txt
+* requirements.pip.txt
 
 Required packages have been split up this way because conda does not provide all packages that pip can.
 While conda is generally considered the preferred method of acquiring python dependencies due to their pre-built nature, some of our requirements are not available through conda.
@@ -39,7 +60,7 @@ If installation of python dependencies via pip only is desired, or if local comp
 
 ### Additional Descriptor Dependencies
 Descriptors implemented in SMQTK may require additional dependencies in order to run.
-This may be because a descriptor required additional libraries or tools on the system. 
+This may be because a descriptor required additional libraries or tools on the system.
 For example, the ColorDescriptor implementation required a 3rd party tool to downloaded and setup.
 
 * ColorDescriptor
@@ -47,11 +68,11 @@ For example, the ColorDescriptor implementation required a 3rd party tool to dow
   * http://koen.me/research/colordescriptors/
   * After unpacking the downloaded ZIP archive, add the directory it was extracted to to the PYTHONPATH so the DescriptorIO.py module can be accessed and used within the SMQTK library.
   * Note that a license is required for commercial use (See the koen.me webpage).
-    
+
 As more descriptors are added, more optional dependencies may be introduced.
 
 ### Recommended Installs
-Before installing Numpy and Scipy, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
+if installing Numpy and Scipy via pip, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
 
 
 # Basic Descriptor Computation
@@ -61,6 +82,7 @@ This section aims to provide a simple example of how to do this for an image fil
 ### Setting up the data
 Most content description implementations require a model of some kind, and this in turn requires that there be some data corpus to train/generate the model from.
 For the purpose of this example, let us assume that this has already been done, and the descriptor specific model is located in a directory called `model`.
+See the section `Generating Models` below for more instructions on how to generated content descriptor implementation models, and the section `Forming File-based DataSets` for generating data sets from local files.
 
 ### Loading the data
 SMQTK uses a data abstraction system in order to mask where data actually exists.
@@ -74,8 +96,8 @@ To load the file, we would do the following:
 We can now use `e` as the data source for descriptor computation
 
 ### Initializing a Content Descriptor
-SMQTK utilizes a general interface for content descriptors and a plugin system to aggregate available implementations at run time. 
-If the name of the implementation is known, we can use the general class type accessor to get access to available descriptor types. 
+SMQTK utilizes a general interface for content descriptors and a plugin system to aggregate available implementations at run time.
+If the name of the implementation is known, we can use the general class type accessor to get access to available descriptor types.
 
 For the sake of this example, say we want to use the Image CSIFT descriptor as provided by the ColorDescriptor package.
 We know, because we looked at the constructor for this class type, that it takes a model directory and a directory to place temporary intermediate working files.
@@ -83,12 +105,22 @@ We know, because we looked at the constructor for this class type, that it takes
     >>> from smqtk.content_description import get_descriptors
     >>> cd = get_descriptors()['ColorDescriptor_Image_csift']("model", "/tmp")
 
-This instance can now be used to compute descriptor vectors for new data.
+Content descriptor implementations return a data abstraction of a content descriptor called a `DescriptorElement`.
+In order for content descriptor generators to know how to create one, we will need to supply a descriptor element factory instance to the `compute_descriptor` method.
+We can create a factory by supplying the desired `DescriptorElement` type and initialization parameters to the generic `DescriptorElementFactory` class.
+For this example we will use a file-based descriptor representation, which backs the descriptor vector data to a reproducable file path.
+Descriptor element implementations also use a plug-in like framework with a generic accessor method that returns a name-to-class dictionary.
 
-    >>> descr_elem = cd.compute_descriptor(e)
+    >>> from smqtk.data_rep import DescriptorElementFactory, get_descriptor_element_impls
+    >>> f = DescriptorElementFactory(get_descriptor_element_impls('DescriptorFileElement'),
+                                     {"save_dir": "~/descriptor_save_directory"})
+
+We can now compute descriptor vectors for new data, assuming `e` is the `DataFileElement` and `f` is the DescriptorElementFactory` instance created in previous code blocks:
+
+    >>> descr_elem = cd.compute_descriptor(e, f)
     >>> vec = descr_elem.vector()
 
-Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used.
+Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used, but is commonly a 1-dimensional vector of N elements, or an N-dimensional vector, of floats, depending on terminology.
 
 
 # System Configuration JSON
@@ -116,9 +148,9 @@ Other data set implementations may provide a window into a database, or other re
 Example call to `createFileIngest.py` script that adds all `png` files in a directory to the data set configuration label `example`:
 
     $> ./bin/createFileIngest.py -s example ./files/*.png
-    
+
 If the number of files to be added to a data set exceeds a shell's maximum argument length, due to glob expansion, the glob should be single-quoted.
-This allows the python code to handle the glob, avoiding the maximum argument length issue. 
+This allows the python code to handle the glob, avoiding the maximum argument length issue.
 
 TODO: An abstraction for descriptor vectors has been implemented, but has not been integrated into any other system in SMQTK as of yet.
 

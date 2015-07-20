@@ -16,6 +16,7 @@ import tempfile
 import smqtk_config
 
 from smqtk.content_description import ContentDescriptor
+from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
 from smqtk.utils.video_utils import get_metadata_info
@@ -612,6 +613,25 @@ class ColorDescriptor_Base (ContentDescriptor):
                                 hist_sp_l2, hist_sp_l3))
         return hist_sp
 
+    def _get_data_temp_path(self, de):
+        """
+        Standard method of generating/getting a data element's temporary file
+        path.
+
+        :param de: DataElement instance to generate/get temporary file path.
+        :type de: smqtk.data_rep.DataElement
+
+        :return: Path to the element's temporary file.
+        :rtype: str
+
+        """
+        temp_dir = None
+        # Shortcut when data element is from file, since we are not going to
+        # write to / modify the file.
+        if not isinstance(de, DataFileElement):
+            temp_dir = self.temp_dir
+        return de.write_temp(temp_dir)
+
 
 # noinspection PyAbstractClass,PyPep8Naming
 class ColorDescriptor_Image (ColorDescriptor_Base):
@@ -653,7 +673,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             info_fp, desc_fp = \
                 self._get_standard_info_descriptors_filepath(di)
             # Save out data bytes to temporary file
-            temp_img_filepath = di.write_temp(self.temp_dir)
+            temp_img_filepath = self._get_data_temp_path(di)
             try:
                 # Generate descriptors
                 utils.generate_descriptors(
@@ -674,7 +694,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             with SimpleTimer("Computing descriptors async...", self.log.debug):
                 for di in data_set:
                     # Creating temporary image file from data bytes
-                    tmp_img_fp = di.write_temp(self.temp_dir)
+                    tmp_img_fp = self._get_data_temp_path(di)
 
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di)
@@ -829,7 +849,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                          self.log.debug):
             for di in data_set:
                 r_map[di.uuid()] = {}
-                tmp_vid_fp = di.write_temp(self.temp_dir)
+                tmp_vid_fp = self._get_data_temp_path(di)
                 p = dict(self.FRAME_EXTRACTION_PARAMS)
                 vmd = get_metadata_info(tmp_vid_fp)
                 p['second_offset'] = vmd.duration * p['second_offset']

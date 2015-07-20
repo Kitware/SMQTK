@@ -123,7 +123,7 @@ class DataElement (object):
     def clean_temp(self):
         """
         Clean any temporary files created by this element. This does nothing if
-        no temporary files have been generated for this element.
+        no temporary files have been generated for this element yet.
         """
         if len(self._temp_filepath_stack):
             for fp in self._temp_filepath_stack:

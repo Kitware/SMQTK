@@ -112,7 +112,7 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     ds_spacing = max(int(min(w, h) / 50.0), 6)
     log.debug("dense-sample spacing: %d", ds_spacing)
 
-    tmp_fd, tmp_path = tempfile.mkstemp()
+    tmp_fd, tmp_path = tempfile.mkstemp(prefix='colorDescriptor.')
     os.close(tmp_fd)
 
     log.debug("launching executable subprocess")

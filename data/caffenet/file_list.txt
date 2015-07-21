@@ -1,0 +1,3 @@
+/home/sun/prog/smqtk/src/data/caffenet/fish-bike.jpg 0
+/home/sun/prog/smqtk/src/data/caffenet/cat_gray.jpg 0
+/home/sun/prog/smqtk/src/data/caffenet/cat.jpg 0

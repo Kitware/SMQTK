@@ -23,3 +23,6 @@ install(
   DESTINATION bin
   COMPONENT   tools
   )
+
+configure_file( "${SMQTK_SOURCE_DIR}/data/caffenet/file_list.txt.in"
+                "${SMQTK_BINARY_DIR}/data/caffenet/file_list.txt" )

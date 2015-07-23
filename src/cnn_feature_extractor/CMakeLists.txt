@@ -1,7 +1,9 @@
 project(smqtk_cnn_feature_extractor)
 cmake_minimum_required(VERSION 2.8)
 
+find_package(OpenCV REQUIRED)
 find_package(Caffe REQUIRED)
+add_definitions( ${Caffe_DEFINITIONS} )
 include_directories(SYSTEM ${Caffe_INCLUDE_DIRS})
 
 set(cnn_feature_extractor_srcs

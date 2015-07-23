@@ -15,11 +15,6 @@ add_executable(cnn_feature_extractor
 target_link_libraries(cnn_feature_extractor
     ${Caffe_LIBRARIES})
 
-set_property(
-    TARGET cnn_feature_extractor
-    PROPERTY
-        COMPILE_FLAGS "${flags}")
-
 install(
   TARGETS     cnn_feature_extractor
   DESTINATION bin

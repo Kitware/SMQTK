@@ -1,4 +1,4 @@
-S1MQTK
+SMQTK
 =====
 ![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
 

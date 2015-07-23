@@ -39,7 +39,7 @@ int feature_extraction_pipeline(int argc, char** argv)
     LOG(ERROR)<<
     "This program takes in a trained network and an input data layer, and then"
     " extract features of the input data produced by the net. It writes out features in text or binary files, instead of database\n"
-    "Usage: extract_features  pretrained_net_param"
+    "Usage: cnn_feature_extractor pretrained_net_param"
     "  feature_extraction_proto_file  extract_feature_blob_name1[,name2,...]"
     "  save_feature_dataset_name1[,name2,...]  num_mini_batches  output_format[csv,svm,stdout]"
     "  [CPU/GPU] [DEVICE_ID=0]\n"
@@ -190,7 +190,7 @@ int feature_extraction_pipeline(int argc, char** argv)
             // stdout
             std::cout << feature_blob_data[d] << " ";
           }
-        } // if ( d < 8 || d == dim_features )
+        } // for (int d = 0; d < dim_features; ++d)
 
         if( write_to_file )
           *feature_ofs[i] << std::endl;

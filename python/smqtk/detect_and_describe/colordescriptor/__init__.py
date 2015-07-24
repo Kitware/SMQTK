@@ -1,0 +1,2 @@
+from .color_detector_and_descriptor import cd_type_list
+DETECT_AND_DESCRIBE_CLASS = cd_type_list

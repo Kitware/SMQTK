@@ -8,9 +8,7 @@ import unittest
 
 from smqtk.utils import safe_create_dir
 
-
 class TestSafeCreateDir (unittest.TestCase):
-
     @mock.patch('smqtk.utils.os.makedirs')
     def test_noExists(self, mock_os_makedirs):
         dir_path = "/some/directory/somewhere"

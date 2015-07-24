@@ -130,6 +130,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
                           "module-named class)", module_name)
 
             for cls in classes:
+                log.debug('Applying filter function on class: %s' % cls.__name__)
                 if filter_func is None or filter_func(cls):
                     class_map[cls.__name__] = cls
                 else:

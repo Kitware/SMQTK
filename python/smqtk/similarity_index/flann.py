@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import cPickle
+import json
 import logging
 import multiprocessing
 import numpy
@@ -14,6 +15,7 @@ from smqtk.similarity_index import (
     SimilarityIndexStateSaveError,
 )
 from smqtk.utils import safe_create_dir
+from smqtk.utils import SimpleTimer
 
 from smqtk_config import WORK_DIR
 
@@ -52,7 +54,7 @@ class FlannSimilarity (SimilarityIndex):
         return pyflann is not None
 
     def __init__(self, temp_dir=tempfile.gettempdir(), autotune=False,
-                 target_precision=0.95, sample_fraction=0.1,
+                 target_precision=0.95, sample_fraction=1.0,
                  distance_method='hik', random_seed=None,
                  config_relative=False):
         """
@@ -106,8 +108,8 @@ class FlannSimilarity (SimilarityIndex):
         ))
 
         # Standard save files relative to save directory
-        self._sf_flann_index = "flann.index"
-        self._sf_state = "flann.state.pickle"
+        self._sf_flann_index = "/Users/jonathanowens/smqtk_benchmarking/indexing/flann.index"
+        self._sf_state = "/Users/jonathanowens/smqtk_benchmarking/indexing/flann.state.pickle"
 
         self._build_autotune = bool(autotune)
         self._build_target_precision = float(target_precision)
@@ -174,6 +176,34 @@ class FlannSimilarity (SimilarityIndex):
         :rtype: int
         """
         return len(self._descr_cache) if self._descr_cache else 0
+
+    def index(self, descriptors):
+        if self._log.getEffectiveLevel() <= logging.DEBUG:
+            log_level = 'info'
+        else:
+            log_level = 'warning'
+
+        self._flann = pyflann.FLANN()
+        with SimpleTimer("Building FLANN index...", self._log.info):
+            self._log.info("target_precision: %s and sample_fraction: %s" % (self._build_target_precision, self._build_sample_frac))
+            self._log.info("Autotuned?: %s" % self._build_autotune)
+            p = {
+                "target_precision": self._build_target_precision,
+                "sample_fraction": self._build_sample_frac,
+                "log_level": log_level,
+            }
+            if self._build_autotune:
+                p['algorithm'] = "autotuned"
+            if self._rand_seed is not None:
+                p['random_seed'] = self._rand_seed
+            print p
+            flann_params = self._flann.build_index(descriptors, **p)
+        with SimpleTimer("Saving FLANN index to file...", self._log.debug):
+            # Save FLANN index data binary
+            self._flann.save_index(self._sf_flann_index)
+            # Save out log of parameters
+            with open(self._sf_state, 'w') as ofile:
+                json.dump(flann_params, ofile, indent=4, sort_keys=True)
 
     def build_index(self, descriptors):
         """

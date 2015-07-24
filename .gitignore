@@ -42,3 +42,16 @@ errors.log
 /TPL/libsvm-3.1-custom/svm-prob
 /TPL/libsvm-3.1-custom/svm-scale
 /TPL/libsvm-3.1-custom/svm-train
+
+.DS_Store
+.idea/
+bin/CreateIngest.py
+bin/orig_generateModel.py
+bin/remove_old_files.py
+bin/run_SMQTK_Application.py
+files/
+python/.DS_Store
+python/EventContentDescriptor/.DS_Store
+python/smqtk/.DS_Store
+tests/
+.gitignore

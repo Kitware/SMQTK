@@ -70,6 +70,41 @@
         }
     },
 
+    "DetectorsAndDescriptors": {
+        "CD_CSIFT_Image_example": {
+            "type": "ColorDetectAndDescribe_Image_csift",
+            "init": {
+                "work_directory": "/Users/jonathanowens/smqtk_benchmarking/detect_and_describe_csift"
+            }
+        }
+    },
+
+    "Quantization": {
+        "SKLearn_Cluster_MiniBatch_Kmeans": {
+            "type": "SKLearn_Cluster_MiniBatch_Kmeans",
+            "init": {
+                "work_dir": "/Users/jonathanowens/smqtk_benchmarking/quantization/kmeans/example_image",
+                "kmeans_k": 256,
+                "label": "labeslsl",
+                // "init_size": 768,
+                "random_seed": 42,
+                "verbose": true,
+                "compute_labels": false,
+                "quantization_filepath": "/Users/jonathanowens/smqtk_benchmarking/quantization/example_image"
+            }
+        }
+    },
+
+    "SimilarityNN": {
+        "FLANN": {
+            "type": "FlannSimilarity",
+            "init": {
+                "random_seed": 42
+            }
+        }
+    },
+
+    // Deprecated -- kept here for running old version of pipeline
     "ContentDescriptors": {
         // "name": {
         //     "type": "typeName",
@@ -82,8 +117,9 @@
             "init": {
                 // This impl allows relative paths, to be interpreted relative
                 // to system DATA_DIR / WORK_DIR respectively.
-                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
-                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+//                "descriptor_type_str": "csift",
+                "model_directory": "/Users/jonathanowens/smqtk_benchmarking/original_smqtk/ColorDescriptor/csift/example_image",
+                "work_directory": "/Users/jonathanowens/smqtk_benchmarking/original_smqtk/ColorDescriptor/csift/example_image",
                 "random_seed": 42,
                 // model generation parameters
                 "kmeans_k": 256
@@ -94,6 +130,7 @@
             "init": {
                 // This impl allows relative paths, to be interpreted relative
                 // to system DATA_DIR / WORK_DIR respectively.
+                "descriptor_type_str": "csift",
                 "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "random_seed": 42,
@@ -103,12 +140,13 @@
             }
         },
         "CD_RGSIFT_Image_example": {
-            "type": "ColorDescriptor_Image_rgsift",
+            "type": "ColorDescriptor_rgsift",
             "init": {
                 // This impl allows relative paths, to be interpreted relative
                 // to system DATA_DIR / WORK_DIR respectively.
-                "model_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
-                "work_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
+                "descriptor_type_str": "rgsift",
+//                "model_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
+                "work_dir": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
                 "random_seed": 42,
                 // model generation parameters
                 "kmeans_k": 256
@@ -125,19 +163,15 @@
                 // model generation parameters
                 "kmeans_k": 512
             }
-        }
-    },
-
-    "LSHCodeIndices": {
-        "MemoryIndex": {
-            "type": "MemoryCodeIndex",
+        },
+        "OpenCV_Surf": {
+            "type": "OpenCV_Desc",
             "init": {
-                // None
+                "open_cv_detector_type": "SURF",
+                "open_cv_descriptor_type": "SURF"
             }
         }
     },
-
-    // Deprecated components below
 
     "Indexers": {
         // For the moment, indexers carry a model that is data-set specific
@@ -170,42 +204,12 @@
         }
     },
 
-    "Fusion": {
-        // TODO: This is outdated for new similarity and IQR indexing structures
-        // <label>: {
-        //      "catalyst": {
-        //          "type: <class_label>,
-        //          "init": {
-        //              <constructor_kwargs>
-        //          }
-        //      },
-        //      "atoms": [
-        //          {
-        //              "descriptor": <cd_label>,
-        //              "indexers": [ <i_label>, ... ]
-        //              // TODO: Need sub-catalyst parameter option for per-atom fusion
-        //          }, ...
-        //      ]
-        //  }, ...
-        "example_image": {
-            "catalyst": {
-                "type": "Average",
-                "init": {}
-            },
-            "atoms": [
-                {
-                    "descriptor": "CD_CSIFT_Image_example",
-                    "indexers": [
-                        "SVM_HIK-CD_CSIFT-Image"
-                    ]
-                },
-                {
-                    "descriptor": "CD_RGSIFT_Image_example",
-                    "indexers": [
-                        "SVM_HIK-CD_RGSIFT-Image"
-                    ]
-                }
-            ]
+    "LSHCodeIndices": {
+        "MemoryIndex": {
+            "type": "MemoryCodeIndex",
+            "init": {
+                // None
+            }
         }
     }
 }

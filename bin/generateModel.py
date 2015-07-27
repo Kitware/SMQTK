@@ -131,7 +131,7 @@ def main():
         log.info("")
         for l in QuantizationConfiguration.available_labels():
             log.info("\t%s" % l)
-            log.info("")
+        log.info("")
         log.info("Available SimilarityNearestNeighborsConfigurations:")
         log.info("")
         for l in SimilarityNearestNeighborsConfiguration.available_labels():

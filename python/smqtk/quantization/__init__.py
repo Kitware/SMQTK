@@ -56,6 +56,10 @@ class Quantization (object):
         '''
         return self._quantization_filepath
 
+    @property
+    def label(self):
+        return self._label
+
     @abc.abstractmethod
     def generate_quantization(self):
         pass

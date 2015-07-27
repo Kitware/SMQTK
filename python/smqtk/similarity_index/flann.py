@@ -56,7 +56,7 @@ class FlannSimilarity (SimilarityIndex):
     def __init__(self, temp_dir=tempfile.gettempdir(), autotune=False,
                  target_precision=0.95, sample_fraction=1.0,
                  distance_method='hik', random_seed=None,
-                 config_relative=False):
+                 checkpoint_dir=None, config_relative=False):
         """
         Initialize FLANN index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from save
@@ -116,6 +116,8 @@ class FlannSimilarity (SimilarityIndex):
         self._build_sample_frac = float(sample_fraction)
 
         self._distance_method = str(distance_method)
+
+        self._checkpoint_dir = checkpoint_dir
 
         # The flann instance with a built index. None before index construction
         #: :type: pyflann.index.FLANN or None
@@ -204,6 +206,37 @@ class FlannSimilarity (SimilarityIndex):
             # Save out log of parameters
             with open(self._sf_state, 'w') as ofile:
                 json.dump(flann_params, ofile, indent=4, sort_keys=True)
+
+    def build_histogram(self, descriptors, quantization):
+        # TODO -- spatial pyramid
+        pyflann.set_distance_type(self._distance_method)
+        flann = pyflann.FLANN()
+        flann.load_index(self._sf_flann_index, quantization)
+        try:
+            idxs, dists = flann.nn_index(descriptors)
+        except AssertionError:
+            self._log.error("Codebook shape  : %s", self._codebook.shape)
+            self._log.error("Descriptor shape: %s", descriptors.shape)
+
+            raise
+
+        h = numpy.histogram(idxs,  # indices are all integers
+            bins=numpy.arange(quantization.shape[0]+1))[0]
+
+        if h.sum():
+            # noinspection PyAugmentAssignment
+            h = h / float(h.sum())
+        else:
+            h = numpy.zeros(h.shape, h.dtype)
+
+        if self._checkpoint_dir:
+            self._log.info("Saving checkpoint file")
+            if not osp.isdir(osp.dirname(self._checkpoint_dir)):
+                safe_create_dir(osp.dirname(self._checkpoint_dir))
+            numpy.save(self._checkpoint_dir+".npy", h)
+
+        return h
+
 
     def build_index(self, descriptors):
         """

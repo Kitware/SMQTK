@@ -10,8 +10,10 @@ import optparse
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.utils import bin_utils
 from smqtk.utils.configuration import (
-    ContentDescriptorConfiguration,
-    DescriptorFactoryConfiguration,
+    DataSetConfiguration,
+    DetectorsAndDescriptorsConfiguration,
+    QuantizationConfiguration,
+    SimilarityNearestNeighborsConfiguration
 )
 
 
@@ -25,14 +27,16 @@ numpy format).
     parser = bin_utils.SMQTKOptParser(usage, description=description)
 
     group_labels = optparse.OptionGroup(parser, "Configuration Labels")
+    group_labels.add_option('-d', '--data-set',
+        help="Data set to use for model generation.")
     group_labels.add_option('-c', '--content-descriptor',
-                            help='The descriptor type to use. This must be a '
-                                 'type available in the system configuration')
-    group_labels.add_option('-f', '--factory-type',
-                            help='The DescriptorElementFactory configuration '
-                                 'to use when computing the descriptor. This '
-                                 'must be a type available in the system '
-                                 'configuration.')
+        help='The descriptor type to use. This must be a '
+        'type available in the system configuration')
+    group_labels.add_option('-q', '--quantization',
+        help="Quantizer for codebook generation.")
+    group_labels.add_option('-s', '--snn',
+        help="Similarity nearest neighbor configuration (FLANN, i.e.)")
+
     parser.add_option_group(group_labels)
 
     group_optional = optparse.OptionGroup(parser, "Optional Parameters")
@@ -61,7 +65,10 @@ numpy format).
 
     output_filepath = opts.output_filepath
     descriptor_label = opts.content_descriptor
-    factory_label = opts.factory_type
+    q_label = opts.quantization
+    snn_label = opts.snn
+    dset = opts.data_set
+
     overwrite = opts.overwrite
     verbose = opts.verbose
 
@@ -71,45 +78,83 @@ numpy format).
 
     if opts.list:
         log.info("")
-        log.info("Available ContentDescriptor types:")
+        log.info("Available Data Sets:")
         log.info("")
-        for dl in ContentDescriptorConfiguration.available_labels():
+        for l in DataSetConfiguration.available_labels():
+            log.info("\t%s" % l)
+        log.info("")
+        log.info("Available DetectorsAndDescriptorsConfigurations types:")
+        log.info("")
+        for dl in DetectorsAndDescriptorsConfiguration.available_labels():
             log.info("\t%s", dl)
         log.info("")
-        log.info("Available DescriptorElementFactory types:")
+        log.info("Available Quantization types:")
         log.info("")
-        for df in DescriptorFactoryConfiguration.available_labels():
-            log.info("\t%s", df)
+        for dl in QuantizationConfiguration.available_labels():
+            log.info("\t%s", dl)
         log.info("")
+        log.info("Available SimilarityNearestNeighborsConfigurations:")
+        log.info("")
+        for l in SimilarityNearestNeighborsConfiguration.available_labels():
+            log.info("\t%s" % l)
+        log.info("")
+
         exit(0)
 
-    if len(args) == 0:
-        log.error("Failed to provide an input file path")
+    if len(args) == 0 and dset is None:
+        log.error("Failed to provide an input file path or dataset")
         exit(1)
     if len(args) > 1:
         log.warning("More than one filepath provided as an argument. Only "
                     "computing for the first one.")
 
+    if not q_label:
+        log.error("Failed to provide quantization. Exiting.")
+        exit(1)
+
+    if not snn_label:
+        log.error("Failed to provide indexer label. Exiting.")
+        exit(1)
+
     input_filepath = args[0]
     data_element = DataFileElement(input_filepath)
 
-    cd = ContentDescriptorConfiguration.new_inst(descriptor_label)
-    factory = DescriptorFactoryConfiguration.new_inst(factory_label)
-    descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
-    vec = descr_elem.vector()
+    # Configure the feature detector and descriptor based on the json configuration file.
+    log.info("Loading feature detection and descriptor %s." % descriptor_label)
+    d_and_d = DetectorsAndDescriptorsConfiguration.new_inst(descriptor_label)
+    # Detect and Describe
+    log.info("Performing feature detection and description.")
+    feat, desc = d_and_d.detect_and_describe(data_element)
 
-    if vec is None:
-        log.error("Failed to generate a descriptor vector for the input data!")
-
-    if output_filepath:
-        numpy.save(output_filepath, vec)
+    # Quantization -- ensure there is an existing quantization generated.
+    quant = QuantizationConfiguration.new_inst(q_label)
+    log.info("Checking to ensure there is an existing quantization for %s." % q_label)
+    if quant.has_quantization:
+      log.info("Success, quantization for %s exists." % q_label)
     else:
-        # Construct string, because numpy
-        s = []
-        # noinspection PyTypeChecker
-        for f in vec:
-            s.append('%15f' % f)
-        print ' '.join(s)
+      log.error("Failed to find a quantization for %s. Exiting." % q_label)
+      exit(1)
+
+    # Load index
+    log.info("Loading index for %s." % snn_label)
+    snn = SimilarityNearestNeighborsConfiguration.new_inst(snn_label)
+    hist = snn.build_histogram(desc, quant._quantization)
+
+#    descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
+    # vec = descr_elem.vector()
+
+    # if vec is None:
+    #     log.error("Failed to generate a descriptor vector for the input data!")
+
+    # if output_filepath:
+    #     numpy.save(output_filepath, vec)
+    # else:
+    #     # Construct string, because numpy
+    #     s = []
+    #     # noinspection PyTypeChecker
+    #     for f in vec:
+    #         s.append('%15f' % f)
+        # print ' '.join(s)
 
 
 if __name__ == "__main__":

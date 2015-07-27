@@ -2,6 +2,7 @@ import abc
 import os
 
 from smqtk.utils.plugin import get_plugins
+from smqtk.data_rep import DataElement
 
 class DetectAndDescribe (object):
 	def __init__(self):
@@ -18,7 +19,12 @@ class DetectAndDescribe (object):
 		Of course, an implementation of DetectAndDescribe does not have to have seperate detect and describe
 		stages, as would be the case for some implementataions such as colorDescriptor.
 		"""
-		pass
+
+		# We need to enforce that we are using a DataSet and not an element
+		if isinstance(data, DataElement):
+			data = {data}
+
+		return data
 
 
 def get_detect_and_describe():

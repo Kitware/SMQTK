@@ -99,7 +99,8 @@
         "FLANN": {
             "type": "FlannSimilarity",
             "init": {
-                "random_seed": 42
+                "random_seed": 42,
+                "checkpoint_dir": "/Users/jonathanowens/smqtk_benchmarking/snn/example_image"
             }
         }
     },

@@ -172,6 +172,9 @@ class ColorDetectAndDescribe_Image (ColorDetectAndDescribe_Base):
         if not data_set:
             raise ValueError("No data given to process.")
 
+        # Safety checks
+        data_set = super(ColorDetectAndDescribe_Base, self).detect_and_describe(data_set)
+
         inf = float('inf')
         descriptor_limit = kwargs.get('limit', inf)
         per_item_limit = numpy.floor(float(descriptor_limit) / len(data_set))

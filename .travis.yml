@@ -8,6 +8,10 @@ addons:
   apt:
     packages:
       - cmake
+      # for python module gmpy2
+      - libgmp-dev
+      - libmpc-dev
+      - libmpfr-dev
 
 # Environment setup
 before_install:

@@ -86,6 +86,7 @@ class SolrCodeIndex (CodeIndex):
 
         self.commit_on_add = commit_on_add
         self.max_boolean_clauses = max_boolean_clauses
+        assert self.max_boolean_clauses >= 2, "Need more clauses"
 
         self.solr = solr.Solr(solr_conn_addr, persistent=persistent_connection,
                               timeout=timeout,

@@ -87,7 +87,7 @@ def bit_vector_to_int(v):
     :return: Integer equivalent
 
     """
-    c = 0
+    c = 0L
     for b in v:
-        c = (c << 1) | b
+        c = (c * 2L) + int(b)
     return c

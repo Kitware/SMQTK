@@ -56,7 +56,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         Initialize ITQ similarity index instance (not the index itself).
 
-        :param index_factory: Method to produce a new code index instance
+        :param index_factory: Method to produce a new code index instance. By
+            default, we use an in-memory index.
         :type index_factory: ()->smqtk.similarity_index.lsh.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
@@ -166,13 +167,13 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
 
         """
-        #initialize with an orthogonal random rotation
+        # initialize with an orthogonal random rotation
         bit = v.shape[1]
         r = numpy.random.randn(bit, bit)
         u11, s2, v2 = numpy.linalg.svd(r)
         r = u11[:, :bit]
 
-        #ITQ to find optimal rotation
+        # ITQ to find optimal rotation
         self._log.debug("ITQ iterations to determine optimal rotation: %d",
                         n_iter)
         for i in range(n_iter):
@@ -364,31 +365,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         b[z >= 0] = 1
         return v, b, bit_utils.bit_vector_to_int(b)
 
-    def _neighbor_codes(self, c, d):
-        """
-        Iterate through small-codes of length ``b``, where ``b`` is the number
-        of bits this index is configured for, that are ``d`` hamming distance
-        away from query code ``c``.
-
-        This will yield a number of elements equal to ``nCr(b, d)``.
-
-        We expect ``d`` to be the integer hamming distance,
-        e.g. h(001101, 100101) == 2, not 0.333.
-
-        :param c: Query small-code integer
-        :type c: int
-
-        :param d: Integer hamming distance
-        :type d: int
-
-        """
-        if not d:
-            yield c
-            raise StopIteration()
-
-        for fltr in bit_utils.iter_perms(self._bit_len, d):
-            yield c ^ fltr
-
     def nn(self, d, n=1):
         """
         Return the nearest `N` neighbors to the given descriptor element.
@@ -422,10 +398,14 @@ class ITQSimilarityIndex (SimilarityIndex):
             #     neighbors.extend(self._code_index.get_descriptors(c))
             neighbors.extend(
                 self._code_index.get_descriptors(
-                    self._neighbor_codes(d_sc, h_dist)
+                    bit_utils.neighbor_codes(self._bit_len, d_sc, h_dist)
                 )
             )
             h_dist += 1
+
+        # import heapq
+        # heapq.nsmallest(n, ints,
+        #                 key=lambda e: distance_functions.hamming_distance(d_sc, e))
 
         # Compute fine-grain distance measurements for collected elements + sort
         distances = []
@@ -436,3 +416,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         distances, neighbors = zip(*ordered)
 
         return neighbors[:n], distances[:n]
+
+
+import heapq

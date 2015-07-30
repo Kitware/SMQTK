@@ -7,6 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
+import gmpy2
 import numpy
 
 
@@ -134,3 +135,20 @@ def cosine_similarity(i, j):
 
     # speed optimization, numpy.linalg.norm can be a bottleneck
     return numpy.dot(i, j) / (numpy.sqrt(i.dot(i)) * numpy.sqrt(j.dot(j)))
+
+
+def hamming_distance(i, j):
+    """
+    Return the hamming distance between the two given integers, or the number of
+    places where the bits differ.
+
+    :param i: First integer.
+    :type i: int
+    :param j: Second integer.
+    :type j: int
+
+    :return: Integer hamming distance between the two values.
+    :rtype: int
+
+    """
+    return gmpy2.popcount(i ^ j)

@@ -47,7 +47,7 @@ class CodeIndex (object):
     @abc.abstractmethod
     def codes(self):
         """
-        :return: Set of codes integers currently used in this code index.
+        :return: Set of code integers currently used in this code index.
         :rtype: set[int]
         """
         return

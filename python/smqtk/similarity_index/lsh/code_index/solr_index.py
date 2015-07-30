@@ -137,7 +137,7 @@ class SolrCodeIndex (CodeIndex):
 
     def codes(self):
         """
-        :return: Set of codes integers currently used in this code index.
+        :return: Set of code integers currently used in this code index.
         :rtype: set[int]
         """
         r = self.solr.select("%s:%s" % (self.idx_uuid_field, self.uuid),

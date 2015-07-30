@@ -29,6 +29,13 @@ class MemoryCodeIndex (CodeIndex):
         """
         return self._num_descr
 
+    def codes(self):
+        """
+        :return: Set of codes integers currently used in this code index.
+        :rtype: set[int]
+        """
+        return set(self._table)
+
     def add_descriptor(self, code, descriptor):
         """
         Add a descriptor to this index given a matching small-code

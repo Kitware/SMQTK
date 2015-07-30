@@ -135,6 +135,17 @@ class SolrCodeIndex (CodeIndex):
                              self.descriptor_field))
                    .numFound)
 
+    def codes(self):
+        """
+        :return: Set of codes integers currently used in this code index.
+        :rtype: set[int]
+        """
+        r = self.solr.select("%s:%s" % (self.idx_uuid_field, self.uuid),
+                             rows=0,
+                             facet='true', facet_field=self.code_field)
+        val2count = r.facet_counts['facet_fields'][self.code_field]
+        return set(int(k) for k in val2count)
+
     def _doc_for_code_descr(self, code, descr):
         """
         Generate standard identifying document base for the given

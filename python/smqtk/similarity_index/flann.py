@@ -309,6 +309,16 @@ class FlannSimilarity (SimilarityIndex):
         self._flann.load_index(osp.join(dir_path, self._sf_flann_index),
                                pts_array)
 
+        # initialize index cache
+        self._pid = multiprocessing.current_process().pid
+        safe_create_dir(self._temp_dir)
+        fd, self._flann_index_cache = tempfile.mkstemp(".flann",
+                                                       dir=self._temp_dir)
+        os.close(fd)
+        self._log.debug("saving loaded index to cache file: %s",
+                        self._flann_index_cache)
+        self._flann.save_index(self._flann_index_cache)
+
     def nn(self, d, n=1):
         """
         Return the nearest `N` neighbors to the given descriptor element.

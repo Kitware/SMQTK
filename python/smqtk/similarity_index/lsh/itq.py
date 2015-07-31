@@ -290,6 +290,12 @@ class ITQSimilarityIndex (SimilarityIndex):
                 (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])
             )
+        # NOTE: If a sub-sampling effect is implemented above, this will have to
+        #       change to querying for descriptor vectors individually since the
+        #       ``c`` matrix will not encode all descriptors at that point. This
+        #       will be slower unless we think of something else. Could probably
+        #       map the small code generation function by bringing it outside of
+        #       the class.
 
     def save_index(self, dir_path):
         """

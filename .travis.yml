@@ -21,7 +21,7 @@ before_install:
   # Added Local Environment Update
   - export LOCAL_ROOT=${HOME}/.local
   - export CPATH=${LOCAL_ROOT}/include:${CPATH}
-  - export LDFLAGS="${LDFLAGS} -L ${LOCAL_ROOT}/lib"
+  - export LDFLAGS="${LDFLAGS} -L${LOCAL_ROOT}/lib"
   - export PATH=${LOCAL_ROOT}/bin:$PATH
   - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
   - mkdir ${LOCAL_ROOT}

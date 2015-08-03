@@ -21,8 +21,9 @@ before_install:
   # Added Local Environment Update
   - export LOCAL_ROOT=${HOME}/.local
   - export CPATH=${LOCAL_ROOT}/include:${CPATH}
+  - export LDFLAGS="${LDFLAGS} -L ${LOCAL_ROOT}/lib"
   - export PATH=${LOCAL_ROOT}/bin:$PATH
-  - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib64:${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
+  - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
   - mkdir ${LOCAL_ROOT}
   # Setup local conda python
   - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
@@ -36,12 +37,12 @@ before_install:
   - conda create -q -n smqtk-$TRAVIS_PYTHON_VERSION python=$TRAVIS_PYTHON_VERSION
   - source activate smqtk-$TRAVIS_PYTHON_VERSION
   # Required gmpy2 deps (taken from scipy .travis.yml)
-  - export MPC_VERSION=1.0.3
+  - export MPC_VERSION=1.0.2
   - wget ftp://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
   - tar xzf mpc-${MPC_VERSION}.tar.gz
   - pushd mpc-${MPC_VERSION}
   - ./configure --prefix=${LOCAL_ROOT}
-  - make
+  - make -j2
   - make install
   - popd
 

@@ -1,6 +1,7 @@
 __author__ = 'purg'
 
 import cPickle
+import json
 import logging
 import multiprocessing
 import numpy
@@ -14,6 +15,7 @@ from smqtk.similarity_index import (
     SimilarityIndexStateSaveError,
 )
 from smqtk.utils import safe_create_dir
+from smqtk.utils import SimpleTimer
 
 from smqtk_config import WORK_DIR
 
@@ -51,10 +53,11 @@ class FlannSimilarity (SimilarityIndex):
         # TODO: check that underlying library is found/valid
         return pyflann is not None
 
-    def __init__(self, temp_dir=tempfile.gettempdir(), autotune=False,
-                 target_precision=0.95, sample_fraction=0.1,
-                 distance_method='hik', random_seed=None,
-                 config_relative=False):
+    def __init__(self, flann_index_filepath=None, temp_dir=tempfile.gettempdir(), 
+                 autotune=False,
+                 target_precision=0.95, sample_fraction=1.0,
+                 distance_method='hik', random_seed=None, use_sp=False,
+                 checkpoint_dir=None, config_relative=False):
         """
         Initialize FLANN index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from save
@@ -106,14 +109,17 @@ class FlannSimilarity (SimilarityIndex):
         ))
 
         # Standard save files relative to save directory
-        self._sf_flann_index = "flann.index"
-        self._sf_state = "flann.state.pickle"
+        self._sf_flann_index = flann_index_filepath + "/index.flann"
+        self._sf_state = flann_index_filepath + "/flann.state.pickle"
 
         self._build_autotune = bool(autotune)
         self._build_target_precision = float(target_precision)
         self._build_sample_frac = float(sample_fraction)
 
         self._distance_method = str(distance_method)
+
+        self._checkpoint_dir = checkpoint_dir
+        self._use_sp = use_sp
 
         # The flann instance with a built index. None before index construction
         #: :type: pyflann.index.FLANN or None
@@ -175,6 +181,108 @@ class FlannSimilarity (SimilarityIndex):
         """
         return len(self._descr_cache) if self._descr_cache else 0
 
+    def build_histogram(self, features, descriptors, quantization):
+        if not self._use_sp:
+            ###
+            # Codebook Quantization
+            #
+            # - loaded the model at class initialization if we had one
+            self._log.debug("Building histogram")
+            pyflann.set_distance_type(self._distance_method)
+            flann = pyflann.FLANN()
+            flann.load_index(self._sf_flann_index, quantization)
+
+            try:
+                idxs, dists = flann.nn_index(descriptors)
+            except AssertionError:
+
+                self.log.error("Codebook shape  : %s", quantization.shape)
+                self.log.error("Descriptor shape: %s", descriptors.shape)
+
+                raise
+
+            # Create histogram
+            # - Using explicit bin slots to prevent numpy from automatically
+            #   creating tightly constrained bins. This would otherwise cause
+            #   histograms between two inputs to be non-comparable (unaligned
+            #   bins).
+            # - See numpy note about ``bins`` to understand why the +1 is
+            #   necessary
+            # - Learned from spatial implementation that we could feed multiple
+            #   neighbors per descriptor into here, leading to a more populated
+            #   histogram.
+            #   - Could also possibly weight things based on dist from
+            #     descriptor?
+            #: :type: numpy.core.multiarray.ndarray
+            h = numpy.histogram(idxs,  # indices are all integers
+                                bins=numpy.arange(quantization.shape[0]+1))[0]
+            # self.log.debug("Quantization histogram: %s", h)
+            # Normalize histogram into relative frequencies
+            # - Not using /= on purpose. h is originally int32 coming out of
+            #   histogram. /= would keep int32 type when we want it to be
+            #   transformed into a float type by the division.
+            if h.sum():
+                # noinspection PyAugmentAssignment
+                h = h / float(h.sum())
+            else:
+                h = numpy.zeros(h.shape, h.dtype)
+            # self.log.debug("Normalized histogram: %s", h)
+        else:
+            ###
+            # Spatial Pyramid Quantization
+            #
+            self.log.debug("Quantizing descriptors using spatial pyramid")
+            ##
+            # Quantization factor - number of nearest codes to be saved
+            q_factor = 10
+            ##
+            # Concatenating spatial information to descriptor vectors to format:
+            #   [ x y <descriptor> ]
+            self.log.debug("Creating combined descriptor matrix")
+            m = numpy.concatenate((features[:, :2],
+                                   descriptors), axis=1)
+            ##
+            # Creating quantized vectors, consisting vector:
+            #   [ x y c_1 ... c_qf dist_1 ... dist_qf ]
+            # which has a total size of 2+(qf*2)
+            #
+            # Sangmin's code included the distances in the quantized vector, but
+            # then also passed this vector into numpy's histogram function with
+            # integral bins, causing the [0,1] to be heavily populated, which
+            # doesn't make sense to do.
+            #   idxs, dists = flann.nn_index(m[:, 2:], q_factor)
+            #   q = numpy.concatenate([m[:, :2], idxs, dists], axis=1)
+            self.log.debug("Computing nearest neighbors")
+            pyflann.set_distance_type(self._distance_method)
+            flann = pyflann.FLANN()
+            flann.load_index(self._sf_flann_index, quantization)
+            idxs = flann.nn_index(m[:, 2:], q_factor)[0]
+            self.log.debug("Creating quantization matrix")
+            q = numpy.concatenate([m[:, :2], idxs], axis=1)
+            ##
+            # Build spatial pyramid from quantized matrix
+            self.log.debug("Building spatial pyramid histograms")
+            hist_sp = self._build_sp_hist(q, quantization.shape[0])
+            ##
+            # Combine each quadrants into single vector
+            self.log.debug("Combining global+thirds into final histogram.")
+            f = sys.float_info.min  # so as we don't div by 0 accidentally
+            rf_norm = lambda h: h / (float(h.sum()) + f)
+            h = numpy.concatenate([rf_norm(hist_sp[0]),
+                                   rf_norm(hist_sp[5]),
+                                   rf_norm(hist_sp[6]),
+                                   rf_norm(hist_sp[7])],
+                                  axis=1)
+            # noinspection PyAugmentAssignment
+            h /= h.sum()
+
+        self._log.debug("Saving checkpoint feature file")
+        if not osp.isdir(osp.dirname(self._checkpoint_dir)):
+            safe_create_dir(osp.dirname(self._checkpoint_dir))
+        numpy.save(self._checkpoint_dir, h)
+
+        return h
+
     def build_index(self, descriptors):
         """
         Build the index over the descriptors data elements.
@@ -208,14 +316,13 @@ class FlannSimilarity (SimilarityIndex):
         # uid2vec = \
         #     self._content_descriptor.compute_descriptor_async(data)
         # Translate returned mapping into cache lists
-        self._descr_cache = [d for d in sorted(descriptors,
-                                               key=lambda e: e.uuid())]
+        self._descr_cache = [d for d in descriptors] #sorted(descriptors,key=lambda e: e.uuid())]
         if not self._descr_cache:
             raise ValueError("No data provided in given iterable.")
 
         # numpy array version for FLANN
         pts_array = [d.vector() for d in self._descr_cache]
-        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
+        pts_array = numpy.array(pts_array, pts_array[0].dtype)
 
         # Reset PID/FLANN/saved cache
         self._pid = multiprocessing.current_process().pid
@@ -225,16 +332,18 @@ class FlannSimilarity (SimilarityIndex):
         os.close(fd)
         self._log.debug("Building FLANN index")
         params = {
-            "algorithm": self._build_autotune,
             "target_precision": self._build_target_precision,
             "sample_fraction": self._build_sample_frac,
             "log_level": ("info"
                           if self._log.getEffectiveLevel() <= logging.DEBUG
-                          else "warn")
+                          else "warning")
         }
+        if self._build_autotune:
+            params["algorithm"] = "autotuned"
         if self._rand_seed is not None:
             params['random_seed'] = self._rand_seed
         pyflann.set_distance_type(self._distance_method)
+
         self._flann = pyflann.FLANN()
         self._flann_build_params = self._flann.build_index(pts_array, **params)
 
@@ -242,6 +351,12 @@ class FlannSimilarity (SimilarityIndex):
         self._log.debug("Saving index to cache file: %s",
                         self._flann_index_cache)
         self._flann.save_index(self._flann_index_cache)
+
+        # Saving index to disk
+        if self._sf_flann_index:
+            self._log.debug("Saving index to permanent file: %s",
+                            self._sf_flann_index)
+            self._flann.save_index(self._sf_flann_index)
 
     def save_index(self, dir_path):
         """

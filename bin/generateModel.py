@@ -2,21 +2,20 @@
 """
 Generate model files for an ingest.
 """
-
 import json
 import logging
 import multiprocessing.pool
+import numpy
 
 from smqtk.utils import bin_utils
 from smqtk.utils.configuration import (
     ConfigurationInterface,
     DataSetConfiguration,
-    DescriptorFactoryConfiguration,
-    ContentDescriptorConfiguration,
-    IndexerConfiguration,
+    DetectorsAndDescriptorsConfiguration,
+    QuantizationConfiguration,
+    SimilarityNearestNeighborsConfiguration
 )
 from smqtk.utils.jsmin import jsmin
-
 
 class NonDaemonicProcess (multiprocessing.Process):
     """ Same as normal processes, but force daemon flag to False """
@@ -42,26 +41,6 @@ class NonDaemonicPool (multiprocessing.pool.Pool):
     Process = NonDaemonicProcess
 
 
-
-def list_available_fds_idxrs(log, ingest_config):
-    """
-    :type ingest_config: IngestConfiguration
-    """
-    log.info("")
-    log.info("For ingest configuration '%s'...", ingest_config.label)
-    log.info("")
-    log.info("Available ContentDescriptor types:")
-    log.info("")
-    for l in ingest_config.get_available_descriptor_labels():
-        log.info("\t%s" % l)
-    log.info("")
-    log.info("Available Indexer types:")
-    log.info("")
-    for l in ingest_config.get_available_indexer_labels():
-        log.info("\t%s", l)
-    log.info("")
-
-
 def main():
     import optparse
     description = \
@@ -76,6 +55,7 @@ def main():
     group_optional = optparse.OptionGroup(parser, "Optional")
 
     group_required.add_option('-d', '--data-set',
+<<<<<<< HEAD
                               help="Data set to use for model generation.")
     group_required.add_option('-f', '--descriptor-factory',
                               help="Descriptor factory configuration label to "
@@ -86,6 +66,15 @@ def main():
     group_required.add_option('-i', '--indexer',
                               help="(Optional) Indexer type for model "
                                    "generation.")
+=======
+        help="Data set to use for model generation.")
+    group_required.add_option('-c', '--content-detect-and-describe',
+        help="Feature descriptor type for model and feature generation.")
+    group_required.add_option('-q', '--quantization',
+        help="Quantizer for codebook generation.")
+    group_required.add_option('-s', '--snn',
+        help="Similarity nearest neighbor configuration (FLANN, i.e.)")
+>>>>>>> Refactored content descriptor into four ind. modules
 
     group_optional.add_option('--sys-json',
                               help="Custom system configuration JSON file to "
@@ -115,9 +104,9 @@ def main():
     log = logging.getLogger("main")
 
     dset_label = opts.data_set
-    descr_fac_label = opts.descriptor_factory
-    cd_label = opts.content_descriptor
-    idxr_label = opts.indexer
+    cd_label = opts.content_detect_and_describe
+    q_label = opts.quantization
+    snn_label = opts.snn
     parallel = opts.threads
 
     # Prep custom JSON configuration if one was given
@@ -132,33 +121,44 @@ def main():
         for l in DataSetConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
-        log.info("Available Descriptor Factory types:")
-        for l in DescriptorFactoryConfiguration.available_labels():
+        log.info("Available DetectorsAndDescriptorsConfigurations:")
+        log.info("")
+        for l in DetectorsAndDescriptorsConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
-        log.info("Available ContentDescriptor types:")
-        for l in ContentDescriptorConfiguration.available_labels():
+        log.info("Available QuantizationConfigurations:")
+        log.info("")
+        for l in QuantizationConfiguration.available_labels():
             log.info("\t%s" % l)
         log.info("")
-        log.info("Available Indexer types:")
-        for l in IndexerConfiguration.available_labels():
-            log.info("\t%s", l)
+        log.info("Available SimilarityNearestNeighborsConfigurations:")
         log.info("")
+        for l in SimilarityNearestNeighborsConfiguration.available_labels():
+            log.info("\t%s" % l)
         exit(0)
 
     # Check given labels
     fail = False
-    if dset_label and dset_label not in DataSetConfiguration.available_labels():
+    if not dset_label:
+        log.error("You have to provide me the name of a data set to use!")
+        fail = True
+    elif dset_label and dset_label not in DataSetConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
                   "data set configuration!", dset_label)
         fail = True
-    if cd_label and cd_label not in ContentDescriptorConfiguration.available_labels():
+    if not cd_label:
+        log.error("You have to provide me with a content descriptor label!")
+        fail = True
+    elif cd_label and cd_label not in DetectorsAndDescriptorsConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
                   "content descriptor configuration!", cd_label)
         fail = True
-    if idxr_label and idxr_label not in IndexerConfiguration.available_labels():
+    if not q_label:
+        log.error("You have to provide me with a quanization configuration!")
+        fail = True
+    elif q_label and q_label not in QuantizationConfiguration.available_labels():
         log.error("Given label '%s' is NOT associated to an existing "
-                  "indexer configuration!", idxr_label)
+                  "quantization configuration!", q_label)
         fail = True
     if idxr_label and descr_fac_label and \
             descr_fac_label not in DescriptorFactoryConfiguration.available_labels():
@@ -172,36 +172,21 @@ def main():
     log.info("Loading data-set instance...")
     dset = DataSetConfiguration.new_inst(dset_label)
 
-    log.info("Loading descriptor instance...")
-    descriptor = ContentDescriptorConfiguration.new_inst(cd_label)
-    # Generate any model files needed by the chosen descriptor
-    descriptor.PARALLEL = parallel
-    descriptor.generate_model(dset)
+    # Detect and Describe
+    log.info("Loading detect-and-describe instance...")
+    dandd = DetectorsAndDescriptorsConfiguration.new_inst(cd_label)
+    log.info("Running feature detection and description...")
+    feat, desc = dandd.detect_and_describe(dset)
 
-    # Don't do indexer model generation if a type was not provided
-    if idxr_label:
-        log.info("Loading indexer instance...")
+    # Quantize
+    quant = QuantizationConfiguration.new_inst(q_label)
+    quant.generate_quantization(desc, dandd._descriptor_element_factory, dandd._data_element_type)
 
-        d_factory = DescriptorFactoryConfiguration.new_inst(descr_fac_label)
-        indexer = IndexerConfiguration.new_inst(idxr_label)
-
-        # It is not guaranteed that the feature computation method is doing
-        # anything in parallel, but if it is, request that it perform serially
-        # in order to allow multiple high-level feature computation jobs, else
-        # we could be overrun with threads.
-        descriptor.PARALLEL = 1
-        # Using NonDaemonicPool because content_description that might to
-        # parallel processing might use multiprocessing.Pool instances, too.
-        # Pools don't usually allow daemonic processes, so this custom top-level
-        # pool allows worker processes to spawn pools themselves.
-        fmap = descriptor.compute_descriptor_async(
-            dset, d_factory,
-            parallel=parallel,
-            pool_type=NonDaemonicPool
-        )
-
-        indexer.generate_model(fmap, parallel=parallel)
-
+    # Index
+    log.info("Loading similiarity nearest neighbor instance...")
+    snn = SimilarityNearestNeighborsConfiguration.new_inst(snn_label)
+    log.info("Bulding index")
+    snn.build_index(quant._quantization)
 
 if __name__ == "__main__":
     main()

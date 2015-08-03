@@ -122,7 +122,6 @@ We can now compute descriptor vectors for new data, assuming `e` is the `DataFil
 
 Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used, but is commonly a 1-dimensional vector of N elements, or an N-dimensional vector, of floats, depending on terminology.
 
-
 # System Configuration JSON
 In the `etc` directory, the `system_config.json` file is intended to provide a central location to map semantic labels to specific configurations of component implementations.
 For example, users can map labels to specific data sets, or specific content descriptors trained with specific models, etc.

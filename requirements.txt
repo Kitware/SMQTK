@@ -1,0 +1,20 @@
+flask-basicauth
+imageio
+nose-exclude
+coverage
+flask
+flask-login
+mock
+nose
+numpy
+Pillow
+pymongo
+requests
+scikit-learn
+scipy
+ipython
+girder
+# Not explicitly used any more, but from original requirements.txt
+#gevent
+
+# Recommended for extended console use

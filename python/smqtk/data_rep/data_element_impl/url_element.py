@@ -61,3 +61,6 @@ class DataUrlElement (DataElement):
         else:
             raise RuntimeError("Request response not OK. Status code returned: "
                                "%d", r.status_code)
+
+
+#DATA_ELEMENT_CLASS = DataUrlElement

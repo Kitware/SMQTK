@@ -1,5 +1,8 @@
 __author__ = 'purg'
 
+import os
+from smqtk.data_rep import DataSet
+from smqtk.utils.plugin import get_plugins
 
 def get_data_set_impls():
     """
@@ -22,9 +25,6 @@ def get_data_set_impls():
     :rtype: dict[str, type]
 
     """
-    import os
-    from smqtk.data_rep import DataSet
-    from smqtk.utils.plugin import get_plugins
 
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "DATA_SET_CLASS"

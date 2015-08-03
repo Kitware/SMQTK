@@ -74,7 +74,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
             module = importlib.import_module('.%s' % module_name,
                                              package=base_module)
             # Invoke reload in case the module changed between imports.
-            module = reload(module)
+            #module = reload(module)
 
             # Look for magic variable for import guidance
             classes = []
@@ -130,6 +130,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
                           "module-named class)", module_name)
 
             for cls in classes:
+                log.debug('Applying filter function on class: %s' % cls.__name__)
                 if filter_func is None or filter_func(cls):
                     class_map[cls.__name__] = cls
                 else:

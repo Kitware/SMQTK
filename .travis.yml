@@ -10,6 +10,7 @@ addons:
       # basics
       - linux-headers-3.13.0-40-generic
       - build-essential
+      - gcc-48
       # For building things
       - cmake
       # for python module gmpy2

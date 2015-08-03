@@ -47,6 +47,33 @@ def iter_perms(l, n):
         yield s
 
 
+def neighbor_codes(b, c, d):
+    """
+    Iterate through integers of bit length ``b``, where ``b`` is the number
+    of bits, that are ``d`` hamming distance away from query code ``c``.
+
+    This will yield a number of elements equal to ``nCr(b, d)``.
+
+    We expect ``d`` to be the integer hamming distance,
+    e.g. h(001101, 100101) == 2, not 0.333.
+
+    :param b: integer bit length
+    :param b: int
+
+    :param c: Query small-code integer
+    :type c: int
+
+    :param d: Integer hamming distance
+    :type d: int
+
+    """
+    if not d:
+        yield c
+    else:
+        for fltr in iter_perms(b, d):
+            yield c ^ fltr
+
+
 def bit_vector_to_int(v):
     """
     Transform a numpy vector representing a sequence of binary bits [0 | >0]
@@ -60,7 +87,7 @@ def bit_vector_to_int(v):
     :return: Integer equivalent
 
     """
-    c = 0
+    c = 0L
     for b in v:
-        c = (c << 1) | b
+        c = (c * 2L) + int(b)
     return c

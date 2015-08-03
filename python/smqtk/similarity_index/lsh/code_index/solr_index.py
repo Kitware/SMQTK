@@ -86,6 +86,7 @@ class SolrCodeIndex (CodeIndex):
 
         self.commit_on_add = commit_on_add
         self.max_boolean_clauses = max_boolean_clauses
+        assert self.max_boolean_clauses >= 2, "Need more clauses"
 
         self.solr = solr.Solr(solr_conn_addr, persistent=persistent_connection,
                               timeout=timeout,
@@ -133,6 +134,17 @@ class SolrCodeIndex (CodeIndex):
                              self.code_field,
                              self.descriptor_field))
                    .numFound)
+
+    def codes(self):
+        """
+        :return: Set of code integers currently used in this code index.
+        :rtype: set[int]
+        """
+        r = self.solr.select("%s:%s" % (self.idx_uuid_field, self.uuid),
+                             rows=0,
+                             facet='true', facet_field=self.code_field)
+        val2count = r.facet_counts['facet_fields'][self.code_field]
+        return set(int(k) for k in val2count)
 
     def _doc_for_code_descr(self, code, descr):
         """

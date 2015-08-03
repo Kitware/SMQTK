@@ -45,6 +45,14 @@ class CodeIndex (object):
         return
 
     @abc.abstractmethod
+    def codes(self):
+        """
+        :return: Set of code integers currently used in this code index.
+        :rtype: set[int]
+        """
+        return
+
+    @abc.abstractmethod
     def add_descriptor(self, code, descriptor):
         """
         Add a descriptor to this index given a matching small-code.

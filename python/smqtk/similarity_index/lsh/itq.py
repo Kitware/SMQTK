@@ -4,6 +4,7 @@ Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 __author__ = 'purg'
 
 import cPickle
+import heapq
 import os.path as osp
 import numpy
 import numpy.matlib
@@ -56,7 +57,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         Initialize ITQ similarity index instance (not the index itself).
 
-        :param index_factory: Method to produce a new code index instance
+        :param index_factory: Method to produce a new code index instance. By
+            default, we use an in-memory index.
         :type index_factory: ()->smqtk.similarity_index.lsh.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
@@ -166,13 +168,13 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
 
         """
-        #initialize with an orthogonal random rotation
+        # initialize with an orthogonal random rotation
         bit = v.shape[1]
         r = numpy.random.randn(bit, bit)
         u11, s2, v2 = numpy.linalg.svd(r)
         r = u11[:, :bit]
 
-        #ITQ to find optimal rotation
+        # ITQ to find optimal rotation
         self._log.debug("ITQ iterations to determine optimal rotation: %d",
                         n_iter)
         for i in range(n_iter):
@@ -211,6 +213,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
+        self._log.debug("Using %d length bit-vectors", self._bit_len)
+
         # TODO: Sub-sample down descriptors to use for PCA + ITQ
         #       - Harry was also working on an iterative training approach so
         #           that we only have to have a limited number of vectors in
@@ -239,17 +243,22 @@ class ITQSimilarityIndex (SimilarityIndex):
         with SimpleTimer("Computing PCA transformation", self._log.info):
             # numpy and matlab observation format is flipped, thus added
             # transpose
+            self._log.debug("-- covariance")
             c = numpy.cov(x.transpose())
 
             # Direct translation
+            # - eigen vectors are the columns of ``pc``
+            self._log.debug('-- linalg.eig')
             l, pc = numpy.linalg.eig(c)
             # ordered by greatest eigenvalue magnitude, keeping top ``bit_len``
+            self._log.debug('-- top pairs')
             top_pairs = sorted(zip(l, pc.transpose()),
                                key=lambda p: p[0],
                                reverse=1
                                )[:self._bit_len]
 
             # # Harry translation -- Uses singular values / vectors, not eigen
+            # # - singular vectors are the rows of pc
             # pc, l, _ = numpy.linalg.svd(c)
             # top_pairs = sorted(zip(l, pc),
             #                    key=lambda p: p[0],
@@ -257,7 +266,9 @@ class ITQSimilarityIndex (SimilarityIndex):
             #                    )[:self._bit_len]
 
             # Eigen-vectors of top ``bit_len`` magnitude eigenvalues
+            self._log.debug("-- top vector extraction")
             pc_top = numpy.array([p[1] for p in top_pairs]).transpose()
+            self._log.debug("-- transform centered data by PC matrix")
             xx = numpy.dot(x, pc_top)
 
         # ITQ to find optimal rotation.
@@ -274,12 +285,17 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
-
             self._code_index = self._index_factory()
             self._code_index.add_many_descriptors(
                 (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])
             )
+        # NOTE: If a sub-sampling effect is implemented above, this will have to
+        #       change to querying for descriptor vectors individually since the
+        #       ``c`` matrix will not encode all descriptors at that point. This
+        #       will be slower unless we think of something else. Could probably
+        #       map the small code generation function by bringing it outside of
+        #       the class.
 
     def save_index(self, dir_path):
         """
@@ -364,31 +380,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         b[z >= 0] = 1
         return v, b, bit_utils.bit_vector_to_int(b)
 
-    def _neighbor_codes(self, c, d):
-        """
-        Iterate through small-codes of length ``b``, where ``b`` is the number
-        of bits this index is configured for, that are ``d`` hamming distance
-        away from query code ``c``.
-
-        This will yield a number of elements equal to ``nCr(b, d)``.
-
-        We expect ``d`` to be the integer hamming distance,
-        e.g. h(001101, 100101) == 2, not 0.333.
-
-        :param c: Query small-code integer
-        :type c: int
-
-        :param d: Integer hamming distance
-        :type d: int
-
-        """
-        if not d:
-            yield c
-            raise StopIteration()
-
-        for fltr in bit_utils.iter_perms(self._bit_len, d):
-            yield c ^ fltr
-
     def nn(self, d, n=1):
         """
         Return the nearest `N` neighbors to the given descriptor element.
@@ -406,26 +397,30 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         d_vec, _, d_sc = self.get_small_code(d)
 
-        # Process:
-        #   Collect codes/descriptors from incrementally more distance bins
-        #   until we have at least the number of neighbors requested. Then,
-        #   compute fine-grain distances with those against query descriptor to
-        #   get final order and return distance values.
+        # Extract the `n` nearest codes to the code of the query descriptor
+        # - a code may associate with multiple hits, but its a safe assumption
+        #   that if we get the top `n` codes, which exist because there is at
+        #   least one element in association with it,
+        code_set = self._code_index.codes()
+        # TODO: Optimize this step
+        #: :type: list[int]
+        near_codes = \
+            heapq.nsmallest(n, code_set,
+                            lambda e:
+                                distance_functions.hamming_distance(d_sc, e)
+                            )
+
+        # Collect descriptors from subsequently farther away bins until we have
+        # >= `n` descriptors, which we will more finely sort after this.
         #: :type: list[smqtk.data_rep.DescriptorElement]
         neighbors = []
         termination_count = min(n, self.count())
-        h_dist = 0
-        while len(neighbors) < termination_count and h_dist <= self._bit_len:
-            # Get codes of hamming dist, ``h_dist``, from ``d``'s code
-            # codes = self._neighbor_codes(d_sc, h_dist)
-            # for c in codes:
-            #     neighbors.extend(self._code_index.get_descriptors(c))
-            neighbors.extend(
-                self._code_index.get_descriptors(
-                    self._neighbor_codes(d_sc, h_dist)
-                )
-            )
-            h_dist += 1
+        for nc in near_codes:
+            neighbors.extend(self._code_index.get_descriptors(nc))
+            # Break out if we've collected >= `n` descriptors, as descriptors
+            # from more distance codes are likely to not be any closer.
+            if len(neighbors) >= termination_count:
+                break
 
         # Compute fine-grain distance measurements for collected elements + sort
         distances = []

@@ -7,10 +7,24 @@ sudo: false
 addons:
   apt:
     packages:
+      # basics
+      - linux-headers-3.13.0-40-generic
+      - build-essential
+      # For building things
       - cmake
+      # for python module gmpy2
+      - libgmp-dev
+      - libmpfr-dev
 
 # Environment setup
 before_install:
+  # Added Local Environment Update
+  - export LOCAL_ROOT=${HOME}/.local
+  - export CPATH=${LOCAL_ROOT}/include:${CPATH}
+  - export LDFLAGS="${LDFLAGS} -L${LOCAL_ROOT}/lib"
+  - export PATH=${LOCAL_ROOT}/bin:$PATH
+  - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
+  - mkdir ${LOCAL_ROOT}
   # Setup local conda python
   - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -22,11 +36,21 @@ before_install:
   - conda info -a
   - conda create -q -n smqtk-$TRAVIS_PYTHON_VERSION python=$TRAVIS_PYTHON_VERSION
   - source activate smqtk-$TRAVIS_PYTHON_VERSION
+  # Required gmpy2 deps (taken from scipy .travis.yml)
+  - export MPC_VERSION=1.0.2
+  - wget ftp://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
+  - tar xzf mpc-${MPC_VERSION}.tar.gz
+  - pushd mpc-${MPC_VERSION}
+  - ./configure --prefix=${LOCAL_ROOT}
+  - make -j2
+  - make install
+  - popd
 
 # "Install" of SMQTK + immediate deps
 install:
   - conda install -q --file requirements.conda.txt
   - pip install -qr requirements.pip.txt
+  - pip install gmpy2
 
   # Build components of SMQTK
   - mkdir _build

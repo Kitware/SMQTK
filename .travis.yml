@@ -15,7 +15,7 @@ addons:
       # for python module gmpy2
       - libgmp-dev
       - libmpc2
-      - libmpc-dev
+      # - libmpc-dev
       - libmpfr-dev
 
 # Environment setup

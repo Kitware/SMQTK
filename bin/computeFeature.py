@@ -128,33 +128,30 @@ numpy format).
 
     # Quantization -- ensure there is an existing quantization generated.
     quant = QuantizationConfiguration.new_inst(q_label)
+    quant._descriptor_element_factory = d_and_d._descriptor_element_factory
+    quant._data_element_type = d_and_d._data_element_type
+
     log.info("Checking to ensure there is an existing quantization for %s." % q_label)
     if quant.has_quantization:
-      log.info("Success, quantization for %s exists." % q_label)
+        log.info("Success, quantization for %s exists." % q_label)
     else:
-      log.error("Failed to find a quantization for %s. Exiting." % q_label)
-      exit(1)
+        log.error("Failed to find a quantization for %s. Exiting." % q_label)
+        exit(1)
 
     # Load index
     log.info("Loading index for %s." % snn_label)
     snn = SimilarityNearestNeighborsConfiguration.new_inst(snn_label)
-    hist = snn.build_histogram(desc, quant._quantization)
+    vec = snn.build_histogram(feat, desc.vector(), quant._quantization_numpy)
 
-#    descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
-    # vec = descr_elem.vector()
-
-    # if vec is None:
-    #     log.error("Failed to generate a descriptor vector for the input data!")
-
-    # if output_filepath:
-    #     numpy.save(output_filepath, vec)
-    # else:
-    #     # Construct string, because numpy
-    #     s = []
-    #     # noinspection PyTypeChecker
-    #     for f in vec:
-    #         s.append('%15f' % f)
-        # print ' '.join(s)
+    if output_filepath:
+        numpy.save(output_filepath, vec)
+    else:
+        # Construct string, because numpy
+        s = []
+        # noinspection PyTypeChecker
+        for f in vec:
+            s.append('%15f' % f)
+        print ' '.join(s)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ import os.path as osp
 
 from smqtk.detect_and_describe import DetectAndDescribe
 from smqtk.utils import safe_create_dir, SimpleTimer
+from smqtk.utils.data_rep_utils import npy_array_to_descriptor_element_md5
 from smqtk.utils.string_utils import partition_string
 
 from . import utils
@@ -14,18 +15,35 @@ from . import utils
 class ColorDetectAndDescribe_Base (DetectAndDescribe):
     PROC_COLORDESCRIPTOR = "colorDescriptor"
 
-    # TODO -- where is this supposed to get set?
-    PARALLEL = 2
-
-    def __init__(self, work_directory):
+    def __init__(self, work_directory, data_element_type, descriptor_element_factory, 
+                 parallel=None, checkpoint_dir=None):
         """
         Initialize a new ColorDetectAndDescribe interface instance.
         :param work_directory: Path to the directory in which to place temporary/working
             files. Relative paths are treated relative to 'smqtk_config.WORK_DIR'.
         :type work_directory: str | unicode
+        
+        :param data_element_type: The type of data element used to represent the data, such
+            as in memory, url, etc.
+        :type data_element_type: DataElement
+        
+        :param descriptor_element_factory: The factory used to create descriptor elements
+            such as file- or memory-based descriptors.
+        :type descriptor_element_factory: DescriptorElementFactory.
+        
+        :param parallel: Number of cores to split the process over.
+        :type parallel: int | default: None
+        
+        :param checkpoint_dir: The directory to output the feature and descriptor matrices.
+            If this is not specified, we do everything in the work directory.
+        :type checkpoint_dir: string | unicode
         """
-        ### TODO -- spatial
+
         self._work_directory = work_directory
+        self._data_element_type = data_element_type
+        self._descriptor_element_factory = descriptor_element_factory
+        self.PARALLEL = parallel
+        self._checkpoint_dir = checkpoint_dir
 
         self._log = logging.getLogger('.'.join([ColorDetectAndDescribe_Base.__module__,
             ColorDetectAndDescribe_Base.__name__]))
@@ -92,7 +110,9 @@ class ColorDetectAndDescribe_Base (DetectAndDescribe):
 
     def _get_checkpoint_dir(self, data):
         """
-        The directory that contains checkpoint material for a given data element
+        The directory that contains checkpoint material for a given data element. If 
+        the _checkpoint_dir is set (during initialization) then thats what we use. Otherwise,
+        we build a custom checkpoint dir based on the md5 hash.
 
         :param data: Data element
         :type data: smqtk.data_rep.DataElement
@@ -101,9 +121,16 @@ class ColorDetectAndDescribe_Base (DetectAndDescribe):
         :rtype: str
 
         """
-        d = osp.join(self._work_directory, *partition_string(data.md5(), 8))
-        safe_create_dir(d)
-        return d
+        if self._checkpoint_dir:
+            """
+            If the user specified a specific checkpoint directory, we use that. Otherwise,
+            we return our default.
+            """
+            return self._checkpoint_dir
+        else:
+            d = osp.join(self._work_directory, *partition_string(data.md5(), 8))
+            safe_create_dir(d)
+            return d
 
     def _get_standard_info_descriptors_filepath(self, data, frame=None):
         """
@@ -183,6 +210,7 @@ class ColorDetectAndDescribe_Image (ColorDetectAndDescribe_Base):
             self._log.debug("Building descriptor matrices for a data_set of length 1")
             # because an iterable doesn't necessarily have a next() method
             di = iter(data_set).next()
+
             # Check for checkpoint files
             feat_fp, desc_fp = \
                 self._get_standard_info_descriptors_filepath(di)
@@ -197,7 +225,12 @@ class ColorDetectAndDescribe_Image (ColorDetectAndDescribe_Base):
             finally:
                 # clean temp file
                 di.clean_temp()
-            return numpy.load(feat_fp), numpy.load(desc_fp)
+
+            descriptor_element, _ = npy_array_to_descriptor_element_md5(self._data_element_type, 
+                self._descriptor_element_factory, 
+                self.name, numpy.load(desc_fp))
+
+            return numpy.load(feat_fp), descriptor_element
             
         else:
             self._log.debug("Building descriptor matrices for a data_set of length %s" % len(data_set))
@@ -281,7 +314,15 @@ class ColorDetectAndDescribe_Image (ColorDetectAndDescribe_Base):
                                    args=(dfp, master_desc, sR, ssi))
             tp.close()
             tp.join()
-            return master_feat, master_desc
+
+            # We want to convert the matrix to a DescriptorElement.
+            descriptor_element, _ = npy_array_to_descriptor_element_md5(self._data_element_type, 
+                self._descriptor_element_factory, 
+                self.name, master_desc)
+
+            print descriptor_element
+
+            return master_feat, descriptor_element
 
     def valid_content_types(self):
         """

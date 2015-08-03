@@ -5,13 +5,13 @@ Helper classes for access to JSON system configuration
 import abc
 import smqtk_config
 
+from smqtk.data_rep.data_element_impl import get_data_element_impls
 from smqtk.data_rep.data_set_impl import get_data_set_impls
 from smqtk.data_rep.descriptor_element_impl import get_descriptor_element_impls
 from smqtk.data_rep.descriptor_element_factory import DescriptorElementFactory
 from smqtk.detect_and_describe import get_detect_and_describe
 from smqtk.content_description import get_descriptors
 from smqtk.quantization import get_quantizers
-#from smqtk.indexing import get_indexers
 from smqtk.similarity_index import get_similarity_nn
 
 
@@ -110,6 +110,7 @@ class ContentDescriptorConfiguration (ConfigurationInterface):
         label_sect = cls.get_config_sect()[label]
         cd_cls = get_descriptors()[label_sect['type']]
         return cd_cls(**label_sect['init'])
+
 
 class DataSetConfiguration (ConfigurationInterface):
     """
@@ -236,6 +237,8 @@ class DetectorsAndDescriptorsConfiguration (ConfigurationInterface):
 
         :raises KeyError: The given label does not exist in the system
             configuration
+        
+        :raises RuntimeError: Data element type or descriptor element factory not given.
 
         :return: New instance of type and parameters associated with the given
             label.
@@ -244,6 +247,23 @@ class DetectorsAndDescriptorsConfiguration (ConfigurationInterface):
         """
         label_sect = cls.get_config_sect()[label]
         cd_cls = get_detect_and_describe()[label_sect['type']]
+
+        if "data_element_type" in label_sect['init'] and \
+            label_sect['init']['data_element_type'] in cls.BASE_CONFIG["DataElements"]:
+            data_element = get_data_element_impls()[label_sect['init']['data_element_type']]
+            label_sect['init']['data_element_type'] = data_element
+        else:
+            raise RuntimeError("You failed to specify a data element type. See DataElements "
+                               "for possible implementations.")
+
+        if "descriptor_element_factory" in label_sect['init'] and \
+            label_sect['init']['descriptor_element_factory'] in DescriptorFactoryConfiguration.available_labels():
+            descriptor_element_factory = DescriptorFactoryConfiguration.new_inst(label_sect['init']['descriptor_element_factory'])
+            label_sect['init']['descriptor_element_factory'] = descriptor_element_factory
+        else:
+            raise RuntimeError("You failed to specify a descriptor element factory. See "
+                                   "DescriptorElementFactory for possible implementations.")            
+
         # cd_cls is an the descriptor given by get descriptors['type']
         # we then return an instance of this descriptor, constructed with the
         # init variables

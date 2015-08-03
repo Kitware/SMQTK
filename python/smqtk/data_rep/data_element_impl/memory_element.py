@@ -53,3 +53,5 @@ class DataMemoryElement (DataElement):
         :rtype: bytes
         """
         return self._bytes
+
+DATA_ELEMENT_CLASS = DataMemoryElement

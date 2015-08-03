@@ -69,6 +69,12 @@ class Quantization (object):
         return self._quantization
 
     @property
+    def quantization_numpy(self):
+        for q in self._quantization:
+            print q.vector
+        return self._quantization_numpy
+
+    @property
     def _descriptor_matrices(self):
         return self._descriptor_matrices
 

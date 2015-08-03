@@ -1,11 +1,17 @@
 import abc
 import os
 
-from smqtk.utils.plugin import get_plugins
 from smqtk.data_rep import DataElement
+from smqtk.utils.plugin import get_plugins
 
 class DetectAndDescribe (object):
-	def __init__(self):
+	def __init__(self, descriptor_element_factory, data_element_type):
+		"""
+		Base abstract initializer for a DetectAndDescribeObject. 
+		:param descriptor_element_factory: A DescriptorElementFactory that will create the appropriate DescriptorElement 
+			to be returned from the implementation of this method.
+		:type descriptor_element_factory: DescriptorElementFactory:
+		"""
 		pass
 
 	@abc.abstractmethod
@@ -18,6 +24,10 @@ class DetectAndDescribe (object):
 
 		Of course, an implementation of DetectAndDescribe does not have to have seperate detect and describe
 		stages, as would be the case for some implementataions such as colorDescriptor.
+
+		:param data: DataSet or DataElement (which will be converted to a DataSet) on which we will perform
+			feature detection and description.
+		:type data: DataSet (or DataElement)
 		"""
 
 		# We need to enforce that we are using a DataSet and not an element

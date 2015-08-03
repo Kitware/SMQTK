@@ -7,7 +7,6 @@ import logging
 import multiprocessing.pool
 import numpy
 
-from smqtk.data_rep.descriptor_element_impl.local_elements import DescriptorMemoryElement
 from smqtk.utils import bin_utils
 from smqtk.utils.configuration import (
     ConfigurationInterface,
@@ -181,12 +180,13 @@ def main():
 
     # Quantize
     quant = QuantizationConfiguration.new_inst(q_label)
-    quant.generate_quantization(desc)
+    quant.generate_quantization(desc, dandd._descriptor_element_factory, dandd._data_element_type)
 
     # Index
     log.info("Loading similiarity nearest neighbor instance...")
     snn = SimilarityNearestNeighborsConfiguration.new_inst(snn_label)
-    snn.index(quant._quantization)
+    log.info("Bulding index")
+    snn.build_index(quant._quantization)
 
 if __name__ == "__main__":
     main()

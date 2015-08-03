@@ -1,6 +1,19 @@
 // Comments are allowed in JSON files used with the SMQTK system. They are
 // parsed out using the smqtk.utils.jsmin module.
 {
+    "DataElements": {
+        // name: {
+        //     "type": <class name from get_data_set_impls()>,
+        //     "init": {
+        //         kwargs to pass to constructor
+        //     }
+        // }
+        "DataMemoryElement": {
+            "type": "DataMemoryElement",
+            "init": {
+            }
+        }
+    },
     "DataSets": {
         // name: {
         //     "type": <class name from get_data_set_impls()>,
@@ -74,7 +87,10 @@
         "CD_CSIFT_Image_example": {
             "type": "ColorDetectAndDescribe_Image_csift",
             "init": {
-                "work_directory": "/Users/jonathanowens/smqtk_benchmarking/detect_and_describe_csift"
+                "work_directory": "/Users/jonathanowens/smqtk_benchmarking/detect_and_describe_csift",
+                "data_element_type": "DataMemoryElement",
+                "descriptor_element_factory": "MemoryDescriptorFactory",
+		"parallel": 1
             }
         }
     },
@@ -100,6 +116,7 @@
             "type": "FlannSimilarity",
             "init": {
                 "random_seed": 42,
+                "flann_index_filepath": "/Users/jonathanowens/smqtk_benchmarking/snn",
                 "checkpoint_dir": "/Users/jonathanowens/smqtk_benchmarking/snn/example_image"
             }
         }

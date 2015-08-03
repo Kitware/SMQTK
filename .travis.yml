@@ -7,6 +7,10 @@ sudo: false
 addons:
   apt:
     packages:
+      # basics
+      - linux-headers-generic
+      - build-essential
+      # For building things
       - cmake
       # for python module gmpy2
       - libgmp-dev

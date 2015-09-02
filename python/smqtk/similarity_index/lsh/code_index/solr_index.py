@@ -85,7 +85,7 @@ class SolrCodeIndex (CodeIndex):
         self.timestamp_field = timestamp_field
 
         self.commit_on_add = commit_on_add
-        self.max_boolean_clauses = max_boolean_clauses
+        self.max_boolean_clauses = int(max_boolean_clauses)
         assert self.max_boolean_clauses >= 2, "Need more clauses"
 
         self.solr = solr.Solr(solr_conn_addr, persistent=persistent_connection,
@@ -121,6 +121,21 @@ class SolrCodeIndex (CodeIndex):
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
                               timeout=state['solr_timeout'])
+
+    def get_config(self):
+        return {
+            "solr_conn_addr": self.solr.url,
+            "index_uuid": self.uuid,
+            "idx_uuid_field": self.idx_uuid_field,
+            "code_field": self.code_field,
+            "d_uid_field": self.d_uid_field,
+            "descriptor_field": self.descriptor_field,
+            "timestamp_field": self.timestamp_field,
+            "timeout": self.solr.timeout,
+            "persistent_connection": self.solr.persistent,
+            "commit_on_add": self.commit_on_add,
+            "max_boolean_clauses": self.max_boolean_clauses
+        }
 
     def count(self):
         """

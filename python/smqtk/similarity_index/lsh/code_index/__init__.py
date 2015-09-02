@@ -3,8 +3,10 @@ __author__ = 'purg'
 import abc
 import logging
 
+from smqtk.utils.plugin import ConfigurablePlugin
 
-class CodeIndex (object):
+
+class CodeIndex (ConfigurablePlugin):
     """
     Abstract base class for LSH small-code index storage
 

@@ -21,6 +21,9 @@ class MemoryCodeIndex (CodeIndex):
         # Mapping of code to a dictionary mapping descrUUID->Descriptor
         self._table = {}
 
+    def get_config(self):
+        return {}
+
     def count(self):
         """
         :return: Number of descriptor elements stored in this index. This is not

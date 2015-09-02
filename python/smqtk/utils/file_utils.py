@@ -1,6 +1,9 @@
 __author__ = 'purg'
 
+import csv
 import os
+import numpy
+import re
 
 
 def iter_directory_files(d, recurse=True):
@@ -57,3 +60,49 @@ def exclusive_touch(file_path):
             return False
         else:
             raise
+
+
+def iter_svm_file(filepath, width):
+    """
+    Iterate parsed vectors in a parsed "*.svm" file that encodes a sparce
+    matrix, where each line consists of multiple "index:value" pairs in index
+    order. Multiple lines construct a matrix.
+
+    :param filepath: Path to the SVM file encoding an array per line
+    :type filepath: str
+    :param width: The known number of columns in the sparse vectors.
+    :param width: int
+
+    :return: Generator yielding ndarray vectors
+    :rtype: collections.Iterable[numpy.core.multiarray.ndarray]
+
+    """
+    idx_val_re = re.compile("([0-9]+):([-+]?[0-9]*\.?[0-9]*)")
+    with open(filepath, 'r') as infile:
+        for line in infile:
+            v = numpy.zeros(width, dtype=float)
+            for seg in line.strip().split(' '):
+                m = idx_val_re.match(seg)
+                assert m is not None, \
+                    "Invalid index:value match for segment '%s'" % seg
+                idx, val = int(m.group(1)), float(m.group(2))
+                v[idx] = val
+            yield v
+
+
+def iter_csv_file(filepath):
+    """
+    Iterate parsed vectors in a "*.csv" file that encodes descriptor output
+    where each line is a descriptor vector. Multiple lines construct a matrix.
+
+    :param filepath: Path to the CSV file encoding an array per line.
+    :type filepath: str
+
+    :return: Generator yielding ndarray vectors
+    :rtype: collections.Iterable[numpy.core.multiarray.ndarray]
+
+    """
+    with open(filepath) as f:
+        r = csv.reader(f)
+        for l in r:
+            yield numpy.array(l, dtype=float)

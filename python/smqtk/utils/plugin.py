@@ -10,6 +10,7 @@ Helper methods for higher level plugin module getter methods.
 
 """
 
+import abc
 import collections
 import importlib
 import inspect
@@ -228,3 +229,47 @@ def from_config(config_dict, plugin_getter, *header_args):
         return cls(*header_args, **config_dict[t])
     except TypeError, ex:
         raise TypeError(cls.__name__ + '.' + ex.message)
+
+
+class ConfigurablePlugin (object):
+    """
+    Interface for plugin objects that should be configurable via a configuration
+    dictionary (think JSON).
+    """
+    __metaclass__ = abc.ABCMeta
+
+    @classmethod
+    def from_config(cls, config_dict):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary.
+
+        This method should not be called via super unless and instance of the
+        class is desired.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        """
+        # The simple case is that the class doesn't require any special
+        # parameters other than those that can be provided via the JSON
+        # specification, which we cover here. If an implementation needs
+        # something more special, they can override this function.
+        return cls(**config_dict)
+
+    @abc.abstractmethod
+    def get_config(self):
+        """
+        Return a JSON-compliant dictionary that could be passed to this class's
+        ``from_config`` method to produce an instance with identical
+        configuration.
+
+        In the common case, this involves naming the keys of the dictionary
+        based on the initialization argument names as if it were to be passed
+        to the constructor via dictionary expansion.
+
+        :return: JSON type compliant configuration dictionary.
+        :rtype: dict
+
+        """

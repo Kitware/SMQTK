@@ -6,29 +6,16 @@ __author__ = 'purg'
 import abc
 import logging
 
-
-class SimilarityIndexStateSaveError (Exception):
-    """
-    Exception for when as index was unable to be saved.
-    """
-    pass
+from smqtk.utils.plugin import ConfigurablePlugin
 
 
-class SimilarityIndexStateLoadError (Exception):
-    """
-    Exception for when an index state cannot be loaded for whatever reason
-    """
-    pass
-
-
-class SimilarityIndex (object):
+class SimilarityIndex (ConfigurablePlugin):
     """
     Common interface for descriptor-based nearest-neighbor computation.
 
-    Current the save/load index methods are file-system based, requiring some
-    method of serializing the index to a set of known files. Depending on the
-    implementation, one or more than one file will be written in order to
-    encapsulate the index state.
+    Implementations, if they allow persistent storage of their index, should
+    take the necessary parameters at construction time. Persistant storage
+    content should be (over)written ``build_index`` is called.
 
     """
     __metaclass__ = abc.ABCMeta
@@ -79,36 +66,6 @@ class SimilarityIndex (object):
 
         :param descriptors: Iterable of descriptor elements to build index over.
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
-
-        """
-        return
-
-    @abc.abstractmethod
-    def save_index(self, dir_path):
-        """
-        Save the current index state to a given location.
-
-        This will overwrite a previously saved state given the same
-        configuration.
-
-        :raises SimilarityIndexStateSaveError: Unable to save the current index
-            state for some reason.
-
-        :param dir_path: Path to the directory to save the index to.
-        :type dir_path: str
-
-        """
-        return
-
-    @abc.abstractmethod
-    def load_index(self, dir_path):
-        """
-        Load a saved index state from a given location.
-
-        :raises SimilarityIndexStateLoadError: Could not load index state.
-
-        :param dir_path: Path to the directory to load the index to.
-        :type dir_path: str
 
         """
         return

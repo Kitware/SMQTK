@@ -30,6 +30,11 @@ class DataFileElement (DataElement):
                % (self.__class__.__name__, self.uuid(), self.md5(),
                   self._filepath)
 
+    def get_config(self):
+        return {
+            "filepath": self._filepath
+        }
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if

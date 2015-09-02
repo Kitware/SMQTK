@@ -53,19 +53,21 @@
                 "save_dir": "LocalDescriptors",
                 // Tells implementation to interpret relative paths to the
                 // WORK_DIR variable as configured in smqtk_config module.
-                "work_relative": 1
+                "work_relative": true
             }
         },
 
         "LocalSolrFactory": {
             "type": "SolrDescriptorElement",
             "init": {
+                "persistent_connection": false,
                 "solr_conn_addr": "http://localhost:8983/solr",
+                // Arbitrarily picked field names. Tune these to the actual
+                // solr instance used.
                 "type_field": "type_s",
                 "uuid_field": "uuid_s",
                 "vector_field": "descriptor_fs",
-                "timestamp_field": "timestamp_f",
-                "persistent_connection": 0
+                "timestamp_field": "timestamp_f"
             }
         }
     },
@@ -99,7 +101,7 @@
                 "random_seed": 42,
                 // model generation parameters
                 "kmeans_k": 256,
-                "use_spatial_pyramid": 1
+                "use_spatial_pyramid": true
             }
         },
         "CD_RGSIFT_Image_example": {
@@ -132,80 +134,9 @@
         "MemoryIndex": {
             "type": "MemoryCodeIndex",
             "init": {
-                // None
+                // No Initialization parameters
             }
-        }
-    },
-
-    // Deprecated components below
-
-    "Indexers": {
-        // For the moment, indexers carry a model that is data-set specific
-        // (contains all descriptors from data in that set with UUID references
-        // to that data). This will hopefully change to the more independent
-        // side of things in the future.
-        "SVM_HIK-CD_CSIFT-Image": {
-            // Model trained using CD_CSIFT_Image_example descriptors
-            // Indexes over example_image data set
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift/example_image"
-            }
-        },
-        "SVM_HIK-CD_RGSIFT-Image": {
-            // Model trained using CD_RGSIFT_Image_example descriptors
-            // Indexes over example_image data set
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_rgsift/example_image"
-            }
-        },
-        "SVM_HIK-CD_CSIFT-Video": {
-            // Model trained using CD_CSIFT_Video_example descriptors
-            // Indexes over example_video data set
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift/example_video"
-            }
-        }
-    },
-
-    "Fusion": {
-        // TODO: This is outdated for new similarity and IQR indexing structures
-        // <label>: {
-        //      "catalyst": {
-        //          "type: <class_label>,
-        //          "init": {
-        //              <constructor_kwargs>
-        //          }
-        //      },
-        //      "atoms": [
-        //          {
-        //              "descriptor": <cd_label>,
-        //              "indexers": [ <i_label>, ... ]
-        //              // TODO: Need sub-catalyst parameter option for per-atom fusion
-        //          }, ...
-        //      ]
-        //  }, ...
-        "example_image": {
-            "catalyst": {
-                "type": "Average",
-                "init": {}
-            },
-            "atoms": [
-                {
-                    "descriptor": "CD_CSIFT_Image_example",
-                    "indexers": [
-                        "SVM_HIK-CD_CSIFT-Image"
-                    ]
-                },
-                {
-                    "descriptor": "CD_RGSIFT_Image_example",
-                    "indexers": [
-                        "SVM_HIK-CD_RGSIFT-Image"
-                    ]
-                }
-            ]
         }
     }
+
 }

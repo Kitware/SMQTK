@@ -13,6 +13,10 @@ from smqtk.indexing import get_indexers
 from smqtk.similarity_index.lsh.code_index import get_index_types
 
 
+def str_to_bool(s):
+    return s.lower() in {'yes', 'true'}
+
+
 class ConfigurationInterface (object):
     """
     Abstract interface for constructing object instances based central on system

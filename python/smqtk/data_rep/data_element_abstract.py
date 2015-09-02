@@ -9,12 +9,13 @@ import os.path as osp
 import tempfile
 
 from smqtk.utils import safe_create_dir
+from smqtk.utils.plugin import ConfigurablePlugin
 
 
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (object):
+class DataElement (ConfigurablePlugin):
     """
     Base abstract class for a data element.
 
@@ -159,7 +160,6 @@ class DataElement (object):
             the content type is unknown.
         :rtype: str or None
         """
-        return
 
     @abc.abstractmethod
     def get_bytes(self):
@@ -167,4 +167,3 @@ class DataElement (object):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return

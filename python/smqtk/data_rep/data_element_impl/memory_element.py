@@ -39,6 +39,9 @@ class DataMemoryElement (DataElement):
         # since we have the bytes right now, short circuiting the MD5 cache
         self._md5_cache = hashlib.md5(self._bytes).hexdigest()
 
+    def get_config(self):
+        return {}
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if

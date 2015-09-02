@@ -4,8 +4,10 @@ import abc
 import logging
 import numpy
 
+from smqtk.utils.plugin import ConfigurablePlugin
 
-class DescriptorElement (object):
+
+class DescriptorElement (ConfigurablePlugin):
     """
     Abstract descriptor vector container. The intent of this structure is to
     hide the specific method of storage of data (e.g. memory, file, database,
@@ -21,6 +23,27 @@ class DescriptorElement (object):
 
     """
     __metaclass__ = abc.ABCMeta
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    def from_config(cls, type_str, uuid, config_dict):
+        """
+        Instantiate a new instance of this class given the desired type, uuid,
+        and JSON-compliant configuration dictionary.
+
+        :param type_str: Type of descriptor. This is usually the name of the
+            content descriptor that generated this vector.
+        :type type_str: str
+
+        :param uuid: Unique ID reference of the descriptor.
+        :type uuid: collections.Hashable
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        """
+        return cls(type_str, uuid, **config_dict)
 
     def __init__(self, type_str, uuid):
         """

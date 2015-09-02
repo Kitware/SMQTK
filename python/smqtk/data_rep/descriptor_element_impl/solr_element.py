@@ -69,11 +69,24 @@ class SolrDescriptorElement (DescriptorElement):
         self.vector_field = vector_field
         self.timestamp_field = timestamp_field
         self.commit_on_set = commit_on_set
+
         self.solr = solr.Solr(solr_conn_addr,
                               persistent=persistent_connection,
                               timeout=timeout,
-                              # debug=True
+                              # debug=True  # This makes things pretty verbose
                               )
+
+    def get_config(self):
+        return {
+            "solr_conn_addr": self.solr.url,
+            "type_field": self.type_field,
+            "uuid_field": self.uuid_field,
+            "vector_field": self.vector_field,
+            "timestamp_field": self.timestamp_field,
+            "timeout": self.solr.timeout,
+            "persistent_connection": self.solr.persistent,
+            "commit_on_set": self.commit_on_set,
+        }
 
     def __getstate__(self):
         return {
@@ -100,7 +113,7 @@ class SolrDescriptorElement (DescriptorElement):
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
                               timeout=state['solr_timeout'],
-                              # debug=True
+                              # debug=True  # see above
                               )
 
     def __repr__(self):

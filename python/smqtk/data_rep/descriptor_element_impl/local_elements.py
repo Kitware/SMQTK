@@ -1,5 +1,6 @@
 __author__ = 'purg'
 
+import copy
 import numpy
 import os
 import os.path as osp
@@ -17,6 +18,13 @@ class DescriptorMemoryElement (DescriptorElement):
 
     # In-memory cache of descriptor vectors
     MEMORY_CACHE = {}
+
+    def get_config(self):
+        """
+        :return: JSON type compliant configuration dictionary.
+        :rtype: dict
+        """
+        return {}
 
     def has_vector(self):
         """
@@ -104,6 +112,7 @@ class DescriptorFileElement (DescriptorElement):
         )
 
         # Saving components
+        self._subdir_split = subdir_split
         if subdir_split and int(subdir_split) > 0:
             save_dir = osp.join(self._save_dir,
                                 *partition_string(str(uuid).replace('-', ''),
@@ -115,6 +124,13 @@ class DescriptorFileElement (DescriptorElement):
         self._vec_filepath = osp.join(save_dir,
                                       "%s.%s.vector.npy" % (self._type_label,
                                                             str(uuid)))
+
+    def get_config(self):
+        return {
+            "save_dir": self._save_dir,
+            "work_relative": False,
+            'subdir_split': self._subdir_split
+        }
 
     def has_vector(self):
         """

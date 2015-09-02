@@ -24,6 +24,9 @@ EXPECTED_MD5 = hashlib.md5(EXPECTED_BYTES).hexdigest()
 class DummyDataElement (smqtk.data_rep.data_element_abstract.DataElement):
     # abstract methods have no base functionality
 
+    def get_config(self):
+        return {}
+
     def content_type(self):
         return EXPECTED_CONTENT_TYPE
 

@@ -36,6 +36,7 @@ HBASE_BINARY_COL = 'image:binary'
 HBASE_BATCH_SIZE = 1000
 HBASE_START_KEY = '0' * 40  # SHA1 simulation
 HBASE_STOP_KEY = 'F' * 40  # SHA1 simulation
+HBASE_KEY_CHECKPOINT_FILEPATH = '/data/kitware/smqtk/image_cache_cnn_compute/hbase.checkpoint.txt'
 
 CNN_BATCH_SIZE = 10000  # Total batch of images to run in an execution of the descriptor executable at a time.
 CNN_GPU_BATCH_SIZE = 100  # Number of images computed on GPU at a time
@@ -178,26 +179,55 @@ class HBaseFeeder (multiprocessing.Process):
         self.queue = feed_queue
         self.batch_size = batch_size
 
-    def run(self):
-        table = happybase.Connection(HBASE_ADDRESS, timeout=HBASE_TIMEOUT)\
-            .table(HBASE_TABLE)
-        scan_iter = table.scan(
-            row_start=self.start_key,
+        # HBase things
+        self.connection = None
+        self.table = None
+
+    def _new_scan_iter(self, start_key):
+        self.connection = happybase.Connection(HBASE_ADDRESS, timeout=HBASE_TIMEOUT)
+        self.table = self.connection.table(HBASE_TABLE)
+        return self.table.scan(
+            row_start=start_key,
             row_stop=self.stop_key,
             batch_size=self.batch_size,
             columns=[HBASE_BINARY_COL]
         )
 
+    def run(self):
         doc_batch = {}
-        #last_key = None
-        for key, doc in scan_iter:
+        last_key = None
+        i = 0
+
+        scan_iter = self._new_scan_iter(iself.start_key)
+        running = True
+
+        while running:
+            try:
+                key, doc = scan_iter.next()
+            except IOError:
+                # Expected for a scan timeout error. Re-initialize connection
+                self.log.warn("HBase connection timed out. Initializing new scan connection")
+                self.connection.close()
+                scan_iter = self._new_scan_iter(last_key or self.start_key)
+                continue
+            except StopIteration:
+                # Finished scan
+                self.log.info("Finished scan iteration.")
+                running = False
+                continue
+
             # Normalize hex casing
             key = key.lower()
+            i += 1
 
-            # This passes consistently. Commenting for optimization.
-            #assert key > last_key, \
-            #    "Found an iteration order exception: '%s' >! '%s'" \
-            #    % (key, last_key)
+            if last_key:
+                assert int(key, 16) > int(last_key, 16), \
+                    "Found an key iteration order exception: '%s' >! '%s'" \
+                    % (key, last_key)
+            last_key = key
+
+            if i % self.batch_size == 0:
+                self.log.info("scanned %d total keys", i)
 
             # Make a temporary DescriptorFileElement to see if this key has been computed before or not.
             if make_descriptor(key).has_vector():
@@ -213,18 +243,8 @@ class HBaseFeeder (multiprocessing.Process):
             doc_batch[key] = binary
 
             if len(doc_batch) >= self.batch_size:
-                self.log.info("Recieved batch of %d elements from HBase, writing to files",
+                self.log.info("Completed batch of %d elements from HBase, writing to files",
                               self.batch_size)
-
-                # keys, binaries = zip(*doc_batch.iteritems())
-                # pool = multiprocessing.Pool(self.PARALLEL)
-                # temp_files = pool.map(write_to_temp, binaries)
-                # self.log.info("Pushing values to queue")
-                # for k, f in zip(keys, temp_files):
-                #     if f is not None:
-                #         self.queue.put((k, f))
-                # pool.close()
-                # pool.join()
 
                 pool = multiprocessing.pool.ThreadPool(self.PARALLEL)
                 pool.map(async_write_temp, zip(*zip(*doc_batch.iteritems()) + [[self.queue]*len(doc_batch)]))
@@ -236,15 +256,6 @@ class HBaseFeeder (multiprocessing.Process):
                 doc_batch = {}
 
         # Write anything remaining in the batch structure
-        #keys, binaries = zip(*doc_batch.iteritems())
-        #pool = multiprocessing.Pool(self.PARALLEL)
-        #temp_files = pool.map(write_to_temp, binaries)
-        #self.log.info("Pushing values to queue")
-        #for k, f in zip(keys, temp_files):
-        #    if f is not None:
-        #        self.queue.put((k, f))
-        #pool.close()
-        #pool.join()
         pool = multiprocessing.pool.ThreadPool(self.PARALLEL)
         pool.map(async_write_temp, zip(*zip(*doc_batch.iteritems()) + [[self.queue]*len(doc_batch)]))
         pool.close()
@@ -330,6 +341,8 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
                           len(batch), gpu_b_size)
             self.process_batch(batch, gpu_b_size)
 
+        complete_queue.put(None)
+
 
     def process_batch(self, batch, gpu_batch_size):
         assert len(batch) % gpu_batch_size == 0, \
@@ -402,11 +415,29 @@ def run():
     f_queue = multiprocessing.Queue(FEED_QUEUE_MAX_SIZE)
     c_queue = multiprocessing.Queue()  # This queue will never effectively be that large
 
-    feeder = HBaseFeeder(HBASE_START_KEY, HBASE_STOP_KEY, f_queue, HBASE_BATCH_SIZE)
+    if os.path.exists(HBASE_KEY_CHECKPOINT_FILEPATH):
+        with open(HBASE_KEY_CHECKPOINT_FILEPATH) as f:
+            start_key = f.read().strip()
+            log.info("starting from key: '%s'", start_key)
+    else:
+        start_key = HBASE_START_KEY
+
+    feeder = HBaseFeeder(start_key, HBASE_STOP_KEY, f_queue, HBASE_BATCH_SIZE)
     generator = CaffeDescriptorGenerator(f_queue, c_queue, CNN_BATCH_SIZE, CNN_GPU_BATCH_SIZE)
 
     feeder.start()
     generator.start()
+
+    log.info("Monitoring complete queue for checkpoint keys")
+    checking = True
+    while checking:
+        k = c_queue.get()
+        if k is None:
+            checking = False
+        else:
+            with open(HBASE_KEY_CHECKPOINT_FILEPATH, 'w') as f:
+                f.write(k)
+                log.info("Checkpointed key: '%s'", k)
 
     log.info("Waiting for worker processes to complete.")
     feeder.join()

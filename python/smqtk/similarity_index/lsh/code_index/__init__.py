@@ -1,9 +1,11 @@
-__author__ = 'purg'
 
 import abc
 import logging
 
 from smqtk.utils.plugin import ConfigurablePlugin
+
+
+__author__ = 'purg'
 
 
 class CodeIndex (ConfigurablePlugin):
@@ -35,7 +37,6 @@ class CodeIndex (ConfigurablePlugin):
         :rtype: bool
 
         """
-        return
 
     @abc.abstractmethod
     def count(self):
@@ -44,7 +45,6 @@ class CodeIndex (ConfigurablePlugin):
             necessarily the number of codes stored in the index.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def codes(self):
@@ -52,7 +52,6 @@ class CodeIndex (ConfigurablePlugin):
         :return: Set of code integers currently used in this code index.
         :rtype: set[int]
         """
-        return
 
     @abc.abstractmethod
     def add_descriptor(self, code, descriptor):
@@ -69,7 +68,6 @@ class CodeIndex (ConfigurablePlugin):
         :type descriptor: smqtk.data_rep.DescriptorElement
 
         """
-        return
 
     def __setitem__(self, code, descriptor):
         self.add_descriptor(code, descriptor)
@@ -102,7 +100,6 @@ class CodeIndex (ConfigurablePlugin):
         :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return
 
     def __getitem__(self, code):
         return self.get_descriptors(code)

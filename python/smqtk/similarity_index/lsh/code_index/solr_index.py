@@ -140,7 +140,8 @@ class SolrCodeIndex (CodeIndex):
     def count(self):
         """
         :return: Number of descriptor elements stored in this index. This is not
-            necessarily the number of codes stored in the index.
+            necessarily the number of codes stored in the index as there may be
+            multiple descriptors associated with the same code.
         :rtype: int
         """
         return int(self.solr.
@@ -249,3 +250,6 @@ class SolrCodeIndex (CodeIndex):
                                      for doc in r.results)
 
         return [cPickle.loads(str(pd)) for pd in pickled_descr]
+
+
+CODE_INDEX_CLASS = SolrCodeIndex

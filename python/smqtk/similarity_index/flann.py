@@ -1,11 +1,9 @@
-__author__ = 'purg'
 
 import cPickle
 import logging
 import multiprocessing
 import numpy
 import os.path as osp
-import tempfile
 
 from smqtk.similarity_index import SimilarityIndex
 
@@ -13,6 +11,9 @@ try:
     import pyflann
 except ImportError:
     pyflann = None
+
+
+__author__ = 'purg'
 
 
 class FlannSimilarity (SimilarityIndex):
@@ -25,14 +26,9 @@ class FlannSimilarity (SimilarityIndex):
     NOTE ON MULTIPROCESSING
         Normally, FLANN indices don't play well when multiprocessing due to
         the underlying index being a C structure, which doesn't auto-magically
-        transfer to forked processes like python structure data does.
-        However, FLANN can serialize an index, and so this processes uses
-        a temporary file (per index FlannSimilarity instance) to make a back-up
-        of the index for recovery when we discover that we're working in a
-        different process. This temporary file, however, is deleted upon garbage
-        collection of the instance in the parent process, so be sure that there
-        is a reference to the parent instance while multiprocessing forking new
-        processes.
+        transfer to forked processes like python structure data does. The
+        serialized FLANN index file is used to restore a built index in separate
+        processes, assuming one has been built.
 
     """
 
@@ -43,8 +39,9 @@ class FlannSimilarity (SimilarityIndex):
         # TODO: check that underlying library is found/valid?
         return pyflann is not None
 
-    def __init__(self, index_filepath, parameters_filepath,
-                 descriptor_cache_filepath,
+    def __init__(self, index_filepath="index.flann",
+                 parameters_filepath="index_parameters.pickle",
+                 descriptor_cache_filepath="descriptor_cache.pickle",
                  # Parameters for building an index
                  autotune=False, target_precision=0.95, sample_fraction=0.1,
                  distance_method='hik', random_seed=None):
@@ -94,7 +91,8 @@ class FlannSimilarity (SimilarityIndex):
         :type random_seed: int
 
         """
-        normpath = lambda p: (p and osp.abspath(osp.expanduser(p))) or p
+        def normpath(p):
+            return (p and osp.abspath(osp.expanduser(p))) or p
         self._index_filepath = normpath(index_filepath)
         self._index_param_filepath = normpath(parameters_filepath)
         self._descr_cache_filepath = normpath(descriptor_cache_filepath)
@@ -128,7 +126,6 @@ class FlannSimilarity (SimilarityIndex):
         # on. If this differs from the current process ID, the index should be
         # reloaded from cache.
         self._pid = None
-        self._is_child_proc = False
 
         # Load the index/parameters if one exists
         if self._has_model_files():
@@ -155,9 +152,9 @@ class FlannSimilarity (SimilarityIndex):
         """
         check if configured model files exist
         """
-        return (osp.isfile(self._index_filepath)
-                and osp.isfile(self._index_param_filepath)
-                and osp.isfile(self._descr_cache_filepath))
+        return (osp.isfile(self._index_filepath) and
+                osp.isfile(self._index_param_filepath) and
+                osp.isfile(self._descr_cache_filepath))
 
     def _load_flann_model(self):
         # Params pickle include the build params + our local state params
@@ -191,7 +188,6 @@ class FlannSimilarity (SimilarityIndex):
         if bool(self._flann) and self._has_model_files() \
                 and self._pid != multiprocessing.current_process().pid:
             self._load_flann_model()
-            self._is_child_proc = True
 
     def count(self):
         """
@@ -215,8 +211,10 @@ class FlannSimilarity (SimilarityIndex):
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptors elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
+        :param descriptors: Iterable of descriptors elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
         # Not caring about restoring the index because we're just making a new

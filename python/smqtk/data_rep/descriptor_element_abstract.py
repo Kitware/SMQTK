@@ -1,10 +1,11 @@
-__author__ = 'purg'
-
 import abc
 import logging
 import numpy
 
 from smqtk.utils.plugin import ConfigurablePlugin
+
+
+__author__ = 'purg'
 
 
 class DescriptorElement (ConfigurablePlugin):
@@ -26,7 +27,7 @@ class DescriptorElement (ConfigurablePlugin):
 
     # noinspection PyMethodOverriding
     @classmethod
-    def from_config(cls, type_str, uuid, config_dict):
+    def from_config(cls, config_dict, type_str, uuid):
         """
         Instantiate a new instance of this class given the desired type, uuid,
         and JSON-compliant configuration dictionary.

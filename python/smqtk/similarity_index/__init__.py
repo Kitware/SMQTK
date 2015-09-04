@@ -1,12 +1,14 @@
 """
 Interface for generic element-wise nearest-neighbor computation.
 """
-__author__ = 'purg'
 
 import abc
 import logging
 
 from smqtk.utils.plugin import ConfigurablePlugin
+
+
+__author__ = 'purg'
 
 
 class SimilarityIndex (ConfigurablePlugin):
@@ -40,7 +42,6 @@ class SimilarityIndex (ConfigurablePlugin):
         :rtype: bool
 
         """
-        return
 
     @property
     def _log(self):
@@ -53,14 +54,14 @@ class SimilarityIndex (ConfigurablePlugin):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def build_index(self, descriptors):
         """
         Build the index over the descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the index, not add to it,
+        or raise an exception to as to protect the current index.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -68,7 +69,6 @@ class SimilarityIndex (ConfigurablePlugin):
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return
 
     @abc.abstractmethod
     def nn(self, d, n=1):
@@ -86,7 +86,6 @@ class SimilarityIndex (ConfigurablePlugin):
         :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
-        return
 
 
 def get_similarity_nn():

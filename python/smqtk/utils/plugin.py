@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 LICENCE
 -------
@@ -6,7 +5,22 @@ Copyright 2015 by Kitware, Inc. All Rights Reserved. Please refer to
 KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
-Helper methods for higher level plugin module getter methods.
+Helper interface and functions for higher level plugin module getter methods.
+
+Plugin configuration dictionaries take the following general format:
+
+    {
+        "type": "name",
+        "impl_name": {
+            "param1": "val1",
+            "param2": "val2",
+            ...
+        },
+        "other_impl": {
+            ...
+        },
+        ... (etc.)
+    }
 
 """
 
@@ -141,7 +155,7 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
     return class_map
 
 
-def to_config(plugin_getter, arg_skip=0):
+def make_config(plugin_getter):
     """
     Generated configuration dictionary for the given base-class and associated
     plugin getter method (which returns a dictionary of labels to class types)
@@ -154,11 +168,6 @@ def to_config(plugin_getter, arg_skip=0):
         class types.
     :type plugin_getter: () -> dict[str, type]
 
-    :param arg_skip: The number of arguments in a classes constructor to skip
-        and not consider as configurable arguments. 0 by default (always skips
-        self argument).
-    :type arg_skip: int
-
     :return: Base configuration dictionary with an empty ``type`` field, and
         containing the types and initialization parameter specification for all
         implementation types available from the provided getter method.
@@ -167,68 +176,9 @@ def to_config(plugin_getter, arg_skip=0):
     """
     d = {"type": None}
     for label, cls in plugin_getter().iteritems():
-        d[label] = {}
-        argspec = inspect.getargspec(cls.__init__)
-
-        params = argspec.args[1 + arg_skip:]
-        num_params = len(params)
-
-        # assuming ``self`` doesn't have a default argument.
-        if argspec.defaults:
-            vals = ((None,) * (num_params - len(argspec.defaults))
-                    + argspec.defaults[-num_params:])
-        else:
-            vals = (None,) * num_params
-
-        d[label] = dict(zip(params, vals))
+        # noinspection PyUnresolvedReferences
+        d[label] = cls.default_config()
     return d
-
-
-def from_config(config_dict, plugin_getter, *header_args):
-    """
-    Assuming a configuration dictionary for object specification and
-    construction is of the form (as made by the ``to_config`` function):
-
-        {
-            "type": "name",
-            "name": {
-                "param1": "val1",
-                "param2": "val2",
-                ...
-            },
-            "other": {
-                ...
-            },
-            ...
-        }
-
-    Return an instance of the configured type as found in the given
-    ``plugin_getter``.
-
-    :raises KeyError: There was no ``type`` field to inspect, or there was no
-        parameter specification for the specified ``type``.
-    :raises TypeError: Insufficient/incorrect initialization parameters were
-        specified for the specified ``type``'s constructor.
-
-    :param config_dict: Configuration dictionary to draw from.
-    :type config_dict: dict[str]
-
-    :param plugin_getter: Function that returns a dictionary mapping labels to
-        class types.
-    :type plugin_getter: () -> dict[str]
-
-    :param header_args: Positional arguments to be inserted in front of
-        configuration parameters when constructing the configured instance.
-
-    :return: Instance of the configured type
-
-    """
-    t = config_dict['type']
-    cls = plugin_getter()[t]
-    try:
-        return cls(*header_args, **config_dict[t])
-    except TypeError, ex:
-        raise TypeError(cls.__name__ + '.' + ex.message)
 
 
 class ConfigurablePlugin (object):
@@ -237,6 +187,40 @@ class ConfigurablePlugin (object):
     dictionary (think JSON).
     """
     __metaclass__ = abc.ABCMeta
+
+    @classmethod
+    def default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as arguments,
+        turning those argument names into configuration dictionary keys. If any
+        of those arguments have defaults, we will add those values into the
+        configuration dictionary appropriately. The dictionary returned should
+        only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        argspec = inspect.getargspec(cls.__init__)
+
+        # Ignores potential *args or **kwargs present
+        params = argspec.args[1:]  # skipping ``self`` arg
+        num_params = len(params)
+
+        if argspec.defaults:
+            num_defaults = len(argspec.defaults)
+            vals = ((None,) * (num_params - num_defaults) + argspec.defaults)
+        else:
+            vals = (None,) * num_params
+
+        return dict(zip(params, vals))
 
     @classmethod
     def from_config(cls, config_dict):
@@ -273,3 +257,63 @@ class ConfigurablePlugin (object):
         :rtype: dict
 
         """
+
+
+def to_plugin_config(cp_inst):
+    """
+    Helper method that transforms the configuration dictionary gotten from the
+    passed ConfigurablePlugin-subclass instance into the standard multi-plugin
+    configuration dictionary format (see above).
+
+    This result of this function would be compatible with being passed to the
+    ``from_plugin_config`` function, given the appropriate plugin-getter method.
+
+    TL;DR: This wraps the instance's ``get_config`` return in a certain way.
+
+    :param cp_inst: Instance of a ConfigurablePlugin-subclass.
+    :type cp_inst: ConfigurablePlugin
+
+    :return: Plugin-format configuration dictionary.
+    :rtype: dict
+
+    """
+    name = cp_inst.__class__.__name__
+    return {
+        "type": name,
+        name: cp_inst.get_config()
+    }
+
+
+def from_plugin_config(config, plugin_getter, *args):
+    """
+    Helper method for instantiating an instance of a class available via the
+    provided ``plugin_getter`` function given the plugin configuration
+    dictionary ``config``.
+
+    :raises KeyError: There was no ``type`` field to inspect, or there was no
+        parameter specification for the specified ``type``.
+    :raises TypeError: Insufficient/incorrect initialization parameters were
+        specified for the specified ``type``'s constructor.
+
+    :param config: Configuration dictionary to draw from.
+    :type config: dict[str]
+
+    :param plugin_getter: Function that returns a dictionary mapping labels to
+        class types.
+    :type plugin_getter: () -> dict[str, type]
+
+    :param args: Additional argument to be passed to the ``from_config`` method
+        on the configured class type.
+
+    :return: Instance of the configured class type as found in the given
+        ``plugin_getter``.
+    :rtype: ConfigurablePlugin
+
+    """
+    t = config['type']
+    cls = plugin_getter()[t]
+    try:
+        # noinspection PyUnresolvedReferences
+        return cls.from_config(config[t], *args)
+    except TypeError, ex:
+        raise TypeError(cls.__name__ + '.' + ex.message)

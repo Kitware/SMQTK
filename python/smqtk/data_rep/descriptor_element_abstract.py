@@ -25,6 +25,33 @@ class DescriptorElement (ConfigurablePlugin):
     """
     __metaclass__ = abc.ABCMeta
 
+    @classmethod
+    def default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as arguments,
+        aside from the first two assumed positional arguments, turning those
+        argument names into configuration dictionary keys.
+        If any of those arguments have defaults, we will add those values into
+        the configuration dictionary appropriately.
+        The dictionary returned should only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        # similar to parent impl, except we remove the ``type_str`` and ``uuid``
+        # configuration parameters as they are to be specified at runtime.
+        dc = super(DescriptorElement, cls).default_config()
+        del dc['type_str'], dc['uuid']
+        return dc
+
     # noinspection PyMethodOverriding
     @classmethod
     def from_config(cls, config_dict, type_str, uuid):

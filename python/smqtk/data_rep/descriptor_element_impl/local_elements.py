@@ -1,6 +1,3 @@
-__author__ = 'purg'
-
-import copy
 import numpy
 import os
 import os.path as osp
@@ -9,6 +6,9 @@ from smqtk.data_rep import DescriptorElement
 from smqtk.utils import safe_create_dir
 from smqtk.utils.string_utils import partition_string
 from smqtk_config import WORK_DIR
+
+
+__author__ = 'purg'
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -128,7 +128,7 @@ class DescriptorFileElement (DescriptorElement):
     def get_config(self):
         return {
             "save_dir": self._save_dir,
-            "work_relative": False,
+            "work_relative": False,  # modified into abs form during init
             'subdir_split': self._subdir_split
         }
 

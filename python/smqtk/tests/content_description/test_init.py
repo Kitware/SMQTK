@@ -1,4 +1,3 @@
-__author__ = 'purg'
 
 import mock
 import multiprocessing.pool
@@ -12,6 +11,9 @@ from smqtk.content_description import get_descriptors
 from smqtk.content_description import _async_feature_generator_helper
 
 import smqtk.data_rep
+
+
+__author__ = 'purg'
 
 
 def test_get_descriptors():
@@ -31,6 +33,9 @@ class DummyContentDescriptor (ContentDescriptor):
     @classmethod
     def is_usable(cls):
         return
+
+    def get_config(self):
+        return {}
 
     def valid_content_types(self):
         return

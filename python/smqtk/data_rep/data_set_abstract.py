@@ -1,11 +1,15 @@
-__author__ = 'purg'
 
 import abc
 import collections
 import logging
 
+from smqtk.utils.plugin import ConfigurablePlugin
 
-class DataSet (collections.Set):
+
+__author__ = 'purg'
+
+
+class DataSet (collections.Set, ConfigurablePlugin):
     """
     Base abstract class for data sets.
     """

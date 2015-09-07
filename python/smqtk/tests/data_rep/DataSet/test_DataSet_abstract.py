@@ -1,10 +1,11 @@
-__author__ = 'purg'
-
 import nose.tools as ntools
 import random
 import unittest
 
 from smqtk.data_rep import DataSet
+
+
+__author__ = 'purg'
 
 
 class DummyDataSet (DataSet):
@@ -33,6 +34,9 @@ class DummyDataSet (DataSet):
 
     def uuids(self):
         return range(len(self.stuff))
+
+    def get_config(self):
+        return {}
 
 
 class TestDataSetAbstract (unittest.TestCase):

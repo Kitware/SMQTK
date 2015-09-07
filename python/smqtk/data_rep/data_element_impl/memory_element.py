@@ -1,9 +1,11 @@
-__author__ = 'purg'
 
 import base64
 import hashlib
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 class DataMemoryElement (DataElement):

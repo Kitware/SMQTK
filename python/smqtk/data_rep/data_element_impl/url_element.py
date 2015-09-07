@@ -1,10 +1,11 @@
-__author__ = 'purg'
 
-import hashlib
 import mimetypes
 import requests
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 MIMETYPES = mimetypes.MimeTypes()

@@ -1,4 +1,3 @@
-__author__ = 'purg'
 
 import abc
 import hashlib
@@ -10,6 +9,9 @@ import tempfile
 
 from smqtk.utils import safe_create_dir
 from smqtk.utils.plugin import ConfigurablePlugin
+
+
+__author__ = 'purg'
 
 
 MIMETYPES = mimetypes.MimeTypes()

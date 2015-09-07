@@ -1,9 +1,11 @@
-__author__ = 'purg'
 
 import mimetypes
 import os.path as osp
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 class DataFileElement (DataElement):

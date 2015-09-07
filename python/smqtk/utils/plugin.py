@@ -99,17 +99,17 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
                 if classes is None:
                     log.debug("[%s] Helper is None, skipping module",
                               module_name)
-                elif (isinstance(classes, collections.Iterable)
-                        and not isinstance(classes, basestring)):
+                elif (isinstance(classes, collections.Iterable) and
+                      not isinstance(classes, basestring)):
                     classes = tuple(classes)
                     log.debug("[%s] Loaded list of %d class types via helper",
                               module_name, len(classes))
                     # check that all class types in iterable are types and
                     # are subclasses of the given base-type
                     for cls in classes:
-                        if not (isinstance(cls, type)
-                                and cls is not baseclass_type
-                                and issubclass(cls, baseclass_type)):
+                        if not (isinstance(cls, type) and
+                                cls is not baseclass_type and
+                                issubclass(cls, baseclass_type)):
                             raise RuntimeError("[%s] Found element in list "
                                                "that is not a class or does "
                                                "not descend from required base "
@@ -226,7 +226,7 @@ class ConfigurablePlugin (object):
     def from_config(cls, config_dict):
         """
         Instantiate a new instance of this class given the configuration
-        JSON-compliant dictionary.
+        JSON-compliant dictionary encapsulating initialization arguments.
 
         This method should not be called via super unless and instance of the
         class is desired.

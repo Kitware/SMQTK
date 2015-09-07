@@ -75,7 +75,9 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         # replace ``code_index`` with nested plugin configuration
         index_conf = plugin.make_config(get_index_types)
-        index_conf.update(plugin.to_plugin_config(default['code_index']))
+        if default['code_index']:
+            # Only overwrite default config if there is a default value
+            index_conf.update(plugin.to_plugin_config(default['code_index']))
         default['code_index'] = index_conf
 
         return default

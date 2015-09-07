@@ -42,7 +42,10 @@ class DataMemoryElement (DataElement):
         self._md5_cache = hashlib.md5(self._bytes).hexdigest()
 
     def get_config(self):
-        return {}
+        return {
+            "bytes": self._bytes,
+            'content_type': self._content_type,
+        }
 
     def content_type(self):
         """

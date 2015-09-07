@@ -45,7 +45,12 @@ class DataElement (ConfigurablePlugin):
     def __del__(self):
         self.clean_temp()
 
-    # TODO: __eq__/__ne__ methods?
+    def __eq__(self, other):
+        return isinstance(other, DataElement) and \
+               self.get_bytes() == other.get_bytes()
+
+    def __ne__(self, other):
+        return not (self == other)
 
     def md5(self):
         """

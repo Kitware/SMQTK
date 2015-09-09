@@ -1,10 +1,14 @@
-__author__ = 'purg'
 
 import abc
 import logging
 
+from smqtk.utils.configurable_interface import Configurable
 
-class CodeIndex (object):
+
+__author__ = 'purg'
+
+
+class CodeIndex (Configurable):
     """
     Abstract base class for LSH small-code index storage
 
@@ -33,7 +37,6 @@ class CodeIndex (object):
         :rtype: bool
 
         """
-        return
 
     @abc.abstractmethod
     def count(self):
@@ -42,7 +45,6 @@ class CodeIndex (object):
             necessarily the number of codes stored in the index.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def codes(self):
@@ -50,7 +52,6 @@ class CodeIndex (object):
         :return: Set of code integers currently used in this code index.
         :rtype: set[int]
         """
-        return
 
     @abc.abstractmethod
     def add_descriptor(self, code, descriptor):
@@ -67,7 +68,6 @@ class CodeIndex (object):
         :type descriptor: smqtk.data_rep.DescriptorElement
 
         """
-        return
 
     def __setitem__(self, code, descriptor):
         self.add_descriptor(code, descriptor)
@@ -100,7 +100,6 @@ class CodeIndex (object):
         :rtype: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return
 
     def __getitem__(self, code):
         return self.get_descriptors(code)

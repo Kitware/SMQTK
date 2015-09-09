@@ -1,9 +1,10 @@
-__author__ = 'purg'
-
 import numpy
 import solr
 from smqtk.data_rep import DescriptorElement
 import time
+
+
+__author__ = 'purg'
 
 
 class SolrDescriptorElement (DescriptorElement):
@@ -18,7 +19,7 @@ class SolrDescriptorElement (DescriptorElement):
 
     """
 
-    def __init__(self, type_str, uid, solr_conn_addr,
+    def __init__(self, type_str, uuid, solr_conn_addr,
                  type_field, uuid_field, vector_field, timestamp_field,
                  timeout=10, persistent_connection=False, commit_on_set=True):
         """
@@ -28,8 +29,8 @@ class SolrDescriptorElement (DescriptorElement):
             content descriptor that generated this vector.
         :type type_str: str
 
-        :param uid: Unique ID reference of the descriptor.
-        :type uid: collections.Hashable
+        :param uuid: Unique ID reference of the descriptor.
+        :type uuid: collections.Hashable
 
         :param solr_conn_addr: HTTP(S) address for the Solr index to use
         :type solr_conn_addr: str
@@ -62,17 +63,18 @@ class SolrDescriptorElement (DescriptorElement):
         :type commit_on_set: bool
 
         """
-        super(SolrDescriptorElement, self).__init__(type_str, uid)
+        super(SolrDescriptorElement, self).__init__(type_str, uuid)
 
         self.type_field = type_field
         self.uuid_field = uuid_field
         self.vector_field = vector_field
         self.timestamp_field = timestamp_field
         self.commit_on_set = commit_on_set
+
         self.solr = solr.Solr(solr_conn_addr,
                               persistent=persistent_connection,
                               timeout=timeout,
-                              # debug=True
+                              # debug=True  # This makes things pretty verbose
                               )
 
     def __getstate__(self):
@@ -100,7 +102,7 @@ class SolrDescriptorElement (DescriptorElement):
         self.solr = solr.Solr(state['solr_url'],
                               persistent=state['solr_persistent'],
                               timeout=state['solr_timeout'],
-                              # debug=True
+                              # debug=True  # see above
                               )
 
     def __repr__(self):
@@ -133,6 +135,18 @@ class SolrDescriptorElement (DescriptorElement):
             return r.results[0]
         else:
             return None
+
+    def get_config(self):
+        return {
+            "solr_conn_addr": self.solr.url,
+            "type_field": self.type_field,
+            "uuid_field": self.uuid_field,
+            "vector_field": self.vector_field,
+            "timestamp_field": self.timestamp_field,
+            "timeout": self.solr.timeout,
+            "persistent_connection": self.solr.persistent,
+            "commit_on_set": self.commit_on_set,
+        }
 
     def has_vector(self):
         return bool(self._get_existing_doc())

@@ -21,8 +21,16 @@ EXPECTED_UUID = 1234567890
 EXPECTED_MD5 = hashlib.md5(EXPECTED_BYTES).hexdigest()
 
 
+# Caches the temp directory before we start mocking things out that would
+# otherwise be required for the tempfile module to determine the temp directory.
+tempfile.gettempdir()
+
+
 class DummyDataElement (smqtk.data_rep.data_element_abstract.DataElement):
     # abstract methods have no base functionality
+
+    def get_config(self):
+        return {}
 
     def content_type(self):
         return EXPECTED_CONTENT_TYPE
@@ -73,7 +81,7 @@ class TestDataElementAbstract (unittest.TestCase):
     #   - existing temps, given specific dir
     #
     # Mocking open, os.open, os.close and fcntl to actual file interaction
-    #   - fcntl is used under the hood of tempfile to open a file (which also
+    #   - os.open is used under the hood of tempfile to open a file (which also
     #       creates it on disk).
 
     @mock.patch('smqtk.data_rep.data_element_abstract.safe_create_dir')

@@ -3,14 +3,17 @@ Helper classes for access to JSON system configuration
 """
 
 import abc
-import smqtk_config
 
+import smqtk_config
 from smqtk.data_rep.data_set_impl import get_data_set_impls
 from smqtk.data_rep.descriptor_element_impl import get_descriptor_element_impls
 from smqtk.data_rep.descriptor_element_factory import DescriptorElementFactory
 from smqtk.content_description import get_descriptors
 from smqtk.indexing import get_indexers
-from smqtk.similarity_index.lsh.code_index import get_index_types
+from smqtk.data_rep.code_index import get_index_types
+
+DeprecationWarning("This module (smqtk.utils.configuration) will be deprecated "
+                   "soon.")
 
 
 class ConfigurationInterface (object):
@@ -242,10 +245,6 @@ class LSHCodeIndexConfiguration (ConfigurationInterface):
         cd_cls = get_index_types()[label_sect['type']]
         return cd_cls(**label_sect['init'])
 
-
-###
-# Deprecating soon
-#
 
 class IndexerConfiguration (ConfigurationInterface):
     """

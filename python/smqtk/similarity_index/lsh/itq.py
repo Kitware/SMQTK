@@ -1,26 +1,24 @@
 """
 Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 """
-__author__ = 'purg'
 
-import cPickle
 import heapq
 import os.path as osp
+
 import numpy
 import numpy.matlib
 
-from smqtk.similarity_index import (
-    SimilarityIndex,
-    SimilarityIndexStateLoadError,
-    SimilarityIndexStateSaveError,
-)
-from smqtk.similarity_index.lsh.code_index.memory import MemoryCodeIndex
+from smqtk.similarity_index import SimilarityIndex
+from smqtk.data_rep.code_index import get_index_types
+from smqtk.data_rep.code_index.memory import MemoryCodeIndex
 from smqtk.utils import (
     bit_utils,
     distance_functions,
-    safe_create_dir,
-    SimpleTimer
+    plugin,
+    SimpleTimer,
 )
+
+__author__ = 'purg'
 
 
 class ITQSimilarityIndex (SimilarityIndex):
@@ -52,17 +50,116 @@ class ITQSimilarityIndex (SimilarityIndex):
         # which if we don't have, nothing will work.
         return True
 
-    def __init__(self, index_factory=lambda: MemoryCodeIndex(), bit_length=8,
-                 itq_iterations=50, distance_method='cosine', random_seed=None):
+    @classmethod
+    def default_config(cls):
         """
-        Initialize ITQ similarity index instance (not the index itself).
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
 
-        :param index_factory: Method to produce a new code index instance. By
-            default, we use an in-memory index.
-        :type index_factory: ()->smqtk.similarity_index.lsh.code_index.CodeIndex
+        By default, we observe what this class's constructor takes as arguments,
+        turning those argument names into configuration dictionary keys. If any
+        of those arguments have defaults, we will add those values into the
+        configuration dictionary appropriately. The dictionary returned should
+        only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        default = super(ITQSimilarityIndex, cls).default_config()
+
+        # replace ``code_index`` with nested plugin configuration
+        index_conf = plugin.make_config(get_index_types)
+        if default['code_index']:
+            # Only overwrite default config if there is a default value
+            index_conf.update(plugin.to_plugin_config(default['code_index']))
+        default['code_index'] = index_conf
+
+        return default
+
+    @classmethod
+    def from_config(cls, config_dict):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary.
+
+        This implementation nests the configuration of the CodeIndex
+        implementation to use. If there is a ``code_index`` in the configuration
+        dictionary, it should be a nested plugin specification dictionary, as
+        specified by the ``smqtk.utils.plugin.from_config`` method.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        """
+        # Transform nested plugin stuff into actual classes.
+        config_dict['code_index'] = \
+            plugin.from_plugin_config(config_dict['code_index'],
+                                      get_index_types)
+
+        return cls(**config_dict)
+
+    def __init__(self, mean_vec_filepath="mean_vector.npy",
+                 rotation_filepath="rotation.npy",
+                 code_index=MemoryCodeIndex(),
+                 # Index building parameters
+                 bit_length=8, itq_iterations=50, distance_method='cosine',
+                 random_seed=None):
+        """
+        Initialize ITQ similarity index instance.
+
+        This implementation allows persistant storage of a built model via
+        providing file paths for the ``mean_vec_filepath`` and
+        ``rotation_filepath`` parameters.
+
+
+        The Code Index
+        --------------
+        ``code_index`` should be an instance of a CodeIndex implementation
+        class.
+
+        When not providing existing mean vector and rotation matrix cache file
+        paths, this should be an empty index. The ``build_index`` call will fail
+        if there is anything in the index provided.
+
+        When providing existing mean_vector and rotation matrix file paths, the
+        ``code_index`` should be populated with codes as generated from the
+        given mean and rotation.
+
+        A more advanced use case includes providing a code index that is
+        update-able in the background. This is valid, assuming there is
+        proper locking mechanisms in the code index, because
+
+
+        Build parameters
+        ----------------
+        Parameters after file path parameters are only related to building the
+        index. When providing existing mean, rotation and code elements, these
+        can be safely ignored.
+
+
+        :raise ValueError: Invalid argument values.
+
+        :param mean_vec_filepath: File location to load/store the mean vector
+            when initialized and/or built. This will use numpy to save/load, so
+            this should have a ``.npy`` suffix.
+        :type mean_vec_filepath: str
+
+        :param rotation_filepath: File location to load/store the rotation
+            matrix when initialize and/or built. This will use numpy to
+            save/load, so this should have a ``.npy`` suffix.
+        :type rotation_filepath: str
+
+        :param code_index: CodeIndex instance to use.
+        :type code_index: smqtk.similarity_index.lsh.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
-            code). This must be greater than 0.
+            code). This must be greater than 0. If given an existing
         :type bit_length: int
 
         :param itq_iterations: Number of iterations for the ITQ algorithm to
@@ -83,41 +180,53 @@ class ITQSimilarityIndex (SimilarityIndex):
         :type random_seed: int
 
         """
+        self._mean_vec_cache_filepath = mean_vec_filepath
+        self._rotation_cache_filepath = rotation_filepath
+
+        # maps small-codes to a list of DescriptorElements mapped by that code
+        self._code_index = code_index
+
+        # Number of bits we convert descriptors into
+        self._bit_len = int(bit_length)
+        # Number of iterations ITQ performs
+        self._itq_iter_num = int(itq_iterations)
+        # Optional fixed random seed
+        self._rand_seed = None if random_seed is None else int(random_seed)
+
         assert bit_length > 0, "Must be given a bit length greater than 1 " \
                                "(one)!"
         assert itq_iterations > 0, "Must be given a number of iterations " \
                                    "greater than 1 (one)!"
 
-        # Index save/load directory and standard saved filepath
-        self._save_file = "itq_index.pickle"
-
-        # Number of bits we convert descriptors into
-        self._bit_len = int(bit_length)
-        # Number of iterations ITQ performs
-        self._itq_iter_num = itq_iterations
-        # Optional fixed random seed
-        self._rand_seed = None if random_seed is None else int(random_seed)
-
-        # Vector of mean feature values. Centers "train" set, used to "center"
-        # additional descriptors when computing nearest neighbors.
-        #: :type: numpy.core.multiarray.ndarray
+        # Vector of mean feature values. Center of "train" set, and used to
+        # "center" additional descriptors when computing small codes.
+        #: :type: numpy.core.multiarray.ndarray[float]
         self._mean_vector = None
+        if osp.isfile(self._mean_vec_cache_filepath):
+            #: :type: numpy.core.multiarray.ndarray[float]
+            self._mean_vector = numpy.load(self._mean_vec_cache_filepath)
 
         # rotation matrix of shape [d, b], found by ITQ process, to use to
         # transform new descriptors into binary hash decision vector.
-        #: :type: numpy.core.multiarray.ndarray[float] | None
+        #: :type: numpy.core.multiarray.ndarray[float]
         self._r = None
-
-        # Function to produce a new CodeIndex implementation instance
-        self._index_factory = index_factory
-
-        # Hash table mapping small-codes to a list of DescriptorElements mapped
-        # by that code
-        #: :type: smqtk.similarity_index.lsh.code_index.CodeIndex
-        self._code_index = None
+        if osp.isfile(self._rotation_cache_filepath):
+            #: :type: numpy.core.multiarray.ndarray[float]
+            self._r = numpy.load(self._rotation_cache_filepath)
 
         self._dist_method = distance_method
         self._dist_func = self._get_dist_func(distance_method)
+
+    def get_config(self):
+        return {
+            "mean_vec_filepath": self._mean_vec_cache_filepath,
+            "rotation_filepath": self._rotation_cache_filepath,
+            "code_index": plugin.to_plugin_config(self._code_index),
+            "bit_length": self._bit_len,
+            "itq_iterations": self._itq_iter_num,
+            "distance_method": self._dist_method,
+            'random_seed': self._rand_seed,
+        }
 
     @staticmethod
     def _get_dist_func(distance_method):
@@ -140,7 +249,7 @@ class ITQSimilarityIndex (SimilarityIndex):
 
     def count(self):
         """
-        :return: Number of elements in this index.
+        :return: Number of descriptor elements in this index.
         :rtype: int
         """
         if self._code_index:
@@ -154,6 +263,9 @@ class ITQSimilarityIndex (SimilarityIndex):
         greater than 0.
 
         This is equivalent to the ITQ function from UNC-CH's implementation.
+
+        ``self`` is used only for logging. Otherwise this has no side effects on
+        this instance.
 
         :param v: 2D numpy array, n*c PCA embedded data, n is the number of data
             elements and c is the code length.
@@ -202,17 +314,29 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         Build the index over the descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
-
         The first part of this method is equivalent to the compressITQ function
         from UNC-CH's implementation.
 
+        :raises RuntimeError: A current data mode is loaded, or the current
+            CodeIndex is not empty.
         :raises ValueError: No data available in the given iterable.
 
         :param descriptors: Iterable of descriptor elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
+        :type descriptors:
+            collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
+        # Halt if we are going to overwrite a loaded mean/rotation cache.
+        if self._mean_vector or self._r:
+            raise RuntimeError("Current ITQ model is not empty. For "
+                               "the sake of protecting data, we are not "
+                               "proceeding.")
+        # Halt if the code index currently isn't empty
+        if self.count():
+            raise RuntimeError("Current CodeIndex instance is not empty. For "
+                               "the sake of protecting data, we are not "
+                               "proceeding.")
+
         self._log.debug("Using %d length bit-vectors", self._bit_len)
 
         # TODO: Sub-sample down descriptors to use for PCA + ITQ
@@ -236,22 +360,21 @@ class ITQSimilarityIndex (SimilarityIndex):
         with SimpleTimer("Centering data", self._log.info):
             # center the data, VERY IMPORTANT for ITQ to work
             self._mean_vector = numpy.mean(x, axis=0)
-            # x = x - numpy.matlib.repmat(self._mean_vector, x.shape[0], 1)
             x -= self._mean_vector
 
         # PCA
         with SimpleTimer("Computing PCA transformation", self._log.info):
             # numpy and matlab observation format is flipped, thus added
             # transpose
-            self._log.debug("-- covariance")
+            self._log.debug("-- computing covariance")
             c = numpy.cov(x.transpose())
 
             # Direct translation
             # - eigen vectors are the columns of ``pc``
-            self._log.debug('-- linalg.eig')
+            self._log.debug('-- computing linalg.eig')
             l, pc = numpy.linalg.eig(c)
             # ordered by greatest eigenvalue magnitude, keeping top ``bit_len``
-            self._log.debug('-- top pairs')
+            self._log.debug('-- computing top pairs')
             top_pairs = sorted(zip(l, pc.transpose()),
                                key=lambda p: p[0],
                                reverse=1
@@ -280,12 +403,11 @@ class ITQSimilarityIndex (SimilarityIndex):
             # De-adjust rotation with PC vector
             self._r = numpy.dot(pc_top, self._r)
 
-        # Populating small-code hash-table
+        # Populating small-code index
         #   - Converting bit-vectors proved faster than creating new codes over
         #       again (~0.01s vs ~0.04s for 80 vectors).
         with SimpleTimer("Converting bitvectors into small codes",
                          self._log.info):
-            self._code_index = self._index_factory()
             self._code_index.add_many_descriptors(
                 (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])
@@ -296,66 +418,6 @@ class ITQSimilarityIndex (SimilarityIndex):
         #       will be slower unless we think of something else. Could probably
         #       map the small code generation function by bringing it outside of
         #       the class.
-
-    def save_index(self, dir_path):
-        """
-        Save the current index state to a given location.
-
-        This will overwrite a previously saved state given the same
-        configuration.
-
-        :raises SimilarityIndexStateSaveError: Unable to save the current index
-            state for some reason.
-
-        :param dir_path: Path to the directory to save the index to.
-        :type dir_path: str
-
-        """
-        if self._r is None:
-            raise SimilarityIndexStateSaveError("No index build yet to save.")
-
-        state = {
-            "bit_len": self._bit_len,
-            "itq_iter": self._itq_iter_num,
-            "rand_seed": self._rand_seed,
-            "mean_vector": self._mean_vector,
-            "rotation": self._r,
-            "code_index": self._code_index,  # should be picklable
-            "distance_method": self._dist_method
-        }
-
-        safe_create_dir(dir_path)
-        save_file = osp.join(dir_path, self._save_file)
-        with open(save_file, 'wb') as f:
-            cPickle.dump(state, f)
-
-    def load_index(self, dir_path):
-        """
-        Load a saved index state from a given location.
-
-        :raises SimilarityIndexStateLoadError: Could not load index state.
-
-        :param dir_path: Path to the directory to load the index to.
-        :type dir_path: str
-
-        """
-        save_file = osp.join(dir_path, self._save_file)
-
-        if not osp.isfile(save_file):
-            raise SimilarityIndexStateLoadError("Expected safe file not found: "
-                                                "%s" % save_file)
-
-        with open(save_file, 'rb') as f:
-            state = cPickle.load(f)
-
-        self._bit_len = state['bit_len']
-        self._itq_iter_num = state['itq_iter']
-        self._rand_seed = state['rand_seed']
-        self._mean_vector = state['mean_vector']
-        self._r = state['rotation']
-        self._code_index = state['code_index']
-        self._dist_method = state['distance_method']
-        self._dist_func = self._get_dist_func(self._dist_method)
 
     def get_small_code(self, descriptor):
         """

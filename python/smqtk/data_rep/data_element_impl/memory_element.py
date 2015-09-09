@@ -1,9 +1,11 @@
-__author__ = 'purg'
 
 import base64
 import hashlib
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 class DataMemoryElement (DataElement):
@@ -38,6 +40,12 @@ class DataMemoryElement (DataElement):
 
         # since we have the bytes right now, short circuiting the MD5 cache
         self._md5_cache = hashlib.md5(self._bytes).hexdigest()
+
+    def get_config(self):
+        return {
+            "bytes": self._bytes,
+            'content_type': self._content_type,
+        }
 
     def content_type(self):
         """

@@ -26,7 +26,7 @@ from smqtk.utils.video_utils import get_metadata_info
 from . import utils
 
 
-# noinspection PyAbstractClass,PyPep8Naming
+# noinspection PyPep8Naming
 class ColorDescriptor_Base (ContentDescriptor):
     """
     Simple implementation of ColorDescriptor feature descriptor utility for
@@ -164,6 +164,30 @@ class ColorDescriptor_Base (ContentDescriptor):
         self._codebook = None
         if self.has_model:
             self._codebook = numpy.load(self.codebook_filepath)
+
+    def get_config(self):
+        """
+        Return a JSON-compliant dictionary that could be passed to this class's
+        ``from_config`` method to produce an instance with identical
+        configuration.
+
+        Keys of the returned dictionary are based on the initialization argument
+        names.
+
+        :return: JSON type compliant configuration dictionary.
+        :rtype: dict
+
+        """
+        return {
+            "model_directory": self._model_dir,
+            "work_directory": self._work_dir,
+            "kmeans_k": self._kmeans_k,
+            "flann_target_precision": self._flann_target_precision,
+            "flann_sample_fraction": self._flann_sample_fraction,
+            "flann_autotune": self._flann_autotune,
+            "random_seed": self._rand_seed,
+            "use_spatial_pyramid": self._use_sp,
+        }
 
     @property
     def name(self):

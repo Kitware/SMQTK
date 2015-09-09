@@ -1,11 +1,15 @@
-__author__ = 'purg'
+import cPickle
+import os.path as osp
 
-from . import CodeIndex
+from smqtk.data_rep.code_index import CodeIndex
+
+
+__author__ = 'purg'
 
 
 class MemoryCodeIndex (CodeIndex):
     """
-    Local RAM memory based index. This implementation cannot save state.
+    Local RAM memory based index with an optional file cache
     """
 
     @classmethod
@@ -16,10 +20,40 @@ class MemoryCodeIndex (CodeIndex):
         """
         return True
 
-    def __init__(self):
+    def __init__(self, file_cache=None):
+        """
+        Initialize a new in-memory code index, or reload one from a cache.
+
+        :param file_cache: Optional path to a file path, loading an existing
+            index if the file already exists. Either way, providing a path to
+            this enabled file caching when descriptors are added to this index.
+        :type file_cache: None | str
+
+        """
         self._num_descr = 0
+        self._file_cache = file_cache
+
         # Mapping of code to a dictionary mapping descrUUID->Descriptor
+        #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.data_rep.DescriptorElement]]
         self._table = {}
+        if file_cache and osp.isfile(file_cache):
+            self._log.debug("Loading cached code index table from file: %s",
+                            file_cache)
+            with open(file_cache) as f:
+                #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.data_rep.DescriptorElement]]
+                self._table = cPickle.load(f)
+                # Find the number of descriptors in the table
+                self._num_descr = sum(len(d) for d in self._table.itervalues())
+
+    def _cache_table(self):
+        if self._file_cache:
+            with open(self._file_cache, 'wb') as f:
+                cPickle.dump(self._table, f)
+
+    def get_config(self):
+        return {
+            "file_cache": self._file_cache
+        }
 
     def count(self):
         """
@@ -36,7 +70,7 @@ class MemoryCodeIndex (CodeIndex):
         """
         return set(self._table)
 
-    def add_descriptor(self, code, descriptor):
+    def add_descriptor(self, code, descriptor, no_cache=False):
         """
         Add a descriptor to this index given a matching small-code
 
@@ -46,9 +80,16 @@ class MemoryCodeIndex (CodeIndex):
         :param descriptor: Descriptor to index
         :type descriptor: smqtk.data_rep.DescriptorElement
 
+        :param no_cache: Do not cache the internal table if a file cache was
+            provided. This option should not be modified from its default by
+            normal use. Used internally.
+        :type no_cache: bool
+
         """
         self._table.setdefault(code, {})[descriptor.uuid()] = descriptor
         self._num_descr += 1
+        if not no_cache:
+            self._cache_table()
 
     def add_many_descriptors(self, code_descriptor_pairs):
         """
@@ -61,7 +102,8 @@ class MemoryCodeIndex (CodeIndex):
 
         """
         for c, d in code_descriptor_pairs:
-            self.add_descriptor(c, d)
+            self.add_descriptor(c, d, True)
+        self._cache_table()
 
     def get_descriptors(self, code_or_codes):
         """

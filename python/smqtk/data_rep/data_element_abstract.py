@@ -1,4 +1,3 @@
-__author__ = 'purg'
 
 import abc
 import hashlib
@@ -9,12 +8,16 @@ import os.path as osp
 import tempfile
 
 from smqtk.utils import safe_create_dir
+from smqtk.utils.configurable_interface import Configurable
+
+
+__author__ = 'purg'
 
 
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (object):
+class DataElement (Configurable):
     """
     Base abstract class for a data element.
 
@@ -42,7 +45,12 @@ class DataElement (object):
     def __del__(self):
         self.clean_temp()
 
-    # TODO: __eq__/__ne__ methods?
+    def __eq__(self, other):
+        return isinstance(other, DataElement) and \
+               self.get_bytes() == other.get_bytes()
+
+    def __ne__(self, other):
+        return not (self == other)
 
     def md5(self):
         """
@@ -159,7 +167,6 @@ class DataElement (object):
             the content type is unknown.
         :rtype: str or None
         """
-        return
 
     @abc.abstractmethod
     def get_bytes(self):
@@ -167,4 +174,3 @@ class DataElement (object):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return

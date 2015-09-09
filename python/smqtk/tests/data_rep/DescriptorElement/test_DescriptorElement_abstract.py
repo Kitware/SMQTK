@@ -10,6 +10,9 @@ from smqtk.data_rep import DescriptorElement
 
 class DummyDescriptorElement (DescriptorElement):
 
+    def get_config(self):
+        return {}
+
     def set_vector(self, new_vec):
         pass
 

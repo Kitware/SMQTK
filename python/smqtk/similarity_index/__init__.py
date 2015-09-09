@@ -1,34 +1,23 @@
 """
 Interface for generic element-wise nearest-neighbor computation.
 """
-__author__ = 'purg'
 
 import abc
 import logging
 
-
-class SimilarityIndexStateSaveError (Exception):
-    """
-    Exception for when as index was unable to be saved.
-    """
-    pass
+from smqtk.utils.configurable_interface import Configurable
 
 
-class SimilarityIndexStateLoadError (Exception):
-    """
-    Exception for when an index state cannot be loaded for whatever reason
-    """
-    pass
+__author__ = 'purg'
 
 
-class SimilarityIndex (object):
+class SimilarityIndex (Configurable):
     """
     Common interface for descriptor-based nearest-neighbor computation.
 
-    Current the save/load index methods are file-system based, requiring some
-    method of serializing the index to a set of known files. Depending on the
-    implementation, one or more than one file will be written in order to
-    encapsulate the index state.
+    Implementations, if they allow persistent storage of their index, should
+    take the necessary parameters at construction time. Persistant storage
+    content should be (over)written ``build_index`` is called.
 
     """
     __metaclass__ = abc.ABCMeta
@@ -53,7 +42,6 @@ class SimilarityIndex (object):
         :rtype: bool
 
         """
-        return
 
     @property
     def _log(self):
@@ -66,14 +54,14 @@ class SimilarityIndex (object):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def build_index(self, descriptors):
         """
         Build the index over the descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the index, not add to it,
+        or raise an exception to as to protect the current index.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -81,37 +69,6 @@ class SimilarityIndex (object):
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        return
-
-    @abc.abstractmethod
-    def save_index(self, dir_path):
-        """
-        Save the current index state to a given location.
-
-        This will overwrite a previously saved state given the same
-        configuration.
-
-        :raises SimilarityIndexStateSaveError: Unable to save the current index
-            state for some reason.
-
-        :param dir_path: Path to the directory to save the index to.
-        :type dir_path: str
-
-        """
-        return
-
-    @abc.abstractmethod
-    def load_index(self, dir_path):
-        """
-        Load a saved index state from a given location.
-
-        :raises SimilarityIndexStateLoadError: Could not load index state.
-
-        :param dir_path: Path to the directory to load the index to.
-        :type dir_path: str
-
-        """
-        return
 
     @abc.abstractmethod
     def nn(self, d, n=1):
@@ -129,7 +86,6 @@ class SimilarityIndex (object):
         :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
-        return
 
 
 def get_similarity_nn():

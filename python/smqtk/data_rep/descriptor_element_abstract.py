@@ -1,11 +1,14 @@
-__author__ = 'purg'
-
 import abc
 import logging
 import numpy
 
+from smqtk.utils.configurable_interface import Configurable
 
-class DescriptorElement (object):
+
+__author__ = 'purg'
+
+
+class DescriptorElement (Configurable):
     """
     Abstract descriptor vector container. The intent of this structure is to
     hide the specific method of storage of data (e.g. memory, file, database,
@@ -21,6 +24,54 @@ class DescriptorElement (object):
 
     """
     __metaclass__ = abc.ABCMeta
+
+    @classmethod
+    def default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as arguments,
+        aside from the first two assumed positional arguments, turning those
+        argument names into configuration dictionary keys.
+        If any of those arguments have defaults, we will add those values into
+        the configuration dictionary appropriately.
+        The dictionary returned should only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        # similar to parent impl, except we remove the ``type_str`` and ``uuid``
+        # configuration parameters as they are to be specified at runtime.
+        dc = super(DescriptorElement, cls).default_config()
+        del dc['type_str'], dc['uuid']
+        return dc
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    def from_config(cls, config_dict, type_str, uuid):
+        """
+        Instantiate a new instance of this class given the desired type, uuid,
+        and JSON-compliant configuration dictionary.
+
+        :param type_str: Type of descriptor. This is usually the name of the
+            content descriptor that generated this vector.
+        :type type_str: str
+
+        :param uuid: Unique ID reference of the descriptor.
+        :type uuid: collections.Hashable
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        """
+        return cls(type_str, uuid, **config_dict)
 
     def __init__(self, type_str, uuid):
         """

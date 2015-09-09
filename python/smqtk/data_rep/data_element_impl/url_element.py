@@ -1,10 +1,11 @@
-__author__ = 'purg'
 
-import hashlib
 import mimetypes
 import requests
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -35,13 +36,17 @@ class DataUrlElement (DataElement):
         # Check that the URL is valid, i.e. actually points to something
         requests.get(self._url).raise_for_status()
 
+    def get_config(self):
+        return {
+            "url_address": self._url
+        }
+
     def content_type(self):
         """
         :return: Standard type/subtype string for this data element, or None if
             the content type is unknown.
         :rtype: str or None
         """
-        # return MIMETYPES.guess_type(self._url)[0]
         return requests.get(self._url).headers['content-type']
 
     def get_bytes(self):

@@ -1,9 +1,11 @@
-__author__ = 'purg'
 
 import mimetypes
 import os.path as osp
 
 from smqtk.data_rep import DataElement
+
+
+__author__ = 'purg'
 
 
 class DataFileElement (DataElement):
@@ -29,6 +31,11 @@ class DataFileElement (DataElement):
         return "%s{uuid: %s, md5: %s, filepath: %s}" \
                % (self.__class__.__name__, self.uuid(), self.md5(),
                   self._filepath)
+
+    def get_config(self):
+        return {
+            "filepath": self._filepath
+        }
 
     def content_type(self):
         """

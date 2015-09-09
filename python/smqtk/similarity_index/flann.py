@@ -1,26 +1,19 @@
-__author__ = 'purg'
 
 import cPickle
 import logging
 import multiprocessing
 import numpy
-import os
 import os.path as osp
-import tempfile
 
-from smqtk.similarity_index import (
-    SimilarityIndex,
-    SimilarityIndexStateLoadError,
-    SimilarityIndexStateSaveError,
-)
-from smqtk.utils import safe_create_dir
-
-from smqtk_config import WORK_DIR
+from smqtk.similarity_index import SimilarityIndex
 
 try:
     import pyflann
 except ImportError:
     pyflann = None
+
+
+__author__ = 'purg'
 
 
 class FlannSimilarity (SimilarityIndex):
@@ -33,14 +26,9 @@ class FlannSimilarity (SimilarityIndex):
     NOTE ON MULTIPROCESSING
         Normally, FLANN indices don't play well when multiprocessing due to
         the underlying index being a C structure, which doesn't auto-magically
-        transfer to forked processes like python structure data does.
-        However, FLANN can serialize an index, and so this processes uses
-        a temporary file (per index FlannSimilarity instance) to make a back-up
-        of the index for recovery when we discover that we're working in a
-        different process. This temporary file, however, is deleted upon garbage
-        collection of the instance in the parent process, so be sure that there
-        is a reference to the parent instance while multiprocessing forking new
-        processes.
+        transfer to forked processes like python structure data does. The
+        serialized FLANN index file is used to restore a built index in separate
+        processes, assuming one has been built.
 
     """
 
@@ -48,15 +36,17 @@ class FlannSimilarity (SimilarityIndex):
     def is_usable(cls):
         # Assuming that if the pyflann module is available, then it's going to
         # work. This assumption will probably be invalidated in the future...
-        # TODO: check that underlying library is found/valid
+        # TODO: check that underlying library is found/valid?
         return pyflann is not None
 
-    def __init__(self, temp_dir=tempfile.gettempdir(), autotune=False,
-                 target_precision=0.95, sample_fraction=0.1,
-                 distance_method='hik', random_seed=None,
-                 config_relative=False):
+    def __init__(self, index_filepath="index.flann",
+                 parameters_filepath="index_parameters.pickle",
+                 descriptor_cache_filepath="descriptor_cache.pickle",
+                 # Parameters for building an index
+                 autotune=False, target_precision=0.95, sample_fraction=0.1,
+                 distance_method='hik', random_seed=None):
         """
-        Initialize FLANN index properties. Does not contain a queryable index
+        Initialize FLANN index properties. Does not contain a query-able index
         until one is built via the ``build_index`` method, or loaded from save
         file via the ``load_index`` method.
 
@@ -68,79 +58,124 @@ class FlannSimilarity (SimilarityIndex):
         See the MATLAB section for detailed descriptions (python section will
         just point you to the MATLAB section).
 
-        :param temp_dir: Directory to use for working file storage, mainly for
-            saving and loading indices for multiprocess transitions. By default,
-            this is the platform specific standard temporary file directory. If
-            given a relative path, it is interpreted against WORK_DIR as
-            configured in `smqtk_config` module.
-        :type temp_dir: str
+        :param index_filepath: File location to load/store FLANN index when
+            initialized and/or built.
+        :param parameters_filepath: File location to load/save FLANN index
+            parameters determined at build time.
+        :param descriptor_cache_filepath: File location to load/store
+            DescriptorElements in this index.
+
         :param autotune: Whether or not to perform parameter auto-tuning when
             building the index. If this is False, then the `target_precision`
             and `sample_fraction` parameters are not used.
         :type autotune: bool
+
         :param target_precision: Target estimation accuracy when determining
             nearest neighbor when tuning parameters. This should be between
             [0,1] and represents percentage accuracy.
         :type target_precision: float
+
         :param sample_fraction: Sub-sample percentage of the total index to use
             when performing auto-tuning. Value should be in the range of [0,1]
             and represents percentage.
         :type sample_fraction: float
+
         :param distance_method: Method label of the distance function to use.
             See FLANN documentation manual for available methods. Common methods
-            include "hik", "chi_square" (default), and "euclidean".
+            include "hik", "chi_square" (default), and "euclidean". When loading
+            and existing index, this value is ignored in preference for the
+            distance method used to build the loaded index.
         :type distance_method: str
 
         :param random_seed: Integer to use as the random number generator seed.
         :type random_seed: int
 
-        :param config_relative: If true, interpret relative paths given to the
-            ``save_dir`` and ``temp_dir`` parameters as relative to the
-            ``DATA_DIR`` and ``WORK_DIR`` smqtk_config parameters, respectively.
-        :type config_relative: bool
-
         """
-        self._temp_dir = osp.abspath(osp.join(
-            WORK_DIR if config_relative else os.getcwd(),
-            osp.expanduser(temp_dir)
-        ))
+        def normpath(p):
+            return (p and osp.abspath(osp.expanduser(p))) or p
+        self._index_filepath = normpath(index_filepath)
+        self._index_param_filepath = normpath(parameters_filepath)
+        self._descr_cache_filepath = normpath(descriptor_cache_filepath)
 
-        # Standard save files relative to save directory
-        self._sf_flann_index = "flann.index"
-        self._sf_state = "flann.state.pickle"
-
-        self._build_autotune = bool(autotune)
+        # parameters for building an index
+        self._build_autotune = autotune
         self._build_target_precision = float(target_precision)
         self._build_sample_frac = float(sample_fraction)
 
         self._distance_method = str(distance_method)
 
-        # The flann instance with a built index. None before index construction
+        # In-order cache of descriptors we're indexing over.
+        # - flann.nn_index will spit out indices to list
+        #: :type: list[smqtk.data_rep.DescriptorElement] | None
+        self._descr_cache = None
+
+        # The flann instance with a built index. None before index load/build.
         #: :type: pyflann.index.FLANN or None
         self._flann = None
-        # Flann index parameters determined during building. This is used when
-        # re-building index when adding to it.
+        # Flann index parameters determined during building. None before index
+        # load/build.
         #: :type: dict
         self._flann_build_params = None
-        # Path to the file that is the temporary cache serialization of our
-        # index for multiprocessing recovery. This is None before index
-        # construction. This is deleted upon parent process instance deletion.
-        #: :type: None or str
-        self._flann_index_cache = None
-        # The process ID that the currently set FLANN instance was build/loaded
+
+        #: :type: None | int
+        self._rand_seed = None
+        if random_seed:
+            self._rand_seed = int(random_seed)
+
+        # The process ID that the currently set FLANN instance was built/loaded
         # on. If this differs from the current process ID, the index should be
         # reloaded from cache.
         self._pid = None
-        self._is_child_proc = False
 
-        # In-order cache of descriptors we're indexing over.
-        # - flann.nn_index will spit out indices into this list
-        # - This should be preserved when forking processes, i.e. shouldn't have
-        #   to save to file like we do with FLANN index.
-        #: :type: list[smqtk.data_rep.DescriptorElement]
-        self._descr_cache = None
+        # Load the index/parameters if one exists
+        if self._has_model_files():
+            # Load descriptor cache
+            # - is copied on fork, so only need to load here.
+            with open(self._descr_cache_filepath) as f:
+                self._descr_cache = cPickle.load(f)
 
-        self._rand_seed = None if random_seed is None else int(random_seed)
+            self._load_flann_model()
+
+    def get_config(self):
+        return {
+            "index_filepath": self._index_filepath,
+            "parameters_filepath": self._index_param_filepath,
+            "descriptor_cache_filepath": self._descr_cache_filepath,
+            "autotune": self._build_autotune,
+            "target_precision": self._build_target_precision,
+            "sample_fraction": self._build_sample_frac,
+            "distance_method": self._distance_method,
+            "random_seed": self._rand_seed,
+        }
+
+    def _has_model_files(self):
+        """
+        check if configured model files exist
+        """
+        return (osp.isfile(self._index_filepath) and
+                osp.isfile(self._index_param_filepath) and
+                osp.isfile(self._descr_cache_filepath))
+
+    def _load_flann_model(self):
+        # Params pickle include the build params + our local state params
+        with open(self._index_param_filepath) as f:
+            state = cPickle.load(f)
+        self._build_autotune = state['b_autotune']
+        self._build_target_precision = state['b_target_precision']
+        self._build_sample_frac = state['b_sample_frac']
+        self._distance_method = state['distance_method']
+        self._flann_build_params = state['flann_build_params']
+
+        # make numpy matrix of descriptor vectors for FLANN
+        pts_array = [d.vector() for d in self._descr_cache]
+        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
+        pyflann.set_distance_type(self._distance_method)
+        self._flann = pyflann.FLANN()
+        self._flann.load_index(self._index_filepath, pts_array)
+        del pts_array
+
+        # Set current PID to the current
+        self._pid = multiprocessing.current_process().pid
 
     def _restore_index(self):
         """
@@ -150,23 +185,9 @@ class FlannSimilarity (SimilarityIndex):
         If there is a loaded index and we're on the same process that created it
         this does nothing.
         """
-        if self._flann_index_cache and os.path.isfile(self._flann_index_cache) \
+        if bool(self._flann) and self._has_model_files() \
                 and self._pid != multiprocessing.current_process().pid:
-            pyflann.set_distance_type(self._distance_method)
-            self._flann = pyflann.FLANN()
-
-            pts_array = [d.vector() for d in self._descr_cache]
-            pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
-            self._flann.load_index(self._flann_index_cache, pts_array)
-            self._pid = multiprocessing.current_process().pid
-            self._is_child_proc = True
-
-    def __del__(self):
-        if not self._is_child_proc:
-            do_remove = (self._flann_index_cache
-                         and os.path.isfile(self._flann_index_cache))
-            if do_remove:
-                os.remove(self._flann_index_cache)
+            self._load_flann_model()
 
     def count(self):
         """
@@ -190,134 +211,61 @@ class FlannSimilarity (SimilarityIndex):
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptors elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
+        :param descriptors: Iterable of descriptors elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        # If there is already an index, clear the cache file if we are in the
-        # same process that created our current index.
-        if self._flann_index_cache and os.path.isfile(self._flann_index_cache) \
-                and self._pid == multiprocessing.current_process().pid:
-            self._log.debug('removing old index cache file')
-            os.remove(self._flann_index_cache)
+        # Not caring about restoring the index because we're just making a new
+        # one
+        self._log.info("Building new FLANN index")
 
-        self._log.debug("Building new index")
-
-        # Compute descriptors for data elements
-        self._log.debug("Computing descriptors for data")
-        # uid2vec = \
-        #     self._content_descriptor.compute_descriptor_async(data)
-        # Translate returned mapping into cache lists
-        self._descr_cache = [d for d in sorted(descriptors,
-                                               key=lambda e: e.uuid())]
+        self._log.debug("Storing descriptors")
+        self._descr_cache = list(descriptors)
         if not self._descr_cache:
             raise ValueError("No data provided in given iterable.")
+        self._log.debug("Caching descriptors: %s", self._descr_cache_filepath)
+        with open(self._descr_cache_filepath, 'w') as f:
+            cPickle.dump(self._descr_cache, f)
 
-        # numpy array version for FLANN
-        pts_array = [d.vector() for d in self._descr_cache]
-        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
-
-        # Reset PID/FLANN/saved cache
-        self._pid = multiprocessing.current_process().pid
-        safe_create_dir(self._temp_dir)
-        fd, self._flann_index_cache = tempfile.mkstemp(".flann",
-                                                       dir=self._temp_dir)
-        os.close(fd)
-        self._log.debug("Building FLANN index")
+        self._log.debug("Building new FLANN index")
         params = {
-            "algorithm": self._build_autotune,
             "target_precision": self._build_target_precision,
             "sample_fraction": self._build_sample_frac,
             "log_level": ("info"
                           if self._log.getEffectiveLevel() <= logging.DEBUG
-                          else "warn")
+                          else "warning")
         }
+        if self._build_autotune:
+            params['algorithm'] = "autotuned"
         if self._rand_seed is not None:
             params['random_seed'] = self._rand_seed
         pyflann.set_distance_type(self._distance_method)
-        self._flann = pyflann.FLANN()
-        self._flann_build_params = self._flann.build_index(pts_array, **params)
 
-        # Saving out index cache
-        self._log.debug("Saving index to cache file: %s",
-                        self._flann_index_cache)
-        self._flann.save_index(self._flann_index_cache)
-
-    def save_index(self, dir_path):
-        """
-        Save the current index state to a configured location. This
-        configuration should be set at instance construction.
-
-        This will overwrite previously saved state date given the same
-        configuration.
-
-        :raises SimilarityIndexStateSaveError: Unable to save the current index
-            state for some reason.
-
-        :param dir_path: Path to the directory to save the index to.
-        :type dir_path: str
-
-        """
-        self._restore_index()
-        if self._flann is None:
-            raise SimilarityIndexStateSaveError("No index built yet to save")
-
-        dir_path = osp.abspath(osp.expanduser(dir_path))
-        safe_create_dir(dir_path)
-        self._flann.save_index(osp.join(dir_path, self._sf_flann_index))
-
-        state = {
-            "flann_params": self._flann_build_params,
-            "descr_cache": self._descr_cache,
-            "distance_method": self._distance_method,
-            "rand_seed": self._rand_seed
-        }
-        with open(osp.join(dir_path, self._sf_state), 'wb') as f:
-            cPickle.dump(state, f)
-
-    def load_index(self, dir_path):
-        """
-        Load a saved index state based on the current configuration.
-
-        :raises SimilarityIndexStateLoadError: Could not load index state.
-
-        :param dir_path: Path to the directory to load the index to.
-        :type dir_path: str
-
-        """
-        self._restore_index()
-
-        if False in (osp.isfile(self._sf_flann_index),
-                     osp.isfile(self._sf_state)):
-            raise SimilarityIndexStateLoadError("In complete index save state")
-
-        dir_path = osp.abspath(osp.expanduser(dir_path))
-
-        with open(osp.join(dir_path, self._sf_state), 'rb') as f:
-            state = cPickle.load(f)
-
-        self._distance_method = state['distance_method']
-        self._rand_seed = state['rand_seed']
-        self._descr_cache = state['descr_cache']
-        self._flann_build_params = state['flann_params']
-
+        self._log.debug("Accumulating descriptor vectors into matrix for FLANN")
         pts_array = [d.vector() for d in self._descr_cache]
         pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
-
-        pyflann.set_distance_type(self._distance_method)
         self._flann = pyflann.FLANN()
-        self._flann.load_index(osp.join(dir_path, self._sf_flann_index),
-                               pts_array)
+        print "Params: %s" % params
+        print "Pts array:", pts_array
+        self._flann_build_params = self._flann.build_index(pts_array, **params)
+        del pts_array
 
-        # initialize index cache
+        self._log.debug("Caching index and state: %s, %s",
+                        self._index_filepath, self._index_param_filepath)
+        self._flann.save_index(self._index_filepath)
+        state = {
+            'b_autotune': self._build_autotune,
+            'b_target_precision': self._build_target_precision,
+            'b_sample_frac': self._build_sample_frac,
+            'distance_method': self._distance_method,
+            'flann_build_params': self._flann_build_params,
+        }
+        with open(self._index_param_filepath, 'w') as f:
+            cPickle.dump(state, f)
+
         self._pid = multiprocessing.current_process().pid
-        safe_create_dir(self._temp_dir)
-        fd, self._flann_index_cache = tempfile.mkstemp(".flann",
-                                                       dir=self._temp_dir)
-        os.close(fd)
-        self._log.debug("saving loaded index to cache file: %s",
-                        self._flann_index_cache)
-        self._flann.save_index(self._flann_index_cache)
 
     def nn(self, d, n=1):
         """

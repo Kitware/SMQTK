@@ -1,11 +1,27 @@
+from smqtk.data_rep import get_descriptor_element_impls
+from smqtk.utils.configurable_interface import Configurable
+from smqtk.utils.plugin import make_config
+
+
 __author__ = 'purg'
 
 
-class DescriptorElementFactory (object):
+class DescriptorElementFactory (Configurable):
     """
     Factory class for DescriptorElement instances of a specific type and
     configuration.
     """
+
+    @classmethod
+    def default_config(cls):
+        return make_config(get_descriptor_element_impls)
+
+    @classmethod
+    def from_config(cls, config_dict):
+        return DescriptorElementFactory(
+            get_descriptor_element_impls()[config_dict['type']],
+            config_dict[config_dict['type']]
+        )
 
     def __init__(self, d_type, init_params):
         """
@@ -19,6 +35,13 @@ class DescriptorElementFactory (object):
         """
         self._d_type = d_type
         self._init_params = init_params
+
+    def get_config(self):
+        d_type_name = self._d_type.__class__.__name__
+        return {
+            'type': d_type_name,
+            d_type_name: self._init_params,
+        }
 
     def new_descriptor(self, type_str, uuid):
         """

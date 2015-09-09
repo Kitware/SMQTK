@@ -17,6 +17,7 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_equal(d._filepath, fp)
 
     def test_init_relFilepath_normal(self):
+        # relative paths should be stored as absolute within the element
         fp = 'foo.txt'
         d = DataFileElement(fp)
         ntools.assert_equal(d._filepath,
@@ -88,3 +89,30 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_equal(len(d._temp_filepath_stack), 0)
         d.clean_temp()
         ntools.assert_true(os.path.isfile(source_file))
+
+    def test_fromConfig(self):
+        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
+        c = {
+            "filepath": fp
+        }
+        df = DataFileElement.from_config(c)
+        ntools.assert_equal(df._filepath, fp)
+
+    def test_toConfig(self):
+        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
+        df = DataFileElement(fp)
+        c = df.get_config()
+        ntools.assert_equal(c['filepath'], fp)
+
+    def test_configuration(self):
+        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
+        default_config = DataFileElement.default_config()
+        ntools.assert_equal(default_config,
+                            {'filepath': None})
+
+        default_config['filepath'] = fp
+        inst1 = DataFileElement.from_config(default_config)
+        ntools.assert_equal(default_config, inst1.get_config())
+
+        inst2 = DataFileElement.from_config(inst1.get_config())
+        ntools.assert_equal(inst1, inst2)

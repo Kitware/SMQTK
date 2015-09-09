@@ -1,5 +1,3 @@
-__author__ = 'purg'
-
 import cPickle
 import multiprocessing
 import os
@@ -13,6 +11,9 @@ from smqtk.utils.file_utils import iter_directory_files
 from smqtk.utils.string_utils import partition_string
 
 
+__author__ = 'purg'
+
+
 class DataFileSet (DataSet):
     """
     File-based data set. Data elements will all be file-based (DataFile type,
@@ -21,6 +22,10 @@ class DataFileSet (DataSet):
     File sets are initialized with a root directory, under which it attempts to
     find existing serialized DataElement pickle files. This notion means that
     DataElement implementations stored must be picklable.
+
+    This implementation does not currently suppose asynchronous modification on
+    separate processes as they will conflict with each other on what to write to
+    disk. This implementation should, however, be thread safe.
 
     """
 
@@ -99,6 +104,13 @@ class DataFileSet (DataSet):
         for k in sorted(self.uuids()):
             with self._element_map_lock:
                 yield self._element_map[k]
+
+    def get_config(self):
+        return {
+            "root_directory": self._root_dir,
+            "sha1_chunk": self._sha1_chunk,
+            "data_relative": False,  # already expanded to abs path
+        }
 
     def _discover_data_elements(self):
         """

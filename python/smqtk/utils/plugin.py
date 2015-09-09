@@ -24,10 +24,8 @@ Plugin configuration dictionaries take the following general format:
 
 """
 
-import abc
 import collections
 import importlib
-import inspect
 import logging
 import os
 import re
@@ -157,12 +155,12 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
 
 def make_config(plugin_getter):
     """
-    Generated configuration dictionary for the given base-class and associated
-    plugin getter method (which returns a dictionary of labels to class types)
+    Generated configuration dictionary for the given plugin getter method (which
+    returns a dictionary of labels to class types)
 
     A types parameters, as listed, at the construction parameters for that type.
     Default values are inserted where possible, otherwise None values are
-    listed.
+    used.
 
     :param plugin_getter: Function that returns a dictionary mapping labels to
         class types.

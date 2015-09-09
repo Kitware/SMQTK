@@ -8,7 +8,7 @@ import os.path as osp
 import tempfile
 
 from smqtk.utils import safe_create_dir
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
 __author__ = 'purg'
@@ -17,7 +17,7 @@ __author__ = 'purg'
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (ConfigurablePlugin):
+class DataElement (Configurable):
     """
     Base abstract class for a data element.
 

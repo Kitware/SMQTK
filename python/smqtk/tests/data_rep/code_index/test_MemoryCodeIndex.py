@@ -1,12 +1,13 @@
 import cPickle
-import nose.tools as ntools
 import os
-import numpy
 import tempfile
 import unittest
 
+import nose.tools as ntools
+import numpy
+
 from smqtk.data_rep.descriptor_element_impl.local_elements import DescriptorMemoryElement
-from smqtk.similarity_index.lsh.code_index.memory import MemoryCodeIndex
+from smqtk.data_rep.code_index.memory import MemoryCodeIndex
 
 __author__ = 'purg'
 

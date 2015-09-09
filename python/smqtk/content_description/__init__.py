@@ -15,10 +15,10 @@ import os
 import traceback
 
 from smqtk.utils import SimpleTimer
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
-class ContentDescriptor (ConfigurablePlugin):
+class ContentDescriptor (Configurable):
     """
     Base abstract Feature Descriptor interface
     """

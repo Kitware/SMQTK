@@ -2,7 +2,7 @@
 import nose.tools as ntools
 import unittest
 
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
 __author__ = 'purg'
@@ -11,7 +11,7 @@ __author__ = 'purg'
 class TestConfigurablePluginInterface (unittest.TestCase):
 
     def test_default_config(self):
-        class T1 (ConfigurablePlugin):
+        class T1 (Configurable):
             def __init__(self, a, b, cat):
                 pass
         ntools.assert_equal(
@@ -20,7 +20,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
         )
 
         # star stuff shouldn't change anything
-        class T2 (ConfigurablePlugin):
+        class T2 (Configurable):
             def __init__(self, a, b, cat, *args, **kwargs):
                 pass
         ntools.assert_equal(
@@ -29,7 +29,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
         )
 
     def test_default_config_with_default_values(self):
-        class T1 (ConfigurablePlugin):
+        class T1 (Configurable):
             def __init__(self, a, b, c=0, d='foobar'):
                 pass
         ntools.assert_equal(
@@ -38,7 +38,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
         )
 
         # star stuff shouldn't change anything
-        class T2 (ConfigurablePlugin):
+        class T2 (Configurable):
             def __init__(self, a, b, c=0, d='foobar', *args, **kwargs):
                 pass
         ntools.assert_equal(
@@ -47,7 +47,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
         )
 
 
-class TestAlgo1 (ConfigurablePlugin):
+class TestAlgo1 (Configurable):
 
     def __init__(self, foo=1, bar='baz'):
         self.foo = foo
@@ -66,7 +66,7 @@ class TestAlgo1 (ConfigurablePlugin):
         }
 
 
-class TestAlgo2 (ConfigurablePlugin):
+class TestAlgo2 (Configurable):
     """
     Semi-standard way to implement nested algorithms.
     Usually, algorithms are associated to a plugin getter method that wraps a

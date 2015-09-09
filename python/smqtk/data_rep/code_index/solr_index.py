@@ -1,10 +1,12 @@
-__author__ = 'purg'
 
 import cPickle
 import solr
 import time
 
-from . import CodeIndex
+from smqtk.data_rep.code_index import CodeIndex
+
+
+__author__ = 'purg'
 
 
 class SolrCodeIndex (CodeIndex):

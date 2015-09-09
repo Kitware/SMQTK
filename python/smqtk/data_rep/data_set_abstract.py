@@ -3,13 +3,13 @@ import abc
 import collections
 import logging
 
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
 __author__ = 'purg'
 
 
-class DataSet (collections.Set, ConfigurablePlugin):
+class DataSet (collections.Set, Configurable):
     """
     Base abstract class for data sets.
     """

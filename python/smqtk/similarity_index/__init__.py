@@ -5,13 +5,13 @@ Interface for generic element-wise nearest-neighbor computation.
 import abc
 import logging
 
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
 __author__ = 'purg'
 
 
-class SimilarityIndex (ConfigurablePlugin):
+class SimilarityIndex (Configurable):
     """
     Common interface for descriptor-based nearest-neighbor computation.
 

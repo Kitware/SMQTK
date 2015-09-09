@@ -3,7 +3,7 @@ import nose.tools as ntools
 import unittest
 
 from smqtk.utils.plugin import *
-from smqtk.tests.utils.test_plugin_ConfigurablePlugin import (
+from smqtk.tests.utils.test_configurable_interface import (
     TestAlgo1, TestAlgo2
 )
 

@@ -4,20 +4,19 @@ Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 
 import heapq
 import os.path as osp
+
 import numpy
 import numpy.matlib
-import tempfile
 
 from smqtk.similarity_index import SimilarityIndex
-from smqtk.similarity_index.lsh.code_index import get_index_types
-from smqtk.similarity_index.lsh.code_index.memory import MemoryCodeIndex
+from smqtk.data_rep.code_index import get_index_types
+from smqtk.data_rep.code_index.memory import MemoryCodeIndex
 from smqtk.utils import (
     bit_utils,
     distance_functions,
     plugin,
     SimpleTimer,
 )
-
 
 __author__ = 'purg'
 

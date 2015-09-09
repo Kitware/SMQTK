@@ -1,7 +1,7 @@
 import cPickle
 import os.path as osp
 
-from . import CodeIndex
+from smqtk.data_rep.code_index import CodeIndex
 
 
 __author__ = 'purg'

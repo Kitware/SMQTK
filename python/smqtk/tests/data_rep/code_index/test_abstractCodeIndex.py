@@ -1,12 +1,11 @@
+import unittest
 
 import mock
 import nose.tools as ntools
 import numpy
-import unittest
 
 from smqtk.data_rep.descriptor_element_impl.local_elements import DescriptorMemoryElement
-from smqtk.similarity_index.lsh.code_index import CodeIndex
-
+from smqtk.data_rep.code_index import CodeIndex
 
 __author__ = 'purg'
 

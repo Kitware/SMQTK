@@ -2,13 +2,13 @@ import abc
 import logging
 import numpy
 
-from smqtk.utils.plugin import ConfigurablePlugin
+from smqtk.utils.configurable_interface import Configurable
 
 
 __author__ = 'purg'
 
 
-class DescriptorElement (ConfigurablePlugin):
+class DescriptorElement (Configurable):
     """
     Abstract descriptor vector container. The intent of this structure is to
     hide the specific method of storage of data (e.g. memory, file, database,

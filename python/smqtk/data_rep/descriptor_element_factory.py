@@ -14,10 +14,37 @@ class DescriptorElementFactory (Configurable):
 
     @classmethod
     def default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
         return make_config(get_descriptor_element_impls)
 
     @classmethod
     def from_config(cls, config_dict):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        This method should not be called via super unless and instance of the
+        class is desired.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :return: Constructed instance from the provided config.
+        :rtype: DescriptorElementFactory
+
+        """
         return DescriptorElementFactory(
             get_descriptor_element_impls()[config_dict['type']],
             config_dict[config_dict['type']]

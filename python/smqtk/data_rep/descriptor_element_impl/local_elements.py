@@ -1,3 +1,4 @@
+import multiprocessing
 import numpy
 import os
 import os.path as osp
@@ -18,6 +19,19 @@ class DescriptorMemoryElement (DescriptorElement):
 
     # In-memory cache of descriptor vectors
     MEMORY_CACHE = {}
+    MEMORY_CACHE_LOCK = multiprocessing.RLock()
+
+    def __getstate__(self):
+        return self.type(), self.uuid(), self.vector(),
+
+    def __setstate__(self, state):
+        self._type_label = state[0]
+        self._uuid = state[1]
+        with self.MEMORY_CACHE_LOCK:
+            self.MEMORY_CACHE[self._get_cache_index()] = state[2]
+
+    def _get_cache_index(self):
+        return self.type(), self.uuid()
 
     def get_config(self):
         """
@@ -32,7 +46,8 @@ class DescriptorMemoryElement (DescriptorElement):
             stored.
         :rtype: bool
         """
-        return self.uuid() in DescriptorMemoryElement.MEMORY_CACHE
+        with self.MEMORY_CACHE_LOCK:
+            return self._get_cache_index() in self.MEMORY_CACHE
 
     def vector(self):
         """
@@ -40,7 +55,8 @@ class DescriptorMemoryElement (DescriptorElement):
             None of there is no vector stored in this container.
         :rtype: numpy.core.multiarray.ndarray or None
         """
-        return DescriptorMemoryElement.MEMORY_CACHE.get(self.uuid(), None)
+        with self.MEMORY_CACHE_LOCK:
+            return self.MEMORY_CACHE.get(self._get_cache_index(), None)
 
     def set_vector(self, new_vec):
         """
@@ -53,7 +69,8 @@ class DescriptorMemoryElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        DescriptorMemoryElement.MEMORY_CACHE[self.uuid()] = new_vec
+        with self.MEMORY_CACHE_LOCK:
+            self.MEMORY_CACHE[self._get_cache_index()] = new_vec
 
 
 class DescriptorFileElement (DescriptorElement):

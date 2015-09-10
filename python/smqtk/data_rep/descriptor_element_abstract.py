@@ -70,6 +70,9 @@ class DescriptorElement (Configurable):
             a configuration.
         :type config_dict: dict
 
+        :return: Constructed instance from the provided config.
+        :rtype: DescriptorElement
+
         """
         return cls(type_str, uuid, **config_dict)
 

@@ -8,7 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import gmpy2
-import numpy
+import numpy as np
 
 
 def histogram_intersection_distance(i, j):
@@ -35,34 +35,30 @@ def histogram_intersection_distance(i, j):
     #       if i_sum != 0:
     #           i /= i_sum
     #       ...
-    return 1.0 - ((i + j - numpy.abs(i - j)).sum() * 0.5)
+    return 1.0 - ((i + j - np.abs(i - j)).sum() * 0.5)
 
 
-def histogram_intersection_dist_matrix(a, b):
+def histogram_intersection_distance2(a, b):
     """
-    Compute the histogram intersection percent relation between given histogram
-    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 0.0 means
-    full intersection, and 1.0 means no intersection.
+    Compute the histogram intersection distance between given histogram
+    vectors or matrices ``a`` and ``b``, returning a value between ``0.0`` and
+    ``1.0``. This is the inverse of intersection similarity, whereby a distance
+    of  ``0.0`` means full intersection and ``1.0`` means no intersection.
 
     This implements non-branching formula for efficient computation.
 
-    Input vectors ``a`` and ``b`` may be of 1 or 2 dimensions. ``b`` must have
-    dimensionality less than or equal to ``a``. The following chart shows what
-    this function does depending on input format:
+    Input vectors ``a`` and ``b`` may be of 1 or 2 dimensions. Depending on the
+    values of ``a`` and ``b``, different things may occur:
 
-    * ``i.ndim == 1 && j.ndim == 1 && a.shape == b.shape``
-        The distance between vectors ``a`` and ``b`` are returned as a floating
-        point value
+    * If both ``a`` and ``b`` are 2D matrices, they're shape must be congruent
+      and the result will be an vector of distances between parallel rows.
 
-    * ``i.ndim == 2 && j.ndim == 1 && a.shape[0] == b.shape``
-        A vector of distances are returned that correspond to ``d(a_i, j)``
-        where ``i`` is the i\ :sup:`th` row of of ``a``.
+    * If either is a 1D vector and the other is a 2D matrix, a vector of
+      distances is returned between the 1D vector and each row of the 2D matrix.
 
-    * ``i.ndim == 2 && j.ndim == 2 && a.shape == b.shape``
-        A vector of distances are returned that correspond to ``d(a_i, b_i)``
-        where ``i`` is the i\ :sup:`th` rows of ``a`` and ``b``.
-
-    :raises ValueError: Input array shapes are incompatible.
+    * If both ``a`` and ``b`` are 1D vectors, a floating-point scalar distance
+      is returned that is the histogram intersection distance between the input
+      vectors.
 
     :param a: Histogram or array of histograms ``a``
     :type a: numpy.core.multiarray.ndarray
@@ -73,24 +69,15 @@ def histogram_intersection_dist_matrix(a, b):
     :return: Float or array of float distance (inverse percent intersection).
     :rtype: float or numpy.core.multiarray.ndarray
     """
-    # TODO: Always normalize input histograms here? e.g.:
-    #       ...
-    #       i_sum = i.sum()
-    #       if i_sum != 0:
-    #           i /= i_sum
-    #       ...
-    a_dim = a.ndim
-    if a_dim == 1:
-        a = numpy.array([a])
-    # TODO: Assert shape consistency
-
-    #: :type: numpy.core.multiarray.ndarray
-    r = 1.0 - ((numpy.add(a, b) - numpy.abs(numpy.subtract(a, b))).sum(axis=1) * 0.5)
-
-    if a_dim == 1:
-        return r[0]
-    else:
-        return r
+    # TODO: input value checks?
+    # Which axis to sum on. If there is a matrix involved, its along column,
+    # but if its just two arrays its along the row.
+    # The following is noticeably slower:
+    #   sum_axis = not (a.ndim == 1 and b.ndim == 1)
+    sum_axis = 1
+    if a.ndim == 1 and b.ndim == 1:
+        sum_axis = 0
+    return 1. - ((np.add(a, b) - np.abs(np.subtract(a, b))).sum(sum_axis) * 0.5)
 
 
 def euclidean_distance(i, j):
@@ -108,7 +95,7 @@ def euclidean_distance(i, j):
 
     """
     # noinspection PyTypeChecker
-    return numpy.sqrt(numpy.power(i - j, 2.0).sum())
+    return np.sqrt(np.power(i - j, 2.0).sum())
 
 
 def cosine_similarity(i, j):
@@ -134,7 +121,7 @@ def cosine_similarity(i, j):
     # return numpy.dot(i, j) / (numpy.linalg.norm(i) * numpy.linalg.norm(j))
 
     # speed optimization, numpy.linalg.norm can be a bottleneck
-    return numpy.dot(i, j) / (numpy.sqrt(i.dot(i)) * numpy.sqrt(j.dot(j)))
+    return np.dot(i, j) / (np.sqrt(i.dot(i)) * np.sqrt(j.dot(j)))
 
 
 def hamming_distance(i, j):

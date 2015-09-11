@@ -14,7 +14,7 @@ from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
 
 
-def compute_distance_kernel(m, dist_func):
+def compute_distance_kernel(m, dist_func, row_wise=False):
     """
     Method for computing the distance kernel of an array of vectors given a
     distance function that works on two supplied 1D arrays.
@@ -25,10 +25,13 @@ def compute_distance_kernel(m, dist_func):
     :param m: An array of vectors to compute the pairwise distance kernel for.
     :type m: numpy.core.multiarray.ndarray
 
-    :param dist_func: Distance function that can computer the distance between
-        an input vector against an array of vectors (a 2D matrix of the same
-        column dimension).
-    :type dist_func: (ndarray, ndarray) -> ndarray[float]
+    :param dist_func: Distance function
+    :type dist_func: (ndarray, ndarray) -> ndarray[float] | float
+
+    :param row_wise: If the given distance function can take a vector and a
+        matrix, and computes pair-wise distances, returning a vector of
+        distances between the given vector and each row of the matrix.
+    :type row_wise: bool
 
     :return: Computed square distance kernel
     :rtype: numpy.core.multiarray.ndarray
@@ -49,23 +52,23 @@ def compute_distance_kernel(m, dist_func):
     side = m.shape[0]
     mat = np.ndarray((side, side), dtype=float)
     log.debug("computing distances")
-    for i in xrange(side-1):
-        # log.debug(" -- row :: %d", i)
-        # cols to the left of diagonal index
-        # for j in xrange(i):
-        #     if i == j:
-        #         mat[i, j] = 0.
-        #     else:
-        #         d = dist_func(m[i], m[j])
-        #         mat[i, j] = d
-        #         mat[j, i] = d
-        mat[i+1:, i] = dist_func(m[i], m[i+1:])
-        # Reflect in other triangle
-        mat[i, i+1:] = mat[i+1:, i]
-    # Fill in diagonal 0's
-    log.debug("Filling in diagonals")
-    for i in xrange(side):
-        mat[i, i] = 0.
+
+    if row_wise:
+        log.debug("Computing row-wise distances")
+        # For all rows except the last one. We'll have computed all distanced by
+        # the time reach m[side-1]
+        for i in xrange(side-1):
+            # Compute col/row wise distances
+            mat[i, i] = 0.
+            mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
+    else:
+        log.debug("Computing element-wise distances")
+        for i in xrange(side):
+            mat[i, i] = 0
+            # cols to the left of diagonal index for this row
+            for j in xrange(i):
+                mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
+
     return mat
 
 

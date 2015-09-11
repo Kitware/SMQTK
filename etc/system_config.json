@@ -8,13 +8,6 @@
         //         kwargs to pass to constructor
         //     }
         // }
-        "ucf1k": {
-            "type": "DataFileSet",
-            "init": {
-                "root_directory": "/home/purg/dev/smqtk/source/data/FileDataSets/ucf1k/data",
-                "md5_chunk": 8
-            }
-        },
         "image_example": {
             "type": "DataFileSet",
             "init": {
@@ -32,17 +25,6 @@
         //         "kwargs": "here"
         //     }
         // }
-        "CD_CSIFT_Video_UCF1k": {
-            "type": "ColorDescriptor_Video_csift",
-            "init": {
-                "model_directory": "ContentDescriptors/ColorDescriptor/csift/ucf1k",
-                "work_directory": "ContentDescriptors/ColorDescriptor/csift/ucf1k",
-                "random_seed": 42,
-                // model generation parameters
-                "kmeans_k": 1024,
-                "flann_sample_fraction": 1.0
-            }
-        },
         "CD_CSIFT_Image_example" : {
             "type": "ColorDescriptor_Image_csift",
             "init": {
@@ -59,12 +41,6 @@
         // (contains all descriptors from data in that set with UUID references
         // to that data). This will hopefully change to the more independent
         // side of things in the future.
-        "SVM_HIK-CD_CSIFT-Video-UCF_1k_sample": {
-            "type": "SVMIndexerHIK",
-            "init": {
-                "data_dir": "Indexers/SVM_HIK/cd_csift/ucf1k"
-            }
-        },
         "SVM_HIK-CD_CSIFT-Image-example": {
             "type": "SVMIndexerHIK",
             "init": {

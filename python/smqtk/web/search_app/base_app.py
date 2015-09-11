@@ -128,16 +128,6 @@ class SMQTKSearchApp (flask.Flask):
             self.register_blueprint(self.mod_example_image)
             self.add_navigable_blueprint(self.mod_example_image)
 
-        #with SimpleTimer("Loading UCF 1k sample", self.log.info):
-        #    ds_ucf1k = DataSetConfiguration.new_inst("ucf1k")
-        #    self.mod_ucf1k = IQRSearch(
-        #        "VideoSearch UCF 1k sample", self, ds_ucf1k,
-        #        'CD_CSIFT_Video_UCF1k', 'SVM_HIK-CD_CSIFT-Video-UCF_1k_sample',
-        #        url_prefix='/video_ucf_1k'
-        #    )
-        #    self.register_blueprint(self.mod_ucf1k)
-        #    self.add_navigable_blueprint(self.mod_ucf1k)
-
         #
         # Basic routing
         #

@@ -38,4 +38,4 @@ install:
 
 # Run tests here
 script:
-  - nosetests --with-doctest python/smqtk/
+  - nosetests --with-doctest --exclude-dir=python/smqtk/web python/smqtk/

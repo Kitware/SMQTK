@@ -7,6 +7,7 @@ import time
 import uuid
 
 from smqtk.data_rep import DataElement
+import smqtk_config
 
 
 class DataFileElement (DataElement):
@@ -14,7 +15,7 @@ class DataFileElement (DataElement):
     File-based data element
     """
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, data_relative=False):
         """
         Create a new FileElement.
 
@@ -25,7 +26,8 @@ class DataFileElement (DataElement):
         # Only keeping stringification of UUID, removing dashes
         self._uuid = str(uuid.uuid1(clock_seq=int(time.time()*1000000)))\
             .replace('-', '')
-        self._filepath = osp.abspath(osp.expanduser(filepath))
+        self._filepath = filepath
+        self._data_relative = data_relative
         self._content_type = mimetypes.guess_type(filepath)[0]
 
         # Cache variables for lazy lading
@@ -34,7 +36,13 @@ class DataFileElement (DataElement):
     def __repr__(self):
         return "%s{uuid: %s, md5: %s, filepath: %s" \
                % (self.__class__.__name__, self.uuid(), self.md5(),
-                  self._filepath)
+                  self._get_filepath())
+
+    def _get_filepath(self):
+        if self._data_relative:
+            return osp.expanduser(osp.abspath(osp.join(smqtk_config.DATA_DIR, self._filepath)))
+        else:
+            return osp.expanduser(osp.abspath(self._filepath))
 
     def content_type(self):
         """
@@ -69,7 +77,7 @@ class DataFileElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return open(self._filepath, 'rb').read()
+        return open(self._get_filepath(), 'rb').read()
 
     def write_temp(self, temp_dir=None):
         """
@@ -95,7 +103,7 @@ class DataFileElement (DataElement):
         if temp_dir:
             return super(DataFileElement, self).write_temp(temp_dir=temp_dir)
         else:
-            return self._filepath
+            return self._get_filepath()
 
     def clean_temp(self):
         """

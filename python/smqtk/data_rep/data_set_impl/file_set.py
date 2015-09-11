@@ -5,6 +5,7 @@ import cPickle
 import multiprocessing
 
 import os
+import os.path as osp
 
 import re
 
@@ -12,6 +13,8 @@ from smqtk.data_rep import DataElement, DataSet
 from smqtk.utils import safe_create_dir
 from smqtk.utils.file_utils import iter_directory_files
 from smqtk.utils.string_utils import partition_string
+
+import smqtk_config
 
 
 class DataFileSet (DataSet):
@@ -32,7 +35,7 @@ class DataFileSet (DataSet):
     # - yields two groups, the first is the UUID, the second is the MD5 sum
     SERIAL_FILE_RE = re.compile("UUID_(\w+).MD5_(\w+).dataElement")
 
-    def __init__(self, root_directory, md5_chunk=8):
+    def __init__(self, root_directory, md5_chunk=8, data_relative=False):
         """
         Initialize a new or existing file set from a root directory.
 
@@ -44,11 +47,12 @@ class DataFileSet (DataSet):
         :type md5_chunk: int
 
         """
-        self._root_dir = os.path.abspath(root_directory)
+        self._root_dir = root_directory
         self._md5_chunk = md5_chunk
+        self._data_relative = data_relative
 
         self._log.debug("Initializing FileSet under root dir: %s",
-                        self._root_dir)
+                        self._get_root_dir())
 
         #: :type: dict[object, smqtk.data_rep.DataElement]
         self._element_map = {}
@@ -83,16 +87,22 @@ class DataFileSet (DataSet):
             with self._element_map_lock:
                 yield self._element_map[k]
 
+    def _get_root_dir(self):
+        if self._data_relative:
+            return osp.expanduser(osp.abspath(osp.join(smqtk_config.DATA_DIR, self._root_dir)))
+        else:
+            return osp.expanduser(osp.abspath(self._root_dir))
+
     def _discover_data_elements(self):
         """
         From the set root directory, find serialized files, deserialize them and
         store in instance mapping.
         """
-        if os.path.isdir(self._root_dir):
+        if os.path.isdir(self._get_root_dir()):
             self._log.debug("Root directory exists, finding existing data "
                             "elements...")
             with self._element_map_lock:
-                for fpath in iter_directory_files(self._root_dir, True):
+                for fpath in iter_directory_files(self._get_root_dir(), True):
                     m = self.SERIAL_FILE_RE.match(os.path.basename(fpath))
                     if m:
                         with open(fpath) as f:
@@ -110,7 +120,7 @@ class DataFileSet (DataSet):
         """
         with self._element_map_lock:
             self._log.debug("Serializing data elements into: %s",
-                            self._root_dir)
+                            self._get_root_dir())
             for uuid, de in self._element_map.iteritems():
                 # Remove any temporary files an element may have generated
                 de.clean_temp()
@@ -119,7 +129,7 @@ class DataFileSet (DataSet):
                 # Leaving off trailing chunk so that we don't have a single
                 # directory per md5-sum.
                 containing_dir = \
-                    os.path.join(self._root_dir,
+                    os.path.join(self._get_root_dir(),
                                  *partition_string(md5, self._md5_chunk))
                 if not os.path.isdir(containing_dir):
                     safe_create_dir(containing_dir)

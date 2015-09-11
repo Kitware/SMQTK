@@ -2,6 +2,7 @@ import cPickle
 import os.path as osp
 
 from smqtk.data_rep.code_index import CodeIndex
+from smqtk.utils import SimpleTimer
 
 
 __author__ = 'purg'
@@ -47,8 +48,9 @@ class MemoryCodeIndex (CodeIndex):
 
     def _cache_table(self):
         if self._file_cache:
-            with open(self._file_cache, 'wb') as f:
-                cPickle.dump(self._table, f)
+            with SimpleTimer("Caching memory table", self._log.debug):
+                with open(self._file_cache, 'wb') as f:
+                    cPickle.dump(self._table, f)
 
     def get_config(self):
         return {

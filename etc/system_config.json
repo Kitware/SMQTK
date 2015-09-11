@@ -14,6 +14,14 @@
                 "root_directory": "/home/purg/dev/smqtk/source/data/FileDataSets/ucf1k/data",
                 "md5_chunk": 8
             }
+        },
+        "image_example": {
+            "type": "DataFileSet",
+            "init": {
+                "root_directory": "FileDataSets/example_image/data",
+                "md5_chunk": 8,
+                "data_relative": true
+            }
         }
     },
 
@@ -34,6 +42,15 @@
                 "kmeans_k": 1024,
                 "flann_sample_fraction": 1.0
             }
+        },
+        "CD_CSIFT_Image_example" : {
+            "type": "ColorDescriptor_Image_csift",
+            "init": {
+                "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
+                "random_seed": 42,
+                "kmeans_k": 1024
+            }
         }
     },
 
@@ -46,6 +63,12 @@
             "type": "SVMIndexerHIK",
             "init": {
                 "data_dir": "Indexers/SVM_HIK/cd_csift/ucf1k"
+            }
+        },
+        "SVM_HIK-CD_CSIFT-Image-example": {
+            "type": "SVMIndexerHIK",
+            "init": {
+                "data_dir": "Indexers/SVM_HIK/cd_csift/example_image"
             }
         }
     },

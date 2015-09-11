@@ -533,7 +533,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                     i_shape, d_shape = r.get()
                 except RuntimeError:
                     self.log.warning("Descriptor generation failed for "
-                                     "UID[%d], skipping its inclusion in "
+                                     "UID[%s], skipping its inclusion in "
                                      "model.", uid)
                     r_map[uid] = None
                     continue

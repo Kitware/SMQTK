@@ -59,9 +59,13 @@ class DataElement (object):
         if not hasattr(self, '_temp_filepath') or not self._temp_filepath:
             if temp_dir:
                 safe_create_dir(temp_dir)
+            ext = MIMETYPES.guess_extension(self.content_type())
+            # Exceptions because mimetypes is apparently REALLY OLD
+            if ext in {'.jpe', '.jfif'}:
+                ext = '.jpg'
             # noinspection PyAttributeOutsideInit
             fd, self._temp_filepath = tempfile.mkstemp(
-                suffix=MIMETYPES.guess_extension(self.content_type()),
+                suffix=ext,
                 dir=temp_dir
             )
             os.close(fd)

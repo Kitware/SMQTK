@@ -33,7 +33,7 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
         distances between the given vector and each row of the matrix.
     :type row_wise: bool
 
-    :return: Computed square distance kernel
+    :return: Computed symmetric distance kernel
     :rtype: numpy.core.multiarray.ndarray
 
     """
@@ -70,6 +70,23 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
                 mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
 
     return mat
+
+
+def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
+    """
+    Function for computing the pair-wise distance matrix between two arrays of
+    vectors. Both matrices must have the same number of columns.
+    """
+    k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
+    if row_wise:
+        # row wise
+        for i in xrange(m1.shape[0]):
+          k[i, :] = dist_func(m1[i], m2)
+    else:
+        for i in xrange(m1.shape[0]):
+            for j in xrange(m2.shape[0]):
+                k[i, j] = dist_func(m1[i], m2[j])
+    return k
 
 
 class DistanceKernel (object):

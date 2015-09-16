@@ -19,6 +19,9 @@ class IqrIndex (Configurable):
     """
     __metaclass__ = abc.ABCMeta
 
+    def __len__(self):
+        return self.count()
+
     @property
     def _log(self):
         return logging.getLogger('.'.join([self.__module__,

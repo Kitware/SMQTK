@@ -1,4 +1,6 @@
 import copy
+import cPickle
+import os.path as osp
 
 import numpy
 
@@ -8,7 +10,7 @@ from smqtk.utils.distance_kernel import (
     compute_distance_kernel,
     compute_distance_matrix
 )
-from smqtk.utils.distance_functions import histogram_intersection_distance2
+from smqtk.utils.distance_functions import histogram_intersection_distance
 import smqtk.utils.plugin as plugin
 
 try:
@@ -52,13 +54,21 @@ class LibSvmHikIqrIndex (IqrIndex):
         """
         return svm and svmutil
 
-    def __init__(self):
+    def __init__(self, descr_cache_filepath=None):
         """
+        Initialize a new or existing index.
+
         TODO ::
         - input optional known background descriptors, i.e. descriptors for
             things that would otherwise always be considered a negative example.
 
+        :param descr_cache_filepath: Optional path to store/load descriptors
+            we index.
+        :type descr_cache_filepath: None | str
+
         """
+        self._descr_cache_fp = descr_cache_filepath
+
         # Descriptor elements in this index
         self._descr_cache = []
         # Local serialization of descriptor vectors. Used when for computing
@@ -67,11 +77,17 @@ class LibSvmHikIqrIndex (IqrIndex):
         # Mapping of descriptor vectors to their index in the cache, and
         # subsequently in the distance kernel
         self._descr2index = {}
-        # Distance kernel matrix (symmetric)
-        self._dist_kernel = None
+        # # Distance kernel matrix (symmetric)
+        # self._dist_kernel = None
 
-        # TODO: make cache file constructor parameters + load them if they
-        #       exist
+        if self._descr_cache_fp and osp.exists(self._descr_cache_fp):
+            with open(self._descr_cache_fp, 'rb') as f:
+                descriptors = cPickle.load(f)
+                # Temporarily unsetting so we don't cause an extra write inside
+                # build_index.
+                self._descr_cache_fp = None
+                self.build_index(descriptors)
+                self._descr_cache_fp = descr_cache_filepath
 
     @staticmethod
     def _gen_w1_weight(num_pos, num_neg):
@@ -87,7 +103,9 @@ class LibSvmHikIqrIndex (IqrIndex):
         return ' '.join((' '.join((str(k), str(v))) for k, v in params.items()))
 
     def get_config(self):
-        return {}
+        return {
+            "descr_cache_filepath": self._descr_cache_fp
+        }
 
     def count(self):
         return len(self._descr_cache)
@@ -104,9 +122,6 @@ class LibSvmHikIqrIndex (IqrIndex):
         :type descriptors: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         """
-        # TODO: Refuse to build if we already have data models loaded
-        #       so we don't overwrite them in persistent storage
-
         # ordered cache of descriptors in our index.
         self._descr_cache = []
         # Reverse mapping of a descriptor's vector to its index in the cache
@@ -125,6 +140,10 @@ class LibSvmHikIqrIndex (IqrIndex):
         #    compute_distance_kernel(self._descr_matrix,
         #                            histogram_intersection_distance2,
         #                            row_wise=True)
+
+        if self._descr_cache_fp:
+            with open(self._descr_cache_fp, 'wb') as f:
+                cPickle.dump(self._descr_cache, f)
 
     def rank(self, pos, neg=()):
         """
@@ -146,33 +165,15 @@ class LibSvmHikIqrIndex (IqrIndex):
         # Notes:
         # - Pos and neg exemplars may be in our index.
 
-        #
-        # Process
-        #
-        # - create training matrix of indexed and input descriptors
-        #     train_labels = []; train_vectors = []
-        #     for d in (pos + neg):
-        #         if in pos: train_labels.append(+1)
-        #         else     : train_labels.append(-1)
-        #         train_vectors.append(d.vector().tolist())  # because libSVM wants lists
-        # - compute svm problem/model
-        #     svm_problem = svm.svm_problem(train_labels, train_vectors)
-        #     svm_model = svmutil.svm_train(svm_problem, <parameter string>)
-        # - get out support vectors (actual descriptors)
-        #     svm_sv = [[i.value for i in n[:m.shape[1]]] for n in svm_model.SV[:sum(svm_model.nSV[:2])]]
-        # - compute distance of support vectors to everything in index
-        #   -> or, of support vectors are really always either a query vector
-        #      or something in our existing index, get the specific rows from
-        #      pre-existing distance kernel(s).
-        #     svm_test_k = compute_distance_matrix(svm_sv, m, histogram_intersection_distance2, True)
-        # - Platt Scaling (see original code, it doesn't need change)
-
         # TODO: Pad the negative list with something when empty, else SVM
         #       training is going to fail?
+        #       - create a set of most distance descriptors from input positive
+        #           examples.
 
         #
         # SVM model training
         #
+        # Creating training matrix and labels
         train_labels = []
         train_vectors = []
         num_pos = 0
@@ -186,6 +187,7 @@ class LibSvmHikIqrIndex (IqrIndex):
             train_vectors.append(d.vector().tolist())
             num_neg += 1
 
+        # Training SVM model
         svm_problem = svm.svm_problem(train_labels, train_vectors)
         svm_model = svmutil.svm_train(svm_problem,
                                       self._gen_svm_parameter_string(num_pos,
@@ -207,12 +209,8 @@ class LibSvmHikIqrIndex (IqrIndex):
         for i, nlist in enumerate(svm_model.SV[:svm_SVs.shape[0]]):
             svm_SVs[i, :] = [n.value for n in nlist[:len(train_vectors[0])]]
         # compute matrix of distances from support vectors to index elements
-        # TODO: Optimize this so we don't perform repeat distance calculations
-        #       for intra-index vectors.
-        #       - Cache pairwise distances in dict for reduced future
-        #           computations?
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
-                                             histogram_intersection_distance2,
+                                             histogram_intersection_distance,
                                              row_wise=True)
 
         # the actual platt scaling stuff
@@ -230,11 +228,11 @@ class LibSvmHikIqrIndex (IqrIndex):
         # - If the positive example probabilities show to be in the lower 50%,
         #   flip the generated probabilities, since its experimentally known
         #   that the SVM will change which index it uses to represent a
-        #   particular class label occasionally, which influences the platt
+        #   particular class label occasionally, which influences the Platt
         #   scaling apparently.
         pos_vectors = numpy.array(train_vectors[:num_pos])
         pos_test_k = compute_distance_matrix(svm_SVs, pos_vectors,
-                                             histogram_intersection_distance2,
+                                             histogram_intersection_distance,
                                              row_wise=True)
         pos_margins = numpy.dot(weights, pos_test_k)
         pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))

@@ -48,6 +48,9 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
                                   dist_func.func_name])
     log = logging.getLogger('compute_distance_kernel[%s]' % distance_name)
 
+    if m.ndim == 1:
+        m = m[np.newaxis]
+
     log.info("Computing distance kernel")
     side = m.shape[0]
     mat = np.ndarray((side, side), dtype=float)
@@ -57,10 +60,11 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
         log.debug("Computing row-wise distances")
         # For all rows except the last one. We'll have computed all distanced by
         # the time reach m[side-1]
-        for i in xrange(side-1):
+        for i in xrange(side):
             # Compute col/row wise distances
             mat[i, i] = 0.
-            mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
+            if i < (side-1):
+                mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
     else:
         log.debug("Computing element-wise distances")
         for i in xrange(side):
@@ -77,11 +81,15 @@ def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
     Function for computing the pair-wise distance matrix between two arrays of
     vectors. Both matrices must have the same number of columns.
     """
+    if m1.ndim == 1:
+        m1 = m1[np.newaxis]
+    if m2.ndim == 1:
+        m2 = m2[np.newaxis]
     k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
     if row_wise:
         # row wise
         for i in xrange(m1.shape[0]):
-          k[i, :] = dist_func(m1[i], m2)
+            k[i, :] = dist_func(m1[i], m2)
     else:
         for i in xrange(m1.shape[0]):
             for j in xrange(m2.shape[0]):

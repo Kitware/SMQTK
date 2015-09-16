@@ -11,34 +11,7 @@ import gmpy2
 import numpy as np
 
 
-def histogram_intersection_distance(i, j):
-    """
-    Compute the histogram intersection percent relation between given histogram
-    vectors ``a`` and ``b``, returning a value between 0.0 and 1.0. 0.0 means
-    full intersection, and 1.0 means no intersection.
-
-    This implements non-branching formula for efficient computation.
-
-    :param i: Histogram ``i``
-    :type i: numpy.core.multiarray.ndarray
-
-    :param j: Histogram ``j``
-    :type j: numpy.core.multiarray.ndarray
-
-    :return: Float inverse percent intersection amount.
-    :rtype: float
-
-    """
-    # TODO: Always normalize input histograms here? e.g.:
-    #       ...
-    #       i_sum = i.sum()
-    #       if i_sum != 0:
-    #           i /= i_sum
-    #       ...
-    return 1.0 - ((i + j - np.abs(i - j)).sum() * 0.5)
-
-
-def histogram_intersection_distance2(a, b):
+def histogram_intersection_distance(a, b):
     """
     Compute the histogram intersection distance between given histogram
     vectors or matrices ``a`` and ``b``, returning a value between ``0.0`` and
@@ -72,12 +45,38 @@ def histogram_intersection_distance2(a, b):
     # TODO: input value checks?
     # Which axis to sum on. If there is a matrix involved, its along column,
     # but if its just two arrays its along the row.
-    # The following is noticeably slower:
-    #   sum_axis = not (a.ndim == 1 and b.ndim == 1)
+    #
+    # - The following are noticeably slower:
+    #       sum_axis = not (a.ndim == 1 and b.ndim == 1)
+    #       sum_axis = (a.ndim > 1) | (b.ndim > 1)
     sum_axis = 1
     if a.ndim == 1 and b.ndim == 1:
         sum_axis = 0
     return 1. - ((np.add(a, b) - np.abs(np.subtract(a, b))).sum(sum_axis) * 0.5)
+
+
+def histogram_intersection_distance_fast(i, j):
+    """
+    Compute the histogram intersection percent relation between given 1D
+    histogram vectors ``a`` and ``b``, returning a value between 0.0 and 1.0.
+    0.0 means full intersection, and 1.0 means no intersection.
+
+    This implements non-branching formula for efficient computation.
+
+    Use of this implementations is faster when the input will only be 1D
+    vectors.
+
+    :param i: Histogram ``i``
+    :type i: numpy.core.multiarray.ndarray
+
+    :param j: Histogram ``j``
+    :type j: numpy.core.multiarray.ndarray
+
+    :return: Float inverse percent intersection amount.
+    :rtype: float
+
+    """
+    return 1.0 - ((i + j - np.abs(i - j)).sum() * 0.5)
 
 
 def euclidean_distance(i, j):

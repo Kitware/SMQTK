@@ -121,9 +121,8 @@ class LibSvmHikIqrIndex (IqrIndex):
             self._descr2index[tuple(v)] = i
         self._descr_matrix = numpy.array(self._descr_matrix)
         # TODO: For when we optimize SVM SV kernel computation
-        #descr_matrix = numpy.array(descr_matrix)
-        #self._dist_kernel = \
-        #    compute_distance_kernel(descr_matrix,
+        # self._dist_kernel = \
+        #    compute_distance_kernel(self._descr_matrix,
         #                            histogram_intersection_distance2,
         #                            row_wise=True)
 
@@ -169,28 +168,37 @@ class LibSvmHikIqrIndex (IqrIndex):
         # - Platt Scaling (see original code, it doesn't need change)
 
         # TODO: Pad the negative list with something when empty, else SVM
-        #       training is going to fail.
+        #       training is going to fail?
 
         #
         # SVM model training
         #
         train_labels = []
         train_vectors = []
+        num_pos = 0
         for d in pos:
             train_labels.append(+1)
             train_vectors.append(d.vector().tolist())
+            num_pos += 1
+        num_neg = 0
         for d in neg:
             train_labels.append(-1)
             train_vectors.append(d.vector().tolist())
+            num_neg += 1
 
         svm_problem = svm.svm_problem(train_labels, train_vectors)
-        svm_model = svmutil.svm_train(svm_problem, self._gen_svm_parameter_string(len(pos), len(neg)))
+        svm_model = svmutil.svm_train(svm_problem,
+                                      self._gen_svm_parameter_string(num_pos,
+                                                                     num_neg))
+        if svm_model.l == 0:
+            raise RuntimeError("SVM Model learning failed")
 
         #
         # Platt Scaling for probability rankings
         #
 
         # Number of support vectors
+        # Q: is this always the same as ``svm_model.l``?
         num_SVs = sum(svm_model.nSV[:svm_model.nr_class])
         # Support vector dimensionality
         dim_SVs = len(train_vectors[0])
@@ -201,6 +209,8 @@ class LibSvmHikIqrIndex (IqrIndex):
         # compute matrix of distances from support vectors to index elements
         # TODO: Optimize this so we don't perform repeat distance calculations
         #       for intra-index vectors.
+        #       - Cache pairwise distances in dict for reduced future
+        #           computations?
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance2,
                                              row_wise=True)
@@ -211,9 +221,28 @@ class LibSvmHikIqrIndex (IqrIndex):
         rho = svm_model.rho[0]
         probA = svm_model.probA[0]
         probB = svm_model.probB[0]
+        #: :type: numpy.core.multiarray.ndarray
         probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
 
-        return dict(zip(self._descr_cache, probs))
+        # Detect whether we need to flip probabilities
+        # - Probability of input positive examples should have a high
+        #   probability score among the generated probabilities of our index.
+        # - If the positive example probabilities show to be in the lower 50%,
+        #   flip the generated probabilities, since its experimentally known
+        #   that the SVM will change which index it uses to represent a
+        #   particular class label occasionally, which influences the platt
+        #   scaling apparently.
+        pos_vectors = numpy.array(train_vectors[:num_pos])
+        pos_test_k = compute_distance_matrix(svm_SVs, pos_vectors,
+                                             histogram_intersection_distance2,
+                                             row_wise=True)
+        pos_margins = numpy.dot(weights, pos_test_k)
+        pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))
+        if min(pos_probs) < (probs.sum() / probs.size):
+            probs = 1. - probs
+
+        rank_pool = dict(zip(self._descr_cache, probs))
+        return rank_pool
 
 
 IQR_INDEX_CLASS = LibSvmHikIqrIndex

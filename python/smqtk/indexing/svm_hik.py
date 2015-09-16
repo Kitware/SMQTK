@@ -19,7 +19,7 @@ import smqtk_config
 
 from smqtk.indexing import Indexer
 from smqtk.utils import safe_create_dir, SimpleTimer
-from smqtk.utils.distance_functions import histogram_intersection_distance
+from smqtk.utils.distance_functions import histogram_intersection_distance_fast
 
 
 def _svm_model_hik_helper(i, j, i_feat, j_feat):
@@ -29,7 +29,7 @@ def _svm_model_hik_helper(i, j, i_feat, j_feat):
     log = logging.getLogger("_svm_model_hik_helper")
     log.debug("Computing HIK for [%d, %d]", i, j)
     # noinspection PyUnresolvedReferences
-    ij_hik = histogram_intersection_distance(i_feat, j_feat)
+    ij_hik = histogram_intersection_distance_fast(i_feat, j_feat)
     return ij_hik
 
 
@@ -175,7 +175,7 @@ class SVMIndexerHIK (Indexer):
             for i in range(num_features):
                 for j in range(i, num_features):
                     self._distance_mat[i, j] = self._distance_mat[j, i] = \
-                        histogram_intersection_distance(self._feature_mat[i],
+                        histogram_intersection_distance_fast(self._feature_mat[i],
                                                         self._feature_mat[j])
 
         with SimpleTimer("Saving data files", self.log.info):
@@ -274,7 +274,7 @@ class SVMIndexerHIK (Indexer):
                 self._feature_mat[r] = uid_feature_map[r_uid]
                 for c in range(r+1):
                     hid_map[r, c] = pool.apply_async(
-                        histogram_intersection_distance,
+                        histogram_intersection_distance_fast,
                         args=(self._feature_mat[r], self._feature_mat[c])
                     )
         pool.close()

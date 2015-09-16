@@ -244,7 +244,7 @@ class ITQSimilarityIndex (SimilarityIndex):
             return lambda i, j: 1.0 - distance_functions.cosine_similarity(i, j)
         elif distance_method == 'hik':
             #: :type: (ndarray, ndarray) -> ndarray
-            return distance_functions.histogram_intersection_distance
+            return distance_functions.histogram_intersection_distance_fast
         else:
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")

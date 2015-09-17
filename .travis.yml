@@ -50,7 +50,6 @@ before_install:
 install:
   - conda install -q --file requirements.conda.txt
   - pip install -qr requirements.pip.txt
-  - pip install gmpy2
 
   # Build components of SMQTK
   - mkdir _build

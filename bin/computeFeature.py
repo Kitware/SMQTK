@@ -3,16 +3,23 @@
 Compute a feature vector for a given file with a chosen ContentDescriptor type.
 """
 
+import json
 import logging
 import numpy
 import optparse
+import os
 
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.utils import bin_utils
-from smqtk.utils.configuration import (
-    ContentDescriptorConfiguration,
-    DescriptorFactoryConfiguration,
-)
+from smqtk.data_rep import DescriptorElementFactory
+from smqtk.content_description import get_descriptors
+from smqtk.utils import bin_utils, plugin
+
+
+def default_config():
+    return {
+        "descriptor_factory": DescriptorElementFactory.default_config(),
+        "content_descriptor": plugin.make_config(get_descriptors),
+    }
 
 
 def main():
@@ -24,21 +31,17 @@ numpy format).
 """
     parser = bin_utils.SMQTKOptParser(usage, description=description)
 
-    group_labels = optparse.OptionGroup(parser, "Configuration Labels")
-    group_labels.add_option('-c', '--content-descriptor',
-                            help='The descriptor type to use. This must be a '
-                                 'type available in the system configuration')
-    group_labels.add_option('-f', '--factory-type',
-                            help='The DescriptorElementFactory configuration '
-                                 'to use when computing the descriptor. This '
-                                 'must be a type available in the system '
-                                 'configuration.')
+    group_labels = optparse.OptionGroup(parser, "Configuration")
+    group_labels.add_option('-c', '--config',
+                            default=None,
+                            help='Path to the JSON configuration file.')
+    group_labels.add_option('--output-config',
+                            default=None,
+                            help='Optional path to output default JSON '
+                                 'configuration to.')
     parser.add_option_group(group_labels)
 
     group_optional = optparse.OptionGroup(parser, "Optional Parameters")
-    group_optional.add_option('-l', '--list',
-                              action='store_true', default=False,
-                              help='List available descriptor types.')
     group_optional.add_option('--overwrite',
                               action='store_true', default=False,
                               help="Force descriptor computation even if an "
@@ -60,8 +63,6 @@ numpy format).
     opts, args = parser.parse_args()
 
     output_filepath = opts.output_filepath
-    descriptor_label = opts.content_descriptor
-    factory_label = opts.factory_type
     overwrite = opts.overwrite
     verbose = opts.verbose
 
@@ -69,19 +70,21 @@ numpy format).
     bin_utils.initialize_logging(logging.getLogger(), llevel)
     log = logging.getLogger("main")
 
-    if opts.list:
-        log.info("")
-        log.info("Available ContentDescriptor types:")
-        log.info("")
-        for dl in ContentDescriptorConfiguration.available_labels():
-            log.info("\t%s", dl)
-        log.info("")
-        log.info("Available DescriptorElementFactory types:")
-        log.info("")
-        for df in DescriptorFactoryConfiguration.available_labels():
-            log.info("\t%s", df)
-        log.info("")
-        exit(0)
+    if opts.output_config:
+        if os.path.exists(opts.output_config):
+            log.error("ERROR: output config path already exists (%s)",
+                      opts.output_config)
+            exit(1)
+        else:
+            with open(opts.output_config, 'w') as f:
+                json.dump(default_config(), f, indent=4, check_circular=True)
+            exit(0)
+
+    if not opts.config:
+        log.error("No configuration provided")
+        exit(1)
+    elif not os.path.isfile(opts.config):
+        log.error("Configuration file path not valid.")
 
     if len(args) == 0:
         log.error("Failed to provide an input file path")
@@ -90,11 +93,16 @@ numpy format).
         log.warning("More than one filepath provided as an argument. Only "
                     "computing for the first one.")
 
+    with open(opts.config, 'r') as f:
+        config = json.load(f)
+
     input_filepath = args[0]
     data_element = DataFileElement(input_filepath)
 
-    cd = ContentDescriptorConfiguration.new_inst(descriptor_label)
-    factory = DescriptorFactoryConfiguration.new_inst(factory_label)
+    factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
+    #: :type: smqtk.content_description.ContentDescriptor
+    cd = plugin.from_plugin_config(config['content_descriptor'],
+                                   get_descriptors)
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

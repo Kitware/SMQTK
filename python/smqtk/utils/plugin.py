@@ -79,9 +79,8 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
     log.debug("Getting plugins for module '%s'", base_module)
     class_map = {}
     for file_name in os.listdir(search_dir):
-        log.debug("Checking file: %s", file_name)
         if valid_module_file_re.match(file_name):
-            log.debug("Examining file: %s", file_name)
+            log.debug("Examining module file: %s", file_name)
             module_name = os.path.splitext(file_name)[0]
             # We want any exception this might throw to continue up. If a module
             # in the directory is not importable, the user should know.
@@ -188,7 +187,8 @@ def to_plugin_config(cp_inst):
     This result of this function would be compatible with being passed to the
     ``from_plugin_config`` function, given the appropriate plugin-getter method.
 
-    TL;DR: This wraps the instance's ``get_config`` return in a certain way.
+    TL;DR: This wraps the instance's ``get_config`` return in a certain way
+           that's compatible with ``from_plugin_config``.
 
     :param cp_inst: Instance of a ConfigurablePlugin-subclass.
     :type cp_inst: Configurable

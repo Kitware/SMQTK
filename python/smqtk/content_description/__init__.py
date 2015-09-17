@@ -130,7 +130,8 @@ class ContentDescriptor (Configurable):
             with such storage.
         :type overwrite: bool
 
-        :return: Result descriptor element.
+        :return: Result descriptor element. UUID of this output descriptor is
+            the same as the UUID of the input data element.
         :rtype: smqtk.data_rep.DescriptorElement
 
         """
@@ -191,6 +192,8 @@ class ContentDescriptor (Configurable):
         :type pool_type: type
 
         :return: Mapping of data element UUID to computed descriptor element.
+            Element UUID's are congruent with the UUID of the data element it
+            is the descriptor of.
         :rtype: dict[collections.Hashable, smqtk.data_rep.DescriptorElement]
 
         """

@@ -86,6 +86,7 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         ntools.assert_true(d1 != d2)
 
     def test_hash(self):
+        t = 'a'
         uuid = 'some uuid'
-        de = DummyDescriptorElement('a', uuid)
-        ntools.assert_equal(hash(de), hash(uuid))
+        de = DummyDescriptorElement(t, uuid)
+        ntools.assert_equal(hash(de), hash((t, uuid)))

@@ -102,7 +102,7 @@ class ITQSimilarityIndex (SimilarityIndex):
             plugin.from_plugin_config(config_dict['code_index'],
                                       get_index_types)
 
-        return cls(**config_dict)
+        return super(ITQSimilarityIndex, cls).from_config(config_dict)
 
     def __init__(self, mean_vec_filepath="mean_vector.npy",
                  rotation_filepath="rotation.npy",
@@ -203,6 +203,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         #: :type: numpy.core.multiarray.ndarray[float]
         self._mean_vector = None
         if osp.isfile(self._mean_vec_cache_filepath):
+            self._log.debug("Loading existing descriptor vector mean")
             #: :type: numpy.core.multiarray.ndarray[float]
             self._mean_vector = numpy.load(self._mean_vec_cache_filepath)
 
@@ -211,6 +212,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         #: :type: numpy.core.multiarray.ndarray[float]
         self._r = None
         if osp.isfile(self._rotation_cache_filepath):
+            self._log.debug("Loading existing descriptor rotation matrix")
             #: :type: numpy.core.multiarray.ndarray[float]
             self._r = numpy.load(self._rotation_cache_filepath)
 
@@ -242,7 +244,7 @@ class ITQSimilarityIndex (SimilarityIndex):
             return lambda i, j: 1.0 - distance_functions.cosine_similarity(i, j)
         elif distance_method == 'hik':
             #: :type: (ndarray, ndarray) -> ndarray
-            return distance_functions.histogram_intersection_distance
+            return distance_functions.histogram_intersection_distance_fast
         else:
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
@@ -327,10 +329,10 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         """
         # Halt if we are going to overwrite a loaded mean/rotation cache.
-        if self._mean_vector or self._r:
-            raise RuntimeError("Current ITQ model is not empty. For "
-                               "the sake of protecting data, we are not "
-                               "proceeding.")
+        if not (self._mean_vector is None and self._r is None):
+            raise RuntimeError("Current ITQ model is not empty (cached mean / "
+                               "rotation). For the sake of protecting data, we "
+                               "are not proceeding.")
         # Halt if the code index currently isn't empty
         if self.count():
             raise RuntimeError("Current CodeIndex instance is not empty. For "
@@ -361,6 +363,8 @@ class ITQSimilarityIndex (SimilarityIndex):
             # center the data, VERY IMPORTANT for ITQ to work
             self._mean_vector = numpy.mean(x, axis=0)
             x -= self._mean_vector
+        with SimpleTimer("Saving mean vector", self._log.info):
+            numpy.save(self._mean_vec_cache_filepath, self._mean_vector)
 
         # PCA
         with SimpleTimer("Computing PCA transformation", self._log.info):
@@ -402,6 +406,8 @@ class ITQSimilarityIndex (SimilarityIndex):
             c, self._r = self._find_itq_rotation(xx, self._itq_iter_num)
             # De-adjust rotation with PC vector
             self._r = numpy.dot(pc_top, self._r)
+        with SimpleTimer("Saving rotation matrix", self._log.info):
+            numpy.save(self._rotation_cache_filepath, self._r)
 
         # Populating small-code index
         #   - Converting bit-vectors proved faster than creating new codes over
@@ -485,11 +491,13 @@ class ITQSimilarityIndex (SimilarityIndex):
                 break
 
         # Compute fine-grain distance measurements for collected elements + sort
-        distances = []
-        for d_elem in neighbors:
-            distances.append(self._dist_func(d_vec, d_elem.vector()))
+        # for d_elem in neighbors:
+        #     distances.append(self._dist_func(d_vec, d_elem.vector()))
+        def comp_neighbor_dist(neighbor):
+            return self._dist_func(d_vec, neighbor.vector())
+        distances = map(comp_neighbor_dist, neighbors)
 
-        ordered = sorted(zip(distances, neighbors), key=lambda p: p[0])
-        distances, neighbors = zip(*ordered)
-
-        return neighbors[:n], distances[:n]
+        # Sort by distance, return top n
+        ordered = sorted(zip(neighbors, distances), key=lambda p: p[1])
+        neighbors, distances = zip(*(ordered[:n]))
+        return neighbors, distances

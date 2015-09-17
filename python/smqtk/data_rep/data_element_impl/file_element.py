@@ -28,9 +28,8 @@ class DataFileElement (DataElement):
         self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):
-        return "%s{uuid: %s, md5: %s, filepath: %s}" \
-               % (self.__class__.__name__, self.uuid(), self.md5(),
-                  self._filepath)
+        return super(DataFileElement, self).__repr__()[:-1] + \
+            ", filepath: %s}" % self._filepath
 
     def get_config(self):
         return {

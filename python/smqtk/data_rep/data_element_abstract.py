@@ -52,6 +52,10 @@ class DataElement (Configurable):
     def __ne__(self, other):
         return not (self == other)
 
+    def __repr__(self):
+        return "%s{uuid: %s, content_type: '%s'}" \
+               % (self.__class__.__name__, self.uuid(), self.content_type())
+
     def md5(self):
         """
         :return: MD5 hex string of the data content.

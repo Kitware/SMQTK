@@ -8,10 +8,93 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import logging
 import numpy as np
-from numpy.core.multiarray import ndarray
+from numpy.core.multiarray import ndarray  # for shortening doc strings
 
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
+
+
+def compute_distance_kernel(m, dist_func, row_wise=False):
+    """
+    Method for computing the distance kernel of an array of vectors given a
+    distance function that works on two supplied 1D arrays.
+
+    For a valid distance function interface, see
+    ``smqtk.utils.distance_functions.histogram_intersection_distance2``.
+
+    :param m: An array of vectors to compute the pairwise distance kernel for.
+    :type m: numpy.core.multiarray.ndarray
+
+    :param dist_func: Distance function
+    :type dist_func: (ndarray, ndarray) -> ndarray[float] | float
+
+    :param row_wise: If the given distance function can take a vector and a
+        matrix, and computes pair-wise distances, returning a vector of
+        distances between the given vector and each row of the matrix.
+    :type row_wise: bool
+
+    :return: Computed symmetric distance kernel
+    :rtype: numpy.core.multiarray.ndarray
+
+    """
+    if hasattr(dist_func, 'im_func'):
+        # noinspection PyUnresolvedReferences
+        distance_name = '.'.join([dist_func.__module__,
+                                  dist_func.im_class.__name__,
+                                  dist_func.im_func.func_name])
+    else:
+        # noinspection PyUnresolvedReferences
+        distance_name = '.'.join([dist_func.__module__,
+                                  dist_func.func_name])
+    log = logging.getLogger('compute_distance_kernel[%s]' % distance_name)
+
+    if m.ndim == 1:
+        m = m[np.newaxis]
+
+    log.info("Computing distance kernel")
+    side = m.shape[0]
+    mat = np.ndarray((side, side), dtype=float)
+    log.debug("computing distances")
+
+    if row_wise:
+        log.debug("Computing row-wise distances")
+        # For all rows except the last one. We'll have computed all distanced by
+        # the time reach m[side-1]
+        for i in xrange(side):
+            # Compute col/row wise distances
+            mat[i, i] = 0.
+            if i < (side-1):
+                mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
+    else:
+        log.debug("Computing element-wise distances")
+        for i in xrange(side):
+            mat[i, i] = 0
+            # cols to the left of diagonal index for this row
+            for j in xrange(i):
+                mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
+
+    return mat
+
+
+def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
+    """
+    Function for computing the pair-wise distance matrix between two arrays of
+    vectors. Both matrices must have the same number of columns.
+    """
+    if m1.ndim == 1:
+        m1 = m1[np.newaxis]
+    if m2.ndim == 1:
+        m2 = m2[np.newaxis]
+    k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
+    if row_wise:
+        # row wise
+        for i in xrange(m1.shape[0]):
+            k[i, :] = dist_func(m1[i], m2)
+    else:
+        for i in xrange(m1.shape[0]):
+            for j in xrange(m2.shape[0]):
+                k[i, j] = dist_func(m1[i], m2[j])
+    return k
 
 
 class DistanceKernel (object):

@@ -129,11 +129,14 @@ class FlannSimilarity (SimilarityIndex):
 
         # Load the index/parameters if one exists
         if self._has_model_files():
+            self._log.info("Found existing model files. Loading.")
             # Load descriptor cache
             # - is copied on fork, so only need to load here.
-            with open(self._descr_cache_filepath) as f:
+            self._log.debug("Loading cached descriptors")
+            with open(self._descr_cache_filepath, 'rb') as f:
                 self._descr_cache = cPickle.load(f)
 
+            self._log.debug("Loading cached FLANN model")
             self._load_flann_model()
 
     def get_config(self):
@@ -226,10 +229,9 @@ class FlannSimilarity (SimilarityIndex):
         if not self._descr_cache:
             raise ValueError("No data provided in given iterable.")
         self._log.debug("Caching descriptors: %s", self._descr_cache_filepath)
-        with open(self._descr_cache_filepath, 'w') as f:
+        with open(self._descr_cache_filepath, 'wb') as f:
             cPickle.dump(self._descr_cache, f)
 
-        self._log.debug("Building new FLANN index")
         params = {
             "target_precision": self._build_target_precision,
             "sample_fraction": self._build_sample_frac,
@@ -247,8 +249,6 @@ class FlannSimilarity (SimilarityIndex):
         pts_array = [d.vector() for d in self._descr_cache]
         pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
         self._flann = pyflann.FLANN()
-        print "Params: %s" % params
-        print "Pts array:", pts_array
         self._flann_build_params = self._flann.build_index(pts_array, **params)
         del pts_array
 

@@ -59,6 +59,9 @@ class Configurable (object):
             a configuration.
         :type config_dict: dict
 
+        :return: Constructed instance from the provided config.
+        :rtype: Configurable
+
         """
         # The simple case is that the class doesn't require any special
         # parameters other than those that can be provided via the JSON

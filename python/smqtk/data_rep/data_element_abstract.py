@@ -53,8 +53,8 @@ class DataElement (Configurable):
         return not (self == other)
 
     def __repr__(self):
-        return "%s{type: uuid: %s}" \
-               % (self.__class__.__name__, self.uuid())
+        return "%s{uuid: %s, content_type: '%s'}" \
+               % (self.__class__.__name__, self.uuid(), self.content_type())
 
     def md5(self):
         """

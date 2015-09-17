@@ -29,8 +29,7 @@ class DataFileElement (DataElement):
 
     def __repr__(self):
         return super(DataFileElement, self).__repr__()[:-1] + \
-            ', content_type: %s, filepath: %s}' \
-            % (self._content_type, self._filepath)
+            ", filepath: %s}" % self._filepath
 
     def get_config(self):
         return {

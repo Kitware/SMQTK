@@ -7,7 +7,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import gmpy2
 import numpy as np
 
 
@@ -137,4 +136,4 @@ def hamming_distance(i, j):
     :rtype: int
 
     """
-    return gmpy2.popcount(i ^ j)
+    return bin(i ^ j).count('1')

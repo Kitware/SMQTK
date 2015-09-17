@@ -12,9 +12,6 @@ addons:
       - build-essential
       # For building things
       - cmake
-      # for python module gmpy2
-      - libgmp-dev
-      - libmpfr-dev
 
 # Environment setup
 before_install:
@@ -36,15 +33,6 @@ before_install:
   - conda info -a
   - conda create -q -n smqtk-$TRAVIS_PYTHON_VERSION python=$TRAVIS_PYTHON_VERSION
   - source activate smqtk-$TRAVIS_PYTHON_VERSION
-  # Required gmpy2 deps (taken from scipy .travis.yml)
-  - export MPC_VERSION=1.0.2
-  - wget ftp://ftp.gnu.org/gnu/mpc/mpc-${MPC_VERSION}.tar.gz
-  - tar xzf mpc-${MPC_VERSION}.tar.gz
-  - pushd mpc-${MPC_VERSION}
-  - ./configure --prefix=${LOCAL_ROOT}
-  - make -j2
-  - make install
-  - popd
 
 # "Install" of SMQTK + immediate deps
 install:

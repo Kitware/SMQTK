@@ -1,3 +1,4 @@
+import random
 import unittest
 
 import nose.tools as ntools
@@ -7,6 +8,10 @@ from smqtk.utils import distance_functions as df
 
 
 __author__ = 'purg'
+
+
+def gen(n):
+    return random.randint(0, 2**n-1)
 
 
 class TestHistogramIntersectionDistance (unittest.TestCase):
@@ -78,3 +83,25 @@ class TestHistogramIntersectionDistance (unittest.TestCase):
 
         ntools.assert_raises(ValueError, df.histogram_intersection_distance,
                              self.m1, self.m2)
+
+
+class TestHammingDistance (unittest.TestCase):
+
+    def test_hd_0(self):
+        ntools.assert_equal(df.hamming_distance(0, 0), 0)
+
+    def test_rand(self):
+        n = 64
+        for i in xrange(1000):
+            a = gen(n)
+            b = gen(n)
+            actual = bin(a^b).count('1')
+            ntools.assert_equal(df.hamming_distance(a, b), actual)
+
+    def test_rand_large(self):
+        n = 1024
+        for i in xrange(1000):
+            a = gen(n)
+            b = gen(n)
+            actual = bin(a^b).count('1')
+            ntools.assert_equal(df.hamming_distance(a, b), actual)

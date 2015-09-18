@@ -136,4 +136,5 @@ def hamming_distance(i, j):
     :rtype: int
 
     """
+    # TODO: Find something better than this.
     return bin(i ^ j).count('1')

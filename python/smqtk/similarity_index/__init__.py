@@ -86,6 +86,10 @@ class SimilarityIndex (Configurable):
         :rtype: (tuple[smqtk.data_rep.DescriptorElement], tuple[float])
 
         """
+        if not d.has_vector():
+            raise ValueError("Query descriptor did not have a vector set!")
+        elif not self.count():
+            raise ValueError("No index currently set to query from!")
 
 
 def get_similarity_nn():

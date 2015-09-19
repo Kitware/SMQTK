@@ -114,7 +114,7 @@ class Indexer (object):
         return
 
 
-def get_indexers():
+def get_indexers(reload_modules=False):
     """
     Discover and return Indexer classes found in the given plugin search
     directory. Keys in the returned map are the names of the discovered classes,
@@ -130,6 +130,9 @@ def get_indexers():
     look for a class by the same name and casing as the module. If neither are
     found, the module is skipped.
 
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
+
     :return: Map of discovered class object of type ``Indexer`` whose keys are
         the string names of the classes.
     :rtype: dict of (str, type)
@@ -138,4 +141,5 @@ def get_indexers():
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "INDEXER_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, Indexer)
+    return get_plugins(__name__, this_dir, helper_var, Indexer, None,
+                       reload_modules)

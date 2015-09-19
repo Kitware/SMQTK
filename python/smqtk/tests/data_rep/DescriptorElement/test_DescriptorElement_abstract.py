@@ -1,11 +1,12 @@
-__author__ = 'purg'
-
 import mock
 import nose.tools as ntools
 import numpy
 import unittest
 
 from smqtk.data_rep import DescriptorElement
+
+
+__author__ = 'purg'
 
 
 class DummyDescriptorElement (DescriptorElement):

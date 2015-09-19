@@ -105,7 +105,7 @@ class CodeIndex (Configurable):
         return self.get_descriptors(code)
 
 
-def get_index_types():
+def get_index_types(reload_modules=False):
     """
     Discover and return small-code index implementation classes found in the
     plugin directory.
@@ -122,6 +122,9 @@ def get_index_types():
     present, we look for a class by the same na e and casing as the module's
     name. If neither are found, the module is skipped.
 
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
+
     :return: Map of discovered class objects of type ``CodeIndex`` whose
         keys are the string names of the classes.
     :rtype: dict[str, type]
@@ -133,4 +136,5 @@ def get_index_types():
     this_dir = osp.abspath(osp.dirname(__file__))
     helper_var = 'CODE_INDEX_CLASS'
     fltr = lambda cls: cls.is_usable()
-    return get_plugins(__name__, this_dir, helper_var, CodeIndex, fltr)
+    return get_plugins(__name__, this_dir, helper_var, CodeIndex, fltr,
+                       reload_modules)

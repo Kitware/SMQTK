@@ -92,7 +92,7 @@ class IqrIndex (Configurable):
         return
 
 
-def get_iqr_index():
+def get_iqr_index(reload_modules=False):
     """
     Discover and return SimilarityNN implementation classes found in the given
     plugin search directory. Keys in the returned map are the names of the
@@ -107,6 +107,9 @@ def get_iqr_index():
     None, we skip that module and do not import anything. If the variable is not
     present, we look for a class by the same name and casing as the module. If
     neither are found, the module is skipped.
+
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
 
     :return: Map of discovered class object of type ``SimilarityNN`` whose
         keys are the string names of the classes.
@@ -128,4 +131,4 @@ def get_iqr_index():
         return True
 
     return get_plugins(__name__, this_dir, helper_var, IqrIndex,
-                       class_filter)
+                       class_filter, reload_modules)

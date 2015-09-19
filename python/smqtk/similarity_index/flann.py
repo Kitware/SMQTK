@@ -283,6 +283,7 @@ class FlannSimilarity (SimilarityIndex):
 
         """
         self._restore_index()
+        super(FlannSimilarity, self).nn(d, n)
         vec = d.vector()
 
         # If the distance method is HIK, we need to treat it special since that

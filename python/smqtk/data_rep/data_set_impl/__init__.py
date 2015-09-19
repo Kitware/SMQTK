@@ -1,7 +1,7 @@
 __author__ = 'purg'
 
 
-def get_data_set_impls():
+def get_data_set_impls(reload_modules=False):
     """
     Discover and return DataSet implementation classes found in the plugin
     directory. Keys in the returned map are the names of the discovered classes
@@ -17,6 +17,9 @@ def get_data_set_impls():
     present, we look for a class by the same na e and casing as the module's
     name. If neither are found, the module is skipped.
 
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
+
     :return: Map of discovered class objects of type ``DataSet`` whose keys
         are the string names of the classes.
     :rtype: dict[str, type]
@@ -28,4 +31,5 @@ def get_data_set_impls():
 
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "DATA_SET_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, DataSet)
+    return get_plugins(__name__, this_dir, helper_var, DataSet, None,
+                       reload_modules)

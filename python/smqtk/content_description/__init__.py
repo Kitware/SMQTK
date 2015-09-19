@@ -304,7 +304,7 @@ def _async_feature_generator_helper(cd_inst, data):
         return None
 
 
-def get_descriptors():
+def get_descriptors(reload_modules=False):
     """
     Discover and return ContentDescriptor classes found in the given plugin
     search directory. Keys in the returned map are the names of the discovered
@@ -320,6 +320,9 @@ def get_descriptors():
     present, we look for a class by the same name and casing as the module. If
     neither are found, the module is skipped.
 
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
+
     :return: Map of discovered class object of type ``ContentDescriptor`` whose
         keys are the string names of the classes.
     :rtype: dict of (str, type)
@@ -329,4 +332,4 @@ def get_descriptors():
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CONTENT_DESCRIPTOR_CLASS"
     return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
-                       lambda c: c.is_usable())
+                       lambda c: c.is_usable(), reload_modules)

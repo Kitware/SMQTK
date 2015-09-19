@@ -4,7 +4,8 @@ import numpy
 import unittest
 
 from smqtk.data_rep import DescriptorElementFactory
-from smqtk.data_rep.descriptor_element_impl.local_elements import DescriptorMemoryElement
+from smqtk.data_rep.descriptor_element_impl.local_elements \
+    import DescriptorMemoryElement
 
 
 __author__ = 'purg'

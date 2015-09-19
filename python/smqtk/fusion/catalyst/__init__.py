@@ -58,7 +58,7 @@ class Catalyst (object):
         pass
 
 
-def get_catalysts():
+def get_catalysts(reload_modules=False):
     """
     Discover and return Catalyst classes found in the given plugin search
     directory. Keys in the returned map are the names of the discovered classes,
@@ -82,4 +82,5 @@ def get_catalysts():
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CATALYST_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, Catalyst)
+    return get_plugins(__name__, this_dir, helper_var, Catalyst, None,
+                       reload_modules)

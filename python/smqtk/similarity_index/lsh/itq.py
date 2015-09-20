@@ -163,7 +163,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :type rotation_filepath: str
 
         :param code_index: CodeIndex instance to use.
-        :type code_index: smqtk.similarity_index.lsh.code_index.CodeIndex
+        :type code_index: smqtk.data_rep.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
             code). This must be greater than 0. If given an existing
@@ -423,8 +423,10 @@ class ITQSimilarityIndex (SimilarityIndex):
         # Populating small-code index
         #   - Converting bit-vectors proved faster than creating new codes over
         #       again (~0.01s vs ~0.04s for 80 vectors).
-        with SimpleTimer("Converting bitvectors into small codes",
-                         self._log.info):
+        with SimpleTimer("Clearing code index", self._log.info):
+            self._code_index.clear()
+        with SimpleTimer("Converting bit-vectors into small codes, inserting "
+                         "into code index", self._log.info):
             self._code_index.add_many_descriptors(
                 (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])

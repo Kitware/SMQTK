@@ -31,6 +31,7 @@ class DummyCodeIndex (CodeIndex):
     add_many_descriptors = mock.Mock()
     codes = mock.Mock()
     count = mock.Mock()
+    clear = mock.Mock()
     get_config = mock.Mock()
     get_descriptors = mock.Mock()
 

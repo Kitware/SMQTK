@@ -74,7 +74,7 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         # replace ``code_index`` with nested plugin configuration
         index_conf = plugin.make_config(get_index_types)
-        if default['code_index']:
+        if default['code_index'] is not None:
             # Only overwrite default config if there is a default value
             index_conf.update(plugin.to_plugin_config(default['code_index']))
         default['code_index'] = index_conf
@@ -96,6 +96,9 @@ class ITQSimilarityIndex (SimilarityIndex):
             a configuration.
         :type config_dict: dict
 
+        :return: ITQ similarity index instance
+        :rtype: ITQSimilarityIndex
+
         """
         # Transform nested plugin stuff into actual classes.
         config_dict['code_index'] = \
@@ -104,8 +107,8 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         return super(ITQSimilarityIndex, cls).from_config(config_dict)
 
-    def __init__(self, mean_vec_filepath="mean_vector.npy",
-                 rotation_filepath="rotation.npy",
+    def __init__(self, mean_vec_filepath=None,
+                 rotation_filepath=None,
                  code_index=MemoryCodeIndex(),
                  # Index building parameters
                  bit_length=8, itq_iterations=50, distance_method='cosine',
@@ -113,8 +116,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         """
         Initialize ITQ similarity index instance.
 
-        This implementation allows persistant storage of a built model via
-        providing file paths for the ``mean_vec_filepath`` and
+        This implementation allows optional persistant storage of a built model
+        via providing file paths for the ``mean_vec_filepath`` and
         ``rotation_filepath`` parameters.
 
 
@@ -123,17 +126,19 @@ class ITQSimilarityIndex (SimilarityIndex):
         ``code_index`` should be an instance of a CodeIndex implementation
         class.
 
-        When not providing existing mean vector and rotation matrix cache file
-        paths, this should be an empty index. The ``build_index`` call will fail
-        if there is anything in the index provided.
+        The ``build_index`` call will clear the provided index anything in the
+        index provided. For safety, make sure to check the index provided so as
+        to not accidentally erase data.
 
-        When providing existing mean_vector and rotation matrix file paths, the
-        ``code_index`` should be populated with codes as generated from the
-        given mean and rotation.
+        When providing existing mean_vector and rotation matrix caches, the
+        ``code_index`` may be populated with codes. Pre-populated entries in the
+        provided code index should have been generated from the same rotation
+        and mean vector models provided, else nearest-neighbor query performance
+        will not be as desired.
 
         A more advanced use case includes providing a code index that is
         update-able in the background. This is valid, assuming there is
-        proper locking mechanisms in the code index, because
+        proper locking mechanisms in the code index.
 
 
         Build parameters
@@ -145,18 +150,20 @@ class ITQSimilarityIndex (SimilarityIndex):
 
         :raise ValueError: Invalid argument values.
 
-        :param mean_vec_filepath: File location to load/store the mean vector
-            when initialized and/or built. This will use numpy to save/load, so
-            this should have a ``.npy`` suffix.
+        :param mean_vec_filepath: Optional file location to load/store the mean
+            vector when initialized and/or built. When None, this will only be
+            stored in memory. This will use numpy to save/load, so this should
+            have a ``.npy`` suffix, or one will be added at save time.
         :type mean_vec_filepath: str
 
-        :param rotation_filepath: File location to load/store the rotation
-            matrix when initialize and/or built. This will use numpy to
-            save/load, so this should have a ``.npy`` suffix.
+        :param rotation_filepath: Optional file location to load/store the
+            rotation matrix when initialize and/or built. When None, this will
+            only be stored in memory. This will use numpy to save/load, so this
+            should have a ``.npy`` suffix, or one will be added at save time.
         :type rotation_filepath: str
 
         :param code_index: CodeIndex instance to use.
-        :type code_index: smqtk.similarity_index.lsh.code_index.CodeIndex
+        :type code_index: smqtk.data_rep.code_index.CodeIndex
 
         :param bit_length: Number of bits used to represent descriptors (hash
             code). This must be greater than 0. If given an existing
@@ -202,7 +209,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         # "center" additional descriptors when computing small codes.
         #: :type: numpy.core.multiarray.ndarray[float]
         self._mean_vector = None
-        if osp.isfile(self._mean_vec_cache_filepath):
+        if self._mean_vec_cache_filepath and \
+                osp.isfile(self._mean_vec_cache_filepath):
             self._log.debug("Loading existing descriptor vector mean")
             #: :type: numpy.core.multiarray.ndarray[float]
             self._mean_vector = numpy.load(self._mean_vec_cache_filepath)
@@ -211,7 +219,8 @@ class ITQSimilarityIndex (SimilarityIndex):
         # transform new descriptors into binary hash decision vector.
         #: :type: numpy.core.multiarray.ndarray[float]
         self._r = None
-        if osp.isfile(self._rotation_cache_filepath):
+        if self._rotation_cache_filepath and \
+                osp.isfile(self._rotation_cache_filepath):
             self._log.debug("Loading existing descriptor rotation matrix")
             #: :type: numpy.core.multiarray.ndarray[float]
             self._r = numpy.load(self._rotation_cache_filepath)
@@ -363,8 +372,9 @@ class ITQSimilarityIndex (SimilarityIndex):
             # center the data, VERY IMPORTANT for ITQ to work
             self._mean_vector = numpy.mean(x, axis=0)
             x -= self._mean_vector
-        with SimpleTimer("Saving mean vector", self._log.info):
-            numpy.save(self._mean_vec_cache_filepath, self._mean_vector)
+        if self._mean_vec_cache_filepath:
+            with SimpleTimer("Saving mean vector", self._log.info):
+                numpy.save(self._mean_vec_cache_filepath, self._mean_vector)
 
         # PCA
         with SimpleTimer("Computing PCA transformation", self._log.info):
@@ -406,14 +416,17 @@ class ITQSimilarityIndex (SimilarityIndex):
             c, self._r = self._find_itq_rotation(xx, self._itq_iter_num)
             # De-adjust rotation with PC vector
             self._r = numpy.dot(pc_top, self._r)
-        with SimpleTimer("Saving rotation matrix", self._log.info):
-            numpy.save(self._rotation_cache_filepath, self._r)
+        if self._rotation_cache_filepath:
+            with SimpleTimer("Saving rotation matrix", self._log.info):
+                numpy.save(self._rotation_cache_filepath, self._r)
 
         # Populating small-code index
         #   - Converting bit-vectors proved faster than creating new codes over
         #       again (~0.01s vs ~0.04s for 80 vectors).
-        with SimpleTimer("Converting bitvectors into small codes",
-                         self._log.info):
+        with SimpleTimer("Clearing code index", self._log.info):
+            self._code_index.clear()
+        with SimpleTimer("Converting bit-vectors into small codes, inserting "
+                         "into code index", self._log.info):
             self._code_index.add_many_descriptors(
                 (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])

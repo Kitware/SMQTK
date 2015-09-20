@@ -1,6 +1,5 @@
 import os
 import random
-import tempfile
 import unittest
 
 import nose.tools as ntools
@@ -9,15 +8,10 @@ import numpy
 from smqtk.data_rep.descriptor_element_impl.local_elements import \
     DescriptorMemoryElement
 from smqtk.similarity_index.flann import FlannSimilarity
+from smqtk.utils.file_utils import make_tempfile
 
 
 __author__ = 'purg'
-
-
-def make_tempfile(suffix=""):
-    fd, fp = tempfile.mkstemp(suffix)
-    os.close(fd)
-    return fp
 
 
 # Don't bother running tests of the class is not usable

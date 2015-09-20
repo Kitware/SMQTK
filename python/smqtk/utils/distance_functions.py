@@ -81,7 +81,7 @@ def histogram_intersection_distance_fast(i, j):
 
 def euclidean_distance(i, j):
     """
-    Compute euclidian distance between two N-dimensional point vectors.
+    Compute euclidean distance between two N-dimensional point vectors.
 
     :param i: Vector i
     :type i: numpy.core.multiarray.ndarray
@@ -146,6 +146,8 @@ def popcount(v):
     Pure python popcount algorithm adapted implementation at:
     see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     """
+    # TODO: C implemetation of this
+    #       since this version, being in python, isn't faster than above bin use
     if not v:
         return 0
 

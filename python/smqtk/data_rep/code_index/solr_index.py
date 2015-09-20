@@ -153,6 +153,13 @@ class SolrCodeIndex (CodeIndex):
                              self.descriptor_field))
                    .numFound)
 
+    def clear(self):
+        """
+        Clear this code index's entries from the Solr instance
+        """
+        self.solr.delete_query("%s:%s" % (self.idx_uuid_field, self.uuid))
+        self.solr.commit()
+
     def codes(self):
         """
         :return: Set of code integers currently used in this code index.

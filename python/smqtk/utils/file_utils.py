@@ -1,9 +1,26 @@
-__author__ = 'purg'
-
 import csv
 import os
 import numpy
 import re
+import tempfile
+
+
+__author__ = 'purg'
+
+
+def make_tempfile(*args, **kwds):
+    """
+    Wrapper for ``tempfile.mkstemp`` that closes/discards the file descriptor
+    returned from the method. Arguments and keywords passed are given to
+    ``tempfile.mkstemp``.
+
+    :return: Path to a new user-owned temporary file.
+    :rtype: str
+
+    """
+    fd, fp = tempfile.mkstemp(*args, **kwds)
+    os.close(fd)
+    return fp
 
 
 def iter_directory_files(d, recurse=True):

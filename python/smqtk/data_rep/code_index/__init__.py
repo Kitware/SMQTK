@@ -47,6 +47,12 @@ class CodeIndex (Configurable):
         """
 
     @abc.abstractmethod
+    def clear(self):
+        """
+        Clear this code index's entries.
+        """
+
+    @abc.abstractmethod
     def codes(self):
         """
         :return: Set of code integers currently used in this code index.

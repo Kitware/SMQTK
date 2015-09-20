@@ -65,6 +65,13 @@ class MemoryCodeIndex (CodeIndex):
         """
         return self._num_descr
 
+    def clear(self):
+        """
+        Clear this code index's table entries.
+        """
+        self._table = {}
+        self._cache_table()
+
     def codes(self):
         """
         :return: Set of code integers currently used in this code index.

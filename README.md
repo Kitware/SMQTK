@@ -1,5 +1,4 @@
-SMQTK
-=====
+# SMQTK
 ![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
 
 Social Multimedia Query ToolKit aims to provide a simple and easy to use interface for content descriptor generation for machine learning, content similarity computation (kNN implementations), and ranking for online Iterative Query Refinement (IQR) adjudications.
@@ -10,32 +9,20 @@ In order to provide basic functionality:
 
 * Build SMQTK via CMAKE.
   * Currently, a naive CMake configuration (no modifications to options) is acceptable for basic functionality.
-  * Requred because of a generated python configuration file.
+  * Required because of a generated python configuration file.
     * template files:
       * python/smqtk\_config.build.py.in
       * python/smqtk\_config.install.py.in
     * A manually constructed `smqtk_config.py` may be placed in the `<source>/python/` directory if desired.
 * Install python packages detailed in the `requirements.*.txt` files.
 
-In order to run provided SMQTKSearchApp web application, the following are  additionally required:
+In order to run provided SMQTKSearchApp web application, the following are additionally required:
 
 * MongoDB
   * MongoDB is required for the Web application for session storage.
     This allows the Flask application API to modify session contents when within AJAX routines.
     This required for asynchronous user-session state interaction/modification.
   * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
-
-### CMake Build
-Navagate to where the build products should be located.
-It is recommended that this not be the source tree.
-Build products include some C/C++ libraries, python modules and generated scripts.
-
-If the desired build directory, and run the following, filling in ``<...>`` with appropriate values:
-
-    $ cmake <source_dir_path>
-
-Optionally, the `ccmake` command line utility, or the GUI version, may be run in order to modify options for building additional modules.
-Currently, the selection is very minimal, but may be expanded over time.
 
 ### Installing Python dependencies
 There are two files that list required python packages:
@@ -47,7 +34,7 @@ Required packages have been split up this way because conda does not provide all
 While conda is generally considered the preferred method of acquiring python dependencies due to their pre-built nature, some of our requirements are not available through conda.
 
 #### Installing with Conda and Pip
-The three-step python dependency installation using both conda and pip will look like the following, filling in `<...>` spaces with appropriate:
+The three-step python dependency installation using both conda and pip will look like the following:
 
     $ conda create -n <env_name> --file requirements.conda.txt
     $ . activate <env_name>
@@ -57,6 +44,9 @@ The three-step python dependency installation using both conda and pip will look
 If installation of python dependencies via pip only is desired, or if local compilation of packages is desired, the following is recommended:
 
     $ pip install -r requirements.conda.txt -r requirements.pip.txt
+
+##### NumPy and SciPy
+If installing NumPy and SciPy via pip, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
 
 ### Additional Descriptor Dependencies
 Descriptors implemented in SMQTK may require additional dependencies in order to run.
@@ -71,11 +61,42 @@ For example, the ColorDescriptor implementation required a 3rd party tool to dow
 
 As more descriptors are added, more optional dependencies may be introduced.
 
-### Recommended Installs
-if installing Numpy and Scipy via pip, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
+
+## Building
+Building SMQTK requires CMake and a C/C++ compiler.
+See the example below for a simple example of how to build SMQTK
+
+### CMake Build
+Navigate to where the build products should be located.
+It is recommended that this not be the source tree.
+Build products include some C/C++ libraries, python modules and generated scripts.
+
+If the desired build directory, and run the following, filling in ``<...>`` with appropriate values:
+
+    $ cmake <source_dir_path>
+
+Optionally, the `ccmake` command line utility, or the GUI version, may be run in order to modify options for building additional modules.
+Currently, the selection is very minimal, but may be expanded over time.
+
+### Example
+    # Check things out
+    cd /where/things/should/go/
+    git clone https://github.com/Kitware/SMQTK.git source
+    # Install python dependencies to environment
+    pip install -r source/requirements.conda.txt -r source/requirements.pip.txt
+    # SMQTK build
+    mkdir build
+    pushd build
+    cmake ../source
+    make -j2
+    popd
+    # Set up SMQTK environment by sourcing file
+    . build/setup_smqtk.build.sh
+    # Running tests
+    source/run_tests.sh
 
 
-# Basic Descriptor Computation
+## Basic Descriptor Computation
 One of the primary uses for SMQTK is for content descriptor generation.
 This section aims to provide a simple example of how to do this for an image file on your local filesystem.
 
@@ -123,7 +144,7 @@ We can now compute descriptor vectors for new data, assuming `e` is the `DataFil
 Where `vec` is a numpy array. The format of this vector is dependent on the descriptor used, but is commonly a 1-dimensional vector of N elements, or an N-dimensional vector, of floats, depending on terminology.
 
 
-# System Configuration JSON
+## System Configuration JSON
 In the `etc` directory, the `system_config.json` file is intended to provide a central location to map semantic labels to specific configurations of component implementations.
 For example, users can map labels to specific data sets, or specific content descriptors trained with specific models, etc.
 
@@ -134,7 +155,7 @@ Thus, constructors for implementations, when new ones are made, should only use 
 Comments are allowed in this file when used with SMQTK (`//` line prefix) as they are striped before the JSON is formally parsed (`jsmin` module in `smqtk.utils`).
 
 
-# Forming File-based DataSets
+## Forming File-based DataSets
 The lowest level component in SMQTK is the data.
 Currently, there are two abstractions: data sets and data elements, where data sets are collections of data elements.
 
@@ -155,7 +176,7 @@ This allows the python code to handle the glob, avoiding the maximum argument le
 TODO: An abstraction for descriptor vectors has been implemented, but has not been integrated into any other system in SMQTK as of yet.
 
 
-# Generating Models
+## Generating Models
 Currently, content descriptors and indexer implementations may require a model in order to function.
 
 Usually, these models are based on a training data set, and an indexer is tied to the content descriptor that provided it descriptor vectors.

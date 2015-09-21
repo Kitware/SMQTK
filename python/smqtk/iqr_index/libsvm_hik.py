@@ -187,6 +187,11 @@ class LibSvmHikIqrIndex (IqrIndex):
             train_vectors.append(d.vector().tolist())
             num_neg += 1
 
+        if not num_pos:
+            raise ValueError("No positive examples provided.")
+        elif not num_neg:
+            raise ValueError("No negative examples provided.")
+
         # Training SVM model
         svm_problem = svm.svm_problem(train_labels, train_vectors)
         svm_model = svmutil.svm_train(svm_problem,
@@ -235,8 +240,11 @@ class LibSvmHikIqrIndex (IqrIndex):
                                              histogram_intersection_distance,
                                              row_wise=True)
         pos_margins = numpy.dot(weights, pos_test_k)
+        #: :type: numpy.core.multiarray.ndarray
         pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))
-        if min(pos_probs) < (probs.sum() / probs.size):
+        # Check if average positive probability is less than the average index
+        # probability. If so, the platt scaling probably needs to be flipped.
+        if (pos_probs.sum() / pos_probs.size) < (probs.sum() / probs.size):
             probs = 1. - probs
 
         rank_pool = dict(zip(self._descr_cache, probs))

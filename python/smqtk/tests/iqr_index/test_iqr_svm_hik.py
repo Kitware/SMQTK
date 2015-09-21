@@ -69,3 +69,29 @@ class TestIqrSvmHik (unittest.TestCase):
         ntools.assert_equal(iqr_index.count(), 0)
         iqr_index.build_index(index_descriptors)
         ntools.assert_equal(iqr_index.count(), 7)
+
+    def test_simple_iqr_scenario(self):
+        # Make some descriptors;
+        # Pick some from created set that are close to each other and use as
+        #   positive query, picking some other random descriptors as negative
+        #   examples.
+        # Rank index based on chosen pos/neg
+        # Check that positive choices are at the top of the ranking (closest to
+        #   0) and negative choices are closest to the bottom.
+        iqr_index = LibSvmHikIqrIndex()
+        iqr_index.build_index(index_descriptors)
+
+        rank = iqr_index.rank([q_pos], [q_neg])
+        rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
+
+        # Check expected ordering
+        # 0-5-1-2-6-3-4
+        # - 2 should end up coming before 6, because 6 has more intersection
+        #   with the negative example.
+        ntools.assert_equal(rank_ordered[0][0], d0)
+        ntools.assert_equal(rank_ordered[1][0], d5)
+        ntools.assert_equal(rank_ordered[2][0], d1)
+        ntools.assert_equal(rank_ordered[3][0], d2)
+        ntools.assert_equal(rank_ordered[4][0], d6)
+        ntools.assert_equal(rank_ordered[5][0], d3)
+        ntools.assert_equal(rank_ordered[6][0], d4)

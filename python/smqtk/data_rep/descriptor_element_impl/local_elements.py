@@ -31,6 +31,10 @@ class DescriptorMemoryElement (DescriptorElement):
             self.MEMORY_CACHE[self._get_cache_index()] = state[2]
 
     def _get_cache_index(self):
+        """
+        :return: Index tuple for this element in the global cache
+        :rtype: (str, collections.Hashable)
+        """
         return self.type(), self.uuid()
 
     def get_config(self):
@@ -65,12 +69,19 @@ class DescriptorMemoryElement (DescriptorElement):
         If this container already stores a descriptor vector, this will
         overwrite it.
 
+        ``new_vec`` may be None, which clears this descriptor's vector from the
+        cache.
+
         :param new_vec: New vector to contain.
-        :type new_vec: numpy.core.multiarray.ndarray
+        :type new_vec: numpy.core.multiarray.ndarray | None
 
         """
+        idx = self._get_cache_index()
         with self.MEMORY_CACHE_LOCK:
-            self.MEMORY_CACHE[self._get_cache_index()] = new_vec
+            if new_vec is None and idx in self.MEMORY_CACHE:
+                del self.MEMORY_CACHE[self._get_cache_index()]
+            else:
+                self.MEMORY_CACHE[idx] = new_vec
 
 
 class DescriptorFileElement (DescriptorElement):

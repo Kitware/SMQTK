@@ -70,15 +70,7 @@ numpy format).
     bin_utils.initialize_logging(logging.getLogger(), llevel)
     log = logging.getLogger("main")
 
-    if opts.output_config:
-        if os.path.exists(opts.output_config):
-            log.error("ERROR: output config path already exists (%s)",
-                      opts.output_config)
-            exit(1)
-        else:
-            with open(opts.output_config, 'w') as f:
-                json.dump(default_config(), f, indent=4, check_circular=True)
-            exit(0)
+    bin_utils.output_config(opts.output_config, default_config(), log)
 
     if not opts.config:
         log.error("No configuration provided")

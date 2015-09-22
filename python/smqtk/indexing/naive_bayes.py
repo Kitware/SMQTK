@@ -14,15 +14,13 @@ import os.path as osp
 import numpy
 from sklearn.naive_bayes import MultinomialNB
 
-import smqtk_config
-
 from smqtk.utils import safe_create_dir, SimpleTimer
 
 
 class NaiveBayesMultinomial (Indexer):
 
     def __init__(self, data_dir):
-        self.data_dir = osp.join(smqtk_config.DATA_DIR, data_dir)
+        self.data_dir = data_dir
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures

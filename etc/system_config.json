@@ -11,17 +11,15 @@
         "example_image": {
             "type": "DataFileSet",
             "init": {
-                "root_directory": "FileDataSets/example_image/data",
-                // Tells implementation to interpret relative paths to the
-                // DATA_DIR variable as configured in smqtk_config module.
-                "data_relative": 1
+                // Prefix this directory with where it should be stored
+                "root_directory": "FileDataSets/example_image/data"
             }
         },
         "example_video": {
             "type": "DataFileSet",
             "init": {
-                "root_directory": "FileDataSets/example_video/data",
-                "data_relative": 1
+                // Prefix this directory with where it should be stored
+                "root_directory": "FileDataSets/example_video/data"
             }
         }
     },
@@ -50,10 +48,8 @@
         "LocalDiskFactory": {
             "type": "DescriptorFileElement",
             "init": {
-                "save_dir": "LocalDescriptors",
-                // Tells implementation to interpret relative paths to the
-                // WORK_DIR variable as configured in smqtk_config module.
-                "work_relative": true
+                // Prefix this directory with where it should be stored
+                "save_dir": "LocalDescriptors"
             }
         },
 
@@ -82,8 +78,7 @@
         "CD_CSIFT_Image_example": {
             "type": "ColorDescriptor_Image_csift",
             "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
+                // Prefix this directory with where it should be stored
                 "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "random_seed": 42,
@@ -94,8 +89,7 @@
         "CD_CSIFT_Image_example_spatial": {
             "type": "ColorDescriptor_Image_csift",
             "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
+                // Prefix this directory with where it should be stored
                 "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_image",
                 "random_seed": 42,
@@ -107,8 +101,7 @@
         "CD_RGSIFT_Image_example": {
             "type": "ColorDescriptor_Image_rgsift",
             "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
+                // Prefix this directory with where it should be stored
                 "model_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
                 "work_directory": "ContentDescriptors/ColorDescriptor/rgsift/example_image",
                 "random_seed": 42,
@@ -119,8 +112,7 @@
         "CD_CSIFT_Video_example": {
             "type": "ColorDescriptor_Video_csift",
             "init": {
-                // This impl allows relative paths, to be interpreted relative
-                // to system DATA_DIR / WORK_DIR respectively.
+                // Prefix this directory with where it should be stored
                 "model_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
                 "work_directory": "ContentDescriptors/ColorDescriptor/csift/example_video",
                 "random_seed": 42,

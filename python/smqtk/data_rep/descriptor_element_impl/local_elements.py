@@ -109,8 +109,8 @@ class DescriptorFileElement (DescriptorElement):
         :type uuid: collections.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
-            is relative, we interpret as relative to the WORK_DIR path set in
-            the `smqtk_config` module.
+            is relative, we interpret as relative to the current working
+            directory.
         :type save_dir: str | unicode
 
         :param subdir_split: If a positive integer, this will cause us to store

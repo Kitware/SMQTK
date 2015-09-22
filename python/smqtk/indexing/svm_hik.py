@@ -15,8 +15,6 @@ import os.path as osp
 import svm
 import svmutil
 
-import smqtk_config
-
 from smqtk.indexing import Indexer
 from smqtk.utils import safe_create_dir, SimpleTimer
 from smqtk.utils.distance_functions import histogram_intersection_distance_fast
@@ -45,7 +43,7 @@ class SVMIndexerHIK (Indexer):
     AUTO_NEG_PERCENT = 0.10
 
     def __init__(self, data_dir):
-        self.data_dir = osp.join(smqtk_config.DATA_DIR, data_dir)
+        self.data_dir = data_dir
 
         # Array of UIDs in the index the UID refers to in these internal
         # structures

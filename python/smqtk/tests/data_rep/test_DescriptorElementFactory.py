@@ -3,6 +3,7 @@ import nose.tools as ntools
 import numpy
 import unittest
 
+from smqtk.data_rep import DescriptorElement
 from smqtk.data_rep import DescriptorElementFactory
 from smqtk.data_rep.descriptor_element_impl.local_elements \
     import DescriptorMemoryElement
@@ -11,41 +12,71 @@ from smqtk.data_rep.descriptor_element_impl.local_elements \
 __author__ = 'purg'
 
 
+class DummyElementImpl (DescriptorElement):
+
+    def __init__(self, *args, **kwds):
+        pass
+
+    def set_vector(self, new_vec):
+        pass
+
+    def has_vector(self):
+        pass
+
+    def vector(self):
+        pass
+
+    def get_config(self):
+        pass
+
+
 class TestDescriptorElemFactory (unittest.TestCase):
 
-    def test_no_params(self):
+    @mock.patch.object(DummyElementImpl, "__init__")
+    def test_no_params(self, dei_init):
+        # So we don't break python
+        dei_init.return_value = None
+
         test_params = {}
 
-        d_type = mock.Mock()
-        factory = DescriptorElementFactory(d_type, test_params)
+        factory = DescriptorElementFactory(DummyElementImpl, test_params)
 
         expected_type = 'type'
         expected_uuid = 'uuid'
+        # Should construct a new DEI instance under they hood somewhere
         r = factory.new_descriptor(expected_type, expected_uuid)
 
-        ntools.assert_true(d_type.called)
-        d_type.assert_called_once_with(expected_type, expected_uuid)
-        ntools.assert_equal(r, d_type())
+        ntools.assert_true(dei_init.called)
+        dei_init.assert_called_once_with(expected_type, expected_uuid)
+        ntools.assert_is_instance(r, DummyElementImpl)
 
-    def test_with_params(self):
+    @mock.patch.object(DummyElementImpl, "__init__")
+    def test_with_params(self, dei_init):
+        # So we don't break python
+        dei_init.return_value = None
+
         v = numpy.random.randint(0, 10, 10)
         test_params = {
             'p1': 'some dir',
             'vec': v
         }
 
-        d_type = mock.Mock()
-        factory = DescriptorElementFactory(d_type, test_params)
+        factory = DescriptorElementFactory(DummyElementImpl, test_params)
 
         ex_type = 'type'
         ex_uuid = 'uuid'
+        # Should construct a new DEI instance under they hood somewhere
         r = factory.new_descriptor(ex_type, ex_uuid)
 
-        ntools.assert_true(d_type.called)
-        d_type.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
-        ntools.assert_equal(r, d_type())
+        ntools.assert_true(dei_init.called)
+        dei_init.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
+        ntools.assert_is_instance(r, DummyElementImpl)
 
-    def test_call(self):
+    @mock.patch.object(DummyElementImpl, "__init__")
+    def test_call(self, dei_init):
+        # So we don't break python
+        dei_init.return_value = None
+
         # Same as `test_with_params` but using __call__ entry point
         v = numpy.random.randint(0, 10, 10)
         test_params = {
@@ -53,16 +84,16 @@ class TestDescriptorElemFactory (unittest.TestCase):
             'vec': v
         }
 
-        d_type = mock.Mock()
-        factory = DescriptorElementFactory(d_type, test_params)
+        factory = DescriptorElementFactory(DummyElementImpl, test_params)
 
         ex_type = 'type'
         ex_uuid = 'uuid'
+        # Should construct a new DEI instance under they hood somewhere
         r = factory(ex_type, ex_uuid)
 
-        ntools.assert_true(d_type.called)
-        d_type.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
-        ntools.assert_equal(r, d_type())
+        ntools.assert_true(dei_init.called)
+        dei_init.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
+        ntools.assert_is_instance(r, DummyElementImpl)
 
     def test_configuration(self):
         c = DescriptorElementFactory.default_config()
@@ -73,7 +104,7 @@ class TestDescriptorElemFactory (unittest.TestCase):
         factory = DescriptorElementFactory.from_config(c)
         ntools.assert_equal(factory._d_type.__name__,
                             DescriptorMemoryElement.__name__)
-        ntools.assert_equal(factory._init_params, {})
+        ntools.assert_equal(factory._d_type_config, {})
 
         d = factory.new_descriptor('test', 'foo')
         ntools.assert_equal(d.type(), 'test')

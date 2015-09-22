@@ -9,11 +9,6 @@ In order to provide basic functionality:
 
 * Build SMQTK via CMAKE.
   * Currently, a naive CMake configuration (no modifications to options) is acceptable for basic functionality.
-  * Required because of a generated python configuration file.
-    * template files:
-      * python/smqtk\_config.build.py.in
-      * python/smqtk\_config.install.py.in
-    * A manually constructed `smqtk_config.py` may be placed in the `<source>/python/` directory if desired.
 * Install python packages detailed in the `requirements.*.txt` files.
 
 In order to run provided SMQTKSearchApp web application, the following are additionally required:

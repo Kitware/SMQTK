@@ -3,8 +3,6 @@ import multiprocessing
 import os
 import re
 
-from smqtk_config import DATA_DIR
-
 from smqtk.data_rep import DataElement, DataSet
 from smqtk.utils import safe_create_dir
 from smqtk.utils.file_utils import iter_directory_files
@@ -36,7 +34,7 @@ class DataFileSet (DataSet):
     # - yields two groups, the first is the UUID, the second is the SHA1 sum
     SERIAL_FILE_RE = re.compile("UUID_(\w+).SHA1_(\w+).dataElement")
 
-    def __init__(self, root_directory, sha1_chunk=10, data_relative=False):
+    def __init__(self, root_directory, sha1_chunk=10):
         """
         Initialize a new or existing file set from a root directory.
 
@@ -49,18 +47,8 @@ class DataFileSet (DataSet):
             into when saving element serializations.
         :type sha1_chunk: int
 
-        :param data_relative: If true, we should interpret ``root_directory`` as
-            relative to the configured WORK_DIR parameter in the
-            ``smqtk_config`` module.
-        :type data_relative: bool
-
         """
-        self._root_dir = os.path.abspath(
-            os.path.join(
-                DATA_DIR if data_relative else os.getcwd(),
-                os.path.expanduser(root_directory)
-            )
-        )
+        self._root_dir = os.path.abspath(os.path.expanduser(root_directory))
         self._sha1_chunk = sha1_chunk
 
         self._log.debug("Initializing FileSet under root dir: %s",
@@ -109,7 +97,6 @@ class DataFileSet (DataSet):
         return {
             "root_directory": self._root_dir,
             "sha1_chunk": self._sha1_chunk,
-            "data_relative": False,  # already expanded to abs path
         }
 
     def _discover_data_elements(self):

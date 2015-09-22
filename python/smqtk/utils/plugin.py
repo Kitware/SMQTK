@@ -232,7 +232,7 @@ def from_plugin_config(config, plugin_getter, *args):
 
     :return: Instance of the configured class type as found in the given
         ``plugin_getter``.
-    :rtype: Configurable
+    :rtype: smqtk.utils.Configurable
 
     """
     t = config['type']

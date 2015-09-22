@@ -14,7 +14,6 @@ class TestDescriptorFileElement (unittest.TestCase):
         ntools.assert_equal(default_config,
                             {
                                 'save_dir': None,
-                                'work_relative': False,
                                 'subdir_split': None,
                             })
 

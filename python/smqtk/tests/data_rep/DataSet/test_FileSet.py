@@ -30,7 +30,6 @@ class TestDataFileSet (unittest.TestCase):
         ntools.assert_equal(default_config, {
             'root_directory': None,
             'sha1_chunk': 10,
-            'data_relative': False
         })
 
         default_config['root_directory'] = '/some/dir'

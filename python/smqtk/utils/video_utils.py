@@ -1,5 +1,3 @@
-__author__ = 'purg'
-
 import logging
 import hashlib
 import multiprocessing
@@ -10,7 +8,9 @@ import subprocess
 import time
 
 from smqtk.utils import file_utils, safe_create_dir, string_utils
-import smqtk_config
+
+
+__author__ = 'purg'
 
 
 class VideoMetadata (object):
@@ -117,7 +117,7 @@ def ffmpeg_extract_frame(t, input_filepath, output_filepath,
     #                        % (t, p.returncode))
 
 
-def ffmpeg_extract_frame_map(video_filepath, second_offset=0,
+def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
                              second_interval=0, max_duration=0, frames=(),
                              output_image_ext="png", parallel=None,
                              ffmpeg_exe='ffmpeg'):
@@ -133,12 +133,18 @@ def ffmpeg_extract_frame_map(video_filepath, second_offset=0,
     This may return an empty list if there are no frames in the video for
     the specified, or default, constraints.
 
-    Extracted frames are cached in a directory structure under the globally
-    configured work directory ``<smqtk_config.WORK_DIR>/VideoFrameExtraction``.
-    Frames are extracted into separate directories based on the MD5 sum of the
-    video file.
+    Extracted frames are cached in a directory structure under the provided
+    ``working_dir`` directory path: ``<working_dir>/VideoFrameExtraction``.
+    Frames are extracted into separate directories based on the SHA1 checksum of
+    the video file.
 
     :raises RuntimeError: No frames were extracted.
+
+    :param working_dir: Working directory for frame extraction to occur in.
+    :type working_dir: str
+
+    :param video_filepath: Path to the video to extract frames from.
+    :type video_filepath: str
 
     :param second_offset: Seconds into the video to start extracting
     :type second_offset: float
@@ -172,11 +178,13 @@ def ffmpeg_extract_frame_map(video_filepath, second_offset=0,
     log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map')
 
     video_md = get_metadata_info(video_filepath)
-    video_md5sum = hashlib.md5(open(video_filepath, 'rb').read()).hexdigest()
-    frame_output_dir = os.path.join(smqtk_config.WORK_DIR,
-                                    "VideoFrameExtraction",
-                                    *string_utils.partition_string(video_md5sum,
-                                                                   8))
+    video_sha1sum = hashlib.sha1(open(video_filepath, 'rb').read()).hexdigest()
+    frame_output_dir = os.path.join(
+        working_dir,
+        "VideoFrameExtraction",
+        *string_utils.partition_string(video_sha1sum, 10)
+        # 40 hex chars split into chunks of 4
+    )
     safe_create_dir(frame_output_dir)
 
     def filename_for_frame(frame, ext):

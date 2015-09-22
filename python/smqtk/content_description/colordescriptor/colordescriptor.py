@@ -13,8 +13,6 @@ import sklearn.cluster
 import sys
 import tempfile
 
-import smqtk_config
-
 from smqtk.content_description import ContentDescriptor
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
 from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
@@ -108,12 +106,12 @@ class ColorDescriptor_Base (ContentDescriptor):
 
         :param model_directory: Path to the directory to store/read data model
             files on the local filesystem. Relative paths are treated relative
-            to ``smqtk_config.DATA_DIR``.
+            to the current working directory.
         :type model_directory: str | unicode
 
         :param work_directory: Path to the directory in which to place
             temporary/working files. Relative paths are treated relative to
-            ``smqtk_config.WORD_DIR``.
+            the current working directory.
         :type work_directory: str | unicode
 
         :param kmeans_k: Centroids to generate. Default of 1024
@@ -146,8 +144,8 @@ class ColorDescriptor_Base (ContentDescriptor):
         #       an alternative must be found before this can be put into
         #       production. Suggest saving/using sk-learn MBKMeans class? Can
         #       the class be regenerated from an existing codebook?
-        self._model_dir = osp.join(smqtk_config.DATA_DIR, model_directory)
-        self._work_dir = osp.join(smqtk_config.WORK_DIR, work_directory)
+        self._model_dir = model_directory
+        self._work_dir = work_directory
 
         self._kmeans_k = int(kmeans_k)
         self._flann_target_precision = float(flann_target_precision)
@@ -879,6 +877,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 p['second_offset'] = vmd.duration * p['second_offset']
                 p['max_duration'] = vmd.duration * p['max_duration']
                 fm = video_utils.ffmpeg_extract_frame_map(
+                    self._work_dir,
                     tmp_vid_fp,
                     parallel=extract_parallel,
                     **p

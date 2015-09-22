@@ -8,7 +8,7 @@ def partition_string(s, segments):
     are added to the leading segments in order to allow for the requested number
     of segments.
 
-    This is useful when partitioning an MD5 sum of a file to determine where it
+    This is useful when partitioning an checksum of a file to determine where it
     should be placed in a directory tree system.
 
     >>> partition_string("foobar", 2)

@@ -16,7 +16,7 @@ class TestColorDescriptor (unittest.TestCase):
     @mock.patch('smqtk.content_description.colordescriptor.colordescriptor'
                 '.safe_create_dir')
     def test_configuration(self, mock_scd):
-        default_config = ColorDescriptor_Image_csift.default_config()
+        default_config = ColorDescriptor_Image_csift.get_default_config()
         default_config['model_directory'] = '/some/path/models/'
         default_config['work_directory'] = '/some/path/work/'
 

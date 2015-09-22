@@ -10,7 +10,7 @@ __author__ = 'purg'
 class TestDescriptorFileElement (unittest.TestCase):
 
     def test_configuration(self):
-        default_config = DescriptorFileElement.default_config()
+        default_config = DescriptorFileElement.get_default_config()
         ntools.assert_equal(default_config,
                             {
                                 'save_dir': None,

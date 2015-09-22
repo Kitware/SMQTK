@@ -17,7 +17,7 @@ from smqtk.utils import bin_utils, plugin
 
 def default_config():
     return {
-        "descriptor_factory": DescriptorElementFactory.default_config(),
+        "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "content_descriptor": plugin.make_config(get_descriptors),
     }
 
@@ -77,6 +77,7 @@ numpy format).
         exit(1)
     elif not os.path.isfile(opts.config):
         log.error("Configuration file path not valid.")
+        exit(1)
 
     if len(args) == 0:
         log.error("Failed to provide an input file path")

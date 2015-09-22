@@ -40,7 +40,7 @@ class PreviewCache (object):
         """
         self._cache_dir = os.path.abspath(os.path.expanduser(cache_dir))
         # Cache of preview images for data elements encountered.
-        #: :type: dict[str, str]
+        #: :type: dict[collections.Hashable, str]
         self._preview_cache = {}
 
     def get_preview_image(self, elem):
@@ -57,8 +57,8 @@ class PreviewCache (object):
         :rtype: str
 
         """
-        if elem.md5() in self._preview_cache:
-            return self._preview_cache[elem.md5()]
+        if elem.uuid() in self._preview_cache:
+            return self._preview_cache[elem.uuid()]
 
         # else, generate preview image based on content type / content class
         if elem.content_type() in self.PREVIEW_GEN_METHOD:
@@ -92,7 +92,7 @@ class PreviewCache (object):
         """
         output_fp = os.path.join(
             output_dir,
-            "%s%s" % (str(elem.md5()),
+            "%s%s" % (str(elem.uuid()),
                       MIMETYPES.guess_extension(elem.content_type()))
         )
         if not os.path.isfile(output_fp):
@@ -114,7 +114,7 @@ class PreviewCache (object):
 
         """
         output_fp = os.path.join(output_dir,
-                                 "%s.gif" % elem.md5())
+                                 "%s.gif" % elem.uuid())
         if not os.path.isfile(output_fp):
             tmp_vid_fp = elem.write_temp()
             interval = 0.5  # ~2fps gif

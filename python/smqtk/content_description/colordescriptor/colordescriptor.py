@@ -263,7 +263,7 @@ class ColorDescriptor_Base (ContentDescriptor):
         :rtype: str
 
         """
-        d = osp.join(self._work_dir, *partition_string(data.md5(), 8))
+        d = osp.join(self._work_dir, *partition_string(str(data.uuid()), 10))
         safe_create_dir(d)
         return d
 
@@ -285,13 +285,13 @@ class ColorDescriptor_Base (ContentDescriptor):
         d = self._get_checkpoint_dir(data)
         if frame is not None:
             return (
-                osp.join(d, "%s.info.%d.npy" % (data.md5(), frame)),
-                osp.join(d, "%s.descriptors.%d.npy" % (data.md5(), frame))
+                osp.join(d, "%s.info.%d.npy" % (str(data.uuid()), frame)),
+                osp.join(d, "%s.descriptors.%d.npy" % (str(data.uuid()), frame))
             )
         else:
             return (
-                osp.join(d, "%s.info.npy" % data.md5()),
-                osp.join(d, "%s.descriptors.npy" % data.md5())
+                osp.join(d, "%s.info.npy" % str(data.uuid())),
+                osp.join(d, "%s.descriptors.npy" % str(data.uuid()))
             )
 
     def _get_checkpoint_feature_file(self, data):
@@ -309,10 +309,10 @@ class ColorDescriptor_Base (ContentDescriptor):
         """
         if self._use_sp:
             return osp.join(self._get_checkpoint_dir(data),
-                            "%s.feature.sp.npy" % data.md5())
+                            "%s.feature.sp.npy" % str(data.uuid()))
         else:
             return osp.join(self._get_checkpoint_dir(data),
-                            "%s.feature.npy" % data.md5())
+                            "%s.feature.npy" % str(data.uuid()))
 
     def generate_model(self, data_set, **kwargs):
         """

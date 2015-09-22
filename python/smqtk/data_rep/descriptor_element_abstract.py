@@ -26,7 +26,7 @@ class DescriptorElement (Configurable):
     __metaclass__ = abc.ABCMeta
 
     @classmethod
-    def default_config(cls):
+    def get_default_config(cls):
         """
         Generate and return a default configuration dictionary for this class.
         This will be primarily used for generating what the configuration
@@ -48,7 +48,7 @@ class DescriptorElement (Configurable):
         """
         # similar to parent impl, except we remove the ``type_str`` and ``uuid``
         # configuration parameters as they are to be specified at runtime.
-        dc = super(DescriptorElement, cls).default_config()
+        dc = super(DescriptorElement, cls).get_default_config()
         del dc['type_str'], dc['uuid']
         return dc
 

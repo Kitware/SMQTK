@@ -13,7 +13,7 @@ class DescriptorElementFactory (Configurable):
     """
 
     @classmethod
-    def default_config(cls):
+    def get_default_config(cls):
         """
         Generate and return a default configuration dictionary for this class.
         This will be primarily used for generating what the configuration

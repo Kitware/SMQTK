@@ -51,7 +51,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         return True
 
     @classmethod
-    def default_config(cls):
+    def get_default_config(cls):
         """
         Generate and return a default configuration dictionary for this class.
         This will be primarily used for generating what the configuration
@@ -70,7 +70,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: dict
 
         """
-        default = super(ITQSimilarityIndex, cls).default_config()
+        default = super(ITQSimilarityIndex, cls).get_default_config()
 
         # replace ``code_index`` with nested plugin configuration
         index_conf = plugin.make_config(get_index_types)

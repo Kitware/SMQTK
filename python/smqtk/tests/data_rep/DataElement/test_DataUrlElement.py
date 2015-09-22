@@ -21,7 +21,7 @@ class TestDataUrlElement (unittest.TestCase):
     """
 
     def test_configuration(self):
-        default_config = DataUrlElement.default_config()
+        default_config = DataUrlElement.get_default_config()
         ntools.assert_equal(default_config, {'url_address': None})
 
         default_config['url_address'] = EXAMPLE_URL

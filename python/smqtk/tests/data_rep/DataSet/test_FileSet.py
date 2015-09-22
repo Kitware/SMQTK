@@ -26,7 +26,7 @@ class TestDataFileSet (unittest.TestCase):
         ntools.assert_true(m_dfs_sde.called)
 
     def test_configuration(self):
-        default_config = DataFileSet.default_config()
+        default_config = DataFileSet.get_default_config()
         ntools.assert_equal(default_config, {
             'root_directory': None,
             'sha1_chunk': 10,

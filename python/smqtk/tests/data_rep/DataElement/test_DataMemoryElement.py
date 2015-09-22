@@ -11,7 +11,7 @@ __author__ = 'purg'
 class TestDataMemoryElement (unittest.TestCase):
 
     def test_configuration(self):
-        default_config = DataMemoryElement.default_config()
+        default_config = DataMemoryElement.get_default_config()
         ntools.assert_equal(default_config,
                             {'bytes': None, 'content_type': None})
 

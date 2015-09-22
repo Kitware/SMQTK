@@ -39,7 +39,7 @@ class TestIqrSvmHik (unittest.TestCase):
         cls.q_neg.set_vector(np.array([0, 0, 0, .5, .5], float))
 
     def test_configuration(self):
-        c = LibSvmHikIqrIndex.default_config()
+        c = LibSvmHikIqrIndex.get_default_config()
         ntools.assert_in('descr_cache_filepath', c)
 
         # change default for something different

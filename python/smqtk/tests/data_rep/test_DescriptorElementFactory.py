@@ -96,7 +96,7 @@ class TestDescriptorElemFactory (unittest.TestCase):
         ntools.assert_is_instance(r, DummyElementImpl)
 
     def test_configuration(self):
-        c = DescriptorElementFactory.default_config()
+        c = DescriptorElementFactory.get_default_config()
         ntools.assert_is_none(c['type'])
         ntools.assert_in('DescriptorMemoryElement', c)
 

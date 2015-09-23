@@ -19,7 +19,7 @@ from smqtk.utils.configuration import (
     DescriptorFactoryConfiguration,
     ContentDescriptorConfiguration,
 )
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element_impl.file_element import DataFileElement
 
 import traceback
 

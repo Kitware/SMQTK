@@ -5,13 +5,14 @@ Compute a feature vector for a given file with a chosen ContentDescriptor type.
 
 import json
 import logging
-import numpy
 import optparse
 import os
 
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.data_rep import DescriptorElementFactory
-from smqtk.content_description import get_descriptors
+import numpy
+
+from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation import DescriptorElementFactory
+from smqtk.algorithms.content_description import get_descriptors
 from smqtk.utils import bin_utils, plugin
 
 

@@ -1,19 +1,19 @@
-import flask
 import mimetypes
 import multiprocessing
 import os
+
+import flask
 import requests
 
-from smqtk.content_description import get_descriptors
-from smqtk.data_rep import DescriptorElementFactory
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
-from smqtk.data_rep.data_element_impl.url_element import DataUrlElement
+from smqtk.algorithms.content_description import get_descriptors
+from smqtk.representation import DescriptorElementFactory
+from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element_impl.memory_element import DataMemoryElement
+from smqtk.representation.data_element_impl.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
 from smqtk.utils import plugin
 from smqtk.utils.configuration import merge_configs
 from smqtk.web import SmqtkWebApp
-
 
 MIMETYPES = mimetypes.MimeTypes()
 
@@ -274,7 +274,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         :param uri: URI to data
         :type uri: str
         :return: DataElement instance wrapping given URI to data.
-        :rtype: smqtk.data_rep.DataElement
+        :rtype: smqtk.representation.DataElement
 
         """
         # Resolve URI into appropriate DataElement instance
@@ -315,11 +315,11 @@ class DescriptorServiceServer (SmqtkWebApp):
         :raises ValueError: Content type mismatch given the descriptor generator
         :raises RuntimeError: Descriptor extraction failure.
 
-        :type de: smqtk.data_rep.DataElement
+        :type de: smqtk.representation.DataElement
         :type cd_label: str
 
         :return: Generated descriptor element instance with vector information.
-        :rtype: smqtk.data_rep.DescriptorElement
+        :rtype: smqtk.representation.DescriptorElement
 
         """
         with SimpleTimer("Computing descriptor...", self.log.debug):

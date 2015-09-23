@@ -51,7 +51,7 @@ class PreviewCache (object):
             given element's content type.
 
         :param elem: Data element to generate a preview image for.
-        :type elem: smqtk.data_rep.DataElement
+        :type elem: smqtk.representation.DataElement
 
         :return: Path to the preview image for the given data element.
         :rtype: str
@@ -84,7 +84,7 @@ class PreviewCache (object):
         Copy temporary image to specified output filepath.
 
         :param elem: Data element to get the preview image for.
-        :type elem: smqtk.data_rep.DataElement
+        :type elem: smqtk.representation.DataElement
 
         :param output_dir: Directory to save generated image to.
         :type output_dir: str
@@ -107,7 +107,7 @@ class PreviewCache (object):
         Copy temporary image to specified output filepath.
 
         :param elem: Data element to get the preview image for.
-        :type elem: smqtk.data_rep.DataElement
+        :type elem: smqtk.representation.DataElement
 
         :param output_dir: Directory to save generated image to.
         :type output_dir: str

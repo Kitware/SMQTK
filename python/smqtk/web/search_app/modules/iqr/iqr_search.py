@@ -3,26 +3,26 @@ Video Search blueprint
 """
 
 import base64
-import flask
 import json
 import logging
 import multiprocessing
 import os
 import os.path as osp
-import PIL.Image
 import random
 
-from smqtk.content_description import get_descriptors
-from smqtk.data_rep import get_data_set_impls, get_descriptor_element_impls
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
+import flask
+import PIL.Image
+
+from smqtk.algorithms.content_description import get_descriptors
+from smqtk.representation import get_data_set_impls
+from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.iqr_control import IqrController, IqrSession
-from smqtk.iqr_index import get_iqr_index
-from smqtk.similarity_index import get_similarity_nn
+from smqtk.algorithms.iqr_index import get_iqr_index
+from smqtk.algorithms.similarity_index import get_similarity_nn
 from smqtk.utils import Configurable
 from smqtk.utils import plugin
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
-
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -115,7 +115,7 @@ class IqrSearch (flask.Blueprint, Configurable):
         :type parent_app: smqtk.web.search_app.app.search_app
 
         :param data_set: Data set to work over
-        :type data_set: SMQTK.data_rep.DataSet
+        :type data_set: SMQTK.representation.DataSet
 
         :param descriptor_type: Feature Descriptor type string
         :type descriptor_type: str
@@ -400,7 +400,7 @@ class IqrSearch (flask.Blueprint, Configurable):
                 "static_file_link": None,
             }
 
-            #: :type: smqtk.data_rep.DataElement
+            #: :type: smqtk.representation.DataElement
             de = None
             if self._data_set.has_uuid(uid):
                 de = self._data_set.get_data(uid)

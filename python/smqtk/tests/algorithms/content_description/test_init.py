@@ -7,7 +7,7 @@ import nose.tools as ntools
 import numpy
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
-from smqtk.algorithms.descriptor_generator import get_content_descriptor_impls
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator import _async_feature_generator_helper
 import smqtk.representation
 
@@ -15,7 +15,7 @@ __author__ = 'purg'
 
 
 def test_get_descriptors():
-    m = get_content_descriptor_impls()
+    m = get_descriptor_generator_impls()
     ntools.assert_is_instance(m, dict, "Should return a dictionary of class "
                                        "label-to-types")
 

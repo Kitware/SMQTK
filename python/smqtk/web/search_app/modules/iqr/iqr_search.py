@@ -13,7 +13,7 @@ import random
 import flask
 import PIL.Image
 
-from smqtk.algorithms.descriptor_generator import get_content_descriptor_impls
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSession
@@ -51,7 +51,7 @@ class IqrSearch (flask.Blueprint, Configurable):
             "name": "Default IQR Search",
             "url_prefix": "/iqr_search",
             "data_set": plugin.make_config(get_data_set_impls),
-            "descriptor_generator": plugin.make_config(get_content_descriptor_impls),
+            "descriptor_generator": plugin.make_config(get_descriptor_generator_impls),
             "nn_index": plugin.make_config(get_nn_index_impls),
             "relevancy_index": plugin.make_config(get_iqr_index),
         }
@@ -81,7 +81,7 @@ class IqrSearch (flask.Blueprint, Configurable):
         data_set = plugin.from_plugin_config(config['data_set'],
                                              get_data_set_impls)
         descr_generator = plugin.from_plugin_config(config['descriptor_generator'],
-                                                    get_content_descriptor_impls)
+                                                    get_descriptor_generator_impls)
         sim_index = plugin.from_plugin_config(config['nn_index'],
                                               get_nn_index_impls)
         iqr_index = plugin.from_plugin_config(config['relevancy_index'],

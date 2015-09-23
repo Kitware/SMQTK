@@ -264,17 +264,17 @@ def _async_feature_generator_helper(cd_inst, data):
         return None
 
 
-def get_content_descriptor_impls(reload_modules=False):
+def get_descriptor_generator_impls(reload_modules=False):
     """
-    Discover and return ``DescriptorGenerator`` classes found in the given plugin
-    search directory. Keys in the returned map are the names of the discovered
-    classes, and the paired values are the actual class type objects.
+    Discover and return ``DescriptorGenerator`` classes found in the given
+    plugin search directory. Keys in the returned map are the names of the
+    discovered classes, and the paired values are the actual class type objects.
 
     We look for modules (directories or files) that start with an alphanumeric
     character ('_' prefixed files/directories are hidden, but not recommended).
 
     Within a module we first look for a helper variable by the name
-    ``CONTENT_DESCRIPTOR_CLASS``, which can either be a single class object or
+    ``DESCRIPTOR_GENERATOR_CLASS``, which can either be a single class object or
     an iterable of class objects, to be exported. If the variable is set to
     None, we skip that module and do not import anything. If the variable is not
     present, we look for a class by the same name and casing as the module. If
@@ -283,18 +283,18 @@ def get_content_descriptor_impls(reload_modules=False):
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``DescriptorGenerator`` whose
-        keys are the string names of the classes.
+    :return: Map of discovered class object of type ``DescriptorGenerator``
+        whose keys are the string names of the classes.
     :rtype: dict of (str, type)
 
     """
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
-    helper_var = "CONTENT_DESCRIPTOR_CLASS"
+    helper_var = "DESCRIPTOR_GENERATOR_CLASS"
 
     def class_filter(cls):
         log = logging.getLogger('.'.join([__name__,
-                                          'get_content_descriptor_impls',
+                                          'get_descriptor_generator_impls',
                                           'class_filter']))
         if not cls.is_usable():
             log.warn("Class type '%s' not usable, filtering out.",

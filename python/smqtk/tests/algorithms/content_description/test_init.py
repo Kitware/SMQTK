@@ -6,9 +6,9 @@ import mock
 import nose.tools as ntools
 import numpy
 
-from smqtk.algorithms.content_description import ContentDescriptor
-from smqtk.algorithms.content_description import get_content_descriptor_impls
-from smqtk.algorithms.content_description import _async_feature_generator_helper
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
+from smqtk.algorithms.descriptor_generator import get_content_descriptor_impls
+from smqtk.algorithms.descriptor_generator import _async_feature_generator_helper
 import smqtk.representation
 
 __author__ = 'purg'
@@ -20,7 +20,7 @@ def test_get_descriptors():
                                        "label-to-types")
 
 
-class DummyContentDescriptor (ContentDescriptor):
+class DummyDescriptorGenerator (DescriptorGenerator):
     """
     Shell implementation of abstract class in order to test abstract class
     functionality.
@@ -44,7 +44,7 @@ class DummyContentDescriptor (ContentDescriptor):
     # Have base implementations
 
     def generate_model(self, data_set, **kwargs):
-        super(DummyContentDescriptor, self).generate_model(data_set, **kwargs)
+        super(DummyDescriptorGenerator, self).generate_model(data_set, **kwargs)
 
 
 class TestAsyncHelper (unittest.TestCase):
@@ -54,7 +54,7 @@ class TestAsyncHelper (unittest.TestCase):
     def test_valid_data(self):
         expected_vector = numpy.random.randint(0, 100, 10)
 
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
 
         v = _async_feature_generator_helper(cd, self.mDataElement())
@@ -71,7 +71,7 @@ class TestAsyncHelper (unittest.TestCase):
             warnings.simplefilter("ignore")
             expected_vector = numpy.zeros(10) / 0
 
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
 
         v = _async_feature_generator_helper(cd, self.mDataElement())
@@ -83,16 +83,16 @@ class TestAsyncHelper (unittest.TestCase):
             warnings.simplefilter("ignore")
             expected_vector = numpy.arange(1, 10) / 0.
 
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
 
         v = _async_feature_generator_helper(cd, self.mDataElement())
 
         ntools.assert_is_none(v)
 
-    @mock.patch('smqtk.algorithms.content_description.numpy')
+    @mock.patch('smqtk.algorithms.descriptor_generator.numpy')
     def test_exception(self, mNumpy):
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd._compute_descriptor = mock.Mock(side_effect=Exception('Some error'))
 
         v = _async_feature_generator_helper(cd, self.mDataElement())
@@ -110,7 +110,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
     """
 
     def test_generate_model(self):
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
         mDataElement().content_type.return_value = 'image/png'
         m_dataset = [mDataElement(), mDataElement()]
@@ -137,7 +137,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         ntools.assert_equal(cd.valid_content_types.call_count, 1)
 
     def test_compute_descriptor_invlaid_type(self):
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd.valid_content_types = mock.Mock(return_value={'image/png'})
 
         mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
@@ -157,7 +157,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         expected_uuid = "a unique ID"
 
         # Set up mock classes/responses
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd.valid_content_types = mock.Mock(return_value={expected_image_type})
         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
 
@@ -201,7 +201,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd.valid_content_types = mock.Mock(return_value={expected_image_type})
         cd._compute_descriptor = mock.Mock(return_value=expected_new_vector)
 
@@ -233,7 +233,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         cd.valid_content_types = mock.Mock(return_value={expected_image_type})
         cd._compute_descriptor = mock.Mock(return_value=expected_new_vector)
 
@@ -247,7 +247,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         mDescrElement().set_vector.assert_called_once_with(expected_new_vector)
         ntools.assert_is(d, mDescrElement())
 
-    @mock.patch('smqtk.algorithms.content_description.multiprocessing.Pool')
+    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.Pool')
     def test_computeDescriptorAsync(self, mPool):
         expected_new_descriptors = [numpy.random.randint(0, 100, 10),
                                     numpy.random.randint(0, 100, 10)]
@@ -274,7 +274,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         mDescriptorFactory().new_descriptor.return_value = mDescrElement()
 
         # The call
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         de_map = cd.compute_descriptor_async([m_d0, m_d1],
                                              mDescriptorFactory())
 
@@ -294,7 +294,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         ntools.assert_in(expected_uuids[0], de_map)
         ntools.assert_in(expected_uuids[1], de_map)
 
-    @mock.patch('smqtk.algorithms.content_description.multiprocessing.Pool')
+    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.Pool')
     def test_computeDescriptorAsync_failure(self, mPool):
         expected_uuids = [1, 2]
 
@@ -319,7 +319,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         mDescriptorFactory().new_descriptor.return_value = mDescrElement()
 
         # The call
-        cd = DummyContentDescriptor()
+        cd = DummyDescriptorGenerator()
         ntools.assert_raises(RuntimeError, cd.compute_descriptor_async,
                              [m_d0, m_d1], mDescriptorFactory())
 

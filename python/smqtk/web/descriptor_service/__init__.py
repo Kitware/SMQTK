@@ -5,7 +5,7 @@ import os
 import flask
 import requests
 
-from smqtk.algorithms.content_description import get_content_descriptor_impls
+from smqtk.algorithms.descriptor_generator import get_content_descriptor_impls
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.representation.data_element_impl.memory_element import DataMemoryElement
@@ -89,7 +89,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         #: :type: dict[str, dict]
         self.generator_label_configs = self.json_config['descriptor_generators']
 
-        # Cache of ContentDescriptor instances so we don't have to continuously
+        # Cache of DescriptorGenerator instances so we don't have to continuously
         # initialize them as we get requests.
         self.descriptor_cache = {}
         self.descriptor_cache_lock = multiprocessing.RLock()
@@ -251,7 +251,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         Get the cached content descriptor instance for a configuration label
         :type label: str
-        :rtype: smqtk.content_description.ContentDescriptor
+        :rtype: smqtk.descriptor_generator.DescriptorGenerator
         """
         with self.descriptor_cache_lock:
             if label not in self.descriptor_cache:

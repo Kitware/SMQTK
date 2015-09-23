@@ -13,7 +13,7 @@ import random
 import flask
 import PIL.Image
 
-from smqtk.algorithms.content_description import get_content_descriptor_impls
+from smqtk.algorithms.descriptor_generator import get_content_descriptor_impls
 from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSession

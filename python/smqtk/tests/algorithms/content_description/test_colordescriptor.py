@@ -3,7 +3,7 @@ import unittest
 import mock
 import nose.tools as ntools
 
-from smqtk.algorithms.content_description.colordescriptor.colordescriptor import (
+from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor import (
     ColorDescriptor_Image_csift  # arbitrary leaf class
 )
 
@@ -12,7 +12,7 @@ __author__ = 'purg'
 
 class TestColorDescriptor (unittest.TestCase):
 
-    @mock.patch('smqtk.algorithms.content_description.colordescriptor.colordescriptor'
+    @mock.patch('smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor'
                 '.safe_create_dir')
     def test_configuration(self, mock_scd):
         default_config = ColorDescriptor_Image_csift.get_default_config()

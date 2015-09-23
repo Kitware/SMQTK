@@ -14,7 +14,7 @@ import numpy
 import sklearn.cluster
 
 import pyflann
-from smqtk.algorithms.content_description import ContentDescriptor
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
@@ -25,7 +25,7 @@ from . import utils
 
 
 # noinspection PyPep8Naming
-class ColorDescriptor_Base (ContentDescriptor):
+class ColorDescriptor_Base (DescriptorGenerator):
     """
     Simple implementation of ColorDescriptor feature descriptor utility for
     feature generation over images and videos.
@@ -80,7 +80,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             except OSError:
                 log.warn("Could not locate colorDescriptor executable. Make "
                          "sure that its on the PATH! See "
-                         "smqtk/content_description/colordescriptor/INSTALL.md "
+                         "smqtk/descriptor_generator/colordescriptor/INSTALL.md "
                          "for help.")
                 ColorDescriptor_Base._is_usable_cache = False
 
@@ -88,7 +88,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             if not utils.has_colordescriptor_module():
                 log.warn("Could not import DescriptorIO. Make sure that the "
                          "colorDescriptor package is on the PYTHONPATH! See "
-                         "smqtk/content_description/colordescriptor/INSTALL.md "
+                         "smqtk/descriptor_generator/colordescriptor/INSTALL.md "
                          "for help.")
                 ColorDescriptor_Base._is_usable_cache = False
 

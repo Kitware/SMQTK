@@ -12,7 +12,7 @@ from smqtk.utils import SimpleTimer
 __author__ = 'purg'
 
 
-class ContentDescriptor (SmqtkAlgorithm):
+class DescriptorGenerator (SmqtkAlgorithm):
     """
     Base abstract Feature Descriptor interface
     """
@@ -237,7 +237,7 @@ def _async_feature_generator_helper(cd_inst, data):
     :type data: smqtk.representation.DataElement
 
     :param cd_inst: Content descriptor that will generate the feature
-    :type cd_inst: SMQTK.content_description.ContentDescriptor
+    :type cd_inst: smqtk.descriptor_generator.DescriptorGenerator
 
     :return: UID and associated feature vector
     :rtype: numpy.core.multiarray.ndarray or None
@@ -266,7 +266,7 @@ def _async_feature_generator_helper(cd_inst, data):
 
 def get_content_descriptor_impls(reload_modules=False):
     """
-    Discover and return ``ContentDescriptor`` classes found in the given plugin
+    Discover and return ``DescriptorGenerator`` classes found in the given plugin
     search directory. Keys in the returned map are the names of the discovered
     classes, and the paired values are the actual class type objects.
 
@@ -283,7 +283,7 @@ def get_content_descriptor_impls(reload_modules=False):
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``ContentDescriptor`` whose
+    :return: Map of discovered class object of type ``DescriptorGenerator`` whose
         keys are the string names of the classes.
     :rtype: dict of (str, type)
 
@@ -302,5 +302,5 @@ def get_content_descriptor_impls(reload_modules=False):
             return False
         return True
 
-    return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
+    return get_plugins(__name__, this_dir, helper_var, DescriptorGenerator,
                        class_filter, reload_modules)

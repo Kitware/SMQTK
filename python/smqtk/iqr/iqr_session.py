@@ -74,7 +74,7 @@ class IqrSession (object):
         :type work_directory: str
 
         :param descriptor: Descriptor to use for this IQR session
-        :type descriptor: smqtk.content_description.ContentDescriptor
+        :type descriptor: smqtk.descriptor_generator.DescriptorGenerator
 
         :param indexer: indexer to use for this IQR session
         :type indexer: smqtk.indexing.Indexer

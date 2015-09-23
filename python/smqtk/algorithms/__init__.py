@@ -42,15 +42,16 @@ class SmqtkAlgorithm (Configurable):
         """
         Check whether this descriptor is available for use.
 
-        Since certain ContentDescriptor implementations may require additional
+        Since certain algorithm implementations may require additional
         dependencies that may not yet be available on the system, this method
         should check for those dependencies and return a boolean saying if the
         implementation is usable.
 
         NOTES:
             - This should be a class method
-            - When not available, this should emit a warning message pointing to
-                documentation on how to get/install required dependencies.
+            - When an implementation is deemed not usable, this should emit a
+                warning detailing why the implementation is not available for
+                use.
 
         :return: Boolean determination of whether this implementation is usable.
         :rtype: bool

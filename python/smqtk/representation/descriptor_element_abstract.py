@@ -125,7 +125,7 @@ class DescriptorElement (Configurable):
 
     def type(self):
         """
-        :return: Type label type of the ContentDescriptor that generated this
+        :return: Type label type of the DescriptorGenerator that generated this
             vector.
         :rtype: str
         """

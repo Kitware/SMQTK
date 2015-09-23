@@ -103,11 +103,11 @@ Explanations about whether an extra model is required and how it is constructed 
 
 For example, part of the definition of a ``NearestNeighborsIndex`` algorithm is that there is an index to search over, which is arguably a model for that algorithm.
 Thus, the ``build_index()`` method, which should build the index model, is part of that algorithm's interface.
-Other algorithms, like the ``ContentDescriptor`` class of algorithms, do not have a high-level model building method, and model generation or choice is left to specific implementations to explain or provide.
+Other algorithms, like the ``DescriptorGenerator`` class of algorithms, do not have a high-level model building method, and model generation or choice is left to specific implementations to explain or provide.
 
-### ContentDescriptor Models
-The ``ContentDescriptor`` interface does not define a model building method, but some implementations require internal models.
-Below is explanations on how to build modes for ``ContentDescriptor`` implementations that require a model.
+### DescriptorGenerator Models
+The ``DescriptorGenerator`` interface does not define a model building method, but some implementations require internal models.
+Below is explanations on how to build modes for ``DescriptorGenerator`` implementations that require a model.
 
 #### ColorDescriptor
 ColorDescriptor implementations need to build a visual bag-of-words codebook model for reducing the dimensionality of the many low-level descriptors detected in an input data element.
@@ -121,7 +121,7 @@ Otherwise, the provided directory is used to store model components when the ``g
 Please reference the constructor's doc-string for the description of other constructor parameters.
 
 The method ``generate_model(data_set)`` is provided on instances, which should be given an iterable of ``DataElement`` instances representing media that should be used for training the visual bag-of-words codebook.
-Media content types that are supported by ``ContentDescriptor`` instances is listed via the ``valid_content_types()`` method.
+Media content types that are supported by ``DescriptorGenerator`` instances is listed via the ``valid_content_types()`` method.
 
 Below is an example code snippet of how to train a ColorDescriptor model for some instance of a ColorDescriptor implementation class and configuration.
 

@@ -16,6 +16,7 @@ __author__ = 'purg'
 
 def test_get_descriptors():
     m = get_descriptor_generator_impls()
+    # Currently no types that are guaranteed available
     ntools.assert_is_instance(m, dict, "Should return a dictionary of class "
                                        "label-to-types")
 

@@ -324,9 +324,6 @@ class ColorDescriptor_Base (ContentDescriptor):
         the "autotune" or linear algorithm to intelligently pick the fastest
         indexing method.
 
-        :param num_elements: Number of data elements in the iterator
-        :type num_elements: int
-
         :param data_set: Set of input data elements to generate the model
             with.
         :type data_set: collections.Set[smqtk.data_rep.DataElement]

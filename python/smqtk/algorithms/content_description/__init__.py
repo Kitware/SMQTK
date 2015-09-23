@@ -1,12 +1,3 @@
-"""
-LICENCE
--------
-Copyright 2013 by Kitware, Inc. All Rights Reserved. Please refer to
-KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
-Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
-
-"""
-
 import abc
 import logging
 import multiprocessing
@@ -14,11 +5,14 @@ import numpy
 import os
 import traceback
 
+from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import SimpleTimer
-from smqtk.utils.configurable_interface import Configurable
 
 
-class ContentDescriptor (Configurable):
+__author__ = 'purg'
+
+
+class ContentDescriptor (SmqtkAlgorithm):
     """
     Base abstract Feature Descriptor interface
     """
@@ -27,41 +21,6 @@ class ContentDescriptor (Configurable):
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
     PARALLEL = None
-
-    @property
-    def log(self):
-        """
-        :return: logging object for this class
-        :rtype: logging.Logger
-        """
-        return logging.getLogger('.'.join((self.__module__,
-                                           self.__class__.__name__)))
-
-    @property
-    def name(self):
-        return self.__class__.__name__
-
-    # noinspection PyMethodParameters
-    @abc.abstractmethod
-    def is_usable(cls):
-        """
-        Check whether this descriptor is available for use.
-
-        Since certain ContentDescriptor implementations may require additional
-        dependencies that may not yet be available on the system, this method
-        should check for those dependencies and return a boolean saying if the
-        implementation is usable.
-
-        NOTES:
-            - This should be a class method
-            - When not available, this should emit a warning message pointing to
-                documentation on how to get/install required dependencies.
-
-        :return: Boolean determination of whether this implementation is usable.
-        :rtype: bool
-
-        """
-        return
 
     @abc.abstractmethod
     def valid_content_types(self):
@@ -97,10 +56,10 @@ class ContentDescriptor (Configurable):
             if di.content_type() not in valid_types:
                 invalid_types_found.add(di.content_type())
         if invalid_types_found:
-            self.log.error("Found one or more invalid content types among "
-                           "input:")
+            self._log.error("Found one or more invalid content types among "
+                            "input:")
             for t in sorted(invalid_types_found):
-                self.log.error("\t- '%s", t)
+                self._log.error("\t- '%s", t)
             raise ValueError("Discovered invalid content type among input "
                              "data: %s" % sorted(invalid_types_found))
 
@@ -138,7 +97,8 @@ class ContentDescriptor (Configurable):
         # Check content type against listed valid types
         ct = data.content_type()
         if ct not in self.valid_content_types():
-            self.log.error("Cannot compute descriptor of content type '%s'", ct)
+            self._log.error("Cannot compute descriptor of content type '%s'",
+                            ct)
             raise ValueError("Cannot compute descriptor of content type '%s'"
                              % ct)
 
@@ -152,7 +112,7 @@ class ContentDescriptor (Configurable):
             vec = self._compute_descriptor(data)
             descr_elem.set_vector(vec)
         else:
-            self.log.debug("Found existing vector in generated element.")
+            self._log.debug("Found existing vector in generated element.")
 
         return descr_elem
 
@@ -197,7 +157,7 @@ class ContentDescriptor (Configurable):
         :rtype: dict[collections.Hashable, smqtk.representation.DescriptorElement]
 
         """
-        self.log.info("Async compute features")
+        self._log.info("Async compute features")
 
         # Mapping of DataElement UUID to async processing result
         #: :type: dict[collections.Hashable, multiprocessing.pool.ApplyResult]
@@ -210,7 +170,7 @@ class ContentDescriptor (Configurable):
         parallel = kwds.get('parallel', None)
         pool_t = kwds.get('pool_type', multiprocessing.Pool)
         pool = pool_t(processes=parallel)
-        with SimpleTimer("Queuing descriptor computation...", self.log.debug):
+        with SimpleTimer("Queuing descriptor computation...", self._log.debug):
             for d in data_iter:
                 de_map[d.uuid()] = descr_factory.new_descriptor(self.name,
                                                                 d.uuid())
@@ -224,7 +184,7 @@ class ContentDescriptor (Configurable):
         # noinspection PyPep8Naming
         perc_T = 0.0
         perc_inc = 0.1
-        with SimpleTimer("Collecting async results...", self.log.debug):
+        with SimpleTimer("Collecting async results...", self._log.debug):
             for i, (uid, ar) in enumerate(ar_map.iteritems()):
                 feat = ar.get()
                 if feat is None:
@@ -235,9 +195,9 @@ class ContentDescriptor (Configurable):
 
                 perc = float(i + 1) / len(ar_map)
                 if perc >= perc_T:
-                    self.log.debug("Progress: [%d/%d] %3.3f%%",
-                                   i + 1, len(ar_map),
-                                   float(i + 1) / (len(ar_map)) * 100)
+                    self._log.debug("Progress: [%d/%d] %3.3f%%",
+                                    i + 1, len(ar_map),
+                                    float(i + 1) / (len(ar_map)) * 100)
                     perc_T += perc_inc
         pool.join()
 
@@ -304,9 +264,9 @@ def _async_feature_generator_helper(cd_inst, data):
         return None
 
 
-def get_descriptors(reload_modules=False):
+def get_content_descriptor_impls(reload_modules=False):
     """
-    Discover and return ContentDescriptor classes found in the given plugin
+    Discover and return ``ContentDescriptor`` classes found in the given plugin
     search directory. Keys in the returned map are the names of the discovered
     classes, and the paired values are the actual class type objects.
 
@@ -331,5 +291,16 @@ def get_descriptors(reload_modules=False):
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "CONTENT_DESCRIPTOR_CLASS"
+
+    def class_filter(cls):
+        log = logging.getLogger('.'.join([__name__,
+                                          'get_content_descriptor_impls',
+                                          'class_filter']))
+        if not cls.is_usable():
+            log.warn("Class type '%s' not usable, filtering out.",
+                     cls.__name__)
+            return False
+        return True
+
     return get_plugins(__name__, this_dir, helper_var, ContentDescriptor,
-                       lambda c: c.is_usable(), reload_modules)
+                       class_filter, reload_modules)

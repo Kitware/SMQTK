@@ -315,4 +315,4 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         return [self._descr_cache[i] for i in idxs], dists
 
 
-SIMILARITY_INDEX_CLASS = FlannNearestNeighborsIndex
+NN_INDEX_CLASS = FlannNearestNeighborsIndex

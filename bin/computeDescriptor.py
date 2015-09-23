@@ -12,14 +12,14 @@ import numpy
 
 from smqtk.representation.data_element_impl.file_element import DataFileElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.algorithms.content_description import get_descriptors
+from smqtk.algorithms.content_description import get_content_descriptor_impls
 from smqtk.utils import bin_utils, plugin
 
 
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
-        "content_descriptor": plugin.make_config(get_descriptors),
+        "content_descriptor": plugin.make_config(get_content_descriptor_impls),
     }
 
 
@@ -96,7 +96,7 @@ numpy format).
     factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
     #: :type: smqtk.content_description.ContentDescriptor
     cd = plugin.from_plugin_config(config['content_descriptor'],
-                                   get_descriptors)
+                                   get_content_descriptor_impls)
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

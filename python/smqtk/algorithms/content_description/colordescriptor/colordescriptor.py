@@ -20,8 +20,6 @@ from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
 from smqtk.utils.video_utils import get_metadata_info
 
-
-
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
 
@@ -216,8 +214,8 @@ class ColorDescriptor_Base (ContentDescriptor):
 
     @property
     def has_model(self):
-        has_model = (osp.isfile(self.codebook_filepath)
-                     and osp.isfile(self.flann_index_filepath))
+        has_model = (osp.isfile(self.codebook_filepath) and
+                     osp.isfile(self.flann_index_filepath))
         # Load the codebook model if not already loaded. FLANN index will be
         # loaded when needed to prevent thread/subprocess memory issues.
         if self._codebook is None and has_model:
@@ -334,29 +332,29 @@ class ColorDescriptor_Base (ContentDescriptor):
         super(ColorDescriptor_Base, self).generate_model(data_set, **kwargs)
 
         if self.has_model:
-            self.log.warn("ColorDescriptor model for descriptor type '%s' "
-                          "already generated!", self.descriptor_type())
+            self._log.warn("ColorDescriptor model for descriptor type '%s' "
+                           "already generated!", self.descriptor_type())
             return
 
         pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
         flann = pyflann.FLANN()
 
         if not osp.isfile(self.codebook_filepath):
-            self.log.info("Did not find existing ColorDescriptor codebook for "
-                          "descriptor '%s'.", self.descriptor_type())
+            self._log.info("Did not find existing ColorDescriptor codebook for "
+                           "descriptor '%s'.", self.descriptor_type())
 
             # generate descriptors
             with SimpleTimer("Generating descriptor matrices...",
-                             self.log.info):
+                             self._log.info):
                 descriptors_checkpoint = osp.join(self._work_dir,
                                                   "model_descriptors.npy")
 
                 if osp.isfile(descriptors_checkpoint):
-                    self.log.debug("Found existing computed descriptors work "
-                                   "file for model generation.")
+                    self._log.debug("Found existing computed descriptors work "
+                                    "file for model generation.")
                     descriptors = numpy.load(descriptors_checkpoint)
                 else:
-                    self.log.debug("Computing model descriptors")
+                    self._log.debug("Computing model descriptors")
                     _, descriptors = \
                         self._generate_descriptor_matrices(
                             data_set,
@@ -364,14 +362,14 @@ class ColorDescriptor_Base (ContentDescriptor):
                         )
                     _, tmp = tempfile.mkstemp(dir=self._work_dir,
                                               suffix='.npy')
-                    self.log.debug("Saving model-gen info/descriptor matrix")
+                    self._log.debug("Saving model-gen info/descriptor matrix")
                     numpy.save(tmp, descriptors)
                     os.rename(tmp, descriptors_checkpoint)
 
             # Compute centroids (codebook) with kmeans
             with SimpleTimer("Computing sklearn.cluster.MiniBatchKMeans...",
-                             self.log.info):
-                kmeans_verbose = self.log.getEffectiveLevel <= logging.DEBUG
+                             self._log.info):
+                kmeans_verbose = self._log.getEffectiveLevel <= logging.DEBUG
                 kmeans = sklearn.cluster.MiniBatchKMeans(
                     n_clusters=self._kmeans_k,
                     init_size=self._kmeans_k*3,
@@ -381,20 +379,20 @@ class ColorDescriptor_Base (ContentDescriptor):
                 )
                 kmeans.fit(descriptors)
                 codebook = kmeans.cluster_centers_
-            with SimpleTimer("Saving generated codebook...", self.log.debug):
+            with SimpleTimer("Saving generated codebook...", self._log.debug):
                 numpy.save(self.codebook_filepath, codebook)
         else:
-            self.log.info("Found existing codebook file.")
+            self._log.info("Found existing codebook file.")
             codebook = numpy.load(self.codebook_filepath)
 
         # create FLANN index
         # - autotune will force select linear search if there are < 1000 words
         #   in the codebook vocabulary.
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        if self._log.getEffectiveLevel() <= logging.DEBUG:
             log_level = 'info'
         else:
             log_level = 'warning'
-        with SimpleTimer("Building FLANN index...", self.log.info):
+        with SimpleTimer("Building FLANN index...", self._log.info):
             p = {
                 "target_precision": self._flann_target_precision,
                 "sample_fraction": self._flann_sample_fraction,
@@ -405,7 +403,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             if self._rand_seed is not None:
                 p['random_seed'] = self._rand_seed
             flann_params = flann.build_index(codebook, **p)
-        with SimpleTimer("Saving FLANN index to file...", self.log.debug):
+        with SimpleTimer("Saving FLANN index to file...", self._log.debug):
             # Save FLANN index data binary
             flann.save_index(self.flann_index_filepath)
             # Save out log of parameters
@@ -446,7 +444,8 @@ class ColorDescriptor_Base (ContentDescriptor):
                                % (self.codebook_filepath,
                                   self.flann_index_filepath))
 
-        self.log.debug("Computing descriptors for data UID[%s]...", data.uuid())
+        self._log.debug("Computing descriptors for data UID[%s]...",
+                        data.uuid())
         info, descriptors = self._generate_descriptor_matrices({data})
 
         if not self._use_sp:
@@ -454,7 +453,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             # Codebook Quantization
             #
             # - loaded the model at class initialization if we had one
-            self.log.debug("Quantizing descriptors")
+            self._log.debug("Quantizing descriptors")
             pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
             flann = pyflann.FLANN()
             flann.load_index(self.flann_index_filepath, self._codebook)
@@ -462,8 +461,8 @@ class ColorDescriptor_Base (ContentDescriptor):
                 idxs, dists = flann.nn_index(descriptors)
             except AssertionError:
 
-                self.log.error("Codebook shape  : %s", self._codebook.shape)
-                self.log.error("Descriptor shape: %s", descriptors.shape)
+                self._log.error("Codebook shape  : %s", self._codebook.shape)
+                self._log.error("Descriptor shape: %s", descriptors.shape)
 
                 raise
 
@@ -482,7 +481,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             #: :type: numpy.core.multiarray.ndarray
             h = numpy.histogram(idxs,  # indices are all integers
                                 bins=numpy.arange(self._codebook.shape[0]+1))[0]
-            # self.log.debug("Quantization histogram: %s", h)
+            # self._log.debug("Quantization histogram: %s", h)
             # Normalize histogram into relative frequencies
             # - Not using /= on purpose. h is originally int32 coming out of
             #   histogram. /= would keep int32 type when we want it to be
@@ -492,20 +491,20 @@ class ColorDescriptor_Base (ContentDescriptor):
                 h = h / float(h.sum())
             else:
                 h = numpy.zeros(h.shape, h.dtype)
-            # self.log.debug("Normalized histogram: %s", h)
+            # self._log.debug("Normalized histogram: %s", h)
 
         else:
             ###
             # Spatial Pyramid Quantization
             #
-            self.log.debug("Quantizing descriptors using spatial pyramid")
+            self._log.debug("Quantizing descriptors using spatial pyramid")
             ##
             # Quantization factor - number of nearest codes to be saved
             q_factor = 10
             ##
             # Concatenating spatial information to descriptor vectors to format:
             #   [ x y <descriptor> ]
-            self.log.debug("Creating combined descriptor matrix")
+            self._log.debug("Creating combined descriptor matrix")
             m = numpy.concatenate((info[:, :2],
                                    descriptors), axis=1)
             ##
@@ -519,22 +518,24 @@ class ColorDescriptor_Base (ContentDescriptor):
             # doesn't make sense to do.
             #   idxs, dists = flann.nn_index(m[:, 2:], q_factor)
             #   q = numpy.concatenate([m[:, :2], idxs, dists], axis=1)
-            self.log.debug("Computing nearest neighbors")
+            self._log.debug("Computing nearest neighbors")
             pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
             flann = pyflann.FLANN()
             flann.load_index(self.flann_index_filepath, self._codebook)
             idxs = flann.nn_index(m[:, 2:], q_factor)[0]
-            self.log.debug("Creating quantization matrix")
+            self._log.debug("Creating quantization matrix")
             q = numpy.concatenate([m[:, :2], idxs], axis=1)
             ##
             # Build spatial pyramid from quantized matrix
-            self.log.debug("Building spatial pyramid histograms")
+            self._log.debug("Building spatial pyramid histograms")
             hist_sp = self._build_sp_hist(q, self._codebook.shape[0])
             ##
             # Combine each quadrants into single vector
-            self.log.debug("Combining global+thirds into final histogram.")
+            self._log.debug("Combining global+thirds into final histogram.")
             f = sys.float_info.min  # so as we don't div by 0 accidentally
-            rf_norm = lambda h: h / (float(h.sum()) + f)
+
+            def rf_norm(hist):
+                return hist / (float(hist.sum()) + f)
             h = numpy.concatenate([rf_norm(hist_sp[0]),
                                    rf_norm(hist_sp[5]),
                                    rf_norm(hist_sp[6]),
@@ -543,7 +544,7 @@ class ColorDescriptor_Base (ContentDescriptor):
             # noinspection PyAugmentAssignment
             h /= h.sum()
 
-        self.log.debug("Saving checkpoint feature file")
+        self._log.debug("Saving checkpoint feature file")
         if not osp.isdir(osp.dirname(checkpoint_filepath)):
             safe_create_dir(osp.dirname(checkpoint_filepath))
         numpy.save(checkpoint_filepath, h)
@@ -712,7 +713,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             # Mapping of UID to tuple containing:
             #   (info_fp, desc_fp, async processing result, tmp_clean_method)
             r_map = {}
-            with SimpleTimer("Computing descriptors async...", self.log.debug):
+            with SimpleTimer("Computing descriptors async...", self._log.debug):
                 for di in data_set:
                     # Creating temporary image file from data bytes
                     tmp_img_fp = self._get_data_temp_path(di)
@@ -729,7 +730,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             # matrix shapes.
             # - Transforms r_map into:
             #       UID -> (info_fp, desc_fp, starting_row, SubSampleIndices)
-            self.log.debug("Constructing information for super matrices...")
+            self._log.debug("Constructing information for super matrices...")
             s_keys = sorted(r_map.keys())
             running_height = 0  # info and desc heights congruent
 
@@ -743,9 +744,9 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                 try:
                     i_shape, d_shape = r.get()
                 except RuntimeError, ex:
-                    self.log.warning("Descriptor generation failed for "
-                                     "UID[%s], skipping its inclusion in "
-                                     "model: %s", uid, str(ex))
+                    self._log.warning("Descriptor generation failed for "
+                                      "UID[%s], skipping its inclusion in "
+                                      "model: %s", uid, str(ex))
                     r_map[uid] = None
                     continue
                 finally:
@@ -773,7 +774,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             pool.join()
 
             # Asynchronously load files, inserting data into master matrices
-            self.log.debug("Building super matrices...")
+            self._log.debug("Building super matrices...")
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
@@ -867,7 +868,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         #   (info_fp, desc_fp, async processing result)
         r_map = {}
         with SimpleTimer("Extracting frames and submitting descriptor jobs...",
-                         self.log.debug):
+                         self._log.debug):
             for di in data_set:
                 r_map[di.uuid()] = {}
                 tmp_vid_fp = self._get_data_temp_path(di)
@@ -901,7 +902,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         # Each result is a tuple of two ndarrays: info and descriptor matrices
         with SimpleTimer("Collecting shape information for super matrices...",
-                         self.log.debug):
+                         self._log.debug):
             running_height = 0
 
             i_width = None
@@ -922,9 +923,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     try:
                         i_shape, d_shape = r.get()
                     except RuntimeError, ex:
-                        self.log.warning('Descriptor generation failed for '
-                                         'frame %d in video UID[%s]: %s',
-                                         frame, uid, str(ex))
+                        self._log.warning('Descriptor generation failed for '
+                                          'frame %d in video UID[%s]: %s',
+                                          frame, uid, str(ex))
                         r_map[uid] = None
                         continue
 
@@ -957,7 +958,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         del pool
 
         with SimpleTimer("Building master descriptor matrices...",
-                         self.log.debug):
+                         self._log.debug):
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)

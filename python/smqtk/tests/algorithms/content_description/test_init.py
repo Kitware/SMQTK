@@ -7,7 +7,7 @@ import nose.tools as ntools
 import numpy
 
 from smqtk.algorithms.content_description import ContentDescriptor
-from smqtk.algorithms.content_description import get_descriptors
+from smqtk.algorithms.content_description import get_content_descriptor_impls
 from smqtk.algorithms.content_description import _async_feature_generator_helper
 import smqtk.representation
 
@@ -15,7 +15,7 @@ __author__ = 'purg'
 
 
 def test_get_descriptors():
-    m = get_descriptors()
+    m = get_content_descriptor_impls()
     ntools.assert_is_instance(m, dict, "Should return a dictionary of class "
                                        "label-to-types")
 

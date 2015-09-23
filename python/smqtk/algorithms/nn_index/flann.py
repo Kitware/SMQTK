@@ -5,7 +5,7 @@ import os.path as osp
 
 import numpy
 
-from smqtk.algorithms.similarity_index import SimilarityIndex
+from smqtk.algorithms.nn_index import NearestNeighborsIndex
 
 try:
     import pyflann
@@ -16,7 +16,7 @@ except ImportError:
 __author__ = 'purg'
 
 
-class FlannSimilarity (SimilarityIndex):
+class FlannNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FLANN library (pyflann module).
 
@@ -283,7 +283,7 @@ class FlannSimilarity (SimilarityIndex):
 
         """
         self._restore_index()
-        super(FlannSimilarity, self).nn(d, n)
+        super(FlannNearestNeighborsIndex, self).nn(d, n)
         vec = d.vector()
 
         # If the distance method is HIK, we need to treat it special since that
@@ -315,4 +315,4 @@ class FlannSimilarity (SimilarityIndex):
         return [self._descr_cache[i] for i in idxs], dists
 
 
-SIMILARITY_INDEX_CLASS = FlannSimilarity
+SIMILARITY_INDEX_CLASS = FlannNearestNeighborsIndex

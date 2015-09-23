@@ -5,7 +5,7 @@ import numpy as np
 
 from smqtk.representation.descriptor_element_impl.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.iqr_index.libsvm_hik import LibSvmHikIqrIndex
+from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
 
 
 __author__ = 'purg'
@@ -39,13 +39,13 @@ class TestIqrSvmHik (unittest.TestCase):
         cls.q_neg.set_vector(np.array([0, 0, 0, .5, .5], float))
 
     def test_configuration(self):
-        c = LibSvmHikIqrIndex.get_default_config()
+        c = LibSvmHikRelevancyIndex.get_default_config()
         ntools.assert_in('descr_cache_filepath', c)
 
         # change default for something different
         c['descr_cache_filepath'] = 'foobar.thing'
 
-        iqr_index = LibSvmHikIqrIndex.from_config(c)
+        iqr_index = LibSvmHikRelevancyIndex.from_config(c)
         ntools.assert_equal(iqr_index._descr_cache_fp,
                             c['descr_cache_filepath'])
 
@@ -53,22 +53,22 @@ class TestIqrSvmHik (unittest.TestCase):
         ntools.assert_dict_equal(c, iqr_index.get_config())
 
     def test_rank_no_neg(self):
-        iqr_index = LibSvmHikIqrIndex()
+        iqr_index = LibSvmHikRelevancyIndex()
         iqr_index.build_index(self.index_descriptors)
         ntools.assert_raises(ValueError, iqr_index.rank, [self.q_pos], [])
 
     def test_rank_no_pos(self):
-        iqr_index = LibSvmHikIqrIndex()
+        iqr_index = LibSvmHikRelevancyIndex()
         iqr_index.build_index(self.index_descriptors)
         ntools.assert_raises(ValueError, iqr_index.rank, [], [self.q_neg])
 
     def test_rank_no_input(self):
-        iqr_index = LibSvmHikIqrIndex()
+        iqr_index = LibSvmHikRelevancyIndex()
         iqr_index.build_index(self.index_descriptors)
         ntools.assert_raises(ValueError, iqr_index.rank, [], [])
 
     def test_count(self):
-        iqr_index = LibSvmHikIqrIndex()
+        iqr_index = LibSvmHikRelevancyIndex()
         ntools.assert_equal(iqr_index.count(), 0)
         iqr_index.build_index(self.index_descriptors)
         ntools.assert_equal(iqr_index.count(), 7)
@@ -81,7 +81,7 @@ class TestIqrSvmHik (unittest.TestCase):
         # Rank index based on chosen pos/neg
         # Check that positive choices are at the top of the ranking (closest to
         #   0) and negative choices are closest to the bottom.
-        iqr_index = LibSvmHikIqrIndex()
+        iqr_index = LibSvmHikRelevancyIndex()
         iqr_index.build_index(self.index_descriptors)
 
         rank = iqr_index.rank([self.q_pos], [self.q_neg])

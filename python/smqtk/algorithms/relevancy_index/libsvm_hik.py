@@ -4,7 +4,7 @@ import os.path as osp
 
 import numpy
 
-from smqtk.algorithms.iqr_index import IqrIndex
+from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (
     compute_distance_matrix
 )
@@ -21,7 +21,7 @@ except ImportError:
 __author__ = 'purg'
 
 
-class LibSvmHikIqrIndex (IqrIndex):
+class LibSvmHikRelevancyIndex (RelevancyIndex):
     """
     Uses libSVM python interface, using histogram intersection, to implement
     IQR ranking.
@@ -247,4 +247,4 @@ class LibSvmHikIqrIndex (IqrIndex):
         return rank_pool
 
 
-IQR_INDEX_CLASS = LibSvmHikIqrIndex
+IQR_INDEX_CLASS = LibSvmHikRelevancyIndex

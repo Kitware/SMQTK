@@ -1,7 +1,7 @@
 # SMQTK
 ![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
 
-Social Multimedia Query ToolKit aims to provide a simple and easy to use interface for content descriptor generation for machine learning, content similarity computation (kNN implementations), and ranking for online Iterative Query Refinement (IQR) adjudications.
+Social Multimedia Query ToolKit aims to provide a simple and easy to use interface for content descriptor generation for machine learning, content similarity computation (kNN implementations), and relevancy ranking for online Iterative Query Refinement (IQR) adjudications.
 
 
 ## Dependencies
@@ -74,21 +74,23 @@ Optionally, the `ccmake` command line utility, or the GUI version, may be run in
 Currently, the selection is very minimal, but may be expanded over time.
 
 ### Example
-    # Check things out
-    cd /where/things/should/go/
-    git clone https://github.com/Kitware/SMQTK.git source
-    # Install python dependencies to environment
-    pip install -r source/requirements.conda.txt -r source/requirements.pip.txt
-    # SMQTK build
-    mkdir build
-    pushd build
-    cmake ../source
-    make -j2
-    popd
-    # Set up SMQTK environment by sourcing file
-    . build/setup_smqtk.build.sh
-    # Running tests
-    source/run_tests.sh
+```bash
+# Check things out
+cd /where/things/should/go/
+git clone https://github.com/Kitware/SMQTK.git source
+# Install python dependencies to environment
+pip install -r source/requirements.conda.txt -r source/requirements.pip.txt
+# SMQTK build
+mkdir build
+pushd build
+cmake ../source
+make -j2
+popd
+# Set up SMQTK environment by sourcing file
+. build/setup_smqtk.build.sh
+# Running tests
+source/run_tests.sh
+```
 
 
 ## Algorithm Models
@@ -99,7 +101,7 @@ Algorithm implementations that require extra modeling are responsible for provid
 Some algorithm implementations may also be pre-packaged with one or more specific models to optionally choose from, due to some performance, tuning or feasibility constraint.
 Explanations about whether an extra model is required and how it is constructed should be detailed by the documentation for that specific implementation.
 
-For example, part of the definition of a SimilarityIndex algorithm, or nearest-neighbors algorithm, is that there is an index to search over, which is arguably a model for that algorithm.
+For example, part of the definition of a ``NearestNeighborsIndex`` algorithm is that there is an index to search over, which is arguably a model for that algorithm.
 Thus, the ``build_index()`` method, which should build the index model, is part of that algorithm's interface.
 Other algorithms, like the ``ContentDescriptor`` class of algorithms, do not have a high-level model building method, and model generation or choice is left to specific implementations to explain or provide.
 
@@ -143,17 +145,17 @@ new_cd = ColorDescriptor_<flavor>(model_directory="data", work_directory="work")
 new_cd.compute_descriptor(new_data, some_factory)
 ```
 
-### SimilarityIndex Models (k nearest-neighbors)
-``SimilarityIndex`` interfaced classes include a ``build_index`` method on instances that should build the index model for an implementation.
+### NearestNeighborsIndex Models (k nearest-neighbors)
+``NearestNeighborsIndex`` interfaced classes include a ``build_index`` method on instances that should build the index model for an implementation.
 Implementations, if they allow for persistant storage, should take relevant parameters at construction time.
 Currently, we do not package an implementation that require additional model creation.
 
-The general pattern for ``SimilarityIndex`` instance index model generation:
+The general pattern for ``NearestNeighborsIndex`` instance index model generation:
 
 ```python
 descriptors = [...]  # some number of descriptors to index
 
-index = SimilarityIndexImpl(...)
+index = NearestNeighborsIndexImpl(...)
 # Calling ``nn`` should fail before an index has been built.
 
 index.build_index(descriptors)
@@ -162,17 +164,17 @@ q = DescriptorElementImpl(...)
 neighbors, dists = index.nn(q)
 ```
 
-### IQR Index Models
-``IqrIndex`` interfaced classes include a ``build_index`` method in instances that should build the index model for a particular implementation.
+### RelevancyIndex Models
+``RelevancyIndex`` interfaced classes include a ``build_index`` method in instances that should build the index model for a particular implementation.
 Implementations, if they allow for persistant storage, should take relevant parameters at construction time.
 Currently, we do not package an implementation that requires additional model creation.
 
-The general pattern for ``IqrIndex`` instance index model generation:
+The general pattern for ``RelevancyIndex`` instance index model generation:
 
 ```python
 descriptors = [...]  # some number of descriptors to index
 
-index = IqrIndexImpl(...)
+index = RelevancyIndexImpl(...)
 # Calling ``rank`` should fail before an index has been built.
 
 index.build_index(descriptors)

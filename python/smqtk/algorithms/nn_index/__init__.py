@@ -11,9 +11,10 @@ from smqtk.utils.configurable_interface import Configurable
 __author__ = 'purg'
 
 
-class SimilarityIndex (Configurable):
+class NearestNeighborsIndex (Configurable):
     """
-    Common interface for descriptor-based nearest-neighbor computation.
+    Common interface for descriptor-based nearest-neighbor computation over a
+    built index of descriptors.
 
     Implementations, if they allow persistent storage of their index, should
     take the necessary parameters at construction time. Persistant storage
@@ -92,7 +93,7 @@ class SimilarityIndex (Configurable):
             raise ValueError("No index currently set to query from!")
 
 
-def get_similarity_nn(reload_modules=False):
+def get_nn_index_impls(reload_modules=False):
     """
     Discover and return SimilarityNN implementation classes found in the given
     plugin search directory. Keys in the returned map are the names of the
@@ -130,5 +131,5 @@ def get_similarity_nn(reload_modules=False):
             return False
         return True
 
-    return get_plugins(__name__, this_dir, helper_var, SimilarityIndex,
+    return get_plugins(__name__, this_dir, helper_var, NearestNeighborsIndex,
                        class_filter, reload_modules)

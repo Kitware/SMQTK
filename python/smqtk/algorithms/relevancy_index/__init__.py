@@ -7,13 +7,7 @@ from smqtk.utils.configurable_interface import Configurable
 __author__ = 'purg'
 
 
-# TODO: This module/interface should be renamed
-#       While used in the IQR process, this algorithm interface is not the whole
-#       of what IQR is, but just the algorithm that ranks an index of
-#       descriptors given positive and negative exemplar descriptors.
-
-
-class IqrIndex (Configurable):
+class RelevancyIndex (Configurable):
     """
     Abstract class for IQR index implementations.
 
@@ -137,5 +131,5 @@ def get_iqr_index(reload_modules=False):
             return False
         return True
 
-    return get_plugins(__name__, this_dir, helper_var, IqrIndex,
+    return get_plugins(__name__, this_dir, helper_var, RelevancyIndex,
                        class_filter, reload_modules)

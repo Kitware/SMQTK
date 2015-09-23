@@ -8,7 +8,7 @@ import os.path as osp
 import numpy
 import numpy.matlib
 
-from smqtk.algorithms.similarity_index import SimilarityIndex
+from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.code_index import get_index_types
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 from smqtk.utils import (
@@ -21,7 +21,7 @@ from smqtk.utils import (
 __author__ = 'purg'
 
 
-class ITQSimilarityIndex (SimilarityIndex):
+class ITQNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest neighbor implementation using Iterative Quantization (ITQ), a method
     to convert a descriptor (e.g. 4000-dim vector) to few bits (e.g. 64 bits).
@@ -70,7 +70,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :rtype: dict
 
         """
-        default = super(ITQSimilarityIndex, cls).get_default_config()
+        default = super(ITQNearestNeighborsIndex, cls).get_default_config()
 
         # replace ``code_index`` with nested plugin configuration
         index_conf = plugin.make_config(get_index_types)
@@ -97,7 +97,7 @@ class ITQSimilarityIndex (SimilarityIndex):
         :type config_dict: dict
 
         :return: ITQ similarity index instance
-        :rtype: ITQSimilarityIndex
+        :rtype: ITQNearestNeighborsIndex
 
         """
         # Transform nested plugin stuff into actual classes.
@@ -105,7 +105,7 @@ class ITQSimilarityIndex (SimilarityIndex):
             plugin.from_plugin_config(config_dict['code_index'],
                                       get_index_types)
 
-        return super(ITQSimilarityIndex, cls).from_config(config_dict)
+        return super(ITQNearestNeighborsIndex, cls).from_config(config_dict)
 
     def __init__(self, mean_vec_filepath=None,
                  rotation_filepath=None,

@@ -6,12 +6,12 @@ import numpy
 
 from smqtk.representation.descriptor_element_impl.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.similarity_index import SimilarityIndex
+from smqtk.algorithms.nn_index import NearestNeighborsIndex
 
 __author__ = 'purg'
 
 
-class DummySI (SimilarityIndex):
+class DummySI (NearestNeighborsIndex):
     @classmethod
     def is_usable(cls):
         True

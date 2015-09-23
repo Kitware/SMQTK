@@ -9,7 +9,7 @@ import numpy
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 from smqtk.representation.descriptor_element_impl.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.similarity_index.lsh.itq import ITQSimilarityIndex
+from smqtk.algorithms.nn_index.lsh.itq import ITQNearestNeighborsIndex
 from smqtk.utils.file_utils import make_tempfile
 
 __author__ = 'purg'
@@ -39,7 +39,7 @@ class TestIqrSimilarityIndex (unittest.TestCase):
         self._clean_cache_files()
         # Initialize with a fresh code index instance every time, otherwise the
         # same code index is maintained between constructions
-        return ITQSimilarityIndex(self.ITQ_MEAN_VEC, self.ITQ_ROTATION_MAT,
+        return ITQNearestNeighborsIndex(self.ITQ_MEAN_VEC, self.ITQ_ROTATION_MAT,
                                   code_index=MemoryCodeIndex(),
                                   bit_length=bits,
                                   distance_method=dist_method,
@@ -49,7 +49,7 @@ class TestIqrSimilarityIndex (unittest.TestCase):
         self._clean_cache_files()
 
     def test_configuration(self):
-        c = ITQSimilarityIndex.get_default_config()
+        c = ITQNearestNeighborsIndex.get_default_config()
         # Default code index should be memory based
         ntools.assert_equal(c['code_index']['type'], 'MemoryCodeIndex')
         ntools.assert_true(c['mean_vec_filepath'] is None)
@@ -66,7 +66,7 @@ class TestIqrSimilarityIndex (unittest.TestCase):
         c['rotation_filepath'] = 'rot.npy'
 
         # Make instance
-        index = ITQSimilarityIndex.from_config(c)
+        index = ITQNearestNeighborsIndex.from_config(c)
         ntools.assert_equal(index._mean_vec_cache_filepath,
                             c['mean_vec_filepath'])
         ntools.assert_equal(index._rotation_cache_filepath,

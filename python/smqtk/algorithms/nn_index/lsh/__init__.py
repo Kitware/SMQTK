@@ -4,9 +4,9 @@ indexing techniques.
 """
 __author__ = 'purg'
 
-from .itq import ITQSimilarityIndex
+from .itq import ITQNearestNeighborsIndex
 
 
 SIMILARITY_INDEX_CLASS = [
-    ITQSimilarityIndex
+    ITQNearestNeighborsIndex
 ]

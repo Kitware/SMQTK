@@ -7,14 +7,14 @@ import numpy
 
 from smqtk.representation.descriptor_element_impl.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.similarity_index.flann import FlannSimilarity
+from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
 from smqtk.utils.file_utils import make_tempfile
 
 __author__ = 'purg'
 
 
 # Don't bother running tests of the class is not usable
-if FlannSimilarity.is_usable():
+if FlannNearestNeighborsIndex.is_usable():
 
     class TestFlannIndex (unittest.TestCase):
 
@@ -40,11 +40,11 @@ if FlannSimilarity.is_usable():
 
         def _make_inst(self, dist_method):
             """
-            Make an instance of FlannSimilarity
+            Make an instance of FlannNearestNeighborsIndex
             """
             self._make_cache_files()
             self._clean_cache_files()
-            return FlannSimilarity(self.FLANN_INDEX_CACHE,
+            return FlannNearestNeighborsIndex(self.FLANN_INDEX_CACHE,
                                    self.FLANN_PARAMETER_CACHE,
                                    self.FLANN_DESCR_CACHE,
                                    distance_method=dist_method,
@@ -138,7 +138,7 @@ if FlannSimilarity.is_usable():
             self._clean_cache_files()
 
             # Make configuration based on default
-            c = FlannSimilarity.get_default_config()
+            c = FlannNearestNeighborsIndex.get_default_config()
             c['index_filepath'] = self.FLANN_INDEX_CACHE
             c['parameters_filepath'] = self.FLANN_PARAMETER_CACHE
             c['descriptor_cache_filepath'] = self.FLANN_DESCR_CACHE
@@ -146,7 +146,7 @@ if FlannSimilarity.is_usable():
             c['random_seed'] = 42
 
             # Build based on configuration
-            index = FlannSimilarity.from_config(c)
+            index = FlannNearestNeighborsIndex.from_config(c)
             ntools.assert_equal(index._index_filepath, self.FLANN_INDEX_CACHE)
             ntools.assert_equal(index._index_param_filepath,
                                 self.FLANN_PARAMETER_CACHE)

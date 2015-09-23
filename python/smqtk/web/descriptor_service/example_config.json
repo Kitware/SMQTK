@@ -24,7 +24,8 @@
     // These descriptors will need to already have models generated if they
     // require one.
     // This sections will consist of "label": {configuration} pairs,
-    //      where {configuration} is the
+    //      where {configuration} is the JSON configuration dictionary for the
+    //      specified implementation type.
     "descriptor_generators": {
         "example": {
             "type": "ColorDescriptor_Image_csift",

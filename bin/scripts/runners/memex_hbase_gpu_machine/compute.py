@@ -23,7 +23,7 @@ import tempfile
 from tika import detector as tika_detector
 import time
 
-from smqtk.data_rep.descriptor_element_impl.local_elements import DescriptorFileElement
+from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
 import smqtk.utils.bin_utils
 import smqtk.utils.factors
 import smqtk.utils.file_utils

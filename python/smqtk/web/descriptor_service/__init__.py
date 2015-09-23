@@ -1,19 +1,19 @@
-import flask
 import mimetypes
 import multiprocessing
 import os
+
+import flask
 import requests
 
-from smqtk.content_description import get_descriptors
-from smqtk.data_rep import DescriptorElementFactory
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.data_rep.data_element_impl.memory_element import DataMemoryElement
-from smqtk.data_rep.data_element_impl.url_element import DataUrlElement
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.representation import DescriptorElementFactory
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
 from smqtk.utils import plugin
 from smqtk.utils.configuration import merge_configs
 from smqtk.web import SmqtkWebApp
-
 
 MIMETYPES = mimetypes.MimeTypes()
 
@@ -64,7 +64,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         merge_configs(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generators": {
-                "example": plugin.make_config(get_descriptors)
+                "example": plugin.make_config(get_descriptor_generator_impls)
             }
         })
         return c
@@ -89,7 +89,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         #: :type: dict[str, dict]
         self.generator_label_configs = self.json_config['descriptor_generators']
 
-        # Cache of ContentDescriptor instances so we don't have to continuously
+        # Cache of DescriptorGenerator instances so we don't have to continuously
         # initialize them as we get requests.
         self.descriptor_cache = {}
         self.descriptor_cache_lock = multiprocessing.RLock()
@@ -251,7 +251,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         Get the cached content descriptor instance for a configuration label
         :type label: str
-        :rtype: smqtk.content_description.ContentDescriptor
+        :rtype: smqtk.descriptor_generator.DescriptorGenerator
         """
         with self.descriptor_cache_lock:
             if label not in self.descriptor_cache:
@@ -259,7 +259,7 @@ class DescriptorServiceServer (SmqtkWebApp):
                 self.descriptor_cache[label] = \
                     plugin.from_plugin_config(
                     self.generator_label_configs[label],
-                        get_descriptors
+                        get_descriptor_generator_impls
                     )
 
             return self.descriptor_cache[label]
@@ -274,7 +274,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         :param uri: URI to data
         :type uri: str
         :return: DataElement instance wrapping given URI to data.
-        :rtype: smqtk.data_rep.DataElement
+        :rtype: smqtk.representation.DataElement
 
         """
         # Resolve URI into appropriate DataElement instance
@@ -315,11 +315,11 @@ class DescriptorServiceServer (SmqtkWebApp):
         :raises ValueError: Content type mismatch given the descriptor generator
         :raises RuntimeError: Descriptor extraction failure.
 
-        :type de: smqtk.data_rep.DataElement
+        :type de: smqtk.representation.DataElement
         :type cd_label: str
 
         :return: Generated descriptor element instance with vector information.
-        :rtype: smqtk.data_rep.DescriptorElement
+        :rtype: smqtk.representation.DescriptorElement
 
         """
         with SimpleTimer("Computing descriptor...", self.log.debug):

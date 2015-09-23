@@ -50,7 +50,10 @@ add_subdirectory( bin )
 ###
 # MASIR side-car project
 #
-add_subdirectory(MASIR)
+# Un-comment if a side-car MASIR installation is desired.
+# This may interfere with the SMQTK installation or vice versa.
+#add_subdirectory(MASIR)
+
 
 ###
 # File configuration
@@ -70,16 +73,12 @@ configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
 # System Installation
 #
 
-option(FORCE_STANDARD_INSTALL_PREFIX
-  "Force the standard install prefix (for initial override of basic install prefix)."
-  ON
-  )
-if (FORCE_STANDARD_INSTALL_PREFIX)
+if (NOT SMQTK_FIRST_PASS_COMPLETE)
   set(CMAKE_INSTALL_PREFIX "/opt/kitware/SMQTK"
     CACHE PATH
     "Install path prefix, prepended onto install directories."
     FORCE)
-endif()
+endif(NOT SMQTK_FIRST_PASS_COMPLETE)
 
 #+
 # inital empty data and work directories
@@ -108,7 +107,10 @@ install(DIRECTORY   etc/
         DESTINATION etc
         )
 
-install(FILES requirements.txt
+install(FILES requirements.conda.txt
+        DESTINATION .
+        )
+install(FILES requirements.pip.txt
         DESTINATION .
         )
 
@@ -148,3 +150,8 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
 
 include(CPack)
+
+if (NOT SMQTK_FIRST_PASS_COMPLETE)
+  set(SMQTK_FIRST_PASS_COMPLETE True CACHE BOOL "SMQTK first pass configuration complete" FORCE)
+  mark_as_advanced(SMQTK_FIRST_PASS_COMPLETE)
+endif(NOT SMQTK_FIRST_PASS_COMPLETE)

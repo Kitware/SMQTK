@@ -8,8 +8,8 @@ import json
 import logging
 import os.path as osp
 
-from smqtk.data_rep import get_data_set_impls
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
+from smqtk.representation import get_data_set_impls
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import bin_utils, plugin
 
 
@@ -45,7 +45,7 @@ def main():
     with open(opts.config, 'r') as f:
         config = json.load(f)
 
-    #: :type: smqtk.data_rep.DataSet
+    #: :type: smqtk.representation.DataSet
     ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls)
     log.debug("Script arguments:\n%s" % args)
 

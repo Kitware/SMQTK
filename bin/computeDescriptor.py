@@ -1,24 +1,25 @@
 #!/usr/bin/env python
 """
-Compute a feature vector for a given file with a chosen ContentDescriptor type.
+Compute a feature vector for a given file with a chosen DescriptorGenerator type.
 """
 
 import json
 import logging
-import numpy
 import optparse
 import os
 
-from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.data_rep import DescriptorElementFactory
-from smqtk.content_description import get_descriptors
+import numpy
+
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation import DescriptorElementFactory
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.utils import bin_utils, plugin
 
 
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
-        "content_descriptor": plugin.make_config(get_descriptors),
+        "content_descriptor": plugin.make_config(get_descriptor_generator_impls),
     }
 
 
@@ -93,9 +94,9 @@ numpy format).
     data_element = DataFileElement(input_filepath)
 
     factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
-    #: :type: smqtk.content_description.ContentDescriptor
+    #: :type: smqtk.descriptor_generator.DescriptorGenerator
     cd = plugin.from_plugin_config(config['content_descriptor'],
-                                   get_descriptors)
+                                   get_descriptor_generator_impls)
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

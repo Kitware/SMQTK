@@ -328,16 +328,5 @@ class DescriptorServiceServer (SmqtkWebApp):
 
         return descriptor
 
-    def run(self, host=None, port=None, debug=False, **options):
-        """
-        Override of the run method, drawing running host and port from
-        configuration by default. 'host' and 'port' values specified as argument
-        or keyword will override the app configuration.
-        """
-        super(DescriptorServiceServer, self)\
-            .run(host=(host or self.json_config['server']['host']),
-                 port=(port or self.json_config['server']['port']),
-                 **options)
-
 
 APPLICATION_CLASS = DescriptorServiceServer

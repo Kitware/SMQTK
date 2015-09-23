@@ -90,6 +90,17 @@ class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable):
         return logging.getLogger('.'.join((self.__module__,
                                            self.__class__.__name__)))
 
+    def run(self, host=None, port=None, debug=False, **options):
+        """
+        Override of the run method, drawing running host and port from
+        configuration by default. 'host' and 'port' values specified as argument
+        or keyword will override the app configuration.
+        """
+        super(SmqtkWebApp, self)\
+            .run(host=(host or self.json_config['server']['host']),
+                 port=(port or self.json_config['server']['port']),
+                 **options)
+
 
 def get_web_applications():
     """

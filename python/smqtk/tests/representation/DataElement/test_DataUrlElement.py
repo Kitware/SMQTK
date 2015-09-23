@@ -2,7 +2,7 @@
 import nose.tools as ntools
 import unittest
 
-from smqtk.representation.data_element_impl.url_element import DataUrlElement
+from smqtk.representation.data_element.url_element import DataUrlElement
 
 
 __author__ = 'purg'

@@ -5,7 +5,7 @@ import nose.tools as ntools
 import os
 import unittest
 
-from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
 
 

@@ -15,7 +15,7 @@ import sklearn.cluster
 
 import pyflann
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
-from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import safe_create_dir, SimpleTimer, video_utils
 from smqtk.utils.string_utils import partition_string
 from smqtk.utils.video_utils import get_metadata_info

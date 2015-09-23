@@ -1,5 +1,5 @@
 
-from smqtk.representation.data_set_impl import get_data_set_impls
+from smqtk.representation.data_set import get_data_set_impls
 
 
 __author__ = 'purg'

@@ -15,7 +15,7 @@ import PIL.Image
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.representation import get_data_set_impls
-from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.iqr import IqrController, IqrSession
 from smqtk.algorithms.relevancy_index import get_iqr_index
 from smqtk.algorithms.nn_index import get_nn_index_impls

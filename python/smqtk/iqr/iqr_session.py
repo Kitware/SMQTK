@@ -15,7 +15,7 @@ import os.path as osp
 import shutil
 import uuid
 
-from smqtk.representation.data_set_impl.file_set import DataFileSet as DataFileSet
+from smqtk.representation.data_set.file_set import DataFileSet as DataFileSet
 from smqtk.utils import safe_create_dir
 
 

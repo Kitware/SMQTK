@@ -7,7 +7,7 @@ import nose.tools as ntools
 import numpy
 
 from smqtk.representation.code_index.memory import MemoryCodeIndex
-from smqtk.representation.descriptor_element_impl.local_elements import \
+from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.nn_index.lsh.itq import ITQNearestNeighborsIndex
 from smqtk.utils.file_utils import make_tempfile

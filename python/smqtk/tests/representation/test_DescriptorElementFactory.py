@@ -5,7 +5,7 @@ import unittest
 
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.representation.descriptor_element_impl.local_elements \
+from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
 

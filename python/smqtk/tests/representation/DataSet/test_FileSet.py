@@ -2,8 +2,8 @@ import mock
 import nose.tools as ntools
 import unittest
 
-from smqtk.representation.data_element_impl.memory_element import DataMemoryElement
-from smqtk.representation.data_set_impl.file_set import DataFileSet
+from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_set.file_set import DataFileSet
 
 
 __author__ = 'purg'

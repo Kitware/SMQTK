@@ -9,7 +9,7 @@ import numpy
 import numpy.matlib
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
-from smqtk.representation.code_index import get_index_types
+from smqtk.representation.code_index import get_code_index_impls
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 from smqtk.utils import (
     bit_utils,
@@ -73,7 +73,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         default = super(ITQNearestNeighborsIndex, cls).get_default_config()
 
         # replace ``code_index`` with nested plugin configuration
-        index_conf = plugin.make_config(get_index_types)
+        index_conf = plugin.make_config(get_code_index_impls)
         if default['code_index'] is not None:
             # Only overwrite default config if there is a default value
             index_conf.update(plugin.to_plugin_config(default['code_index']))
@@ -103,7 +103,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # Transform nested plugin stuff into actual classes.
         config_dict['code_index'] = \
             plugin.from_plugin_config(config_dict['code_index'],
-                                      get_index_types)
+                                      get_code_index_impls)
 
         return super(ITQNearestNeighborsIndex, cls).from_config(config_dict)
 

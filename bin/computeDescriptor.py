@@ -10,7 +10,7 @@ import os
 
 import numpy
 
-from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation import DescriptorElementFactory
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.utils import bin_utils, plugin

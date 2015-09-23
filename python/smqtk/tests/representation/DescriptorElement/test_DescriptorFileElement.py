@@ -1,7 +1,7 @@
 import nose.tools as ntools
 import unittest
 
-from smqtk.representation.descriptor_element_impl.local_elements import DescriptorFileElement
+from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
 
 
 __author__ = 'purg'

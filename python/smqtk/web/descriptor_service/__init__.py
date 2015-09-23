@@ -7,9 +7,9 @@ import requests
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.representation import DescriptorElementFactory
-from smqtk.representation.data_element_impl.file_element import DataFileElement
-from smqtk.representation.data_element_impl.memory_element import DataMemoryElement
-from smqtk.representation.data_element_impl.url_element import DataUrlElement
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
 from smqtk.utils import plugin
 from smqtk.utils.configuration import merge_configs

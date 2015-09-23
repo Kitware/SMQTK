@@ -2,8 +2,6 @@
 Tests for DataElement abstract interface class methods that provide
 functionality.
 """
-__author__ = 'purg'
-
 import hashlib
 import mock
 import nose.tools as ntools
@@ -11,7 +9,10 @@ import os.path as osp
 import tempfile
 import unittest
 
-import smqtk.representation.data_element_abstract
+import smqtk.representation.data_element
+
+
+__author__ = 'purg'
 
 
 # because this has a stable mimetype conversion
@@ -27,7 +28,7 @@ EXPECTED_SHA1 = hashlib.sha1(EXPECTED_BYTES).hexdigest()
 tempfile.gettempdir()
 
 
-class DummyDataElement (smqtk.representation.data_element_abstract.DataElement):
+class DummyDataElement (smqtk.representation.data_element.DataElement):
     # abstract methods have no base functionality
 
     def get_config(self):

@@ -3,7 +3,7 @@ import unittest
 import nose.tools as ntools
 import numpy as np
 
-from smqtk.representation.descriptor_element_impl.local_elements import \
+from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
 

@@ -2,7 +2,7 @@
 import nose.tools as ntools
 import unittest
 
-from smqtk.representation.data_element_impl.memory_element import DataMemoryElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 
 
 __author__ = 'purg'

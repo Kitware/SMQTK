@@ -4,7 +4,7 @@ import unittest
 import nose.tools as ntools
 import numpy
 
-from smqtk.representation.descriptor_element_impl.local_elements import DescriptorMemoryElement
+from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 
 
 __author__ = 'purg'

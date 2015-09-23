@@ -9,7 +9,7 @@ import logging
 import os.path as osp
 
 from smqtk.representation import get_data_set_impls
-from smqtk.representation.data_element_impl.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import bin_utils, plugin
 
 

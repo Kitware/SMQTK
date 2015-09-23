@@ -3,7 +3,7 @@ import numpy
 import requests
 import unittest
 
-from smqtk.representation.descriptor_element_impl.solr_element import SolrDescriptorElement
+from smqtk.representation.descriptor_element.solr_element import SolrDescriptorElement
 
 
 __author__ = 'purg'

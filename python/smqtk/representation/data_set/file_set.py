@@ -15,7 +15,7 @@ __author__ = 'purg'
 class DataFileSet (DataSet):
     """
     File-based data set. Data elements will all be file-based (DataFile type,
-    see ``../data_element_impl/file_element.py``).
+    see ``../data_element/file_element.py``).
 
     File sets are initialized with a root directory, under which it attempts to
     find existing serialized DataElement pickle files. This notion means that

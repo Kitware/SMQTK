@@ -111,7 +111,7 @@ class CodeIndex (Configurable):
         return self.get_descriptors(code)
 
 
-def get_index_types(reload_modules=False):
+def get_code_index_impls(reload_modules=False):
     """
     Discover and return small-code index implementation classes found in the
     plugin directory.

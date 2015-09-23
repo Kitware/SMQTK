@@ -62,7 +62,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_equal(sha1, EXPECTED_SHA1)
 
         # When called a second time, should use cache instead of recomputing
-        with mock.patch("smqtk.representation.data_element_abstract.hashlib") as mock_hashlib:
+        with mock.patch("smqtk.representation.data_element.hashlib") as mock_hashlib:
             md5 = de.md5()
             ntools.assert_false(mock_hashlib.md5.called)
             ntools.assert_equal(md5, EXPECTED_MD5)
@@ -93,7 +93,7 @@ class TestDataElementAbstract (unittest.TestCase):
     #   - os.open is used under the hood of tempfile to open a file (which also
     #       creates it on disk).
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -108,7 +108,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_true(mock_open.called)
         ntools.assert_equal(osp.dirname(fp), tempfile.gettempdir())
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -126,7 +126,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_not_equal(osp.dirname(fp), tempfile.gettempdir())
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -148,7 +148,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_false(mock_open.called)
         ntools.assert_equal(fp, prev_1)
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -172,7 +172,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_true(mock_open.called)
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -198,7 +198,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_false(mock_open.called)
         ntools.assert_equal(fp, prev_1)
 
-    @mock.patch("smqtk.representation.data_element_abstract.os")
+    @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_noTemp(self, mock_os):
         # should do all of nothing
         de = DummyDataElement()
@@ -208,7 +208,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_false(mock_os.path.isfile.called)
         ntools.assert_false(mock_os.remove.called)
 
-    @mock.patch("smqtk.representation.data_element_abstract.os")
+    @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_hasTemp_badPath(self, mock_os):
         de = DummyDataElement()
         de._temp_filepath_stack.append('tmp/thing')
@@ -219,7 +219,7 @@ class TestDataElementAbstract (unittest.TestCase):
         mock_os.path.isfile.assert_called_once_with('tmp/thing')
         ntools.assert_false(mock_os.remove.called)
 
-    @mock.patch("smqtk.representation.data_element_abstract.os")
+    @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_hasTemp_validPath(self, mock_os):
         expected_path = '/tmp/something'
 

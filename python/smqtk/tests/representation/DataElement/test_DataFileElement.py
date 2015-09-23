@@ -27,7 +27,7 @@ class TestDataFileElement (unittest.TestCase):
         d = DataFileElement('foo.txt')
         ntools.assert_equal(d.content_type(), 'text/plain')
 
-    @mock.patch('smqtk.representation.data_element_abstract.DataElement.write_temp')
+    @mock.patch('smqtk.representation.data_element.DataElement.write_temp')
     def test_writeTempOverride(self, mock_DataElement_wt):
         # no manual directory, should return the base filepath
         expected_filepath = '/path/to/file.txt'
@@ -37,7 +37,7 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_false(mock_DataElement_wt.called)
         ntools.assert_equal(expected_filepath, fp)
 
-    @mock.patch('smqtk.representation.data_element_abstract.DataElement.write_temp')
+    @mock.patch('smqtk.representation.data_element.DataElement.write_temp')
     def test_writeTempOverride_sameDir(self, mock_DataElement_wt):
         expected_filepath = '/path/to/file.txt'
         target_dir = '/path/to'
@@ -48,7 +48,7 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_false(mock_DataElement_wt.called)
         ntools.assert_equal(fp, expected_filepath)
 
-    @mock.patch('smqtk.representation.data_element_abstract.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global

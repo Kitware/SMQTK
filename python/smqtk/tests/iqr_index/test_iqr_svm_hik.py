@@ -39,7 +39,7 @@ class TestIqrSvmHik (unittest.TestCase):
         cls.q_neg.set_vector(np.array([0, 0, 0, .5, .5], float))
 
     def test_configuration(self):
-        c = LibSvmHikIqrIndex.default_config()
+        c = LibSvmHikIqrIndex.get_default_config()
         ntools.assert_in('descr_cache_filepath', c)
 
         # change default for something different
@@ -55,7 +55,7 @@ class TestIqrSvmHik (unittest.TestCase):
     def test_rank_no_neg(self):
         iqr_index = LibSvmHikIqrIndex()
         iqr_index.build_index(self.index_descriptors)
-        ntools.assert_raises(ValueError, iqr_index.rank, [self.q_pos])
+        ntools.assert_raises(ValueError, iqr_index.rank, [self.q_pos], [])
 
     def test_rank_no_pos(self):
         iqr_index = LibSvmHikIqrIndex()
@@ -65,7 +65,7 @@ class TestIqrSvmHik (unittest.TestCase):
     def test_rank_no_input(self):
         iqr_index = LibSvmHikIqrIndex()
         iqr_index.build_index(self.index_descriptors)
-        ntools.assert_raises(ValueError, iqr_index.rank, [])
+        ntools.assert_raises(ValueError, iqr_index.rank, [], [])
 
     def test_count(self):
         iqr_index = LibSvmHikIqrIndex()

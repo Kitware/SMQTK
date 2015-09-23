@@ -72,16 +72,17 @@ class IqrIndex (Configurable):
         return
 
     @abc.abstractmethod
-    def rank(self, pos, neg=()):
+    def rank(self, pos, neg):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
         negative exemplar descriptor elements.
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type pos: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
-        :param neg: Optional iterable of negative exemplar DescriptorElement
-            instances.
+        :param neg: Iterable of negative exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.data_rep.DescriptorElement]
 
         :return: Map of descriptor UUID to rank value within [0, 1] range, where

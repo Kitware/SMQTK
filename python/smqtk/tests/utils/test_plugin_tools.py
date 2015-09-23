@@ -25,8 +25,8 @@ class TestPluginToos (unittest.TestCase):
             make_config(dummy_getter),
             {
                 'type': None,
-                'TestAlgo1': TestAlgo1.default_config(),
-                'TestAlgo2': TestAlgo2.default_config(),
+                'TestAlgo1': TestAlgo1.get_default_config(),
+                'TestAlgo2': TestAlgo2.get_default_config(),
             }
         )
 

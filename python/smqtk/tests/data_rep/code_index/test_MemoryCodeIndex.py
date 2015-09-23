@@ -75,7 +75,7 @@ class TestMemoryCodeIndex (unittest.TestCase):
 
     def test_default_config(self):
         ntools.assert_equal(
-            MemoryCodeIndex.default_config(),
+            MemoryCodeIndex.get_default_config(),
             {"file_cache": None}
         )
 

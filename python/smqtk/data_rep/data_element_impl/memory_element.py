@@ -38,8 +38,10 @@ class DataMemoryElement (DataElement):
         self._bytes = bytes
         self._content_type = content_type
 
-        # since we have the bytes right now, short circuiting the MD5 cache
+        # since we have the bytes right now, short circuiting the checksum
+        # caches
         self._md5_cache = hashlib.md5(self._bytes).hexdigest()
+        self._sha1_cache = hashlib.sha1(self._bytes).hexdigest()
 
     def get_config(self):
         return {

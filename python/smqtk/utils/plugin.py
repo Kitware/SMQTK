@@ -88,8 +88,14 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
             module_name = os.path.splitext(file_name)[0]
             # We want any exception this might throw to continue up. If a module
             # in the directory is not importable, the user should know.
-            module = importlib.import_module('.%s' % module_name,
-                                             package=base_module)
+            try:
+                module = importlib.import_module('.%s' % module_name,
+                                                 package=base_module)
+            except Exception, ex:
+                log.warn("Failed to import module '%s' due to exception: "
+                         "(%s) %s",
+                         module_name, ex.__class__.__name__, str(ex))
+                continue
             if reload_modules:
                 # Invoke reload in case the module changed between imports.
                 module = reload(module)
@@ -179,14 +185,14 @@ def make_config(plugin_getter):
     d = {"type": None}
     for label, cls in plugin_getter().iteritems():
         # noinspection PyUnresolvedReferences
-        d[label] = cls.default_config()
+        d[label] = cls.get_default_config()
     return d
 
 
 def to_plugin_config(cp_inst):
     """
     Helper method that transforms the configuration dictionary gotten from the
-    passed ConfigurablePlugin-subclass instance into the standard multi-plugin
+    passed Configurable-subclass instance into the standard multi-plugin
     configuration dictionary format (see above).
 
     This result of this function would be compatible with being passed to the
@@ -195,7 +201,7 @@ def to_plugin_config(cp_inst):
     TL;DR: This wraps the instance's ``get_config`` return in a certain way
            that's compatible with ``from_plugin_config``.
 
-    :param cp_inst: Instance of a ConfigurablePlugin-subclass.
+    :param cp_inst: Instance of a Configurable-subclass.
     :type cp_inst: Configurable
 
     :return: Plugin-format configuration dictionary.
@@ -221,7 +227,7 @@ def from_plugin_config(config, plugin_getter, *args):
         specified for the specified ``type``'s constructor.
 
     :param config: Configuration dictionary to draw from.
-    :type config: dict[str]
+    :type config: dict
 
     :param plugin_getter: Function that returns a dictionary mapping labels to
         class types.
@@ -232,7 +238,7 @@ def from_plugin_config(config, plugin_getter, *args):
 
     :return: Instance of the configured class type as found in the given
         ``plugin_getter``.
-    :rtype: Configurable
+    :rtype: smqtk.utils.Configurable
 
     """
     t = config['type']

@@ -13,7 +13,7 @@ class DescriptorElementFactory (Configurable):
     """
 
     @classmethod
-    def default_config(cls):
+    def get_default_config(cls):
         """
         Generate and return a default configuration dictionary for this class.
         This will be primarily used for generating what the configuration
@@ -50,24 +50,25 @@ class DescriptorElementFactory (Configurable):
             config_dict[config_dict['type']]
         )
 
-    def __init__(self, d_type, init_params):
+    def __init__(self, d_type, type_config):
         """
         :param d_type: Type of descriptor element this factory should produce.
         :type d_type: type
-        :param init_params: Initialization parameter dictionary that should
+        :param type_config: Initialization parameter dictionary that should
             contain all additional construction parameters for the provided type
             except for the expected `type_str` and `uuid` arguments that should
             be the first and second positional arguments respectively.
-        :type init_params: dict
+        :type type_config: dict
         """
+        #: :type: smqtk.data_rep.DescriptorElement
         self._d_type = d_type
-        self._init_params = init_params
+        self._d_type_config = type_config
 
     def get_config(self):
         d_type_name = self._d_type.__class__.__name__
         return {
             'type': d_type_name,
-            d_type_name: self._init_params,
+            d_type_name: self._d_type_config,
         }
 
     def new_descriptor(self, type_str, uuid):
@@ -85,7 +86,7 @@ class DescriptorElementFactory (Configurable):
         :rtype: smqtk.data_rep.DescriptorElement
 
         """
-        return self._d_type(type_str, uuid, **self._init_params)
+        return self._d_type.from_config(self._d_type_config, type_str, uuid)
 
     def __call__(self, type_str, uuid):
         """

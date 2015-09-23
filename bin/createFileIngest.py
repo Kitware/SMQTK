@@ -4,62 +4,53 @@ Create an ingest of files in a specified directory.
 """
 
 import glob
+import json
 import logging
 import os.path as osp
 
+from smqtk.data_rep import get_data_set_impls
 from smqtk.data_rep.data_element_impl.file_element import DataFileElement
-from smqtk.utils import bin_utils
-from smqtk.utils.configuration import DataSetConfiguration
-import smqtk_config
+from smqtk.utils import bin_utils, plugin
+
+
+def default_config():
+    return {
+        "data_set": plugin.make_config(get_data_set_impls)
+    }
 
 
 def main():
     usage = "%prog [options] GLOB [ GLOB [ ... ] ]"
-    description = "Create a file-based ingest from a set of local file paths " \
-                  "or shell-style glob strings."
+    description = "Add a set of local system files to a data set via " \
+                  "explicit paths or shell-style glob strings."
 
     parser = bin_utils.SMQTKOptParser(usage, description=description)
-    parser.add_option('-s', '--set-label',
-                      help="Configured ingest to 'ingest' into.")
-    parser.add_option('-l', '--list-ingests', action='store_true',
-                      default=False,
-                      help="List available ingests we can ingest new data "
-                           "into. See the system_config.json file in the etc "
-                           "directory for more details.")
+    parser.add_option('-c', '--config',
+                      help="Path to the JSON configuration file")
+    parser.add_option('--output-config',
+                      help="Optional path to output a default configuration "
+                           "file to. This output file should be modified and "
+                           "used for this executable.")
     parser.add_option('-v', '--verbose', action='store_true', default=False,
                       help='Add debug messaged to output logging.')
     opts, args = parser.parse_args()
 
     bin_utils.initialize_logging(logging.getLogger(),
-                                logging.INFO - (10*opts.verbose))
+                                 logging.INFO - (10*opts.verbose))
     log = logging.getLogger("main")
 
-    if opts.list_ingests:
-        # Find labels for configured data sets that are of the FileSet type
-        file_ds_labels = [
-            l
-            for l, dsc in smqtk_config.SYSTEM_CONFIG['DataSets'].iteritems()
-            if dsc['type'] == "DataFileSet"
-        ]
+    # output configuration dictionary when asked for.
+    bin_utils.output_config(opts.output_config, default_config(), log)
 
-        log.info("")
-        log.info("Available File-based datasets:")
-        for k in sorted(file_ds_labels):
-            log.info("\t%s", k)
-        log.info("")
-        exit(0)
+    with open(opts.config, 'r') as f:
+        config = json.load(f)
 
-    if opts.set_label is None:
-        log.info("")
-        log.info("ERROR: Please provide data set configuration label.")
-        log.info("")
-        exit(1)
-
-    fds = DataSetConfiguration.new_inst(opts.set_label)
+    #: :type: smqtk.data_rep.DataSet
+    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls)
     log.debug("Script arguments:\n%s" % args)
 
     def ingest_file(fp):
-        fds.add_data(DataFileElement(fp))
+        ds.add_data(DataFileElement(fp))
 
     for f in args:
         f = osp.expanduser(f)

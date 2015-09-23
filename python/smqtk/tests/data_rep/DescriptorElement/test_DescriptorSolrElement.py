@@ -26,7 +26,7 @@ if solr_accessible:
     class TestDescriptorSolrElement (unittest.TestCase):
 
         def test_configuration(self):
-            default_config = SolrDescriptorElement.default_config()
+            default_config = SolrDescriptorElement.get_default_config()
             ntools.assert_equal(default_config, {
                 "solr_conn_addr": None,
                 "type_field": None,

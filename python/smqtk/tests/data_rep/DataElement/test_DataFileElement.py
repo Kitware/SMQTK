@@ -106,7 +106,7 @@ class TestDataFileElement (unittest.TestCase):
 
     def test_configuration(self):
         fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
-        default_config = DataFileElement.default_config()
+        default_config = DataFileElement.get_default_config()
         ntools.assert_equal(default_config,
                             {'filepath': None})
 

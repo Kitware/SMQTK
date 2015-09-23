@@ -6,7 +6,6 @@ import os.path as osp
 from smqtk.data_rep import DescriptorElement
 from smqtk.utils import safe_create_dir
 from smqtk.utils.string_utils import partition_string
-from smqtk_config import WORK_DIR
 
 
 __author__ = 'purg'
@@ -98,8 +97,7 @@ class DescriptorFileElement (DescriptorElement):
 
     """
 
-    def __init__(self, type_str, uuid, save_dir, work_relative=False,
-                 subdir_split=None):
+    def __init__(self, type_str, uuid, save_dir, subdir_split=None):
         """
         Initialize a file-base descriptor element.
 
@@ -111,14 +109,9 @@ class DescriptorFileElement (DescriptorElement):
         :type uuid: collections.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
-            is relative, we interpret as relative to the WORK_DIR path set in
-            the `smqtk_config` module.
+            is relative, we interpret as relative to the current working
+            directory.
         :type save_dir: str | unicode
-
-        :param work_relative: If true, we should interpret ``root_directory`` as
-            relative to the configured WORK_DIR parameter in the
-            ``smqtk_config`` module.
-        :type work_relative: bool
 
         :param subdir_split: If a positive integer, this will cause us to store
             the vector file in a subdirectory under the ``save_dir`` that was
@@ -132,12 +125,7 @@ class DescriptorFileElement (DescriptorElement):
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
 
-        self._save_dir = osp.abspath(
-            osp.join(
-                WORK_DIR if work_relative else os.getcwd(),
-                osp.expanduser(save_dir)
-            )
-        )
+        self._save_dir = osp.abspath(osp.expanduser(save_dir))
 
         # Saving components
         self._subdir_split = subdir_split
@@ -156,7 +144,6 @@ class DescriptorFileElement (DescriptorElement):
     def get_config(self):
         return {
             "save_dir": self._save_dir,
-            "work_relative": False,  # modified into abs form during init
             'subdir_split': self._subdir_split
         }
 

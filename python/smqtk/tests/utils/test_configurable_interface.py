@@ -15,7 +15,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
             def __init__(self, a, b, cat):
                 pass
         ntools.assert_equal(
-            T1.default_config(),
+            T1.get_default_config(),
             {'a': None, 'b': None, 'cat': None}
         )
 
@@ -24,7 +24,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
             def __init__(self, a, b, cat, *args, **kwargs):
                 pass
         ntools.assert_equal(
-            T2.default_config(),
+            T2.get_default_config(),
             {'a': None, 'b': None, 'cat': None}
         )
 
@@ -33,7 +33,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
             def __init__(self, a, b, c=0, d='foobar'):
                 pass
         ntools.assert_equal(
-            T1.default_config(),
+            T1.get_default_config(),
             {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
         )
 
@@ -42,7 +42,7 @@ class TestConfigurablePluginInterface (unittest.TestCase):
             def __init__(self, a, b, c=0, d='foobar', *args, **kwargs):
                 pass
         ntools.assert_equal(
-            T2.default_config(),
+            T2.get_default_config(),
             {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
         )
 
@@ -75,8 +75,8 @@ class TestAlgo2 (Configurable):
     """
 
     @classmethod
-    def default_config(cls):
-        default = super(TestAlgo2, cls).default_config()
+    def get_default_config(cls):
+        default = super(TestAlgo2, cls).get_default_config()
         # replace ``child`` with config available config
         default['child'] = default['child'].get_config()
         return default
@@ -111,13 +111,13 @@ class TestConfigurablePluginTestImpl (unittest.TestCase):
 
     def test_algo1_default(self):
         ntools.assert_equal(
-            TestAlgo1.default_config(),
+            TestAlgo1.get_default_config(),
             {'foo': 1, 'bar': 'baz'}
         )
 
     def test_algo2_default(self):
         ntools.assert_equal(
-            TestAlgo2.default_config(),
+            TestAlgo2.get_default_config(),
             {
                 'child': {'foo': 1, 'bar': 'baz'},
                 'alpha': 0.0001,

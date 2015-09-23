@@ -50,7 +50,7 @@ class TestIqrSimilarityIndex (unittest.TestCase):
         self._clean_cache_files()
 
     def test_configuration(self):
-        c = ITQSimilarityIndex.default_config()
+        c = ITQSimilarityIndex.get_default_config()
         # Default code index should be memory based
         ntools.assert_equal(c['code_index']['type'], 'MemoryCodeIndex')
         ntools.assert_true(c['mean_vec_filepath'] is None)

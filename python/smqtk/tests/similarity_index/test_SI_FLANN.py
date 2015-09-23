@@ -139,7 +139,7 @@ if FlannSimilarity.is_usable():
             self._clean_cache_files()
 
             # Make configuration based on default
-            c = FlannSimilarity.default_config()
+            c = FlannSimilarity.get_default_config()
             c['index_filepath'] = self.FLANN_INDEX_CACHE
             c['parameters_filepath'] = self.FLANN_PARAMETER_CACHE
             c['descriptor_cache_filepath'] = self.FLANN_DESCR_CACHE

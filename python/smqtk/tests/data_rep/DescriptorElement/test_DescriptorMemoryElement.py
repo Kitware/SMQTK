@@ -13,7 +13,7 @@ __author__ = 'purg'
 class TestDescriptorMemoryElement (unittest.TestCase):
 
     def test_configuration(self):
-        default_config = DescriptorMemoryElement.default_config()
+        default_config = DescriptorMemoryElement.get_default_config()
         ntools.assert_equal(default_config, {})
 
         inst1 = DescriptorMemoryElement.from_config(default_config, 'test', 'a')

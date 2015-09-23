@@ -6,7 +6,7 @@ import numpy
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
 
 __author__ = 'purg'
 
@@ -35,6 +35,25 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
     def setUp(cls):
         # Reset descriptor memory global cache before each test
         DescriptorMemoryElement.MEMORY_CACHE = {}
+
+    def test_get_impls(self):
+        ntools.assert_equal(
+            set(get_nn_index_impls().keys()),
+            {
+                'FlannNearestNeighborsIndex',
+                'ITQNearestNeighborsIndex',
+            }
+        )
+
+    def test_count(self):
+        index = DummySI()
+        ntools.assert_equal(index.count(), 0)
+        ntools.assert_equal(index.count(), len(index))
+
+        # Pretend that there were things in there. Len should pass it though
+        index.count = mock.Mock()
+        index.count.return_value = 5
+        ntools.assert_equal(len(index), 5)
 
     @mock.patch.object(DummySI, 'count')
     def test_normal_conditions(self, mock_dsi_count):

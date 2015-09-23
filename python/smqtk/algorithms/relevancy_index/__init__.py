@@ -27,7 +27,6 @@ class RelevancyIndex (SmqtkAlgorithm):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def build_index(self, descriptors):
@@ -42,7 +41,6 @@ class RelevancyIndex (SmqtkAlgorithm):
         :type descriptors: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        return
 
     @abc.abstractmethod
     def rank(self, pos, neg):
@@ -63,7 +61,6 @@ class RelevancyIndex (SmqtkAlgorithm):
         :rtype: dict[collections.Hashable, float]
 
         """
-        return
 
 
 def get_relevancy_index_impls(reload_modules=False):

@@ -29,7 +29,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
             handle.
         :rtype: set[str]
         """
-        return
 
     @abc.abstractmethod
     def generate_model(self, data_set, **kwargs):
@@ -226,7 +225,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :rtype: numpy.core.multiarray.ndarray
 
         """
-        return
 
 
 def _async_feature_generator_helper(cd_inst, data):

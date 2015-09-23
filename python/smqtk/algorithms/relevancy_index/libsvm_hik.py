@@ -247,4 +247,4 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         return rank_pool
 
 
-IQR_INDEX_CLASS = LibSvmHikRelevancyIndex
+RELEVANCY_INDEX_CLASS = LibSvmHikRelevancyIndex

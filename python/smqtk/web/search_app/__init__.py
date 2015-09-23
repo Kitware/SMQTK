@@ -3,78 +3,42 @@ Top level flask application
 """
 
 import flask
-import logging
 import os.path
 
 from smqtk.utils import DatabaseInfo, SimpleTimer
+from smqtk.utils.configuration import merge_configs
 from smqtk.utils.mongo_sessions import MongoSessionInterface
+from smqtk.web import SmqtkWebApp
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class SMQTKSearchApp (flask.Flask):
+class IqrSearchApp (SmqtkWebApp):
 
-    # Optional environment variable that can point to a configuration file
-    ENV_CONFIG = "SMQTK_SEARCHAPP_CONFIG"
+    @classmethod
+    def get_default_config(cls):
+        c = super(IqrSearchApp, cls).get_default_config()
+        merge_configs(c, {
+            "mongo": {
+                "server": "127.0.0.1:27017",
+                "database": "smqtk",
+            },
+            # Each entry in this mapping generates a new tab in the GUI
+            "iqr_tabs": {
 
-    @property
-    def log(self):
-        return logging.getLogger('.'.join((self.__module__,
-                                           self.__class__.__name__)))
+            }
+        })
+        return c
 
-    def __init__(self, config_filepath=None):
-        super(SMQTKSearchApp, self).__init__(
-            self.__class__.__name__,
-            static_folder=os.path.join(SCRIPT_DIR, 'static'),
-            template_folder=os.path.join(SCRIPT_DIR, 'templates')
-        )
-
-        #
-        # Configuration setup
-        #
-        config_env_loaded = config_file_loaded = None
-
-        # Load default -- This should always be present, aka base defaults
-        self.config.from_object('smqtk_config')
-        config_default_loaded = True
-
-        # Load from env var if present
-        if self.ENV_CONFIG in os.environ:
-            self.log.info("Loading config from env var (%s)...",
-                          self.ENV_CONFIG)
-            self.config.from_envvar(self.ENV_CONFIG)
-            config_env_loaded = True
-
-        # Load from configuration file if given
-        if config_filepath and os.path.isfile(config_filepath):
-            config_file_path = os.path.expanduser(os.path.abspath(config_filepath))
-            self.log.info("Loading config from file (%s)...", config_file_path)
-            self.config.from_pyfile(config_file_path)
-            config_file_loaded = True
-
-        self.log.debug("Config defaults loaded : %s", config_default_loaded)
-        self.log.debug("Config from env loaded : %s", config_env_loaded)
-        self.log.debug("Config from file loaded: %s", config_file_loaded)
-        if not (config_default_loaded or config_env_loaded or config_file_loaded):
-            raise RuntimeError("No configuration file specified for loading. "
-                               "(%s=%s) (file=%s)"
-                               % (self.ENV_CONFIG,
-                                  os.environ.get(self.ENV_CONFIG, None),
-                                  config_filepath))
-
-        self.log.debug("Configuration loaded: %s", self.config)
-
-        #
-        # Security
-        #
-        self.secret_key = self.config['SECRET_KEY']
+    def __init__(self, json_config):
+        super(IqrSearchApp, self).__init__(json_config)
 
         #
         # Database setup using Mongo
         #
-        h, p = self.config['MONGO_SERVER'].split(':')
-        n = "SMQTKSearchApp"
+        h, p = self.json_config['mongo']['server'].split(':')
+        n = self.json_config['mongo']['database']
         self.db_info = DatabaseInfo(h, p, n)
 
         # Use mongo for session storage.
@@ -111,16 +75,12 @@ class SMQTKSearchApp (flask.Flask):
         self.register_blueprint(self.module_login)
 
         # IQR modules
-        # TODO: At the moment, for simplicity, we're fixing the feature detector
-        #       and indexer types. In the future this should either be moved
-        #       to something that can be chosen by the user or a
-        #       multi-feature/indexer fusion system.
-        from .modules.iqr import IQRSearch, IQRSearchFusion
+        from .modules.iqr import IqrSearch
 
         with SimpleTimer("Loading Example Image ingest + IQR...", self.log.info):
             ds_example_image = DataSetConfiguration.new_inst("example_image")
 
-            self.mod_example_image = IQRSearch(
+            self.mod_example_image = IqrSearch(
                 "Image Search - Example Imagery",
                 self, ds_example_image,
                 "CD_CSIFT_Image_example", "SVM_HIK-CD_CSIFT-Image",
@@ -128,16 +88,6 @@ class SMQTKSearchApp (flask.Flask):
             )
             self.register_blueprint(self.mod_example_image)
             self.add_navigable_blueprint(self.mod_example_image)
-
-        with SimpleTimer("Loading Example Image ingest + IQR Fusion", self.log.info):
-            self.mod_example_image_fusion = IQRSearchFusion(
-                "Image Search Fusion - Example Imagery",
-                self, ds_example_image,
-                "example_image",
-                url_prefix='/image_example_fusion'
-            )
-            self.register_blueprint(self.mod_example_image_fusion)
-            self.add_navigable_blueprint(self.mod_example_image_fusion)
 
         # with SimpleTimer("Loading Example Video ingest + IQR...", self.log.info):
         #     ds_example_video = DataSetConfiguration.new_inst("example_video")
@@ -196,13 +146,3 @@ class SMQTKSearchApp (flask.Flask):
         return {
             "nav_content": l
         }
-
-    def run(self, host=None, port=None, debug=False, **options):
-        """
-        Override of the run method, drawing running host and port from
-        configuration by default. 'host' and 'port' values specified as argument
-        or keyword will override the app configuration.
-        """
-        super(SMQTKSearchApp, self).run(host=(host or self.config['RUN_HOST']),
-                                        port=(port or self.config['RUN_PORT']),
-                                        **options)

@@ -192,7 +192,7 @@ def make_config(plugin_getter):
 def to_plugin_config(cp_inst):
     """
     Helper method that transforms the configuration dictionary gotten from the
-    passed ConfigurablePlugin-subclass instance into the standard multi-plugin
+    passed Configurable-subclass instance into the standard multi-plugin
     configuration dictionary format (see above).
 
     This result of this function would be compatible with being passed to the
@@ -201,7 +201,7 @@ def to_plugin_config(cp_inst):
     TL;DR: This wraps the instance's ``get_config`` return in a certain way
            that's compatible with ``from_plugin_config``.
 
-    :param cp_inst: Instance of a ConfigurablePlugin-subclass.
+    :param cp_inst: Instance of a Configurable-subclass.
     :type cp_inst: Configurable
 
     :return: Plugin-format configuration dictionary.

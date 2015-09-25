@@ -226,8 +226,6 @@ class SolrCodeIndex (CodeIndex):
         Get iterable of descriptors associated to this code or iterable of
         codes. This may return an empty iterable.
 
-        Runtime: O(n) where n is the number of codes provided.
-
         :param code_or_codes: An integer or iterable of integer bit-codes.
         :type code_or_codes: collections.Iterable[int] | int
 

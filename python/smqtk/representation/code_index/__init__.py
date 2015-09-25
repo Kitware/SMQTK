@@ -10,7 +10,7 @@ __author__ = "paul.tunison@kitware.com"
 
 class CodeIndex (Configurable):
     """
-    Abstract base class for LSH small-code index storage
+    Abstract interface for bit-code to DescriptorElement relationship storage.
 
     Implementations should be picklable for serialization.
 
@@ -96,8 +96,6 @@ class CodeIndex (Configurable):
         """
         Get iterable of descriptors associated to this code or iterable of
         codes. This may return an empty iterable.
-
-        Runtime: O(n) where n is the number of codes provided.
 
         :param code_or_codes: An integer or iterable of integer bit-codes.
         :type code_or_codes: collections.Iterable[int] | int

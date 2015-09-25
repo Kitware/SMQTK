@@ -8,9 +8,28 @@ __author__ = "paul.tunison@kitware.com"
 
 class DescriptorElementFactory (Configurable):
     """
-    Factory class for DescriptorElement instances of a specific type and
-    configuration.
+    Factory class for producing DescriptorElement instances of a specified type
+    and configuration.
     """
+
+    def __init__(self, d_type, type_config):
+        """
+        Initialize the factory to produce DescriptorElement instances of the
+        given type and configuration.
+
+        :param d_type: Type of descriptor element this factory should produce.
+        :type d_type: type
+
+        :param type_config: Initialization parameter dictionary that should
+            contain all additional construction parameters for the provided type
+            except for the expected `type_str` and `uuid` arguments that should
+            be the first and second positional arguments respectively.
+        :type type_config: dict
+
+        """
+        #: :type: smqtk.representation.DescriptorElement
+        self._d_type = d_type
+        self._d_type_config = type_config
 
     @classmethod
     def get_default_config(cls):
@@ -49,20 +68,6 @@ class DescriptorElementFactory (Configurable):
             get_descriptor_element_impls()[config_dict['type']],
             config_dict[config_dict['type']]
         )
-
-    def __init__(self, d_type, type_config):
-        """
-        :param d_type: Type of descriptor element this factory should produce.
-        :type d_type: type
-        :param type_config: Initialization parameter dictionary that should
-            contain all additional construction parameters for the provided type
-            except for the expected `type_str` and `uuid` arguments that should
-            be the first and second positional arguments respectively.
-        :type type_config: dict
-        """
-        #: :type: smqtk.representation.DescriptorElement
-        self._d_type = d_type
-        self._d_type_config = type_config
 
     def get_config(self):
         d_type_name = self._d_type.__class__.__name__

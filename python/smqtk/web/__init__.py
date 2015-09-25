@@ -129,5 +129,3 @@ def get_web_applications():
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "APPLICATION_CLASS"
     return get_plugins(__name__, this_dir, helper_var, SmqtkWebApp)
-
-

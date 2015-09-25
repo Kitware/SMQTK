@@ -5,7 +5,7 @@ import unittest
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestDataMemoryElement (unittest.TestCase):

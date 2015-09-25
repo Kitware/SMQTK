@@ -8,7 +8,7 @@ from smqtk.utils import safe_create_dir
 from smqtk.utils.string_utils import partition_string
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DescriptorMemoryElement (DescriptorElement):

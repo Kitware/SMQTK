@@ -124,6 +124,7 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
            # "harrislaplace" is another option here, but this can result in 0
            # descriptors for an image, and is also slower.
            '--detector', 'densesampling',
+           # '--detector', 'harrislaplace',
            '--ds_spacing', str(ds_spacing),
            '--descriptor', descriptor_type]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

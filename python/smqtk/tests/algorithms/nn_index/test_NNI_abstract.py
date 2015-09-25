@@ -8,7 +8,7 @@ from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DummySI (NearestNeighborsIndex):

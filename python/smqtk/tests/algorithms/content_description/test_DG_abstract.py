@@ -11,7 +11,7 @@ from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator import _async_feature_generator_helper
 import smqtk.representation
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 def test_get_descriptors():

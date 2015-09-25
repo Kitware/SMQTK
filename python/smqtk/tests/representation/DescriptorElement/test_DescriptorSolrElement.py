@@ -6,7 +6,7 @@ import unittest
 from smqtk.representation.descriptor_element.solr_element import SolrDescriptorElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 SOLR_URL = 'http://localhost:8983/solr'  # is also a web-page

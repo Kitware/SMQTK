@@ -6,7 +6,7 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_set.file_set import DataFileSet
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestDataFileSet (unittest.TestCase):

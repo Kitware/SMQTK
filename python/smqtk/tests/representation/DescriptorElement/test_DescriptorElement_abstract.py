@@ -6,7 +6,7 @@ import unittest
 from smqtk.representation import DescriptorElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DummyDescriptorElement (DescriptorElement):

@@ -10,7 +10,7 @@ from smqtk.utils import safe_create_dir
 from smqtk.utils.configurable_interface import Configurable
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()

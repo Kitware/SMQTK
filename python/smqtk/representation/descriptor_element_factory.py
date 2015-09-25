@@ -3,7 +3,7 @@ from smqtk.utils.configurable_interface import Configurable
 from smqtk.utils.plugin import make_config
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DescriptorElementFactory (Configurable):

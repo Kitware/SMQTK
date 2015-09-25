@@ -5,7 +5,7 @@ from smqtk.representation.code_index import CodeIndex
 from smqtk.utils import SimpleTimer
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class MemoryCodeIndex (CodeIndex):

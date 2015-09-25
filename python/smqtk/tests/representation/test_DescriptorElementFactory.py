@@ -9,7 +9,7 @@ from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DummyElementImpl (DescriptorElement):

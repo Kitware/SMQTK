@@ -5,7 +5,7 @@ import logging
 from smqtk.utils.configurable_interface import Configurable
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DataSet (collections.Set, Configurable):

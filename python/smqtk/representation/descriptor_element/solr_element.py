@@ -4,7 +4,7 @@ from smqtk.representation import DescriptorElement
 import time
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class SolrDescriptorElement (DescriptorElement):

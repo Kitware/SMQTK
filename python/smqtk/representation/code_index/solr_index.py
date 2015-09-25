@@ -6,7 +6,7 @@ import time
 from smqtk.representation.code_index import CodeIndex
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class SolrCodeIndex (CodeIndex):

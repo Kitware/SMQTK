@@ -5,7 +5,7 @@ import re
 import tempfile
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 def make_tempfile(*args, **kwds):

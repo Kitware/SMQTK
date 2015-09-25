@@ -8,7 +8,7 @@ from smqtk.tests.utils.test_configurable_interface import (
 )
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 def dummy_getter():

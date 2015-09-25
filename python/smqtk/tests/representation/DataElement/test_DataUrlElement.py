@@ -5,7 +5,7 @@ import unittest
 from smqtk.representation.data_element.url_element import DataUrlElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 # Public domain rose image

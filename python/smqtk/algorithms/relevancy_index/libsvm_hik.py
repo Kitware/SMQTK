@@ -18,7 +18,7 @@ except ImportError:
     svmutil = None
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class LibSvmHikRelevancyIndex (RelevancyIndex):
@@ -241,6 +241,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Check if average positive probability is less than the average index
         # probability. If so, the platt scaling probably needs to be flipped.
         if (pos_probs.sum() / pos_probs.size) < (probs.sum() / probs.size):
+            self._log.debug("inverting probabilities")
             probs = 1. - probs
 
         rank_pool = dict(zip(self._descr_cache, probs))

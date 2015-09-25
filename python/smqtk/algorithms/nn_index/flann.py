@@ -13,7 +13,7 @@ except ImportError:
     pyflann = None
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class FlannNearestNeighborsIndex (NearestNeighborsIndex):

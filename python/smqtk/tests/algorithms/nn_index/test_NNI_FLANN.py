@@ -10,7 +10,7 @@ from smqtk.representation.descriptor_element.local_elements import \
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
 from smqtk.utils.file_utils import make_tempfile
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 # Don't bother running tests of the class is not usable

@@ -4,7 +4,7 @@ import unittest
 from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestDescriptorFileElement (unittest.TestCase):

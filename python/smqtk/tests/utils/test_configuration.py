@@ -7,7 +7,7 @@ from smqtk.utils.configuration import (
 )
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestMergeConfigs (unittest.TestCase):

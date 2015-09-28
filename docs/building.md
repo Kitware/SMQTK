@@ -84,7 +84,7 @@ Currently, the selection is very minimal, but may be expanded over time.
     make -j2
     popd
     # Set up SMQTK environment by sourcing file
-    . build/setup_smqtk.build.sh
+    . build/setup_env.build.sh
     # Running tests
     source/run_tests.sh
     

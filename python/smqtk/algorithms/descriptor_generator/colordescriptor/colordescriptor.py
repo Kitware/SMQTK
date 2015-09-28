@@ -329,12 +329,24 @@ class ColorDescriptor_Base (DescriptorGenerator):
         :type data_set: collections.Set[smqtk.representation.DataElement]
 
         """
-        super(ColorDescriptor_Base, self).generate_model(data_set, **kwargs)
-
         if self.has_model:
             self._log.warn("ColorDescriptor model for descriptor type '%s' "
                            "already generated!", self.descriptor_type())
             return
+
+        # Check that input data is value for processing through colorDescriptor
+        valid_types = self.valid_content_types()
+        invalid_types_found = set()
+        for di in data_set:
+            if di.content_type() not in valid_types:
+                invalid_types_found.add(di.content_type())
+        if invalid_types_found:
+            self._log.error("Found one or more invalid content types among "
+                            "input:")
+            for t in sorted(invalid_types_found):
+                self._log.error("\t- '%s", t)
+            raise ValueError("Discovered invalid content type among input "
+                             "data: %s" % sorted(invalid_types_found))
 
         pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
         flann = pyflann.FLANN()

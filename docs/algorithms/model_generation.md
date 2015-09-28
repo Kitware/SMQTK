@@ -12,7 +12,7 @@ Other algorithms, like the ``DescriptorGenerator`` class of algorithms, do not h
 
 ## DescriptorGenerator Models
 The ``DescriptorGenerator`` interface does not define a model building method, but some implementations require internal models.
-Below is explanations on how to build modes for ``DescriptorGenerator`` implementations that require a model.
+Below are explanations on how to build or get modes for ``DescriptorGenerator`` implementations that require a model.
 
 ### ColorDescriptor
 ColorDescriptor implementations need to build a visual bag-of-words codebook model for reducing the dimensionality of the many low-level descriptors detected in an input data element.

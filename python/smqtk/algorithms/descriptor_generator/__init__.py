@@ -16,7 +16,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
     """
     Base abstract Feature Descriptor interface
     """
-    __metaclass__ = abc.ABCMeta
 
     # Number of cores to use when doing parallel multiprocessing operations
     # - None means use all available cores.
@@ -29,38 +28,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
             handle.
         :rtype: set[str]
         """
-
-    @abc.abstractmethod
-    def generate_model(self, data_set, **kwargs):
-        """
-        Generate this feature detector's data-model given a file ingest. This
-        saves the generated model to the currently configured data directory.
-
-        This method should do nothing if there is already a model generated or
-        if this descriptor does not generate a model.
-
-        This abstract super method should be invoked for common error checking.
-
-        :raises ValueError: One or more input data elements did not conform to
-            this descriptor's valid content set.
-
-        :param data_set: Set of input data elements to generate the model
-            with.
-        :type data_set: collections.Set[smqtk.representation.DataElement]
-
-        """
-        valid_types = self.valid_content_types()
-        invalid_types_found = set()
-        for di in data_set:
-            if di.content_type() not in valid_types:
-                invalid_types_found.add(di.content_type())
-        if invalid_types_found:
-            self._log.error("Found one or more invalid content types among "
-                            "input:")
-            for t in sorted(invalid_types_found):
-                self._log.error("\t- '%s", t)
-            raise ValueError("Discovered invalid content type among input "
-                             "data: %s" % sorted(invalid_types_found))
 
     def compute_descriptor(self, data, descr_factory, overwrite=False):
         """

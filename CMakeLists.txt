@@ -73,6 +73,9 @@ configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
 # System Installation
 #
 
+# Initially set custom install path
+# User can change this later as desired after the first configuration pass has
+#   completed
 if (NOT SMQTK_FIRST_PASS_COMPLETE)
   set(CMAKE_INSTALL_PREFIX "/opt/kitware/SMQTK"
     CACHE PATH
@@ -81,15 +84,15 @@ if (NOT SMQTK_FIRST_PASS_COMPLETE)
 endif(NOT SMQTK_FIRST_PASS_COMPLETE)
 
 #+
-# inital empty data and work directories
+# initial empty data and work directories
 install(DIRECTORY DESTINATION var/work)
 install(DIRECTORY DESTINATION var/data)
 install(DIRECTORY DESTINATION var/nltk_data)
 
 if(UNIX)
-  # Due to super-user privaleges being required to run things like groupadd,
+  # Due to super-user privileges being required to run things like groupadd,
   # these commands will only be executed when we have such permissions (like
-  # installing to the system, etc.)
+  # installing to the system via sudo, etc.)
   install(CODE
           "execute_process(COMMAND groupadd -r SMQTK
                            COMMAND chown -R :SMQTK var
@@ -124,6 +127,7 @@ install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
 #
 
 # TODO: Define package dependencies here
+#       - just non-python? or include system python deps here, too?
 set(SMQTK_DEPS "")
 
 if(EXISTS /etc/redhat-release)

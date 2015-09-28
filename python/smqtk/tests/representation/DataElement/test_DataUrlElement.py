@@ -1,7 +1,6 @@
 
 import nose.tools as ntools
 import requests
-import socket
 import unittest
 
 from smqtk.representation.data_element.url_element import DataUrlElement

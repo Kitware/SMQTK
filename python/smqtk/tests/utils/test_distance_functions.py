@@ -7,7 +7,7 @@ import numpy as np
 from smqtk.utils import distance_functions as df
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 def gen(n):

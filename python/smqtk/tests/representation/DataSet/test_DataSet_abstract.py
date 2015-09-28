@@ -5,7 +5,7 @@ import unittest
 from smqtk.representation import DataSet
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DummyDataSet (DataSet):

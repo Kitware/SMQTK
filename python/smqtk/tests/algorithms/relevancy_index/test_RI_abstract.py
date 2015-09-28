@@ -7,7 +7,7 @@ from smqtk.algorithms.relevancy_index import \
     RelevancyIndex, get_relevancy_index_impls
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DummyRI (RelevancyIndex):

@@ -7,7 +7,7 @@ from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor impor
     ColorDescriptor_Image_csift  # arbitrary leaf class
 )
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestColorDescriptor (unittest.TestCase):

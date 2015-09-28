@@ -27,13 +27,15 @@
     //      where {configuration} is the JSON configuration dictionary for the
     //      specified implementation type.
     "descriptor_generators": {
-        "example": {
+        "example_label": {
             "type": "ColorDescriptor_Image_csift",
             "ColorDescriptor_Image_csift": {
-                "model_directory": "/Users/purg/dev/smqtk/source/data/ContentDescriptors/ColorDescriptor/csift/example_image",
-                "work_directory": "/Users/purg/dev/smqtk/source/work/ContentDescriptors/ColorDescriptor/csift/example_image",
+                // The following paths should point to valid directories, with
+                // the model_directory having pre-trained model files in it.
+                "model_directory": "...data/example_image",
+                "work_directory": "...work/example_image",
                 "random_seed": 42,
-                "kmeans_k": 256,
+                "kmeans_k": 1024,
                 "flann_autotune": false,
                 "flann_sample_fraction": 0.75,
                 "flann_target_precision": 0.95,

@@ -9,7 +9,7 @@ from smqtk.utils.file_utils import iter_directory_files
 from smqtk.utils.string_utils import partition_string
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DataFileSet (DataSet):

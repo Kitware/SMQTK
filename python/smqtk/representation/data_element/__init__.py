@@ -10,7 +10,7 @@ from smqtk.utils import safe_create_dir
 from smqtk.utils.configurable_interface import Configurable
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -18,12 +18,10 @@ MIMETYPES = mimetypes.MimeTypes()
 
 class DataElement (Configurable):
     """
-    Base abstract class for a data element.
+    Abstract interface for a byte data.
 
-    Basic data elements have a UUID, some byte content, and a content type.
-
-    DataElement implementations should be picklable for serialization, as some
-    DataSet implementations will desire such functionality.
+    Basic data elements have a UUID, some byte content, a content type, and
+    checksum accessor methods.
 
     """
     __metaclass__ = abc.ABCMeta

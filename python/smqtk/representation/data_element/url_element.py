@@ -5,7 +5,7 @@ import requests
 from smqtk.representation import DataElement
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()

@@ -8,7 +8,7 @@ import logging
 from smqtk.algorithms import SmqtkAlgorithm
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class NearestNeighborsIndex (SmqtkAlgorithm):

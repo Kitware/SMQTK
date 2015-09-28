@@ -11,7 +11,7 @@ from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator import _async_feature_generator_helper
 import smqtk.representation
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 def test_get_descriptors():
@@ -41,11 +41,6 @@ class DummyDescriptorGenerator (DescriptorGenerator):
 
     def _compute_descriptor(self, data):
         return
-
-    # Have base implementations
-
-    def generate_model(self, data_set, **kwargs):
-        super(DummyDescriptorGenerator, self).generate_model(data_set, **kwargs)
 
 
 class TestAsyncHelper (unittest.TestCase):
@@ -109,33 +104,6 @@ class TestContentDescriptorAbstract (unittest.TestCase):
 
     Test abstract super-class functionality where there is any
     """
-
-    def test_generate_model(self):
-        cd = DummyDescriptorGenerator()
-        mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-        mDataElement().content_type.return_value = 'image/png'
-        m_dataset = [mDataElement(), mDataElement()]
-
-        # When descriptor takes PNGs
-        cd.valid_content_types = mock.Mock(return_value={'image/png'})
-        cd.generate_model(m_dataset)
-        ntools.assert_equal(cd.valid_content_types.call_count, 1)
-
-        # When descriptor doesn't take PNGs
-        cd.valid_content_types = mock.Mock(return_value={'image/jpeg'})
-        ntools.assert_raises(ValueError, cd.generate_model, m_dataset)
-        ntools.assert_equal(cd.valid_content_types.call_count, 1)
-
-        # Mixed acceptance
-        d1 = mDataElement()
-        d2 = mDataElement()
-        d1.content_type.return_value = "image/jpeg"
-        d2.content_type.return_value = 'image/png'
-
-        cd.valid_content_types = mock.Mock(return_value={'image/png',
-                                                         'image/jpeg'})
-        cd.generate_model(m_dataset)
-        ntools.assert_equal(cd.valid_content_types.call_count, 1)
 
     def test_compute_descriptor_invlaid_type(self):
         cd = DummyDescriptorGenerator()

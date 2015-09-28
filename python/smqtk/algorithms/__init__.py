@@ -4,7 +4,7 @@ import logging
 from smqtk.utils import Configurable
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class SmqtkAlgorithm (Configurable):

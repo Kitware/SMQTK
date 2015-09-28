@@ -10,7 +10,7 @@ import time
 from smqtk.utils import file_utils, safe_create_dir, string_utils
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class VideoMetadata (object):

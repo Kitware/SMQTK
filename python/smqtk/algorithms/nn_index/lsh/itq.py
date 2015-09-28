@@ -18,7 +18,7 @@ from smqtk.utils import (
     SimpleTimer,
 )
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class ITQNearestNeighborsIndex (NearestNeighborsIndex):
@@ -328,7 +328,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         The first part of this method is equivalent to the compressITQ function
         from UNC-CH's implementation.
 
-        :raises RuntimeError: A current data mode is loaded, or the current
+        :raises RuntimeError: A current data model is loaded, or the current
             CodeIndex is not empty.
         :raises ValueError: No data available in the given iterable.
 

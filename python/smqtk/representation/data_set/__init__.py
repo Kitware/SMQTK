@@ -5,12 +5,15 @@ import logging
 from smqtk.utils.configurable_interface import Configurable
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class DataSet (collections.Set, Configurable):
     """
-    Base abstract class for data sets.
+    Abstract interface for data sets, that contain an arbitrary number of
+    ``DataElement`` instances of arbitrary implementation type, keyed on
+    ``DataElement`` UUID values.
+
     """
     __metaclass__ = abc.ABCMeta
 

@@ -9,7 +9,7 @@ import numpy
 from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 RAND_UUID = 0

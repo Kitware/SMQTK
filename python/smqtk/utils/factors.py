@@ -3,7 +3,7 @@
 import math
 
 
-__all__ = ["sieve_of_eratosthenes", "prime_factors", "all_factors"]
+__all__ = ["sieve_of_eratosthenes", "prime_factors", "factors", "factor_pairs"]
 
 
 def sieve_of_eratosthenes(N):
@@ -71,6 +71,7 @@ def prime_factors(N):
         # Short-cut loop exit when we know we cant factorize any more
         if remaining == 1:
             break
+        # factory out
         while remaining > 1 and ((remaining % p) == 0):
             p_factors.append(p)
             remaining /= p

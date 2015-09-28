@@ -1,4 +1,4 @@
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 import mock
 import nose.tools as ntools

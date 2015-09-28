@@ -8,7 +8,7 @@ from smqtk.representation.descriptor_element.local_elements import \
 from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 class TestIqrSvmHik (unittest.TestCase):

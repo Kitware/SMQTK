@@ -6,7 +6,7 @@ indexing techniques.
 from .itq import ITQNearestNeighborsIndex
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 NN_INDEX_CLASS = [

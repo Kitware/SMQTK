@@ -12,7 +12,7 @@ import unittest
 import smqtk.representation.data_element
 
 
-__author__ = 'purg'
+__author__ = "paul.tunison@kitware.com"
 
 
 # because this has a stable mimetype conversion

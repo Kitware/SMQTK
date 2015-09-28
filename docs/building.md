@@ -39,6 +39,8 @@ If installation of python dependencies via pip only is desired, or if local comp
 ##### NumPy and SciPy
 If installing NumPy and SciPy via pip, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
 
+Additionally, when installing these packages using ``pip``, if the ``LDFLAGS`` or ``CFLAGS``/``CXXFLAGS``/``CPPFLAGS`` are set, their build may fail as they are assuming specific setups.
+
 ### Additional Descriptor Dependencies
 Descriptors implemented in SMQTK may require additional dependencies in order to run.
 This may be because a descriptor required additional libraries or tools on the system.
@@ -82,7 +84,7 @@ Currently, the selection is very minimal, but may be expanded over time.
     make -j2
     popd
     # Set up SMQTK environment by sourcing file
-    . build/setup_smqtk.build.sh
+    . build/setup_env.build.sh
     # Running tests
     source/run_tests.sh
     

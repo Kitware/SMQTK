@@ -4,7 +4,7 @@ There is at least one implementation available for each interface.
 Some implementations will require additional dependencies that cannot be packaged with SMQTK.
 
 
-## [``DescriptorGenerator``](python/smqtk/algorithms/descriptor_generator/__init__.py)
+## [``DescriptorGenerator``](/python/smqtk/algorithms/descriptor_generator/__init__.py)
 This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.
 The input ``DataElement`` must be of a content type that the ``DescriptorGenerator`` supports, referenced against the ``DescriptorGenerator.valid_content_types`` method.
 
@@ -19,7 +19,7 @@ This interface supports a high-level, implementation agnostic asynchronous descr
 This is given an iterable of ``DataElement`` instances, a single ``DescriptorElementFactory`` that is used to produce all descriptor
 
 
-## [``NearestNeighborsIndex``](python/smqtk/algorithms/nn_index/__init__.py)
+## [``NearestNeighborsIndex``](/python/smqtk/algorithms/nn_index/__init__.py)
 This interface defines a method to build an index from a set of ``DescriptorElement`` instances (``NearestNeighborsIndex.build_index``) and a nearest-neighbors query function for getting a number of near neighbors to e query ``DescriptorElement`` (``NearestNeighborsIndex.nn``).
 
 Building an index requires that some non-zero number of ``DescriptorElements`` be passed into the ``build_index`` method. Subsequent calls to this method should rebuild the index model, not add to it.
@@ -32,7 +32,7 @@ If the provided query ``DescriptorElement`` does not have a set vector, this met
 This interface additionally requires that implementations define a ``count`` method, which returns the number of distinct ``DescriptorElement``instances are in the index.
 
 
-## [``RelevancyIndex``](python/smqtk/algorithms/relevancy_index/__init__.py)
+## [``RelevancyIndex``](/python/smqtk/algorithms/relevancy_index/__init__.py)
 This interface defines two methods: ``build_index`` and ``rank``.
 The ``build_index`` method is, like a ``NearestNeighborsIndex``, used to build an index of ``DescriptorElement`` instances.
 The ``rank`` method takes examples of relevant and not-relevant ``DescriptorElement`` examples with which the algorithm uses to rank (think sort) the indexed ``DescriptorElement`` instances by relevancy (on a ``[0, 1]`` scale).

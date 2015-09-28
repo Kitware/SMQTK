@@ -4,7 +4,7 @@ SMQTK is mainly comprised of 3 high level components, with additional sub-module
 
 * Data abstraction interfaces and plugin implementations
 * Algorithm abstraction interfaces and plugin implementations
-* [Web services](python/smqtk/web) and utility [scripts](bin)/[modules](python/smqtk/utils) that use and are used by both of the above
+* [Web services](/python/smqtk/web) and utility [scripts](bin)/[modules](python/smqtk/utils) that use and are used by both of the above
 
 Each of these main components are housed within distinct sub-modules under ``smqtk`` and adhere to a plugin pattern for the dynamic discovery of implementations.
 

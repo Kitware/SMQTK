@@ -117,19 +117,21 @@ class DescriptorGenerator (SmqtkAlgorithm):
             use a normal multiprocessing.pool.Pool instance.
         :type pool_type: type
 
-        :return: Mapping of data element UUID to computed descriptor element.
-            Element UUID's are congruent with the UUID of the data element it
-            is the descriptor of.
-        :rtype: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        :return: Mapping of input DataElement instances to the computed
+            descriptor element.
+            DescriptorElement UUID's are congruent with the UUID of the data
+            element it is the descriptor of.
+        :rtype: dict[smqtk.representation.DataElement,
+                     smqtk.representation.DescriptorElement]
 
         """
         self._log.info("Async compute features")
 
-        # Mapping of DataElement UUID to async processing result
-        #: :type: dict[collections.Hashable, multiprocessing.pool.ApplyResult]
+        # Mapping of DataElement to async processing result
+        #: :type: dict[smqtk.representation.DataElement, multiprocessing.pool.ApplyResult]
         ar_map = {}
-        # Mapping of DataElement UUID to the DescriptorElement for it.
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        # Mapping of DataElement to the DescriptorElement for it.
+        #: :type: dict[smqtk.representation.DataElement, smqtk.representation.DescriptorElement]
         de_map = {}
 
         # Queue up descriptor generation for descriptor elements that
@@ -138,10 +140,9 @@ class DescriptorGenerator (SmqtkAlgorithm):
         pool = pool_t(processes=parallel)
         with SimpleTimer("Queuing descriptor computation...", self._log.debug):
             for d in data_iter:
-                de_map[d.uuid()] = descr_factory.new_descriptor(self.name,
-                                                                d.uuid())
-                if overwrite or not de_map[d.uuid()].has_vector():
-                    ar_map[d.uuid()] = \
+                de_map[d] = descr_factory.new_descriptor(self.name, d.uuid())
+                if overwrite or not de_map[d].has_vector():
+                    ar_map[d] = \
                         pool.apply_async(_async_feature_generator_helper,
                                          args=(self, d))
         pool.close()
@@ -151,13 +152,13 @@ class DescriptorGenerator (SmqtkAlgorithm):
         perc_T = 0.0
         perc_inc = 0.1
         with SimpleTimer("Collecting async results...", self._log.debug):
-            for i, (uid, ar) in enumerate(ar_map.iteritems()):
-                feat = ar.get()
-                if feat is None:
+            for i, (d, ar) in enumerate(ar_map.iteritems()):
+                descriptor = ar.get()
+                if descriptor is None:
                     failures = True
                     continue
                 else:
-                    de_map[uid].set_vector(feat)
+                    de_map[d].set_vector(descriptor)
 
                 perc = float(i + 1) / len(ar_map)
                 if perc >= perc_T:

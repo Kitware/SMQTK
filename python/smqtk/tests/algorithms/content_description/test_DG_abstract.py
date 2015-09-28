@@ -260,8 +260,8 @@ class TestContentDescriptorAbstract (unittest.TestCase):
             mock.call(expected_new_descriptors[1]),
         ], any_order=True)
 
-        ntools.assert_in(expected_uuids[0], de_map)
-        ntools.assert_in(expected_uuids[1], de_map)
+        ntools.assert_in(m_d0, de_map)
+        ntools.assert_in(m_d1, de_map)
 
     @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.Pool')
     def test_computeDescriptorAsync_failure(self, mPool):

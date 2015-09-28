@@ -1,6 +1,6 @@
 import abc
 import logging
-import multiprocessing
+import multiprocessing.pool
 import numpy
 import os
 import traceback
@@ -136,7 +136,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
 
         # Queue up descriptor generation for descriptor elements that
         parallel = kwds.get('parallel', None)
-        pool_t = kwds.get('pool_type', multiprocessing.Pool)
+        pool_t = kwds.get('pool_type', multiprocessing.pool.ThreadPool)
         pool = pool_t(processes=parallel)
         with SimpleTimer("Queuing descriptor computation...", self._log.debug):
             for d in data_iter:

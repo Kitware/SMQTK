@@ -44,7 +44,7 @@ Other data structures are provided in the [``smqtk.representation``](/python/smq
 ## Algorithm Interfaces
 Algorithm interfaces provided:
 
-* [``DescriptorGenerator``](/python/smqtk/algorithms/descriptor_generator__init__.py)
+* [``DescriptorGenerator``](/python/smqtk/algorithms/descriptor_generator/__init__.py)
     * Algorithms that generate a single ``DescriptorElement`` per input ``DataElement``.
     * Implementations are constrained to some set of data content types they know how to handle.
 * [``NearestNeighborsIndex``](/python/smqtk/algorithms/nn_index/__init__.py)
@@ -92,9 +92,9 @@ This allows users to treat instances of structures and algorithms in a generic w
 It lies, of course, to the implementations of these interfaces to provide the concrete functionality.
 
 When creating a new data structure or algorithm interface, the pattern is that each interface is defined inside its own sub-module in the ``__init__.py`` file.
-This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py).
+This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31).
 This helper method looks for modules defined parallel to the ``__init__.py`` file and extracts classes that extend from the specified interface class as specified by a specified helper variable or by matching the file's name to a contained class name.
-See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py) for more information on how plugin modules are discovered.
+See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31) for more information on how plugin modules are discovered.
 
 ### Adding a new Interface and Implementation
 For example, lets say we're creating a new data structure interface called ``FooBar``.

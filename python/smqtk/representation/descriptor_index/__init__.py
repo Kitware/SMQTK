@@ -24,6 +24,9 @@ class DescriptorIndex (Configurable):
     def __getitem__(self, uuid):
         return self.get_descriptor(uuid)
 
+    def __delitem__(self, uuid):
+        self.remove_descriptor(uuid)
+
     @property
     def _log(self):
         return logging.getLogger('.'.join([self.__module__,
@@ -121,14 +124,40 @@ class DescriptorIndex (Configurable):
         """
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
-        :param type_uuid_pairs: Iterable of descriptor UUIDs to query for.
-        :type type_uuid_pairs: collections.Iterable[collections.Hashable]
+        :param uuids: Iterable of descriptor UUIDs to query for.
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given type-uuid pairs.
         :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+
+    @abc.abstractmethod
+    def remove_descriptor(self, uuid):
+        """
+        Remove a descriptor from this index by the given UUID.
+
+        :param uuid: UUID of the DescriptorElement to remove.
+        :type uuid: collections.Hashable
+
+        :raises KeyError: The given UUID doesn't associate to a
+            DescriptorElement in this index.
+
+        """
+
+    @abc.abstractmethod
+    def remove_many_descriptors(self, **uuids):
+        """
+        Remove descriptors associated to given descriptor UUIDs from this index.
+
+        :param type_uuid_pairs: Iterable of descriptor UUIDs to remove.
+        :type type_uuid_pairs: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: A given UUID doesn't associate with a
+            DescriptorElement in this index.
 
         """
 

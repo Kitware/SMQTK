@@ -132,8 +132,8 @@ class DescriptorMemoryIndex (DescriptorIndex):
         """
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
-        :param type_uuid_pairs: Iterable of descriptor UUIDs to query for.
-        :type type_uuid_pairs: collections.Iterable[collections.Hashable]
+        :param uuids: Iterable of descriptor UUIDs to query for.
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -144,6 +144,42 @@ class DescriptorMemoryIndex (DescriptorIndex):
         """
         for uid in uuids:
             yield self._table[uid]
+
+    def remove_descriptor(self, uuid, no_cache=False):
+        """
+        Remove a descriptor from this index by the given UUID.
+
+        :param uuid: UUID of the DescriptorElement to remove.
+        :type uuid: collections.Hashable
+
+        :raises KeyError: The given UUID doesn't associate to a
+            DescriptorElement in this index.
+
+        :param no_cache: Do not cache the internal table if a file cache was
+            provided. This would be used if adding many descriptors at a time,
+            preventing a file write for every individual descriptor added.
+        :type no_cache: bool
+
+        """
+        del self._table[uuid]
+        if not no_cache:
+            self._cache_table()
+
+    def remove_many_descriptors(self, **uuids):
+        """
+        Remove descriptors associated to given descriptor UUIDs from this index.
+
+        :param type_uuid_pairs: Iterable of descriptor UUIDs to remove.
+        :type type_uuid_pairs: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: A given UUID doesn't associate with a
+            DescriptorElement in this index.
+
+        """
+        for uid in uuids:
+            # using no-cache so we don't trigger multiple file writes
+            self.remove_descriptor(uid, no_cache=True)
+        self._cache_table()
 
     def iterkeys(self):
         return self._table.iterkeys()

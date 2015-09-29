@@ -37,7 +37,12 @@ def setup_cli(parser):
     group_configuration.add_option('--output-config', default=None,
                                    help='Optional path to output default JSON '
                                         'configuration to.')
-
+    group_configuration.add_option('--overwrite',
+                                   default=False, action='store_true',
+                                   help="When outputting a configuration file, "
+                                        "overwrite an existing file if one "
+                                        "already exists by the specified "
+                                        "output file path.")
     parser.add_option_group(group_configuration)
 
     # Server options
@@ -113,7 +118,7 @@ def main():
 
     # Output config and exit if requested
     bin_utils.output_config(opts.output_config, app_class.get_default_config(),
-                            log)
+                            log, opts.overwrite)
 
     if not opts.config:
         log.error("No configuration provided")
@@ -131,6 +136,7 @@ def main():
     use_threading = opts.threaded
     use_basic_auth = opts.use_basic_auth
 
+    # noinspection PyUnresolvedReferences
     app = app_class.from_config(config)
     if use_basic_auth:
         app.config["BASIC_AUTH_FORCE"] = True

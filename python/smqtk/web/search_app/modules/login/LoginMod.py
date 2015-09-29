@@ -30,8 +30,7 @@ class LoginMod (flask.Blueprint):
         self.log = logging.getLogger('LoginMod')
 
         # Pull in users configuration file from etc directory
-        users_config_file = os.path.join(parent_app.config['ETC_DIR'],
-                                         'users.json')
+        users_config_file = os.path.join(script_dir, 'users.json')
         if not os.path.isfile(users_config_file):
             raise RuntimeError("Couldn't find expected users config file -> %s"
                                % users_config_file)

@@ -56,9 +56,10 @@ class RelevancyIndex (SmqtkAlgorithm):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :return: Map of descriptor UUID to rank value within [0, 1] range, where
-            a 1.0 means most relevant and 0.0 meaning least relevant.
-        :rtype: dict[collections.Hashable, float]
+        :return: Map of indexed descriptor elements to a rank value between
+            [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
+            meaning least relevant.
+        :rtype: dict[smqtk.representation.DescriptorElement, float]
 
         """
 

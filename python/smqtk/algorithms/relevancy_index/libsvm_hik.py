@@ -148,14 +148,17 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         negative exemplar descriptor elements.
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type pos: collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param neg: Iterable of negative exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :return: Map of descriptor UUID to rank value within [0, 1] range, where
-            a 1.0 means most relevant and 0.0 meaning least relevant.
-        :rtype: dict[collections.Hashable, float]
+        :return: Map of indexed descriptor elements to a rank value between
+            [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
+            meaning least relevant.
+        :rtype: dict[smqtk.representation.DescriptorElement, float]
 
         """
         # Notes:
@@ -210,6 +213,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         for i, nlist in enumerate(svm_model.SV[:svm_SVs.shape[0]]):
             svm_SVs[i, :] = [n.value for n in nlist[:len(train_vectors[0])]]
         # compute matrix of distances from support vectors to index elements
+        # TODO: Optimize this step by caching SV distance vectors
+        #       - It is known that SVs are vectors from the training data, so
+        #           if the same descriptors are given to this function
+        #           repeatedly (which is the case for IQR), this can be faster
+        #           because we're only computing at most a few more distance
+        #           vectors against our indexed descriptor matrix, and the rest
+        #           have already been computed before.
+        #       - At worst, we're effectively doing this call because each SV
+        #           needs to have its distance vector computed.
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)

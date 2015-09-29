@@ -57,3 +57,9 @@ class SmqtkAlgorithm (Configurable):
         :rtype: bool
 
         """
+
+
+# Import module abstracts and plugin getter functions
+from .descriptor_generator import DescriptorGenerator, get_descriptor_generator_impls
+from .nn_index import NearestNeighborsIndex, get_nn_index_impls
+from .relevancy_index import RelevancyIndex, get_relevancy_index_impls

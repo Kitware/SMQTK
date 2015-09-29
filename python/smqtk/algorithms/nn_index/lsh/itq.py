@@ -15,6 +15,7 @@ from smqtk.utils import (
     bit_utils,
     distance_functions,
     plugin,
+    safe_create_dir,
     SimpleTimer,
 )
 
@@ -374,6 +375,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
             x -= self._mean_vector
         if self._mean_vec_cache_filepath:
             with SimpleTimer("Saving mean vector", self._log.info):
+                safe_create_dir(osp.dirname(self._mean_vec_cache_filepath))
                 numpy.save(self._mean_vec_cache_filepath, self._mean_vector)
 
         # PCA
@@ -418,6 +420,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
             self._r = numpy.dot(pc_top, self._r)
         if self._rotation_cache_filepath:
             with SimpleTimer("Saving rotation matrix", self._log.info):
+                safe_create_dir(osp.dirname(self._rotation_cache_filepath))
                 numpy.save(self._rotation_cache_filepath, self._r)
 
         # Populating small-code index

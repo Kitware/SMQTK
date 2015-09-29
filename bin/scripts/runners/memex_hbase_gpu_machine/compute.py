@@ -13,6 +13,7 @@ Notes:
 
 import happybase
 import jinja2
+import hashlib
 import logging
 import mimetypes
 import multiprocessing
@@ -38,7 +39,7 @@ HBASE_START_KEY = '0' * 40  # SHA1 simulation
 HBASE_STOP_KEY = 'F' * 40  # SHA1 simulation
 HBASE_KEY_CHECKPOINT_FILEPATH = '/data/kitware/smqtk/image_cache_cnn_compute/hbase.checkpoint.txt'
 
-CNN_BATCH_SIZE = 10000  # Total batch of images to run in an execution of the descriptor executable at a time.
+CNN_BATCH_SIZE = 2000  # Total batch of images to run in an execution of the descriptor executable at a time.
 CNN_GPU_BATCH_SIZE = 100  # Number of images computed on GPU at a time
 CNN_EXE = "cnn_feature_extractor"
 CNN_CAFFE_MODE = '/data/kitware/caffe/source/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
@@ -125,7 +126,8 @@ def async_write_temp((key, img_binary, out_q)):
     if not ext:
         log.warn("Count not guess extension for type: %s", ext)
         return
-    fd, filepath = tempfile.mkstemp(suffix=ext, dir=TEMP_DIR)
+    sha1 = hashlib.sha1(img_binary).hexdigest()
+    fd, filepath = tempfile.mkstemp(suffix=ext, prefix=sha1+'.', dir=TEMP_DIR)
     os.close(fd)
     with open(filepath, 'wb') as ofile:
         ofile.write(img_binary)
@@ -184,6 +186,7 @@ class HBaseFeeder (multiprocessing.Process):
         self.table = None
 
     def _new_scan_iter(self, start_key):
+        self.log.info("Initializing HBase connection/table/scan from key: %s", start_key)
         self.connection = happybase.Connection(HBASE_ADDRESS, timeout=HBASE_TIMEOUT)
         self.table = self.connection.table(HBASE_TABLE)
         return self.table.scan(
@@ -198,22 +201,28 @@ class HBaseFeeder (multiprocessing.Process):
         last_key = None
         i = 0
 
-        scan_iter = self._new_scan_iter(iself.start_key)
+        scan_iter = self._new_scan_iter(self.start_key)
         running = True
 
         while running:
+            key = doc = None
             try:
                 key, doc = scan_iter.next()
             except IOError:
                 # Expected for a scan timeout error. Re-initialize connection
                 self.log.warn("HBase connection timed out. Initializing new scan connection")
-                self.connection.close()
                 scan_iter = self._new_scan_iter(last_key or self.start_key)
                 continue
             except StopIteration:
                 # Finished scan
                 self.log.info("Finished scan iteration.")
                 running = False
+                continue
+            except:
+                self.log.warn("Encountered unknown exception when trying to "
+                              "get next key-doc pair (probably an HBase "
+                              "issue). Reinitializing connection/scan.")
+                scan_iter = self._new_scan_iter(last_key or self.start_key)
                 continue
 
             # Normalize hex casing
@@ -341,7 +350,7 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
                           len(batch), gpu_b_size)
             self.process_batch(batch, gpu_b_size)
 
-        complete_queue.put(None)
+        self.complete_queue.put(None)
 
 
     def process_batch(self, batch, gpu_batch_size):
@@ -387,16 +396,22 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
         proc_cnn = subprocess.Popen(call_args)
         rc = proc_cnn.wait()
         if rc:
-            raise RuntimeError("Failed to execute CNN executable with return code: %s" % rc)
-
-        # Parse output file into SMQTK DescriptorElement instances
-        self.log.info("Parsing output descriptors")
-        pool = multiprocessing.Pool(self.PARALLEL)
-        d_elems = pool.map(set_descriptor,
-                           zip(keys, smqtk.utils.file_utils.iter_csv_file(output_csv)))
+            self.log.warn("Failed to execute CNN executable with return code: %s", rc)
+            self.log.warn("Skipping images in previous batch due to error")
+            #raise RuntimeError("Failed to execute CNN executable with return code: %s" % rc)
+        else:
+            # if we succeeded,
+            # Parse output file into SMQTK DescriptorElement instances
+            self.log.info("Parsing output descriptors")
+            pool = multiprocessing.Pool(self.PARALLEL)
+            d_elems = pool.map(set_descriptor,
+                               zip(keys, smqtk.utils.file_utils.iter_csv_file(output_csv)))
+            pool.close()
+            pool.join()
 
         # Remove temp files used
         self.log.info("Cleaning up")
+        pool = multiprocessing.Pool(self.PARALLEL)
         pool.map(os.remove, temp_files)
         pool.close()
         pool.join()
@@ -405,7 +420,6 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
         os.remove(output_csv)
 
         self.log.info("Returning elements")
-        return d_elems
 
 
 def run():

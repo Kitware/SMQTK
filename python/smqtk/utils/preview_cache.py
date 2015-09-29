@@ -1,5 +1,3 @@
-__author__ = "paul.tunison@kitware.com"
-
 import imageio
 import logging
 import mimetypes
@@ -7,6 +5,9 @@ import os
 import shutil
 
 from smqtk.utils import safe_create_dir, video_utils
+
+
+__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()

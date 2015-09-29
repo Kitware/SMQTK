@@ -103,5 +103,6 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
         else:
             log.info("Outputting JSON configuration to: %s", output_path)
             with open(output_path, 'w') as f:
-                json.dump(config_dict, f, indent=4, check_circular=True)
+                json.dump(config_dict, f, indent=4, check_circular=True,
+                          sort_keys=True)
             exit(0)

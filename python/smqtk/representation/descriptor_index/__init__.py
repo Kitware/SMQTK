@@ -18,14 +18,17 @@ class DescriptorIndex (Configurable):
 
     """
 
-    def __len__(self):
-        return self.count()
+    def __delitem__(self, uuid):
+        self.remove_descriptor(uuid)
 
     def __getitem__(self, uuid):
         return self.get_descriptor(uuid)
 
-    def __delitem__(self, uuid):
-        self.remove_descriptor(uuid)
+    def __iter__(self):
+        return self.iterkeys()
+
+    def __len__(self):
+        return self.count()
 
     @property
     def _log(self):

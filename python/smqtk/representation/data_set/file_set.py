@@ -34,6 +34,20 @@ class DataFileSet (DataSet):
     # - yields two groups, the first is the UUID, the second is the SHA1 sum
     SERIAL_FILE_RE = re.compile("UUID_(\w+).SHA1_(\w+).dataElement")
 
+    @classmethod
+    def is_usable(cls):
+        """
+        Check whether this data set implementations is available for use.
+
+        This is always true for this implementation as there are no required 3rd
+        party dependencies
+
+        :return: Boolean determination of whether this implementation is usable.
+        :rtype: bool
+
+        """
+        return True
+
     def __init__(self, root_directory, sha1_chunk=10):
         """
         Initialize a new or existing file set from a root directory.

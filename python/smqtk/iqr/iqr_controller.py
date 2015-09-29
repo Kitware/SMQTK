@@ -1,13 +1,3 @@
-# coding=utf-8
-"""
-LICENCE
--------
-Copyright 2015 by Kitware, Inc. All Rights Reserved. Please refer to
-KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
-Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
-
-"""
-
 import multiprocessing
 import uuid
 
@@ -91,6 +81,9 @@ class IqrController (object):
         with self._map_rlock:
             if not session_uuid:
                 session_uuid = uuid.uuid1()
+                assert session_uuid not in self._iqr_sessions, \
+                    "Generated a new random UUID that already exists in " \
+                    "session map."
             else:
                 if session_uuid in self._iqr_sessions:
                     raise RuntimeError("Cannot use given ID as it already "

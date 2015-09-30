@@ -13,7 +13,8 @@ from smqtk.utils import plugin
 from smqtk.utils import safe_create_dir
 
 
-DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})
+DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
+                                                     {})
 DFLT_REL_INDEX_CONFIG = {
     "type": "LibSvmHikRelevancyIndex",
     "LibSvmHikRelevancyIndex": {
@@ -24,7 +25,11 @@ DFLT_REL_INDEX_CONFIG = {
 
 class IqrResultsDict (dict):
     """
-    Dictionary subclass for standardizing data types stored.
+    Dictionary subclass for containing DescriptorElement-to-float mapping.
+
+    We expect keys to be DescriptorElement instances and the values to be floats
+    between [0,1], inclusive.
+
     """
 
     def __setitem__(self, i, v):
@@ -98,6 +103,7 @@ class IqrSession (object):
             index may contain anywhere from this value's number of entries, to
             ``N*P``, where ``N`` is this value and ``P`` is the number of
             positive examples at the time of working index initialization.
+        :type pos_seed_neighbors: int
 
         :param rel_index_config: Plugin configuration dictionary for the
             RelevancyIndex to use for ranking user adjudications. By default we
@@ -124,7 +130,9 @@ class IqrSession (object):
 
         # Descriptor references from our index (above) that have been
         #   adjudicated.
+        #: :type: set[smqtk.representation.DescriptorElement]
         self.positive_descriptors = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
         self.negative_descriptors = set()
 
         # Example pos/neg data/descriptors added to this session
@@ -197,6 +205,8 @@ class IqrSession (object):
         Return a tuple of the current (id, probability) result pairs in
         order of probability score. If there are no results yet, None is
         returned.
+
+        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
 
         """
         with self.lock:

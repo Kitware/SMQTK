@@ -27,9 +27,8 @@
     <script>
     $(document).ready(function() {
         var a = new ActivityBar($("#initialLoadProgress"),
-                                "Initializing IQR session"),
-            fz = null,
-            iqr_view = null;
+                                "Initializing IQR session");
+        var iqr_view = null;
         a.on();
 
         $.ajax({
@@ -37,41 +36,13 @@
             success: function( data ) {
                 if( data.success ) {
                     a.remove();
-
-                    fz = new FlowUploadZone($("#FlowUploadZone"),
-                                            "{{ uploader_post_url }}");
-
-                    // Add uploaded to current session online ingest
-                    fz.onFileSuccess(function(file) {
-                        var fname = file.name;
-                        var fid = file.uniqueIdentifier;
-
-                        var message_prefix = "Ingesting file ["+fname+"]: ";
-                        var bar = new ActivityBar($("#ingest_progress"),
-                                                  message_prefix+"Ingesting...");
-                        bar.on();
-
-                        $.ajax({
-                            url: "iqr_ingest_file",
-                            type: 'POST',
-                            data: {
-                                fid: fid
-                            },
-                            success: function(data) {
-                                bar.on(message_prefix+data);
-                                bar.stop_active("success");
-                            },
-                            error: function(jqXHR, textStatus, errorThrown) {
-                                bar.on("ERROR: "+errorThrown);
-                                bar.stop_active("danger");
-                                alert_error("Error during FID upload POST: "
-                                            + textStatus);
-                            }
-                        });
-                    });
-
-                    iqr_view = new IqrView($("#iqr_view_container"));
+                    iqr_view = new IqrView($("#iqr_view_container"),
+                                           "{{uploader_post_url}}");
                 }
+                else {
+                    alert_error("Failed to initialize IQR session: " + data.message);
+                }
+                a.remove();
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 a.remove();
@@ -87,45 +58,9 @@
 {% block body_content %}
     <div class="container-fluid">
         <h1>{{ module_name }}</h1>
+        <hr>
         <div id="initialLoadProgress"></div>
-        <div id="FlowUploadZone"></div>
-
-        <hr>
-        <div id="ingest_progress"></div>
-
-        <hr>
         <div id="iqr_view_container"></div>
-
     </div>
-
-{#-
-        <div class="flow-drop" ondragenter="jQuery(this).addClass('flow-dragover');" ondragend="jQuery(this).removeClass('flow-dragover');" ondrop="jQuery(this).removeClass('flow-dragover');">
-        Drop videos here to process or <a class="flow-browse-folder"><u>select folder</u></a> or <a class="flow-browse"><u>select from your computer</u></a>
-        </div>
-
-        <div class="flow-progress">
-        <table>
-          <tr>
-            <td width="100%"><div class="progress-container"><div class="progress-bar"></div></div></td>
-            <td class="progress-text" nowrap="nowrap"></td>
-            <td class="progress-pause" nowrap="nowrap">
-              <a href="#" onclick="r.upload(); return(false);" class="progress-resume-link"><img src="/oneshot/static/resume.png" title="Resume upload" /></a>
-              <a href="#" onclick="r.pause(); return(false);" class="progress-pause-link"><img src="/oneshot/static/pause.png" title="Pause upload" /></a>
-              <a href="#" onclick="r.cancel(); return(false);" class="progress-cancel-link"><img src="/oneshot/static/cancel.png" title="Cancel upload" /></a>
-            </td>
-          </tr>
-        </table>
-        </div>
-
-        </br>
-        <ul class="flow-list"></ul>
-        </br>
-        <h2> Uploaded Videos </h2>
-        <div id="videos"></div>
-        <button id="beginiqr" class="btn btn-primary" disabled="disabled"> Search Simlar Videos </button>
-
-        <div id="clipresults"></div>
-#}
-
 {% endblock body_content %}
 

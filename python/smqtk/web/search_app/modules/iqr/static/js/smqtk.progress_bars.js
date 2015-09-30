@@ -2,6 +2,8 @@
  * General purpose progress bar encapsulation
  */
 function GeneralProgressBar(container, min, max) {
+    Object.call(this);
+
     this.contained_by = $(container);
     this.min = min || 0;
     this.max = max || 100;
@@ -61,6 +63,8 @@ GeneralProgressBar.prototype.update = function (new_val) {
  * @constructor
  */
 function ActivityBar(container, message) {
+    Object.call(this);
+
     this.message = (typeof message === 'undefined') ? "" : message;
 
     // jQuery div container

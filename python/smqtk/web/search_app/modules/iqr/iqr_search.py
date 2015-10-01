@@ -224,13 +224,20 @@ class IqrSearch (flask.Blueprint, Configurable):
                 # noinspection PyProtectedMember
                 return flask.jsonify({
                     "uuid": iqrs.uuid,
-                    "positive_uids": tuple(d.uuid() for d in iqrs.positive_descriptors),
-                    "negative_uids": tuple(d.uuid() for d in iqrs.negative_descriptors),
+                    "positive_uids":
+                        tuple(d.uuid() for d in iqrs.positive_descriptors),
+                    "negative_uids":
+                        tuple(d.uuid() for d in iqrs.negative_descriptors),
+
                     "ex_pos":
-                        tuple(d.uuid() for d in iqrs.ex_pos_data2descriptor.itervalues()),
+                        tuple(d.uuid() for d
+                              in iqrs.ex_pos_data2descriptor.itervalues()),
                     "ex_neg":
-                        tuple(d.uuid() for d in iqrs.ex_neg_data2descriptor.itervalues()),
+                        tuple(d.uuid() for d
+                              in iqrs.ex_neg_data2descriptor.itervalues()),
+
                     "initialized": iqrs.working_index.count() > 0,
+                    "index_size": iqrs.working_index.count(),
                 })
 
         @self.route("/check_current_iqr_session")
@@ -330,6 +337,58 @@ class IqrSearch (flask.Blueprint, Configurable):
 
                 return str(upload_data.uuid())
 
+        @self.route("/iqr_initialize", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def iqr_initialize():
+            """
+            Initialize IQR session working index based on current positive
+            examples and adjudications.
+            """
+            with self.get_current_iqr_session() as iqrs:
+                try:
+                    iqrs.initialize()
+                    return flask.jsonify({
+                        "success": True,
+                        "message": "Completed initialization",
+                    })
+                except Exception, ex:
+                    return flask.jsonify({
+                        "success": False,
+                        "message": "ERROR: (%s) %s" % (type(ex).__name__,
+                                                       str(ex))
+                    })
+
+        @self.route("/get_item_adjudication", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def get_adjudication():
+            """
+            Get the adjudication status of a particular data/descriptor element
+            by UUID.
+
+            This should only ever return a dict where one of the two, or
+            neither, are labeled True.
+
+            :return: {
+                    is_pos: <bool>,
+                    is_neg: <bool>
+                }
+            """
+            elem_uuid = flask.request.args['uid']
+            with self.get_current_iqr_session() as iqrs:
+                is_p = (
+                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors) or
+                    elem_uuid in set(d.uuid() for d in iqrs.ex_pos_data2descriptor)
+                )
+                is_n = (
+                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors) or
+                    elem_uuid in set(d.uuid() for d in iqrs.ex_neg_data2descriptor)
+                )
+
+                return flask.jsonify({
+                    "is_pos": is_p,
+                    "is_neg": is_n,
+                })
+
         @self.route("/adjudicate", methods=["POST", "GET"])
         @self._parent_app.module_login.login_required
         def adjudicate():
@@ -373,99 +432,6 @@ class IqrSearch (flask.Blueprint, Configurable):
                            % (pos_to_add, pos_to_remove,
                               neg_to_add, neg_to_remove)
             })
-
-        @self.route("/get_item_adjudication", methods=["GET"])
-        @self._parent_app.module_login.login_required
-        def get_adjudication():
-            """
-            Get the adjudication status of a particular data/descriptor element
-            by UUID.
-
-            This should only ever return a dict where one of the two, or
-            neither, are labeled True.
-
-            :return: {
-                    is_pos: <bool>,
-                    is_neg: <bool>
-                }
-            """
-            elem_uuid = flask.request.args['uid']
-            with self.get_current_iqr_session() as iqrs:
-                is_p = (
-                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors) or
-                    elem_uuid in set(d.uuid() for d in iqrs.ex_pos_data2descriptor)
-                )
-                is_n = (
-                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors) or
-                    elem_uuid in set(d.uuid() for d in iqrs.ex_neg_data2descriptor)
-                )
-
-                return flask.jsonify({
-                    "is_pos": is_p,
-                    "is_neg": is_n,
-                })
-
-        @self.route("/get_positive_uids", methods=["GET"])
-        @self._parent_app.module_login.login_required
-        def get_positive_uids():
-            """
-            Get a list of the positive data/descriptor UUIDs
-
-            :return: {
-                    uids: list of collections.Hashable
-                }
-            """
-            with self.get_current_iqr_session() as iqrs:
-                pos_uuids = set()
-                pos_uuids.update(d.uuid() for d in iqrs.positive_descriptors)
-                pos_uuids.update(d.uuid() for d in iqrs.ex_pos_data2descriptor.itervalues())
-
-                return flask.jsonify({
-                    "uids": list(pos_uuids)
-                })
-
-        @self.route("/get_random_uids")
-        @self._parent_app.module_login.login_required
-        def get_random_uids():
-            """
-            Return to the client a list of all known dataset IDs but in a random
-            order. If there is currently an active IQR session with elements in
-            its extension ingest, then those IDs are included in the random
-            list.
-
-            :return: {
-                    uids: list of int
-                }
-            """
-            all_ids = self._data_set.uuids()
-            with self.get_current_iqr_session() as iqrs:
-                all_ids.update(iqrs.extension_ds.uuids())
-            all_ids = list(all_ids)
-            random.shuffle(all_ids)
-            return flask.jsonify({
-                "uids": all_ids
-            })
-
-        @self.route("/iqr_initialize", methods=["POST"])
-        @self._parent_app.module_login.login_required
-        def iqr_initialize():
-            """
-            Initialize IQR session working index based on current positive
-            examples and adjudications.
-            """
-            with self.get_current_iqr_session() as iqrs:
-                try:
-                    iqrs.initialize()
-                    return flask.jsonify({
-                        "success": True,
-                        "message": "Completed initialization",
-                    })
-                except Exception, ex:
-                    return flask.jsonify({
-                        "success": False,
-                        "message": "ERROR: (%s) %s" % (type(ex).__name__,
-                                                       str(ex))
-                    })
 
         @self.route("/iqr_refine", methods=["POST"])
         @self._parent_app.module_login.login_required
@@ -527,6 +493,26 @@ class IqrSearch (flask.Blueprint, Configurable):
                 return flask.jsonify({
                     "success": True
                 })
+
+        @self.route("/get_random_uids")
+        @self._parent_app.module_login.login_required
+        def get_random_uids():
+            """
+            Return to the client a list of working index IDs but in a random
+            order. If there is currently an active IQR session with elements in
+            its extension ingest, then those IDs are included in the random
+            list.
+
+            :return: {
+                    uids: list of int
+                }
+            """
+            with self.get_current_iqr_session() as iqrs:
+                all_ids = list(iqrs.working_index.iterkeys())
+            random.shuffle(all_ids)
+            return flask.jsonify({
+                "uids": all_ids
+            })
 
     def get_config(self):
         return {

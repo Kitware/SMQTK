@@ -56,7 +56,7 @@ GeneralProgressBar.prototype.update = function (new_val) {
 
 
 /**
- * Animated bar that represents indeterminently ongoing progress.
+ * Animated bar that represents indeterminately ongoing progress.
  *
  * @param container Containing element
  * @param message Optional Initial message to show
@@ -91,7 +91,7 @@ function ActivityBar(container, message) {
  * @param message Message to show.
  */
 ActivityBar.prototype.on = function(message) {
-    this.loading_bar.text(message);
+    this.loading_bar.text(message || this.message);
     this.progress_div.show();
 };
 

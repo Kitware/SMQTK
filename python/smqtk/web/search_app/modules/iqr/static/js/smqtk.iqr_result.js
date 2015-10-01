@@ -56,7 +56,7 @@ function IqrResult(container, rank, uid, probability, adjudicatable) {
     this.header = $('<div/>');
     this.header.css('height', '24px');
     this.header.text("#" + (this.rank+1) + " | "
-                     + "UID: " + this.uid + " | "
+                     //+ "UID: " + this.uid + " | "
                      + (this.probability*100).toFixed(2) + "%");
 
     // adjudication icons / functionality

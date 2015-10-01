@@ -35,9 +35,9 @@
     text-align: center;
     vertical-align: top;
 }
-.explicit-image {
+.explicit {
     filter: blur(10px);
 }
-.explicit-image:hover {
+.explicit:hover {
     filter: blur(0);
 }

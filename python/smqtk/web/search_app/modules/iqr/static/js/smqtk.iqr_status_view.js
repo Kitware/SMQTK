@@ -39,6 +39,7 @@ IqrStatusView.prototype.construct_view = function (container) {
         this.example_pos_data_zone,
         $("<span><h3>Negative Examples:</h3></span>"),
         this.example_neg_data_zone,
+        $("<span><h4>View Index Adjudications:</h4></span>"),
         this.buttons_bottom
     );
 
@@ -47,11 +48,11 @@ IqrStatusView.prototype.construct_view = function (container) {
         this.button_view_neg
     );
 
-    this.example_pos_data_zone.attr('id', 'pos_example_zone');
-    this.example_neg_data_zone.attr('id', 'neg_example_zone');
+    this.example_pos_data_zone.attr("id", "pos_example_zone");
+    this.example_neg_data_zone.attr("id", "neg_example_zone");
 
-    this.button_view_pos.text("View positive adjudications");
-    this.button_view_neg.text("View negative adjudications");
+    this.button_view_pos.text("Positive");
+    this.button_view_neg.text("Negative");
 
     //
     // Control

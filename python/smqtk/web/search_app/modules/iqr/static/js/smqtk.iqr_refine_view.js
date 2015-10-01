@@ -12,7 +12,13 @@ function IqrRefineView(container) {
     // Members
     //
     this.show_more_step = 20;
-    this.displayed_search_results = [];
+
+    // parallel arrays of ordered result UUIDs and relevancy scores.
+    //this.displayed_search_results = [];
+    this.refine_result_uuids = [];
+    this.refine_result_score = [];
+    // number of refine results currently displayed from the above arrays.
+    this.refine_results_displayed = 0;
 
     this.random_enabled = false;  // not displayed initially.
     this.random_ids = [];
@@ -43,16 +49,9 @@ function IqrRefineView(container) {
     this.button_container_random_top = this.button_container_refine_top.clone();
     this.button_container_random_bot = this.button_container_refine_top.clone();
 
-    this.button_initialize = $('<button class="btn btn-primary" type="button"/>');
-    this.button_initialize.text("Initialize");
-
     this.button_refine_top = $('<button class="btn btn-primary" type="button"/>');
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
-
-    this.button_reset_top = $('<button class="btn btn-danger" type="button"/>');
-    this.button_reset_top.text("Reset IQR");
-    this.button_reset_bot = this.button_reset_top.clone();
 
     // To be put in top button container
     this.button_toggle_random = $('<button class="btn" type="button"/>');
@@ -61,7 +60,6 @@ function IqrRefineView(container) {
     // To be put in bottom button container in results panel
     this.button_refine_showMore = $('<button class="btn" type="button"/>');
     this.button_refine_showMore.text("Show More");
-    this.button_refine_showMore.hide();
 
     this.button_random_refresh = $('<button class="btn btn-danger" type="button"/>');
     this.button_random_refresh.text("Refresh Random Results");
@@ -69,9 +67,7 @@ function IqrRefineView(container) {
     this.button_random_showMore = this.button_refine_showMore.clone();
 
     this.results_container_refine = $('<div/>');
-    this.results_container_refine.css('text-align', 'center');
-
-    this.results_container_random = this.results_container_refine.clone();
+    this.results_container_random = $('<div/>');
 
     //
     // Construct layout
@@ -79,53 +75,26 @@ function IqrRefineView(container) {
     // Not constructing random pane here so that it can be added and removed via
     // functions.
     //
-
-    // initially construct pane out-of-tree
-    this.construct_refine_pane();
-
     $(container).append(this.iqr_view_container);
-    $(container).append($('<hr>'));
-
-    // Update model to initial state
-    var inst = this;
-    $.ajax({
-        url: "get_positive_uids",
-        success: function (data) {
-            var num_pos = data['uids'].length;
-            inst.display_search_results_range(0, inst.show_more_step + num_pos);
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            alert_error("AJAX: " + textStatus + ": " + errorThrown);
-        }
-    });
+    this.construct_view(); // Everything lives underneath iqr_view_container
 
     return this;
 }
 
 /**
- * Return the number of initial search results to display.
- *
- * This takes into account the number of results at the very top that are
- * already marked positive, and returns that number + the step amount. This
- * ensures that the user is given at least some non-redundant information
- * before having to click any buttons.
- *
- * @returns int Number of search results to initially display.
+ * Global view construction
  */
-//IqrRefineView.prototype.get_initial_result_display_count = function() {
-//    var pos_ids = 0;
-//    $.ajax({
-//        async: false,
-//        url: "get_positive_uids",
-//        success: function (data) {
-//            pos_ids = data['uids'].length;
-//        },
-//        error: function (jqXHR, textStatus, errorThrown) {
-//            alert_error("AJAX Error: " + errorThrown);
-//        }
-//    });
-//    return this.show_more_step + pos_ids;
-//};
+IqrRefineView.prototype.construct_view = function () {
+    this.construct_refine_pane();
+    // construct random pane on request
+};
+
+/**
+ * Global view update
+ */
+IqrRefineView.prototype.update_view = function () {
+    this.update_refine_pane();
+};
 
 /**
  * Construct the IQR Search pane
@@ -135,7 +104,6 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     // remove the main container in case its already there
     this.refine_container.remove();
-
     this.iqr_view_container.append(this.refine_container);
 
     this.refine_container.append(
@@ -147,41 +115,170 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
-        this.button_reset_top,
         this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
-        this.button_reset_bot,
-        this.button_refine_showMore);
+        this.button_refine_showMore
+    );
+    // initially hide bottom buttons
+    this.button_container_refine_bot.hide();
 
-    // Search pane events
+    /**
+     * Event handling
+     */
     this.button_refine_top.click(function () {
-        inst.refine();
+        inst.iqr_refine();
     });
     this.button_refine_bot.click(function () {
-        inst.refine();
+        inst.iqr_refine();
     });
-
-    this.button_reset_top.click(function () {
-        inst.reset();
-    });
-    this.button_reset_bot.click(function () {
-        inst.reset();
-    });
-
     this.button_refine_showMore.click(function () {
         inst.iterate_more_index_results();
     });
-
     this.button_toggle_random.click(function () {
         inst.toggle_random_pane();
     });
 
     // sets element initial visible/hidden status
-    this.show_refine_functionals();
+    this.update_refine_pane();
 };
+
+/**
+ * Refresh the view of the refine pane based on server-side model
+ *
+ */
+IqrRefineView.prototype.update_refine_pane = function () {
+    // clear children of results container
+    // get ordered results information
+    // display first X results
+    this.results_container_refine.children().remove();
+    this.refine_result_uuids = [];
+    this.refine_result_score = [];
+    this.refine_results_displayed = 0;
+
+    var self = this;
+    // Check initialization status of session
+    // - When not initialized, disable buttons + don't try to show results
+    //   (there aren't going to be any)
+    // - When initialized, enable buttons + show ordered results
+    $.ajax({
+        url: "iqr_session_info",
+        method: "GET",
+        success: function (data) {
+            if (data["initialized"]) {
+                // enable buttons
+                self.button_container_refine_top.children().prop("disabled", false);
+                // Fetch ordered results + display
+                $.ajax({
+                    url: "iqr_ordered_results",
+                    method: "GET",
+                    success: function (data) {
+                        // Update refinement result uuid/score arrays
+                        for (var i=0; i < data["results"].length; i++) {
+                            self.refine_result_uuids.push(data["results"][0]);
+                            self.refine_result_score.push(data["results"][1]);
+                        }
+
+                        // create/show top N results
+                        // - If no results, display text verification of no results
+                        if (self.refine_result_uuids.length === 0) {
+                            self.results_container_refine.append(
+                                $("<span>No Results</span>")
+                            );
+                        }
+                        else {
+                            self.show_more_refine_results();
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        alert_error("Error fetching refined results: " +
+                            "("+errorThrown+") " + textStatus);
+                    }
+                });
+            }
+            else {
+                // disable buttons + hide bottom button container
+                self.button_container_refine_top.children().prop("disabled", true);
+                self.button_container_refine_bot.hide();
+            }
+        }
+    });
+};
+
+/**
+ * Show more refinement results in the refinement view if we can.
+ *
+ * If we have shown all results possible, we hide the "Show More" button.
+ */
+IqrRefineView.prototype.show_more_refine_results = function () {
+    var to_display = Math.min(
+        this.refine_result_uuids.length,
+        this.refine_results_displayed + this.show_more_step
+    );
+    while (this.refine_results_displayed < to_display)
+    {
+        new IqrResult(this.results_container_refine,
+                      this.refine_results_displayed+1,  // show 1-indexed rank value
+                      this.refine_result_uuids[this.refine_results_displayed],
+                      this.refine_result_score[this.refine_results_displayed]);
+        this.refine_results_displayed++;
+    }
+
+    if (this.refine_results_displayed === 0) {
+        this.button_container_refine_bot.hide();
+    }
+    else {
+        this.button_container_refine_bot.show();
+
+        // Conditionally show or hide the show-more button
+        if (this.refine_results_displayed === this.refine_result_uuids.length) {
+            this.button_refine_showMore.hide();
+        }
+        else {
+            this.button_refine_showMore.show();
+        }
+    }
+};
+
+/**
+ * Trigger an index refine action server-size, updating view when complete.
+ * Requires that there be positive
+ */
+IqrRefineView.prototype.iqr_refine = function() {
+    this.hide_refine_functionals();
+    this.clear_search_results();
+    this.progress_bar_refine.on("... Searching ...");
+
+    var inst = this;
+    var restore = function () {
+        inst.progress_bar_refine.off();
+        inst.show_refine_functionals();
+    };
+
+    // Refine and then display the first N results.
+    $.ajax({
+        url: 'iqr_refine',
+        method: "POST",
+        success: function (data) {
+            if (data['success']) {
+                alert_info("Iqr refine complete");
+            }
+            else {
+                alert_error("IQR Refine error: " + data['message']);
+            }
+            inst.update_refine_pane();
+            restore();
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            alert_error("AJAX Error: " + errorThrown);
+            restore();
+        }
+    });
+};
+
+
 
 /**
  * Construct the random pane
@@ -242,7 +339,7 @@ IqrRefineView.prototype.show_refine_functionals = function () {
 /**
  * Hide functional elements in the search container
  */
-IqrRefineView.prototype.hide_search_functionals = function () {
+IqrRefineView.prototype.hide_refine_functionals = function () {
     this.button_container_refine_top.hide();
     this.button_container_refine_bot.hide();
 };
@@ -413,89 +510,6 @@ IqrRefineView.prototype.iterate_more_random_results = function () {
     var e = s + N;
     //alert_info("Showing more randoms in range ("+s+", "+e+"]");
     this.display_random_results_range(s, e);
-};
-
-/**
- * Update the state of this view with the Iqr session model server-side
- */
-IqrRefineView.prototype.refine = function() {
-    this.hide_search_functionals();
-    this.clear_search_results();
-    this.progress_bar_refine.on("... Searching ...");
-
-    var inst = this;
-    var restore = function () {
-        inst.progress_bar_refine.off();
-        inst.show_refine_functionals();
-    };
-
-    // Refine and then display the first N results.
-    $.ajax({
-        url: 'iqr_refine',
-        method: "POST",
-        success: function (data) {
-            if (data['success']) {
-                //alert_info("Iqr refine complete");
-                $.ajax({
-                    url: "get_positive_uids",
-                    success: function (data) {
-                        var num_pos = data['uids'].length;
-                        inst.display_search_results_range(
-                            0, inst.show_more_step + num_pos
-                        );
-                        restore();
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        alert_error("AJAX: " + textStatus + ": " + errorThrown);
-                    }
-                });
-            }
-            else {
-                alert_error("IQR Refine error: " + data['message']);
-                restore();
-            }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            alert_error("AJAX Error: " + errorThrown);
-            restore();
-        }
-    });
-};
-
-/**
- * Reset current IQR session state.
- */
-IqrRefineView.prototype.reset = function () {
-    this.hide_search_functionals();
-    this.clear_search_results();
-    this.clear_random_results();
-
-    var inst = this;
-    var restore = function () {
-        inst.progress_bar_refine.off();
-        inst.show_refine_functionals();
-
-        // refresh random results if the pane is on
-        if (inst.random_enabled)
-        {
-            inst.refresh_random_ids();
-        }
-    };
-
-    // Call for IQR Session removal and initialization of a new session
-    this.progress_bar_refine.on("... Resetting current IQR Session ...");
-    $.ajax({
-        url: "reset_iqr_session",
-        method: "POST",
-        success: function (/*data*/) {
-            //alert_info("[RESET]: " + data['message']);
-            restore();
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            alert_error("AJAX Error: " + errorThrown);
-            restore();
-        }
-    })
 };
 
 /**

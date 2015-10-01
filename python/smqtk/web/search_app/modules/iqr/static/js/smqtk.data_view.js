@@ -6,18 +6,18 @@
  *
  * for image load progress status, see: http://usablica.github.io/progress.js/
  *
- * @param adjudicatable: Boolean flag for whether or not adjudication controls
- *                       are accessible.
+ * @param is_example: Boolean flag for whether or not this is a view of example
+ *                    data, in contrast to data in the IQR working index.
  *
  */
-function IqrResult(container, rank, uid, probability, adjudicatable) {
+function DataView(container, rank, uid, probability, is_example) {
     Object.call(this);
 
     var inst = this;
     this.rank = rank;
     this.uid = uid;
     this.probability = probability;
-    this.is_adjudicatable = (adjudicatable !== undefined) && adjudicatable;
+    this.is_example = is_example === undefined ? false : is_example;
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
@@ -79,7 +79,7 @@ function IqrResult(container, rank, uid, probability, adjudicatable) {
     this.image_data_view.attr('src', this.loading_gif);
 
     // Assemble result box
-    if (this.is_adjudicatable) {
+    if (! this.is_example) {
         this.result.append(this.header);
         this.result.append(this.adjudication_controls);
     }
@@ -118,14 +118,14 @@ function IqrResult(container, rank, uid, probability, adjudicatable) {
  * @returns boolean True of this result has been adjudicated and false if
  *      not.
  */
-IqrResult.prototype.is_adjudicated = function () {
+DataView.prototype.is_adjudicated = function () {
     return (this.is_negative || this.is_positive);
 };
 
 /**
  * Update the view of this element based on current state.
  */
-IqrResult.prototype.update_view = function (server_update) {
+DataView.prototype.update_view = function (server_update) {
     var inst = this;
     server_update = server_update || false;
 
@@ -169,8 +169,16 @@ IqrResult.prototype.update_view = function (server_update) {
 
     if (server_update)
     {
+        var query_url = null;
+        if (this.is_example) {
+            query_url = "get_example_adjudication";
+        }
+        else {
+            query_url = "get_index_adjudication";
+        }
+
         $.ajax({
-            url: "get_item_adjudication?uid="+this.uid,
+            url: query_url+"?uid="+this.uid,
             success: function (data)
             {
                 inst.is_positive = data['is_pos'];
@@ -227,7 +235,7 @@ IqrResult.prototype.update_view = function (server_update) {
 /**
  * Set display to positive indication and let the server know of change.
  */
-IqrResult.prototype.set_positive = function () {
+DataView.prototype.set_positive = function () {
     var post_data = {};
     //var adj_type = '';  // for alert_info below
     if (!this.is_positive) {
@@ -264,7 +272,7 @@ IqrResult.prototype.set_positive = function () {
 /**
  * Set display of negative indication and let the server know.
  */
-IqrResult.prototype.set_negative = function () {
+DataView.prototype.set_negative = function () {
     var post_data = {};
     //var adj_type = '';  // for alert_info below
     if (!this.is_negative) {
@@ -302,7 +310,7 @@ IqrResult.prototype.set_negative = function () {
 /**
  * Open this image up in a new window
  */
-IqrResult.prototype.display_full_image = function () {
+DataView.prototype.display_full_image = function () {
     if (this.image_loaded) {
         // TODO: Should make this better...
         //       like open a webpage instead of just opening static data...

@@ -332,7 +332,8 @@ class IqrSearch (flask.Blueprint, Configurable):
                 upload_data.uuid()
 
                 # Extend session ingest -- modifying
-                self.log.debug("[%s::%s] Adding new data to session positives")
+                self.log.debug("[%s::%s] Adding new data to session positives",
+                               iqr_sess.uuid, fid)
                 iqr_sess.add_positive_data(upload_data)
 
                 return str(upload_data.uuid())
@@ -358,9 +359,38 @@ class IqrSearch (flask.Blueprint, Configurable):
                                                        str(ex))
                     })
 
-        @self.route("/get_item_adjudication", methods=["GET"])
+        @self.route("/get_example_adjudication", methods=["GET"])
         @self._parent_app.module_login.login_required
-        def get_adjudication():
+        def get_example_adjudication():
+            """
+            Get positive/negative status for a data/descriptor in our example
+            set.
+
+            :return: {
+                    is_pos: <bool>,
+                    is_neg: <bool>
+                }
+
+            """
+            elem_uuid = flask.request.args['uid']
+            with self.get_current_iqr_session() as iqrs:
+                is_p = (
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.ex_pos_data2descriptor)
+                )
+                is_n = (
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.ex_neg_data2descriptor)
+                )
+
+                return flask.jsonify({
+                    "is_pos": is_p,
+                    "is_neg": is_n,
+                })
+
+        @self.route("/get_index_adjudication", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def get_index_adjudication():
             """
             Get the adjudication status of a particular data/descriptor element
             by UUID.
@@ -376,12 +406,10 @@ class IqrSearch (flask.Blueprint, Configurable):
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
                 is_p = (
-                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors) or
-                    elem_uuid in set(d.uuid() for d in iqrs.ex_pos_data2descriptor)
+                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors)
                 )
                 is_n = (
-                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors) or
-                    elem_uuid in set(d.uuid() for d in iqrs.ex_neg_data2descriptor)
+                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors)
                 )
 
                 return flask.jsonify({
@@ -420,11 +448,13 @@ class IqrSearch (flask.Blueprint, Configurable):
 
             with self.get_current_iqr_session() as iqrs:
                 iqrs.adjudicate(
-                    iqrs.working_index.get_many_descriptors(pos_to_add),
-                    iqrs.working_index.get_many_descriptors(neg_to_add),
-                    iqrs.working_index.get_many_descriptors(pos_to_remove),
-                    iqrs.working_index.get_many_descriptors(neg_to_remove),
+                    tuple(iqrs.working_index.get_many_descriptors(*pos_to_add)),
+                    tuple(iqrs.working_index.get_many_descriptors(*neg_to_add)),
+                    tuple(iqrs.working_index.get_many_descriptors(*pos_to_remove)),
+                    tuple(iqrs.working_index.get_many_descriptors(*neg_to_remove)),
                 )
+                self.log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
+                self.log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)
 
             return flask.jsonify({
                 "success": True,

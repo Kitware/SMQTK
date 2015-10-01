@@ -331,18 +331,20 @@ class IqrSession (object):
 
         """
         with self.lock:
-            if not self.positive_descriptors:
-                raise RuntimeError("Did not find at least one positive "
-                                   "adjudication.")
             if not self.rel_index:
                 raise RuntimeError("No relevancy index yet. Must not have "
-                                   "initialize session (no working index).")
+                                   "initialized session (no working index).")
 
             # fuse pos/neg adjudications + added positive data descriptors
             pos = self.ex_pos_data2descriptor.values() + \
                 list(self.positive_descriptors)
             neg = self.ex_neg_data2descriptor.values() + \
                 list(self.negative_descriptors)
+
+            if not pos:
+                raise RuntimeError("Did not find at least one positive "
+                                   "adjudication.")
+
             id_probability_map = self.rel_index.rank(pos, neg)
 
             if self.results is None:

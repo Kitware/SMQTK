@@ -7,11 +7,6 @@ function IqrStatusView (container) {
     // Members
     //
 
-    // Arrays of data/descriptor element UUIDs of positive and negative example
-    // data (user-uploaded).
-    self.pos_example_uuids = [];
-    self.neg_example_uuids = [];
-
     // View components
     this.example_pos_data_zone = $('<div>');
     this.example_neg_data_zone = $('<div>');
@@ -80,8 +75,8 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
     this.example_pos_data_zone.children().remove();
     for (var i=0; i < iqr_sess_state["ex_pos"].length; i++) {
-        new IqrResult(this.example_pos_data_zone,
-                      0, iqr_sess_state["ex_pos"][i], 0, false);
+        new DataView(this.example_pos_data_zone, 0, iqr_sess_state["ex_pos"][i],
+                     0, true);
     }
 };
 
@@ -96,8 +91,8 @@ IqrStatusView.prototype.update_neg_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
     this.example_neg_data_zone.children().remove();
     for (var i=0; i < iqr_sess_state["ex_neg"].length; i++) {
-        new IqrResult(this.example_neg_data_zone,
-                      0, iqr_sess_state["ex_neg"][i], 0, false);
+        new DataView(this.example_neg_data_zone, 0, iqr_sess_state["ex_neg"][i],
+                     0, true);
     }
 };
 

@@ -1,7 +1,5 @@
 /**
- * Encapsulation of IQR Search/Refinement results.
- *
- * This allows incremental loading of results, i.e.
+ * Encapsulation of IQR Refinement queries and results viewing.
  *
  * @constructor
  */
@@ -31,7 +29,7 @@ function IqrRefineView(container) {
     // top-level container for layout
     this.iqr_view_container = $('<div id="iqr_view_instance"/>');
 
-    // for IqrResult views
+    // for DataView views
     this.refine_container = $('<div class="iqr-view-results-container"/>');
     this.refine_container.css('width', '100%');
 
@@ -135,7 +133,7 @@ IqrRefineView.prototype.construct_refine_pane = function () {
         inst.iqr_refine();
     });
     this.button_refine_showMore.click(function () {
-        inst.iterate_more_index_results();
+        inst.show_more_refine_results();
     });
     this.button_toggle_random.click(function () {
         inst.toggle_random_pane();
@@ -177,8 +175,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
                     success: function (data) {
                         // Update refinement result uuid/score arrays
                         for (var i=0; i < data["results"].length; i++) {
-                            self.refine_result_uuids.push(data["results"][0]);
-                            self.refine_result_score.push(data["results"][1]);
+                            self.refine_result_uuids.push(data["results"][i][0]);
+                            self.refine_result_score.push(data["results"][i][1]);
                         }
 
                         // create/show top N results
@@ -219,7 +217,7 @@ IqrRefineView.prototype.show_more_refine_results = function () {
     );
     while (this.refine_results_displayed < to_display)
     {
-        new IqrResult(this.results_container_refine,
+        new DataView(this.results_container_refine,
                       this.refine_results_displayed+1,  // show 1-indexed rank value
                       this.refine_result_uuids[this.refine_results_displayed],
                       this.refine_result_score[this.refine_results_displayed]);
@@ -247,15 +245,23 @@ IqrRefineView.prototype.show_more_refine_results = function () {
  * Requires that there be positive
  */
 IqrRefineView.prototype.iqr_refine = function() {
-    this.hide_refine_functionals();
-    this.clear_search_results();
-    this.progress_bar_refine.on("... Searching ...");
+    var self = this;
 
-    var inst = this;
-    var restore = function () {
-        inst.progress_bar_refine.off();
-        inst.show_refine_functionals();
-    };
+    // helper methods for display stuff
+    function disable_buttons() {
+        self.button_container_refine_top.children().prop("disabled", true);
+        self.button_container_refine_bot.children().prop("disabled", true);
+    }
+    function enable_buttons() {
+        self.button_container_refine_top.children().prop("disabled", false);
+        self.button_container_refine_bot.children().prop("disabled", false);
+    }
+    function restore() {
+        self.progress_bar_refine.off();
+    }
+
+    disable_buttons();
+    this.progress_bar_refine.on("Refining");
 
     // Refine and then display the first N results.
     $.ajax({
@@ -263,12 +269,12 @@ IqrRefineView.prototype.iqr_refine = function() {
         method: "POST",
         success: function (data) {
             if (data['success']) {
-                alert_info("Iqr refine complete");
+                enable_buttons();
             }
             else {
                 alert_error("IQR Refine error: " + data['message']);
             }
-            inst.update_refine_pane();
+            self.update_refine_pane();
             restore();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -279,7 +285,9 @@ IqrRefineView.prototype.iqr_refine = function() {
 };
 
 
-
+//
+// Random pane stuff
+//
 /**
  * Construct the random pane
  */
@@ -320,31 +328,6 @@ IqrRefineView.prototype.remove_random_pane = function () {
 };
 
 /**
- * Show functional elements in the search container
- */
-IqrRefineView.prototype.show_refine_functionals = function () {
-    this.button_container_refine_top.show();
-    // Only show bottom buttons if there are results being shown
-    if (this.displayed_search_results.length > 0) {
-        this.button_container_refine_bot.show();
-        // explicitly show this one in case it was hidden due to display of
-        // all results.
-        this.button_refine_showMore.show();
-    }
-    else {
-        this.button_container_refine_bot.hide();
-    }
-};
-
-/**
- * Hide functional elements in the search container
- */
-IqrRefineView.prototype.hide_refine_functionals = function () {
-    this.button_container_refine_top.hide();
-    this.button_container_refine_bot.hide();
-};
-
-/**
  * Show functional elements in the random container
  */
 IqrRefineView.prototype.show_random_functionals = function () {
@@ -367,62 +350,11 @@ IqrRefineView.prototype.hide_random_functionals = function () {
 };
 
 /**
- * Clear currently displayed and stored search results
- */
-IqrRefineView.prototype.clear_search_results = function () {
-    this.results_container_refine.children().remove();
-    this.displayed_search_results = [];
-};
-
-/**
  * Clear currently displayed and stored random results.
  */
 IqrRefineView.prototype.clear_random_results = function () {
     this.results_container_random.children().remove();
     this.displayed_random_results = [];
-};
-
-/**
- * Add results from the current IQR session within the given ordered result
- * index range
- *
- * @param s Starting result index (inclusive)
- * @param e Ending result index (exclusive)
- */
-IqrRefineView.prototype.display_search_results_range = function (s, e) {
-    var inst = this;
-    $.ajax({
-        url: "iqr_ordered_results",
-        data: {
-            i: s,
-            j: e
-        },
-        success: function (data) {
-            // see IQRSearch.iqr_get_results_range for
-            // results dictionary return format.
-            var results = data['results'];
-            var i = 0, r = null, c = null;
-            for (; i < results.length; i++) {
-                c = results[i];
-                r = new IqrResult(inst.results_container_refine, s+i,
-                                  c[0], c[1]);
-                inst.displayed_search_results.push(r);
-            }
-
-            // Update functionals shown
-            inst.show_refine_functionals();
-
-            // Hide load more button if we received less results than what
-            // we asked for, meaning that we just displayed the last of
-            // available results.
-            if (results.length != (e - s)) {
-                inst.button_refine_showMore.hide();
-            }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            alert_error("AJAX Error: " + errorThrown);
-        }
-    });
 };
 
 /**
@@ -439,8 +371,8 @@ IqrRefineView.prototype.display_random_results_range = function (s, e) {
     //alert_info("Displaying random range ("+s+", "+e+")");
     var r = null;
     for (; s < e; s++) {
-        r = new IqrResult(this.results_container_random, s,
-                          this.random_ids[s], 'rand', inst, true);
+        r = new DataView(this.results_container_random, s,
+                         this.random_ids[s], 'rand');
         this.displayed_random_results.push(r);
     }
 
@@ -481,20 +413,6 @@ IqrRefineView.prototype.refresh_random_ids = function () {
             restore();
         }
     });
-};
-
-/**
- * Display N more results in the search results container
- *
- * Where N is the amount specified or our configured ``show_more_step``
- * amount. If there are no more results to show, we hide the button.
- */
-IqrRefineView.prototype.iterate_more_index_results = function () {
-    var N = this.show_more_step;
-    var s = this.displayed_search_results.length;
-    var e = s + N;
-    //alert_info("Showing more from index range ("+s+", "+e+"]");
-    this.display_search_results_range(s, e);
 };
 
 /**

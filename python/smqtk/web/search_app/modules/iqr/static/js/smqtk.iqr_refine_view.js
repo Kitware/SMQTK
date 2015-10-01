@@ -138,18 +138,23 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.iqr_view_container.append(this.refine_container);
 
-    this.refine_container.append(this.progress_bar_refine.progress_div);
-    this.refine_container.append(this.button_container_refine_top);
-    this.refine_container.append(this.results_container_refine);
-    this.refine_container.append(this.button_container_refine_bot);
+    this.refine_container.append(
+        this.progress_bar_refine.progress_div,
+        this.button_container_refine_top,
+        this.results_container_refine,
+        this.button_container_refine_bot
+    );
 
-    this.button_container_refine_top.append(this.button_refine_top);
-    this.button_container_refine_top.append(this.button_reset_top);
-    this.button_container_refine_top.append(this.button_toggle_random);
+    this.button_container_refine_top.append(
+        this.button_refine_top,
+        this.button_reset_top,
+        this.button_toggle_random
+    );
 
-    this.button_container_refine_bot.append(this.button_refine_bot);
-    this.button_container_refine_bot.append(this.button_reset_bot);
-    this.button_container_refine_bot.append(this.button_refine_showMore);
+    this.button_container_refine_bot.append(
+        this.button_refine_bot,
+        this.button_reset_bot,
+        this.button_refine_showMore);
 
     // Search pane events
     this.button_refine_top.click(function () {

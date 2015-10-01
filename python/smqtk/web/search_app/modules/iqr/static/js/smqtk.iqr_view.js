@@ -15,13 +15,18 @@ function IqrView(container, upload_post_url) {
 
     // Instance of FlowUploadZone being used.
     this.flow_inst = null;
-    // Instance of IqrResultsView being used
+    // Instance of IqrStatusView being used.
+    this.status_inst = null;
+    // Instance of IqrResultsView being used.
     this.results_view_inst = null;
 
     // View elements
     this.flow_zone = $('<div>');
+    this.ingest_progress_zone = $('<div>');
     this.status_zone = $('<div>');
     this.results_zone = $('<div>');
+
+    this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
 
     //
     // Setup
@@ -33,22 +38,30 @@ function IqrView(container, upload_post_url) {
 
 /**
  * Build up the view.
+ *
+ * @param container: Parent container element to append view elements to.
  */
 IqrView.prototype.construct_view = function (container) {
     container.append(
         this.flow_zone,
+        this.ingest_progress_zone,
         $("<hr>"),
         this.status_zone,
         $("<hr>"),
+        this.button_reset_session,
         this.results_zone
     );
 
     this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
+    this.status_inst = new IqrStatusView(this.status_zone);
     this.results_view_inst = null; //new IqrRefineView(this.results_zone);
+
+    this.button_reset_session.text("Reset IQR Session");
 
     //
     // Control
     //
+    var self = this;
 
     // Add uploaded content to current session online ingest
     this.flow_inst.onFileSuccess(function(file) {
@@ -56,7 +69,7 @@ IqrView.prototype.construct_view = function (container) {
         var fid = file.uniqueIdentifier;
 
         var message_prefix = "Ingesting file ["+fname+"]: ";
-        var bar = new ActivityBar($("#ingest_progress"),
+        var bar = new ActivityBar(self.ingest_progress_zone,
                                   message_prefix+"Ingesting...");
         bar.on();
 
@@ -67,10 +80,13 @@ IqrView.prototype.construct_view = function (container) {
                 fid: fid
             },
             success: function(data) {
-                bar.on(message_prefix+data);
+                bar.on(message_prefix+"Complete");
                 bar.stop_active("success");
                 bar.remove();
-                // TODO: Call status zone method to add data UUID reference
+                bar.progress_div.fadeOut('slow', function () {
+                    bar.remove();
+                });
+                self.status_inst.update_view();
             },
             error: function(jqXHR, textStatus, errorThrown) {
                 bar.on("ERROR: "+errorThrown);
@@ -79,5 +95,17 @@ IqrView.prototype.construct_view = function (container) {
                             + textStatus);
             }
         });
+    });
+
+    this.button_reset_session.click(function () {
+        $.ajax({
+            url: "reset_iqr_session",
+            success: function (data) {
+                if ( data.success ) {
+                    self.status_inst.update_view();
+                    alert_success("IQR Session Reset");
+                }
+            }
+        })
     });
 };

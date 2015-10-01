@@ -133,7 +133,7 @@ class DescriptorIndex (Configurable):
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
-        :return: Iterator of descriptors associated to given type-uuid pairs.
+        :return: Iterator of descriptors associated to given uuid values.
         :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
@@ -156,8 +156,8 @@ class DescriptorIndex (Configurable):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 
-        :param type_uuid_pairs: Iterable of descriptor UUIDs to remove.
-        :type type_uuid_pairs: collections.Iterable[collections.Hashable]
+        :param uuids: Iterable of descriptor UUIDs to remove.
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -167,8 +167,7 @@ class DescriptorIndex (Configurable):
     @abc.abstractmethod
     def iterkeys(self):
         """
-        Return an iterator over indexed descriptor keys, which are their
-        descriptor type string and UUID: (type_str, uuid)
+        Return an iterator over indexed descriptor keys, which are their UUIDs.
         """
 
     @abc.abstractmethod

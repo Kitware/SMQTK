@@ -20,7 +20,7 @@ function IqrRefineView(container) {
 
     this.random_enabled = false;  // not displayed initially.
     this.random_ids = [];
-    this.displayed_random_results = [];
+    this.random_results_displayed = 0;
 
     //
     // Visual elements
@@ -333,7 +333,7 @@ IqrRefineView.prototype.remove_random_pane = function () {
 IqrRefineView.prototype.show_random_functionals = function () {
     this.button_random_refresh.show();
     // Only show the showMode button if there are any results displayed
-    if (this.displayed_random_results.length > 0) {
+    if (this.random_results_displayed > 0) {
         this.button_random_showMore.show();
     }
     else {
@@ -354,7 +354,7 @@ IqrRefineView.prototype.hide_random_functionals = function () {
  */
 IqrRefineView.prototype.clear_random_results = function () {
     this.results_container_random.children().remove();
-    this.displayed_random_results = [];
+    this.random_results_displayed = 0;
 };
 
 /**
@@ -373,14 +373,14 @@ IqrRefineView.prototype.display_random_results_range = function (s, e) {
     for (; s < e; s++) {
         r = new DataView(this.results_container_random, s,
                          this.random_ids[s], 'rand');
-        this.displayed_random_results.push(r);
+        this.random_results_displayed++;
     }
 
     // update functionals shown.
     this.show_random_functionals();
 
     // Hide "show more" button if there are no more to show
-    if (this.displayed_random_results.length == this.random_ids.length) {
+    if (this.random_results_displayed === this.random_ids.length) {
         this.button_random_showMore.hide();
     }
 };
@@ -424,7 +424,7 @@ IqrRefineView.prototype.refresh_random_ids = function () {
  */
 IqrRefineView.prototype.iterate_more_random_results = function () {
     var N = this.show_more_step;
-    var s = this.displayed_random_results.length;
+    var s = this.random_results_displayed;
     var e = s + N;
     //alert_info("Showing more randoms in range ("+s+", "+e+"]");
     this.display_random_results_range(s, e);

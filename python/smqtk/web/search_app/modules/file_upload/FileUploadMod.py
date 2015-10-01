@@ -213,11 +213,9 @@ class FileUploadMod (flask.Blueprint):
         tmp_fd, tmp_path = tempfile.mkstemp(file_extension,
                                             dir=self.working_dir)
         self.log.debug("Combining chunks into temporary file: %s", tmp_path)
-        # tmp_file = os.fdopen(tmp_fd, 'wb')
         tmp_file = open(tmp_path, 'wb')
         for idx, chunk in sorted(chunk_map.items(), key=lambda p: p[0]):
             data = chunk.read()
             tmp_file.write(data)
-        tmp_file.close()  # apparently also closes file descriptor?
-        os.close(tmp_fd)
+        tmp_file.close()
         return tmp_path

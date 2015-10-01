@@ -151,11 +151,11 @@ function FlowUploadZone(container, upload_url) {
                       + message);
         hook_fileSuccess && hook_fileSuccess(file);
 
-        //// Fade out the bar when done.
-        //var fpi = ffid_fpi_map[file.uniqueIdentifier];
-        //fpi.progress_c.fadeOut('slow', function () {
-        //    fpi.progress_c.remove();
-        //});
+        // Fade out the bar when done.
+        var fpi = ffid_fpi_map[file.uniqueIdentifier];
+        fpi.progress_c.fadeOut('slow', function () {
+            fpi.progress_c.remove();
+        });
 
         delete ffid_fpi_map[file.uniqueIdentifier];
     });

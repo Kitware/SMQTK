@@ -84,6 +84,11 @@ Web applications are located under the plug-able module ``smqtk.web``.
 * [Descriptor Similarity Service](/python/smqtk/web/descriptor_service/__init__.py)
     * Provides a web-accessible API for computing content descriptor vectors for available descriptor generator labels.
     * Descriptor generators that are available to the service are based on the a configuration file provided to the server.
+* [IQR Demo Application](/python/smqtk/web/search_app)
+    * Demo application for performing Interactive Query Refinement (IQR)
+    * Fully configurable (see [example configuration file](/python/smqtk/web/search_app/config.IqrSearchApp.json))
+    * Requires algorithm models to be built
+        * See example [model construction script](/bin/scripts/iqr_app_model_generation.py) in ``bin/scripts`` on what is required and how to generate them.
 
 
 ## Plugin Architecture

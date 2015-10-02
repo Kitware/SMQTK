@@ -30,12 +30,12 @@ function IqrStatusView (container) {
  */
 IqrStatusView.prototype.construct_view = function (container) {
     container.append(
-        $("<span><h3>Positive Examples:</h3></span>"),
-        this.example_pos_data_zone,
-        $("<span><h3>Negative Examples:</h3></span>"),
-        this.example_neg_data_zone,
-        $("<span><h4>View Index Adjudications:</h4></span>"),
-        this.buttons_bottom
+        $("<span><h3>Positive Examples:</h3></span>")
+        ,this.example_pos_data_zone
+        //,$("<span><h3>Negative Examples:</h3></span>")
+        //,this.example_neg_data_zone
+        //,$("<span><h4>View Index Adjudications:</h4></span>")
+        //,this.buttons_bottom
     );
 
     this.buttons_bottom.append(

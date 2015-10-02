@@ -1,13 +1,3 @@
-# coding=utf-8
-"""
-LICENCE
--------
-Copyright 2015 by Kitware, Inc. All Rights Reserved. Please refer to
-KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
-Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
-
-"""
-
 import logging
 import multiprocessing
 import multiprocessing.pool
@@ -15,13 +5,31 @@ import os.path as osp
 import shutil
 import uuid
 
-from smqtk.representation.data_set.file_set import DataFileSet as DataFileSet
+from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
+from smqtk.representation import DescriptorElementFactory
+from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
+from smqtk.representation.descriptor_index.memory import DescriptorMemoryIndex
+from smqtk.utils import plugin
 from smqtk.utils import safe_create_dir
+
+
+DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
+                                                     {})
+DFLT_REL_INDEX_CONFIG = {
+    "type": "LibSvmHikRelevancyIndex",
+    "LibSvmHikRelevancyIndex": {
+        "descr_cache_filepath": None,
+    }
+}
 
 
 class IqrResultsDict (dict):
     """
-    Dictionary subclass for standardizing data types stored.
+    Dictionary subclass for containing DescriptorElement-to-float mapping.
+
+    We expect keys to be DescriptorElement instances and the values to be floats
+    between [0,1], inclusive.
+
     """
 
     def __setitem__(self, i, v):
@@ -38,12 +46,12 @@ class IqrResultsDict (dict):
         """
         if hasattr(other, 'keys'):
             for k in other:
-                self[k] = other[k]
-        else:
+                self[k] = float(other[k])
+        elif other is not None:
             for k, v in other:
-                self[k] = v
+                self[k] = float(v)
         for k in kwds:
-            self[k] = kwds[k]
+            self[k] = float(kwds[k])
 
 
 class IqrSession (object):
@@ -57,27 +65,56 @@ class IqrSession (object):
 
     """
 
-    @property
-    def _log(self):
-        return logging.getLogger(
-            '.'.join((self.__module__, self.__class__.__name__))
-            + "[%s]" % self.uuid
-        )
+    def __init__(self, work_directory, descriptor, nn_index,
+                 pos_seed_neighbors=500,
+                 rel_index_config=DFLT_MEMORY_DESCR_FACTORY,
+                 descriptor_factory=DFLT_MEMORY_DESCR_FACTORY,
+                 session_uid=None):
+        """ Initialize the IQR session
 
-    def __init__(self, work_directory, descriptor, indexer, session_uid=None):
-        """ Initialize IQR session
+        This does not initialize the working index for ranking as there are no
+        known positive descriptor examples at this time.
 
-        Extension data set is file based and located in the working directory
-        of this session instance.
+        Adjudications
+        -------------
+        Adjudications are carried through between initializations. This allows
+        indexed material adjudicated through-out the lifetime of the session to
+        stay relevant.
 
-        :param work_directory: Directory we are allowed to use for working files
+        :param work_directory: Directory assigned to this session for temporary
+            and working files.
         :type work_directory: str
 
         :param descriptor: Descriptor to use for this IQR session
-        :type descriptor: smqtk.descriptor_generator.DescriptorGenerator
+        :type descriptor:
+            smqtk.algorithms.descriptor_generator.DescriptorGenerator
 
-        :param indexer: indexer to use for this IQR session
-        :type indexer: smqtk.indexing.Indexer
+        :param nn_index: NearestNeighborIndex to draw from when initializing IQR
+            session.
+        :type nn_index: smqtk.algorithms.nn_index.NearestNeighborsIndex
+
+        :param pos_seed_neighbors: Number of neighbors to pull from the given
+            ``nn_index`` for each positive exemplar when populating the working
+            index, i.e. this value determines the size of the working index for
+            IQR refinement. By default, we try to get 500 neighbors.
+
+            Since there may be partial to significant overlap of near neighbors
+            as a result of nn_index queries for positive exemplars, the working
+            index may contain anywhere from this value's number of entries, to
+            ``N*P``, where ``N`` is this value and ``P`` is the number of
+            positive examples at the time of working index initialization.
+        :type pos_seed_neighbors: int
+
+        :param rel_index_config: Plugin configuration dictionary for the
+            RelevancyIndex to use for ranking user adjudications. By default we
+            we use an in-memory libSVM based index using the histogram
+            intersection metric.
+        :type rel_index_config: dict
+
+        :param descriptor_factory: DescriptorElementFactory instance to use to
+            produce new descriptors in output extension data. By default, we
+            use a factory that produces in-memory descriptors.
+        :type descriptor_factory: DescriptorElementFactory
 
         :param session_uid: Optional manual specification of session UUID.
         :type session_uid: str or uuid.UUID
@@ -86,22 +123,58 @@ class IqrSession (object):
         self.uuid = session_uid or uuid.uuid1()
         self.lock = multiprocessing.RLock()
 
-        self.positive_ids = set()
-        self.negative_ids = set()
+        # Local descriptor index for ranking, populated by a query to the
+        #   nn_index instance.
+        # Added external data/descriptors not added to this index.
+        self.working_index = DescriptorMemoryIndex()
 
+        # Descriptor references from our index (above) that have been
+        #   adjudicated.
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.positive_descriptors = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.negative_descriptors = set()
+
+        # Example pos/neg data and descriptors added to this session
+        #   (external to our working index).
+        # All maps keyed on UUID values (some kind of content checksum,
+        #   i.e. SHA1).
+        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
+        self.ex_data = dict()
+        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        self.ex_pos_descriptors = dict()
+        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        self.ex_neg_descriptors = dict()
+
+        self.pos_seed_neighbors = int(pos_seed_neighbors)
+
+        # Working directory assigned to this session
         self._work_dir = work_directory
 
-        self.descriptor = descriptor
-        self.indexer = indexer
-
-        # Mapping of a clip ID to the probability of it being associated to
-        # positive adjudications. This is None before any refinement occurs.
+        # Mapping of a DescriptorElement in our relevancy search index (not the
+        #   index that the nn_index uses) to the relevancy score given the
+        #   recorded positive and negative adjudications.
+        # This is None before any initialization or refinement occurs.
         #: :type: None or dict of (collections.Hashable, float)
         self.results = None
 
-        # Ingest where extension images are placed
-        self.extension_ds_dir = osp.join(work_directory, 'online-dataset')
-        self.extension_ds = DataFileSet(self.extension_ds_dir)
+        #
+        # Algorithm Instances [+Config]
+        #
+        # DescriptorGenerator instance assigned to this session.
+        self.descriptor = descriptor
+        # Factory for generating DescriptorElements of a configured impl type.
+        self.descriptor_factory = descriptor_factory
+        # NearestNeighborIndex instance assigned to this session.
+        self.nn_index = nn_index
+        # RelevancyIndex configuration and instance that is used for producing
+        #   results.
+        # This is only [re]constructed when initializing the session.
+        self.rel_index_config = rel_index_config
+        # This is None until session initialization happens after pos/neg
+        # exemplar data has been added.
+        #: :type: None | smqtk.algorithms.relevancy_index.RelevancyIndex
+        self.rel_index = None
 
     def __del__(self):
         # Clean up working directory
@@ -120,17 +193,24 @@ class IqrSession (object):
         self.lock.release()
 
     @property
-    def work_dir(self):
-        if not osp.isdir(self._work_dir):
-            safe_create_dir(self._work_dir)
-        return self._work_dir
+    def _log(self):
+        return logging.getLogger(
+            '.'.join((self.__module__, self.__class__.__name__)) +
+            "[%s]" % self.uuid
+        )
 
     @property
+    def work_dir(self):
+        safe_create_dir(self._work_dir)
+        return self._work_dir
+
     def ordered_results(self):
         """
         Return a tuple of the current (id, probability) result pairs in
         order of probability score. If there are no results yet, None is
         returned.
+
+        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
 
         """
         with self.lock:
@@ -140,64 +220,136 @@ class IqrSession (object):
                                     reverse=True))
             return None
 
-    def adjudicate(self, new_positives=(), new_negatives=(),
-                   un_positives=(), un_negatives=()):
+    def add_positive_data(self, *data_elements):
         """
-        Update current state of user defined positive and negative truths on
-        specific image IDs
+        Add one or more data elements to this IQR session as positive examples.
+        This produces descriptors on the input data with our configured
+        descriptor generator.
 
-        :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: collections.Iterable of collections.Hashable
-
-        :param new_negatives: New IDs of items to now be considered negative.
-        :type new_negatives: collections.Iterable of collections.Hashable
-
-        :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: collections.Iterable of collections.Hashable
-
-        :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: collections.Iterable of collections.Hashable
+        :param data_elements: Iterable of data elements to add as positive
+            examples.
+        :type data_elements: collections.Iterable[smqtk.representation.DataElement]
 
         """
         with self.lock:
-            self.positive_ids.update(new_positives)
-            self.positive_ids.difference_update(un_positives)
-            self.positive_ids.difference_update(new_negatives)
+            r = self.descriptor.compute_descriptor_async(
+                data_elements, self.descriptor_factory
+            )
+            for da in r:
+                self.ex_pos_descriptors[da.uuid()] = r[da]
+                self.ex_data[da.uuid()] = da
 
-            self.negative_ids.update(new_negatives)
-            self.negative_ids.difference_update(un_negatives)
-            self.negative_ids.difference_update(new_positives)
+    def add_negative_data(self, *data_elements):
+        """
+        Add one or more data elements to this IQR session as negative examples.
+        This produces descriptors on the input data with our configured
+        descriptor generator.
 
-    def refine(self, new_positives=(), new_negatives=(),
-               un_positives=(), un_negatives=()):
+        :param data_elements: Iterable of data elements to add as positive
+            examples.
+        :type data_elements: collections.Iterable[smqtk.representation.DataElement]
+
+        """
+        with self.lock:
+            r = self.descriptor.compute_descriptor_async(
+                data_elements, self.descriptor_factory
+            )
+            for da in r:
+                self.ex_neg_descriptors[da.uuid()] = r[da]
+                self.ex_data[da.uuid()] = da
+
+    def initialize(self):
+        """
+        Initialize working index based on currently set positive exemplar data.
+
+        This takes into account the currently set positive data descriptors as
+        well as positively adjudicated descriptors from the lifetime of this
+        session.
+
+        :raises RuntimeError: There are no positive example descriptors in this
+            session to use as a basis for querying.
+
+        """
+        if len(self.ex_pos_descriptors) + \
+                len(self.positive_descriptors) <= 0:
+            raise RuntimeError("No positive descriptors to query the neighbor "
+                               "index with.")
+        # Clear the current working index so we can put different things in it
+        self._log.info("Clearing working index")
+        self.working_index.clear()
+
+        # build up new working index
+        for p in self.ex_pos_descriptors.itervalues():
+            self._log.info("Querying neighbors to: %s", p)
+            self.working_index.add_many_descriptors(
+                self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
+            )
+        for p in self.positive_descriptors:
+            self._log.info("Querying neighbors to: %s", p)
+            self.working_index.add_many_descriptors(
+                self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
+            )
+
+        # Make new relevancy index
+        self._log.info("Creating new relevancy index over working index.")
+        #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
+        self.rel_index = plugin.from_plugin_config(self.rel_index_config,
+                                                   get_relevancy_index_impls)
+        self.rel_index.build_index(self.working_index.iterdescriptors())
+
+    def adjudicate(self, new_positives=(), new_negatives=(),
+                   un_positives=(), un_negatives=()):
+        """
+        Update current state of working index positive and negative
+        adjudications based on descriptor UUIDs.
+
+        :param new_positives: Descriptors of elements in our working index to
+            now be considered to be positively relevant.
+        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param new_negatives: Descriptors of elements in our working index to
+            now be considered to be negatively relevant.
+        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param un_positives: Descriptors of elements in our working index to now
+            be considered not positive any more.
+        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param un_negatives: Descriptors of elements in our working index to now
+            be considered not negative any more.
+        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self.lock:
+            self.positive_descriptors.update(new_positives)
+            self.positive_descriptors.difference_update(un_positives)
+            self.positive_descriptors.difference_update(new_negatives)
+
+            self.negative_descriptors.update(new_negatives)
+            self.negative_descriptors.difference_update(un_negatives)
+            self.negative_descriptors.difference_update(new_positives)
+
+    def refine(self):
         """ Refine current model results based on current adjudication state
 
         :raises RuntimeError: There are no adjudications to run on. We must have
             at least one positive adjudication.
 
-        :param new_positives: New IDs of items to now be considered positive.
-        :type new_positives: collections.Iterable of collections.Hashable
-
-        :param new_negatives: New IDs of items to now be considered negative.
-        :type new_negatives: collections.Iterable of collections.Hashable
-
-        :param un_positives: New item IDs that are now not positive any more.
-        :type un_positives: collections.Iterable of collections.Hashable
-
-        :param un_negatives: New item IDs that are now not negative any more.
-        :type un_negatives: collections.Iterable of collections.Hashable
-
         """
         with self.lock:
-            self.adjudicate(new_positives, new_negatives, un_positives,
-                            un_negatives)
+            if not self.rel_index:
+                raise RuntimeError("No relevancy index yet. Must not have "
+                                   "initialized session (no working index).")
 
-            if not self.positive_ids:
+            # fuse pos/neg adjudications + added positive data descriptors
+            pos = self.ex_pos_descriptors.values() + list(self.positive_descriptors)
+            neg = self.ex_neg_descriptors.values() + list(self.negative_descriptors)
+
+            if not pos:
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
-            id_probability_map = \
-                self.indexer.rank(self.positive_ids, self.negative_ids)
+            id_probability_map = self.rel_index.rank(pos, neg)
 
             if self.results is None:
                 self.results = IqrResultsDict()
@@ -206,10 +358,13 @@ class IqrSession (object):
             # Force adjudicated positives and negatives to be probability 1 and
             # 0, respectively, since we want to control where they show up in
             # our results view.
-            for uid in self.positive_ids:
-                self.results[uid] = 1.0
-            for uid in self.negative_ids:
-                self.results[uid] = 0.0
+            # - Not all pos/neg descriptors may be in our working index.
+            for d in pos:
+                if d in self.results:
+                    self.results[d] = 1.0
+            for d in neg:
+                if d in self.results:
+                    self.results[d] = 0.0
 
     def reset(self):
         """ Reset the IQR Search state
@@ -218,15 +373,15 @@ class IqrSession (object):
 
         """
         with self.lock:
-            self.positive_ids.clear()
-            self.negative_ids.clear()
-            self.indexer.reset()
+            self.working_index.clear()
+            self.positive_descriptors.clear()
+            self.negative_descriptors.clear()
+            self.ex_pos_descriptors.clear()
+            self.ex_neg_descriptors.clear()
+            self.ex_data.clear()
+
+            self.rel_index = None
             self.results = None
 
             # clear contents of working directory
             shutil.rmtree(self.work_dir)
-
-            # Re-initialize extension ingest. Now that we've killed the IQR work
-            # tree, this should initialize empty
-            if len(self.extension_ds):
-                self.extension_ds = DataFileSet(self.extension_ds_dir)

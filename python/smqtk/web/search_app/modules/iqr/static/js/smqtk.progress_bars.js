@@ -2,6 +2,8 @@
  * General purpose progress bar encapsulation
  */
 function GeneralProgressBar(container, min, max) {
+    Object.call(this);
+
     this.contained_by = $(container);
     this.min = min || 0;
     this.max = max || 100;
@@ -54,13 +56,15 @@ GeneralProgressBar.prototype.update = function (new_val) {
 
 
 /**
- * Animated bar that represents indeterminently ongoing progress.
+ * Animated bar that represents indeterminately ongoing progress.
  *
  * @param container Containing element
  * @param message Optional Initial message to show
  * @constructor
  */
 function ActivityBar(container, message) {
+    Object.call(this);
+
     this.message = (typeof message === 'undefined') ? "" : message;
 
     // jQuery div container
@@ -87,7 +91,7 @@ function ActivityBar(container, message) {
  * @param message Message to show.
  */
 ActivityBar.prototype.on = function(message) {
-    this.loading_bar.text(message);
+    this.loading_bar.text(message || this.message);
     this.progress_div.show();
 };
 

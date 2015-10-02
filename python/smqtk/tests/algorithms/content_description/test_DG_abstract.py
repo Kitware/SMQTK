@@ -97,7 +97,7 @@ class TestAsyncHelper (unittest.TestCase):
         ntools.assert_is_none(v)
 
 
-class TestContentDescriptorAbstract (unittest.TestCase):
+class TestDescriptorGeneratorAbstract (unittest.TestCase):
     """
     Create mock object (look up mock module?) to test abstract super-class
     functionality in isolation.
@@ -216,7 +216,7 @@ class TestContentDescriptorAbstract (unittest.TestCase):
         mDescrElement().set_vector.assert_called_once_with(expected_new_vector)
         ntools.assert_is(d, mDescrElement())
 
-    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.Pool')
+    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.pool.ThreadPool')
     def test_computeDescriptorAsync(self, mPool):
         expected_new_descriptors = [numpy.random.randint(0, 100, 10),
                                     numpy.random.randint(0, 100, 10)]
@@ -260,10 +260,10 @@ class TestContentDescriptorAbstract (unittest.TestCase):
             mock.call(expected_new_descriptors[1]),
         ], any_order=True)
 
-        ntools.assert_in(expected_uuids[0], de_map)
-        ntools.assert_in(expected_uuids[1], de_map)
+        ntools.assert_in(m_d0, de_map)
+        ntools.assert_in(m_d1, de_map)
 
-    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.Pool')
+    @mock.patch('smqtk.algorithms.descriptor_generator.multiprocessing.pool.ThreadPool')
     def test_computeDescriptorAsync_failure(self, mPool):
         expected_uuids = [1, 2]
 

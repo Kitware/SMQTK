@@ -6,26 +6,30 @@
  *
  * for image load progress status, see: http://usablica.github.io/progress.js/
  *
- * Explicit images are covered initially by default but may be uncovered
- * temporarily.
+ * @param is_example: Boolean flag for whether or not this is a view of example
+ *                    data, in contrast to data in the IQR working index.
  *
  */
-function IqrResult(container, rank, uid, probability) {
+function DataView(container, rank, uid, probability, is_example) {
     Object.call(this);
 
     var inst = this;
     this.rank = rank;
     this.uid = uid;
     this.probability = probability;
+    this.is_example = is_example === undefined ? false : is_example;
 
+    // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
+    // link to statically hosted file for full view
     this.static_view_link = null;
+    // If we have received image preview data yet
     this.image_loaded = false;
-    this.is_explicit = false;
-    // this is 1 if height > width, 0 if otherwise
+    // Used for image view size clamping
+    // -> this is 1 if height > width, 0 if otherwise.
     this.img_long_side = 0;
-    this.e_marked_servereide = false;
 
+    // adjudication status
     this.is_positive = false;
     this.is_negative = false;
 
@@ -38,14 +42,10 @@ function IqrResult(container, rank, uid, probability) {
     this.adj_neg_off_icon = "static/img/carbon-rejected.png";
     this.adj_neg_on_icon = "static/img/carbon-rejected_on.png";
 
-    this.explicit_icon_on = "static/img/explicit_marker_on.png";
-    this.explicit_icon_off = "static/img/explicit_marker_off.png";
-    this.explicit_overlay_image = "static/img/explicit_overlay.png";
-
     this.loading_gif = "static/img/loading.gif";
 
     //
-    // Layout
+    // View Layout
     //
 
     // top-level container
@@ -67,22 +67,22 @@ function IqrResult(container, rank, uid, probability) {
     this.adj_neg_icon = $('<img height="24px">');
     this.adj_neg_icon.css('padding-left', '12px');
     this.adj_neg_icon.attr('src', inst.adj_neg_off_icon);
-    this.explicit_icon = $('<img height="24px"/>');
-    this.explicit_icon.addClass("pull-right");
-    this.explicit_icon.attr('src', this.explicit_icon_off);
 
     this.adjudication_controls.append(this.adj_pos_icon);
     this.adjudication_controls.append(this.adj_neg_icon);
-    this.adjudication_controls.append(this.explicit_icon);
 
     // image container image data and adjudication buttons
     this.image_container = $('<div class="iqr-result-img-container"/>');
     this.image_data_view = $('<img>');
+    // Showing loading GIF by default until image preview actually loaded via
+    // ajax call.
     this.image_data_view.attr('src', this.loading_gif);
 
     // Assemble result box
-    this.result.append(this.header);
-    this.result.append(this.adjudication_controls);
+    if (! this.is_example) {
+        this.result.append(this.header);
+        this.result.append(this.adjudication_controls);
+    }
     this.result.append(this.image_container);
 
     this.image_container.append(this.image_data_view);
@@ -101,17 +101,12 @@ function IqrResult(container, rank, uid, probability) {
         inst.set_negative();
     });
 
-    // react to clicking explicit icon
-    this.explicit_icon.click(function () {
-        inst.toggle_explicit();
-    });
-
     // link click controls
     this.image_data_view.click(function () {
         inst.display_full_image();
     });
 
-    // Update to initial view
+    // Update to initial view from the server's state
     this.update_view(true);
 
     return this;
@@ -123,19 +118,20 @@ function IqrResult(container, rank, uid, probability) {
  * @returns boolean True of this result has been adjudicated and false if
  *      not.
  */
-IqrResult.prototype.is_adjudicated = function () {
+DataView.prototype.is_adjudicated = function () {
     return (this.is_negative || this.is_positive);
 };
 
 /**
  * Update the view of this element based on current state.
  */
-IqrResult.prototype.update_view = function (server_update) {
+DataView.prototype.update_view = function (server_update) {
     var inst = this;
     server_update = server_update || false;
 
     // Fetch/Update adjudication status
-    function update_adj_button_view() {
+    function update_adj_button_view()
+    {
         if (inst.is_positive) {
             inst.adj_pos_icon.attr('src', inst.adj_pos_on_icon);
             inst.adj_neg_icon.attr('src', inst.adj_neg_off_icon);
@@ -155,10 +151,34 @@ IqrResult.prototype.update_view = function (server_update) {
             inst.result.removeClass(inst.adj_neg_class);
         }
     }
+
+    // helper function for display based on explicit settings
+    function update_image()
+    {
+        inst.image_data_view.attr('src', inst.image_preview_data);
+        // balance side scaling.
+        if (inst.img_long_side)
+        {
+            inst.image_data_view.css('height', '192px');
+        }
+        else
+        {
+            inst.image_data_view.css('width', '192px');
+        }
+    }
+
     if (server_update)
     {
+        var query_url = null;
+        if (this.is_example) {
+            query_url = "get_example_adjudication";
+        }
+        else {
+            query_url = "get_index_adjudication";
+        }
+
         $.ajax({
-            url: "get_item_adjudication?uid="+this.uid,
+            url: query_url+"?uid="+this.uid,
             success: function (data)
             {
                 inst.is_positive = data['is_pos'];
@@ -177,31 +197,6 @@ IqrResult.prototype.update_view = function (server_update) {
         update_adj_button_view();
     }
 
-    // display based on explicit settings
-    function update_image()
-    {
-        inst.image_data_view.attr('src', inst.image_preview_data);
-        // balance side scaling.
-        if (inst.img_long_side)
-        {
-            inst.image_data_view.css('height', '192px');
-        }
-        else
-        {
-            inst.image_data_view.css('width', '192px');
-        }
-
-        if (inst.is_explicit)
-        {
-            inst.explicit_icon.attr('src', inst.explicit_icon_on);
-            inst.image_data_view.addClass("explicit-image");
-        }
-        else
-        {
-            inst.explicit_icon.attr('src', inst.explicit_icon_off);
-            inst.image_data_view.removeClass("explicit-image")
-        }
-    }
     if (this.image_loaded)
     {
         update_image();
@@ -210,20 +205,17 @@ IqrResult.prototype.update_view = function (server_update) {
     {
         // Get the preview image information from the server
         $.ajax({
-            url: "get_ingest_image_preview_data?uid=" + this.uid,
+            url: "get_data_preview_image?uid=" + this.uid,
             success: function (data) {
                 // Check for failures
                 if  (!data.success) {
                     alert_error("Image fetch error: " + data.message);
-                    inst.image_preview_data = 'url("'+inst.adj_neg_on_icon+'")';
+                    inst.image_preview_data = inst.adj_neg_on_icon;
                 }
                 else {
-                    inst.image_preview_data =
-                        'data:image/'+data.ext+';base64,'+ data.data;
-                    inst.static_view_link = data.static_file_link
+                    inst.image_preview_data = data.static_preview_link;
+                    inst.static_view_link = data.static_file_link;
                     inst.image_loaded = true;
-                    inst.is_explicit = inst.e_marked_servereide =
-                        data.is_explicit;
 
                     inst.img_long_side =
                         parseInt(data.shape[1]) > parseInt(data.shape[0]);
@@ -233,8 +225,7 @@ IqrResult.prototype.update_view = function (server_update) {
             error: function (jqXHR, textStatus, errorThrown) {
                 alert_error("Failed to load preview image for ID " + inst.uid
                         + ": " + errorThrown);
-                //inst.image_preview_data = inst.adj_neg_on_icon;
-                inst.image_preview_data = "broken-image";
+                inst.image_preview_data = "broken-image-src";
                 update_image();
             }
         });
@@ -244,7 +235,7 @@ IqrResult.prototype.update_view = function (server_update) {
 /**
  * Set display to positive indication and let the server know of change.
  */
-IqrResult.prototype.set_positive = function () {
+DataView.prototype.set_positive = function () {
     var post_data = {};
     //var adj_type = '';  // for alert_info below
     if (!this.is_positive) {
@@ -281,7 +272,7 @@ IqrResult.prototype.set_positive = function () {
 /**
  * Set display of negative indication and let the server know.
  */
-IqrResult.prototype.set_negative = function () {
+DataView.prototype.set_negative = function () {
     var post_data = {};
     //var adj_type = '';  // for alert_info below
     if (!this.is_negative) {
@@ -317,82 +308,10 @@ IqrResult.prototype.set_negative = function () {
 };
 
 /**
- * Locally turn off image explicit label and overlay.
- *
- * Alerts with an acknowledgment confirmation.
- */
-IqrResult.prototype.turn_off_explicit = function () {
-    var c = confirm("This image has been marked as containing explicit " +
-        "content.\n\nAre you sure you would like to un-mark this image " +
-        "as explicit?");
-    if (c) {
-        this.is_explicit = false;
-        this.update_view();
-    }
-};
-
-/**
- * Turn on explicit label + overlay.
- *
- * Notify server of an image being marked as explicit.
- */
-IqrResult.prototype.turn_on_explicit = function () {
-    this.is_explicit = true;
-    this.update_view();
-
-    if (!this.e_marked_servereide && confirm("Permanently mark this image as explicit?")) {
-        // notifying server that this image has been marked as explicit so the
-        // decision is reflected in future views of this image.
-        var inst = this;
-        $.ajax({
-            url: "mark_uid_explicit",
-            method: "POST",
-            data: {
-                uid: this.uid
-            },
-            success: function (data) {
-                if (data['success']) {
-                    inst.e_marked_servereide = true;
-                }
-                else {
-                    alert_error("Image ID "+inst.uid+" not marked " +
-                        "server-side due to error. (See log)");
-                }
-            },
-            error: function (jqXHR, textStatus, errorThrown) {
-                alert_error("AJAX Error: " + errorThrown);
-            }
-        });
-    }
-};
-
-/**
- * Toggle the explicit state of this image.
- */
-IqrResult.prototype.toggle_explicit = function () {
-    if (this.is_explicit) {
-        this.turn_off_explicit();
-    }
-    else {
-        this.turn_on_explicit();
-    }
-};
-
-/**
  * Open this image up in a new window
- *
- * If this image is explicit, query the user if they're sure they still want
- * to view it.
  */
-IqrResult.prototype.display_full_image = function () {
+DataView.prototype.display_full_image = function () {
     if (this.image_loaded) {
-        if (this.is_explicit) {
-            if (!confirm("This image has been marked as explicit\n\nAre " +
-                "you sure you would still like to view the full " +
-                "image?")) {
-                return;
-            }
-        }
         // TODO: Should make this better...
         //       like open a webpage instead of just opening static data...
         window.open(this.static_view_link);

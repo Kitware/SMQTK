@@ -51,7 +51,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         return svm and svmutil
 
-    def __init__(self, descr_cache_filepath=None):
+    def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1):
         """
         Initialize a new or existing index.
 
@@ -63,8 +63,17 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             we index.
         :type descr_cache_filepath: None | str
 
+        :param autoneg_select_ratio: Number of maximally distant descriptors to
+            select from our descriptor cache for each positive example provided
+            when no negative examples are provided for ranking.
+
+            This must be an integer. Default value of 1. It is advisable not to
+            make this value too large.
+        :type autoneg_select_ratio: int
+
         """
         self._descr_cache_fp = descr_cache_filepath
+        self._autoneg_select_ratio = int(autoneg_select_ratio)
 
         # Descriptor elements in this index
         self._descr_cache = []
@@ -101,7 +110,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
     def get_config(self):
         return {
-            "descr_cache_filepath": self._descr_cache_fp
+            "descr_cache_filepath": self._descr_cache_fp,
+            'autoneg_select_ratio': self._autoneg_select_ratio,
         }
 
     def count(self):
@@ -148,27 +158,28 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         negative exemplar descriptor elements.
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type pos: collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param neg: Iterable of negative exemplar DescriptorElement instances.
+            This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :return: Map of descriptor UUID to rank value within [0, 1] range, where
-            a 1.0 means most relevant and 0.0 meaning least relevant.
-        :rtype: dict[collections.Hashable, float]
+        :return: Map of indexed descriptor elements to a rank value between
+            [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
+            meaning least relevant.
+        :rtype: dict[smqtk.representation.DescriptorElement, float]
 
         """
         # Notes:
         # - Pos and neg exemplars may be in our index.
 
-        # TODO: Pad the negative list with something when empty, else SVM
-        #       training is going to fail?
-        #       - create a set of most distance descriptors from input positive
-        #           examples.
-
         #
         # SVM model training
         #
+        # Copy pos descriptors into a set for repeated iteration
+        #: :type: set[smqtk.representation.DescriptorElement]
+        pos = set(pos)
         # Creating training matrix and labels
         train_labels = []
         train_vectors = []
@@ -177,8 +188,42 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             train_labels.append(+1)
             train_vectors.append(d.vector().tolist())
             num_pos += 1
+
+        # When no negative examples are given, naively pick most distant example
+        # in our dataset, using HI metric, for each positive example
+        neg_autoselect = set()
+        if not neg:
+            self._log.info("Auto-selecting negative examples.")
+            # ``train_vectors`` only composed of positive examples at this point
+            for p in pos:
+                # where d is the distance vector to descriptor elements in cache
+                d = histogram_intersection_distance(p.vector(),
+                                                    self._descr_matrix)
+                # Scan vector for max distance index
+                # - Allow variable number of maximally distance descriptors to
+                #   be picked per positive.
+                m_set = {}
+                m_val = -1
+                for i in xrange(d.size):
+                    if d[i] > m_val:
+                        m_set[d[i]] = i
+                        if len(m_set) > self._autoneg_select_ratio:
+                            if m_val in m_set:
+                                del m_set[m_val]
+                            m_val = min(m_set)
+                for i in m_set.itervalues():
+                    neg_autoselect.add(self._descr_cache[i])
+            # Remove any positive examples from auto-selected results
+            neg_autoselect.difference_update(pos)
+            self._log.debug("Auto-selected negative descriptors: %s",
+                            neg_autoselect)
+
         num_neg = 0
         for d in neg:
+            train_labels.append(-1)
+            train_vectors.append(d.vector().tolist())
+            num_neg += 1
+        for d in neg_autoselect:
             train_labels.append(-1)
             train_vectors.append(d.vector().tolist())
             num_neg += 1
@@ -210,6 +255,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         for i, nlist in enumerate(svm_model.SV[:svm_SVs.shape[0]]):
             svm_SVs[i, :] = [n.value for n in nlist[:len(train_vectors[0])]]
         # compute matrix of distances from support vectors to index elements
+        # TODO: Optimize this step by caching SV distance vectors
+        #       - It is known that SVs are vectors from the training data, so
+        #           if the same descriptors are given to this function
+        #           repeatedly (which is the case for IQR), this can be faster
+        #           because we're only computing at most a few more distance
+        #           vectors against our indexed descriptor matrix, and the rest
+        #           have already been computed before.
+        #       - At worst, we're effectively doing this call because each SV
+        #           needs to have its distance vector computed.
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)

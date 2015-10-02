@@ -1,0 +1,66 @@
+{
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "iqr_tabs": [
+        {
+            "name": "example",
+            "url_prefix": "/example",
+            "working_directory": "/Users/purg/dev/smqtk/source/work/Web/IqrSearchApp/example",
+            "data_set": {
+                "DataFileSet": {
+                    "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                    "sha1_chunk": 10
+                },
+                "type": "DataFileSet"
+            },
+            "descr_generator": {
+                "ColorDescriptor_Image_csift": {
+                    "flann_autotune": false,
+                    "flann_sample_fraction": 0.75,
+                    "flann_target_precision": 0.95,
+                    "kmeans_k": 1024,
+                    "model_directory": "/Users/purg/dev/smqtk/source/data/ContentDescriptors/ColorDescriptor/csift/example_image",
+                    "random_seed": 42,
+                    "use_spatial_pyramid": false,
+                    "work_directory": "/Users/purg/dev/smqtk/source/work/ContentDescriptors/ColorDescriptor/csift/example_image"
+                },
+                "type": "ColorDescriptor_Image_csift"
+            },
+            "nn_index": {
+                "ITQNearestNeighborsIndex": {
+                    "bit_length": 8,
+                    "code_index": {
+                        "MemoryCodeIndex": {
+                            "file_cache": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/mem_code_index.pickle"
+                        },
+                        "type": "MemoryCodeIndex"
+                    },
+                    "distance_method": "hik",
+                    "itq_iterations": 50,
+                    "mean_vec_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/mean_vec.npy",
+                    "random_seed": 42,
+                    "rotation_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/rotation.npy"
+                },
+                "type": "ITQNearestNeighborsIndex"
+            },
+            "rel_index_config": {
+                "LibSvmHikRelevancyIndex": {
+                    "descr_cache_filepath": null,
+                    "autoneg_select_ratio": 1
+                },
+                "type": "LibSvmHikRelevancyIndex"
+            }
+        }
+    ],
+    "mongo": {
+        "database": "smqtk",
+        "server": "127.0.0.1:27017"
+    },
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    }
+}

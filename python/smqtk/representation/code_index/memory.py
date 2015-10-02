@@ -28,6 +28,7 @@ class MemoryCodeIndex (CodeIndex):
         :param file_cache: Optional path to a file path, loading an existing
             index if the file already exists. Either way, providing a path to
             this enabled file caching when descriptors are added to this index.
+            This cache file is a pickle serialization.
         :type file_cache: None | str
 
         """

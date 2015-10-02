@@ -15,7 +15,6 @@ class CodeIndex (Configurable):
     Implementations should be picklable for serialization.
 
     """
-    __metaclass__ = abc.ABCMeta
 
     @property
     def _log(self):
@@ -89,7 +88,6 @@ class CodeIndex (Configurable):
             collections.Iterable[(int, smqtk.representation.DescriptorElement)]
 
         """
-        return
 
     @abc.abstractmethod
     def get_descriptors(self, code_or_codes):

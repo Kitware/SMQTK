@@ -1,3 +1,4 @@
+from pprint import pprint
 import unittest
 
 import nose.tools as ntools
@@ -34,9 +35,9 @@ class TestIqrSvmHik (unittest.TestCase):
                                  cls.d6]
 
         cls.q_pos = DescriptorMemoryElement('query', 0)
-        cls.q_pos.set_vector(np.array([.75, .25, 0, 0, 0], float))
+        cls.q_pos.set_vector(np.array([.75, .25, 0, 0,  0], float))
         cls.q_neg = DescriptorMemoryElement('query', 1)
-        cls.q_neg.set_vector(np.array([0, 0, 0, .5, .5], float))
+        cls.q_neg.set_vector(np.array([0,   0,   0, .5, .5], float))
 
     def test_configuration(self):
         c = LibSvmHikRelevancyIndex.get_default_config()
@@ -55,7 +56,9 @@ class TestIqrSvmHik (unittest.TestCase):
     def test_rank_no_neg(self):
         iqr_index = LibSvmHikRelevancyIndex()
         iqr_index.build_index(self.index_descriptors)
-        ntools.assert_raises(ValueError, iqr_index.rank, [self.q_pos], [])
+        # index should auto-select some negative examples, thus not raising an
+        # exception.
+        iqr_index.rank([self.q_pos], [])
 
     def test_rank_no_pos(self):
         iqr_index = LibSvmHikRelevancyIndex()

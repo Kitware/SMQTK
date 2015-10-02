@@ -1,3 +1,4 @@
+import glob
 import logging
 
 from smqtk import algorithms
@@ -18,20 +19,24 @@ if not logging.getLogger().handlers:
 #
 # Input parameters
 #
+input_image_file_glob = "/Users/purg/dev/smqtk/source/data/FileDataSets/" \
+                        "example_image/images/*/*"
+
 data_set_config = {
     "type": "DataFileSet",
     "DataFileSet": {
-        "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+        "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/"
+                          "example_image/data",
         "sha1_chunk": 10
     }
 }
 
 descriptor_elem_factory_config = {
+    'DescriptorMemoryElement': {},
     # 'DescriptorFileElement': {
     #     'save_dir': None,
     #     'subdir_split': None
     # },
-    'DescriptorMemoryElement': {},
     # 'SolrDescriptorElement': {
     #     'commit_on_set': True,
     #     'persistent_connection': False,
@@ -51,27 +56,21 @@ descriptor_generator_config = {
         "flann_sample_fraction": 0.75,
         "flann_target_precision": 0.95,
         "kmeans_k": 1024,
-        "model_directory": "/Users/purg/dev/smqtk/source/data/ContentDescriptors/ColorDescriptor/csift/example_image",
+        "model_directory": "/Users/purg/dev/smqtk/source/data/"
+                           "ContentDescriptors/ColorDescriptor/csift/"
+                           "example_image",
         "random_seed": 42,
         "use_spatial_pyramid": False,
-        "work_directory": "/Users/purg/dev/smqtk/source/work/ContentDescriptors/ColorDescriptor/csift/example_image"
+        "work_directory": "/Users/purg/dev/smqtk/source/work/"
+                          "ContentDescriptors/ColorDescriptor/csift/"
+                          "example_image"
     },
     "type": "ColorDescriptor_Image_csift"
 }
 
 nn_index_config = {
-    # "FlannNearestNeighborsIndex": {
-    #     "autotune": false,
-    #     "descriptor_cache_filepath": "descriptor_cache.pickle",
-    #     "distance_method": "hik",
-    #     "index_filepath": "index.flann",
-    #     "parameters_filepath": "index_parameters.pickle",
-    #     "random_seed": null,
-    #     "sample_fraction": 0.1,
-    #     "target_precision": 0.95
-    # },
     "ITQNearestNeighborsIndex": {
-        "bit_length": 8,
+        "bit_length": 64,
         "code_index": {
             "MemoryCodeIndex": {
                 "file_cache": "/Users/purg/dev/smqtk/source/data/"
@@ -80,7 +79,7 @@ nn_index_config = {
             },
             "type": "MemoryCodeIndex"
         },
-        "distance_method": "cosine",
+        "distance_method": "hik",
         "itq_iterations": 50,
         "mean_vec_filepath": "/Users/purg/dev/smqtk/source/data/"
                              "NearestNeighborsIndex/ITQNearestNeighborsIndex/"
@@ -95,7 +94,8 @@ nn_index_config = {
 
 rel_index_config = {
     "LibSvmHikRelevancyIndex": {
-        "descr_cache_filepath": None
+        "descr_cache_filepath": None,
+        "autoneg_select_ratio": 1
     },
     "type": "LibSvmHikRelevancyIndex"
 }
@@ -131,6 +131,11 @@ rel_index = \
 #
 # Build models
 #
+
+# Add data files to DataSet
+DataFileElement = representation.get_data_element_impls()["DataFileElement"]
+data_set.add_data(*[DataFileElement(fp) for fp
+                    in glob.iglob(input_image_file_glob)])
 
 # Generate a mode if the generator defines a known generation method.
 if hasattr(descriptor_generator, "generate_model"):

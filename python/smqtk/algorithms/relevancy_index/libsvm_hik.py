@@ -51,7 +51,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         return svm and svmutil
 
-    def __init__(self, descr_cache_filepath=None):
+    def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1):
         """
         Initialize a new or existing index.
 
@@ -63,8 +63,17 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             we index.
         :type descr_cache_filepath: None | str
 
+        :param autoneg_select_ratio: Number of maximally distant descriptors to
+            select from our descriptor cache for each positive example provided
+            when no negative examples are provided for ranking.
+
+            This must be an integer. Default value of 1. It is advisable not to
+            make this value too large.
+        :type autoneg_select_ratio: int
+
         """
         self._descr_cache_fp = descr_cache_filepath
+        self._autoneg_select_ratio = int(autoneg_select_ratio)
 
         # Descriptor elements in this index
         self._descr_cache = []
@@ -164,10 +173,31 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Notes:
         # - Pos and neg exemplars may be in our index.
 
-        # TODO: Pad the negative list with something when empty, else SVM
-        #       training is going to fail?
-        #       - create a set of most distance descriptors from input positive
-        #           examples.
+        # When no negative examples are given, naively pick most distant example
+        # in our dataset, using HI metric, for each positive example
+        neg_autoselect = set()
+        if not neg:
+            self._log.info("Auto-selecting negative examples.")
+            for p in pos:
+                # where d is the distance vector to descriptor elements in cache
+                d = histogram_intersection_distance(p.vector(),
+                                                    self._descr_matrix)
+                # Scan vector for max distance index
+                # - Allow variable number of maximally distance descriptors to
+                #   be picked per positive.
+                m_set = {}
+                m_val = -1
+                for i in xrange(d.size):
+                    if d[i] > m_val:
+                        m_set[d[i]] = i
+                        if len(m_set) > self._autoneg_select_ratio:
+                            if m_val in m_set:
+                                del m_set[m_val]
+                            m_val = min(m_set)
+                for i in m_set.itervalues():
+                    neg_autoselect.add(self._descr_cache[i])
+            self._log.debug("Auto-selected negative descriptors: %s",
+                            neg_autoselect)
 
         #
         # SVM model training
@@ -182,6 +212,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             num_pos += 1
         num_neg = 0
         for d in neg:
+            train_labels.append(-1)
+            train_vectors.append(d.vector().tolist())
+            num_neg += 1
+        for d in neg_autoselect:
             train_labels.append(-1)
             train_vectors.append(d.vector().tolist())
             num_neg += 1

@@ -28,9 +28,9 @@ class IqrSearchApp (SmqtkWebApp):
                 "database": "smqtk",
             },
             # Each entry in this mapping generates a new tab in the GUI
-            "iqr_tabs": {
-                "example": IqrSearch.get_default_config(),
-            }
+            "iqr_tabs": [
+                IqrSearch.get_default_config(),
+            ]
         })
         return c
 
@@ -85,8 +85,10 @@ class IqrSearchApp (SmqtkWebApp):
         # - for each entry in 'iqr_tabs', initialize a separate IqrSearch
         #   instance.
         self._iqr_search_modules = []
-        for iqr_search_config in self.json_config['iqr_tabs'].itervalues():
-            self.log.debug("Iqr tab config:\n%s", iqr_search_config)
+        for iqr_search_config in self.json_config['iqr_tabs']:
+            self.log.info("Initializing IQR tab '%s'",
+                          iqr_search_config['name'])
+            self.log.debug("IQR tab config:\n%s", iqr_search_config)
             m = IqrSearch.from_config(iqr_search_config, self)
             self.register_blueprint(m)
             self.add_navigable_blueprint(m)

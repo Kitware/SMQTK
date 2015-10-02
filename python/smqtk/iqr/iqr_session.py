@@ -135,12 +135,16 @@ class IqrSession (object):
         #: :type: set[smqtk.representation.DescriptorElement]
         self.negative_descriptors = set()
 
-        # Example pos/neg data/descriptors added to this session
-        # (external to our working index).
-        #: :type: dict[smqtk.representation.DataElement, smqtk.representation.DescriptorElement]
-        self.ex_pos_data2descriptor = dict()
-        #: :type: dict[smqtk.representation.DataElement, smqtk.representation.DescriptorElement]
-        self.ex_neg_data2descriptor = dict()
+        # Example pos/neg data and descriptors added to this session
+        #   (external to our working index).
+        # All maps keyed on UUID values (some kind of content checksum,
+        #   i.e. SHA1).
+        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
+        self.ex_data = dict()
+        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        self.ex_pos_descriptors = dict()
+        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        self.ex_neg_descriptors = dict()
 
         self.pos_seed_neighbors = int(pos_seed_neighbors)
 
@@ -228,11 +232,12 @@ class IqrSession (object):
 
         """
         with self.lock:
-            self.ex_pos_data2descriptor.update(
-                self.descriptor.compute_descriptor_async(
-                    data_elements, self.descriptor_factory
-                )
+            r = self.descriptor.compute_descriptor_async(
+                data_elements, self.descriptor_factory
             )
+            for da in r:
+                self.ex_pos_descriptors[da.uuid()] = r[da]
+                self.ex_data[da.uuid()] = da
 
     def add_negative_data(self, *data_elements):
         """
@@ -246,11 +251,12 @@ class IqrSession (object):
 
         """
         with self.lock:
-            self.ex_neg_data2descriptor.update(
-                self.descriptor.compute_descriptor_async(
-                    data_elements, self.descriptor_factory
-                )
+            r = self.descriptor.compute_descriptor_async(
+                data_elements, self.descriptor_factory
             )
+            for da in r:
+                self.ex_neg_descriptors[da.uuid()] = r[da]
+                self.ex_data[da.uuid()] = da
 
     def initialize(self):
         """
@@ -264,7 +270,7 @@ class IqrSession (object):
             session to use as a basis for querying.
 
         """
-        if len(self.ex_pos_data2descriptor) + \
+        if len(self.ex_pos_descriptors) + \
                 len(self.positive_descriptors) <= 0:
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
@@ -273,7 +279,7 @@ class IqrSession (object):
         self.working_index.clear()
 
         # build up new working index
-        for p in self.ex_pos_data2descriptor.itervalues():
+        for p in self.ex_pos_descriptors.itervalues():
             self._log.info("Querying neighbors to: %s", p)
             self.working_index.add_many_descriptors(
                 self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
@@ -336,10 +342,8 @@ class IqrSession (object):
                                    "initialized session (no working index).")
 
             # fuse pos/neg adjudications + added positive data descriptors
-            pos = self.ex_pos_data2descriptor.values() + \
-                list(self.positive_descriptors)
-            neg = self.ex_neg_data2descriptor.values() + \
-                list(self.negative_descriptors)
+            pos = self.ex_pos_descriptors.values() + list(self.positive_descriptors)
+            neg = self.ex_neg_descriptors.values() + list(self.negative_descriptors)
 
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
@@ -351,16 +355,16 @@ class IqrSession (object):
                 self.results = IqrResultsDict()
             self.results.update(id_probability_map)
 
-            # # Force adjudicated positives and negatives to be probability 1 and
-            # # 0, respectively, since we want to control where they show up in
-            # # our results view.
-            # # - Not all pos/neg descriptors may be in our working index.
-            # for d in pos:
-            #     if d in self.results:
-            #         self.results[d] = 1.0
-            # for d in neg:
-            #     if d in self.results:
-            #         self.results[d] = 0.0
+            # Force adjudicated positives and negatives to be probability 1 and
+            # 0, respectively, since we want to control where they show up in
+            # our results view.
+            # - Not all pos/neg descriptors may be in our working index.
+            for d in pos:
+                if d in self.results:
+                    self.results[d] = 1.0
+            for d in neg:
+                if d in self.results:
+                    self.results[d] = 0.0
 
     def reset(self):
         """ Reset the IQR Search state
@@ -372,8 +376,9 @@ class IqrSession (object):
             self.working_index.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
-            self.ex_pos_data2descriptor.clear()
-            self.ex_neg_data2descriptor.clear()
+            self.ex_pos_descriptors.clear()
+            self.ex_neg_descriptors.clear()
+            self.ex_data.clear()
 
             self.rel_index = None
             self.results = None

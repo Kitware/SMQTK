@@ -20,7 +20,6 @@ from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import Configurable
 from smqtk.utils import plugin
-from smqtk.utils import safe_create_dir
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 
@@ -229,12 +228,8 @@ class IqrSearch (flask.Blueprint, Configurable):
                     "negative_uids":
                         tuple(d.uuid() for d in iqrs.negative_descriptors),
 
-                    "ex_pos":
-                        tuple(d.uuid() for d
-                              in iqrs.ex_pos_data2descriptor.itervalues()),
-                    "ex_neg":
-                        tuple(d.uuid() for d
-                              in iqrs.ex_neg_data2descriptor.itervalues()),
+                    "ex_pos": tuple(iqrs.ex_pos_descriptors),
+                    "ex_neg": tuple(iqrs.ex_neg_descriptors),
 
                     "initialized": iqrs.working_index.count() > 0,
                     "index_size": iqrs.working_index.count(),
@@ -274,10 +269,15 @@ class IqrSearch (flask.Blueprint, Configurable):
                 "static_preview_link": None,
             }
 
+            # Try to find a DataElement by the given UUID in our indexed data
+            # or in the session's example data.
             #: :type: smqtk.representation.DataElement
             de = None
             if self._data_set.has_uuid(uid):
                 de = self._data_set.get_data(uid)
+            else:
+                with self.get_current_iqr_session() as iqrs:
+                    de = iqrs.ex_data.get(uid, None)
 
             if not de:
                 info["success"] = False
@@ -374,14 +374,8 @@ class IqrSearch (flask.Blueprint, Configurable):
             """
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
-                is_p = (
-                    elem_uuid in set(d.uuid() for d
-                                     in iqrs.ex_pos_data2descriptor)
-                )
-                is_n = (
-                    elem_uuid in set(d.uuid() for d
-                                     in iqrs.ex_neg_data2descriptor)
-                )
+                is_p = (elem_uuid in iqrs.ex_pos_descriptors)
+                is_n = (elem_uuid in iqrs.ex_neg_descriptors)
 
                 return flask.jsonify({
                     "is_pos": is_p,

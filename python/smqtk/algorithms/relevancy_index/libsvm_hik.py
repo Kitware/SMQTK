@@ -110,7 +110,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
     def get_config(self):
         return {
-            "descr_cache_filepath": self._descr_cache_fp
+            "descr_cache_filepath": self._descr_cache_fp,
+            'autoneg_select_ratio': self._autoneg_select_ratio,
         }
 
     def count(self):
@@ -173,11 +174,27 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Notes:
         # - Pos and neg exemplars may be in our index.
 
+        #
+        # SVM model training
+        #
+        # Copy pos descriptors into a set for repeated iteration
+        #: :type: set[smqtk.representation.DescriptorElement]
+        pos = set(pos)
+        # Creating training matrix and labels
+        train_labels = []
+        train_vectors = []
+        num_pos = 0
+        for d in pos:
+            train_labels.append(+1)
+            train_vectors.append(d.vector().tolist())
+            num_pos += 1
+
         # When no negative examples are given, naively pick most distant example
         # in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
         if not neg:
             self._log.info("Auto-selecting negative examples.")
+            # ``train_vectors`` only composed of positive examples at this point
             for p in pos:
                 # where d is the distance vector to descriptor elements in cache
                 d = histogram_intersection_distance(p.vector(),
@@ -196,20 +213,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             m_val = min(m_set)
                 for i in m_set.itervalues():
                     neg_autoselect.add(self._descr_cache[i])
+            # Remove any positive examples from auto-selected results
+            neg_autoselect.difference_update(pos)
             self._log.debug("Auto-selected negative descriptors: %s",
                             neg_autoselect)
 
-        #
-        # SVM model training
-        #
-        # Creating training matrix and labels
-        train_labels = []
-        train_vectors = []
-        num_pos = 0
-        for d in pos:
-            train_labels.append(+1)
-            train_vectors.append(d.vector().tolist())
-            num_pos += 1
         num_neg = 0
         for d in neg:
             train_labels.append(-1)

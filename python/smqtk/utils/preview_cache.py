@@ -44,6 +44,13 @@ class PreviewCache (object):
         #: :type: dict[collections.Hashable, str]
         self._preview_cache = {}
 
+    def __del__(self):
+        """
+        Cleanup after ourselves.
+        """
+        for fp in self._preview_cache.itervalues():
+            os.remove(fp)
+
     def get_preview_image(self, elem):
         """
         Get the filepath to the preview image for the given data element.
@@ -66,18 +73,20 @@ class PreviewCache (object):
             self._log.debug("Generating preview image based on content type: "
                             "%s", elem.content_type)
             safe_create_dir(self._cache_dir)
-            return self.PREVIEW_GEN_METHOD[elem.content_type()](elem, self._cache_dir)
+            fp = self.PREVIEW_GEN_METHOD[elem.content_type()](elem, self._cache_dir)
         else:
             content_class = elem.content_type().split('/', 1)[0]
             if content_class in self.PREVIEW_GEN_METHOD:
                 self._log.debug("Generating preview image based on content "
                                 "class: %s", content_class)
                 safe_create_dir(self._cache_dir)
-                return self.PREVIEW_GEN_METHOD[content_class](elem, self._cache_dir)
+                fp = self.PREVIEW_GEN_METHOD[content_class](elem, self._cache_dir)
             else:
                 raise ValueError("No preview generation method for the data "
                                  "element provided, of content type '%s'."
                                  % elem.content_type())
+        self._preview_cache[elem.uuid()] = fp
+        return fp
 
     @staticmethod
     def gen_image_preview(elem, output_dir):

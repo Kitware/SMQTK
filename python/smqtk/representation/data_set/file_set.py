@@ -1,5 +1,4 @@
 import cPickle
-import multiprocessing
 import os
 import os.path as osp
 import re
@@ -22,6 +21,7 @@ class DataFileSet (DataSet):
     to be picklable, so this is a valid assumption.
 
     """
+    # TODO: Use file-based locking mechanism to make thread/process safe
 
     # Filename template for serialized files. Requires template
     SERIAL_FILE_TEMPLATE = "UUID_%s.dataElement"

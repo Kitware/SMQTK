@@ -15,7 +15,6 @@ class DataSet (collections.Set, Configurable):
     ``DataElement`` UUID values.
 
     """
-    __metaclass__ = abc.ABCMeta
 
     @classmethod
     @abc.abstractmethod

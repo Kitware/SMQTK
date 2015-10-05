@@ -159,7 +159,6 @@ class DataFileSet (DataSet):
             assert isinstance(e, DataElement)
             uuid = str(e.uuid())
             fp = self._fp_for_uuid(uuid)
-            print "Adding to:", fp
             safe_create_dir(osp.dirname(fp))
             with open(fp, 'wb') as f:
                 cPickle.dump(e, f)

@@ -22,6 +22,10 @@ from smqtk.utils import Configurable
 from smqtk.utils import plugin
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
+from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
+
+
+__author__ = 'paul.tunison@kitware.com'
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -173,6 +177,16 @@ class IqrSearch (flask.Blueprint, Configurable):
         # base directory that's transformed by the ``work_dir`` property into
         # an absolute path.
         self._working_dir = working_directory
+        # Directory to put things to allow them to be statically available to
+        # public users.
+        self._static_data_prefix = "static/data"
+        self._static_data_dir = osp.join(self.work_dir, 'static')
+
+        # Custom static host sub-module
+        self.mod_static_dir = StaticDirectoryHost('%s_static' % self.name,
+                                                  self._static_data_dir,
+                                                  self._static_data_prefix)
+        self.register_blueprint(self.mod_static_dir)
 
         # Uploader Sub-Module
         self.upload_work_dir = os.path.join(self.work_dir, "uploads")
@@ -188,12 +202,9 @@ class IqrSearch (flask.Blueprint, Configurable):
         self._iqr_controller = IqrController()
 
         # Preview Image Caching
-        self._preview_cache = PreviewCache(osp.join(self.static_folder,
+        self._preview_cache = PreviewCache(osp.join(self._static_data_dir,
                                                     "previews"))
 
-        # Directory to write data for static viewing.
-        # This is so we don't have to embed base64 bytes in html things.
-        self._static_data_dir = os.path.join(self.static_folder, 'media_data')
         # Cache mapping of written static files for data elements
         self._static_cache = {}
 
@@ -283,19 +294,27 @@ class IqrSearch (flask.Blueprint, Configurable):
                 info["success"] = False
                 info["message"] = "UUID not part of the active data set!"
             else:
-                # preview_path should be a path within our staticly hosted area
+                # Preview_path should be a path within our statically hosted
+                # area.
                 preview_path = self._preview_cache.get_preview_image(de)
                 img = PIL.Image.open(preview_path)
                 info["shape"] = img.size
-                info["static_preview_link"] = 'static/' \
-                    + os.path.relpath(preview_path, self.static_folder)
 
                 if de.uuid() not in self._static_cache:
                     self._static_cache[de.uuid()] = \
                         de.write_temp(self._static_data_dir)
-                info['static_file_link'] = 'static/' \
-                    + os.path.relpath(self._static_cache[de.uuid()],
-                                      self.static_folder)
+
+                # Need to format links by transforming the generated paths to
+                # something usable by webpage:
+                # - make relative to the static directory, and then pre-pending
+                #   the known static url to the
+                info["static_preview_link"] = \
+                    self._static_data_prefix + '/' + \
+                    os.path.relpath(preview_path, self._static_data_dir)
+                info['static_file_link'] = \
+                    self._static_data_prefix + '/' + \
+                    os.path.relpath(self._static_cache[de.uuid()],
+                                    self._static_data_dir)
 
             return flask.jsonify(info)
 

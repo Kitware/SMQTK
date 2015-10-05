@@ -86,18 +86,6 @@ class DataFileSet (DataSet):
         if self._new_elem_added:
             self._save_data_elements()
 
-    def __contains__(self, d):
-        """
-        :param d: DataElement to test for containment
-        :type d: smqtk.representation.DataElement
-
-        :return: True of this DataSet contains the given data element.
-        :rtype: bool
-
-        """
-        with self._element_map_lock:
-            return d.uuid() in self._element_map
-
     def __iter__(self):
         """
         :return: Generator over the DataElements contained in this set in UUID

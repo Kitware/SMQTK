@@ -53,7 +53,6 @@ class DataSet (collections.Set, Configurable):
     def __getitem__(self, uuid):
         return self.get_data(uuid)
 
-    @abc.abstractmethod
     def __contains__(self, d):
         """
         Different than has_uuid() because this takes another DataElement
@@ -66,7 +65,7 @@ class DataSet (collections.Set, Configurable):
         :rtype: bool
 
         """
-        return
+        return self.has_uuid(d.uuid())
 
     @abc.abstractmethod
     def __iter__(self):

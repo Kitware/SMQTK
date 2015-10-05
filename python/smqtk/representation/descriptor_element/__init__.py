@@ -21,7 +21,6 @@ class DescriptorElement (Configurable):
     up for discussion).
 
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, type_str, uuid):
         """

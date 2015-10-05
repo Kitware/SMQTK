@@ -24,7 +24,6 @@ class DataElement (Configurable):
     checksum accessor methods.
 
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         self._md5_cache = None

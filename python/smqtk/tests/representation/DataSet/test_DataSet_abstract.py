@@ -20,9 +20,6 @@ class DummyDataSet (DataSet):
         for e in self.stuff:
             yield e
 
-    def __contains__(self, d):
-        pass
-
     def has_uuid(self, uuid):
         pass
 

@@ -8,3 +8,4 @@ __author__ = "paul.tunison@kitware.com"
 def test_plugin_getter():
     c = get_data_set_impls()
     assert 'DataFileSet' in c
+    assert 'DataMemorySet' in c

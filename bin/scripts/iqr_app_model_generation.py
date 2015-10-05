@@ -59,7 +59,7 @@ data_set_config = {
     "DataFileSet": {
         "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/"
                           "example_image/data",
-        "sha1_chunk": 10
+        "uuid_chunk": 10
     }
 }
 

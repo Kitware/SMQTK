@@ -1,6 +1,7 @@
 import cPickle
 import multiprocessing
 import os
+import os.path as osp
 import re
 
 from smqtk.representation import DataElement, DataSet
@@ -14,25 +15,20 @@ __author__ = "paul.tunison@kitware.com"
 
 class DataFileSet (DataSet):
     """
-    File-based data set. Data elements will all be file-based (DataFile type,
-    see ``../data_element/file_element.py``).
+    File-based data set
 
-    File sets are initialized with a root directory, under which it attempts to
-    find existing serialized DataElement pickle files. This notion means that
-    DataElement implementations stored must be picklable.
-
-    This implementation does not currently suppose asynchronous modification on
-    separate processes as they will conflict with each other on what to write to
-    disk. This implementation should, however, be thread safe.
+    File sets are initialized with a root directory, under which it finds and
+    serialized DataElement instances. DataElement implementations are required
+    to be picklable, so this is a valid assumption.
 
     """
 
     # Filename template for serialized files. Requires template
-    SERIAL_FILE_TEMPLATE = "UUID_%s.SHA1_%s.dataElement"
+    SERIAL_FILE_TEMPLATE = "UUID_%s.dataElement"
 
     # Regex for matching file names as valid FileSet serialized elements
     # - yields two groups, the first is the UUID, the second is the SHA1 sum
-    SERIAL_FILE_RE = re.compile("UUID_(\w+).SHA1_(\w+).dataElement")
+    SERIAL_FILE_RE = re.compile("UUID_(\w+)\.dataElement")
 
     @classmethod
     def is_usable(cls):
@@ -48,7 +44,7 @@ class DataFileSet (DataSet):
         """
         return True
 
-    def __init__(self, root_directory, sha1_chunk=10):
+    def __init__(self, root_directory, uuid_chunk=10):
         """
         Initialize a new or existing file set from a root directory.
 
@@ -57,114 +53,84 @@ class DataFileSet (DataSet):
             description.
         :type root_directory: str
 
-        :param sha1_chunk: Number of segments to split data element SHA1 sum
+        :param uuid_chunk: Number of segments to split data element UUID
             into when saving element serializations.
-        :type sha1_chunk: int
+        :type uuid_chunk: int
 
         """
         self._root_dir = os.path.abspath(os.path.expanduser(root_directory))
-        self._sha1_chunk = sha1_chunk
+        self._uuid_chunk = uuid_chunk
 
         self._log.debug("Initializing FileSet under root dir: %s",
                         self._root_dir)
 
-        #: :type: dict[object, smqtk.representation.DataElement]
-        self._element_map = {}
-        self._element_map_lock = multiprocessing.RLock()
-
-        self._discover_data_elements()
-
-        # Flag for when new elements have been added to the data set, which
-        # triggers a filesystem serialization dump upon instance garbage
-        # collection.
-        self._new_elem_added = False
-
-    def __del__(self):
+    def _iter_file_tree(self):
         """
-        Serialize out element contents on deletion.
+        Iterate over our file tree, yielding the file paths of serialized
+            elements found.
         """
-        if self._new_elem_added:
-            self._save_data_elements()
+        for fp in iter_directory_files(self._root_dir):
+            m = self.SERIAL_FILE_RE.match(osp.basename(fp))
+            if m:
+                # if the path doesn't have the configured split chunking value,
+                # it doesn't belong to this data set
+                seg = osp.dirname(osp.relpath(fp, self._root_dir)).split(os.sep)
+                if len(seg) == self._uuid_chunk:
+                    yield fp
+
+    def _uuid_from_fp(self, fp):
+        return osp.dirname(osp.relpath(fp, self._root_dir)).replace(os.sep, '')
+
+    def _containing_dir(self, uuid):
+        """
+        Return the containing directory for something with the given UUID value
+        """
+        return osp.join(self._root_dir,
+                        *partition_string(uuid, self._uuid_chunk))
+
+    def _fp_for_uuid(self, uuid):
+        """
+        Return the filepath to where an element with the given UUID would be
+        saved.
+        """
+        return osp.join(self._containing_dir(uuid),
+                        self.SERIAL_FILE_TEMPLATE % uuid)
 
     def __iter__(self):
         """
-        :return: Generator over the DataElements contained in this set in UUID
-            order, if sortable. If not, then in no particular order.
+        :return: Generator over the DataElements contained in this set in no
+            particular order.
         """
-        for k in sorted(self.uuids()):
-            with self._element_map_lock:
-                yield self._element_map[k]
+        for fp in self._iter_file_tree():
+            # deserialize and yield
+            with open(fp) as f:
+                yield cPickle.load(f)
 
     def get_config(self):
         return {
             "root_directory": self._root_dir,
-            "sha1_chunk": self._sha1_chunk,
+            "uuid_chunk": self._uuid_chunk,
         }
-
-    def _discover_data_elements(self):
-        """
-        From the set root directory, find serialized files, deserialize them and
-        store in instance mapping.
-        """
-        if os.path.isdir(self._root_dir):
-            self._log.debug("Root directory exists, finding existing data "
-                            "elements...")
-            with self._element_map_lock:
-                for fpath in iter_directory_files(self._root_dir, True):
-                    m = self.SERIAL_FILE_RE.match(os.path.basename(fpath))
-                    if m:
-                        with open(fpath) as f:
-                            #: :type: smqtk.representation.DataElement
-                            de = cPickle.load(f)
-                        self._element_map[de.uuid()] = de
-                self._log.debug("Found %d elements", len(self._element_map))
-        else:
-            self._log.debug("Root dir doesn't exist, can't have existing "
-                            "elements")
-
-    def _save_data_elements(self):
-        """
-        Serialize out data elements in mapping into the root directory.
-        """
-        with self._element_map_lock:
-            self._log.debug("Serializing data elements into: %s",
-                            self._root_dir)
-            for uuid, de in self._element_map.iteritems():
-                # Remove any temporary files an element may have generated
-                de.clean_temp()
-
-                sha1 = de.sha1()
-                # Leaving off trailing chunk so that we don't have a single
-                # directory per sha1-sum.
-                containing_dir = \
-                    os.path.join(self._root_dir,
-                                 *partition_string(sha1, self._sha1_chunk))
-                if not os.path.isdir(containing_dir):
-                    safe_create_dir(containing_dir)
-
-                output_fname = os.path.join(
-                    containing_dir,
-                    self.SERIAL_FILE_TEMPLATE % (str(uuid), sha1)
-                )
-                with open(output_fname, 'wb') as ofile:
-                    cPickle.dump(de, ofile)
-            self._log.debug("Serializing data elements -- Done")
 
     def count(self):
         """
         :return: The number of data elements in this set.
         :rtype: int
         """
-        with self._element_map_lock:
-            return len(self._element_map)
+        c = 0
+        for _ in self._iter_file_tree():
+            c += 1
+        return c
 
     def uuids(self):
         """
         :return: A new set of uuids represented in this data set.
         :rtype: set
         """
-        with self._element_map_lock:
-            return set(self._element_map.keys())
+        s = set()
+        for de in self:
+            s.add(de.uuid())
+        return s
 
     def has_uuid(self, uuid):
         """
@@ -178,8 +144,8 @@ class DataFileSet (DataSet):
         :rtype: bool
 
         """
-        with self._element_map_lock:
-            return uuid in self._element_map
+        # Try to access the expected file path like a hash table
+        return osp.isfile(self._fp_for_uuid(uuid))
 
     def add_data(self, *elems):
         """
@@ -189,15 +155,36 @@ class DataFileSet (DataSet):
         :type elems: list[smqtk.representation.DataElement]
 
         """
-        with self._element_map_lock:
-            for e in elems:
-                assert isinstance(e, DataElement)
-                self._element_map[e.uuid()] = e
-                self._new_elem_added = True
+        for e in elems:
+            assert isinstance(e, DataElement)
+            uuid = str(e.uuid())
+            fp = self._fp_for_uuid(uuid)
+            print "Adding to:", fp
+            safe_create_dir(osp.dirname(fp))
+            with open(fp, 'wb') as f:
+                cPickle.dump(e, f)
+            self._log.debug("Wrote out element %s", e)
 
     def get_data(self, uuid):
-        with self._element_map_lock:
-            return self._element_map[uuid]
+        """
+        Get the data element the given uuid references, or raise an
+        exception if the uuid does not reference any element in this set.
+
+        :raises KeyError: If the given uuid does not refer to an element in
+            this data set.
+
+        :param uuid: The uuid of the element to retrieve.
+
+        :return: The data element instance for the given uuid.
+        :rtype: smqtk.representation.DataElement
+
+        """
+        fp = self._fp_for_uuid(str(uuid))
+        if not osp.isfile(fp):
+            raise KeyError(uuid)
+        else:
+            with open(fp, 'rb') as f:
+                return cPickle.load(f)
 
 
 DATA_SET_CLASS = DataFileSet

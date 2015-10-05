@@ -40,18 +40,13 @@ def iter_directory_files(d, recurse=True):
     :rtype: collections.Iterable[str]
 
     """
+    # TODO: Update this to use os.walk
     d = os.path.abspath(d)
-    for f in os.listdir(d):
-        f = os.path.join(d, f)
-        if os.path.isfile(f):
-            yield f
-        elif os.path.isdir(f):
-            if recurse:
-                for sf in iter_directory_files(f, recurse):
-                    yield sf
-        else:
-            raise RuntimeError("Encountered something not a file or "
-                               "directory? :: '%s'" % f)
+    for dirpath, dirnames, filenames in os.walk(d):
+        for fname in filenames:
+            yield os.path.join(dirpath, fname)
+        if not recurse:
+            break
 
 
 def exclusive_touch(file_path):

@@ -70,8 +70,8 @@ class DataSet (collections.Set, Configurable):
     @abc.abstractmethod
     def __iter__(self):
         """
-        :return: Generator over the DataElements contained in this set in UUID
-            order, if sortable. If not, then in no particular order.
+        :return: Generator over the DataElements contained in this set in no
+            particular order.
         """
         return
 

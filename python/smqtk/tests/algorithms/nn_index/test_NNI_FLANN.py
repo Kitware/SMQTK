@@ -8,7 +8,6 @@ import numpy
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
-from smqtk.utils.file_utils import make_tempfile
 
 __author__ = "paul.tunison@kitware.com"
 
@@ -18,40 +17,14 @@ if FlannNearestNeighborsIndex.is_usable():
 
     class TestFlannIndex (unittest.TestCase):
 
-        FLANN_INDEX_CACHE = None
-        FLANN_PARAMETER_CACHE = None
-        FLANN_DESCR_CACHE = None
-
         RAND_SEED = 42
-
-        @classmethod
-        def _make_cache_files(cls):
-            cls.FLANN_INDEX_CACHE = make_tempfile('.flann')
-            cls.FLANN_PARAMETER_CACHE = make_tempfile('.pickle')
-            cls.FLANN_DESCR_CACHE = make_tempfile('.pickle')
-
-        @classmethod
-        def _clean_cache_files(cls):
-            for fp in [cls.FLANN_DESCR_CACHE,
-                       cls.FLANN_PARAMETER_CACHE,
-                       cls.FLANN_INDEX_CACHE]:
-                if fp and os.path.isfile(fp):
-                    os.remove(fp)
 
         def _make_inst(self, dist_method):
             """
             Make an instance of FlannNearestNeighborsIndex
             """
-            self._make_cache_files()
-            self._clean_cache_files()
-            return FlannNearestNeighborsIndex(self.FLANN_INDEX_CACHE,
-                                   self.FLANN_PARAMETER_CACHE,
-                                   self.FLANN_DESCR_CACHE,
-                                   distance_method=dist_method,
-                                   random_seed=self.RAND_SEED)
-
-        def tearDown(self):
-            self._clean_cache_files()
+            return FlannNearestNeighborsIndex(distance_method=dist_method,
+                                              random_seed=self.RAND_SEED)
 
         def test_known_descriptors_euclidean_unit(self):
             dim = 5
@@ -134,24 +107,23 @@ if FlannNearestNeighborsIndex.is_usable():
             ntools.assert_equal(dists[0], 0.)
 
         def test_configuration(self):
-            self._make_cache_files()
-            self._clean_cache_files()
+            index_filepath = '/index_filepath'
+            para_filepath = '/param_fp'
+            descr_cache_fp = '/descrcachefp'
 
             # Make configuration based on default
             c = FlannNearestNeighborsIndex.get_default_config()
-            c['index_filepath'] = self.FLANN_INDEX_CACHE
-            c['parameters_filepath'] = self.FLANN_PARAMETER_CACHE
-            c['descriptor_cache_filepath'] = self.FLANN_DESCR_CACHE
+            c['index_filepath'] = index_filepath
+            c['parameters_filepath'] = para_filepath
+            c['descriptor_cache_filepath'] = descr_cache_fp
             c['distance_method'] = 'hik'
             c['random_seed'] = 42
 
             # Build based on configuration
             index = FlannNearestNeighborsIndex.from_config(c)
-            ntools.assert_equal(index._index_filepath, self.FLANN_INDEX_CACHE)
-            ntools.assert_equal(index._index_param_filepath,
-                                self.FLANN_PARAMETER_CACHE)
-            ntools.assert_equal(index._descr_cache_filepath,
-                                self.FLANN_DESCR_CACHE)
+            ntools.assert_equal(index._index_filepath, index_filepath)
+            ntools.assert_equal(index._index_param_filepath, para_filepath)
+            ntools.assert_equal(index._descr_cache_filepath, descr_cache_fp)
 
             c2 = index.get_config()
             ntools.assert_equal(c, c2)

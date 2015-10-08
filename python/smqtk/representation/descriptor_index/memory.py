@@ -12,10 +12,7 @@ class DescriptorMemoryIndex (DescriptorIndex):
 
     @classmethod
     def is_usable(cls):
-        """
-        No outside dependencies.
-        :rtype: bool
-        """
+        # no dependencies
         return True
 
     def __init__(self, file_cache=False):

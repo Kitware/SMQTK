@@ -4,8 +4,7 @@ import os.path as osp
 import re
 
 from smqtk.representation import DataElement, DataSet
-from smqtk.utils import safe_create_dir
-from smqtk.utils.file_utils import iter_directory_files
+from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
 
@@ -69,7 +68,7 @@ class DataFileSet (DataSet):
         Iterate over our file tree, yielding the file paths of serialized
             elements found.
         """
-        for fp in iter_directory_files(self._root_dir):
+        for fp in file_utils.iter_directory_files(self._root_dir):
             m = self.SERIAL_FILE_RE.match(osp.basename(fp))
             if m:
                 # if the path doesn't have the configured split chunking value,
@@ -159,7 +158,7 @@ class DataFileSet (DataSet):
             assert isinstance(e, DataElement)
             uuid = str(e.uuid())
             fp = self._fp_for_uuid(uuid)
-            safe_create_dir(osp.dirname(fp))
+            file_utils.safe_create_dir(osp.dirname(fp))
             with open(fp, 'wb') as f:
                 cPickle.dump(e, f)
             self._log.debug("Wrote out element %s", e)

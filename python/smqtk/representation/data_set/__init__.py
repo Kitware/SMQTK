@@ -1,14 +1,13 @@
 import abc
 import collections
-import logging
 
-from smqtk.utils.configurable_interface import Configurable
+from smqtk.utils import Configurable, plugin, SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class DataSet (collections.Set, Configurable):
+class DataSet (SmqtkObject, collections.Set, Configurable, plugin.Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on
@@ -37,11 +36,6 @@ class DataSet (collections.Set, Configurable):
         :rtype: bool
 
         """
-
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
 
     def __len__(self):
         """

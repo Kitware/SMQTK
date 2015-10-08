@@ -6,7 +6,7 @@ import os
 from StringIO import StringIO
 import tempfile
 
-from smqtk.utils import safe_create_dir
+from smqtk.utils import file_utils
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -209,7 +209,7 @@ class FileUploadMod (flask.Blueprint):
         """
         # Make sure write dir exists...
         if not os.path.isdir(self.working_dir):
-            safe_create_dir(self.working_dir)
+            file_utils.safe_create_dir(self.working_dir)
         tmp_fd, tmp_path = tempfile.mkstemp(file_extension,
                                             dir=self.working_dir)
         self.log.debug("Combining chunks into temporary file: %s", tmp_path)

@@ -7,46 +7,33 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import errno
+import logging
 import operator as op
-import os
 
 
-def safe_create_dir(d):
+class SmqtkObject (object):
     """
-    Recursively create the given directory, ignoring the already-exists
-    error if thrown.
+    Highest level object interface for classes defined in SMQTK.
 
-    :param d: Directory filepath to create
-    :type d: str
-
-    :return: The directory that was created, i.e. the directory that was passed
-        (in absolute form).
-    :rtype: str
+    Currently defines logging methods.
 
     """
-    d = os.path.abspath(os.path.expanduser(d))
-    try:
-        os.makedirs(d)
-    except OSError, ex:
-        if ex.errno == errno.EEXIST and os.path.exists(d):
-            pass
-        else:
-            raise
-    return d
 
+    @classmethod
+    def logger(cls):
+        """
+        :return: logging object for this class
+        :rtype: logging.Logger
+        """
+        return logging.getLogger('.'.join((cls.__module__, cls.__name__)))
 
-def touch(fname):
-    """
-    Touch a file, creating it if it doesn't exist, setting its updated time to
-    now.
-
-    :param fname: File path to touch.
-    :type fname: str
-
-    """
-    with open(fname, 'a'):
-        os.utime(fname, None)
+    @property
+    def _log(self):
+        """
+        :return: logging object for this class as a property
+        :rtype: logging.Logger
+        """
+        return self.logger()
 
 
 def ncr(n, r):

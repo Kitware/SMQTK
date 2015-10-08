@@ -2,13 +2,13 @@ import abc
 import logging
 import numpy
 
-from smqtk.utils.configurable_interface import Configurable
+from smqtk.utils import Configurable, plugin, SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class DescriptorElement (Configurable):
+class DescriptorElement (SmqtkObject, Configurable, plugin.Pluggable):
     """
     Abstract descriptor vector container.
 
@@ -36,11 +36,6 @@ class DescriptorElement (Configurable):
         """
         self._type_label = type_str
         self._uuid = uuid
-
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
 
     def __hash__(self):
         return hash((self.type(), self.uuid()))

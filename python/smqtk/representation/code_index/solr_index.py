@@ -1,9 +1,14 @@
-
 import cPickle
-import solr
 import time
 
 from smqtk.representation.code_index import CodeIndex
+
+
+# Try to import required module
+try:
+    import solr
+except ImportError:
+    solr = None
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -22,9 +27,7 @@ class SolrCodeIndex (CodeIndex):
 
     @classmethod
     def is_usable(cls):
-        # Only needs solrpy to be installed, which is part of the
-        # requirements.pip.txt
-        return True
+        return solr is not None
 
     def __init__(self, solr_conn_addr, index_uuid,
                  idx_uuid_field, code_field, d_uid_field, descriptor_field,

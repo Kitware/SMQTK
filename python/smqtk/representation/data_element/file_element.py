@@ -13,6 +13,11 @@ class DataFileElement (DataElement):
     File-based data element
     """
 
+    @classmethod
+    def is_usable(cls):
+        # No dependencies
+        return True
+
     def __init__(self, filepath):
         """
         Create a new FileElement.

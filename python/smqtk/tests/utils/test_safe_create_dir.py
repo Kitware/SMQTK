@@ -6,7 +6,7 @@ import nose.tools as ntools
 import os
 import unittest
 
-from smqtk.utils import safe_create_dir
+from smqtk.utils import file_utils
 
 
 class TestSafeCreateDir (unittest.TestCase):
@@ -14,7 +14,7 @@ class TestSafeCreateDir (unittest.TestCase):
     @mock.patch('smqtk.utils.os.makedirs')
     def test_noExists(self, mock_os_makedirs):
         dir_path = "/some/directory/somewhere"
-        p = safe_create_dir(dir_path)
+        p = file_utils.safe_create_dir(dir_path)
 
         ntools.assert_true(mock_os_makedirs.called)
         ntools.assert_equals(p, dir_path)
@@ -28,7 +28,7 @@ class TestSafeCreateDir (unittest.TestCase):
         mock_osp_exists.return_value = True
 
         dir_path = '/existing/dir'
-        p = safe_create_dir(dir_path)
+        p = file_utils.safe_create_dir(dir_path)
 
         ntools.assert_true(mock_os_makedirs.called)
         ntools.assert_true(mock_osp_exists.called)
@@ -43,7 +43,7 @@ class TestSafeCreateDir (unittest.TestCase):
         mock_osp_exists.return_value = False
 
         dir_path = '/some/dir'
-        ntools.assert_raises(OSError, safe_create_dir, dir_path)
+        ntools.assert_raises(OSError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(dir_path)
         mock_osp_exists.assert_called_once_with(dir_path)
@@ -55,7 +55,7 @@ class TestSafeCreateDir (unittest.TestCase):
                                                "Permission Denied")
 
         dir_path = '/some/dir'
-        ntools.assert_raises(OSError, safe_create_dir, dir_path)
+        ntools.assert_raises(OSError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(dir_path)
         ntools.assert_false(mock_osp_exists.called)
@@ -65,6 +65,6 @@ class TestSafeCreateDir (unittest.TestCase):
         mock_os_makedirs.side_effect = RuntimeError("Some other exception")
 
         dir_path = 'something'
-        ntools.assert_raises(RuntimeError, safe_create_dir, dir_path)
+        ntools.assert_raises(RuntimeError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(os.path.abspath(dir_path))

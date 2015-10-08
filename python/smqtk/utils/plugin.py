@@ -18,6 +18,7 @@ Plugin configuration dictionaries take the following general format:
 
 """
 
+import abc
 import collections
 import importlib
 import logging
@@ -26,6 +27,36 @@ import re
 
 
 valid_module_file_re = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
+
+
+class Pluggable (object):
+    """
+    Interface for classes that have plugin implementations
+    """
+
+    @classmethod
+    @abc.abstractmethod
+    def is_usable(cls):
+        """
+        Check whether this class is available for use.
+
+        Since certain plugin implementations may require additional dependencies
+        that may not yet be available on the system, this method should check
+        for those dependencies and return a boolean saying if the implementation
+        is usable.
+
+        NOTES:
+            - This should be a class method
+            - When an implementation is deemed not usable, this should emit a
+                warning detailing why the implementation is not available for
+                use.
+
+        :return: Boolean determination of whether this implementation is usable.
+        :rtype: bool
+
+        """
+        raise NotImplementedError("is_usable class-method not implemented for "
+                                  "class '%s'" % cls.__name__)
 
 
 def get_plugins(base_module, search_dir, helper_var, baseclass_type,

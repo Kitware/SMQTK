@@ -4,7 +4,7 @@ import os
 import os.path as osp
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils import safe_create_dir
+from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
 
@@ -19,6 +19,10 @@ class DescriptorMemoryElement (DescriptorElement):
     # In-memory cache of descriptor vectors
     MEMORY_CACHE = {}
     MEMORY_CACHE_LOCK = multiprocessing.RLock()
+
+    @classmethod
+    def is_usable(cls):
+        return True
 
     def __getstate__(self):
         return self.type(), self.uuid(), self.vector(),
@@ -96,6 +100,10 @@ class DescriptorFileElement (DescriptorElement):
     space.
 
     """
+
+    @classmethod
+    def is_usable(cls):
+        return True
 
     def __init__(self, type_str, uuid, save_dir, subdir_split=None):
         """
@@ -178,7 +186,7 @@ class DescriptorFileElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        safe_create_dir(osp.dirname(self._vec_filepath))
+        file_utils.safe_create_dir(osp.dirname(self._vec_filepath))
         numpy.save(self._vec_filepath, new_vec)
 
 

@@ -93,7 +93,7 @@ class TestDataElementAbstract (unittest.TestCase):
     #   - os.open is used under the hood of tempfile to open a file (which also
     #       creates it on disk).
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -108,7 +108,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_true(mock_open.called)
         ntools.assert_equal(osp.dirname(fp), tempfile.gettempdir())
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -126,7 +126,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_not_equal(osp.dirname(fp), tempfile.gettempdir())
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -148,7 +148,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_false(mock_open.called)
         ntools.assert_equal(fp, prev_1)
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -172,7 +172,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_true(mock_open.called)
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global

@@ -1,4 +1,5 @@
 from smqtk.representation import get_descriptor_element_impls
+from smqtk.utils import SmqtkObject
 from smqtk.utils.configurable_interface import Configurable
 from smqtk.utils.plugin import make_config
 
@@ -6,7 +7,7 @@ from smqtk.utils.plugin import make_config
 __author__ = "paul.tunison@kitware.com"
 
 
-class DescriptorElementFactory (Configurable):
+class DescriptorElementFactory (SmqtkObject, Configurable):
     """
     Factory class for producing DescriptorElement instances of a specified type
     and configuration.

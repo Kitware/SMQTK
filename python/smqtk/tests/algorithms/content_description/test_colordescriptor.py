@@ -13,7 +13,7 @@ __author__ = "paul.tunison@kitware.com"
 class TestColorDescriptor (unittest.TestCase):
 
     @mock.patch('smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor'
-                '.safe_create_dir')
+                '.file_utils.safe_create_dir')
     def test_configuration(self, mock_scd):
         default_config = ColorDescriptor_Image_csift.get_default_config()
         default_config['model_directory'] = '/some/path/models/'

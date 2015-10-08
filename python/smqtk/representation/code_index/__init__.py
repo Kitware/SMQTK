@@ -2,13 +2,15 @@
 import abc
 import logging
 
-from smqtk.utils.configurable_interface import Configurable
+from smqtk.utils import Configurable
+from smqtk.utils import plugin
+from smqtk.utils import SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class CodeIndex (Configurable):
+class CodeIndex (SmqtkObject, Configurable, plugin.Pluggable):
     """
     Abstract interface for bit-code to DescriptorElement relationship storage.
 
@@ -16,26 +18,8 @@ class CodeIndex (Configurable):
 
     """
 
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
-
     def __len__(self):
         return self.count()
-
-    @classmethod
-    @abc.abstractmethod
-    def is_usable(cls):
-        """
-        Return boolean that describes whether this implementation is available
-        for use. If this is false, then it will not be returned as an available
-        plugin implementation.
-
-        :return: If this implementation is usable or not.
-        :rtype: bool
-
-        """
 
     @abc.abstractmethod
     def count(self):

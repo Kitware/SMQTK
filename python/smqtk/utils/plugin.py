@@ -105,6 +105,11 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
     """
     log = logging.getLogger('.'.join([__name__,
                                       "getPlugins[%s]" % base_module]))
+
+    if not issubclass(baseclass_type, Pluggable):
+        raise ValueError("Required base-class must descent from the Pluggable "
+                         "interface!")
+
     log.debug("Getting plugins for module '%s'", base_module)
     class_map = {}
     for file_name in os.listdir(search_dir):
@@ -170,9 +175,8 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
                 # check that all class types in iterable are types and
                 # are subclasses of the given base-type and plugin interface
                 if not (isinstance(cls, type) and
-                        cls not in (baseclass_type, Pluggable) and
-                        issubclass(cls, baseclass_type) and
-                        issubclass(cls, Pluggable)):
+                        cls is not baseclass_type and
+                        issubclass(cls, baseclass_type)):
                     raise RuntimeError("[%s] Found element in list "
                                        "that is not a class or does "
                                        "not descend from required base "

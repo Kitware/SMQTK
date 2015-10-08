@@ -1,15 +1,13 @@
 import abc
 import hashlib
-import logging
 import mimetypes
 import os
 import os.path as osp
 import tempfile
 
+from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
-from smqtk.utils import Configurable
 from smqtk.utils import plugin
-from smqtk.utils import SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -18,7 +16,7 @@ __author__ = "paul.tunison@kitware.com"
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (SmqtkObject, Configurable, plugin.Pluggable):
+class DataElement (SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for a byte data.
 

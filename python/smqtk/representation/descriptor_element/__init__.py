@@ -1,14 +1,14 @@
 import abc
-import logging
 import numpy
 
-from smqtk.utils import Configurable, plugin, SmqtkObject
+from smqtk.representation import SmqtkRepresentation
+from smqtk.utils import plugin
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class DescriptorElement (SmqtkObject, Configurable, plugin.Pluggable):
+class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract descriptor vector container.
 

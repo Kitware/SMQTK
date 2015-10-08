@@ -1,12 +1,13 @@
 import abc
 
-from smqtk.utils import Configurable, plugin, SmqtkObject
+from smqtk.representation import SmqtkRepresentation
+from smqtk.utils import plugin
 
 
 __author__ = 'paul.tunison@kitware.com'
 
 
-class DescriptorIndex (SmqtkObject, Configurable, plugin.Pluggable):
+class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
     """
     Index of descriptors, query-able by descriptor UUID.
 

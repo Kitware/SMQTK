@@ -1,13 +1,14 @@
 import abc
 import collections
 
-from smqtk.utils import Configurable, plugin, SmqtkObject
+from smqtk.representation import SmqtkRepresentation
+from smqtk.utils import plugin
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class DataSet (SmqtkObject, collections.Set, Configurable, plugin.Pluggable):
+class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on

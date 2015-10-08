@@ -1,16 +1,13 @@
-
 import abc
-import logging
 
-from smqtk.utils import Configurable
+from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
-from smqtk.utils import SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class CodeIndex (SmqtkObject, Configurable, plugin.Pluggable):
+class CodeIndex (SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for bit-code to DescriptorElement relationship storage.
 

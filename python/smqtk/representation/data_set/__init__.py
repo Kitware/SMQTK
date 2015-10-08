@@ -157,10 +157,6 @@ def get_data_set_impls(reload_modules=False):
     import os
     from smqtk.utils.plugin import get_plugins
 
-    def fltr(t):
-        return t.is_usable()
-
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "DATA_SET_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, DataSet, fltr,
-                       reload_modules)
+    return get_plugins(__name__, this_dir, helper_var, DataSet, reload_modules)

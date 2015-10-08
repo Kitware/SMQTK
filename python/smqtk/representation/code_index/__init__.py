@@ -118,6 +118,5 @@ def get_code_index_impls(reload_modules=False):
 
     this_dir = osp.abspath(osp.dirname(__file__))
     helper_var = 'CODE_INDEX_CLASS'
-    fltr = lambda cls: cls.is_usable()
-    return get_plugins(__name__, this_dir, helper_var, CodeIndex, fltr,
+    return get_plugins(__name__, this_dir, helper_var, CodeIndex,
                        reload_modules)

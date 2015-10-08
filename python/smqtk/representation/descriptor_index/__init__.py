@@ -195,6 +195,5 @@ def get_descriptor_index_impls(reload_modules=False):
 
     this_dir = osp.abspath(osp.dirname(__file__))
     helper_var = 'DESCRIPTOR_INDEX_CLASS'
-    fltr = lambda cls: cls.is_usable()
-    return get_plugins(__name__, this_dir, helper_var, DescriptorIndex, fltr,
+    return get_plugins(__name__, this_dir, helper_var, DescriptorIndex,
                        reload_modules)

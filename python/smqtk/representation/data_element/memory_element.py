@@ -14,6 +14,11 @@ class DataMemoryElement (DataElement):
     """
 
     @classmethod
+    def is_usable(cls):
+        # No dependencies
+        return True
+
+    @classmethod
     def from_base64(cls, b64_str, content_type):
         """
         Create new MemoryElement instance based on a given base64 string and

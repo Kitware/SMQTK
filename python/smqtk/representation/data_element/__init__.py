@@ -1,13 +1,13 @@
 import abc
 import hashlib
-import logging
 import mimetypes
 import os
 import os.path as osp
 import tempfile
 
-from smqtk.utils import safe_create_dir
-from smqtk.utils.configurable_interface import Configurable
+from smqtk.representation import SmqtkRepresentation
+from smqtk.utils import file_utils
+from smqtk.utils import plugin
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -16,7 +16,7 @@ __author__ = "paul.tunison@kitware.com"
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (Configurable):
+class DataElement (SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for a byte data.
 
@@ -29,11 +29,6 @@ class DataElement (Configurable):
         self._md5_cache = None
         self._sha1_cache = None
         self._temp_filepath_stack = []
-
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
 
     def __hash__(self):
         return hash(self.uuid())
@@ -98,7 +93,7 @@ class DataElement (Configurable):
         def write_temp(d):
             """ Returns path to file written. Always creates new file. """
             if d:
-                safe_create_dir(d)
+                file_utils.safe_create_dir(d)
             ext = MIMETYPES.guess_extension(self.content_type())
             # Exceptions because mimetypes is apparently REALLY OLD
             if ext in {'.jpe', '.jfif'}:
@@ -205,5 +200,5 @@ def get_data_element_impls(reload_modules=False):
 
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "DATA_ELEMENT_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, DataElement, None,
+    return get_plugins(__name__, this_dir, helper_var, DataElement,
                        reload_modules)

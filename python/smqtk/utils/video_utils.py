@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import time
 
-from smqtk.utils import file_utils, safe_create_dir, string_utils
+from smqtk.utils import file_utils, string_utils
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -185,7 +185,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         *string_utils.partition_string(video_sha1sum, 10)
         # 40 hex chars split into chunks of 4
     )
-    safe_create_dir(frame_output_dir)
+    file_utils.safe_create_dir(frame_output_dir)
 
     def filename_for_frame(frame, ext):
         """

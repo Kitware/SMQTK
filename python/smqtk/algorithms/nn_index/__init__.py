@@ -98,16 +98,5 @@ def get_nn_index_impls(reload_modules=False):
     import os
     this_dir = os.path.abspath(os.path.dirname(__file__))
     helper_var = "NN_INDEX_CLASS"
-
-    def class_filter(cls):
-        log = logging.getLogger('.'.join([__name__,
-                                          'get_nn_index_impls',
-                                          'class_filter']))
-        if not cls.is_usable():
-            log.warn("Class type '%s' not usable, filtering out.",
-                     cls.__name__)
-            return False
-        return True
-
     return get_plugins(__name__, this_dir, helper_var, NearestNeighborsIndex,
-                       class_filter, reload_modules)
+                       reload_modules)

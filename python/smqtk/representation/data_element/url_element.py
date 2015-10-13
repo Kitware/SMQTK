@@ -1,4 +1,4 @@
-
+import logging
 import mimetypes
 import requests
 
@@ -15,6 +15,19 @@ class DataUrlElement (DataElement):
     """
     Representation of data loadable via a web URL address.
     """
+
+    @classmethod
+    def is_usable(cls):
+        # have to be able to connect to the internet
+        try:
+            r = requests.get('http://github.com')
+            _ = r.content
+            return True
+        except Exception, ex:
+            cls.logger().warning(
+                "DataUrlElement not usable, cannot connect to github.com"
+            )
+            return False
 
     def __init__(self, url_address):
         """

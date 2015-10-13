@@ -1,14 +1,13 @@
-
 import abc
-import logging
 
-from smqtk.utils.configurable_interface import Configurable
+from smqtk.representation import SmqtkRepresentation
+from smqtk.utils import plugin
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class CodeIndex (Configurable):
+class CodeIndex (SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for bit-code to DescriptorElement relationship storage.
 
@@ -16,26 +15,8 @@ class CodeIndex (Configurable):
 
     """
 
-    @property
-    def _log(self):
-        return logging.getLogger('.'.join([self.__module__,
-                                           self.__class__.__name__]))
-
     def __len__(self):
         return self.count()
-
-    @classmethod
-    @abc.abstractmethod
-    def is_usable(cls):
-        """
-        Return boolean that describes whether this implementation is available
-        for use. If this is false, then it will not be returned as an available
-        plugin implementation.
-
-        :return: If this implementation is usable or not.
-        :rtype: bool
-
-        """
 
     @abc.abstractmethod
     def count(self):
@@ -137,6 +118,5 @@ def get_code_index_impls(reload_modules=False):
 
     this_dir = osp.abspath(osp.dirname(__file__))
     helper_var = 'CODE_INDEX_CLASS'
-    fltr = lambda cls: cls.is_usable()
-    return get_plugins(__name__, this_dir, helper_var, CodeIndex, fltr,
+    return get_plugins(__name__, this_dir, helper_var, CodeIndex,
                        reload_modules)

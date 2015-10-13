@@ -1,4 +1,5 @@
 import csv
+import errno
 import os
 import numpy
 import re
@@ -6,6 +7,30 @@ import tempfile
 
 
 __author__ = "paul.tunison@kitware.com"
+
+
+def safe_create_dir(d):
+    """
+    Recursively create the given directory, ignoring the already-exists
+    error if thrown.
+
+    :param d: Directory filepath to create
+    :type d: str
+
+    :return: The directory that was created, i.e. the directory that was passed
+        (in absolute form).
+    :rtype: str
+
+    """
+    d = os.path.abspath(os.path.expanduser(d))
+    try:
+        os.makedirs(d)
+    except OSError, ex:
+        if ex.errno == errno.EEXIST and os.path.exists(d):
+            pass
+        else:
+            raise
+    return d
 
 
 def make_tempfile(*args, **kwds):
@@ -47,6 +72,19 @@ def iter_directory_files(d, recurse=True):
             yield os.path.join(dirpath, fname)
         if not recurse:
             break
+
+
+def touch(fname):
+    """
+    Touch a file, creating it if it doesn't exist, setting its updated time to
+    now.
+
+    :param fname: File path to touch.
+    :type fname: str
+
+    """
+    with open(fname, 'a'):
+        os.utime(fname, None)
 
 
 def exclusive_touch(file_path):

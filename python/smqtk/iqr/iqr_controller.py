@@ -1,8 +1,10 @@
 import multiprocessing
 import uuid
 
+from smqtk.utils import SmqtkObject
 
-class IqrController (object):
+
+class IqrController (SmqtkObject):
     """
     Main controlling object for one or more IQR Sessions.
 

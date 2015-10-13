@@ -4,7 +4,7 @@ import mimetypes
 import os
 import shutil
 
-from smqtk.utils import safe_create_dir, video_utils
+from smqtk.utils import file_utils, video_utils
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -72,14 +72,14 @@ class PreviewCache (object):
         if elem.content_type() in self.PREVIEW_GEN_METHOD:
             self._log.debug("Generating preview image based on content type: "
                             "%s", elem.content_type)
-            safe_create_dir(self._cache_dir)
+            file_utils.safe_create_dir(self._cache_dir)
             fp = self.PREVIEW_GEN_METHOD[elem.content_type()](elem, self._cache_dir)
         else:
             content_class = elem.content_type().split('/', 1)[0]
             if content_class in self.PREVIEW_GEN_METHOD:
                 self._log.debug("Generating preview image based on content "
                                 "class: %s", content_class)
-                safe_create_dir(self._cache_dir)
+                file_utils.safe_create_dir(self._cache_dir)
                 fp = self.PREVIEW_GEN_METHOD[content_class](elem, self._cache_dir)
             else:
                 raise ValueError("No preview generation method for the data "

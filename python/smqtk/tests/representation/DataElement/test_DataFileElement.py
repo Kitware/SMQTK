@@ -48,7 +48,7 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_false(mock_DataElement_wt.called)
         ntools.assert_equal(fp, expected_filepath)
 
-    @mock.patch('smqtk.representation.data_element.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global

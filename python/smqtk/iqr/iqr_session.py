@@ -9,8 +9,9 @@ from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import DescriptorMemoryIndex
+from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
-from smqtk.utils import safe_create_dir
+from smqtk.utils import file_utils
 
 
 DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
@@ -54,7 +55,7 @@ class IqrResultsDict (dict):
             self[k] = float(kwds[k])
 
 
-class IqrSession (object):
+class IqrSession (SmqtkObject):
     """
     Encapsulation of IQR Session related data structures with a centralized lock
     for multi-thread access.
@@ -64,6 +65,13 @@ class IqrSession (object):
     conditions do not occur across threads/sub-processes.
 
     """
+
+    @classmethod
+    def logger(cls):
+        return logging.getLogger(
+            '.'.join((cls.__module__, cls.__name__)) +
+            "[%s]" % self.uuid
+        )
 
     def __init__(self, work_directory, descriptor, nn_index,
                  pos_seed_neighbors=500,
@@ -193,15 +201,8 @@ class IqrSession (object):
         self.lock.release()
 
     @property
-    def _log(self):
-        return logging.getLogger(
-            '.'.join((self.__module__, self.__class__.__name__)) +
-            "[%s]" % self.uuid
-        )
-
-    @property
     def work_dir(self):
-        safe_create_dir(self._work_dir)
+        file_utils.safe_create_dir(self._work_dir)
         return self._work_dir
 
     def ordered_results(self):

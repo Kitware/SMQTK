@@ -1,7 +1,13 @@
 import numpy
-import solr
 from smqtk.representation import DescriptorElement
 import time
+
+
+# Try to import required module
+try:
+    import solr
+except ImportError:
+    solr = None
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -18,6 +24,10 @@ class SolrDescriptorElement (DescriptorElement):
     reproducible from this object's key attributes.
 
     """
+
+    @classmethod
+    def is_usable(cls):
+        return solr is not None
 
     def __init__(self, type_str, uuid, solr_conn_addr,
                  type_field, uuid_field, vector_field, timestamp_field,

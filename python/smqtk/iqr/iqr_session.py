@@ -66,10 +66,10 @@ class IqrSession (SmqtkObject):
 
     """
 
-    @classmethod
-    def logger(cls):
+    @property
+    def _log(self):
         return logging.getLogger(
-            '.'.join((cls.__module__, cls.__name__)) +
+            '.'.join((self.__module__, self.__class__.__name__)) +
             "[%s]" % self.uuid
         )
 

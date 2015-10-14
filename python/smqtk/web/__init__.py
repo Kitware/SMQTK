@@ -9,9 +9,10 @@ import os
 import flask
 
 import smqtk.utils
+from smqtk.utils import plugin
 
 
-class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable):
+class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
     """
     Base class for SMQTK web applications
     """

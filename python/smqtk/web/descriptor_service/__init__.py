@@ -50,6 +50,10 @@ class DescriptorServiceServer (SmqtkWebApp):
     """
 
     @classmethod
+    def is_usable(cls):
+      return True
+
+    @classmethod
     def get_default_config(cls):
         """
         Generate and return a default configuration dictionary for this class.

@@ -20,6 +20,10 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class IqrSearchApp (SmqtkWebApp):
 
     @classmethod
+    def is_usable(cls):
+        return True
+
+    @classmethod
     def get_default_config(cls):
         c = super(IqrSearchApp, cls).get_default_config()
         merge_configs(c, {

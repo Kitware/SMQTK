@@ -6,6 +6,7 @@ import os.path as osp
 import numpy
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.utils.file_utils import safe_create_dir
 
 try:
     import pyflann
@@ -255,6 +256,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         if self._descr_cache_filepath:
             self._log.debug("Caching descriptors: %s",
                             self._descr_cache_filepath)
+            safe_create_dir(osp.dirname(self._descr_cache_filepath))
             with open(self._descr_cache_filepath, 'wb') as f:
                 cPickle.dump(self._descr_cache, f)
 
@@ -282,6 +284,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                         self._index_filepath, self._index_param_filepath)
         if self._index_filepath:
             self._log.debug("Caching index: %s", self._index_filepath)
+            safe_create_dir(osp.dirname(self._index_filepath))
             self._flann.save_index(self._index_filepath)
         if self._index_param_filepath:
             self._log.debug("Caching index params: %s",
@@ -293,6 +296,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                 'distance_method': self._distance_method,
                 'flann_build_params': self._flann_build_params,
             }
+            safe_create_dir(osp.dirname(self._index_param_filepath))
             with open(self._index_param_filepath, 'w') as f:
                 cPickle.dump(state, f)
 
@@ -319,7 +323,6 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
         # If the distance method is HIK, we need to treat it special since that
         # method produces a similarity score, not a distance score.
-        #   -
         #
         # FLANN asserts that we query for <= index size, thus the use of min()
         if self._distance_method == 'hik':

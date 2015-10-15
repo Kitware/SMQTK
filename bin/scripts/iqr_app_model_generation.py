@@ -20,11 +20,12 @@ which would in turn drive structure/model generation.
 
 """
 import glob
+import json
 import logging
 
 from smqtk import algorithms
 from smqtk import representation
-from smqtk.utils import bin_utils, plugin
+from smqtk.utils import bin_utils, jsmin, plugin
 
 
 __author__ = 'paul.tunison@kitware.com'
@@ -48,88 +49,28 @@ if not logging.getLogger().handlers:
 # See algorithm implementation doc-strings for more information on configuration
 # parameters (see implementation class ``__init__`` method).
 #
+search_app_config_filepath = "/Users/purg/dev/smqtk/source/python/smqtk/web/" \
+                             "search_app/config.IqrSearchApp.json"
+search_app_config = \
+    json.loads(jsmin.jsmin(open(search_app_config_filepath).read()))
+
+# base actions on a specific IQR tab configuration (choose index here)
+search_app_iqr_config = search_app_config["iqr_tabs"][0]
 
 # Shell glob for where input data is located.
 input_image_file_glob = "/Users/purg/dev/smqtk/source/data/FileDataSets/" \
                         "example_image/images/*/*"
 
 # Configure DataSet implementation and parameters
-data_set_config = {
-    "type": "DataFileSet",
-    "DataFileSet": {
-        "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/"
-                          "example_image/data",
-        "uuid_chunk": 10
-    }
-}
-
-# Configure DescriptorElementFactory instance, which defines what implementation
-# of DescriptorElement to use for storing generated descriptor vectors.
-descriptor_elem_factory_config = {
-    'DescriptorMemoryElement': {},
-    # Some other descriptor element implementations:
-    # 'DescriptorFileElement': {
-    #     'save_dir': None,
-    #     'subdir_split': None
-    # },
-    # 'SolrDescriptorElement': {
-    #     'commit_on_set': True,
-    #     'persistent_connection': False,
-    #     'solr_conn_addr': None,
-    #     'timeout': 10,
-    #     'timestamp_field': None,
-    #     'type_field': None,
-    #     'uuid_field': None,
-    #     'vector_field': None
-    # },
-    'type': 'DescriptorMemoryElement'
-}
+data_set_config = search_app_iqr_config['data_set']
 
 # Configure DescriptorGenerator algorithm implementation, parameters and
 # persistant model component locations (if implementation has any).
-descriptor_generator_config = {
-    "ColorDescriptor_Image_csift": {
-        "flann_autotune": False,
-        "flann_sample_fraction": 0.75,
-        "flann_target_precision": 0.95,
-        "kmeans_k": 1024,
-        "model_directory": "/Users/purg/dev/smqtk/source/data/"
-                           "ContentDescriptors/ColorDescriptor/csift/"
-                           "example_image",
-        "random_seed": 42,
-        "use_spatial_pyramid": False,
-        "work_directory": "/Users/purg/dev/smqtk/source/work/"
-                          "ContentDescriptors/ColorDescriptor/csift/"
-                          "example_image"
-    },
-    "type": "ColorDescriptor_Image_csift"
-}
+descriptor_generator_config = search_app_iqr_config['descr_generator']
 
 # Configure NearestNeighborIndex algorithm implementation, parameters and
 # persistant model component locations (if implementation has any).
-nn_index_config = {
-    "ITQNearestNeighborsIndex": {
-        "bit_length": 64,
-        "code_index": {
-            "MemoryCodeIndex": {
-                "file_cache": "/Users/purg/dev/smqtk/source/data/"
-                              "NearestNeighborsIndex/ITQNearestNeighborsIndex/"
-                              "example_image/csift/mem_code_index.pickle"
-            },
-            "type": "MemoryCodeIndex"
-        },
-        "distance_method": "hik",
-        "itq_iterations": 50,
-        "mean_vec_filepath": "/Users/purg/dev/smqtk/source/data/"
-                             "NearestNeighborsIndex/ITQNearestNeighborsIndex/"
-                             "example_image/csift/mean_vec.npy",
-        "random_seed": 42,
-        "rotation_filepath": "/Users/purg/dev/smqtk/source/data/"
-                             "NearestNeighborsIndex/ITQNearestNeighborsIndex/"
-                             "example_image/csift/rotation.npy"
-    },
-    "type": "ITQNearestNeighborsIndex"
-}
+nn_index_config = search_app_iqr_config['nn_index']
 
 # Configure RelevancyIndex algorithm implementation, parameters and
 # persistant model component locations (if implementation has any).
@@ -138,12 +79,13 @@ nn_index_config = {
 # model (or doesn't have to that is), but we're leaving this block here in
 # anticipation of other potential implementations in the future.
 #
-rel_index_config = {
-    "LibSvmHikRelevancyIndex": {
-        "descr_cache_filepath": None,
-        "autoneg_select_ratio": 1
-    },
-    "type": "LibSvmHikRelevancyIndex"
+rel_index_config = search_app_iqr_config['rel_index_config']
+
+# Configure DescriptorElementFactory instance, which defines what implementation
+# of DescriptorElement to use for storing generated descriptor vectors below.
+descriptor_elem_factory_config = {
+    'DescriptorMemoryElement': {},
+    'type': 'DescriptorMemoryElement'
 }
 
 
@@ -191,6 +133,8 @@ data_set.add_data(*[DataFileElement(fp) for fp
 # Generate a mode if the generator defines a known generation method.
 if hasattr(descriptor_generator, "generate_model"):
     descriptor_generator.generate_model(data_set)
+# Add other if-else cases for other known implementation-specific generation
+# methods stubs
 
 # Generate descriptors of data for building NN index.
 data2descriptor = descriptor_generator.compute_descriptor_async(

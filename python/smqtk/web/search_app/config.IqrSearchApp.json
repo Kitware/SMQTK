@@ -44,7 +44,15 @@
                     "random_seed": 42,
                     "rotation_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/rotation.npy"
                 },
-                "type": "ITQNearestNeighborsIndex"
+                "FlannNearestNeighborsIndex": {
+                    "index_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.flann",
+                    "parameters_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.parameters",
+                    "descriptor_cache_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.cache",
+                    "autotune": false,
+                    "distance_method": "hik",
+                    "random_seed": 42
+                },
+                "type": "FlannNearestNeighborsIndex"
             },
             "rel_index_config": {
                 "LibSvmHikRelevancyIndex": {

@@ -470,7 +470,27 @@ class ColorDescriptor_Base (DescriptorGenerator):
             flann = pyflann.FLANN()
             flann.load_index(self.flann_index_filepath, self._codebook)
             try:
-                idxs, dists = flann.nn_index(descriptors)
+                # If the distance method is HIK, we need to treat it special
+                # since that method produces a similarity score, not a distance
+                # score.
+                #
+                if self.FLANN_DISTANCE_FUNCTION == 'hik':
+                    # This searches for all NN instead of minimum between n and
+                    # the number of descriptors and keeps the last one because
+                    # hik is a similarity score and not a distance, which is
+                    # also why the values in dists is flipped below.
+                    #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+                    idxs, dists = flann.nn_index(descriptors,
+                                                 self._codebook.shape[0])
+                    # Only keep the last index for each descriptor return
+                    idxs = numpy.array([i_array[-1] for i_array in idxs])
+                    dists = numpy.array([d_array[-1] for d_array in dists])
+                    # Invert values to stay consistent with other distance value
+                    # norms.
+                    dists = [1.0 - d for d in dists]
+                else:
+                    # :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+                    idxs, dists = flann.nn_index(descriptors, 1)
             except AssertionError:
 
                 self._log.error("Codebook shape  : %s", self._codebook.shape)

@@ -75,7 +75,7 @@ class IqrSession (SmqtkObject):
 
     def __init__(self, work_directory, descriptor, nn_index,
                  pos_seed_neighbors=500,
-                 rel_index_config=DFLT_MEMORY_DESCR_FACTORY,
+                 rel_index_config=DFLT_REL_INDEX_CONFIG,
                  descriptor_factory=DFLT_MEMORY_DESCR_FACTORY,
                  session_uid=None):
         """ Initialize the IQR session

@@ -5,7 +5,7 @@
 
 import json
 import logging
-import optparse
+import argparse
 import os
 
 from flask.ext.basicauth import BasicAuth
@@ -15,78 +15,78 @@ from smqtk.utils.jsmin import jsmin
 import smqtk.web
 
 
-def setup_cli(parser):
+def cli_parser():
+    description="Runs conforming SMQTK Web Applications."
+    parser = argparse.ArgumentParser(description=description)
+
     # Application options
-    group_application = optparse.OptionGroup(parser, "Application selection "
-                                                     "parameters")
-    group_application.add_option('-l', '--list',
+    group_application = parser.add_argument_group("Application selection parameters")
+                                                  
+    group_application.add_argument('-l', '--list',
                                  default=False, action="store_true",
                                  help="List currently available applications "
                                       "for running")
-    group_application.add_option('-a', '--application', default=None,
+    group_application.add_argument('-a', '--application', default=None,
                                  help="Label of the web application to run.")
-    parser.add_option_group(group_application)
 
     # Configuration options
-    group_configuration = optparse.OptionGroup(parser, "Options dealing with "
+    group_configuration = parser.add_argument_group( "Options dealing with "
                                                        "application "
                                                        "configuration")
-    group_configuration.add_option('-c', '--config', default=None,
+
+    group_configuration.add_argument('-c', '--config', default=None,
                                    help='Path to application JSON '
                                         'configuration file.')
-    group_configuration.add_option('--output-config', default=None,
+    group_configuration.add_argument('--output-config', default=None,
                                    help='Optional path to output default JSON '
                                         'configuration to.')
-    group_configuration.add_option('--overwrite',
+    group_configuration.add_argument('--overwrite',
                                    default=False, action='store_true',
                                    help="When outputting a configuration file, "
                                         "overwrite an existing file if one "
                                         "already exists by the specified "
                                         "output file path.")
-    parser.add_option_group(group_configuration)
 
     # Server options
-    group_server = optparse.OptionGroup(parser, "Server options")
-    group_server.add_option('-r', '--reload',
+    group_server = parser.add_argument_group("Server options")
+    group_server.add_argument('-r', '--reload',
                             action='store_true', default=False,
                             help='Turn on server reloading.')
-    group_server.add_option('-t', '--threaded',
+    group_server.add_argument('-t', '--threaded',
                             action='store_true', default=False,
                             help="Turn on server multi-threading.")
-    group_server.add_option('--host',
+    group_server.add_argument('--host',
                             default=None,
                             help="Run host address specification override. "
                                  "This will override all other configuration "
                                  "method specifications.")
-    group_server.add_option('--port',
+    group_server.add_argument('--port',
                             default=None,
                             help="Run port specification override. This will "
                                  "override all other configuration method "
                                  "specifications.")
-    group_server.add_option("--use-basic-auth",
+    group_server.add_argument("--use-basic-auth",
                             action="store_true", default=False,
                             help="Use global basic authentication as "
                                  "configured.")
-    parser.add_option_group(group_server)
 
     # Other options
-    group_other = optparse.OptionGroup(parser, "Other options")
-    group_other.add_option('--debug-server',
+    group_other = parser.add_argument_group("Other options")
+    group_other.add_argument('--debug-server',
                            action='store_true', default=False,
                            help='Turn on server debugging messages')
-    group_other.add_option('--debug-smqtk',
+    group_other.add_argument('--debug-smqtk',
                            action='store_true', default=False,
                            help='Turn on SMQTK debugging messages')
-    parser.add_option_group(group_other)
 
+    return parser
 
 def main():
-    parser = bin_utils.SMQTKOptParser()
-    setup_cli(parser)
-    opts, args = parser.parse_args()
+    parser = cli_parser()
+    args = parser.parse_args()
 
-    debug_smqtk = opts.debug_smqtk
-    debug_server = opts.debug_server
+    debug_smqtk = args.debug_smqtk
+    debug_server = args.debug_server
 
     bin_utils.initialize_logging(logging.getLogger("smqtk"),
                                  logging.INFO - (10*debug_smqtk))
@@ -96,7 +96,7 @@ def main():
 
     web_applications = smqtk.web.get_web_applications()
 
-    if opts.list:
+    if args.list:
         log.info("")
         log.info("Available applications:")
         log.info("")
@@ -105,7 +105,7 @@ def main():
         log.info("")
         exit(0)
 
-    application_name = opts.application
+    application_name = args.application
 
     if application_name is None:
         log.error("No application name given!")
@@ -117,24 +117,24 @@ def main():
     app_class = web_applications[application_name]
 
     # Output config and exit if requested
-    bin_utils.output_config(opts.output_config, app_class.get_default_config(),
-                            log, opts.overwrite)
+    bin_utils.output_config(args.output_config, app_class.get_default_config(),
+                            log, args.overwrite)
 
-    if not opts.config:
+    if not args.config:
         log.error("No configuration provided")
         exit(1)
-    elif not os.path.isfile(opts.config):
+    elif not os.path.isfile(args.config):
         log.error("Configuration file path not valid.")
         exit(1)
 
-    with open(opts.config, 'r') as f:
+    with open(args.config, 'r') as f:
         config = json.loads(jsmin(f.read()))
 
-    host = opts.host
-    port = opts.port and int(opts.port)
-    use_reloader = opts.reload
-    use_threading = opts.threaded
-    use_basic_auth = opts.use_basic_auth
+    host = args.host
+    port = args.port and int(args.port)
+    use_reloader = args.reload
+    use_threading = args.threaded
+    use_basic_auth = args.use_basic_auth
 
     # noinspection PyUnresolvedReferences
     app = app_class.from_config(config)

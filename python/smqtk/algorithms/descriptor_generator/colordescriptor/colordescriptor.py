@@ -15,6 +15,7 @@ import numpy
 import sklearn.cluster
 
 import pyflann
+
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import file_utils, SimpleTimer, video_utils
@@ -41,20 +42,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
     distance function.
 
     """
-
-    # colorDescriptor executable that should be on the PATH
-    PROC_COLORDESCRIPTOR = 'colorDescriptor'
-
-    # Distance function to use in FLANN indexing. See FLANN documentation for
-    # available distance function types (under the MATLAB section reference for
-    # valid string identifiers)
-    FLANN_DISTANCE_FUNCTION = 'hik'
-
-    # Total number of descriptors to use from input data to generate codebook
-    # model. Fewer than this may be used if the data set is small, but if it is
-    # greater, we randomly sample down to this count (occurs on a per element
-    # basis).
-    CODEBOOK_DESCRIPTOR_LIMIT = 1000000.
 
     @classmethod
     def is_usable(cls):
@@ -110,10 +97,13 @@ class ColorDescriptor_Base (DescriptorGenerator):
         return ColorDescriptor_Base._is_usable_cache
 
     def __init__(self, model_directory, work_directory,
-                 kmeans_k=1024, flann_target_precision=0.95,
+                 model_gen_descriptor_limit=1000000,
+                 kmeans_k=1024, flann_distance_metric='hik',
+                 flann_target_precision=0.95,
                  flann_sample_fraction=0.75,
                  flann_autotune=False,
-                 random_seed=None, use_spatial_pyramid=False):
+                 random_seed=None, use_spatial_pyramid=False,
+                 colordescriptor_exe='colorDescriptor'):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -127,8 +117,20 @@ class ColorDescriptor_Base (DescriptorGenerator):
             the current working directory.
         :type work_directory: str | unicode
 
+        :param model_gen_descriptor_limit: Total number of descriptors to use
+            from input data to generate codebook model. Fewer than this may be
+            used if the data set is small, but if it is greater, we randomly
+            sample down to this count (occurs on a per element basis).
+        :type model_gen_descriptor_limit: int
+
         :param kmeans_k: Centroids to generate. Default of 1024
         :type kmeans_k: int
+
+        :param flann_distance_metric: Distance function to use in FLANN
+            indexing. See FLANN documentation for available distance function
+            types (under the MATLAB section reference for valid string
+            identifiers)
+        :type flann_distance_metric: str
 
         :param flann_target_precision: Target precision percent to tune index
             for. Default is 0.95 (95% accuracy). For some codebooks, if this is
@@ -144,13 +146,18 @@ class ColorDescriptor_Base (DescriptorGenerator):
             find an optimal index representation and parameter set.
         :type flann_autotune: bool
 
+        :param random_seed: Optional value to seed components requiring random
+            operations.
+        :type random_seed: None or int
+
         :param use_spatial_pyramid: Use spacial pyramids when quantizing low
             level descriptors during feature computation.
         :type use_spatial_pyramid: bool
 
-        :param random_seed: Optional value to seed components requiring random
-            operations.
-        :type random_seed: None or int
+        :param colordescriptor_exe: Name or path to the colorDescriptor
+            executable that should be used. If just the name of the executable,
+            we assume it is available on the PATH.
+        :type colordescriptor_exe: str
 
         """
         # TODO: Because of the FLANN library non-deterministic overflow issue,
@@ -160,12 +167,17 @@ class ColorDescriptor_Base (DescriptorGenerator):
         self._model_dir = model_directory
         self._work_dir = work_directory
 
+        self._model_gen_descriptor_limit = model_gen_descriptor_limit
+
         self._kmeans_k = int(kmeans_k)
+        self._flann_distance_metric = flann_distance_metric
         self._flann_target_precision = float(flann_target_precision)
         self._flann_sample_fraction = float(flann_sample_fraction)
         self._flann_autotune = bool(flann_autotune)
         self._use_sp = use_spatial_pyramid
         self._rand_seed = None if random_seed is None else int(random_seed)
+
+        self._cd_exe = colordescriptor_exe
 
         if self._rand_seed is not None:
             numpy.random.seed(self._rand_seed)
@@ -192,12 +204,15 @@ class ColorDescriptor_Base (DescriptorGenerator):
         return {
             "model_directory": self._model_dir,
             "work_directory": self._work_dir,
+            "model_gen_descriptor_limit": self._model_gen_descriptor_limit,
             "kmeans_k": self._kmeans_k,
+            "flann_distance_metric": self._flann_distance_metric,
             "flann_target_precision": self._flann_target_precision,
             "flann_sample_fraction": self._flann_sample_fraction,
             "flann_autotune": self._flann_autotune,
             "random_seed": self._rand_seed,
             "use_spatial_pyramid": self._use_sp,
+            "colordescriptor_exe": self._cd_exe,
         }
 
     @property
@@ -361,9 +376,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
             raise ValueError("Discovered invalid content type among input "
                              "data: %s" % sorted(invalid_types_found))
 
-        pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
-        flann = pyflann.FLANN()
-
         if not osp.isfile(self.codebook_filepath):
             self._log.info("Did not find existing ColorDescriptor codebook for "
                            "descriptor '%s'.", self.descriptor_type())
@@ -383,7 +395,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
                     _, descriptors = \
                         self._generate_descriptor_matrices(
                             data_set,
-                            limit=self.CODEBOOK_DESCRIPTOR_LIMIT
+                            limit=self._model_gen_descriptor_limit
                         )
                     _, tmp = tempfile.mkstemp(dir=self._work_dir,
                                               suffix='.npy')
@@ -413,6 +425,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
         # create FLANN index
         # - autotune will force select linear search if there are < 1000 words
         #   in the codebook vocabulary.
+        pyflann.set_distance_type(self._flann_distance_metric)
+        flann = pyflann.FLANN()
         if self._log.getEffectiveLevel() <= logging.DEBUG:
             log_level = 'info'
         else:
@@ -473,37 +487,36 @@ class ColorDescriptor_Base (DescriptorGenerator):
                         data.uuid())
         info, descriptors = self._generate_descriptor_matrices({data})
 
+        # Load FLANN components
+        pyflann.set_distance_type(self._flann_distance_metric)
+        flann = pyflann.FLANN()
+        flann.load_index(self.flann_index_filepath, self._codebook)
+
         if not self._use_sp:
             ###
             # Codebook Quantization
             #
             # - loaded the model at class initialization if we had one
             self._log.debug("Quantizing descriptors")
-            pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
-            flann = pyflann.FLANN()
-            flann.load_index(self.flann_index_filepath, self._codebook)
+
             try:
                 # If the distance method is HIK, we need to treat it special
                 # since that method produces a similarity score, not a distance
                 # score.
                 #
-                if self.FLANN_DISTANCE_FUNCTION == 'hik':
+                if self._flann_distance_metric == 'hik':
                     # This searches for all NN instead of minimum between n and
                     # the number of descriptors and keeps the last one because
                     # hik is a similarity score and not a distance, which is
                     # also why the values in dists is flipped below.
                     #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
-                    idxs, dists = flann.nn_index(descriptors,
-                                                 self._codebook.shape[0])
+                    idxs = flann.nn_index(descriptors,
+                                          self._codebook.shape[0])[0]
                     # Only keep the last index for each descriptor return
                     idxs = numpy.array([i_array[-1] for i_array in idxs])
-                    dists = numpy.array([d_array[-1] for d_array in dists])
-                    # Invert values to stay consistent with other distance value
-                    # norms.
-                    dists = [1.0 - d for d in dists]
                 else:
                     # :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
-                    idxs, dists = flann.nn_index(descriptors, 1)
+                    idxs = flann.nn_index(descriptors, 1)[0]
             except AssertionError:
 
                 self._log.error("Codebook shape  : %s", self._codebook.shape)
@@ -564,11 +577,18 @@ class ColorDescriptor_Base (DescriptorGenerator):
             #   idxs, dists = flann.nn_index(m[:, 2:], q_factor)
             #   q = numpy.concatenate([m[:, :2], idxs, dists], axis=1)
             self._log.debug("Computing nearest neighbors")
-            pyflann.set_distance_type(self.FLANN_DISTANCE_FUNCTION)
-            flann = pyflann.FLANN()
-            flann.load_index(self.flann_index_filepath, self._codebook)
-            idxs = flann.nn_index(m[:, 2:], q_factor)[0]
+            if self._flann_distance_metric == 'hik':
+                # Query full ordering of code indices
+                idxs = flann.nn_index(m[:, 2:], self._codebook.shape[0])[0]
+                # Extract the right-side block for use in building histogram
+                # Order doesn't actually matter in the current implementation
+                #   because index relative position is not being weighted.
+                idxs = idxs[:, -q_factor:]
+            else:
+                idxs = flann.nn_index(m[:, 2:], q_factor)[0]
             self._log.debug("Creating quantization matrix")
+            # This matrix consists of descriptor (x,y) position + near code
+            #   indices.
             q = numpy.concatenate([m[:, :2], idxs], axis=1)
             ##
             # Build spatial pyramid from quantized matrix
@@ -602,7 +622,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
         Build spatial pyramid from quantized data. We expect feature matrix
         to be in the following format:
 
-            [[ x y c_1 ... c_n dist_1 ... dist_n ]
+            [[ x y c_1 ... c_n ]
              [ ... ]
              ... ]
 
@@ -744,7 +764,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             try:
                 # Generate descriptors
                 utils.generate_descriptors(
-                    self.PROC_COLORDESCRIPTOR, temp_img_filepath,
+                    self._cd_exe, temp_img_filepath,
                     self.descriptor_type(), info_fp, desc_fp, per_item_limit
                 )
             finally:
@@ -765,7 +785,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di)
-                    args = (self.PROC_COLORDESCRIPTOR, tmp_img_fp,
+                    args = (self._cd_exe, tmp_img_fp,
                             self.descriptor_type(), info_fp, desc_fp)
                     r = pool.apply_async(utils.generate_descriptors, args)
                     r_map[di.uuid()] = (info_fp, desc_fp, r, di.clean_temp)
@@ -934,7 +954,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                         self._get_standard_info_descriptors_filepath(di, frame)
                     r = pool.apply_async(
                         utils.generate_descriptors,
-                        args=(self.PROC_COLORDESCRIPTOR, imgPath,
+                        args=(self._cd_exe, imgPath,
                               self.descriptor_type(), info_fp, desc_fp)
                     )
                     r_map[di.uuid()][frame] = (info_fp, desc_fp, r)

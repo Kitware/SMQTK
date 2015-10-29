@@ -7,6 +7,7 @@ import multiprocessing
 import multiprocessing.pool
 import os
 import os.path as osp
+import subprocess
 import sys
 import tempfile
 
@@ -69,30 +70,42 @@ class ColorDescriptor_Base (DescriptorGenerator):
                                           "is_usable"]))
 
         if not hasattr(ColorDescriptor_Base, "_is_usable_cache"):
+            # Base assumption that it is available, now lets prove its false.
+            ColorDescriptor_Base._is_usable_cache = True
+
             # Check for colorDescriptor executable on the path
-            import subprocess
+            log_file = open(tempfile.mkstemp()[1], 'w')
             try:
                 # This should try to print out the CLI options return with code
                 # 1.
-                subprocess.call(['colorDescriptor', '-h'],
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+                subprocess.call(['colorDescriptor', '--version'],
+                                stdout=log_file, stderr=log_file)
+                # it is known that colorDescriptor has a return code of 1 no
+                # matter if it exited "successfully" or not, which is not
+                # helpful, I know.
             except OSError:
                 log.warn("Could not locate colorDescriptor executable. Make "
                          "sure that its on the PATH! See "
-                         "smqtk/descriptor_generator/colordescriptor/INSTALL.md "
-                         "for help.")
+                         "smqtk/descriptor_generator/colordescriptor/"
+                         "INSTALL.md for help.")
+                # If there was anything written to the log file, output it.
+                log_file.flush()
+                if log_file.tell():
+                    with open(log_file.name) as f:
+                        log.warn("STDOUT and STDERR output from attempted "
+                                 "colorDescriptor call:\n%s", f.read())
                 ColorDescriptor_Base._is_usable_cache = False
+            finally:
+                log_file.close()
+                os.remove(log_file.name)
 
             # Checking if DescriptorIO is importable
             if not utils.has_colordescriptor_module():
                 log.warn("Could not import DescriptorIO. Make sure that the "
                          "colorDescriptor package is on the PYTHONPATH! See "
-                         "smqtk/descriptor_generator/colordescriptor/INSTALL.md "
-                         "for help.")
+                         "smqtk/descriptor_generator/colordescriptor/"
+                         "INSTALL.md for help.")
                 ColorDescriptor_Base._is_usable_cache = False
-
-            ColorDescriptor_Base._is_usable_cache = True
 
         return ColorDescriptor_Base._is_usable_cache
 

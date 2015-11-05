@@ -77,3 +77,6 @@ class HBaseDataElement (DataElement):
         table = self._new_hbase_table_connection()
         r = table.row(self.element_key, columns=[self.binary_column])
         return r[self.binary_column]
+
+
+DATA_ELEMENT_CLASS = HBaseDataElement

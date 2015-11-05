@@ -352,7 +352,6 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
 
         self.complete_queue.put(None)
 
-
     def process_batch(self, batch, gpu_batch_size):
         assert len(batch) % gpu_batch_size == 0, \
             "GPU Batch size does not evenly divide the given computation batch"

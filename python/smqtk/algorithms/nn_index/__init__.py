@@ -91,7 +91,7 @@ def get_nn_index_impls(reload_modules=False):
 
     :return: Map of discovered class object of type ``NearestNeighborsIndex``
         whose keys are the string names of the classes.
-    :rtype: dict of (str, type)
+    :rtype: dict[str, type]
 
     """
     from smqtk.utils.plugin import get_plugins

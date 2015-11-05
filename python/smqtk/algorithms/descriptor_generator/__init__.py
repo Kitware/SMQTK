@@ -251,7 +251,7 @@ def get_descriptor_generator_impls(reload_modules=False):
 
     :return: Map of discovered class object of type ``DescriptorGenerator``
         whose keys are the string names of the classes.
-    :rtype: dict of (str, type)
+    :rtype: dict[str, type]
 
     """
     from smqtk.utils.plugin import get_plugins

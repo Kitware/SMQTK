@@ -43,6 +43,10 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
     """
 
+    # Name/Path to the colorDescriptor executable to use. By default we assume
+    # its accessible on the PATH.
+    EXE = 'colorDescriptor'
+
     @classmethod
     def is_usable(cls):
         """
@@ -65,7 +69,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
             try:
                 # This should try to print out the CLI options return with code
                 # 1.
-                subprocess.call(['colorDescriptor', '--version'],
+                subprocess.call([cls.EXE, '--version'],
                                 stdout=log_file, stderr=log_file)
                 # it is known that colorDescriptor has a return code of 1 no
                 # matter if it exited "successfully" or not, which is not
@@ -102,8 +106,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
                  flann_target_precision=0.95,
                  flann_sample_fraction=0.75,
                  flann_autotune=False,
-                 random_seed=None, use_spatial_pyramid=False,
-                 colordescriptor_exe='colorDescriptor'):
+                 random_seed=None, use_spatial_pyramid=False):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -154,11 +157,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
             level descriptors during feature computation.
         :type use_spatial_pyramid: bool
 
-        :param colordescriptor_exe: Name or path to the colorDescriptor
-            executable that should be used. If just the name of the executable,
-            we assume it is available on the PATH.
-        :type colordescriptor_exe: str
-
         """
         # TODO: Because of the FLANN library non-deterministic overflow issue,
         #       an alternative must be found before this can be put into
@@ -176,8 +174,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
         self._flann_autotune = bool(flann_autotune)
         self._use_sp = use_spatial_pyramid
         self._rand_seed = None if random_seed is None else int(random_seed)
-
-        self._cd_exe = colordescriptor_exe
 
         if self._rand_seed is not None:
             numpy.random.seed(self._rand_seed)
@@ -212,7 +208,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
             "flann_autotune": self._flann_autotune,
             "random_seed": self._rand_seed,
             "use_spatial_pyramid": self._use_sp,
-            "colordescriptor_exe": self._cd_exe,
         }
 
     @property
@@ -764,7 +759,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             try:
                 # Generate descriptors
                 utils.generate_descriptors(
-                    self._cd_exe, temp_img_filepath,
+                    self.EXE, temp_img_filepath,
                     self.descriptor_type(), info_fp, desc_fp, per_item_limit
                 )
             finally:
@@ -785,7 +780,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di)
-                    args = (self._cd_exe, tmp_img_fp,
+                    args = (self.EXE, tmp_img_fp,
                             self.descriptor_type(), info_fp, desc_fp)
                     r = pool.apply_async(utils.generate_descriptors, args)
                     r_map[di.uuid()] = (info_fp, desc_fp, r, di.clean_temp)
@@ -954,7 +949,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                         self._get_standard_info_descriptors_filepath(di, frame)
                     r = pool.apply_async(
                         utils.generate_descriptors,
-                        args=(self._cd_exe, imgPath,
+                        args=(self.EXE, imgPath,
                               self.descriptor_type(), info_fp, desc_fp)
                     )
                     r_map[di.uuid()][frame] = (info_fp, desc_fp, r)

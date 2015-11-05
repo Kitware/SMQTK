@@ -1,6 +1,9 @@
+import cPickle
 import multiprocessing
+import os
 
 from smqtk.representation import DataElement, DataSet
+from smqtk.utils import SimpleTimer
 
 
 __author__ = 'paul.tunison@kitware.com'
@@ -26,14 +29,33 @@ class DataMemorySet (DataSet):
         """
         return True
 
-    def __init__(self):
+    def __init__(self, file_cache=None):
         """
         Initialize a new in-memory data set instance.
+
+        :param file_cache: Optional path to a file to store/load a cache of this
+            data set's contents into. Cache loading, if the file was found, will
+            occur in this constructor. Cache writing will only occur after
+            adding one or more elements.
+
+            This can be optionally turned on after creating/using this data set
+            for a while by setting a valid filepath to the ``file_cache``
+            attribute and calling the ``.cache()`` method. When ``file_cache``
+            is not set, the ``cache()`` method does nothing.
+        :type file_cache: None | str
+
         """
         # Mapping of UUIDs to DataElement instances
         #: :type: dict[collections.Hashable, DataElement]
         self._element_map = {}
         self._element_map_lock = multiprocessing.RLock()
+
+        # Optional path to a file that will act as a cache of our internal table
+        self.file_cache = file_cache
+        if file_cache and os.path.isfile(file_cache):
+            with open(file_cache) as f:
+                #: :type: dict[collections.Hashable, DataElement]
+                self._element_map = cPickle.load(f)
 
     def __iter__(self):
         """
@@ -47,6 +69,13 @@ class DataMemorySet (DataSet):
             for k in uuids:
                 yield self._element_map[k]
 
+    def cache(self):
+        if self.file_cache:
+            with self._element_map_lock:
+                with SimpleTimer("Caching memory data-set table", self._log):
+                    with open(self.file_cache, 'wb') as f:
+                        cPickle.dump(self._element_map, f)
+
     def get_config(self):
         """
         This implementation has no configuration properties.
@@ -55,7 +84,9 @@ class DataMemorySet (DataSet):
         :rtype: dict
 
         """
-        return {}
+        return {
+            "file_cache": self.file_cache,
+        }
 
     def count(self):
         """
@@ -100,6 +131,7 @@ class DataMemorySet (DataSet):
             for e in elems:
                 assert isinstance(e, DataElement)
                 self._element_map[e.uuid()] = e
+            self.cache()
 
     def get_data(self, uuid):
         """

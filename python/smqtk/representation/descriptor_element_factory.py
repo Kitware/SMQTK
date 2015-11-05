@@ -71,7 +71,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         )
 
     def get_config(self):
-        d_type_name = self._d_type.__class__.__name__
+        d_type_name = self._d_type.__name__
         return {
             'type': d_type_name,
             d_type_name: self._d_type_config,

@@ -15,8 +15,8 @@ from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.nn_index import get_nn_index_impls
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.iqr import IqrController, IqrSession
-from smqtk.iqr.iqr_session import DFLT_REL_INDEX_CONFIG
-from smqtk.representation import get_data_set_impls
+from smqtk.iqr.iqr_session import DFLT_MEMORY_DESCR_FACTORY, DFLT_REL_INDEX_CONFIG
+from smqtk.representation import get_data_set_impls, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import Configurable
 from smqtk.utils import plugin
@@ -72,6 +72,11 @@ class IqrSearch (flask.Blueprint, Configurable):
             ri_config.update(d['rel_index_config'])
         d['rel_index_config'] = ri_config
 
+        df_config = DescriptorElementFactory.get_default_config()
+        if d['descriptor_factory']:
+            df_config.update(d['descriptor_factory'].get_config())
+        d['descriptor_factory'] = df_config
+
         return d
 
     # noinspection PyMethodOverriding
@@ -103,10 +108,14 @@ class IqrSearch (flask.Blueprint, Configurable):
             plugin.from_plugin_config(config['nn_index'],
                                       get_nn_index_impls)
 
+        config['descriptor_factory'] = \
+            DescriptorElementFactory.from_config(config['descriptor_factory'])
+
         return cls(parent_app, **config)
 
     def __init__(self, parent_app, name, data_set, descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,
+                 descriptor_factory=DFLT_MEMORY_DESCR_FACTORY,
                  url_prefix=None, pos_seed_neighbors=500):
         """
         Initialize a generic IQR Search module with a single descriptor and
@@ -136,6 +145,10 @@ class IqrSearch (flask.Blueprint, Configurable):
             These may be considered temporary and may be removed between
             executions of this app. Retention of a work directory may speed
             things up in subsequent runs because of caching.
+
+        :param descriptor_factory: DescriptorElementFactory for producing new
+            DescriptorElement instances when data is uploaded to the server.
+        :type descriptor_factory: DescriptorElementFactory
 
         :param url_prefix: Web address prefix for this blueprint.
         :type url_prefix: str
@@ -171,6 +184,7 @@ class IqrSearch (flask.Blueprint, Configurable):
         self._descriptor_generator = descr_generator
         self._nn_index = nn_index
         self._rel_index_config = rel_index_config
+        self._descr_elem_factory = descriptor_factory
 
         self._pos_seed_neighbors = int(pos_seed_neighbors)
 
@@ -566,6 +580,7 @@ class IqrSearch (flask.Blueprint, Configurable):
             'descr_generator': plugin.to_plugin_config(self._descriptor_generator),
             'nn_index': plugin.to_plugin_config(self._nn_index),
             'rel_index_config': self._rel_index_config,
+            'descriptor_factory': self._descr_elem_factory.get_config(),
         }
 
     def register_blueprint(self, blueprint, **options):
@@ -610,7 +625,8 @@ class IqrSearch (flask.Blueprint, Configurable):
                                       self._nn_index,
                                       self._pos_seed_neighbors,
                                       self._rel_index_config,
-                                      session_uid=sid)
+                                      self._descr_elem_factory,
+                                      sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
 
             return self._iqr_controller.get_session(sid)

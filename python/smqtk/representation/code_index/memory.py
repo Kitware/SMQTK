@@ -39,13 +39,15 @@ class MemoryCodeIndex (CodeIndex):
         #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.representation.DescriptorElement]]
         self._table = {}
         if file_cache and osp.isfile(file_cache):
-            self._log.debug("Loading cached code index table from file: %s",
-                            file_cache)
             with open(file_cache) as f:
+                self._log.debug("Loading cached code index table from file: %s",
+                                file_cache)
                 #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.representation.DescriptorElement]]
                 self._table = cPickle.load(f)
+                self._log.debug("Counting indexed descriptors")
                 # Find the number of descriptors in the table
                 self._num_descr = sum(len(d) for d in self._table.itervalues())
+                self._log.debug("Done loading cached table")
 
     def _cache_table(self):
         if self._file_cache:
@@ -96,8 +98,10 @@ class MemoryCodeIndex (CodeIndex):
         :type no_cache: bool
 
         """
-        self._table.setdefault(code, {})[descriptor.uuid()] = descriptor
-        self._num_descr += 1
+        code_map = self._table.setdefault(code, {})
+        if descriptor.uuid() not in code_map:
+            self._num_descr += 1
+        code_map[descriptor.uuid()] = descriptor
         if not no_cache:
             self._cache_table()
 

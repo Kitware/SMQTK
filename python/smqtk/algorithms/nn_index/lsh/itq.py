@@ -14,6 +14,7 @@ import numpy.matlib
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.code_index import get_code_index_impls
 from smqtk.representation.code_index.memory import MemoryCodeIndex
+from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.utils import (
     bit_utils,
@@ -326,99 +327,6 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
 
         return b, r
 
-    @staticmethod
-    def _proc_get_vector((row, d_elem, q)):
-        """
-        Should only be called from pool.map() with 3-element sequence arguments.
-
-        Get the vector from the element, and insert it into the given
-        multiprocessing.Queue. The queue will have a max size, so this will
-        block when the queue is full.
-
-        Queue will be pushed a tuple of the format:
-            ( row , npy-vector )
-
-        :param row: Integer row of the final matrix
-        :type row: int
-
-        :param d_elem: DescriptorElement instance
-        :type d_elem: smqtk.representation.DescriptorElement
-
-        :param q: Output queue
-        :type q: multiprocessing.Queue
-
-        """
-        q.put((row, d_elem.vector()))
-
-    @staticmethod
-    def _load_mat_async_proc(descriptor_elements, x):
-        """
-        Load DescriptorElement vectors into the given matrix ``x`` using a
-        multiprocessing approach.
-
-        :param descriptor_elements: Input descriptor elements
-        :type descriptor_elements: list[smqtk.representation.DescriptorElement]
-
-        :param x: output matrix
-        :type x: numpy.core.multiarray.ndarray
-
-        """
-        assert len(descriptor_elements) == x.shape[0], \
-            "Incompatible matrix height"
-        assert descriptor_elements[0].vector().size == x.shape[1], \
-            "Incompatible matrix width"
-
-        q = multiprocessing.Queue(multiprocessing.cpu_count() * 2)
-        p = multiprocessing.Pool()
-        p.map_async(ITQNearestNeighborsIndex._proc_get_vector,
-                    itertools.izip(
-                        xrange(len(descriptor_elements)),
-                        descriptor_elements,
-                        itertools.repeat(q, len(descriptor_elements))
-                    ))
-        # Aggregate results. Will need to only call q.get() as many times as
-        # there are input elements, thus the for-loop and no terminal value on
-        # queue.
-        for _ in descriptor_elements:
-            r, v = q.get()
-            x[r] = v
-
-        # x updated in place, no return
-
-    @staticmethod
-    def _thread_insert_vec((x, r, d_elem)):
-        """
-        Should only be called from pool.map() with 3-element sequence arguments.
-        """
-        x[r] = d_elem.vector()
-
-    @staticmethod
-    def _load_mat_async_thread(descriptor_elements, x):
-        """
-        Load descriptor element vectors into matrix ``x`` on threads
-
-        :param descriptor_elements: Input descriptor elements
-        :type descriptor_elements: list[smqtk.representation.DescriptorElement]
-
-        :param x: output matrix
-        :type x: numpy.core.multiarray.ndarray
-
-        """
-        assert len(descriptor_elements) == x.shape[0], \
-            "Incompatible matrix height"
-        assert descriptor_elements[0].vector().size == x.shape[1], \
-            "Incompatible matrix width"
-
-        p = multiprocessing.pool.ThreadPool()
-        p.map(ITQNearestNeighborsIndex._thread_insert_vec,
-              itertools.izip(
-                  itertools.repeat(x, len(descriptor_elements)),
-                  xrange(len(descriptor_elements)),
-                  descriptor_elements
-              ))
-
-        # x updated in place, no return
-
     def build_index(self, descriptors):
         """
         Build the index over the descriptor data elements.
@@ -464,14 +372,9 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
                 raise ValueError("No descriptors given!")
         with SimpleTimer("Creating matrix of descriptors for training",
                          self._log.info):
-            # Get vectors on separate processes and aggregate into matrix x
-            vec_size = descr_cache[0].vector().size
-            x = numpy.ndarray((len(descr_cache), vec_size), float)
-            # max limit so we don't buffer too many things as a time
-            if isinstance(descr_cache[0], DescriptorMemoryElement):
-                self._load_mat_async_thread(descr_cache, x)
-            else:
-                self._load_mat_async_proc(descr_cache, x)
+            # Get non-memory vectors on separate processes and aggregate into
+            # matrix.
+            x = elements_to_matrix(descr_cache)
 
         with SimpleTimer("Centering data", self._log.info):
             # center the data, VERY IMPORTANT for ITQ to work

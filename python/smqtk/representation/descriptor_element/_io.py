@@ -1,5 +1,6 @@
 import logging
 import multiprocessing
+import time
 
 import numpy
 
@@ -38,9 +39,10 @@ def elements_to_matrix(descr_elements, mat=None, procs=None):
 
     # Create/check matrix
     if mat is None:
-        mat = numpy.ndarray((len(descr_elements),
-                             descr_elements[0].vector().size),
-                            float)
+        shp = (len(descr_elements),
+               descr_elements[0].vector().size)
+        log.debug("Creating new matrix with shape: %s", shp)
+        mat = numpy.ndarray(shp, float)
     else:
         assert mat.shape[0] == len(descr_elements)
         assert mat.shape[1] == descr_elements[0].vector().size
@@ -50,39 +52,72 @@ def elements_to_matrix(descr_elements, mat=None, procs=None):
 
     in_q = multiprocessing.Queue()
     out_q = multiprocessing.Queue(procs * 2)
+    log.debug("Output queue size: %d", out_q._maxsize)
 
     # Workers for async extraction
-    workers = [_ElemVectorExtractor(in_q, out_q) for _ in xrange(procs)]
-
-    async_packets_sent = 0
-    for r, d in enumerate(descr_elements):
-        if isinstance(d, DescriptorMemoryElement):
-            # No loading required, already in memory
-            mat[r] = d.vector()
-        else:
-            in_q.put((r, d))
-            async_packets_sent += 1
-
-    # Collect work from async
-    for _ in xrange(async_packets_sent):
-        r, v = out_q.get()
-        mat[r] = v
-    out_q.close()
-
-    # All work should be exhausted at this point
-    assert in_q.qsize() == 0
-    assert out_q.qsize() == 0
-
-    # Shutdown workers
-    # - Workers should exit upon getting a None packet
-    for _ in workers:
-        # One for each worker
-        in_q.put(None)
-    in_q.close()
+    log.debug("constructing worker processes")
+    workers = [_ElemVectorExtractor(i, in_q, out_q) for i in xrange(procs)]
     for w in workers:
-        w.join()
+        w.daemon = True
 
-    return mat
+    try:
+        # Start worker processes
+        log.debug("starting worker processes")
+        for w in workers:
+            w.start()
+
+        log.debug("Sending work packets")
+        async_packets_sent = 0
+        for r, d in enumerate(descr_elements):
+            if isinstance(d, DescriptorMemoryElement):
+                # No loading required, already in memory
+                mat[r] = d.vector()
+            else:
+                in_q.put((r, d))
+                async_packets_sent += 1
+
+        # Collect work from async
+        log.debug("Aggregating async results")
+        lf = f = 0
+        t = time.time()
+        for _ in xrange(async_packets_sent):
+            r, v = out_q.get()
+            mat[r] = v
+
+            f += 1
+            if time.time() - t > 1:
+                log.debug("Rows per second: %f, Total: %d",  (f-lf) / (time.time()/t), f)
+                lf = f
+                t = time.time()
+
+        log.debug("Closing output queue")
+        out_q.close()
+
+        # All work should be exhausted at this point
+        assert in_q.qsize() == 0
+        assert out_q.qsize() == 0
+
+        # Shutdown workers
+        # - Workers should exit upon getting a None packet
+        log.debug("Sending worker terminal signals")
+        for _ in workers:
+            # One for each worker
+            in_q.put(None)
+        log.debug("Closing input queue")
+        in_q.close()
+
+        log.debug("Done")
+        return mat
+    finally:
+        # Forcibly terminate worker processes if still alive
+        log.debug("Joining/Terminating workers")
+        for w in workers:
+            if w.is_alive():
+                w.terminate()
+            w.join()
+        for q in (in_q, out_q):
+            q.close()
+            q.join_thread()
 
 
 class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
@@ -96,15 +131,19 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
 
     """
 
-    def __init__(self, in_q, out_q):
+    def __init__(self, i, in_q, out_q):
         super(_ElemVectorExtractor, self)\
-            .__init__()
+            .__init__(name='[w%d]' % i)
+        self._log.debug("Making worker (%d, %s, %s)", i, in_q, out_q)
+        self.i = i
         self.in_q = in_q
         self.out_q = out_q
 
     def run(self):
         packet = self.in_q.get()
+        #self._log.debug("[%d] Received packet: %s", self.i, packet)
         while packet is not None:
             row, elem = packet
             self.out_q.put((row, elem.vector()))
             packet = self.in_q.get()
+            #self._log.debug("[%d] Received packet: %s", self.i, packet)

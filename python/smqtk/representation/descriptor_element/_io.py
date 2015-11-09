@@ -15,7 +15,8 @@ __all__ = [
 ]
 
 
-def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2):
+def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
+                       report_interval=None):
     """
     Add to or create a numpy matrix, adding to it the vector data contained in
     a sequence of DescriptorElement instances using asynchronous processing.
@@ -41,6 +42,11 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2):
     :param buffer_factor: Multiplier against the number of processes used to
         limit the growth size of the result queue coming from worker processes.
     :type buffer_factor: float
+
+    :param report_interval: Optional interval in seconds for debug logging to
+        occur reporting about conversion speed. This should be greater than 0
+        if this debug logging is desired.
+    :type report_interval: None | float
 
     :return: Created or input matrix.
     :rtype: numpy.core.multiarray.ndarray
@@ -72,13 +78,12 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2):
     # Workers for async extraction
     log.debug("constructing worker processes")
     workers = [_ElemVectorExtractor(i, in_q, out_q) for i in xrange(procs)]
-    for w in workers:
-        w.daemon = True
 
     try:
         # Start worker processes
         log.debug("starting worker processes")
         for w in workers:
+            w.daemon = True
             w.start()
 
         log.debug("Sending work packets")
@@ -93,17 +98,17 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2):
 
         # Collect work from async
         log.debug("Aggregating async results")
-        lf = f = 0
-        t = time.time()
+        f = 0
+        lt = t = time.time()
         for _ in xrange(async_packets_sent):
             r, v = out_q.get()
             mat[r] = v
 
             f += 1
-            if time.time() - t > 1:
-                log.debug("Rows per second: %f, Total: %d",  (f-lf) / (time.time()/t), f)
-                lf = f
-                t = time.time()
+            if report_interval and time.time() - lt >= report_interval:
+                log.debug("Rows per second: %f, Total: %d",
+                          f / (time.time() - t), f)
+                lt = time.time()
 
         log.debug("Closing output queue")
         out_q.close()
@@ -156,9 +161,7 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
 
     def run(self):
         packet = self.in_q.get()
-        #self._log.debug("[%d] Received packet: %s", self.i, packet)
         while packet is not None:
             row, elem = packet
             self.out_q.put((row, elem.vector()))
             packet = self.in_q.get()
-            #self._log.debug("[%d] Received packet: %s", self.i, packet)

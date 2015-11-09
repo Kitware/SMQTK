@@ -374,7 +374,10 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
                          self._log.info):
             # Get non-memory vectors on separate processes and aggregate into
             # matrix.
+            self._log.debug("Input elements: %d", len(descr_cache))
+            self._log.debug("Input elem size: %s", descr_cache[0].vector().size)
             x = elements_to_matrix(descr_cache)
+            self._log.debug("descriptor matrix shape: %s", x.shape)
 
         with SimpleTimer("Centering data", self._log.info):
             # center the data, VERY IMPORTANT for ITQ to work
@@ -492,6 +495,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # - a code may associate with multiple hits, but its a safe assumption
         #   that if we get the top `n` codes, which exist because there is at
         #   least one element in association with it,
+        self._log.debug("fetching nearest %d codes", n)
         code_set = self._code_index.codes()
         # TODO: Optimize this step
         #: :type: list[int]
@@ -504,6 +508,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # Collect descriptors from subsequently farther away bins until we have
         # >= `n` descriptors, which we will more finely sort after this.
         #: :type: list[smqtk.representation.DescriptorElement]
+        self._log.debug("Collecting descriptors from near codes")
         neighbors = []
         termination_count = min(n, self.count())
         for nc in near_codes:
@@ -516,11 +521,13 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # Compute fine-grain distance measurements for collected elements + sort
         # for d_elem in neighbors:
         #     distances.append(self._dist_func(d_vec, d_elem.vector()))
+        self._log.debug("Sorting descriptors: %d", len(neighbors))
         def comp_neighbor_dist(neighbor):
             return self._dist_func(d_vec, neighbor.vector())
         distances = map(comp_neighbor_dist, neighbors)
 
         # Sort by distance, return top n
+        self._log.debug("Forming output")
         ordered = sorted(zip(neighbors, distances), key=lambda p: p[1])
         neighbors, distances = zip(*(ordered[:n]))
         return neighbors, distances

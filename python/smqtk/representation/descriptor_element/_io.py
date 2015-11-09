@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-def elements_to_matrix(descr_elements, mat=None, procs=None):
+def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2):
     """
     Add to or create a numpy matrix, adding to it the vector data contained in
     a sequence of DescriptorElement instances using asynchronous processing.
@@ -23,12 +23,27 @@ def elements_to_matrix(descr_elements, mat=None, procs=None):
     If ``mat`` is provided, its shape must equal:
         ( len(descr_elements) , descr_elements[0].size )
 
-    :param descr_elements:
-    :param mat:
-    :param procs:
+    :param descr_elements: Sequence of DescriptorElement objects to transform
+        into a matrix. Each element should contain descriptor vectors of the
+        same size.
+    :type descr_elements:
+        collections.Sequence[smqtk.representation.DescriptorElement]
 
-    :return: Create or input matrix
+    :param mat: Optionally pre-constructed numpy matrix of the appropriate shape
+        to as loaded vectors into. If supplied this must have rows of the shape:
+        (nDescriptors, nFeatures)
+    :type mat: None | numpy.core.multiarray.ndarray
 
+    :param procs: Optional specification of the number of cores to use. If None,
+        we will attempt to use all available cores.
+    :type procs: None | int | long
+
+    :param buffer_factor: Multiplier against the number of processes used to
+        limit the growth size of the result queue coming from worker processes.
+    :type buffer_factor: float
+
+    :return: Created or input matrix.
+    :rtype: numpy.core.multiarray.ndarray
 
     """
     log = logging.getLogger(__name__)
@@ -51,7 +66,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None):
         procs = multiprocessing.cpu_count()
 
     in_q = multiprocessing.Queue()
-    out_q = multiprocessing.Queue(procs * 2)
+    out_q = multiprocessing.Queue(int(procs * buffer_factor))
     log.debug("Output queue size: %d", out_q._maxsize)
 
     # Workers for async extraction

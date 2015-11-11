@@ -45,7 +45,7 @@ def main():
     #
     # smqtk.representation
     #
-    log.info("Checking DataSet plugins")
+    log.info("Checking DataElement plugins")
     plugin_type_list.append("DataElement")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_data_element_impls()

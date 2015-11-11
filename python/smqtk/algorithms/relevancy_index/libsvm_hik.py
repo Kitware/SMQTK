@@ -236,6 +236,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             raise ValueError("No negative examples provided.")
 
         # Training SVM model
+        self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
         svm_model = svmutil.svm_train(svm_problem,
                                       self._gen_svm_parameter_string(num_pos,
@@ -247,6 +248,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Platt Scaling for probability rankings
         #
 
+        self._log.debug("making test distance matrix")
         # Number of support vectors
         # Q: is this always the same as ``svm_model.l``?
         num_SVs = sum(svm_model.nSV[:svm_model.nr_class])
@@ -270,6 +272,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                                              histogram_intersection_distance,
                                              row_wise=True)
 
+        self._log.debug("Platt scalling")
         # the actual platt scaling stuff
         weights = numpy.array(svm_model.get_sv_coef()).flatten()
         margins = numpy.dot(weights, svm_test_k)

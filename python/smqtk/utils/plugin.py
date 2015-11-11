@@ -24,9 +24,15 @@ import importlib
 import logging
 import os
 import re
+import sys
+import types
 
 
+# Template for checking validity of sub-module files
 valid_module_file_re = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
+
+# Template for checking validity of module attributes
+valid_attribute_re = re.compile("^[a-zA-Z]\w*$")
 
 
 class Pluggable (object):
@@ -59,39 +65,56 @@ class Pluggable (object):
                                   "class '%s'" % cls.__name__)
 
 
-def get_plugins(base_module, search_dir, helper_var, baseclass_type,
-                reload_modules=False):
+def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
+                baseclass_type, warn=True, reload_modules=False):
     """
-    Discover and return classes found in the given plugin search directory. Keys
-    in the returned map are the names of the discovered classes, and the paired
-    values are the actual class type objects.
+    Discover and return classes found in the SMQTK internal plugin directory and
+    any additional directories specified via an environment variable.
 
-    We look for modules (directories or files) that start with an alphanumeric
-    character ('_' prefixed files/directories are hidden, but not recommended).
+    In order to specify additional out-of-SMQTK python modules containing
+    base-class implementations, additions to the given environment variable must
+    be made. Entries must be separated by either a ';' (for windows) or ':' (for
+    everything else). This is the same as for the PATH environment variable on
+    your platform. Entries should be paths to importable modules containing
+    attributes for potential import.
 
-    We assume that the base class that we are checking for also descends from
+    We look for module attributes that start with an alphanumeric character ('_'
+    prefixed attributes are hidden from import by this function).
+
+    We required that the base class that we are checking for also descends from
     the ``Pluggable`` interface defined above. This allows us to check if a
     loaded class ``is_usable``.
 
     Within a module we first look for a helper variable by the name provided,
     which can either be a single class object or an iterable of class objects,
-    to be exported. If the variable is set to None, we skip that module and do
-    not import anything. If the variable is not present, we look for a class
-    by the same name and casing as the module. If neither are found, the module
-    is skipped.
+    to be specifically exported. If the variable is set to None, we skip that
+    module and do not import anything. If the variable is not present, we look
+    at attributes defined in that module for classes that descend from the given
+    base class type. If none of the above are found, or if an exception occurs,
+    the module is skipped.
 
-    :param base_module: Base module string path.
+    :param base_module: SMQTK internal module path in which internal plugin
+        modules are located.
     :type base_module: str
 
-    :param search_dir: Directory path to look for modules in.
-    :type search_dir: str
+    :param internal_dir: Directory path to where SMQTK internal plugin modules
+        are located.
+    :type internal_dir: str
 
-    :param helper_var: Name of the expected helper variable.
+    :param dir_env_var: String name of an environment variable to look for that
+        may optionally define additional directory paths to search for modules
+        that may implement additional child classes of the base type.
+    :type dir_env_var: str
+
+    :param helper_var: Name of the expected module helper attribute.
     :type helper_var: str
 
     :param baseclass_type: Class type that discovered classes should descend
         from (inherit from).
     :type baseclass_type: type
+
+    :param warn: If we should warn about module import failures.
+    :type warn: bool
 
     :param reload_modules: Explicitly reload discovered modules from source
         instead of taking a potentially cached version of the module.
@@ -107,91 +130,116 @@ def get_plugins(base_module, search_dir, helper_var, baseclass_type,
                                       "getPlugins[%s]" % base_module]))
 
     if not issubclass(baseclass_type, Pluggable):
-        raise ValueError("Required base-class must descent from the Pluggable "
+        raise ValueError("Required base-class must descend from the Pluggable "
                          "interface!")
+
+    # List of module paths to check for valid sub-classes.
+    #: :type: list[str]
+    module_paths = []
+
+    # modules nested under internal module
+    log.debug("Finding internal modules...")
+    for filename in os.listdir(internal_dir):
+        if valid_module_file_re.match(filename):
+            module_name = os.path.splitext(filename)[0]
+            log.debug("-- %s", module_name)
+            module_paths.append('.'.join([base_module, module_name]))
+    log.debug("Internal modules to search: %s", module_paths)
+
+    # modules from env variable
+    log.debug("Extracting env var module paths")
+    if sys.platform == "win32":
+        path_sep = ";"
+    else:
+        path_sep = ":"
+    log.debug("-- path sep: %s", path_sep)
+    if dir_env_var in os.environ:
+        env_var_module_paths = os.environ[dir_env_var].split(path_sep)
+        # strip out empty strings
+        env_var_module_paths = [p for p in env_var_module_paths if p]
+        log.debug("Additional module paths specified in env var: %s",
+                  env_var_module_paths)
+        module_paths.extend(env_var_module_paths)
+    else:
+        log.debug("No paths added from environment.")
 
     log.debug("Getting plugins for module '%s'", base_module)
     class_map = {}
-    for file_name in os.listdir(search_dir):
-        if valid_module_file_re.match(file_name):
-            log.debug("Examining module file: %s", file_name)
-            module_name = os.path.splitext(file_name)[0]
-            # We want any exception this might throw to continue up. If a module
-            # in the directory is not importable, the user should know.
-            try:
-                module = importlib.import_module('.%s' % module_name,
-                                                 package=base_module)
-            except Exception, ex:
-                log.warn("Failed to import module '%s' due to exception: "
-                         "(%s) %s",
-                         module_name, ex.__class__.__name__, str(ex))
-                continue
-            if reload_modules:
-                # Invoke reload in case the module changed between imports.
-                module = reload(module)
+    for module_path in module_paths:
+        log.debug("Examining module: %s", module_path)
+        # We want any exception this might throw to continue up. If a module
+        # in the directory is not importable, the user should know.
+        try:
+            module = importlib.import_module(module_path)
+        except Exception, ex:
+            log.warn("[%s] Failed to import module due to exception: "
+                     "(%s) %s",
+                     module_path, ex.__class__.__name__, str(ex))
+            continue
+        if reload_modules:
+            # Invoke reload in case the module changed between imports.
+            module = reload(module)
+            if module is None:
+                raise RuntimeError("[%s] Failed to reload"
+                                   % module_path)
 
-            # Find valid classes in the discovered module by:
-            classes = []
-            if hasattr(module, helper_var):
-                # Looking for magic variable for import guidance
-                classes = getattr(module, helper_var)
-                if classes is None:
-                    log.debug("[%s] Helper is None, skipping module",
-                              module_name)
-                    classes = []
-                elif (isinstance(classes, collections.Iterable) and
-                      not isinstance(classes, basestring)):
-                    classes = list(classes)
-                    log.debug("[%s] Loaded list of %d class types via helper",
-                              module_name, len(classes))
-                elif issubclass(classes, baseclass_type):
-                    log.debug("[%s] Loaded class type: %s",
-                              module_name, classes.__name__)
-                    classes = [classes]
-                else:
-                    raise RuntimeError("[%s] Helper variable set to an invalid "
-                                       "value: %s", module_name, classes)
-            elif hasattr(module, module.__name__):
-                # If no helper variable, fall back to finding class by the same
-                # name as the module.
-                classes = getattr(module, module.__name__)
-                if not issubclass(classes, baseclass_type):
-                    raise RuntimeError("[%s] Failed to find valid class by "
-                                       "module name fallback. Set helper "
-                                       "variable '%s' to None if this module "
-                                       "shouldn't provide a %s plugin "
-                                       "implementation(s)."
-                                       % (module_name, helper_var,
-                                          baseclass_type.__name__))
-                log.debug('[%s] Loaded class type by module name: %s',
-                          module_name, classes)
+        # Find valid classes in the discovered module by:
+        classes = []
+        if hasattr(module, helper_var):
+            # Looking for magic variable for import guidance
+            classes = getattr(module, helper_var)
+            if classes is None:
+                log.debug("[%s] Helper is None-valued, skipping module",
+                          module_path)
+            elif (isinstance(classes, collections.Iterable) and
+                  not isinstance(classes, basestring)):
+                classes = list(classes)
+                log.debug("[%s] Loaded list of %d class types via helper",
+                          module_path, len(classes))
+            elif issubclass(classes, baseclass_type):
+                log.debug("[%s] Loaded class type: %s",
+                          module_path, classes.__name__)
                 classes = [classes]
             else:
-                log.debug("[%s] Skipping module (no helper variable / no "
-                          "module-named class)", module_name)
+                raise RuntimeError("[%s] Helper variable set to an invalid "
+                                   "value: %s", module_path, classes)
+        else:
+            # Scan module valid attributes for classes that descend from the
+            # given base-class.
+            for attr_name in dir(module):
+                if valid_attribute_re.match(attr_name):
+                    log.debug("[%s] Checking out attribute '%s'", module_path,
+                              attr_name)
+                    attr = getattr(module, attr_name)
+                    if isinstance(attr, type) and \
+                            attr is not baseclass_type and \
+                            issubclass(attr, baseclass_type):
+                        log.debug("[%s] -- Found subclass: %s", module_path,
+                                  attr.__name__)
+                        classes.append(attr)
 
-            # Check the validity of the discovered class types
-            for cls in classes:
-                # check that all class types in iterable are types and
-                # are subclasses of the given base-type and plugin interface
-                if not (isinstance(cls, type) and
-                        cls is not baseclass_type and
-                        issubclass(cls, baseclass_type)):
-                    raise RuntimeError("[%s] Found element in list "
-                                       "that is not a class or does "
-                                       "not descend from required base "
-                                       "class '%s': %s"
-                                       % (module_name,
-                                          baseclass_type.__name__,
-                                          cls))
-                # Check if the algorithm reports being usable
-                elif not cls.is_usable():
-                    log.debug('[%s] Class type "%s" reported not usable '
-                              '(skipping).',
-                              module_name, cls.__name__)
-                else:
-                    # Otherwise add it to the output mapping
-                    class_map[cls.__name__] = cls
+        # Check the validity of the discovered class types
+        for cls in classes:
+            # check that all class types in iterable are types and
+            # are subclasses of the given base-type and plugin interface
+            if not (isinstance(cls, type) and
+                    cls is not baseclass_type and
+                    issubclass(cls, baseclass_type)):
+                raise RuntimeError("[%s] Found element in list "
+                                   "that is not a class or does "
+                                   "not descend from required base "
+                                   "class '%s': %s"
+                                   % (module_path,
+                                      baseclass_type.__name__,
+                                      cls))
+            # Check if the algorithm reports being usable
+            elif not cls.is_usable():
+                log.debug('[%s] Class type "%s" reported not usable '
+                          '(skipping).',
+                          module_path, cls.__name__)
+            else:
+                # Otherwise add it to the output mapping
+                class_map[cls.__name__] = cls
 
     return class_map
 

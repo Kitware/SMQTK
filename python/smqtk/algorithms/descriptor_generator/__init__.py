@@ -257,6 +257,7 @@ def get_descriptor_generator_impls(reload_modules=False):
     """
     from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
+    env_var = "DESCRIPTOR_GENERATOR_PATH"
     helper_var = "DESCRIPTOR_GENERATOR_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, DescriptorGenerator,
-                       reload_modules)
+    return get_plugins(__name__, this_dir, env_var, helper_var,
+                       DescriptorGenerator, reload_modules=reload_modules)

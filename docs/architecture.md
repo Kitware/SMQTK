@@ -97,9 +97,10 @@ This allows users to treat instances of structures and algorithms in a generic w
 It lies, of course, to the implementations of these interfaces to provide the concrete functionality.
 
 When creating a new data structure or algorithm interface, the pattern is that each interface is defined inside its own sub-module in the ``__init__.py`` file.
-This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31).
-This helper method looks for modules defined parallel to the ``__init__.py`` file and extracts classes that extend from the specified interface class as specified by a specified helper variable or by matching the file's name to a contained class name.
-See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31) for more information on how plugin modules are discovered.
+This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L68).
+This helper method looks for modules defined parallel to the ``__init__.py`` file as well as classes defined in modules labeled in an environment variable (defined by the specific call to [``get_plugins``](/python/smqtk/utils/plugin.py#L68)).
+The method extracts classes that extend from the specified interface class as specified by a specified helper variable or searching attributes exposed by the module.
+See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L68) for more information on how plugin modules are discovered.
 
 ### Adding a new Interface and Implementation
 For example, lets say we're creating a new data structure interface called ``FooBar``.
@@ -116,22 +117,22 @@ python/
 The ``__init__.py`` file might look something like the following, defining a new abstract class (sets or descends from something that sets ``__metaclass__ = abc.ABCMeta``):
 
 ```python
-import abc
 from smqtk.utils.configurable_interface import Configurable
 
 class FooBar (Configurable):
     """
     Some documentation on what this does.
     """
-    # Interface methods and/or abstract functionality here
+    # Interface methods and/or abstract functionality here. See the abc module.
 
 def get_foo_bar_impls(reload_modules=False):
     import os.path as osp
     from smqtk.utils.plugin import get_plugins
     this_dir = osp.abspath(osp.dirname(__file__))
+    env_var = 'FOO_BAR_PATH'
     helper_var = 'FOO_BAR_CLASS'
-    return get_plugins(__name__, this_dir, helper_var, CodeIndex, None,
-                       reload_modules)
+    return get_plugins(__name__, this_dir, env_var, helper_var, FooBar,
+                       reload_modules=reload_modules)
 ```
 
 In order to allow for implementations of an interface to to be configurable, as well allowing for implementations used to be determined at configuration time, new interfaces should descend from the ``Configurable`` interface class.

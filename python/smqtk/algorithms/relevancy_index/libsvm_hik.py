@@ -188,12 +188,14 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             train_labels.append(+1)
             train_vectors.append(d.vector().tolist())
             num_pos += 1
+        self._log.debug("Positives given: %d", num_pos)
 
         # When no negative examples are given, naively pick most distant example
         # in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
         if not neg:
-            self._log.info("Auto-selecting negative examples.")
+            self._log.info("Auto-selecting negative examples. (%d per positive)",
+                           self._autoneg_select_ratio)
             # ``train_vectors`` only composed of positive examples at this point
             for p in pos:
                 # where d is the distance vector to descriptor elements in cache
@@ -202,21 +204,21 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 # Scan vector for max distance index
                 # - Allow variable number of maximally distance descriptors to
                 #   be picked per positive.
-                m_set = {}
-                m_val = -1
+                m_set = {}  # track most distance neighbors
+                m_val = -float('inf')  # track smallest distance of most distant neighbors
                 for i in xrange(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i
                         if len(m_set) > self._autoneg_select_ratio:
                             if m_val in m_set:
                                 del m_set[m_val]
-                            m_val = min(m_set)
+                        m_val = min(m_set)
                 for i in m_set.itervalues():
                     neg_autoselect.add(self._descr_cache[i])
             # Remove any positive examples from auto-selected results
             neg_autoselect.difference_update(pos)
-            self._log.debug("Auto-selected negative descriptors: %s",
-                            neg_autoselect)
+            self._log.debug("Auto-selected negative descriptors [%d]: %s",
+                            len(neg_autoselect), neg_autoselect)
 
         num_neg = 0
         for d in neg:

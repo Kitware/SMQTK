@@ -72,7 +72,7 @@ class DataMemorySet (DataSet):
     def cache(self):
         if self.file_cache:
             with self._element_map_lock:
-                with SimpleTimer("Caching memory data-set table", self._log):
+                with SimpleTimer("Caching memory data-set table", self._log.info):
                     with open(self.file_cache, 'wb') as f:
                         cPickle.dump(self._element_map, f)
 
@@ -129,7 +129,7 @@ class DataMemorySet (DataSet):
         """
         with self._element_map_lock:
             for e in elems:
-                assert isinstance(e, DataElement)
+                assert isinstance(e, DataElement), "Expected DataElement instance, got '%s' instance instead" % type(e)
                 self._element_map[e.uuid()] = e
             self.cache()
 

@@ -1,5 +1,7 @@
 import logging
 import multiprocessing
+import multiprocessing.queues
+import sys
 import time
 
 import numpy
@@ -114,8 +116,24 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         out_q.close()
 
         # All work should be exhausted at this point
-        assert in_q.qsize() == 0
-        assert out_q.qsize() == 0
+        if sys.platform == 'darwin':
+            # qsize doesn't work on OSX
+            # Try to get something from each queue, expecting an empty exception
+            try:
+                in_q.get(block=False)
+            except multiprocessing.queues.Empty:
+                pass
+            else:
+                raise AssertionError("In queue not empty")
+            try:
+                out_q.get(block=False)
+            except multiprocessing.queues.Empty:
+                pass
+            else:
+                raise AssertionError("Out queue not empty")
+        else:
+            assert in_q.qsize() == 0, "In queue not empty"
+            assert out_q.qsize() == 0, "Out queue not empty"
 
         # Shutdown workers
         # - Workers should exit upon getting a None packet

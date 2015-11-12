@@ -13,7 +13,6 @@ from smqtk.utils.file_utils import iter_csv_file
 __author__ = 'paul.tunison@kitware.com'
 
 
-
 class CaffeDefaultImageNet (DescriptorGenerator):
     """
     Descriptor generator using the pre-trained AlexNet CNN network, yielding
@@ -36,6 +35,8 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
     """
 
+    CNN_EXE = 'cnn_feature_extractor'
+
     PROTOTEXT_TEMPLATE = jinja2.Template(
         open(os.path.join(os.path.dirname(__file__),
                           "cnn_config.prototxt.tmpl")).read()
@@ -43,27 +44,51 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
     @classmethod
     def is_usable(cls):
-        # Try to call the executable which needs to be on the PATH
-        return True
+        log = cls.logger()
+
+        if not hasattr(CaffeDefaultImageNet, "_is_usable_cache"):
+            CaffeDefaultImageNet._is_usable_cache = True
+
+            try:
+                subprocess.call([cls.CNN_EXE],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except OSError:
+                log.warn("Could not location Caffe CNN descriptor generation "
+                         "executable (\'%s\'). Make sure that SMQTK was build "
+                         "successfully with the Caffe CNN executable option "
+                         "turned ON." % cls.CNN_EXE)
+                CaffeDefaultImageNet._is_usable_cache = False
+
+        return CaffeDefaultImageNet._is_usable_cache
 
     def __init__(self, blvc_reference_caffenet_model, image_mean_binary,
                  gpu_batch_size,
                  layer_extraction='fc7',
                  temp_directory=None,
                  force_gpu=False,
-                 cnn_exe='cnn_feature_extractor'):
+                 cnn_exe=None):
         """
         :param blvc_reference_caffenet_model: Path to the BVLC model file.
+
         :param image_mean_binary: Path to the ImageNet image mean binary file.
+
         :param gpu_batch_size: Number of concurrent images to send to the GPU at
-            a time. This is dependent on the RAM available to your GPU.
+            a time. This is dependent on the RAM available to your GPU. If this
+            is set too high, the executable may segfault due to an out-of-memory
+            failure.
+
         :param layer_extraction: Layer of the CNN to extract as the feature
             vector.
+
         :param temp_directory: Optional directory to store temporary working
             files.
+
         :param force_gpu: Force CNN computation on the GPU. Executable must be
             built with this functionality enabled.
-        :param cnn_exe: Custom name or path to the executable to use.
+
+        :param cnn_exe: Custom name or path to the executable to use. When None
+            we use the default executable name specified on the class in
+            ``CNN_EXE``.
 
         """
         self.blvc_reference_caffenet_model_fp = blvc_reference_caffenet_model
@@ -72,7 +97,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         self.layer_extraction = layer_extraction
         self.temp_directory = temp_directory
         self.force_gpu = force_gpu
-        self.cnn_exe = cnn_exe
+        self.cnn_exe = cnn_exe or self.CNN_EXE
 
     def get_config(self):
         return {

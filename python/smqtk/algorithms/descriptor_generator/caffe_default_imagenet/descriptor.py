@@ -1,8 +1,9 @@
-import tempfile
+import logging
 import multiprocessing
 import multiprocessing.pool
 import os
 import subprocess
+import tempfile
 
 import jinja2
 
@@ -32,6 +33,8 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
     This implementation is currently intended to be run on a GPU, though it may
     work on CPU-only caffe installations.
+
+    TODO: Possibly add auto-download mechanics when model/mean not given/found?
 
     """
 
@@ -228,24 +231,32 @@ class CaffeDefaultImageNet (DescriptorGenerator):
             # Split keys into two batches:
             #   - one evenly divisible by configured GPU batch size
             #   - remaining keys (tail)
-            main_batch_size = self.gpu_batch_size * (len(key_queue) // self.gpu_batch_size)
-            main_vectors = \
-                self._compute_even_batch(key_queue[:main_batch_size],
-                                         data_elements, descr_elements,
-                                         self.gpu_batch_size, procs)
-            # Assigning vectors to appropriate descriptors
-            for k, v in zip(key_queue[:main_batch_size], main_vectors):
-                descr_elements[k].set_vector(v)
+            tail_size = len(key_queue) % self.gpu_batch_size
+            main_size = len(key_queue) - tail_size
+            assert main_size + tail_size == len(key_queue)
+
+            if main_size:
+                self._log.debug("Computing main batch: %d/%d",
+                                main_size, len(key_queue))
+                main_vectors = \
+                    self._compute_even_batch(key_queue[:main_size],
+                                             data_elements, descr_elements,
+                                             self.gpu_batch_size, procs)
+                # Assigning vectors to appropriate descriptors
+                for k, v in zip(key_queue[:main_size], main_vectors):
+                    descr_elements[k].set_vector(v)
 
             # Compute trailing keys if the total queue wasn't evenly divisible
             # by the GPU batch size.
-            if main_batch_size != len(key_queue):
-                tail_size = len(key_queue) - main_batch_size
+            if tail_size:
+                self._log.debug("Computing tail batch: %d/%d",
+                                tail_size, len(key_queue))
                 tail_vectors = self._compute_even_batch(key_queue[-tail_size:],
                                                         data_elements,
                                                         descr_elements,
                                                         tail_size, procs)
-                main_vectors.extend(tail_vectors)
+                for k, v in zip(key_queue[-tail_size:], tail_vectors):
+                    descr_elements[k].set_vector(v)
 
         return dict((data_elements[k], descr_elements[k])
                     for k in data_elements)
@@ -261,6 +272,10 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                                          self.temp_directory)[1]
         prototxt_filepath = tempfile.mkstemp('.prototxt', self.name+'.',
                                              self.temp_directory)[1]
+        output_filebase = tempfile.mkstemp(prefix=self.name+'.',
+                                           dir=self.temp_directory)[1]
+        os.remove(output_filebase)
+        output_csv = output_filebase + '.csv'
 
         try:
             self._log.debug("Writing temp files (threaded)")
@@ -272,7 +287,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                 raise ValueError("GPU batch size does not evenly divide ")
             mini_batch_size = len(keys) // gpu_batch_size
 
-            self._log.debug("make image list file")
+            self._log.debug("make image list file: %s", list_filepath)
             with open(list_filepath, 'w') as list_file:
                 for k in keys:
                     # The ``write_temp`` call here is O(1) because it has
@@ -282,7 +297,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                         % data_elements[k].write_temp(self.temp_directory)
                     )
 
-            self._log.debug("Generate prototxt file")
+            self._log.debug("Generate prototxt file: %s", prototxt_filepath)
             prototxt_str = self.PROTOTEXT_TEMPLATE.render(**{
                 "image_mean_filepath": self.image_mean_binary_fp,
                 "image_filelist_filepath": list_filepath,
@@ -292,12 +307,8 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                 f.write(prototxt_str)
 
             self._log.debug("Computing descriptors")
-            output_filebase = tempfile.mkstemp(prefix=self.name+'.',
-                                               dir=self.temp_directory)[1]
-            os.remove(output_filebase)
             # The expected output CSV file path that will actually get
             # generated.
-            output_csv = output_filebase + '.csv'
             call_args = [
                 self.cnn_exe, self.blvc_reference_caffenet_model_fp,
                 prototxt_filepath, self.layer_extraction, output_filebase,
@@ -307,8 +318,13 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                 call_args.append("GPU")
             self._log.debug("CNN call args: %s", call_args)
 
-            proc_cnn = subprocess.Popen(call_args)
-            rc = proc_cnn.wait()
+            pipe = subprocess.PIPE
+            if self.logger().isEnabledFor(logging.DEBUG):
+                # have process push output to console
+                pipe = None
+            proc_cnn = subprocess.Popen(call_args, stdout=pipe, stderr=pipe)
+            proc_cnn.communicate()
+            rc = proc_cnn.poll()
             if rc:
                 raise RuntimeError("Failed CNN descriptor generation "
                                    "execution with return code: %d"
@@ -325,10 +341,12 @@ class CaffeDefaultImageNet (DescriptorGenerator):
             p.close()
             p.join()
 
-            if list_filepath:
+            if os.path.isfile(list_filepath):
                 os.remove(list_filepath)
-            if prototxt_filepath:
+            if os.path.isfile(prototxt_filepath):
                 os.remove(prototxt_filepath)
+            if os.path.isfile(output_csv):
+                os.remove(output_csv)
 
     @staticmethod
     def _async_write_temp(packet):

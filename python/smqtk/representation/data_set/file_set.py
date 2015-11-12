@@ -74,7 +74,7 @@ class DataFileSet (DataSet):
                 # if the path doesn't have the configured split chunking value,
                 # it doesn't belong to this data set
                 seg = osp.dirname(osp.relpath(fp, self._root_dir)).split(os.sep)
-                if len(seg) == self._uuid_chunk:
+                if not self._uuid_chunk or len(seg) == self._uuid_chunk:
                     yield fp
 
     def _uuid_from_fp(self, fp):
@@ -84,6 +84,10 @@ class DataFileSet (DataSet):
         """
         Return the containing directory for something with the given UUID value
         """
+        if not self._uuid_chunk:
+            # No sub-directory storage configured
+            return self._root_dir
+
         return osp.join(self._root_dir,
                         *partition_string(uuid, self._uuid_chunk))
 

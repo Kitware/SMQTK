@@ -35,7 +35,8 @@ __author__ = 'paul.tunison@kitware.com'
 # Setup logging
 #
 if not logging.getLogger().handlers:
-    bin_utils.initialize_logging(logging.getLogger(), logging.INFO)
+    bin_utils.initialize_logging(logging.getLogger(), logging.DEBUG)
+log = logging.getLogger("smqtk.scripts.iqr_app_model_generation")
 
 
 #
@@ -83,10 +84,7 @@ rel_index_config = search_app_iqr_config['rel_index_config']
 
 # Configure DescriptorElementFactory instance, which defines what implementation
 # of DescriptorElement to use for storing generated descriptor vectors below.
-descriptor_elem_factory_config = {
-    'DescriptorMemoryElement': {},
-    'type': 'DescriptorMemoryElement'
-}
+descriptor_elem_factory_config = search_app_iqr_config['descriptor_factory']
 
 
 #

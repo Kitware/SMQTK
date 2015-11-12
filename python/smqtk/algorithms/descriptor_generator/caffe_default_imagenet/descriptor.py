@@ -214,6 +214,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
+        self._log.debug("Given %d data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
         if len(data_elements) < (procs or multiprocessing.cpu_count()):
@@ -226,6 +227,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         for d in descr_elements.itervalues():
             if overwrite or not d.has_vector():
                 key_queue.append(d.uuid())
+        self._log.debug("Elements for processing: %d", len(key_queue))
 
         if key_queue:
             # Split keys into two batches:

@@ -75,7 +75,15 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         self.cnn_exe = cnn_exe
 
     def get_config(self):
-        return {}
+        return {
+            "blvc_reference_caffenet_model_fp": self.blvc_reference_caffenet_model_fp,
+            "image_mean_binary_fp": self.image_mean_binary_fp,
+            "gpu_batch_size": self.gpu_batch_size,
+            "layer_extraction": self.layer_extraction,
+            "temp_directory": self.temp_directory,
+            "force_gpu": self.force_gpu,
+            "cnn_exe": self.cnn_exe,
+        }
 
     def valid_content_types(self):
         return {
@@ -85,10 +93,9 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         }
 
     def _compute_descriptor(self, data):
-        # For actual implementation, see the
-        # bin/scripts/runners/memex_hbase_gpu_machine/compute.py file.
-        raise NotImplementedError("Shouldn't get here as compute_descriptor is "
-                                  "being overridden")
+        raise NotImplementedError("Shouldn't get here as "
+                                  "compute_descriptor[_async] is being "
+                                  "overridden")
 
     def compute_descriptor(self, data, descr_factory, overwrite=False):
         """

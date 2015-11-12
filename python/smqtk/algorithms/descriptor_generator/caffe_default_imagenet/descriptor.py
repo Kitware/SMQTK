@@ -275,9 +275,11 @@ class CaffeDefaultImageNet (DescriptorGenerator):
             self._log.debug("make image list file")
             with open(list_filepath, 'w') as list_file:
                 for k in keys:
+                    # The ``write_temp`` call here is O(1) because it has
+                    # already been written via the async temp write above.
                     list_file.write(
-                        data_elements[k].write_temp(self.temp_directory) +
-                        '\n'
+                        "%s 0\n"
+                        % data_elements[k].write_temp(self.temp_directory)
                     )
 
             self._log.debug("Generate prototxt file")

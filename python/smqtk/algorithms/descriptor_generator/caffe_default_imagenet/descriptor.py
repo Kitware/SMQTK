@@ -101,8 +101,8 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
     def get_config(self):
         return {
-            "blvc_reference_caffenet_model_fp": self.blvc_reference_caffenet_model_fp,
-            "image_mean_binary_fp": self.image_mean_binary_fp,
+            "blvc_reference_caffenet_model": self.blvc_reference_caffenet_model_fp,
+            "image_mean_binary": self.image_mean_binary_fp,
             "gpu_batch_size": self.gpu_batch_size,
             "layer_extraction": self.layer_extraction,
             "temp_directory": self.temp_directory,

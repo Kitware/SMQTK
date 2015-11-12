@@ -108,14 +108,15 @@ class DescriptorGenerator (SmqtkAlgorithm):
             implementation such storage.
         :type overwrite: bool
 
-        :param parallel: Optionally specification of how many processors to use
+        :param procs: Optional specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
-        :type parallel: int
+        :type procs: int
 
         :param pool_type: multiprocessing pool type to use. If no provided, we
-            use a normal multiprocessing.pool.Pool instance.
-        :type pool_type: type
+            use a normal multiprocessing.pool.Pool instance. By default we use
+            the ThreadPool type when None.
+        :type pool_type: type | None
 
         :return: Mapping of input DataElement instances to the computed
             descriptor element.
@@ -135,9 +136,9 @@ class DescriptorGenerator (SmqtkAlgorithm):
         de_map = {}
 
         # Queue up descriptor generation for descriptor elements that
-        parallel = kwds.get('parallel', None)
-        pool_t = kwds.get('pool_type', multiprocessing.pool.ThreadPool)
-        pool = pool_t(processes=parallel)
+        procs = kwds.get("procs", None)
+        pool_t = kwds.get("pool_type", multiprocessing.pool.ThreadPool)
+        pool = pool_t(processes=procs)
         with SimpleTimer("Queuing descriptor computation...", self._log.debug):
             for d in data_iter:
                 de_map[d] = descr_factory.new_descriptor(self.name, d.uuid())

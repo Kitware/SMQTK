@@ -161,6 +161,9 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         return
 
 
+from ._io import *
+
+
 def get_descriptor_element_impls():
     """
     Discover and return Descriptor implementation classes found in the plugin

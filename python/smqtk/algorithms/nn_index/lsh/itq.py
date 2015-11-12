@@ -3,6 +3,9 @@ Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 """
 
 import heapq
+import itertools
+import multiprocessing
+import multiprocessing.pool
 import os.path as osp
 
 import numpy
@@ -11,6 +14,8 @@ import numpy.matlib
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.code_index import get_code_index_impls
 from smqtk.representation.code_index.memory import MemoryCodeIndex
+from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.utils import (
     bit_utils,
     distance_functions,
@@ -358,16 +363,21 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         if self._rand_seed:
             numpy.random.seed(self._rand_seed)
 
-        with SimpleTimer("Creating descriptor matrix", self._log.info):
-            x = []
+        with SimpleTimer("Creating descriptor cache", self._log.info):
             #: :type: list[smqtk.representation.DescriptorElement]
             descr_cache = []
             for d in descriptors:
                 descr_cache.append(d)
-                x.append(d.vector())
-            if not x:
+            if not descr_cache:
                 raise ValueError("No descriptors given!")
-            x = numpy.array(x)
+        with SimpleTimer("Creating matrix of descriptors for training",
+                         self._log.info):
+            # Get non-memory vectors on separate processes and aggregate into
+            # matrix.
+            self._log.debug("Input elements: %d", len(descr_cache))
+            self._log.debug("Input elem size: %s", descr_cache[0].vector().size)
+            x = elements_to_matrix(descr_cache)
+            self._log.debug("descriptor matrix shape: %s", x.shape)
 
         with SimpleTimer("Centering data", self._log.info):
             # center the data, VERY IMPORTANT for ITQ to work
@@ -485,6 +495,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # - a code may associate with multiple hits, but its a safe assumption
         #   that if we get the top `n` codes, which exist because there is at
         #   least one element in association with it,
+        self._log.debug("fetching nearest %d codes", n)
         code_set = self._code_index.codes()
         # TODO: Optimize this step
         #: :type: list[int]
@@ -497,6 +508,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         # Collect descriptors from subsequently farther away bins until we have
         # >= `n` descriptors, which we will more finely sort after this.
         #: :type: list[smqtk.representation.DescriptorElement]
+        self._log.debug("Collecting descriptors from near codes")
         neighbors = []
         termination_count = min(n, self.count())
         for nc in near_codes:
@@ -507,13 +519,15 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
                 break
 
         # Compute fine-grain distance measurements for collected elements + sort
-        # for d_elem in neighbors:
-        #     distances.append(self._dist_func(d_vec, d_elem.vector()))
-        def comp_neighbor_dist(neighbor):
-            return self._dist_func(d_vec, neighbor.vector())
-        distances = map(comp_neighbor_dist, neighbors)
+        self._log.debug("elements to numpy")
+        neighbor_vectors = elements_to_matrix(neighbors)
+        self._log.debug("Sorting descriptors: %d", len(neighbors))
+        def comp_neighbor_dist(neighbor_vec):
+            return self._dist_func(d_vec, neighbor_vec)
+        distances = map(comp_neighbor_dist, neighbor_vectors)
 
         # Sort by distance, return top n
+        self._log.debug("Forming output")
         ordered = sorted(zip(neighbors, distances), key=lambda p: p[1])
         neighbors, distances = zip(*(ordered[:n]))
         return neighbors, distances

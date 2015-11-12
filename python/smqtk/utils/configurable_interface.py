@@ -1,5 +1,6 @@
 import abc
 import inspect
+import types
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -32,19 +33,23 @@ class Configurable (object):
         :rtype: dict
 
         """
-        argspec = inspect.getargspec(cls.__init__)
+        if isinstance(cls.__init__, types.MethodType):
+            argspec = inspect.getargspec(cls.__init__)
 
-        # Ignores potential *args or **kwargs present
-        params = argspec.args[1:]  # skipping ``self`` arg
-        num_params = len(params)
+            # Ignores potential *args or **kwargs present
+            params = argspec.args[1:]  # skipping ``self`` arg
+            num_params = len(params)
 
-        if argspec.defaults:
-            num_defaults = len(argspec.defaults)
-            vals = ((None,) * (num_params - num_defaults) + argspec.defaults)
-        else:
-            vals = (None,) * num_params
+            if argspec.defaults:
+                num_defaults = len(argspec.defaults)
+                vals = ((None,) * (num_params - num_defaults) + argspec.defaults)
+            else:
+                vals = (None,) * num_params
 
-        return dict(zip(params, vals))
+            return dict(zip(params, vals))
+
+        # No constructor explicitly defined on this class
+        return {}
 
     @classmethod
     def from_config(cls, config_dict):

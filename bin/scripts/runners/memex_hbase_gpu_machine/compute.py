@@ -378,7 +378,7 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
         })
         fd, protoconfig_filepath = tempfile.mkstemp(suffix='.prototxt', dir=TEMP_DIR)
         os.close(fd)
-        with open(protoconfig_filepath, 'w')  as ofile:
+        with open(protoconfig_filepath, 'w') as ofile:
             ofile.write(config_str)
 
         # Call executable

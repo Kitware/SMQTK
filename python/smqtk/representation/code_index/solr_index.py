@@ -168,11 +168,22 @@ class SolrCodeIndex (CodeIndex):
         :return: Set of code integers currently used in this code index.
         :rtype: set[int]
         """
+        return set(self.iter_codes())
+
+    def iter_codes(self):
+        """
+        Iterate over code contained in this index in an arbitrary order.
+
+        :return: Generator that yields integer code keys
+        :rtype: collections.Iterator[int|long]
+
+        """
         r = self.solr.select("%s:%s" % (self.idx_uuid_field, self.uuid),
                              rows=0,
                              facet='true', facet_field=self.code_field)
         val2count = r.facet_counts['facet_fields'][self.code_field]
-        return set(int(k) for k in val2count)
+        for k in val2count:
+            yield int(k)
 
     def _doc_for_code_descr(self, code, descr):
         """

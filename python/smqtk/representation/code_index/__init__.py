@@ -40,6 +40,16 @@ class CodeIndex (SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
+    def iter_codes(self):
+        """
+        Iterate over code contained in this index in an arbitrary order.
+
+        :return: Generator that yields integer code keys
+        :rtype: collections.Iterator[int|long]
+
+        """
+
+    @abc.abstractmethod
     def add_descriptor(self, code, descriptor):
         """
         Add a descriptor to this index given a matching small-code.

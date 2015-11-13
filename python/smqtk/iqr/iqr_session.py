@@ -135,6 +135,11 @@ class IqrSession (SmqtkObject):
         #   nn_index instance.
         # Added external data/descriptors not added to this index.
         self.working_index = DescriptorMemoryIndex()
+        
+        # Initialize book-keeping set so we know what positive descriptors
+        # UUIDs we've used to query the neighbor index with already.
+        #: :type: set[collections.Hashable]
+        self._wi_init_seeds = set()
 
         # Descriptor references from our index (above) that have been
         #   adjudicated.
@@ -275,21 +280,24 @@ class IqrSession (SmqtkObject):
                 len(self.positive_descriptors) <= 0:
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
-        # Clear the current working index so we can put different things in it
-        self._log.info("Clearing working index")
-        self.working_index.clear()
+        # Not clearing index because this step is intended to be additive
 
         # build up new working index
+        # TODO: Only query using new positives since previous queries
         for p in self.ex_pos_descriptors.itervalues():
-            self._log.info("Querying neighbors to: %s", p)
-            self.working_index.add_many_descriptors(
-                self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
-            )
+            if p.uuid() not in self._wi_init_seeds:
+                self._log.info("Querying neighbors to: %s", p)
+                self.working_index.add_many_descriptors(
+                    self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
+                )
+                self._wi_init_seeds.add(p.uuid())
         for p in self.positive_descriptors:
-            self._log.info("Querying neighbors to: %s", p)
-            self.working_index.add_many_descriptors(
-                self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
-            )
+            if p.uuid() not in self._wi_init_seeds:
+                self._log.info("Querying neighbors to: %s", p)
+                self.working_index.add_many_descriptors(
+                    self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
+                )
+                self._wi_init_seeds.add(p.uuid())
 
         # Make new relevancy index
         self._log.info("Creating new relevancy index over working index.")

@@ -47,6 +47,18 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         return "%s{uuid: %s, content_type: '%s'}" \
                % (self.__class__.__name__, self.uuid(), self.content_type())
 
+    def _clear_no_exist(self):
+        """
+        Clear paths in temp list that don't exist on the system until we
+        encounter one that does.
+        """
+        exist_found = False
+        while not exist_found and self._temp_filepath_stack:
+            fp = self._temp_filepath_stack.pop()
+            if osp.isfile(fp):
+                self._temp_filepath_stack.append(fp)
+                exist_found = True
+
     def md5(self):
         """
         :return: MD5 hex string of the data content.
@@ -106,6 +118,10 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
             with open(fp, 'wb') as f:
                 f.write(self.get_bytes())
             return fp
+
+        # Clear out paths, from the back, that don't exist.
+        # Stops when it finds something that exists.
+        self._clear_no_exist()
 
         if temp_dir:
             abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))

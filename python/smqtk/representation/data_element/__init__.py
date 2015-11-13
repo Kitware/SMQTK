@@ -1,4 +1,5 @@
 import abc
+from collections import deque
 import hashlib
 import mimetypes
 import os
@@ -46,6 +47,18 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     def __repr__(self):
         return "%s{uuid: %s, content_type: '%s'}" \
                % (self.__class__.__name__, self.uuid(), self.content_type())
+
+    def _clear_no_exist(self):
+        """
+        Clear paths in temp list that don't exist on the system until we
+        encounter one that does.
+        """
+        no_exist_paths = deque()
+        for fp in self._temp_filepath_stack:
+            if not osp.isfile(fp):
+                no_exist_paths.append(fp)
+        for fp in no_exist_paths:
+            self._temp_filepath_stack.remove(fp)
 
     def md5(self):
         """
@@ -106,6 +119,10 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
             with open(fp, 'wb') as f:
                 f.write(self.get_bytes())
             return fp
+
+        # Clear out paths, from the back, that don't exist.
+        # Stops when it finds something that exists.
+        self._clear_no_exist()
 
         if temp_dir:
             abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))

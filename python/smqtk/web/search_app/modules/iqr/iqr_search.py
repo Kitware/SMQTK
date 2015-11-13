@@ -221,6 +221,7 @@ class IqrSearch (flask.Blueprint, Configurable):
 
         # Cache mapping of written static files for data elements
         self._static_cache = {}
+        self._static_cache_element = {}
 
         #
         # Routing
@@ -317,6 +318,7 @@ class IqrSearch (flask.Blueprint, Configurable):
                 if de.uuid() not in self._static_cache:
                     self._static_cache[de.uuid()] = \
                         de.write_temp(self._static_data_dir)
+                    self._static_cache_element[de.uuid()] = de
 
                 # Need to format links by transforming the generated paths to
                 # something usable by webpage:

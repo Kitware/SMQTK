@@ -48,18 +48,29 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_false(mock_DataElement_wt.called)
         ntools.assert_equal(fp, expected_filepath)
 
+    @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTempOverride_diffDir(self, mock_open, mock_os_open,
-                                       mock_os_close, mock_fcntl, mock_scd):
+                                       mock_os_close, mock_fcntl, mock_scd,
+                                       mock_isfile):
         source_filepath = '/path/to/file.png'
         target_dir = '/some/other/dir'
 
         d = DataFileElement(source_filepath)
         fp = d.write_temp(temp_dir=target_dir)
+
+        # Custom side-effect for os.path.isfile for simulated files
+        simulate = True
+        def osp_isfile_side_effect(path):
+            if simulate and path == fp:
+                return True
+            else:
+                return False
+        mock_isfile.side_effect = osp_isfile_side_effect
 
         ntools.assert_not_equal(fp, source_filepath)
         ntools.assert_equal(os.path.dirname(fp), target_dir)
@@ -79,6 +90,9 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_equal(os.path.dirname(fp4), target2)
         ntools.assert_not_equal(fp, fp4)
         ntools.assert_equal(len(d._temp_filepath_stack), 2)
+
+        # Restore normal os.path.isfile functionality
+        simulate = False
 
     def test_cleanTemp(self):
         # a write temp and clean temp should not affect original file

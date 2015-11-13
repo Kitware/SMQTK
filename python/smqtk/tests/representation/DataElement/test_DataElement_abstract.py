@@ -126,6 +126,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_not_equal(osp.dirname(fp), tempfile.gettempdir())
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
+    @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
@@ -133,8 +134,10 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_noDir(self,
                                          mock_open, mock_os_open, mock_os_close,
-                                         mock_fcntl, mock_scd):
-        # existing temps, no specific dir
+                                         mock_fcntl, mock_scd, mock_isfile):
+        # Pretend we have existing temps. Will to "write" a temp file to no
+        # specific dir, which should not write anything new and just return the
+        # last path in the list.
         prev_0 = '/tmp/file.txt'
         prev_1 = '/tmp/file_two.png'
 
@@ -142,11 +145,25 @@ class TestDataElementAbstract (unittest.TestCase):
         de._temp_filepath_stack.append(prev_0)
         de._temp_filepath_stack.append(prev_1)
 
+        # Make sure os.path.isfile returns true so we think things in temp stack
+        # exist.
+        simulate = True
+        def osp_isfile_se(path):
+            if simulate and path in {prev_0, prev_1}:
+                return True
+            else:
+                return False
+        mock_isfile.side_effect = osp_isfile_se
+
         fp = de.write_temp()
 
         ntools.assert_false(mock_scd.called)
         ntools.assert_false(mock_open.called)
         ntools.assert_equal(fp, prev_1)
+
+        # _temp_filepath_stack files don't exist, so make sure isfile returns
+        # false so clean_temp doesn't try to remove files that don't exist.
+        simulate = False
 
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
@@ -172,6 +189,7 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_true(mock_open.called)
         ntools.assert_equal(osp.dirname(fp), target_dir)
 
+    @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
@@ -179,11 +197,24 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_givenExistingDir(self, mock_open,
                                                     mock_os_open, mock_os_close,
-                                                    mock_fcntl, mock_scd):
-        # existing temps, given specific dir already in stack
+                                                    mock_fcntl, mock_scd,
+                                                    mock_isfile):
+        # Pretend these files already exist as written temp files.
+        # We test that write_temp with a target directory yields a previously
+        #   "written" temp file.
+        #
+        # that given specific dir already in stack
         prev_0 = '/dir1/file.txt'
         prev_1 = '/tmp/things/file_two.png'
         prev_2 = '/some/specific/dir'
+
+        simulate = True
+        def osp_isfile_se(path):
+            if simulate and path in {prev_0, prev_1, prev_2}:
+                return True
+            else:
+                return False
+        mock_isfile.side_effect = osp_isfile_se
 
         de = DummyDataElement()
         de._temp_filepath_stack.append(prev_0)
@@ -192,11 +223,19 @@ class TestDataElementAbstract (unittest.TestCase):
 
         target_dir = "/tmp/things"
 
+        # Make sure os.path.isfile returns true so we think things in temp stack
+        # exist.
+        mock_isfile.return_value = True
+
         fp = de.write_temp(temp_dir=target_dir)
 
         ntools.assert_false(mock_scd.called)
         ntools.assert_false(mock_open.called)
         ntools.assert_equal(fp, prev_1)
+
+        # _temp_filepath_stack files don't exist, so make sure isfile returns
+        # false so clean_temp doesn't try to remove files that don't exist.
+        simulate = False
 
     @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_noTemp(self, mock_os):

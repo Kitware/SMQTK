@@ -82,6 +82,17 @@ class MemoryCodeIndex (CodeIndex):
         """
         return set(self._table)
 
+    def iter_codes(self):
+        """
+        Iterate over code contained in this index in an arbitrary order.
+
+        :return: Generator that yields integer code keys
+        :rtype: collections.Iterator[int|long]
+
+        """
+        for k in self._table:
+            yield k
+
     def add_descriptor(self, code, descriptor, no_cache=False):
         """
         Add a descriptor to this index given a matching small-code

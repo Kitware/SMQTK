@@ -1,4 +1,5 @@
 import abc
+from collections import deque
 import hashlib
 import mimetypes
 import os
@@ -52,12 +53,12 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         Clear paths in temp list that don't exist on the system until we
         encounter one that does.
         """
-        exist_found = False
-        while not exist_found and self._temp_filepath_stack:
-            fp = self._temp_filepath_stack.pop()
-            if osp.isfile(fp):
-                self._temp_filepath_stack.append(fp)
-                exist_found = True
+        no_exist_paths = deque()
+        for fp in self._temp_filepath_stack:
+            if not osp.isfile(fp):
+                no_exist_paths.append(fp)
+        for fp in no_exist_paths:
+            self._temp_filepath_stack.remove(fp)
 
     def md5(self):
         """

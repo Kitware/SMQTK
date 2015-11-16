@@ -97,6 +97,7 @@ def get_nn_index_impls(reload_modules=False):
     from smqtk.utils.plugin import get_plugins
     import os
     this_dir = os.path.abspath(os.path.dirname(__file__))
+    env_var = "NN_INDEX_PATH"
     helper_var = "NN_INDEX_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, NearestNeighborsIndex,
-                       reload_modules)
+    return get_plugins(__name__, this_dir, env_var, helper_var,
+                       NearestNeighborsIndex, reload_modules=reload_modules)

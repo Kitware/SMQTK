@@ -127,6 +127,7 @@ def get_code_index_impls(reload_modules=False):
     from smqtk.utils.plugin import get_plugins
 
     this_dir = osp.abspath(osp.dirname(__file__))
+    env_var = 'CODE_INDEX_PATH'
     helper_var = 'CODE_INDEX_CLASS'
-    return get_plugins(__name__, this_dir, helper_var, CodeIndex,
-                       reload_modules)
+    return get_plugins(__name__, this_dir, env_var, helper_var, CodeIndex,
+                       reload_modules=reload_modules)

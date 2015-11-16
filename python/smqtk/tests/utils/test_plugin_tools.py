@@ -18,7 +18,7 @@ def dummy_getter():
     }
 
 
-class TestPluginToos (unittest.TestCase):
+class TestPluginTools (unittest.TestCase):
 
     def test_make_config(self):
         ntools.assert_equal(
@@ -61,6 +61,7 @@ class TestPluginToos (unittest.TestCase):
             'notAnImpl': {}
         }
 
+        #: :type: TestAlgo1
         i = from_plugin_config(test_config, dummy_getter)
         ntools.assert_is_instance(i, TestAlgo1)
         ntools.assert_equal(i.foo, 256)

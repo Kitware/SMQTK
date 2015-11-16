@@ -25,14 +25,15 @@ import logging
 import os
 import re
 import sys
-import types
 
 
 # Template for checking validity of sub-module files
-valid_module_file_re = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
+VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
 
 # Template for checking validity of module attributes
-valid_attribute_re = re.compile("^[a-zA-Z]\w*$")
+VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
+
+OS_ENV_PATH_SEP = (sys.platform == "win32" and ';') or ':'
 
 
 class Pluggable (object):
@@ -65,7 +66,7 @@ class Pluggable (object):
                                   "class '%s'" % cls.__name__)
 
 
-def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
+def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 baseclass_type, warn=True, reload_modules=False):
     """
     Discover and return classes found in the SMQTK internal plugin directory and
@@ -93,9 +94,9 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
     base class type. If none of the above are found, or if an exception occurs,
     the module is skipped.
 
-    :param base_module: SMQTK internal module path in which internal plugin
-        modules are located.
-    :type base_module: str
+    :param base_module_str: SMQTK internal string module path in which internal
+        plugin modules are located.
+    :type base_module_str: str
 
     :param internal_dir: Directory path to where SMQTK internal plugin modules
         are located.
@@ -127,7 +128,7 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
 
     """
     log = logging.getLogger('.'.join([__name__,
-                                      "getPlugins[%s]" % base_module]))
+                                      "getPlugins[%s]" % base_module_str]))
 
     if not issubclass(baseclass_type, Pluggable):
         raise ValueError("Required base-class must descend from the Pluggable "
@@ -140,21 +141,17 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
     # modules nested under internal module
     log.debug("Finding internal modules...")
     for filename in os.listdir(internal_dir):
-        if valid_module_file_re.match(filename):
+        if VALID_MODULE_FILE_RE.match(filename):
             module_name = os.path.splitext(filename)[0]
             log.debug("-- %s", module_name)
-            module_paths.append('.'.join([base_module, module_name]))
+            module_paths.append('.'.join([base_module_str, module_name]))
     log.debug("Internal modules to search: %s", module_paths)
 
     # modules from env variable
     log.debug("Extracting env var module paths")
-    if sys.platform == "win32":
-        path_sep = ";"
-    else:
-        path_sep = ":"
-    log.debug("-- path sep: %s", path_sep)
+    log.debug("-- path sep: %s", OS_ENV_PATH_SEP)
     if dir_env_var in os.environ:
-        env_var_module_paths = os.environ[dir_env_var].split(path_sep)
+        env_var_module_paths = os.environ[dir_env_var].split(OS_ENV_PATH_SEP)
         # strip out empty strings
         env_var_module_paths = [p for p in env_var_module_paths if p]
         log.debug("Additional module paths specified in env var: %s",
@@ -163,7 +160,7 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
     else:
         log.debug("No paths added from environment.")
 
-    log.debug("Getting plugins for module '%s'", base_module)
+    log.debug("Getting plugins for module '%s'", base_module_str)
     class_map = {}
     for module_path in module_paths:
         log.debug("Examining module: %s", module_path)
@@ -172,9 +169,10 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
         try:
             module = importlib.import_module(module_path)
         except Exception, ex:
-            log.warn("[%s] Failed to import module due to exception: "
-                     "(%s) %s",
-                     module_path, ex.__class__.__name__, str(ex))
+            if warn:
+                log.warn("[%s] Failed to import module due to exception: "
+                         "(%s) %s",
+                         module_path, ex.__class__.__name__, str(ex))
             continue
         if reload_modules:
             # Invoke reload in case the module changed between imports.
@@ -191,6 +189,7 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
             if classes is None:
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
+                classes = []
             elif (isinstance(classes, collections.Iterable) and
                   not isinstance(classes, basestring)):
                 classes = list(classes)
@@ -207,15 +206,15 @@ def get_plugins(base_module, internal_dir, dir_env_var, helper_var,
             # Scan module valid attributes for classes that descend from the
             # given base-class.
             for attr_name in dir(module):
-                if valid_attribute_re.match(attr_name):
-                    log.debug("[%s] Checking out attribute '%s'", module_path,
+                if VALUE_ATTRIBUTE_RE.match(attr_name):
+                    log.debug("[%s] Checking attribute '%s'", module_path,
                               attr_name)
                     attr = getattr(module, attr_name)
                     if isinstance(attr, type) and \
                             attr is not baseclass_type and \
                             issubclass(attr, baseclass_type):
-                        log.debug("[%s] -- Found subclass: %s", module_path,
-                                  attr.__name__)
+                        log.debug("[%s] -- Discovered subclass: %s",
+                                  module_path, attr.__name__)
                         classes.append(attr)
 
         # Check the validity of the discovered class types

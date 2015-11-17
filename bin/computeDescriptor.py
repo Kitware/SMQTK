@@ -31,6 +31,23 @@ def cli_parser():
                   "or to an output file if one was specified (in numpy format)."
     parser = argparse.ArgumentParser(description=description)
 
+    parser.add_argument('--overwrite',
+                        action='store_true', default=False,
+                        help="Force descriptor computation even if an "
+                             "existing descriptor vector was "
+                             "discovered based on the given content "
+                             "descriptor type and data combination.")
+    parser.add_argument('-o', '--output-filepath',
+                        help='Optional path to a file to output '
+                             'feature vector to. Otherwise the feature '
+                             'vector is printed to standard out. '
+                             'Output is saved in numpy binary format '
+                             '(.npy suffix recommended).')
+    parser.add_argument('-v', '--verbose',
+                        action='store_true', default=False,
+                        help='Print additional debugging messages. All '
+                             'logging goes to standard error.')
+
     group_configuration = parser.add_argument_group("Configuration")
     group_configuration.add_argument('-c', '--config',
                                      default=None,
@@ -39,25 +56,9 @@ def cli_parser():
     group_configuration.add_argument('--output-config',
                                      default=None,
                                      help='Optional path to output default '
-                                          'JSON configuration to.')
-
-    group_optional = parser.add_argument_group("Optional Parameters")
-    group_optional.add_argument('--overwrite',
-                                action='store_true', default=False,
-                                help="Force descriptor computation even if an "
-                                     "existing descriptor vector was "
-                                     "discovered based on the given content "
-                                     "descriptor type and data combination.")
-    group_optional.add_argument('-o', '--output-filepath',
-                                help='Optional path to a file to output '
-                                     'feature vector to. Otherwise the feature '
-                                     'vector is printed to standard out. '
-                                     'Output is saved in numpy binary format '
-                                     '(.npy suffix recommended).')
-    group_optional.add_argument('-v', '--verbose',
-                                action='store_true', default=False,
-                                help='Print additional debugging messages. All '
-                                     'logging goes to standard error.')
+                                          'JSON configuration to. '
+                                          'This output file should be modified '
+                                          'and used for this executable.')
 
     parser.add_argument("input_file",
                         nargs="?",
@@ -90,7 +91,7 @@ def main():
             log.error("Configuration file path not valid.")
             exit(1)
 
-    bin_utils.output_config(args.output_config, config, log, args.overwrite)
+    bin_utils.output_config(args.output_config, config, log, True)
 
     # Configuration must have been loaded at this point since we can't normally
     # trust the default.

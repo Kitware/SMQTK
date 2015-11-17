@@ -10,6 +10,8 @@ import os
 import time
 import argparse
 
+from smqtk.utils.bin_utils import initialize_logging
+
 
 sf_log = logging.getLogger("smqtk.scan_files")
 is_log = logging.getLogger("smqtk.interval_scan")
@@ -69,20 +71,24 @@ def interval_scan(interval, base_dir, expire_seconds, action):
         scan_files(base_dir, expire_seconds, action)
         time.sleep(interval)
 
+
 def cli_parser():
-    description="Utility to recursively scan and remove files underneath a given directory if they have not been modified for longer than a set amount of time."
+    description = "Utility to recursively scan and remove files underneath a " \
+                  "given directory if they have not been modified for longer " \
+                  "than a set amount of time."
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-d', '--base-dir',
-                      help='Starting directory for scan.')
+                        help='Starting directory for scan.')
     parser.add_argument('-i', '--interval', type=int,
-                      help='Number of seconds between each scan (integer).')
+                        help='Number of seconds between each scan (integer).')
     parser.add_argument('-e', '--expiry', type=int,
-                      help='Number of seconds until a file has "expired" '
-                           '(integer).')
+                        help='Number of seconds until a file has "expired" '
+                             '(integer).')
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                      help='Display more messages (debugging).')
+                        help='Display more messages (debugging).')
 
     return parser
+
 
 def main():
     parser = cli_parser()

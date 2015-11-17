@@ -1,5 +1,4 @@
 livereload
-sphinx-argparse           
-sphinx-prompt            
-sphinx-rtd-theme        
-
+sphinx-argparse
+sphinx-prompt
+sphinx-rtd-theme

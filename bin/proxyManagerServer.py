@@ -17,45 +17,70 @@ authkey = <string>
 
 """
 
+import argparse
+import json
 import logging
 import os.path as osp
 
 from smqtk.utils import bin_utils
-from smqtk.utils import SafeConfigCommentParser
 from smqtk.utils import ProxyManager
 
 
+def default_config():
+    return {
+        "port": 5000,
+        "authkey": "CHANGE_ME",
+    }
+
+
+def cli_parser():
+    description = "Server for hosting proxy manager which hosts proxy " \
+                   "object instances."
+    parser = argparse.ArgumentParser(description=description)
+
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='Add debugging log messages.')
+
+    group_configuration = parser.add_argument_group("Configuration")
+    group_configuration.add_argument('-c', '--config',
+                                     default=None,
+                                     help='Path to the JSON configuration '
+                                          'file.')
+    group_configuration.add_argument('--output-config',
+                                     default=None,
+                                     help='Optional path to output default '
+                                          'JSON configuration to. '
+                                          'This output file should be modified '
+                                          'and used for this executable.')
+
+    return parser
+
+
 def main():
-    parser = bin_utils.SMQTKOptParser()
-    parser.add_option('-c', '--config', type=str,
-                      help='Path to the configuration file.')
-    parser.add_option('-v', '--verbose', action='store_true', default=False,
-                      help='Add debugging log messages.')
-    opts, args = parser.parse_args()
+    parser = cli_parser()
+    args = parser.parse_args()
 
-    bin_utils.initialize_logging(logging.getLogger(),
-                                logging.INFO - (10*opts.verbose))
+    llevel = logging.DEBUG if args.verbose else logging.INFO
+    bin_utils.initialize_logging(logging.getLogger(), llevel)
+    log = logging.getLogger("main")
 
-    config_file = opts.config
-    assert config_file is not None, \
-        "Not given a configuration file for the server!"
-    assert osp.exists(config_file), \
-        "Given config file path does not exist."
-    assert not osp.isdir(config_file), \
-        "Given config file is a directory!"
+    # Merge loaded config with default
+    config = default_config()
+    if args.config:
+        if osp.isfile(args.config):
+            with open(args.config, 'r') as f:
+                config.update(json.load(f))
+        elif not osp.isfile(args.config):
+            log.error("Configuration file path not valid.")
+            exit(1)
 
-    config = SafeConfigCommentParser()
-    parsed = config.read(config_file)
-    assert parsed, "Configuration file not parsed!"
-    section = 'server'
-    assert config.has_section(section), \
-        "No server section found!"
-    assert config.has_option(section, 'port'), \
-        "No port option in config!"
-    assert config.has_option(section, 'authkey'), \
-        "No authkey option in config!"
-    port = config.getint(section, 'port')
-    authkey = config.get(section, 'authkey')
+    bin_utils.output_config(args.output_config, config, log, True)
+
+    # Default config options for this util are valid for running, so no "has
+    # config loaded check here.
+
+    port = int(config['port'])
+    authkey = str(config['authkey'])
 
     mgr = ProxyManager(('', port), authkey)
     mgr.get_server().serve_forever()

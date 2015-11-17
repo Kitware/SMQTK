@@ -3,9 +3,9 @@
 
 """
 
+import argparse
 import json
 import logging
-import argparse
 import os
 
 from flask.ext.basicauth import BasicAuth
@@ -16,70 +16,67 @@ import smqtk.web
 
 
 def cli_parser():
-    description="Runs conforming SMQTK Web Applications."
+    description = "Runs conforming SMQTK Web Applications."
     parser = argparse.ArgumentParser(description=description)
 
     # Application options
-    group_application = parser.add_argument_group("Application selection parameters")
-                                                  
+    group_application = parser.add_argument_group("Application Selection")
     group_application.add_argument('-l', '--list',
-                                 default=False, action="store_true",
-                                 help="List currently available applications "
-                                      "for running")
+                                   default=False, action="store_true",
+                                   help="List currently available applications "
+                                        "for running")
     group_application.add_argument('-a', '--application', default=None,
-                                 help="Label of the web application to run.")
+                                   help="Label of the web application to run.")
 
     # Configuration options
-    group_configuration = parser.add_argument_group( "Options dealing with "
-                                                       "application "
-                                                       "configuration")
-
+    group_configuration = parser.add_argument_group("Configuration")
     group_configuration.add_argument('-c', '--config', default=None,
-                                   help='Path to application JSON '
-                                        'configuration file.')
+                                     help='Path to application JSON '
+                                          'configuration file.')
     group_configuration.add_argument('--output-config', default=None,
-                                   help='Optional path to output default JSON '
-                                        'configuration to.')
+                                     help='Optional path to output default '
+                                          'JSON configuration to.')
     group_configuration.add_argument('--overwrite',
-                                   default=False, action='store_true',
-                                   help="When outputting a configuration file, "
-                                        "overwrite an existing file if one "
-                                        "already exists by the specified "
-                                        "output file path.")
+                                     default=False, action='store_true',
+                                     help="When outputting a configuration "
+                                          "file, overwrite an existing file if "
+                                          "one already exists by the specified "
+                                          "output file path.")
 
     # Server options
     group_server = parser.add_argument_group("Server options")
     group_server.add_argument('-r', '--reload',
-                            action='store_true', default=False,
-                            help='Turn on server reloading.')
+                              action='store_true', default=False,
+                              help='Turn on server reloading.')
     group_server.add_argument('-t', '--threaded',
-                            action='store_true', default=False,
-                            help="Turn on server multi-threading.")
+                              action='store_true', default=False,
+                              help="Turn on server multi-threading.")
     group_server.add_argument('--host',
-                            default=None,
-                            help="Run host address specification override. "
-                                 "This will override all other configuration "
-                                 "method specifications.")
+                              default=None,
+                              help="Run host address specification override. "
+                                   "This will override all other configuration "
+                                   "method specifications.")
     group_server.add_argument('--port',
-                            default=None,
-                            help="Run port specification override. This will "
-                                 "override all other configuration method "
-                                 "specifications.")
+                              default=None,
+                              help="Run port specification override. This will "
+                                   "override all other configuration method "
+                                   "specifications.")
     group_server.add_argument("--use-basic-auth",
-                            action="store_true", default=False,
-                            help="Use global basic authentication as "
-                                 "configured.")
+                              action="store_true", default=False,
+                              help="Use global basic authentication as "
+                                   "configured.")
 
     # Other options
     group_other = parser.add_argument_group("Other options")
     group_other.add_argument('--debug-server',
-                           action='store_true', default=False,
-                           help='Turn on server debugging messages')
+                             action='store_true', default=False,
+                             help='Turn on server debugging messages')
     group_other.add_argument('--debug-smqtk',
-                           action='store_true', default=False,
-                           help='Turn on SMQTK debugging messages')
+                             action='store_true', default=False,
+                             help='Turn on SMQTK debugging messages')
 
     return parser
+
 
 def main():
     parser = cli_parser()
@@ -114,21 +111,28 @@ def main():
         log.error("Invalid application label '%s'", application_name)
         exit(1)
 
-    app_class = web_applications[application_name]
+    app_class = web_applicationgs[application_name]
+
+    # Merge loaded config with default
+    config_loaded = False
+    config = app_class.get_default_config()
+    if args.config:
+        if os.path.isfile(args.config):
+            with open(args.config, 'r') as f:
+                config.update(json.load(f))
+            config_loaded = True
+        elif not os.path.isfile(args.config):
+            log.error("Configuration file path not valid.")
+            exit(1)
 
     # Output config and exit if requested
-    bin_utils.output_config(args.output_config, app_class.get_default_config(),
-                            log, args.overwrite)
+    bin_utils.output_config(args.output_config, config, log, args.overwrite)
 
-    if not args.config:
+    # Configuration must have been loaded at this point since we can't normally
+    # trust the default.
+    if not config_loaded:
         log.error("No configuration provided")
         exit(1)
-    elif not os.path.isfile(args.config):
-        log.error("Configuration file path not valid.")
-        exit(1)
-
-    with open(args.config, 'r') as f:
-        config = json.loads(jsmin(f.read()))
 
     host = args.host
     port = args.port and int(args.port)

@@ -5,10 +5,10 @@ Monitor files under a given directory, removing them from dist after an expiry
 period.
 """
 
+import argparse
 import logging
 import os
 import time
-import argparse
 
 from smqtk.utils.bin_utils import initialize_logging
 

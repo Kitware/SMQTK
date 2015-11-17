@@ -100,6 +100,7 @@ class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
         super(SmqtkWebApp, self)\
             .run(host=(host or self.json_config['server']['host']),
                  port=(port or self.json_config['server']['port']),
+                 debug=debug,
                  **options)
 
 

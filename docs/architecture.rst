@@ -21,13 +21,14 @@ This allows users to treat instances of structures and algorithms in a generic w
 It lies, of course, to the implementations of these interfaces to provide the concrete functionality.
 
 When creating a new data structure or algorithm interface, the pattern is that each interface is defined inside its own sub-module in the ``__init__.py`` file.
-This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31).
-This helper method looks for modules defined parallel to the ``__init__.py`` file and extracts classes that extend from the specified interface class as specified by a specified helper variable or by matching the file's name to a contained class name.
-See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L31) for more information on how plugin modules are discovered.
+This file also defines a function ``get_..._impls()`` (replacing the ``...`` with the name of the interface) that returns a mapping of implementation class names to the implementation class type, by calling the general helper method [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L69).
+This helper method looks for modules defined parallel to the ``__init__.py`` file as well as classes defined in modules listed in an environment variable (defined by the specific call to [``get_plugins``](/python/smqtk/utils/plugin.py#L69)).
+The function then extracts classes that extend from the specified interface class as specified by a specified helper variable or by searching attributes exposed by the module.
+See the doc-string of [``smqtk.utils.plugin.get_plugins``](/python/smqtk/utils/plugin.py#L69) for more information on how plugin modules are discovered.
 
-Adding a new Interface and Implementation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-For example, lets say we're creating a new data structure interface called ``FooBar``.
+Adding a new Interface and Internal Implementation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For example, lets say we're creating a new data representation interface called ``FooBar``.
 We would create a directory and ``__init__.py`` file (python module) to house the interface as follows::
 
     python/
@@ -37,31 +38,40 @@ We would create a directory and ``__init__.py`` file (python module) to house th
                 └── __init__.py   # new
 
 
-The ``__init__.py`` file might look something like the following, defining a new abstract class (sets or descends from something that sets ``__metaclass__ = abc.ABCMeta``):
+Since we are making a new data representation interface, our new interface should descend from the ``SmqtkRepresentation`` interface defined in the ``smqtk.representation`` module.
+The ``SmqtkRepresentation`` base-class descends from the [``Configurable``](/python/smqtk/utils/configurable_interface.py#L8) interface (interface class sets ``__metaclass__ = abc.ABCMeta``, thus it is not set in the example below).
+
+The ``__init__.py`` file for our new sub-module might look something like the following, defining a new abstract class:
 
 .. code-block:: python
 
     import abc
 
-    from smqtk.utils.configurable_interface import Configurable
+    from smqtk.representation import SmqtkRepresentation
+    from smqtk.utils.plugin import Pluggable, get_plugins
 
-    class FooBar (Configurable):
+
+    class FooBar (SmqtkRepresentation, Pluggable):
         """
         Some documentation on what this does.
         """
-        # Interface methods and/or abstract functionality here
+        # Interface methods and/or abstract functionality here.
+        # -> See the abc module on how to decorate abstract methods.
+
+        @abc.abstractmethod
+        def do_something(self):
+            """ Does Something """
+
 
     def get_foo_bar_impls(reload_modules=False):
         import os.path as osp
         from smqtk.utils.plugin import get_plugins
         this_dir = osp.abspath(osp.dirname(__file__))
+        env_var = 'FOO_BAR_PATH'
         helper_var = 'FOO_BAR_CLASS'
-        return get_plugins(__name__, this_dir, helper_var, CodeIndex, None,
+        return get_plugins(__name__, this_dir, env_var, helper_var, FooBar,
                            reload_modules)
 
-
-In order to allow for implementations of an interface to to be configurable, as well allowing for implementations used to be determined at configuration time, new interfaces should descend from the ``Configurable`` interface class.
-This interface class sets ``__metaclass__ = abc.ABCMeta``, thus it is not set in the example above.
 
 When adding a an implementation class, if it is sufficient to be contained in a single file, a new module can be added like::
 
@@ -82,15 +92,11 @@ Where ``some_impl.py`` might look like:
         """
         Some documentation
         """
-        # Implementation of some stuff
+        # Implementation of abstract methods here
 
-    FOO_BAR_CLASS = SomeImpl
-
-It is important to note the ``FOO_BAR_CLASS = SomeImpl`` line (where ``FOO_BAR_CLASS`` is what is specified to the ``helper_var`` in the ``get_foo_bar_impls`` function).
-This is important to include because this allows the plugin helper to know what class to import (or multiple classes if its set to an iterable).
 
 Implementation classes can also live inside of a nested sub-module.
-This is useful when an implementation class requires extensive, specific support utilities (for example, see the ``DescriptorGenerator`` implementation [``ColorDescriptor``](/python/smqtk/algorithms/descriptor_generator/colordescriptor)).::
+This is useful when an implementation class requires specific or extensive support utilities (for example, see the ``DescriptorGenerator`` implementation [``ColorDescriptor``](/python/smqtk/algorithms/descriptor_generator/colordescriptor)).::
 
     python/
     └── smqtk/
@@ -101,7 +107,16 @@ This is useful when an implementation class requires extensive, specific support
                 └── other_impl/      # new
                     └── __init__.py  # new
 
-Where the ``__init__.py`` file should at least define the helper variable reference to implementation classes that should be exported.
+Where the ``__init__.py`` file should at least expose concrete implementation classes that should be exported as attributes for the plugin getter to discover.
+
+
+Both ``Pluggable`` and ``Confiugrable``
+"""""""""""""""""""""""""""""""""""""""
+It is important to note that our new interface, as defined above, descends from both the ``Configurable`` interface (transitive through the ``SmqtkRepresentation`` base-class) and the ``Pluggable`` interface.
+
+The ``Configurable`` interface allows classes to be instantiated via a dictionary with JSON-compliant data types.
+In conjunction with the plugin getter function (``get_foo_bar_impls`` in our example above), we are able to select and construct specific implementations of an interface via a configuration or during runtime (e.g. via a transcoded JSON object).
+With this flexibility, an application can set up a pipeline using the high-level interfaces as reference, allowing specific implementations to be swapped in an out via configuration.
 
 
 Reload Use Warning

@@ -1,21 +1,7 @@
 import json
 import logging
 import logging.handlers
-import optparse
 import os
-
-
-class SMQTKOptParser (optparse.OptionParser):
-    """
-    Class override to change formatting for description and epilogue strings,
-    basically allowing new-lines and other custom white-spacing.
-    """
-
-    def format_description(self, formatter):
-        return self.description or ''
-
-    def format_epilog(self, formatter):
-        return self.epilog or ''
 
 
 def initialize_logging(logger, stream_level=logging.WARNING,

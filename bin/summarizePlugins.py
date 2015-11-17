@@ -6,6 +6,7 @@ Plugins that have issues will have a change to emmit warnings or errors here.
 :author: paul.tunison@kitware.com
 
 """
+import argparse
 import logging
 
 import smqtk.algorithms
@@ -14,13 +15,16 @@ import smqtk.utils.bin_utils
 
 
 def cli():
-    parser = smqtk.utils.bin_utils.SMQTKOptParser()
+    description = "Print out information about what plugins are currently " \
+                  "usable and the documentation headers for each " \
+                  "implementation."
+    parser = argparse.ArgumentParser(description=description)
 
-    parser.add_option("-v", "--verbose",
-                      default=False, action="store_true",
-                      help="Output debugging options as well.")
+    parser.add_argument("-v", "--verbose",
+                        default=False, action="store_true",
+                        help="Output debugging options as well.")
 
-    return parser.parse_args()
+    return parser
 
 
 def format_cls_description(name, cls):
@@ -28,10 +32,10 @@ def format_cls_description(name, cls):
 
 
 def main():
-    opts, args = cli()
+    args = cli().parse_args()
 
     llevel = logging.INFO
-    if opts.verbose:
+    if args.verbose:
         llevel = logging.DEBUG
     smqtk.utils.bin_utils.initialize_logging(logging.getLogger("smqtk"), llevel)
 
@@ -92,6 +96,7 @@ def main():
     # Print-out
     #
     print
+    print
     for k in plugin_type_list:
         print "[Type]", k
         print '='*(7+len(k))
@@ -99,8 +104,10 @@ def main():
         for l, t in plugin_info[k].items():
             print ":: "+l
             if t.__doc__:
-                print t.__doc__
+                print t.__doc__.rstrip()
+                print
         print
+        printg
 
 
 if __name__ == "__main__":

@@ -107,7 +107,7 @@ def main():
                 print t.__doc__.rstrip()
                 print
         print
-        printg
+        print
 
 
 if __name__ == "__main__":

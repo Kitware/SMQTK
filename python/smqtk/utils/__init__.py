@@ -67,7 +67,7 @@ def ncr(n, r):
 #
 
 # No internal util dependencies
-from .bin_utils import initialize_logging, SMQTKOptParser
+from .bin_utils import initialize_logging
 from .configurable_interface import Configurable
 from .database_info import DatabaseInfo
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock

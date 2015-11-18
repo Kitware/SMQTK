@@ -5,9 +5,12 @@ Monitor files under a given directory, removing them from dist after an expiry
 period.
 """
 
+import argparse
 import logging
 import os
 import time
+
+from smqtk.utils.bin_utils import initialize_logging
 
 
 sf_log = logging.getLogger("smqtk.scan_files")
@@ -69,28 +72,36 @@ def interval_scan(interval, base_dir, expire_seconds, action):
         time.sleep(interval)
 
 
+def cli_parser():
+    description = "Utility to recursively scan and remove files underneath a " \
+                  "given directory if they have not been modified for longer " \
+                  "than a set amount of time."
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-d', '--base-dir',
+                        help='Starting directory for scan.')
+    parser.add_argument('-i', '--interval', type=int,
+                        help='Number of seconds between each scan (integer).')
+    parser.add_argument('-e', '--expiry', type=int,
+                        help='Number of seconds until a file has "expired" '
+                             '(integer).')
+    parser.add_argument('-v', '--verbose', action='store_true', default=False,
+                        help='Display more messages (debugging).')
+
+    return parser
+
+
 def main():
-    from smqtk.utils.bin_utils import initialize_logging, SMQTKOptParser
-    parser = SMQTKOptParser()
-    parser.add_option('-d', '--base-dir',
-                      help='Starting directory for scan.')
-    parser.add_option('-i', '--interval', type=int,
-                      help='Number of seconds between each scan (integer).')
-    parser.add_option('-e', '--expiry', type=int,
-                      help='Number of seconds until a file has "expired" '
-                           '(integer).')
-    parser.add_option('-v', '--verbose', action='store_true', default=False,
-                      help='Display more messages (debugging).')
-    opts, args = parser.parse_args()
+    parser = cli_parser()
+    args = parser.parse_args()
 
     logging_level = logging.INFO
-    if opts.verbose:
+    if args.verbose:
         logging_level = logging.DEBUG
     initialize_logging(logging.getLogger("smqtk"), logging_level)
 
-    base_dir = opts.base_dir
-    interval_seconds = opts.interval
-    expiry_seconds = opts.expiry
+    base_dir = args.base_dir
+    interval_seconds = args.interval
+    expiry_seconds = args.expiry
 
     interval_scan(interval_seconds, base_dir, expiry_seconds,
                   remove_file_action)

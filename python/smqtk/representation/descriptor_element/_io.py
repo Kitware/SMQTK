@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 import multiprocessing.queues
 import sys
+import threading
 import time
 
 import numpy
@@ -34,7 +35,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     :param mat: Optionally pre-constructed numpy matrix of the appropriate shape
         to as loaded vectors into. If supplied this must have rows of the shape:
-        (nDescriptors, nFeatures)
+        (nDescriptors, nFeatures). If this is not supplied, we create a new
+        matrix to insert vectors into.
     :type mat: None | numpy.core.multiarray.ndarray
 
     :param procs: Optional specification of the number of cores to use. If None,
@@ -55,10 +57,6 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     """
     log = logging.getLogger(__name__)
-
-    # Special case for in-memory storage of descriptors
-    from smqtk.representation.descriptor_element.local_elements \
-        import DescriptorMemoryElement
 
     # Create/check matrix
     if mat is None:
@@ -89,28 +87,30 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             w.start()
 
         log.debug("Sending work packets")
-        async_packets_sent = 0
-        for r, d in enumerate(descr_elements):
-            if isinstance(d, DescriptorMemoryElement):
-                # No loading required, already in memory
-                mat[r] = d.vector()
-            else:
-                in_q.put((r, d))
-                async_packets_sent += 1
+        in_queue_t = threading.Thread(
+            target=_thread_feed_queue,
+            args=(descr_elements, in_q, mat, len(workers), log)
+        )
+        in_queue_t.start()
 
         # Collect work from async
         log.debug("Aggregating async results")
+        terminals_collected = 0
         f = 0
         lt = t = time.time()
-        for _ in xrange(async_packets_sent):
-            r, v = out_q.get()
-            mat[r] = v
+        while terminals_collected < len(workers):
+            packet = out_q.get()
+            if packet is None:
+                terminals_collected += 1
+            else:
+                r, v = packet
+                mat[r] = v
 
-            f += 1
-            if report_interval and time.time() - lt >= report_interval:
-                log.debug("Rows per second: %f, Total: %d",
-                          f / (time.time() - t), f)
-                lt = time.time()
+                f += 1
+                if report_interval and time.time() - lt >= report_interval:
+                    log.debug("Rows per second: %f, Total: %d",
+                              f / (time.time() - t), f)
+                    lt = time.time()
 
         log.debug("Closing output queue")
         out_q.close()
@@ -135,15 +135,6 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             assert in_q.qsize() == 0, "In queue not empty"
             assert out_q.qsize() == 0, "Out queue not empty"
 
-        # Shutdown workers
-        # - Workers should exit upon getting a None packet
-        log.debug("Sending worker terminal signals")
-        for _ in workers:
-            # One for each worker
-            in_q.put(None)
-        log.debug("Closing input queue")
-        in_q.close()
-
         log.debug("Done")
         return mat
     finally:
@@ -156,6 +147,26 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         for q in (in_q, out_q):
             q.close()
             q.join_thread()
+
+
+def _thread_feed_queue(descr_elements, q, out_mat, num_terminal_packets, log):
+    """
+    asynchronous put to an input queue
+    """
+    # Special case for in-memory storage of descriptors
+    from smqtk.representation.descriptor_element.local_elements \
+        import DescriptorMemoryElement
+
+    for r, d in enumerate(descr_elements):
+        if isinstance(d, DescriptorMemoryElement):
+            out_mat[r] = d.vector()
+        else:
+            q.put((r, d))
+    log.debug("Sending in-queue terminal packets")
+    for _ in xrange(num_terminal_packets):
+        q.put(None)
+    log.debug("Closing in-queue")
+    q.close()
 
 
 class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
@@ -183,3 +194,4 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
             row, elem = packet
             self.out_q.put((row, elem.vector()))
             packet = self.in_q.get()
+        self.out_q.put(None)

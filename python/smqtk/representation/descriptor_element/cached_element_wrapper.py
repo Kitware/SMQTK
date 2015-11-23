@@ -281,13 +281,3 @@ class CachingDescriptorElement (DescriptorElement):
                     expired = True
                     log.debug("%s Cache was invalidated for us", log_header)
         log.debug("[%s] Monitor thread exiting", log_header)
-
-
-def test():
-    c = CachingDescriptorElement.get_default_config()
-    c['cache_expiration_timeout'] = .5
-    c['wrapped_element_factory']['type'] = 'PostgresDescriptorElement'
-
-    d = CachingDescriptorElement.from_config(c, 'foo', 'not_yet')
-
-    return d

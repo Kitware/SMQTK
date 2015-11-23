@@ -1,7 +1,6 @@
-import multiprocessing
 import numpy
-import os
 import os.path as osp
+import threading
 
 from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
@@ -18,7 +17,7 @@ class DescriptorMemoryElement (DescriptorElement):
 
     # In-memory cache of descriptor vectors
     MEMORY_CACHE = {}
-    MEMORY_CACHE_LOCK = multiprocessing.RLock()
+    MEMORY_CACHE_LOCK = threading.RLock()
 
     @classmethod
     def is_usable(cls):

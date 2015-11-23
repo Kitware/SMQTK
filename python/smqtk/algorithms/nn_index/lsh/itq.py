@@ -3,9 +3,7 @@ Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 """
 
 import heapq
-import itertools
-import multiprocessing
-import multiprocessing.pool
+import logging
 import os.path as osp
 
 import numpy
@@ -15,7 +13,6 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.code_index import get_code_index_impls
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.utils import (
     bit_utils,
     distance_functions,
@@ -376,7 +373,11 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
             # matrix.
             self._log.debug("Input elements: %d", len(descr_cache))
             self._log.debug("Input elem size: %s", descr_cache[0].vector().size)
-            x = elements_to_matrix(descr_cache)
+            dbg_report_interval = None
+            if self.logger().getEffectiveLevel() <= logging.DEBUG:
+                dbg_report_interval = 1.0  # seconds
+            x = elements_to_matrix(descr_cache,
+                                   report_interval=dbg_report_interval)
             self._log.debug("descriptor matrix shape: %s", x.shape)
 
         with SimpleTimer("Centering data", self._log.info):

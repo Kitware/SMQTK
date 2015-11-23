@@ -111,7 +111,7 @@ def main():
         log.error("Invalid application label '%s'", application_name)
         exit(1)
 
-    app_class = web_applicationgs[application_name]
+    app_class = web_applications[application_name]
 
     # Merge loaded config with default
     config_loaded = False

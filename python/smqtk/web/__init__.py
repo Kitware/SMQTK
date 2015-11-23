@@ -104,7 +104,7 @@ class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
                  **options)
 
 
-def get_web_applications():
+def get_web_applications(reload_modules=False):
     """
     Discover and return SmqtkWebApp implementation classes found in the plugin
     directory. Keys in the returned map are the names of the discovered classes
@@ -120,6 +120,9 @@ def get_web_applications():
     present, we look for a class by the same na e and casing as the module's
     name. If neither are found, the module is skipped.
 
+    :param reload_modules: Explicitly reload discovered modules from source.
+    :type reload_modules: bool
+
     :return: Map of discovered class objects of type ``SmqtkWebApp`` whose
         keys are the string names of the classes.
     :rtype: dict[str, type]
@@ -129,5 +132,7 @@ def get_web_applications():
     from smqtk.utils.plugin import get_plugins
 
     this_dir = os.path.abspath(os.path.dirname(__file__))
+    env_var = "APPLICATION_PATH"
     helper_var = "APPLICATION_CLASS"
-    return get_plugins(__name__, this_dir, helper_var, SmqtkWebApp)
+    return get_plugins(__name__, this_dir, env_var, helper_var, SmqtkWebApp,
+                       reload_modules=reload_modules)

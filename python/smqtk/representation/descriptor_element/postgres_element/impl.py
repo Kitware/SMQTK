@@ -29,15 +29,15 @@ class PostgresDescriptorElement (DescriptorElement):
 
     ARRAY_DTYPE = numpy.float64
 
-    INSERT_TMPL = """
+    INSERT_TMPL = ' '.join("""
         SELECT {binary_col:s}
           FROM {table_name:s}
           WHERE {type_col:s} = %(type_val)s
             AND {uuid_col:s} = %(uuid_val)s
         ;
-    """
+    """.split())
 
-    UPSERT_TMPL = """
+    UPSERT_TMPL = ' '.join("""
         WITH upsert AS (
           UPDATE {table_name:s}
             SET {binary_col:s} = %(binary_val)s
@@ -48,7 +48,7 @@ class PostgresDescriptorElement (DescriptorElement):
         INSERT INTO {table_name:s} ({type_col:s}, {uuid_col:s}, {binary_col:s})
           SELECT %(type_val)s, %(uuid_val)s, %(binary_val)s
             WHERE NOT EXISTS (SELECT * FROM upsert);
-    """
+    """.split())
 
     @classmethod
     def is_usable(cls):
@@ -146,6 +146,22 @@ class PostgresDescriptorElement (DescriptorElement):
     #     if self._cache_thread:
     #         self._cache_thread.join()
 
+    def get_config(self):
+        return {
+            "cache_expiry_timeout": self.cache_expiry_timeout,
+
+            "table_name": self.table_name,
+            "uuid_col": self.uuid_col,
+            "type_col": self.type_col,
+            "binary_col": self.binary_col,
+
+            "db_name": self.db_name,
+            "db_host": self.db_host,
+            "db_port": self.db_port,
+            "db_user": self.db_user,
+            "db_pass": self.db_pass,
+        }
+
     def get_psql_connection(self):
         """
         :return: A new connection to the configured database
@@ -159,19 +175,68 @@ class PostgresDescriptorElement (DescriptorElement):
             port=self.db_port,
         )
 
-    def get_config(self):
-        return {
-            "cache_expiry_timeout": self.cache_expiry_timeout,
-            "table_name": self.table_name,
-            "uuid_col": self.uuid_col,
-            "type_col": self.type_col,
-            "binary_col": self.binary_col,
-            "db_name": self.db_name,
-            "db_host": self.db_host,
-            "db_port": self.db_port,
-            "db_user": self.db_user,
-            "db_pass": self.db_pass,
-        }
+    def psql_get_vector(self):
+        """
+        The PSQL vector fetch
+
+        :return: numpy vector or None of not in database
+        :rtype: numpy.core.multiarray.ndarray | None
+
+        """
+        conn = self.get_psql_connection()
+        try:
+            cur = conn.cursor()
+            # fill in query with appropriate field names, then supply values in
+            # execute
+            q = self.INSERT_TMPL.format(**{
+                "binary_col": self.binary_col,
+                "table_name": self.table_name,
+                "type_col": self.type_col,
+                "uuid_col": self.uuid_col,
+            })
+            cur.execute(q, {"type_val": self.type(), "uuid_val": self.uuid()})
+            r = cur.fetchone()
+            if not r:
+                return None
+            else:
+                b = r[0]
+                v = numpy.frombuffer(b, self.ARRAY_DTYPE)
+                return v
+        finally:
+            conn.close()
+
+    def psql_set_vector(self, new_vec):
+        """
+        set new vector to the PSQL storage
+
+        :param new_vec: New vector to store. We assume this is a numpy array.
+        :type new_vec: numpy.core.multiarray.ndarray
+
+        """
+        if new_vec.dtype != self.ARRAY_DTYPE:
+            new_vec = new_vec.astype(self.ARRAY_DTYPE)
+
+        conn = self.get_psql_connection()
+        try:
+            upsert_q = self.UPSERT_TMPL.strip().format(**{
+                "table_name": self.table_name,
+                "binary_col": self.binary_col,
+                "type_col": self.type_col,
+                "uuid_col": self.uuid_col,
+            })
+            q_values = {
+                "binary_val": psycopg2.Binary(new_vec),
+                "type_val": self.type(),
+                "uuid_val": self.uuid(),
+            }
+            # Strip out duplicate white-space
+            upsert_q = " ".join(upsert_q.split())
+
+            cur = conn.cursor()
+            cur.execute(upsert_q, q_values)
+            conn.commit()
+        finally:
+            conn.close()
 
     def has_vector(self):
         """
@@ -205,27 +270,7 @@ class PostgresDescriptorElement (DescriptorElement):
         :rtype: numpy.core.multiarray.ndarray or None
 
         """
-        conn = self.get_psql_connection()
-        try:
-            cur = conn.cursor()
-            # fill in query with appropriate field names, then supply values in
-            # execute
-            q = self.INSERT_TMPL.format(**{
-                "binary_col": self.binary_col,
-                "table_name": self.table_name,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-            })
-            cur.execute(q, {"type_val": self.type(), "uuid_val": self.uuid()})
-            r = cur.fetchone()
-            if not r:
-                return None
-            else:
-                b = r[0]
-                v = numpy.frombuffer(b, self.ARRAY_DTYPE)
-                return v
-        finally:
-            conn.close()
+        return self.psql_get_vector()
 
     def set_vector(self, new_vec):
         """
@@ -242,44 +287,13 @@ class PostgresDescriptorElement (DescriptorElement):
         the vector database-side is replaced, and the cache expiry timeout is
         reset.
 
-        :param new_vec: New vector to contain.
+        :raises ValueError: ``new_vec`` was not a numpy ndarray.
+
+        :param new_vec: New vector to contain. This must be a numpy array.
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        if new_vec.dtype != self.ARRAY_DTYPE:
-            new_vec = new_vec.astype(self.ARRAY_DTYPE)
-
-        conn = self.get_psql_connection()
-        try:
-            upsert_q = """
-            WITH upsert AS (
-              UPDATE {table_name:s}
-                SET {binary_col:s} = %(binary_val)s
-                WHERE {type_col:s} = %(type_val)s
-                  AND {uuid_col:s} = %(uuid_val)s
-                RETURNING *
-              )
-            INSERT INTO {table_name:s} ({type_col:s}, {uuid_col:s}, {binary_col:s})
-              SELECT %(type_val)s, %(uuid_val)s, %(binary_val)s
-                WHERE NOT EXISTS (SELECT * FROM upsert);
-            """.strip().format(**{
-                "table_name": self.table_name,
-                "binary_col": self.binary_col,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-            })
-            q_values = {
-                "binary_val": psycopg2.Binary(new_vec),
-                "type_val": self.type(),
-                "uuid_val": self.uuid(),
-            }
-            # Strip out duplicate white-space
-            upsert_q = " ".join(upsert_q.split())
-
-            print "Before mog:", upsert_q
-            cur = conn.cursor()
-            print "Mogrified :", cur.mogrify(upsert_q, q_values)
-            # cur.execute(upsert_q, q_values)
-            # conn.commit()
-        finally:
-            conn.close()
+        if not isinstance(new_vec, numpy.core.multiarray.ndarray):
+            raise ValueError("Input array for setting was not a numpy.ndarray! "
+                             "(given: %s)" % type(new_vec))
+        self.psql_set_vector(new_vec)

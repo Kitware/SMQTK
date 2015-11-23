@@ -27,7 +27,7 @@ class PostgresDescriptorElement (DescriptorElement):
 
     ARRAY_DTYPE = numpy.float64
 
-    INSERT_TMPL = ' '.join("""
+    SELECT_TMPL = ' '.join("""
         SELECT {binary_col:s}
           FROM {table_name:s}
           WHERE {type_col:s} = %(type_val)s
@@ -189,7 +189,7 @@ class PostgresDescriptorElement (DescriptorElement):
             cur = conn.cursor()
             # fill in query with appropriate field names, then supply values in
             # execute
-            q = self.INSERT_TMPL.format(**{
+            q = self.SELECT_TMPL.format(**{
                 "binary_col": self.binary_col,
                 "table_name": self.table_name,
                 "type_col": self.type_col,

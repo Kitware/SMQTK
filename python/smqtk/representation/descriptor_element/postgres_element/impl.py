@@ -1,5 +1,3 @@
-import threading
-
 import numpy
 
 from smqtk.representation import DescriptorElement
@@ -55,24 +53,29 @@ class PostgresDescriptorElement (DescriptorElement):
         return psycopg2 is not None
 
     def __init__(self, type_str, uuid,
-                 table_name='descriptors', uuid_col='uid', type_col='type_str',
-                 binary_col='vector', cache_expiry_timeout=None,
-                 db_name='postgres', db_host=None, db_port=None,
-                 db_user=None, db_pass=None):
+                 table_name='descriptors',
+                 uuid_col='uid', type_col='type_str', binary_col='vector',
+                 db_name='postgres', db_host=None, db_port=None, db_user=None,
+                 db_pass=None):
         """
         Initialize new PgsqlDescriptorElement attached to some database
         credentials.
 
-        We require that storage tables tread uuid AND type string columns as
+        We require that storage tables treat uuid AND type string columns as
         primary keys. The type and uuid columns should be of the 'text' type.
         The binary column should be of the 'bytea' type.
 
+        Default argument values assume a local PostgreSQL database with a table
+        created via the
+        ``smqtk/representation/descriptor_element/postgres_element/example_table_init.sql``
+        file.
+
         NOTES:
             - Not all uuid types used here are necessarily of the ``uuid.UUID``
-                type, thus the recommendation to use a ``text`` type for the
-                column. For certain specific use cases they may be proper
-                ``uuid.UUID`` instances or strings, but this cannot be generally
-                assumed.
+              type, thus the recommendation to use a ``text`` type for the
+              column. For certain specific use cases they may be proper
+              ``uuid.UUID`` instances or strings, but this cannot be generally
+              assumed.
 
         :param type_str: Type of descriptor. This is usually the name of the
             content descriptor that generated this vector.
@@ -82,16 +85,17 @@ class PostgresDescriptorElement (DescriptorElement):
         :type uuid: collections.Hashable
 
         :param table_name: String label of the database table to use.
+        :type table_name: str
+
         :param uuid_col: The column label for descriptor UUID storage
+        :type uuid_col: str
+
         :param type_col: The column label for descriptor type string storage.
+        :type type_col: str
+
         :param binary_col: The column label for descriptor vector binary
             storage.
-
-        :param cache_expiry_timeout: Optional timeout in seconds for accessed
-            descriptors to be cached. If this is non-zero, a monitoring thread
-            will be launched in order to track the timeout. The thread will be
-            shutdown after timeout. This value must be positive.
-        :type cache_expiry_timeout: None | float
+        :type binary_col: str
 
         :param db_host: Host address of the Postgres server. If None, we
             assume the server is on the local machine and use the UNIX socket.
@@ -117,8 +121,6 @@ class PostgresDescriptorElement (DescriptorElement):
         """
         super(PostgresDescriptorElement, self).__init__(type_str, uuid)
 
-        self.cache_expiry_timeout = cache_expiry_timeout
-
         self.table_name = table_name
         self.uuid_col = uuid_col
         self.type_col = type_col
@@ -130,26 +132,8 @@ class PostgresDescriptorElement (DescriptorElement):
         self.db_user = db_user
         self.db_pass = db_pass
 
-        # TODO: Timed caching with threads
-        self._cache_v = None
-        self._cache_lock = threading.RLock()
-        #: :type: threading.Thread
-        self._cache_thread = None
-
-    # def __del__(self):
-    #     """
-    #     Release vector cache
-    #     """
-    #     with self._cache_lock:
-    #         # Should cause dependent thread to terminate gracefully
-    #         self._cache_v = None
-    #     if self._cache_thread:
-    #         self._cache_thread.join()
-
     def get_config(self):
         return {
-            "cache_expiry_timeout": self.cache_expiry_timeout,
-
             "table_name": self.table_name,
             "uuid_col": self.uuid_col,
             "type_col": self.type_col,
@@ -175,12 +159,29 @@ class PostgresDescriptorElement (DescriptorElement):
             port=self.db_port,
         )
 
-    def psql_get_vector(self):
+    def has_vector(self):
         """
-        The PSQL vector fetch
+        Check if the target database has a vector for our keys.
 
-        :return: numpy vector or None of not in database
-        :rtype: numpy.core.multiarray.ndarray | None
+        This also returns True if we have a cached vector since there must have
+        been a source vector to draw from if there is a cache of it.
+
+        If a vector is cached, this resets the cache expiry timeout.
+
+        :return: Whether or not this container current has a descriptor vector
+            stored.
+        :rtype: bool
+
+        """
+        return self.vector() is not None
+
+    def vector(self):
+        """
+        Return this element's vector, or None if we don't have one.
+
+        :return: Get the stored descriptor vector as a numpy array. This returns
+            None of there is no vector stored in this container.
+        :rtype: numpy.core.multiarray.ndarray or None
 
         """
         conn = self.get_psql_connection()
@@ -204,73 +205,6 @@ class PostgresDescriptorElement (DescriptorElement):
                 return v
         finally:
             conn.close()
-
-    def psql_set_vector(self, new_vec):
-        """
-        set new vector to the PSQL storage
-
-        :param new_vec: New vector to store. We assume this is a numpy array.
-        :type new_vec: numpy.core.multiarray.ndarray
-
-        """
-        if new_vec.dtype != self.ARRAY_DTYPE:
-            new_vec = new_vec.astype(self.ARRAY_DTYPE)
-
-        conn = self.get_psql_connection()
-        try:
-            upsert_q = self.UPSERT_TMPL.strip().format(**{
-                "table_name": self.table_name,
-                "binary_col": self.binary_col,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-            })
-            q_values = {
-                "binary_val": psycopg2.Binary(new_vec),
-                "type_val": self.type(),
-                "uuid_val": self.uuid(),
-            }
-            # Strip out duplicate white-space
-            upsert_q = " ".join(upsert_q.split())
-
-            cur = conn.cursor()
-            cur.execute(upsert_q, q_values)
-            conn.commit()
-        finally:
-            conn.close()
-
-    def has_vector(self):
-        """
-        Check if the target database has a vector for our keys.
-
-        This also returns True if we have a cached vector since there must have
-        been a source vector to draw from if there is a cache of it.
-
-        If a vector is cached, this resets the cache expiry timeout.
-
-        :return: Whether or not this container current has a descriptor vector
-            stored.
-        :rtype: bool
-
-        """
-        return self.vector() is not None
-
-    def vector(self):
-        """
-        Return this element's vector, or None if we don't have one.
-
-        If a vector is to be returned, we are configured to use caching, and
-        one has not been cached yet, then we cache the vector and start a thread
-        to monitor access times and to remove the cache if the access timeout
-        has expired.
-
-        If a vector is already cached, this resets the cache expiry timeout.
-
-        :return: Get the stored descriptor vector as a numpy array. This returns
-            None of there is no vector stored in this container.
-        :rtype: numpy.core.multiarray.ndarray or None
-
-        """
-        return self.psql_get_vector()
 
     def set_vector(self, new_vec):
         """
@@ -296,4 +230,28 @@ class PostgresDescriptorElement (DescriptorElement):
         if not isinstance(new_vec, numpy.core.multiarray.ndarray):
             raise ValueError("Input array for setting was not a numpy.ndarray! "
                              "(given: %s)" % type(new_vec))
-        self.psql_set_vector(new_vec)
+
+        if new_vec.dtype != self.ARRAY_DTYPE:
+            new_vec = new_vec.astype(self.ARRAY_DTYPE)
+
+        conn = self.get_psql_connection()
+        try:
+            upsert_q = self.UPSERT_TMPL.strip().format(**{
+                "table_name": self.table_name,
+                "binary_col": self.binary_col,
+                "type_col": self.type_col,
+                "uuid_col": self.uuid_col,
+            })
+            q_values = {
+                "binary_val": psycopg2.Binary(new_vec),
+                "type_val": self.type(),
+                "uuid_val": self.uuid(),
+            }
+            # Strip out duplicate white-space
+            upsert_q = " ".join(upsert_q.split())
+
+            cur = conn.cursor()
+            cur.execute(upsert_q, q_values)
+            conn.commit()
+        finally:
+            conn.close()

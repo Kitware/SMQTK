@@ -125,8 +125,8 @@ class CachingDescriptorElement (DescriptorElement):
 
         self._d_elem = self.wrapped_element_factory \
                            .new_descriptor(self.type(), self.uuid())
-        self._log.debug("Caching descriptor element instance of type '%s'",
-                        self._d_elem.__class__.__name__)
+        # self._log.debug("Caching descriptor element instance of type '%s'",
+        #                 self._d_elem.__class__.__name__)
 
         # Attributes for timed caching with threads
         self.cache_v = None  # Numpy ndarray if there is a current cache
@@ -142,8 +142,36 @@ class CachingDescriptorElement (DescriptorElement):
         with self.cache_lock:
             # Should cause dependent thread to terminate gracefully
             self.cache_v = None
-        if self.cache_thread:
-            self.cache_thread.join()
+        # if self.cache_thread:
+        #     self.cache_thread.join()
+
+    def __getstate__(self):
+        return {
+            # Base DescriptorElement stuff
+            "type": self.type(),
+            "uuid": self.uuid(),
+            # This impl's stuff
+            "wrapped_element_factory": self.wrapped_element_factory,
+            "cache_expiration_timeout": self.cache_expiration_timeout,
+            "poll_interval": self.poll_interval
+        }
+
+    def __setstate__(self, c):
+        # base-class
+        self._type_label = c['type']
+        self._uuid = c['uuid']
+        # this-class
+        self.wrapped_element_factory = c['wrapped_element_factory']
+        self.cache_expiration_timeout = c['cache_expiration_timeout']
+        self.poll_interval = c['poll_interval']
+
+        # Initializing local cache variables that were un-pickle-able
+        self._d_elem = self.wrapped_element_factory\
+                           .new_descriptor(self.type(), self.uuid())
+        self.cache_v = None
+        self.cache_last_access = None
+        self.cache_lock = threading.RLock()
+        self.cache_thread = None
 
     def get_config(self):
         return {
@@ -173,15 +201,16 @@ class CachingDescriptorElement (DescriptorElement):
             if v is None:
 
                 # No cache currently, attempt fetch from wrapped elem
-                self._log.debug("Getting vector from nested descriptor element")
+                # self._log.debug("Getting vector from nested descriptor "
+                #                 "element")
                 v = self._d_elem.vector()
-                self._log.debug("Vector received: %s", v)
+                # self._log.debug("Vector received: %s", v)
 
                 if v is not None:
                     # Clean-up old thread if there was one
                     if self.cache_thread:
                         # cache_v is None at this point
-                        self._log.debug("Joining old monitor thread")
+                        # self._log.debug("Joining old monitor thread")
                         self.cache_lock.release()
                         self.cache_thread.join()
                         self.cache_lock.acquire()
@@ -192,9 +221,9 @@ class CachingDescriptorElement (DescriptorElement):
                         target=CachingDescriptorElement
                         .thread_monitor_cache_expiration,
                         args=(self,),
-                        verbose=self._log.getEffectiveLevel() <= logging.DEBUG,
+                        # verbose=self._log.getEffectiveLevel()<=logging.DEBUG,
                     )
-                    self._log.debug("Spawning cache monitor thread")
+                    # self._log.debug("Spawning cache monitor thread")
                     self.cache_thread.start()
 
             else:
@@ -219,7 +248,7 @@ class CachingDescriptorElement (DescriptorElement):
         """
         # set source vector and set as current cache
         with self.cache_lock:
-            self._log.debug("Setting in source element")
+            # self._log.debug("Setting in source element")
             self._d_elem.set_vector(new_vec)
 
             # Only start monitor when we're given a cache-able vector and the
@@ -227,7 +256,7 @@ class CachingDescriptorElement (DescriptorElement):
             if new_vec is not None and self.cache_v is None:
                 if self.cache_thread:
                     # cache_thread not alive at this point
-                    self._log.debug("Joining old monitor thread")
+                    # self._log.debug("Joining old monitor thread")
                     self.cache_lock.release()
                     self.cache_thread.join()
                     self.cache_lock.acquire()
@@ -237,9 +266,9 @@ class CachingDescriptorElement (DescriptorElement):
                     target=CachingDescriptorElement
                     .thread_monitor_cache_expiration,
                     args=(self,),
-                    verbose=self._log.getEffectiveLevel() <= logging.DEBUG,
+                    # verbose=self._log.getEffectiveLevel() <= logging.DEBUG,
                 )
-                self._log.debug("Spawning cache monitor thread")
+                # self._log.debug("Spawning cache monitor thread")
                 self.cache_thread.start()
 
             # Update cache vector and access time
@@ -255,14 +284,14 @@ class CachingDescriptorElement (DescriptorElement):
         :type elem: CachingDescriptorElement
 
         """
-        log = logging.getLogger(__name__)
-
-        # noinspection PyProtectedMember
-        log_header = '[{type:s}, {uuid:s}, {elem:s}]'.format(**{
-            "type": elem.type(),
-            'uuid': elem.uuid(),
-            'elem': elem.wrapped_element_factory._d_type,
-        })
+        # log = logging.getLogger(__name__)
+        #
+        # # noinspection PyProtectedMember
+        # log_header = '[{type:s}, {uuid:s}, {elem:s}]'.format(**{
+        #     "type": elem.type(),
+        #     'uuid': elem.uuid(),
+        #     'elem': elem.wrapped_element_factory._d_type,
+        # })
 
         expired = False
         while not expired:
@@ -276,8 +305,8 @@ class CachingDescriptorElement (DescriptorElement):
                 if t - elem.cache_last_access >= elem.cache_expiration_timeout:
                     elem.cache_v = None
                     expired = True
-                    log.debug("%s Cache expired", log_header)
+                    # log.debug("%s Cache expired", log_header)
                 elif elem.cache_v is None:
                     expired = True
-                    log.debug("%s Cache was invalidated for us", log_header)
-        log.debug("[%s] Monitor thread exiting", log_header)
+                    # log.debug("%s Cache was invalidated for us", log_header)
+        # log.debug("%s Monitor thread exiting", log_header)

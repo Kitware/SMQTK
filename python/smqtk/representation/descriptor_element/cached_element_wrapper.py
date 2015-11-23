@@ -52,9 +52,6 @@ class CachingDescriptorElement (DescriptorElement):
             de_impls = get_descriptor_element_impls()
             # Remove ourselves
             del de_impls[cls.__name__]
-            # Remove in-memory impl because it makes no sense to use with
-            # caching
-            del de_impls["DescriptorMemoryElement"]
 
             # Construct config block DescriptorElementFactory wants
             c_def = {"type": None}
@@ -155,7 +152,20 @@ class CachingDescriptorElement (DescriptorElement):
             "poll_interval": self.poll_interval,
         }
 
+    def has_vector(self):
+        """
+        :return: Whether or not this container current has a descriptor vector
+            stored.
+        :rtype: bool
+        """
+        return self.vector() is not None
+
     def vector(self):
+        """
+        :return: Get the stored descriptor vector as a numpy array. This returns
+            None of there is no vector stored in this container.
+        :rtype: numpy.core.multiarray.ndarray or None
+        """
         with self.cache_lock:
             v = self.cache_v
 
@@ -168,10 +178,13 @@ class CachingDescriptorElement (DescriptorElement):
                 self._log.debug("Vector received: %s", v)
 
                 if v is not None:
-                    # Clean-up old thread0 if there was one
+                    # Clean-up old thread if there was one
                     if self.cache_thread:
+                        # cache_v is None at this point
                         self._log.debug("Joining old monitor thread")
+                        self.cache_lock.release()
                         self.cache_thread.join()
+                        self.cache_lock.acquire()
 
                     # vector in elem; set in cache; start monitor thread
                     self.cache_v = v
@@ -194,10 +207,44 @@ class CachingDescriptorElement (DescriptorElement):
         return v
 
     def set_vector(self, new_vec):
-        pass
+        """
+        Set the contained vector.
 
-    def has_vector(self):
-        return self.vector() is not None
+        If this container already stores a descriptor vector, this will
+        overwrite it.
+
+        :param new_vec: New vector to contain.
+        :type new_vec: numpy.core.multiarray.ndarray
+
+        """
+        # set source vector and set as current cache
+        with self.cache_lock:
+            self._log.debug("Setting in source element")
+            self._d_elem.set_vector(new_vec)
+
+            # Only start monitor when we're given a cache-able vector and the
+            #   cache is currently not occupied.
+            if new_vec is not None and self.cache_v is None:
+                if self.cache_thread:
+                    # cache_thread not alive at this point
+                    self._log.debug("Joining old monitor thread")
+                    self.cache_lock.release()
+                    self.cache_thread.join()
+                    self.cache_lock.acquire()
+
+                # need to start new monitor thread
+                self.cache_thread = threading.Thread(
+                    target=CachingDescriptorElement
+                    .thread_monitor_cache_expiration,
+                    args=(self,),
+                    verbose=self._log.getEffectiveLevel() <= logging.DEBUG,
+                )
+                self._log.debug("Spawning cache monitor thread")
+                self.cache_thread.start()
+
+            # Update cache vector and access time
+            self.cache_v = new_vec
+            self.cache_last_access = time.time()
 
     @staticmethod
     def thread_monitor_cache_expiration(elem):
@@ -220,8 +267,8 @@ class CachingDescriptorElement (DescriptorElement):
         expired = False
         while not expired:
             time.sleep(elem.poll_interval)
-            t = time.time()
             with elem.cache_lock:
+                t = time.time()
                 # log.debug("%s Checking cache cache expiration "
                 #           "[now = %f | last access = %f | timeout = %f]",
                 #           log_header, t, elem.cache_last_access,
@@ -241,6 +288,6 @@ def test():
     c['cache_expiration_timeout'] = .5
     c['wrapped_element_factory']['type'] = 'PostgresDescriptorElement'
 
-    d = CachingDescriptorElement.from_config(c, 'foo', 'baz')
+    d = CachingDescriptorElement.from_config(c, 'foo', 'not_yet')
 
     return d

@@ -311,3 +311,7 @@ class CachingDescriptorElement (DescriptorElement):
                     expired = True
                     # log.debug("%s Cache was invalidated for us", log_header)
         # log.debug("%s Monitor thread exiting", log_header)
+
+
+# Disabling this implementation for the moment because it needs to be rethought
+DESCRIPTOR_ELEMENT_CLASS = None

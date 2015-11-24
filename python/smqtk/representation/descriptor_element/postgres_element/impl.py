@@ -13,15 +13,15 @@ except ImportError:
     psycopg2 = None
 
 
-# TODO: Connection pooling?
-
-
 class PostgresDescriptorElement (DescriptorElement):
     """
     Descriptor element whose vector is stored in a Postgres database.
 
     We assume we will work with a Postgres version of at least 9.4 (due to
     versions tested).
+
+    Efficient connection pooling may be achieved via external utilities like
+    PGBounder.
 
     """
 
@@ -185,8 +185,8 @@ class PostgresDescriptorElement (DescriptorElement):
 
         """
         conn = self.get_psql_connection()
+        cur = conn.cursor()
         try:
-            cur = conn.cursor()
             # fill in query with appropriate field names, then supply values in
             # execute
             q = self.SELECT_TMPL.format(**{
@@ -194,16 +194,25 @@ class PostgresDescriptorElement (DescriptorElement):
                 "table_name": self.table_name,
                 "type_col": self.type_col,
                 "uuid_col": self.uuid_col,
+
             })
+
             cur.execute(q, {"type_val": self.type(), "uuid_val": self.uuid()})
             r = cur.fetchone()
+            # For server cleaning (e.g. pgbouncer)
+            conn.commit()
+
             if not r:
                 return None
             else:
                 b = r[0]
                 v = numpy.frombuffer(b, self.ARRAY_DTYPE)
                 return v
+        except:
+            conn.rollback()
+            raise
         finally:
+            cur.close()
             conn.close()
 
     def set_vector(self, new_vec):
@@ -235,6 +244,7 @@ class PostgresDescriptorElement (DescriptorElement):
             new_vec = new_vec.astype(self.ARRAY_DTYPE)
 
         conn = self.get_psql_connection()
+        cur = conn.cursor()
         try:
             upsert_q = self.UPSERT_TMPL.strip().format(**{
                 "table_name": self.table_name,
@@ -250,8 +260,12 @@ class PostgresDescriptorElement (DescriptorElement):
             # Strip out duplicate white-space
             upsert_q = " ".join(upsert_q.split())
 
-            cur = conn.cursor()
             cur.execute(upsert_q, q_values)
+            cur.close()
             conn.commit()
+        except:
+            conn.rollback()
+            raise
         finally:
+            cur.close()
             conn.close()

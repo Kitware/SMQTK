@@ -142,8 +142,9 @@ class CachingDescriptorElement (DescriptorElement):
         with self.cache_lock:
             # Should cause dependent thread to terminate gracefully
             self.cache_v = None
-        # if self.cache_thread:
-        #     self.cache_thread.join()
+        if self.cache_thread and \
+                self.cache_thread.ident != threading.currentThread():
+            self.cache_thread.join()
 
     def __getstate__(self):
         return {

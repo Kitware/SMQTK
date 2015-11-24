@@ -103,12 +103,15 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: ITQNearestNeighborsIndex
 
         """
-        # Transform nested plugin stuff into actual classes.
-        config_dict['code_index'] = \
-            plugin.from_plugin_config(config_dict['code_index'],
+        merged = cls.get_default_config()
+        merged.update(config_dict)
+
+        # Transform nested plugin stuff into actual classes if provided.
+        merged['code_index'] = \
+            plugin.from_plugin_config(merged['code_index'],
                                       get_code_index_impls)
 
-        return super(ITQNearestNeighborsIndex, cls).from_config(config_dict)
+        return super(ITQNearestNeighborsIndex, cls).from_config(merged)
 
     def __init__(self, mean_vec_filepath=None,
                  rotation_filepath=None,

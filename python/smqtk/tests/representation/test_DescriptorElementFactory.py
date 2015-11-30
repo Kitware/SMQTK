@@ -14,8 +14,14 @@ __author__ = "paul.tunison@kitware.com"
 
 class DummyElementImpl (DescriptorElement):
 
-    def __init__(self, *args, **kwds):
-        pass
+    @classmethod
+    def is_usable(cls):
+        return True
+
+    def __init__(self, type_str, uuid, *args, **kwds):
+        super(DummyElementImpl, self).__init__(type_str, uuid)
+        self.args = args
+        self.kwds = kwds
 
     def set_vector(self, new_vec):
         pass
@@ -32,29 +38,26 @@ class DummyElementImpl (DescriptorElement):
 
 class TestDescriptorElemFactory (unittest.TestCase):
 
-    @mock.patch.object(DummyElementImpl, "__init__")
-    def test_no_params(self, dei_init):
-        # So we don't break python
-        dei_init.return_value = None
-
+    def test_no_params(self):
         test_params = {}
 
         factory = DescriptorElementFactory(DummyElementImpl, test_params)
 
         expected_type = 'type'
         expected_uuid = 'uuid'
+        expected_args = ()
+        expected_kwds = {}
+
         # Should construct a new DEI instance under they hood somewhere
         r = factory.new_descriptor(expected_type, expected_uuid)
 
-        ntools.assert_true(dei_init.called)
-        dei_init.assert_called_once_with(expected_type, expected_uuid)
         ntools.assert_is_instance(r, DummyElementImpl)
+        ntools.assert_equal(r._type_label, expected_type)
+        ntools.assert_equal(r._uuid, expected_uuid)
+        ntools.assert_equal(r.args, expected_args)
+        ntools.assert_equal(r.kwds, expected_kwds)
 
-    @mock.patch.object(DummyElementImpl, "__init__")
-    def test_with_params(self, dei_init):
-        # So we don't break python
-        dei_init.return_value = None
-
+    def test_with_params(self):
         v = numpy.random.randint(0, 10, 10)
         test_params = {
             'p1': 'some dir',
@@ -65,18 +68,18 @@ class TestDescriptorElemFactory (unittest.TestCase):
 
         ex_type = 'type'
         ex_uuid = 'uuid'
+        ex_args = ()
+        ex_kwds = test_params
         # Should construct a new DEI instance under they hood somewhere
         r = factory.new_descriptor(ex_type, ex_uuid)
 
-        ntools.assert_true(dei_init.called)
-        dei_init.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
         ntools.assert_is_instance(r, DummyElementImpl)
+        ntools.assert_equal(r._type_label, ex_type)
+        ntools.assert_equal(r._uuid, ex_uuid)
+        ntools.assert_equal(r.args, ex_args)
+        ntools.assert_equal(r.kwds, ex_kwds)
 
-    @mock.patch.object(DummyElementImpl, "__init__")
-    def test_call(self, dei_init):
-        # So we don't break python
-        dei_init.return_value = None
-
+    def test_call(self):
         # Same as `test_with_params` but using __call__ entry point
         v = numpy.random.randint(0, 10, 10)
         test_params = {
@@ -88,12 +91,16 @@ class TestDescriptorElemFactory (unittest.TestCase):
 
         ex_type = 'type'
         ex_uuid = 'uuid'
+        ex_args = ()
+        ex_kwds = test_params
         # Should construct a new DEI instance under they hood somewhere
         r = factory(ex_type, ex_uuid)
 
-        ntools.assert_true(dei_init.called)
-        dei_init.assert_called_once_with(ex_type, ex_uuid, p1='some dir', vec=v)
         ntools.assert_is_instance(r, DummyElementImpl)
+        ntools.assert_equal(r._type_label, ex_type)
+        ntools.assert_equal(r._uuid, ex_uuid)
+        ntools.assert_equal(r.args, ex_args)
+        ntools.assert_equal(r.kwds, ex_kwds)
 
     def test_configuration(self):
         c = DescriptorElementFactory.get_default_config()

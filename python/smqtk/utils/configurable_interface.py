@@ -72,7 +72,9 @@ class Configurable (object):
         # parameters other than those that can be provided via the JSON
         # specification, which we cover here. If an implementation needs
         # something more special, they can override this function.
-        return cls(**config_dict)
+        merged_config = cls.get_default_config()
+        merged_config.update(config_dict)
+        return cls(**merged_config)
 
     @abc.abstractmethod
     def get_config(self):

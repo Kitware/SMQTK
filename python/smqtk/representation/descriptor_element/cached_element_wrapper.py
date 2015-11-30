@@ -67,14 +67,17 @@ class CachingDescriptorElement (DescriptorElement):
 
     @classmethod
     def from_config(cls, config_dict, type_str, uuid):
+        merged_config = cls.get_default_config()
+        merged_config.update(config_dict)
+
         # convert factory configuration
-        config_dict['wrapped_element_factory'] = \
+        merged_config['wrapped_element_factory'] = \
             DescriptorElementFactory.from_config(
-                config_dict['wrapped_element_factory']
+                merged_config['wrapped_element_factory']
             )
 
         return super(CachingDescriptorElement, cls).from_config(
-            config_dict, type_str, uuid
+            merged_config, type_str, uuid
         )
 
     def __init__(self, type_str, uuid, wrapped_element_factory,

@@ -65,9 +65,11 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :rtype: DescriptorElementFactory
 
         """
+        merged_config = cls.get_default_config()
+        merged_config.update(config_dict)
         return DescriptorElementFactory(
-            get_descriptor_element_impls()[config_dict['type']],
-            config_dict[config_dict['type']]
+            get_descriptor_element_impls()[merged_config['type']],
+            config_dict[merged_config['type']]
         )
 
     def get_config(self):

@@ -97,21 +97,24 @@ class IqrSearch (flask.Blueprint, Configurable):
         :rtype: IqrSearch
 
         """
+        merged = cls.get_default_config()
+        merged.update(config)
+
         # construct nested objects via configurations
-        config['data_set'] = \
-            plugin.from_plugin_config(config['data_set'],
+        merged['data_set'] = \
+            plugin.from_plugin_config(merged['data_set'],
                                       get_data_set_impls)
-        config['descr_generator'] = \
-            plugin.from_plugin_config(config['descr_generator'],
+        merged['descr_generator'] = \
+            plugin.from_plugin_config(merged['descr_generator'],
                                       get_descriptor_generator_impls)
-        config['nn_index'] = \
-            plugin.from_plugin_config(config['nn_index'],
+        merged['nn_index'] = \
+            plugin.from_plugin_config(merged['nn_index'],
                                       get_nn_index_impls)
 
-        config['descriptor_factory'] = \
-            DescriptorElementFactory.from_config(config['descriptor_factory'])
+        merged['descriptor_factory'] = \
+            DescriptorElementFactory.from_config(merged['descriptor_factory'])
 
-        return cls(parent_app, **config)
+        return cls(parent_app, **merged)
 
     def __init__(self, parent_app, name, data_set, descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,

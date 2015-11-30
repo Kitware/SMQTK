@@ -197,7 +197,8 @@ class PostgresDescriptorElement (DescriptorElement):
 
             })
 
-            cur.execute(q, {"type_val": self.type(), "uuid_val": self.uuid()})
+            cur.execute(q, {"type_val": self.type(),
+                            "uuid_val": str(self.uuid())})
             r = cur.fetchone()
             # For server cleaning (e.g. pgbouncer)
             conn.commit()
@@ -255,7 +256,7 @@ class PostgresDescriptorElement (DescriptorElement):
             q_values = {
                 "binary_val": psycopg2.Binary(new_vec),
                 "type_val": self.type(),
-                "uuid_val": self.uuid(),
+                "uuid_val": str(self.uuid()),
             }
             # Strip out duplicate white-space
             upsert_q = " ".join(upsert_q.split())

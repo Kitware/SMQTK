@@ -50,10 +50,11 @@ fname_re = re.compile('(\w+)\.(\w+)\.vector\.npy')
 
 
 def transfer_vector(type_str, uuid_str):
-    fd = file_element_factory(type_str, uuid_str)
     pd = psql_element_factory(type_str, uuid_str)
-    # removing the "-0" artifacts
-    pd.set_vector( fd.vector() + 0 )
+    if not pd.has_vector():
+        fd = file_element_factory(type_str, uuid_str)
+        # removing the "-0" artifacts
+        pd.set_vector( fd.vector() + 0 )
 
 
 def proc_transfer(in_queue):
@@ -112,9 +113,10 @@ def main():
             w.terminate()
 
     finally:
-        log.info("Joining workers")
+        log.info("Waiting for workers to complete")
         for w in workers:
             w.join()
+        log.info("Workers joined")
 
 
 if __name__ == '__main__':

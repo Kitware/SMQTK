@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 2.8)
 ###
 # Versioning
 #
-set(SMQTK_VERSION_MAJOR 1)
+set(SMQTK_VERSION_MAJOR 0)
 set(SMQTK_VERSION_MINOR 1)
 set(SMQTK_VERSION_PATCH 0)
 set(SMQTK_VERSION ${SMQTK_VERSION_MAJOR}.${SMQTK_VERSION_MINOR}.${SMQTK_VERSION_PATCH})
@@ -48,14 +48,6 @@ add_subdirectory( bin )
 
 
 ###
-# MASIR side-car project
-#
-# Un-comment if a side-car MASIR installation is desired.
-# This may interfere with the SMQTK installation or vice versa.
-#add_subdirectory(MASIR)
-
-
-###
 # File configuration
 #
 # Environment setup scripts
@@ -83,11 +75,7 @@ if (NOT SMQTK_FIRST_PASS_COMPLETE)
     FORCE)
 endif(NOT SMQTK_FIRST_PASS_COMPLETE)
 
-#+
-# initial empty data and work directories
-install(DIRECTORY DESTINATION var/work)
 install(DIRECTORY DESTINATION var/data)
-install(DIRECTORY DESTINATION var/nltk_data)
 
 if(UNIX)
   # Due to super-user privileges being required to run things like groupadd,
@@ -100,7 +88,6 @@ if(UNIX)
                            WORKING_DIRECTORY \"${CMAKE_INSTALL_PREFIX}\")"
           )
 endif()
-#-
 
 install(DIRECTORY   docs/
         DESTINATION share/doc/SMQTK

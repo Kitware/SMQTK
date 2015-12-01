@@ -8,10 +8,6 @@ errors.log
 # Coverage report
 .coverage
 
-# External data and generated files directories
-/data
-/work
-
 #
 # TPL
 #

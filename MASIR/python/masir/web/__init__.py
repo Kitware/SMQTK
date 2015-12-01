@@ -1,2 +1,0 @@
-
-from .MasirApp import MasirApp

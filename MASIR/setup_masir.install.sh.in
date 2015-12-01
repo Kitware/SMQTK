@@ -1,8 +1,0 @@
-# Setup script for running MASIR web-app in the install tree
-
-this_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-export PYTHONPATH=${this_dir}/@python_site_packages@:$PYTHONPATH
-export PATH=${this_dir}/bin:$PATH
-export MASIR_INSTALL_DIR="${this_dir}"
-export MASIR_SETUP=1

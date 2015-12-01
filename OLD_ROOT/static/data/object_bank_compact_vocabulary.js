@@ -1,1 +1,0 @@
-["small_group_of_people", "light_source", "round_shape", "car", "door", "railing", "person", "truck", "face", "large_group_of_people", "cloud", "floor", "sports_venue", "crowd", "vertical_pattern", "tree", "sky", "large_open_area", "horizontal_pattern", "outdoor", "rectangular_shape"]

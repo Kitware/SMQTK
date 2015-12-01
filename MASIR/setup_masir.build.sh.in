@@ -1,7 +1,0 @@
-# Setup script for running MASIR web-app out of the build directory.
-
-export PYTHONPATH=@MASIR_SOURCE_DIR@/python:@MASIR_BINARY_DIR@/python:$PYTHONPATH
-export PATH=@MASIR_SOURCE_DIR@/bin:@MASIR_BINARY_DIR@/bin:$PATH
-
-export MASIR_INSTALL_DIR="@MASIR_SOURCE_DIR@"
-export MASIR_SETUP=1

@@ -34,6 +34,8 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         :type uuid: collections.Hashable
 
         """
+        super(DescriptorElement, self).__init__()
+
         self._type_label = type_str
         self._uuid = uuid
 

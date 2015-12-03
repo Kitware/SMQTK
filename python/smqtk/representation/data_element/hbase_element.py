@@ -47,6 +47,7 @@ class HBaseDataElement (DataElement):
         :return:
         """
         super(HBaseDataElement, self).__init__()
+
         self.element_key = element_key
         self.binary_column = binary_column
         self.hbase_address = hbase_address

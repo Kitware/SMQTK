@@ -29,7 +29,10 @@ tempfile.gettempdir()
 
 
 class DummyDataElement (smqtk.representation.data_element.DataElement):
-    # abstract methods have no base functionality
+
+    @classmethod
+    def is_usable(cls):
+        return True
 
     def get_config(self):
         return {}

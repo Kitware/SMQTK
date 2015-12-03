@@ -45,6 +45,8 @@ class DataMemorySet (DataSet):
         :type file_cache: None | str
 
         """
+        super(DataMemorySet, self).__init__()
+
         # Mapping of UUIDs to DataElement instances
         #: :type: dict[collections.Hashable, DataElement]
         self._element_map = {}

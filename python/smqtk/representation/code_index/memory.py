@@ -32,6 +32,8 @@ class MemoryCodeIndex (CodeIndex):
         :type file_cache: None | str
 
         """
+        super(MemoryCodeIndex, self).__init__()
+
         self._num_descr = 0
         self._file_cache = file_cache
 

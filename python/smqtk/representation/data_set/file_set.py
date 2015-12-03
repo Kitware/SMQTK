@@ -57,6 +57,8 @@ class DataFileSet (DataSet):
         :type uuid_chunk: int
 
         """
+        super(DataFileSet, self).__init__()
+
         self._root_dir = os.path.abspath(os.path.expanduser(root_directory))
         self._uuid_chunk = uuid_chunk
 

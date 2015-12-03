@@ -193,6 +193,8 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         :type random_seed: int
 
         """
+        super(ITQNearestNeighborsIndex, self).__init__()
+
         self._mean_vec_cache_filepath = mean_vec_filepath
         self._rotation_cache_filepath = rotation_filepath
 

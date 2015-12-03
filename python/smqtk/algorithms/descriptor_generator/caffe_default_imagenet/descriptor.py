@@ -101,6 +101,8 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         :type cnn_exe: None | str
 
         """
+        super(CaffeDefaultImageNet, self).__init__()
+
         self.blvc_reference_caffenet_model_fp = blvc_reference_caffenet_model
         self.image_mean_binary_fp = image_mean_binary
         self.gpu_batch_size = gpu_batch_size

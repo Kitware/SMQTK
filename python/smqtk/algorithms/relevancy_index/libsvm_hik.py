@@ -72,6 +72,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         :type autoneg_select_ratio: int
 
         """
+        super(LibSvmHikRelevancyIndex, self).__init__()
+
         self._descr_cache_fp = descr_cache_filepath
         self._autoneg_select_ratio = int(autoneg_select_ratio)
 

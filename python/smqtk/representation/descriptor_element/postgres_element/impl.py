@@ -50,7 +50,10 @@ class PostgresDescriptorElement (DescriptorElement):
 
     @classmethod
     def is_usable(cls):
-        return psycopg2 is not None
+        if psycopg2 is None:
+            cls.logger().warning("Not usable. Requires psycopg2 module")
+            return False
+        return True
 
     def __init__(self, type_str, uuid,
                  table_name='descriptors',

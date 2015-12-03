@@ -79,6 +79,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
     log.debug("constructing worker processes")
     workers = [_ElemVectorExtractor(i, in_q, out_q) for i in xrange(procs)]
 
+    in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
+
     try:
         # Start worker processes
         log.debug("starting worker processes")
@@ -87,10 +89,6 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             w.start()
 
         log.debug("Sending work packets")
-        in_queue_t = threading.Thread(
-            target=_thread_feed_queue,
-            args=(descr_elements, in_q, mat, len(workers), log)
-        )
         in_queue_t.start()
 
         # Collect work from async
@@ -138,35 +136,65 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         log.debug("Done")
         return mat
     finally:
+        log.debug("Stopping/Joining queue feeder thread")
+        in_queue_t.stop()
+        in_queue_t.join()
+
         # Forcibly terminate worker processes if still alive
         log.debug("Joining/Terminating workers")
         for w in workers:
             if w.is_alive():
                 w.terminate()
             w.join()
+
+        log.debug("Cleaning queues")
         for q in (in_q, out_q):
             q.close()
             q.join_thread()
 
 
-def _thread_feed_queue(descr_elements, q, out_mat, num_terminal_packets, log):
-    """
-    asynchronous put to an input queue
-    """
-    # Special case for in-memory storage of descriptors
-    from smqtk.representation.descriptor_element.local_elements \
-        import DescriptorMemoryElement
+class _FeedQueueThread (threading.Thread):
 
-    for r, d in enumerate(descr_elements):
-        if isinstance(d, DescriptorMemoryElement):
-            out_mat[r] = d.vector()
-        else:
-            q.put((r, d))
-    log.debug("Sending in-queue terminal packets")
-    for _ in xrange(num_terminal_packets):
-        q.put(None)
-    log.debug("Closing in-queue")
-    q.close()
+    def __init__(self, descr_elements, q, out_mat, num_terminal_packets):
+        super(_FeedQueueThread, self).__init__()
+
+        self.num_terminal_packets = num_terminal_packets
+        self.out_mat = out_mat
+        self.q = q
+        self.descr_elements = descr_elements
+
+        self._stop = threading.Event()
+
+    @property
+    def log(self):
+        return logging.getLogger('.'.join([__name__, self.__class__.__name__]))
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        # Special case for in-memory storage of descriptors
+        from smqtk.representation.descriptor_element.local_elements \
+            import DescriptorMemoryElement
+
+        for r, d in enumerate(self.descr_elements):
+            if isinstance(d, DescriptorMemoryElement):
+                self.out_mat[r] = d.vector()
+            else:
+                self.q.put((r, d))
+
+            # If we're told to stop, immediately quit out of processing
+            if self.stopped():
+                break
+
+        self.log.debug("Sending in-queue terminal packets")
+        for _ in xrange(self.num_terminal_packets):
+            self.q.put(None)
+        self.log.debug("Closing in-queue")
+        self.q.close()
 
 
 class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):

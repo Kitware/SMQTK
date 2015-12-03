@@ -77,7 +77,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [_ElemVectorExtractor(i, in_q, out_q) for i in xrange(procs)]
+    workers = [_ElemVectorExtractorProcess(i, in_q, out_q) for i in xrange(procs)]
 
     in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
@@ -153,7 +153,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             q.join_thread()
 
 
-class _FeedQueueThread (threading.Thread):
+class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     def __init__(self, descr_elements, q, out_mat, num_terminal_packets):
         super(_FeedQueueThread, self).__init__()
@@ -164,10 +164,6 @@ class _FeedQueueThread (threading.Thread):
         self.descr_elements = descr_elements
 
         self._stop = threading.Event()
-
-    @property
-    def log(self):
-        return logging.getLogger('.'.join([__name__, self.__class__.__name__]))
 
     def stop(self):
         self._stop.set()
@@ -190,14 +186,14 @@ class _FeedQueueThread (threading.Thread):
             if self.stopped():
                 break
 
-        self.log.debug("Sending in-queue terminal packets")
+        self._log.debug("Sending in-queue terminal packets")
         for _ in xrange(self.num_terminal_packets):
             self.q.put(None)
-        self.log.debug("Closing in-queue")
+        self._log.debug("Closing in-queue")
         self.q.close()
 
 
-class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
+class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
     """
     Helper process for extracting DescriptorElement vectors on a separate
     process. This terminates with a None packet fed to in_q. Otherwise, in_q
@@ -209,7 +205,7 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
     """
 
     def __init__(self, i, in_q, out_q):
-        super(_ElemVectorExtractor, self)\
+        super(_ElemVectorExtractorProcess, self)\
             .__init__(name='[w%d]' % i)
         self._log.debug("Making worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
@@ -220,6 +216,7 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
         packet = self.in_q.get()
         while packet is not None:
             row, elem = packet
-            self.out_q.put((row, elem.vector()))
+            v = elem.vector()
+            self.out_q.put((row, v))
             packet = self.in_q.get()
         self.out_q.put(None)

@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import multiprocessing.queues
+from Queue import Queue
 import sys
 import threading
 import time
@@ -19,7 +20,7 @@ __all__ = [
 
 
 def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
-                       report_interval=None):
+                       report_interval=None, use_multiprocessing=False):
     """
     Add to or create a numpy matrix, adding to it the vector data contained in
     a sequence of DescriptorElement instances using asynchronous processing.
@@ -39,8 +40,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         matrix to insert vectors into.
     :type mat: None | numpy.core.multiarray.ndarray
 
-    :param procs: Optional specification of the number of cores to use. If None,
-        we will attempt to use all available cores.
+    :param procs: Optional specification of the number of threads/cores to use.
+        If None, we will attempt to use all available threads/cores.
     :type procs: None | int | long
 
     :param buffer_factor: Multiplier against the number of processes used to
@@ -51,6 +52,10 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         occur reporting about conversion speed. This should be greater than 0
         if this debug logging is desired.
     :type report_interval: None | float
+
+    :param use_multiprocessing: Whether or not to use discrete processes as the
+        parallelization agent vs python threads.
+    :type use_multiprocessing: bool
 
     :return: Created or input matrix.
     :rtype: numpy.core.multiarray.ndarray
@@ -71,13 +76,19 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
     if procs is None:
         procs = multiprocessing.cpu_count()
 
-    in_q = multiprocessing.Queue()
-    out_q = multiprocessing.Queue(int(procs * buffer_factor))
-    log.debug("Output queue size: %d", out_q._maxsize)
+    # Choose parallel types
+    if use_multiprocessing:
+        queue_t = multiprocessing.Queue
+        worker_t = _ElemVectorExtractorProcess
+    else:
+        queue_t = Queue
+        worker_t = _ElemVectorExtractorThread
 
+    in_q = queue_t()
+    out_q = queue_t(int(procs * buffer_factor))
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [_ElemVectorExtractorProcess(i, in_q, out_q) for i in xrange(procs)]
+    workers = [worker_t(i, in_q, out_q) for i in xrange(procs)]
 
     in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
@@ -110,12 +121,9 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
                               f / (time.time() - t), f)
                     lt = time.time()
 
-        log.debug("Closing output queue")
-        out_q.close()
-
         # All work should be exhausted at this point
-        if sys.platform == 'darwin':
-            # qsize doesn't work on OSX
+        if use_multiprocessing and sys.platform == 'darwin':
+            # multiprocessing.Queue.qsize doesn't work on OSX
             # Try to get something from each queue, expecting an empty exception
             try:
                 in_q.get(block=False)
@@ -133,24 +141,31 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             assert in_q.qsize() == 0, "In queue not empty"
             assert out_q.qsize() == 0, "Out queue not empty"
 
-        log.debug("Done")
         return mat
     finally:
         log.debug("Stopping/Joining queue feeder thread")
         in_queue_t.stop()
         in_queue_t.join()
 
-        # Forcibly terminate worker processes if still alive
-        log.debug("Joining/Terminating workers")
-        for w in workers:
-            if w.is_alive():
-                w.terminate()
-            w.join()
+        if use_multiprocessing:
+            # Forcibly terminate worker processes if still alive
+            log.debug("Joining/Terminating process workers")
+            for w in workers:
+                if w.is_alive():
+                    w.terminate()
+                w.join()
 
-        log.debug("Cleaning queues")
-        for q in (in_q, out_q):
-            q.close()
-            q.join_thread()
+            log.debug("Cleaning multiprocess queues")
+            for q in (in_q, out_q):
+                q.close()
+                q.join_thread()
+        else:
+            log.debug("Stopping/Joining threaded workers")
+            for w in workers:
+                w.stop()
+                w.join()
+
+        log.debug("Done")
 
 
 class _FeedQueueThread (SmqtkObject, threading.Thread):
@@ -172,25 +187,27 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         return self._stop.isSet()
 
     def run(self):
-        # Special case for in-memory storage of descriptors
-        from smqtk.representation.descriptor_element.local_elements \
-            import DescriptorMemoryElement
+        try:
+            # Special case for in-memory storage of descriptors
+            from smqtk.representation.descriptor_element.local_elements \
+                import DescriptorMemoryElement
 
-        for r, d in enumerate(self.descr_elements):
-            if isinstance(d, DescriptorMemoryElement):
-                self.out_mat[r] = d.vector()
-            else:
-                self.q.put((r, d))
+            for r, d in enumerate(self.descr_elements):
+                if isinstance(d, DescriptorMemoryElement):
+                    self.out_mat[r] = d.vector()
+                else:
+                    self.q.put((r, d))
 
-            # If we're told to stop, immediately quit out of processing
-            if self.stopped():
-                break
-
-        self._log.debug("Sending in-queue terminal packets")
-        for _ in xrange(self.num_terminal_packets):
-            self.q.put(None)
-        self._log.debug("Closing in-queue")
-        self.q.close()
+                # If we're told to stop, immediately quit out of processing
+                if self.stopped():
+                    break
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self._log.debug("Sending in-queue terminal packets")
+            for _ in xrange(self.num_terminal_packets):
+                self.q.put(None)
+            self._log.debug("Closing in-queue")
 
 
 class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
@@ -207,16 +224,60 @@ class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
     def __init__(self, i, in_q, out_q):
         super(_ElemVectorExtractorProcess, self)\
             .__init__(name='[w%d]' % i)
-        self._log.debug("Making worker (%d, %s, %s)", i, in_q, out_q)
+        self._log.debug("Making process worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
         self.in_q = in_q
         self.out_q = out_q
 
     def run(self):
-        packet = self.in_q.get()
-        while packet is not None:
-            row, elem = packet
-            v = elem.vector()
-            self.out_q.put((row, v))
+        try:
             packet = self.in_q.get()
-        self.out_q.put(None)
+            while packet is not None:
+                row, elem = packet
+                v = elem.vector()
+                self.out_q.put((row, v))
+                packet = self.in_q.get()
+            self.out_q.put(None)
+        except KeyboardInterrupt:
+            pass
+
+
+class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
+    """
+    Helper process for extracting DescriptorElement vectors on a separate
+    process. This terminates with a None packet fed to in_q. Otherwise, in_q
+    values are expected to be (row, element) pairs. Tuples of the form
+    (row, vector) are published to the out_q.
+
+    Terminal value: None
+
+    """
+
+    def __init__(self, i, in_q, out_q):
+        SmqtkObject.__init__(self)
+        threading.Thread.__init__(self, name='[w%d]' % i)
+
+        self._log.debug("Making thread worker (%d, %s, %s)", i, in_q, out_q)
+        self.i = i
+        self.in_q = in_q
+        self.out_q = out_q
+
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        try:
+            packet = self.in_q.get()
+            while packet is not None and not self.stopped():
+                row, elem = packet
+                v = elem.vector()
+                self.out_q.put((row, v))
+                packet = self.in_q.get()
+            self.out_q.put(None, 1.0)
+        except KeyboardInterrupt:
+            pass

@@ -1,7 +1,7 @@
 import logging
 import multiprocessing
 import multiprocessing.queues
-from Queue import Queue
+import Queue
 import sys
 import threading
 import time
@@ -20,7 +20,8 @@ __all__ = [
 
 
 def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
-                       report_interval=None, use_multiprocessing=False):
+                       report_interval=None, use_multiprocessing=False,
+                       thread_q_put_interval=0.001):
     """
     Add to or create a numpy matrix, adding to it the vector data contained in
     a sequence of DescriptorElement instances using asynchronous processing.
@@ -57,6 +58,13 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         parallelization agent vs python threads.
     :type use_multiprocessing: bool
 
+    :param thread_q_put_interval: Interval at worker threads attempt to insert
+        values into the output queue after fetching vector from a
+        DescriptorElement. This is for dead-lock protection due to size-limited
+        output queue. This is only used if ``use_multiprocessing`` is ``False``
+        and this must be >0.
+    :type thread_q_put_interval: float
+
     :return: Created or input matrix.
     :rtype: numpy.core.multiarray.ndarray
 
@@ -77,18 +85,24 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         procs = multiprocessing.cpu_count()
 
     # Choose parallel types
+    worker_kwds = {}
     if use_multiprocessing:
         queue_t = multiprocessing.Queue
         worker_t = _ElemVectorExtractorProcess
     else:
-        queue_t = Queue
+        queue_t = Queue.Queue
         worker_t = _ElemVectorExtractorThread
+
+        assert thread_q_put_interval >= 0, \
+            "Thread queue.put interval must be >= 0. (given: %f)" \
+            % thread_q_put_interval
+        worker_kwds['q_put_interval'] = thread_q_put_interval
 
     in_q = queue_t()
     out_q = queue_t(int(procs * buffer_factor))
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [worker_t(i, in_q, out_q) for i in xrange(procs)]
+    workers = [worker_t(i, in_q, out_q, **worker_kwds) for i in xrange(procs)]
 
     in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
@@ -253,7 +267,7 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, i, in_q, out_q):
+    def __init__(self, i, in_q, out_q, q_put_interval=0.001):
         SmqtkObject.__init__(self)
         threading.Thread.__init__(self, name='[w%d]' % i)
 
@@ -261,6 +275,7 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         self.i = i
         self.in_q = in_q
         self.out_q = out_q
+        self.q_put_interval = q_put_interval
 
         self._stop = threading.Event()
 
@@ -271,13 +286,24 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         return self._stop.isSet()
 
     def run(self):
-        try:
+        packet = self.in_q.get()
+        while packet is not None and not self.stopped():
+            row, elem = packet
+            v = elem.vector()
+            self.q_put((row, v))
             packet = self.in_q.get()
-            while packet is not None and not self.stopped():
-                row, elem = packet
-                v = elem.vector()
-                self.out_q.put((row, v))
-                packet = self.in_q.get()
-            self.out_q.put(None, 1.0)
-        except KeyboardInterrupt:
-            pass
+        self.q_put(None)
+
+    def q_put(self, val):
+        """
+        Try to put the given value into the output queue until it is inserted
+        (if it was previously full), or the stop signal was given.
+        """
+        put = False
+        while not put and not self.stopped():
+            try:
+                self.out_q.put(val, timeout=self.q_put_interval)
+                put = True
+            except Queue.Full:
+                self._log.debug("Skipping q.put Full error")
+                pass

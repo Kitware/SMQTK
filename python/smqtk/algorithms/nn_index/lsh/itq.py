@@ -526,7 +526,9 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
 
         # Compute fine-grain distance measurements for collected elements + sort
         self._log.debug("elements to numpy")
-        neighbor_vectors = elements_to_matrix(neighbors)
+        neighbor_vectors = elements_to_matrix(neighbors,
+                                              use_multiprocessing=False,
+                                              report_interval=1)
         self._log.debug("Sorting descriptors: %d", len(neighbors))
         def comp_neighbor_dist(neighbor_vec):
             return self._dist_func(d_vec, neighbor_vec)

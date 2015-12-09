@@ -16,9 +16,9 @@ Examples of high level applications may include being able to search a media cor
 ## Documentation
 Additional documentation can be found in the ``docs`` directory as follows:
 
-* [Architecture Overview](/docs/architecture.md)
-* [Building/Installing SMQTK](/docs/building.md)
+* [Architecture Overview](/docs/architecture.rst)
+* [Building/Installing SMQTK](/docs/building.rst)
 * Algorithm Documents
-    * [Algorithm Interfaces](/docs/algorithms/interfaces.md)
-    * [Algorithm Model Generation](/docs/algorithms/model_generation.md)
+    * [Algorithm Interfaces](/docs/algorithminterfaces.rst)
+    * [Algorithm Model Generation](/docs/algorithmmodels.rst)
 * [Example Use Cases and Applications](/docs/examples/overview.md)

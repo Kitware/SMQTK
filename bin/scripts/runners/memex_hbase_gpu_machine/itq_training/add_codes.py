@@ -1,5 +1,6 @@
 import cPickle
 import logging
+import json
 import multiprocessing
 import re
 import time
@@ -7,7 +8,7 @@ import time
 import numpy as np
 
 from smqtk.algorithms.nn_index.lsh.itq import ITQNearestNeighborsIndex
-from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
+from smqtk.representation.descriptor_element.postgres_element import PostgresDescriptorElement
 from smqtk.utils import SmqtkObject
 from smqtk.utils.bin_utils import initialize_logging
 from smqtk.utils.bit_utils import bit_vector_to_int
@@ -15,35 +16,38 @@ from smqtk.utils.bit_utils import bit_vector_to_int
 from load_algo import load_algo
 
 
-DESCRIPTORS_ROOT_DIR = "/data/kitware/smqtk/image_cache_cnn_compute/descriptors"
-DESCRIPTORS_FILE_NAMES = "/data/kitware/smqtk/image_cache_cnn_compute/descriptor_file_names.5.3mil.pickle"
-ITQ_ROTATION = "/data/kitware/smqtk/image_cache_cnn_compute/itq_model/256-bit/rotation.npy"
-ITQ_MEAN_VEC = "/data/kitware/smqtk/image_cache_cnn_compute/itq_model/256-bit/mean_vec.npy"
+UUIDS_FILEPATH = "/data/shared/memex/ht_image_cnn/descriptor_uuid_set.pickle"
+ITQ_ROTATION = "/data/shared/memex/ht_image_cnn/itq_model/16-bit/rotation.npy"
+ITQ_MEAN_VEC = "/data/shared/memex/ht_image_cnn/itq_model/16-bit/mean_vec.npy"
 
 
 fn_sha1_re = re.compile("\w+\.(\w+)\.vector\.npy")
+
+element_type_str = open('/data/shared/memex/ht_image_cnn/descriptor_type_name.txt').read().strip()
+
+psql_element_config = json.load(open('/data/shared/memex/ht_image_cnn/psql_descriptor_config.json'))
 
 
 #
 # Multiprocessing of ITQ small-code generation
 #
-def make_element(sha1):
-    return DescriptorFileElement("CaffeDefaultImageNet", sha1,
-                                 DESCRIPTORS_ROOT_DIR,
-                                 10)
+def make_element(uuid):
+    return PostgresDescriptorElement.from_config(psql_element_config,
+                                                 element_type_str,
+                                                 uuid)
 
 
-def make_elements_from_filenames(filenames):
-    for fn in filenames:
-        yield make_element(fn_sha1_re.match(fn).group(1))
+def make_elements_from_uuids(uuids):
+    for uuid in uuids:
+        yield make_element(uuid)
 
 
 class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
     """
     Worker process for ITQ smallcode generation given a rotation matrix and mean vector.
 
-    Input queue format: DescriptorFileElement
-    Output queue format: (int|long, DescriptorFileElement)
+    Input queue format: PostgresDescriptorElement
+    Output queue format: (int|long, PostgresDescriptorElement)
 
     Terminal value: None
 
@@ -75,7 +79,7 @@ class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
         while packet:
             # self._log.debug("[%s] Packet: %s", self.name, packet)
             descr_elem = packet
-            # self.out_q.put((shell.get_small_code(descr_elem), 
+            # self.out_q.put((shell.get_small_code(descr_elem),
             #                 descr_elem))
 
             d_elems.append(descr_elem)
@@ -105,7 +109,8 @@ class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
 def async_compute_smallcodes(r, mean_vec, descr_elements,
                              procs=None, report_interval=1.):
     """
-    Yields (int|long, DescriptorElement)
+    Returns tuples of small-code values with the associated DescriptorElement
+    instance.
     """
     log = logging.getLogger(__name__)
 
@@ -130,7 +135,7 @@ def async_compute_smallcodes(r, mean_vec, descr_elements,
         lt = t = time.time()
         for de in descr_elements:
             in_q.put(de)
-            
+
             s += 1
             if time.time() - lt >= report_interval:
                 log.debug("Sent packets per second: %f, Total: %d",
@@ -159,7 +164,7 @@ def async_compute_smallcodes(r, mean_vec, descr_elements,
         log.info("Scanned all smallcodes")
 
         return sc_d_return
-        
+
     finally:
         for w in workers:
             if w.is_alive():
@@ -173,16 +178,17 @@ def async_compute_smallcodes(r, mean_vec, descr_elements,
 def add_descriptors_smallcodes():
     log = logging.getLogger(__name__)
 
-    log.info("Loading descriptor file names")
-    with open(DESCRIPTORS_FILE_NAMES) as f:
-        descriptor_filenames = cPickle.load(f)
-    log.info("Loading ITQ components")
-    r = np.load(ITQ_ROTATION)
-    mv = np.load(ITQ_MEAN_VEC)
+    log.info("Loading descriptor UUIDs")
+    with open(UUIDS_FILEPATH) as f:
+        descriptor_uuids = cPickle.load(f)
 
-    log.info("Making SC iterator")
+    log.info("Loading ITQ components")
+    r = np.load("/data/shared/memex/ht_image_cnn/itq_model/16-bit/rotation.npy")
+    mv = np.load("/data/shared/memex/ht_image_cnn/itq_model/16-bit/mean_vec.npy")
+
+    log.info("Making small-codes")
     sc_d_pairs = async_compute_smallcodes(
-        r, mv, make_elements_from_filenames(descriptor_filenames)
+        r, mv, make_elements_from_uuids(descriptor_uuids)
     )
 
     log.info("Loading ITQ model")
@@ -191,7 +197,7 @@ def add_descriptors_smallcodes():
     log.info("Adding small codes")
     itq_index._code_index.add_many_descriptors(sc_d_pairs)
 
-    return descriptor_filenames, itq_index
+    return descriptor_uuids, itq_index
 
 
 if __name__ == "__main__":

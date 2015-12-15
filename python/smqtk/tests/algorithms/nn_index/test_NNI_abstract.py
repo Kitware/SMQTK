@@ -12,9 +12,10 @@ __author__ = "paul.tunison@kitware.com"
 
 
 class DummySI (NearestNeighborsIndex):
+
     @classmethod
     def is_usable(cls):
-        True
+        return True
 
     def get_config(self):
         return {}

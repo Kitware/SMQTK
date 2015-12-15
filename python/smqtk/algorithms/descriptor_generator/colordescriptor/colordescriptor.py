@@ -158,6 +158,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
         :type use_spatial_pyramid: bool
 
         """
+        super(ColorDescriptor_Base, self).__init__()
+
         # TODO: Because of the FLANN library non-deterministic overflow issue,
         #       an alternative must be found before this can be put into
         #       production. Suggest saving/using sk-learn MBKMeans class? Can

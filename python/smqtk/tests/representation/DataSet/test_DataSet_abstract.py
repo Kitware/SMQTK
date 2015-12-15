@@ -10,7 +10,12 @@ __author__ = "paul.tunison@kitware.com"
 
 class DummyDataSet (DataSet):
 
+    @classmethod
+    def is_usable(cls):
+        return True
+
     def __init__(self):
+        super(DummyDataSet, self).__init__()
         self.stuff = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
 
     def count(self):

@@ -27,17 +27,15 @@ class DummyDescriptorGenerator (DescriptorGenerator):
     functionality.
     """
 
-    # No base implementation
-
     @classmethod
     def is_usable(cls):
-        return
+        return True
 
     def get_config(self):
         return {}
 
     def valid_content_types(self):
-        return
+        return {}
 
     def _compute_descriptor(self, data):
         return

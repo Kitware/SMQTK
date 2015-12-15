@@ -27,6 +27,8 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     """
 
     def __init__(self):
+        super(DataElement, self).__init__()
+
         self._md5_cache = None
         self._sha1_cache = None
         self._temp_filepath_stack = []

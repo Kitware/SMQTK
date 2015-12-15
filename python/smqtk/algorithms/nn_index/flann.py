@@ -110,6 +110,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :type random_seed: int
 
         """
+        super(FlannNearestNeighborsIndex, self).__init__()
+
         def normpath(p):
             return (p and osp.abspath(osp.expanduser(p))) or p
         self._index_filepath = normpath(index_filepath)

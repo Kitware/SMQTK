@@ -1,7 +1,9 @@
 import logging
 import multiprocessing
 import multiprocessing.queues
+import Queue
 import sys
+import threading
 import time
 
 import numpy
@@ -18,7 +20,8 @@ __all__ = [
 
 
 def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
-                       report_interval=None):
+                       report_interval=None, use_multiprocessing=False,
+                       thread_q_put_interval=0.001):
     """
     Add to or create a numpy matrix, adding to it the vector data contained in
     a sequence of DescriptorElement instances using asynchronous processing.
@@ -34,11 +37,12 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     :param mat: Optionally pre-constructed numpy matrix of the appropriate shape
         to as loaded vectors into. If supplied this must have rows of the shape:
-        (nDescriptors, nFeatures)
+        (nDescriptors, nFeatures). If this is not supplied, we create a new
+        matrix to insert vectors into.
     :type mat: None | numpy.core.multiarray.ndarray
 
-    :param procs: Optional specification of the number of cores to use. If None,
-        we will attempt to use all available cores.
+    :param procs: Optional specification of the number of threads/cores to use.
+        If None, we will attempt to use all available threads/cores.
     :type procs: None | int | long
 
     :param buffer_factor: Multiplier against the number of processes used to
@@ -50,15 +54,22 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         if this debug logging is desired.
     :type report_interval: None | float
 
+    :param use_multiprocessing: Whether or not to use discrete processes as the
+        parallelization agent vs python threads.
+    :type use_multiprocessing: bool
+
+    :param thread_q_put_interval: Interval at worker threads attempt to insert
+        values into the output queue after fetching vector from a
+        DescriptorElement. This is for dead-lock protection due to size-limited
+        output queue. This is only used if ``use_multiprocessing`` is ``False``
+        and this must be >0.
+    :type thread_q_put_interval: float
+
     :return: Created or input matrix.
     :rtype: numpy.core.multiarray.ndarray
 
     """
     log = logging.getLogger(__name__)
-
-    # Special case for in-memory storage of descriptors
-    from smqtk.representation.descriptor_element.local_elements \
-        import DescriptorMemoryElement
 
     # Create/check matrix
     if mat is None:
@@ -73,13 +84,27 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
     if procs is None:
         procs = multiprocessing.cpu_count()
 
-    in_q = multiprocessing.Queue()
-    out_q = multiprocessing.Queue(int(procs * buffer_factor))
-    log.debug("Output queue size: %d", out_q._maxsize)
+    # Choose parallel types
+    worker_kwds = {}
+    if use_multiprocessing:
+        queue_t = multiprocessing.Queue
+        worker_t = _ElemVectorExtractorProcess
+    else:
+        queue_t = Queue.Queue
+        worker_t = _ElemVectorExtractorThread
 
+        assert thread_q_put_interval >= 0, \
+            "Thread queue.put interval must be >= 0. (given: %f)" \
+            % thread_q_put_interval
+        worker_kwds['q_put_interval'] = thread_q_put_interval
+
+    in_q = queue_t()
+    out_q = queue_t(int(procs * buffer_factor))
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [_ElemVectorExtractor(i, in_q, out_q) for i in xrange(procs)]
+    workers = [worker_t(i, in_q, out_q, **worker_kwds) for i in xrange(procs)]
+
+    in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
     try:
         # Start worker processes
@@ -89,35 +114,30 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             w.start()
 
         log.debug("Sending work packets")
-        async_packets_sent = 0
-        for r, d in enumerate(descr_elements):
-            if isinstance(d, DescriptorMemoryElement):
-                # No loading required, already in memory
-                mat[r] = d.vector()
-            else:
-                in_q.put((r, d))
-                async_packets_sent += 1
+        in_queue_t.start()
 
         # Collect work from async
         log.debug("Aggregating async results")
+        terminals_collected = 0
         f = 0
         lt = t = time.time()
-        for _ in xrange(async_packets_sent):
-            r, v = out_q.get()
-            mat[r] = v
+        while terminals_collected < len(workers):
+            packet = out_q.get()
+            if packet is None:
+                terminals_collected += 1
+            else:
+                r, v = packet
+                mat[r] = v
 
-            f += 1
-            if report_interval and time.time() - lt >= report_interval:
-                log.debug("Rows per second: %f, Total: %d",
-                          f / (time.time() - t), f)
-                lt = time.time()
-
-        log.debug("Closing output queue")
-        out_q.close()
+                f += 1
+                if report_interval and time.time() - lt >= report_interval:
+                    log.debug("Rows per second: %f, Total: %d",
+                              f / (time.time() - t), f)
+                    lt = time.time()
 
         # All work should be exhausted at this point
-        if sys.platform == 'darwin':
-            # qsize doesn't work on OSX
+        if use_multiprocessing and sys.platform == 'darwin':
+            # multiprocessing.Queue.qsize doesn't work on OSX
             # Try to get something from each queue, expecting an empty exception
             try:
                 in_q.get(block=False)
@@ -135,30 +155,76 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             assert in_q.qsize() == 0, "In queue not empty"
             assert out_q.qsize() == 0, "Out queue not empty"
 
-        # Shutdown workers
-        # - Workers should exit upon getting a None packet
-        log.debug("Sending worker terminal signals")
-        for _ in workers:
-            # One for each worker
-            in_q.put(None)
-        log.debug("Closing input queue")
-        in_q.close()
-
-        log.debug("Done")
         return mat
     finally:
-        # Forcibly terminate worker processes if still alive
-        log.debug("Joining/Terminating workers")
-        for w in workers:
-            if w.is_alive():
-                w.terminate()
-            w.join()
-        for q in (in_q, out_q):
-            q.close()
-            q.join_thread()
+        log.debug("Stopping/Joining queue feeder thread")
+        in_queue_t.stop()
+        in_queue_t.join()
+
+        if use_multiprocessing:
+            # Forcibly terminate worker processes if still alive
+            log.debug("Joining/Terminating process workers")
+            for w in workers:
+                if w.is_alive():
+                    w.terminate()
+                w.join()
+
+            log.debug("Cleaning multiprocess queues")
+            for q in (in_q, out_q):
+                q.close()
+                q.join_thread()
+        else:
+            log.debug("Stopping/Joining threaded workers")
+            for w in workers:
+                w.stop()
+                w.join()
+
+        log.debug("Done")
 
 
-class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
+class _FeedQueueThread (SmqtkObject, threading.Thread):
+
+    def __init__(self, descr_elements, q, out_mat, num_terminal_packets):
+        super(_FeedQueueThread, self).__init__()
+
+        self.num_terminal_packets = num_terminal_packets
+        self.out_mat = out_mat
+        self.q = q
+        self.descr_elements = descr_elements
+
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        try:
+            # Special case for in-memory storage of descriptors
+            from smqtk.representation.descriptor_element.local_elements \
+                import DescriptorMemoryElement
+
+            for r, d in enumerate(self.descr_elements):
+                if isinstance(d, DescriptorMemoryElement):
+                    self.out_mat[r] = d.vector()
+                else:
+                    self.q.put((r, d))
+
+                # If we're told to stop, immediately quit out of processing
+                if self.stopped():
+                    break
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self._log.debug("Sending in-queue terminal packets")
+            for _ in xrange(self.num_terminal_packets):
+                self.q.put(None)
+            self._log.debug("Closing in-queue")
+
+
+class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
     """
     Helper process for extracting DescriptorElement vectors on a separate
     process. This terminates with a None packet fed to in_q. Otherwise, in_q
@@ -170,16 +236,74 @@ class _ElemVectorExtractor (SmqtkObject, multiprocessing.Process):
     """
 
     def __init__(self, i, in_q, out_q):
-        super(_ElemVectorExtractor, self)\
+        super(_ElemVectorExtractorProcess, self)\
             .__init__(name='[w%d]' % i)
-        self._log.debug("Making worker (%d, %s, %s)", i, in_q, out_q)
+        self._log.debug("Making process worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
         self.in_q = in_q
         self.out_q = out_q
 
     def run(self):
-        packet = self.in_q.get()
-        while packet is not None:
-            row, elem = packet
-            self.out_q.put((row, elem.vector()))
+        try:
             packet = self.in_q.get()
+            while packet is not None:
+                row, elem = packet
+                v = elem.vector()
+                self.out_q.put((row, v))
+                packet = self.in_q.get()
+            self.out_q.put(None)
+        except KeyboardInterrupt:
+            pass
+
+
+class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
+    """
+    Helper process for extracting DescriptorElement vectors on a separate
+    process. This terminates with a None packet fed to in_q. Otherwise, in_q
+    values are expected to be (row, element) pairs. Tuples of the form
+    (row, vector) are published to the out_q.
+
+    Terminal value: None
+
+    """
+
+    def __init__(self, i, in_q, out_q, q_put_interval=0.001):
+        SmqtkObject.__init__(self)
+        threading.Thread.__init__(self, name='[w%d]' % i)
+
+        self._log.debug("Making thread worker (%d, %s, %s)", i, in_q, out_q)
+        self.i = i
+        self.in_q = in_q
+        self.out_q = out_q
+        self.q_put_interval = q_put_interval
+
+        self._stop = threading.Event()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
+        packet = self.in_q.get()
+        while packet is not None and not self.stopped():
+            row, elem = packet
+            v = elem.vector()
+            self.q_put((row, v))
+            packet = self.in_q.get()
+        self.q_put(None)
+
+    def q_put(self, val):
+        """
+        Try to put the given value into the output queue until it is inserted
+        (if it was previously full), or the stop signal was given.
+        """
+        put = False
+        while not put and not self.stopped():
+            try:
+                self.out_q.put(val, timeout=self.q_put_interval)
+                put = True
+            except Queue.Full:
+                self._log.debug("Skipping q.put Full error")
+                pass

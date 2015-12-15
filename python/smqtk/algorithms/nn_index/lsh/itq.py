@@ -3,9 +3,7 @@ Home of IQR LSH implementation based on UNC Chapel Hill paper / sample code.
 """
 
 import heapq
-import itertools
-import multiprocessing
-import multiprocessing.pool
+import logging
 import os.path as osp
 
 import numpy
@@ -15,7 +13,6 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.code_index import get_code_index_impls
 from smqtk.representation.code_index.memory import MemoryCodeIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.utils import (
     bit_utils,
     distance_functions,
@@ -106,12 +103,15 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: ITQNearestNeighborsIndex
 
         """
-        # Transform nested plugin stuff into actual classes.
-        config_dict['code_index'] = \
-            plugin.from_plugin_config(config_dict['code_index'],
+        merged = cls.get_default_config()
+        merged.update(config_dict)
+
+        # Transform nested plugin stuff into actual classes if provided.
+        merged['code_index'] = \
+            plugin.from_plugin_config(merged['code_index'],
                                       get_code_index_impls)
 
-        return super(ITQNearestNeighborsIndex, cls).from_config(config_dict)
+        return super(ITQNearestNeighborsIndex, cls).from_config(merged)
 
     def __init__(self, mean_vec_filepath=None,
                  rotation_filepath=None,
@@ -193,6 +193,8 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         :type random_seed: int
 
         """
+        super(ITQNearestNeighborsIndex, self).__init__()
+
         self._mean_vec_cache_filepath = mean_vec_filepath
         self._rotation_cache_filepath = rotation_filepath
 
@@ -376,7 +378,11 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
             # matrix.
             self._log.debug("Input elements: %d", len(descr_cache))
             self._log.debug("Input elem size: %s", descr_cache[0].vector().size)
-            x = elements_to_matrix(descr_cache)
+            dbg_report_interval = None
+            if self.logger().getEffectiveLevel() <= logging.DEBUG:
+                dbg_report_interval = 1.0  # seconds
+            x = elements_to_matrix(descr_cache,
+                                   report_interval=dbg_report_interval)
             self._log.debug("descriptor matrix shape: %s", x.shape)
 
         with SimpleTimer("Centering data", self._log.info):
@@ -520,7 +526,9 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
 
         # Compute fine-grain distance measurements for collected elements + sort
         self._log.debug("elements to numpy")
-        neighbor_vectors = elements_to_matrix(neighbors)
+        neighbor_vectors = elements_to_matrix(neighbors,
+                                              use_multiprocessing=False,
+                                              report_interval=1)
         self._log.debug("Sorting descriptors: %d", len(neighbors))
         def comp_neighbor_dist(neighbor_vec):
             return self._dist_func(d_vec, neighbor_vec)

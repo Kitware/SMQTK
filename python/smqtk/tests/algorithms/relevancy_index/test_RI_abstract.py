@@ -11,14 +11,16 @@ __author__ = "paul.tunison@kitware.com"
 
 
 class DummyRI (RelevancyIndex):
+
+    @classmethod
+    def is_usable(cls):
+        return True
+
     def rank(self, pos, neg):
         pass
 
     def get_config(self):
         pass
-
-    def is_usable(cls):
-        True
 
     def count(self):
         return 0

@@ -25,6 +25,8 @@ class DescriptorMemoryIndex (DescriptorIndex):
         :type file_cache: None | str
 
         """
+        super(DescriptorMemoryIndex, self).__init__()
+
         # Mapping of descriptor UUID to the DescriptorElement instance.
         #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         self._table = {}

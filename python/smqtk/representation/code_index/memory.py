@@ -32,6 +32,8 @@ class MemoryCodeIndex (CodeIndex):
         :type file_cache: None | str
 
         """
+        super(MemoryCodeIndex, self).__init__()
+
         self._num_descr = 0
         self._file_cache = file_cache
 
@@ -49,7 +51,7 @@ class MemoryCodeIndex (CodeIndex):
                 self._num_descr = sum(len(d) for d in self._table.itervalues())
                 self._log.debug("Done loading cached table")
 
-    def _cache_table(self):
+    def cache_table(self):
         if self._file_cache:
             with SimpleTimer("Caching memory table", self._log.debug):
                 with open(self._file_cache, 'wb') as f:
@@ -73,7 +75,7 @@ class MemoryCodeIndex (CodeIndex):
         Clear this code index's table entries.
         """
         self._table = {}
-        self._cache_table()
+        self.cache_table()
 
     def codes(self):
         """
@@ -114,7 +116,7 @@ class MemoryCodeIndex (CodeIndex):
             self._num_descr += 1
         code_map[descriptor.uuid()] = descriptor
         if not no_cache:
-            self._cache_table()
+            self.cache_table()
 
     def add_many_descriptors(self, code_descriptor_pairs):
         """
@@ -128,7 +130,7 @@ class MemoryCodeIndex (CodeIndex):
         """
         for c, d in code_descriptor_pairs:
             self.add_descriptor(c, d, True)
-        self._cache_table()
+        self.cache_table()
 
     def get_descriptors(self, code_or_codes):
         """

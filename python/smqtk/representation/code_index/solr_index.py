@@ -81,6 +81,8 @@ class SolrCodeIndex (CodeIndex):
         :type max_boolean_clauses: int
 
         """
+        super(SolrCodeIndex, self).__init__()
+
         self.uuid = index_uuid
 
         self.idx_uuid_field = idx_uuid_field

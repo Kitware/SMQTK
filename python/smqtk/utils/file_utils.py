@@ -33,17 +33,17 @@ def safe_create_dir(d):
     return d
 
 
-def make_tempfile(*args, **kwds):
+def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
     """
     Wrapper for ``tempfile.mkstemp`` that closes/discards the file descriptor
-    returned from the method. Arguments and keywords passed are given to
-    ``tempfile.mkstemp``.
+    returned from the method. Arguments/keywords passed are the same as, and
+    passed directly to ``tempfile.mkstemp``.
 
     :return: Path to a new user-owned temporary file.
     :rtype: str
 
     """
-    fd, fp = tempfile.mkstemp(*args, **kwds)
+    fd, fp = tempfile.mkstemp(suffix, prefix, dir, text)
     os.close(fd)
     return fp
 
@@ -55,23 +55,32 @@ def iter_directory_files(d, recurse=True):
     :param d: base directory path
     :type d: str
 
-    :param recurse: If true, we recursively descend into directories in the
-        given directory. If false, we only return the files in the given
-        directory and not the sub-directories in the given directory.
-    :type recurse: bool
+    :param recurse: If true, we recursively descend into all directories under
+        the given directory. If false, we only return the files in the given
+        directory and not the sub-directories in the given directory. If this is
+        an integer (positive), on only recurse that many sub-directories.
+    :type recurse: bool | int
 
     :return: Generator expression yielding absolute file paths under the given
         directory.
     :rtype: collections.Iterable[str]
 
     """
-    # TODO: Update this to use os.walk
     d = os.path.abspath(d)
     for dirpath, dirnames, filenames in os.walk(d):
         for fname in filenames:
             yield os.path.join(dirpath, fname)
         if not recurse:
             break
+        if not recurse:
+            break
+        elif recurse is not True and dirpath != d:
+            # must be an integer
+            level = len(os.path.relpath(dirpath, d).split(os.sep))
+            if level == recurse:
+                # Empty directories descending
+                del dirnames[:]
+        # else recurse fully
 
 
 def touch(fname):

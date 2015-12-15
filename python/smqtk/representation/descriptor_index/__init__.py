@@ -33,8 +33,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
     @abc.abstractmethod
     def count(self):
         """
-        :return: Number of descriptor elements stored in this index. This is not
-            necessarily the number of codes stored in the index.
+        :return: Number of descriptor elements stored in this index.
         :rtype: int
         """
 

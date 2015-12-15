@@ -36,6 +36,13 @@ VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
 OS_ENV_PATH_SEP = (sys.platform == "win32" and ';') or ':'
 
 
+class NotUsableError (Exception):
+    """
+    Exception thrown when a pluggable class is constructed but does not report
+    as usable.
+    """
+
+
 class Pluggable (object):
     """
     Interface for classes that have plugin implementations
@@ -64,6 +71,11 @@ class Pluggable (object):
         """
         raise NotImplementedError("is_usable class-method not implemented for "
                                   "class '%s'" % cls.__name__)
+
+    def __init__(self):
+        if not self.is_usable():
+            raise NotUsableError("Implementation class '%s' is not currently "
+                                 "usable." % self.__class__.__name__)
 
 
 def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,

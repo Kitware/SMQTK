@@ -56,7 +56,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                 subprocess.call([cls.CNN_EXE],
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except OSError:
-                log.warn("Could not location Caffe CNN descriptor generation "
+                log.warn("Could not find the Caffe CNN descriptor generation "
                          "executable (\'%s\'). Make sure that SMQTK was build "
                          "successfully with the Caffe CNN executable option "
                          "turned ON." % cls.CNN_EXE)
@@ -72,28 +72,37 @@ class CaffeDefaultImageNet (DescriptorGenerator):
                  cnn_exe=None):
         """
         :param blvc_reference_caffenet_model: Path to the BVLC model file.
+        :type blvc_reference_caffenet_model: str
 
         :param image_mean_binary: Path to the ImageNet image mean binary file.
+        :type image_mean_binary: str
 
         :param gpu_batch_size: Number of concurrent images to send to the GPU at
             a time. This is dependent on the RAM available to your GPU. If this
             is set too high, the executable may segfault due to an out-of-memory
             failure.
+        :type gpu_batch_size: int
 
         :param layer_extraction: Layer of the CNN to extract as the feature
             vector.
+        :type layer_extraction: str
 
         :param temp_directory: Optional directory to store temporary working
             files.
+        :type temp_directory: str
 
         :param force_gpu: Force CNN computation on the GPU. Executable must be
             built with this functionality enabled.
+        :type force_gpu: bool
 
         :param cnn_exe: Custom name or path to the executable to use. When None
             we use the default executable name specified on the class in
             ``CNN_EXE``.
+        :type cnn_exe: None | str
 
         """
+        super(CaffeDefaultImageNet, self).__init__()
+
         self.blvc_reference_caffenet_model_fp = blvc_reference_caffenet_model
         self.image_mean_binary_fp = image_mean_binary
         self.gpu_batch_size = gpu_batch_size

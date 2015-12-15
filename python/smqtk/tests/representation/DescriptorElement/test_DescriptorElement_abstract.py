@@ -11,6 +11,10 @@ __author__ = "paul.tunison@kitware.com"
 
 class DummyDescriptorElement (DescriptorElement):
 
+    @classmethod
+    def is_usable(cls):
+        return True
+
     def get_config(self):
         return {}
 

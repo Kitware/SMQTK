@@ -56,6 +56,28 @@ Below is an example code snippet of how to train a ColorDescriptor model for som
     # Since there is a model, we can now compute descriptors for new data
     new_cd.compute_descriptor(new_data, some_factory)
 
+CaffeDefaultImageNet
+^^^^^^^^^^^^^^^^^^^^
+This implementation does not come with a method of training its own models, but requires model files provided by Caffe:
+the network model file and the image mean binary protobuf file.
+
+The Caffe source tree provides two scripts to download the specific files (relative to the caffe source tree):
+
+.. code-block:: bash
+
+    # Downloads the network model file
+    scripts/download_model_binary.py models/bvlc_reference_caffenet
+
+    # Downloads the ImageNet mean image binary protobuf file
+    data/ilsvrc12/get_ilsvrc_aux.sh
+
+These script effectively just download files from a specific source.
+
+If the Caffe source tree is not available, the model files can be downloaded from the following URLs:
+
+    - Network model: http://dl.caffe.berkeleyvision.org/bvlc_reference_caffenet.caffemodel
+    - Image mean: http://dl.caffe.berkeleyvision.org/caffe_ilsvrc12.tar.gz
+
 NearestNeighborsIndex Models (k nearest-neighbors)
 --------------------------------------------------
 

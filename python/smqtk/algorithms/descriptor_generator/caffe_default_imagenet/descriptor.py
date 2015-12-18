@@ -174,10 +174,6 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         """
         Asynchronously compute feature data for multiple data items.
 
-        This function does NOT use the class attribute PARALLEL for determining
-        parallel factor as this method can take that specification as an
-        argument.
-
         :param data_iter: Iterable of data elements to compute features for.
             These must have UIDs assigned for feature association in return
             value.
@@ -198,7 +194,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         :param procs: Optional specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
-        :type procs: int
+        :type procs: int | None
 
         :return: Mapping of input DataElement instances to the computed
             descriptor element.

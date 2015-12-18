@@ -146,7 +146,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             with open(self.image_mean_filepath, 'rb') as f:
                 blob.ParseFromString(f.read())
             a = numpy.array(caffe.io.blobproto_to_array(blob))
-        assert a[0] in [1, 3], \
+            assert a.shape[0] == 1, \
+                "Input image mean blob protobuf consisted of more than one " \
+                "image. Not sure how to handle this yet."
+            a = a.reshape(a.shape[1:])
+        assert a.shape[0] in [1, 3], \
             "Currently asserting that we either get 1 or 3 channel images. " \
             "Got a %d channel image." % a[0]
         a_mean = a.mean(1).mean(1)

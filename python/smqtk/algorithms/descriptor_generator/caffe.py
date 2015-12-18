@@ -119,7 +119,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             caffe.set_mode_cpu()
 
         # Questions:
-        #   - what is ``caffe.TEST``?
+        #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
         self.network = caffe.Net(self.network_prototxt_filepath,
                                  self.network_model_filepath,
@@ -183,7 +183,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             "network_is_bgr": self.network_is_bgr,
             "data_layer": self.data_layer,
         }
-        
+
     def valid_content_types(self):
         """
         :return: A set valid MIME type content types that this descriptor can

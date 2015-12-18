@@ -112,6 +112,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Initialize Caffe and the network
         """
+        self._log.debug("Caffe module: %s", caffe)
+        self._log.debug("caffe dir: %s", dir(caffe))
+
         if self.use_gpu:
             caffe.set_device(self.gpu_device_id)
             caffe.set_mode_gpu()

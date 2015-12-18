@@ -387,5 +387,5 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("extracting return layer '%s' into descriptors",
                         self.return_layer)
-        for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer]):
+        for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer].data):
             descr_elements[uid].set_vector(v)

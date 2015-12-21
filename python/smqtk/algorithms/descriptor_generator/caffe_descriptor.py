@@ -74,18 +74,18 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
-        self.network_prototxt_filepath = network_prototxt_filepath
-        self.network_model_filepath = network_model_filepath
-        self.image_mean_filepath = image_mean_filepath
+        self.network_prototxt_filepath = str(network_prototxt_filepath)
+        self.network_model_filepath = str(network_model_filepath)
+        self.image_mean_filepath = str(image_mean_filepath)
 
-        self.return_layer = return_layer
+        self.return_layer = str(return_layer)
         self.batch_size = int(batch_size)
 
         self.use_gpu = bool(use_gpu)
         self.gpu_device_id = int(gpu_device_id)
 
-        self.network_is_bgr = network_is_bgr
-        self.data_layer = data_layer
+        self.network_is_bgr = bool(network_is_bgr)
+        self.data_layer = str(data_layer)
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" \

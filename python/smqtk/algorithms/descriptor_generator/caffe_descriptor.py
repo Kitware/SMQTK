@@ -5,6 +5,7 @@ import multiprocessing.pool
 
 import numpy
 import PIL.Image
+import PIL.ImageFile
 
 from smqtk.algorithms import DescriptorGenerator
 
@@ -30,7 +31,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                  image_mean_filepath,
                  return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
-                 network_is_bgr=True, data_layer='data'):
+                 network_is_bgr=True, data_layer='data',
+                 load_truncated_images=False):
         """
         Create a Caffe CNN descriptor generator
 
@@ -71,6 +73,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             We assume its 'data' by default.
         :type data_layer: str
 
+        :param load_truncated_images: If we should be lenient and force loading
+            of truncated image bytes. This is False by default.
+
+            This changes a state variable within PIL, so if using descriptor
+            computation in a multi-threaded environment, make sure that other
+            threads loading images via PIL are not modifying this variable
+            differently (including other running instances of this class).
+        :type load_truncated_images: bool
+
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
@@ -86,6 +97,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self.network_is_bgr = bool(network_is_bgr)
         self.data_layer = str(data_layer)
+
+        self.load_truncated_images = bool(load_truncated_images)
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" \
@@ -136,6 +149,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self.transformer = caffe.io.Transformer(
             {self.data_layer: self.network.blobs[self.data_layer].data.shape}
         )
+        self._log.debug("Initializing data transformer -> %s",
+                        self.transformer.inputs)
 
         try:
             a = numpy.load(self.image_mean_filepath)
@@ -189,6 +204,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             "gpu_device_id": self.gpu_device_id,
             "network_is_bgr": self.network_is_bgr,
             "data_layer": self.data_layer,
+            "load_truncated_images": self.load_truncated_images,
         }
 
     def valid_content_types(self):
@@ -278,6 +294,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                      smqtk.representation.DescriptorElement]
 
         """
+        if self.load_truncated_images:
+            PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
+        else:
+            PIL.ImageFile.LOAD_TRUNCATED_IMAGES = False
+
         # Create DescriptorElement instances for each data elem.
         #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
@@ -292,7 +313,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                  "'%s'" % ct)
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
-        self._log.debug("Given %d data elements", len(data_elements))
+        self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
         if len(data_elements) < (procs or multiprocessing.cpu_count()):
@@ -377,6 +398,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                         self.data_layer)
         for i, uid in enumerate(uuids4proc):
             img = PIL.Image.open(io.BytesIO(data_elements[uid].get_bytes()))
+            # Will throw IOError for truncated imagery when we're not
+            # allowing it. Otherwise we would try to array-ify it and get an
+            # empty array, breaking the ``Transformer.preprocess`` method.
+            img.load()
+            # Make into RGB form so we get an array of an expected shape and
+            # format.
+            if img.mode != "RGB":
+                img = img.convert("RGB")
             img_a = numpy.asarray(img)
             # Set into network
             self.network.blobs[self.data_layer].data[i][...] = \

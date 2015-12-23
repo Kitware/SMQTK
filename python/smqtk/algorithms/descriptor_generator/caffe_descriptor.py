@@ -17,6 +17,10 @@ except ImportError:
 
 __author__ = ['paul.tunison@kitware.com, jacob.becker@kitware.com']
 
+__all__ = [
+    "CaffeDescriptorGenerator",
+]
+
 
 class CaffeDescriptorGenerator (DescriptorGenerator):
 
@@ -399,7 +403,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         uid_num = len(uuids4proc)
         p = multiprocessing.Pool(procs)
         img_arrays = p.map(
-            CaffeDescriptorGenerator._process_load_img_array,
+            _process_load_img_array,
             zip(
                 [data_elements[uid] for uid in uuids4proc],
                 [self.transformer]*uid_num,
@@ -427,33 +431,32 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer].data):
             descr_elements[uid].set_vector(v)
 
-    @staticmethod
-    def _process_load_img_array((data_element, transformer,
-                                 data_layer, load_truncated_images)):
-        """
-        Helper function for multiprocessing image data loading
 
-        :param data_element: DataElement providing the bytes
-        :type data_element: smqtk.representation.DataElement
+def _process_load_img_array((data_element, transformer,
+                             data_layer, load_truncated_images)):
+    """
+    Helper function for multiprocessing image data loading
 
-        :param transformer: Caffe Transformer instance for pre-processing
-        :type transformer: caffe.io.Transformer
+    :param data_element: DataElement providing the bytes
+    :type data_element: smqtk.representation.DataElement
 
-        :param load_truncated_images: If PIL should be allowed to load truncated
-            image data. If false, and exception will be raised when encountering
-            such imagery.
+    :param transformer: Caffe Transformer instance for pre-processing
+    :type transformer: caffe.io.Transformer
 
-        :return: Pre-processed numpy array.
+    :param load_truncated_images: If PIL should be allowed to load truncated
+        image data. If false, and exception will be raised when encountering
+        such imagery.
 
-        """
-        CaffeDescriptorGenerator.logger().debug("Loading %s", data_element)
-        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
-        img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-        img_a = numpy.asarray(img)
-        assert img_a.ndim == 3, \
-            "Loaded invalid RGB image with shape %s" \
-            % img_a.shape
-        img_at = transformer.preprocess(data_layer, img_a)
-        return img_at
+    :return: Pre-processed numpy array.
+
+    """
+    PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
+    img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    img_a = numpy.asarray(img)
+    assert img_a.ndim == 3, \
+        "Loaded invalid RGB image with shape %s" \
+        % img_a.shape
+    img_at = transformer.preprocess(data_layer, img_a)
+    return img_at

@@ -5,7 +5,6 @@ Compute many descriptors from a set of file paths loaded from file.
 from collections import deque
 import io
 import logging
-import shutil
 
 import PIL.Image
 
@@ -107,6 +106,7 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
 
 
 def run_file_list(json_config_filepath, filelist_filepath, checkpoint_filepath):
+    import cPickle
     import json
     from smqtk.algorithms import get_descriptor_generator_impls
     from smqtk.representation import DescriptorElementFactory
@@ -117,8 +117,6 @@ def run_file_list(json_config_filepath, filelist_filepath, checkpoint_filepath):
 
     if not logging.getLogger('smqtk').handlers:
         initialize_logging(logging.getLogger('smqtk'), logging.DEBUG)
-    #if not logging.getLogger("PIL").handlers:
-    #    initialize_logging(logging.getLogger("PIL"), logging.DEBUG)
     if not logging.getLogger('__main__').handlers:
         initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
     log = logging.getLogger(__name__)
@@ -127,14 +125,15 @@ def run_file_list(json_config_filepath, filelist_filepath, checkpoint_filepath):
     c = json.load(open(json_config_filepath))
 
     log.info("Making memory factory")
-    # DEBUG
-    #factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
-    factory = DescriptorElementFactory(DescriptorMemoryElement, {})
+    # factory = DescriptorElementFactory(DescriptorMemoryElement, {})
+    factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
+    #: :type: smqtk.algorithms.DescriptorGenerator
     generator = from_plugin_config(c['descriptor_generator'],
                                    get_descriptor_generator_impls)
+    log.info("Making descriptor generator -- Done")
 
     valid_file_paths = dict()
     invalid_file_paths = dict()
@@ -149,50 +148,38 @@ def run_file_list(json_config_filepath, filelist_filepath, checkpoint_filepath):
             else:
                 invalid_file_paths[fp] = ct
 
-    # DEBUG
-    log.info("Getting first 100 valid images")
-    fp_N = 100
-    fp_list = []
-    for fp in iter_valid_files():
-        fp_list.append(fp)
-        if len(fp_list) >= fp_N:
-            break
-
     log.info("Computing descriptors")
-    #m = compute_many_descriptors(iter_valid_files(),
-    m = compute_many_descriptors(fp_list,
+    m = compute_many_descriptors(iter_valid_files(),
                                  generator,
                                  factory,
+                                 batch_size=256,
                                  )
 
-    # DEBUG
-    # # Recording computed file paths and associated file UUIDs (SHA1)
-    # cf = open(checkpoint_filepath, 'a')
-    # for fp, descr in m:
-    #     cf.write("{:s},{:s}\n".format(
-    #         fp, descr.uuid()
-    #     ))
-    # cf.close()
+    # Recording computed file paths and associated file UUIDs (SHA1)
+    cf = open(checkpoint_filepath, 'a')
+    try:
+        for fp, descr in m:
+            cf.write("{:s},{:s}\n".format(
+                fp, descr.uuid()
+            ))
+            cf.flush()
+    finally:
+        cf.close()
 
-    # # Output valid file and invalid file dictionaries as pickle
-    # import cPickle
-    # log.info("Writing valid filepaths map")
-    # with open('valid_file_map.pickle', 'wb') as f:
-    #     cPickle.dump(valid_file_paths, f)
-    # log.info("Writing invalid filepaths map")
-    # with open('invalid_file_map.pickle', 'wb') as f:
-    #     cPickle.dump(invalid_file_paths, f)
+    # Output valid file and invalid file dictionaries as pickle
+    log.info("Writing valid filepaths map")
+    with open('valid_file_map.pickle', 'wb') as f:
+        cPickle.dump(valid_file_paths, f)
+    log.info("Writing invalid filepaths map")
+    with open('invalid_file_map.pickle', 'wb') as f:
+        cPickle.dump(invalid_file_paths, f)
 
-    # log.info("Done")
-
-    for fp, descr in m:
-        yield fp, descr        
-    log.info("Computing descriptors - Done")
+    log.info("Done")
 
 
 if __name__ == "__main__":
     run_file_list(
-        "descriptor_factory.config.json",
-        "files.to_compute.txt",
+        "config.json",
+        "files.all.txt",
         "files.computed.csv",
     )

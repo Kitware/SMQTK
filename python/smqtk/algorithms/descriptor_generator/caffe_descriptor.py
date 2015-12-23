@@ -331,7 +331,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         uuid4proc = tuple(uuid4proc)
 
         if uuid4proc:
-            # Split UUIDs into groups equal to our batch size, and an optioan
+            # Split UUIDs into groups equal to our batch size, and an option
             # tail group that is less than our batch size.
             tail_size = len(uuid4proc) % self.batch_size
             batch_groups = (len(uuid4proc) - tail_size) // self.batch_size

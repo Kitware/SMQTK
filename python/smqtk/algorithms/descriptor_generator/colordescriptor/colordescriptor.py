@@ -106,7 +106,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
                  flann_target_precision=0.95,
                  flann_sample_fraction=0.75,
                  flann_autotune=False,
-                 random_seed=None, use_spatial_pyramid=False):
+                 random_seed=None, use_spatial_pyramid=False,
+                 parallel=None):
         """
         Initialize a new ColorDescriptor interface instance.
 
@@ -157,6 +158,10 @@ class ColorDescriptor_Base (DescriptorGenerator):
             level descriptors during feature computation.
         :type use_spatial_pyramid: bool
 
+        :param parallel: Specific number of threads/cores to use when performing
+            asynchronous activities. When None we will use all cores available.
+        :type parallel: int | None
+
         """
         super(ColorDescriptor_Base, self).__init__()
 
@@ -179,6 +184,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         if self._rand_seed is not None:
             numpy.random.seed(self._rand_seed)
+
+        self.parallel = parallel
 
         # Cannot pre-load FLANN stuff because odd things happen when processing/
         # threading. Loading index file is fast anyway.
@@ -770,7 +777,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             return numpy.load(info_fp), numpy.load(desc_fp)
         else:
             # compute and V-stack matrices for all given images
-            pool = multiprocessing.Pool(processes=self.PARALLEL)
+            pool = multiprocessing.Pool(processes=self.parallel)
 
             # Mapping of UID to tuple containing:
             #   (info_fp, desc_fp, async processing result, tmp_clean_method)
@@ -839,7 +846,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             self._log.debug("Building super matrices...")
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
-            tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
+            tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
             for uid in s_keys:
                 if r_map[uid]:
                     ifp, dfp, sR, ssi = r_map[uid]
@@ -913,9 +920,9 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         per_item_limit = numpy.floor(float(descriptor_limit) / len(data_set))
 
         # If an odd number of jobs, favor descriptor extraction
-        if self.PARALLEL:
-            descr_parallel = int(max(1, math.ceil(self.PARALLEL/2.0)))
-            extract_parallel = int(max(1, math.floor(self.PARALLEL/2.0)))
+        if self.parallel:
+            descr_parallel = int(max(1, math.ceil(self.parallel/2.0)))
+            extract_parallel = int(max(1, math.floor(self.parallel/2.0)))
         else:
             cpuc = multiprocessing.cpu_count()
             descr_parallel = int(max(1, math.ceil(cpuc/2.0)))
@@ -1023,7 +1030,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                          self._log.debug):
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
-            tp = multiprocessing.pool.ThreadPool(processes=self.PARALLEL)
+            tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
             for uid in uids:
                 info_fp_list, desc_fp_list, sR, ssi = r_map[uid]
                 tp.apply_async(ColorDescriptor_Video._thread_load_matrices,

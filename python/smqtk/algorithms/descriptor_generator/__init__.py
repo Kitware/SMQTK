@@ -17,10 +17,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
     Base abstract Feature Descriptor interface
     """
 
-    # Number of cores to use when doing parallel multiprocessing operations
-    # - None means use all available cores.
-    PARALLEL = None
-
     @abc.abstractmethod
     def valid_content_types(self):
         """
@@ -83,13 +79,9 @@ class DescriptorGenerator (SmqtkAlgorithm):
         return descr_elem
 
     def compute_descriptor_async(self, data_iter, descr_factory,
-                                 overwrite=False, **kwds):
+                                 overwrite=False, procs=None, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
-
-        This function does NOT use the class attribute PARALLEL for determining
-        parallel factor as this method can take that specification as an
-        argument.
 
         :param data_iter: Iterable of data elements to compute features for.
             These must have UIDs assigned for feature association in return
@@ -111,7 +103,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :param procs: Optional specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
-        :type procs: int
+        :type procs: int | None
 
         :param pool_type: multiprocessing pool type to use. If no provided, we
             use a normal multiprocessing.pool.Pool instance. By default we use
@@ -136,7 +128,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
         de_map = {}
 
         # Queue up descriptor generation for descriptor elements that
-        procs = kwds.get("procs", None)
+        procs = procs and int(procs)
         pool_t = kwds.get("pool_type", multiprocessing.pool.ThreadPool)
         pool = pool_t(processes=procs)
         with SimpleTimer("Queuing descriptor computation...", self._log.debug):

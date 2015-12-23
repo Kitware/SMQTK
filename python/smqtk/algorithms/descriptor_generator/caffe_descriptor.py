@@ -120,13 +120,12 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Initialize Caffe and the network
         """
-        self._log.debug("Caffe module: %s", caffe)
-        self._log.debug("caffe dir: %s", dir(caffe))
-
         if self.use_gpu:
+            self._log.debug("Using GPU")
             caffe.set_device(self.gpu_device_id)
             caffe.set_mode_gpu()
         else:
+            self._log.debug("using CPU")
             caffe.set_mode_cpu()
 
         # Questions:
@@ -147,6 +146,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Initializing data transformer -> %s",
                         self.transformer.inputs)
 
+        self._log.debug("Loading image mean")
         try:
             a = numpy.load(self.image_mean_filepath)
         except IOError:
@@ -342,19 +342,20 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                     batch_uuids = \
                         uuid4proc[g*self.batch_size:(g+1)*self.batch_size]
                     self._process_batch(batch_uuids, data_elements,
-                                        descr_elements)
+                                        descr_elements, procs)
 
             if tail_size:
                 batch_uuids = uuid4proc[-tail_size:]
                 self._log.debug("Starting tail batch (size=%d)",
                                 len(batch_uuids))
-                self._process_batch(batch_uuids, data_elements, descr_elements)
+                self._process_batch(batch_uuids, data_elements, descr_elements,
+                                    procs)
 
         self._log.debug("forming output dict")
         return dict((data_elements[k], descr_elements[k])
                     for k in data_elements)
 
-    def _process_batch(self, uuids4proc, data_elements, descr_elements):
+    def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
         """
         Run a number of data elements through the network, based on the number
         of UUIDs given, returning the vectors of
@@ -379,8 +380,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                                     *self.net_data_shape[1:4])
 
         # Load data from images into data layer via transformer
-        self._log.debug("Loading image bytes into network layer '%s'",
-                        self.data_layer)
         # for i, uid in enumerate(uuids4proc):
         #     img = PIL.Image.open(io.BytesIO(data_elements[uid].get_bytes()))
         #     # Will throw IOError for truncated imagery when we're not
@@ -396,8 +395,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         #     self.network.blobs[self.data_layer].data[i][...] = \
         #         self.transformer.preprocess(self.data_layer, img_a)
 
+        self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        p = multiprocessing.Pool()
+        p = multiprocessing.Pool(procs)
         img_arrays = p.map(
             CaffeDescriptorGenerator._process_load_img_array,
             zip(
@@ -410,9 +410,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         p.close()
         p.join()
 
+        self._log.debug("Loading image bytes into network layer '%s'",
+                        self.data_layer)
         def set_net_data((i, a)):
             self.network.blobs[self.data_layer].data[i][...] = a
-        p = multiprocessing.pool.ThreadPool()
+        p = multiprocessing.pool.ThreadPool(procs)
         p.map(set_net_data, enumerate(img_arrays))
         p.close()
         p.join()
@@ -444,6 +446,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :return: Pre-processed numpy array.
 
         """
+        CaffeDescriptorGenerator.logger().debug("Loading %s", data_element)
         PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
         img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
         if img.mode != "RGB":

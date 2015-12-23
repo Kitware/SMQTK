@@ -75,11 +75,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         :param load_truncated_images: If we should be lenient and force loading
             of truncated image bytes. This is False by default.
-
-            This changes a state variable within PIL, so if using descriptor
-            computation in a multi-threaded environment, make sure that other
-            threads loading images via PIL are not modifying this variable
-            differently (including other running instances of this class).
         :type load_truncated_images: bool
 
         """
@@ -294,11 +289,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                      smqtk.representation.DescriptorElement]
 
         """
-        if self.load_truncated_images:
-            PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
-        else:
-            PIL.ImageFile.LOAD_TRUNCATED_IMAGES = False
-
         # Create DescriptorElement instances for each data elem.
         #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
@@ -383,11 +373,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                    smqtk.representation.DescriptorElement]
 
         """
-        # convert bytes to arrays via PIL
-        # use transformer on data, add to data layer
-        # feed forward
-        # extract specified network layer insert into appropriate descr_elements
-
         self._log.debug("Updating network data layer shape (%d images)",
                         len(uuids4proc))
         self.network.blobs[self.data_layer].reshape(len(uuids4proc),
@@ -396,20 +381,41 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # Load data from images into data layer via transformer
         self._log.debug("Loading image bytes into network layer '%s'",
                         self.data_layer)
-        for i, uid in enumerate(uuids4proc):
-            img = PIL.Image.open(io.BytesIO(data_elements[uid].get_bytes()))
-            # Will throw IOError for truncated imagery when we're not
-            # allowing it. Otherwise we would try to array-ify it and get an
-            # empty array, breaking the ``Transformer.preprocess`` method.
-            img.load()
-            # Make into RGB form so we get an array of an expected shape and
-            # format.
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-            img_a = numpy.asarray(img)
-            # Set into network
-            self.network.blobs[self.data_layer].data[i][...] = \
-                self.transformer.preprocess(self.data_layer, img_a)
+        # for i, uid in enumerate(uuids4proc):
+        #     img = PIL.Image.open(io.BytesIO(data_elements[uid].get_bytes()))
+        #     # Will throw IOError for truncated imagery when we're not
+        #     # allowing it. Otherwise we would try to array-ify it and get an
+        #     # empty array, breaking the ``Transformer.preprocess`` method.
+        #     img.load()
+        #     # Make into RGB form so we get an array of an expected shape and
+        #     # format.
+        #     if img.mode != "RGB":
+        #         img = img.convert("RGB")
+        #     img_a = numpy.asarray(img)
+        #     # Set into network
+        #     self.network.blobs[self.data_layer].data[i][...] = \
+        #         self.transformer.preprocess(self.data_layer, img_a)
+
+        uid_num = len(uuids4proc)
+        p = multiprocessing.Pool()
+        img_arrays = p.map(
+            CaffeDescriptorGenerator._process_load_img_array,
+            zip(
+                [data_elements[uid] for uid in uuids4proc],
+                [self.transformer]*uid_num,
+                [self.data_layer]*uid_num,
+                [self.load_truncated_images]*uid_num,
+            )
+        )
+        p.close()
+        p.join()
+
+        def set_net_data((i, a)):
+            self.network.blobs[self.data_layer].data[i][...] = a
+        p = multiprocessing.pool.ThreadPool()
+        p.map(set_net_data, enumerate(img_arrays))
+        p.close()
+        p.join()
 
         self._log.debug("Moving network forward")
         self.network.forward()
@@ -418,3 +424,33 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                         self.return_layer)
         for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer].data):
             descr_elements[uid].set_vector(v)
+
+    @staticmethod
+    def _process_load_img_array((data_element, transformer,
+                                 data_layer, load_truncated_images)):
+        """
+        Helper function for multiprocessing image data loading
+
+        :param data_element: DataElement providing the bytes
+        :type data_element: smqtk.representation.DataElement
+
+        :param transformer: Caffe Transformer instance for pre-processing
+        :type transformer: caffe.io.Transformer
+
+        :param load_truncated_images: If PIL should be allowed to load truncated
+            image data. If false, and exception will be raised when encountering
+            such imagery.
+
+        :return: Pre-processed numpy array.
+
+        """
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
+        img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        img_a = numpy.asarray(img)
+        assert img_a.ndim == 3, \
+            "Loaded invalid RGB image with shape %s" \
+            % img_a.shape
+        img_at = transformer.preprocess(data_layer, img_a)
+        return img_at

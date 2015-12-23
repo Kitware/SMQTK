@@ -71,16 +71,23 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
         values.
     :type config_dict: dict
 
+    :param overwrite: If we should clobber any existing file at the specified
+        path. We exit with the error code if this is false and a file exists at
+        ``output_path``.
+    :type overwrite: bool
+
+    :param error_rc: Custom integer error return code to use instead of 1.
+    ;type error_rc: int
+
     :param log: Optionally logging instance. Otherwise we use a local one.
     :type log: logging.Logger
 
     """
-
     error_rc = int(error_rc)
     if error_rc == 0:
         raise ValueError("Error return code cannot be 0.")
     if log is None:
-        log = logging.getLogger(output_config)
+        log = logging.getLogger(__name__)
     if output_path:
         if os.path.exists(output_path) and not overwrite:
             log.error("Output configuration file path already exists! (%s)",

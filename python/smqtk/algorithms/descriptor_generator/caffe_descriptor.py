@@ -383,22 +383,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self.network.blobs[self.data_layer].reshape(len(uuids4proc),
                                                     *self.net_data_shape[1:4])
 
-        # Load data from images into data layer via transformer
-        # for i, uid in enumerate(uuids4proc):
-        #     img = PIL.Image.open(io.BytesIO(data_elements[uid].get_bytes()))
-        #     # Will throw IOError for truncated imagery when we're not
-        #     # allowing it. Otherwise we would try to array-ify it and get an
-        #     # empty array, breaking the ``Transformer.preprocess`` method.
-        #     img.load()
-        #     # Make into RGB form so we get an array of an expected shape and
-        #     # format.
-        #     if img.mode != "RGB":
-        #         img = img.convert("RGB")
-        #     img_a = numpy.asarray(img)
-        #     # Set into network
-        #     self.network.blobs[self.data_layer].data[i][...] = \
-        #         self.transformer.preprocess(self.data_layer, img_a)
-
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
         p = multiprocessing.Pool(procs)

@@ -4,6 +4,11 @@ import os.path as osp
 
 from smqtk.representation import DataElement
 
+try:
+    from tika import detector as tika_detector
+except ImportError:
+    tika_detector = None
+
 
 __author__ = "paul.tunison@kitware.com"
 
@@ -30,7 +35,16 @@ class DataFileElement (DataElement):
         super(DataFileElement, self).__init__()
 
         self._filepath = osp.abspath(osp.expanduser(filepath))
-        self._content_type = mimetypes.guess_type(filepath)[0]
+
+        self._content_type = None
+        if tika_detector:
+            try:
+                self._content_type = tika_detector.from_file(filepath)
+            except IOError:
+                pass
+        # If no tika detector or it failed for some reason
+        if not self._content_type:
+            self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):
         return super(DataFileElement, self).__repr__()[:-1] + \

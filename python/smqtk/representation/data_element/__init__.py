@@ -192,33 +192,37 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
 def get_data_element_impls(reload_modules=False):
     """
-    Discover and return DataElement implementation classes found in the plugin
-    directory. Keys in the returned map are the names of the discovered classes
-    and the paired values are the actual class type objects.
+    Discover and return discovered ``DataElement`` classes. Keys in the
+    returned map are the names of the discovered classes, and the paired values
+    are the actual class type objects.
 
-    We look for modules (directories or files) that start with and alphanumeric
-    character ('_' prefixed files/directories are hidden, but not recommended).
+    We search for implementation classes in:
+        - modules next to this file this function is defined in (ones that begin
+          with an alphanumeric character),
+        - python modules listed in the environment variable
+          ``DATA_ELEMENT_PATH``
+            - This variable should contain a sequence of python module
+              specifications, separated by the platform specific PATH separator
+              character (``;`` for Windows, ``:`` for unix)
 
-    Within a module, we first look for a helper variable by the name
-    ``DATA_ELEMENT_CLASS``, which can either be a single class object or an
-    iterable of class objects, to be exported. If the variable is set to None,
-    we skip that module and do not import anything. If the variable is not
-    present, we look for a class by the same na e and casing as the module's
-    name. If neither are found, the module is skipped.
+    Within a module we first look for a helper variable by the name
+    ``DATA_ELEMENT_CLASS``, which can either be a single class object or
+    an iterable of class objects, to be specifically exported. If the variable
+    is set to None, we skip that module and do not import anything. If the
+    variable is not present, we look at attributes defined in that module for
+    classes that descend from the given base class type. If none of the above
+    are found, or if an exception occurs, the module is skipped.
 
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class objects of type ``DataElement`` whose keys
-        are the string names of the classes.
+    :return: Map of discovered class object of type ``DataElement``
+        whose keys are the string names of the classes.
     :rtype: dict[str, type]
 
     """
-    import os
-    from smqtk.utils.plugin import get_plugins
-
     this_dir = os.path.abspath(os.path.dirname(__file__))
     env_var = "DATA_ELEMENT_PATH"
     helper_var = "DATA_ELEMENT_CLASS"
-    return get_plugins(__name__, this_dir, env_var, helper_var, DataElement,
-                       reload_modules=reload_modules)
+    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
+                              DataElement, reload_modules=reload_modules)

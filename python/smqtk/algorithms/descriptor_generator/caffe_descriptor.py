@@ -416,7 +416,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Loading image bytes into network layer '%s'",
                         self.data_layer)
-        self.network.blobs[self.data_layer].data[...] = numpy.array(img_arrays)
+        self.network.blobs[self.data_layer].data[...] = img_arrays
 
         self._log.debug("Moving network forward")
         self.network.forward()

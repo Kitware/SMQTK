@@ -125,7 +125,6 @@ def run_file_list(json_config_filepath, filelist_filepath, checkpoint_filepath):
     c = json.load(open(json_config_filepath))
 
     log.info("Making memory factory")
-    # factory = DescriptorElementFactory(DescriptorMemoryElement, {})
     factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
 
     log.info("Making descriptor generator '%s'",

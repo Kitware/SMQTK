@@ -304,7 +304,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             ct = d.content_type()
             if ct not in self.valid_content_types():
                 raise ValueError("Cannot compute descriptor of content type "
-                                 "'%s'" % ct)
+                                 "'%s', (DE: %s" % (ct, d))
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
         self._log.debug("Given %d unique data elements", len(data_elements))

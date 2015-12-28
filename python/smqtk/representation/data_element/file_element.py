@@ -40,8 +40,11 @@ class DataFileElement (DataElement):
         if tika_detector:
             try:
                 self._content_type = tika_detector.from_file(filepath)
-            except IOError:
-                pass
+            except IOError, ex:
+                self._log.warn("Failed tika.detector.from_file content type "
+                               "detection (error: %s), falling back to file "
+                               "extension",
+                               str(ex))
         # If no tika detector or it failed for some reason
         if not self._content_type:
             self._content_type = mimetypes.guess_type(filepath)[0]

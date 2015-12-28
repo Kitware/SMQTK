@@ -27,7 +27,7 @@ def default_config():
     }
 
 
-def compute_many_descriptors(file_paths, descr_generator, descr_factory,
+def compute_many_descriptors(file_elements, descr_generator, descr_factory,
                              batch_size=100, overwrite=False,
                              procs=None, **kwds):
     """
@@ -35,7 +35,8 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
     (filepath, DescriptorElement) tuple pairs in the order that they were
     input.
 
-    :param file_paths: Iterable of file path strings of files to work on.
+    :param file_elements: Iterable of DataFileElement instances of files to work
+        on.
     :param descr_generator: DescriptorGenerator implementation instance
         to use to generate descriptor vectors.
     :param descr_factory: DescriptorElement factory to use when producing
@@ -68,8 +69,7 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
         """
         Helper iterator to produce DataFileElement instances from file paths
         """
-        for fp in file_paths:
-            dfe = DataFileElement(fp)
+        for dfe in file_elements:
             dfe_deque.append(dfe)
             yield dfe
 
@@ -139,18 +139,18 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath):
     valid_file_paths = dict()
     invalid_file_paths = dict()
 
-    def iter_valid_files():
+    def iter_valid_elements():
         for fp in file_paths:
             dfe = DataFileElement(fp)
             ct = dfe.content_type()
             if ct in generator.valid_content_types():
                 valid_file_paths[fp] = ct
-                yield fp
+                yield dfe
             else:
                 invalid_file_paths[fp] = ct
 
     log.info("Computing descriptors")
-    m = compute_many_descriptors(iter_valid_files(),
+    m = compute_many_descriptors(iter_valid_elements(),
                                  generator,
                                  factory,
                                  batch_size=256,

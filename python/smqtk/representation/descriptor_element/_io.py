@@ -177,7 +177,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             log.debug("Stopping/Joining threaded workers")
             for w in workers:
                 w.stop()
-                w.join()
+                # w.join()
+                # Threads should exit fine from here
 
         log.debug("Done")
 
@@ -305,5 +306,5 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
                 self.out_q.put(val, timeout=self.q_put_interval)
                 put = True
             except Queue.Full:
-                self._log.debug("Skipping q.put Full error")
+                # self._log.debug("Skipping q.put Full error")
                 pass

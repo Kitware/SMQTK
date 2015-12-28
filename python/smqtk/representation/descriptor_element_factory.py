@@ -69,7 +69,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         merged_config.update(config_dict)
         return DescriptorElementFactory(
             get_descriptor_element_impls()[merged_config['type']],
-            config_dict[merged_config['type']]
+            merged_config[merged_config['type']]
         )
 
     def get_config(self):

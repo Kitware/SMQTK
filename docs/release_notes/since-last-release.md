@@ -46,3 +46,10 @@ Web / Services
 
 Fixes since v0.2.1
 ------------------
+
+Descriptor Elements
+
+  * Fix threading joining in ``elements_to_matrix`` (when using
+    non-multiprocessing mode).
+
+  * Fixed configuration use in ``DescriptorElementFactory.from_config``.

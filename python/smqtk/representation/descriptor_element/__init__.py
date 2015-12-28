@@ -141,7 +141,6 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
             stored.
         :rtype: bool
         """
-        return
 
     @abc.abstractmethod
     def vector(self):
@@ -150,7 +149,6 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
             None of there is no vector stored in this container.
         :rtype: numpy.core.multiarray.ndarray or None
         """
-        return
 
     @abc.abstractmethod
     def set_vector(self, new_vec):
@@ -164,7 +162,6 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        return
 
 
 from ._io import *

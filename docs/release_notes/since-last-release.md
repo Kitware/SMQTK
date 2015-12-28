@@ -5,6 +5,18 @@ Changes Since Last Release
 Updates / New Features since v0.2.1
 -----------------------------------
 
+Classifiers
+
+  * Added generic Classifier algorithm interface.
+
+Classification Elements
+
+  * Added classification result encapsulation interface.
+
+  * Added in-memory implementation
+
+  * Added ClassificationElementFactory implementation.
+
 Data Elements
 
   * Added DataFileElement implementation the optional use of the tika module

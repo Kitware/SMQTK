@@ -1,0 +1,46 @@
+{
+    // Flask application configuration properties. These are set into the
+    // flask.Flask application instance config property.
+    "flask_app": {
+        "SECRET_KEY": "MySuperUltraSecret",
+        // Needed if the application is run in BasicAuth mode
+        // (see runApplication.py script in bin).
+        "BASIC_AUTH_USERNAME": "demo",
+        "BASIC_AUTH_PASSWORD": "demo"
+    },
+    // How to host the application on the running machine
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    },
+    // Configuration of the DescriptorElementFactory used when computing
+    // descriptors for incoming data. This decides where computed descriptors
+    // will temporarily/permanently live.
+    "descriptor_factory": {
+        "DescriptorMemoryElement": {},
+        "type": "DescriptorMemoryElement"
+    },
+    // Listing of descriptor generators available for descriptor computation.
+    // These descriptors will need to already have models generated if they
+    // require one.
+    // This sections will consist of "label": {configuration} pairs,
+    //      where {configuration} is the JSON configuration dictionary for the
+    //      specified implementation type.
+    "descriptor_generators": {
+        "example_label": {
+            "type": "ColorDescriptor_Image_csift",
+            "ColorDescriptor_Image_csift": {
+                // The following paths should point to valid directories, with
+                // the model_directory having pre-trained model files in it.
+                "model_directory": "...data/example_image",
+                "work_directory": "...work/example_image",
+                "random_seed": 42,
+                "kmeans_k": 1024,
+                "flann_autotune": false,
+                "flann_sample_fraction": 0.75,
+                "flann_target_precision": 0.95,
+                "use_spatial_pyramid": false
+            }
+        }
+    }
+}

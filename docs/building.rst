@@ -7,16 +7,19 @@ Dependencies
 In order to provide basic functionality:
 
 * Build SMQTK via CMAKE.
- * Currently, a naive CMake configuration (no modifications to options) is acceptable for basic functionality.
+  * Currently, a naive CMake configuration (no modifications to options) is acceptable for basic functionality.
 * Install python packages detailed in the :file:`requirements.*.txt` files.
 
 In order to run provided SMQTKSearchApp web application, the following are additionally required:
-
+ 
 * MongoDB
- * MongoDB is required for the Web application for session storage.
-   This allows the Flask application API to modify session contents when within AJAX routines.
-   This required for asynchronous user-session state interaction/modification.
- * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
+  * MongoDB is required for the Web application for session storage.
+
+    This allows the Flask application API to modify session contents when within AJAX routines.
+
+    This required for asynchronous user-session state interaction/modification.
+
+  * This is not a permanent requirement as other mediums can be used for this purpose, however they would need implementation.
 
 Installing Python dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -38,6 +41,7 @@ While conda is generally considered the preferred method of acquiring python dep
 
 Installing with Conda and Pip
 """""""""""""""""""""""""""""
+
 The three-step python dependency installation using both conda and pip will look like the following:
 
 .. prompt:: bash
@@ -61,7 +65,7 @@ If installation of python dependencies via pip only is desired, or if local comp
 Where the :file:requirements.docs.*.txt arguments are only needed if you intend to build the SMQTK documentation.
 
 NumPy and SciPy
-+++++++++++++++
+^^^^^^^^^^^^^^^
 
 If installing NumPy and SciPy via pip, it may be useful or required to install BLAS or LAPACK libraries for certain functionality and efficiency.
 
@@ -75,8 +79,10 @@ This may be because a descriptor required additional libraries or tools on the s
 For example, the ColorDescriptor implementation required a 3rd party tool to downloaded and setup.
 
 * ColorDescriptor
- * For CSIFT, TCH, etc. feature descriptors.
-   * http://koen.me/research/colordescriptors/
+  * For CSIFT, TCH, etc. feature descriptors.
+  
+    * http://koen.me/research/colordescriptors/
+
  * After unpacking the downloaded ZIP archive, add the directory it was extracted to to the PYTHONPATH so the DescriptorIO.py module can be accessed and used within the SMQTK library.
  * Note that a license is required for commercial use (See the koen.me webpage).
 
@@ -106,7 +112,7 @@ Optionally, the `ccmake` command line utility, or the GUI version, may be run in
 Currently, the selection is very minimal, but may be expanded over time.
  
 Example
--------
+"""""""
 
 .. prompt:: bash
 
@@ -148,7 +154,7 @@ Will show the other documentation formats that may be available (although be awa
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
 
 Live Preview
-++++++++++++
+^^^^^^^^^^^^
 
 While writing documentation in a mark up format such as ``reStructuredText`` it is very helpful to be able to preview the formated version of the text.  While it is possible to 
 simply run the ``make html`` command periodically, a more seamless version of this is available.  Within the :file:`docs` directory is a small Python script called 

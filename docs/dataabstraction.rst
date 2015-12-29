@@ -35,7 +35,7 @@ DataSet
 
 .. automodule:: smqtk.representation.data_set
    :members:
-.. autoclass:: smqtk.representation.data_set.Dataset
+.. autoclass:: smqtk.representation.data_set.DataSet
    :members:
 
 DescriptorElement

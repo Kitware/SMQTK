@@ -13,17 +13,32 @@ log = logging.getLogger(__name__)
 
 
 log.info("Loading descriptor elements")
+d_type_str = open("descriptor_type_name.txt").read().strip()
 df_config = json.loads(jsmin(open('descriptor_factory_config.json').read()))
 factory = DescriptorElementFactory.from_config(df_config)
 
-d_type_str = open("descriptor_type_name.txt").read().strip()
+#
+# Sample code for finding non-NaN descriptors in parallel
+#
+# def add_non_nan_uuid(uuid):
+#     d = factory.new_descriptor(d_type_str, uuid)
+#     if d.vector().sum() > 0:
+#         return uuid
+#     return None
+#
+# import multiprocessing
+# p = multiprocessing.Pool()
+# non_nan_uuids = \
+#     p.map(add_non_nan_uuid,
+#           (l.strip() for l in open('descriptor_uuids.txt')))
+
 d_elements = []
 with open("descriptor_uuids.train.txt") as f:
     for uuid in (l.strip() for l in f):
         d_elements.append(factory(d_type_str, uuid))
 
-log.info("Sorting descriptors by UUID")
-d_elements.sort(key=lambda e: e.uuid())
+# log.info("Sorting descriptors by UUID")
+# d_elements.sort(key=lambda e: e.uuid())
 
 
 log.info("Loading ITQ index algo")

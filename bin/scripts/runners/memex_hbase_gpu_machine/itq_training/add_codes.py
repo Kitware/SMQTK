@@ -1,4 +1,3 @@
-import cPickle
 import logging
 import json
 import multiprocessing
@@ -7,34 +6,33 @@ import time
 
 import numpy as np
 
-from smqtk.algorithms.nn_index.lsh.itq import ITQNearestNeighborsIndex
-from smqtk.representation.descriptor_element.postgres_element import PostgresDescriptorElement
+from smqtk.representation import DescriptorElementFactory
 from smqtk.utils import SmqtkObject
 from smqtk.utils.bin_utils import initialize_logging
 from smqtk.utils.bit_utils import bit_vector_to_int
+from smqtk.utils.jsmin import jsmin
 
 from load_algo import load_algo
 
 
-UUIDS_FILEPATH = "/data/shared/memex/ht_image_cnn/descriptor_uuid_set.pickle"
-ITQ_ROTATION = "/data/shared/memex/ht_image_cnn/itq_model/16-bit/rotation.npy"
-ITQ_MEAN_VEC = "/data/shared/memex/ht_image_cnn/itq_model/16-bit/mean_vec.npy"
+UUIDS_FILEPATH = "descriptor_uuids.all.txt"
+ITQ_ROTATION = "itq.256.rotation.npy"
+ITQ_MEAN_VEC = "itq.256.mean_vec.npy"
 
 
 fn_sha1_re = re.compile("\w+\.(\w+)\.vector\.npy")
 
-element_type_str = open('/data/shared/memex/ht_image_cnn/descriptor_type_name.txt').read().strip()
+element_type_str = open('descriptor_type_name.txt').read().strip()
 
-psql_element_config = json.load(open('/data/shared/memex/ht_image_cnn/psql_descriptor_config.json'))
+factory_config = json.loads(jsmin(open("descriptor_factory_config.json").read()))
+factory = DescriptorElementFactory.from_config(factory_config)
 
 
 #
 # Multiprocessing of ITQ small-code generation
 #
 def make_element(uuid):
-    return PostgresDescriptorElement.from_config(psql_element_config,
-                                                 element_type_str,
-                                                 uuid)
+    return factory.new_descriptor(element_type_str, uuid)
 
 
 def make_elements_from_uuids(uuids):
@@ -53,18 +51,9 @@ class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
 
     """
 
-    # class ItqShell (ITQNearestNeighborsIndex):
-    #     """
-    #     Shell subclass for access to small-code calculation method
-    #     """
-    #     def __init__(self, rot, mean_vec):
-    #         super(SmallCodeProcess.ItqShell, self).__init__(code_index=None)
-    #         self._r = rot
-    #         self._mean_vector = mean_vec
-
     def __init__(self, i, in_q, out_q, r, mean_vec, batch=500):
         super(SmallCodeProcess, self).__init__()
-        self._log.debug("[%s] Starting worker", self.name)
+        self.i = i
         self.in_q = in_q
         self.out_q = out_q
         self.r = r
@@ -72,15 +61,13 @@ class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
         self.batch = batch
 
     def run(self):
-        # shell = self.ItqShell(self.r, self.m_vec)
+        self._log.debug("[%s] Starting worker", self.name)
 
         packet = self.in_q.get()
         d_elems = []
         while packet:
             # self._log.debug("[%s] Packet: %s", self.name, packet)
             descr_elem = packet
-            # self.out_q.put((shell.get_small_code(descr_elem),
-            #                 descr_elem))
 
             d_elems.append(descr_elem)
             if len(d_elems) >= self.batch:
@@ -103,7 +90,6 @@ class SmallCodeProcess (SmqtkObject, multiprocessing.Process):
             b[z >= 0] = 1
             for bits, d in zip(b, d_elems):
                 self.out_q.put((bit_vector_to_int(bits), d))
-            d_elems = []
 
 
 def async_compute_smallcodes(r, mean_vec, descr_elements,
@@ -180,11 +166,11 @@ def add_descriptors_smallcodes():
 
     log.info("Loading descriptor UUIDs")
     with open(UUIDS_FILEPATH) as f:
-        descriptor_uuids = cPickle.load(f)
+        descriptor_uuids = [l.strip() for l in f]
 
     log.info("Loading ITQ components")
-    r = np.load("/data/shared/memex/ht_image_cnn/itq_model/16-bit/rotation.npy")
-    mv = np.load("/data/shared/memex/ht_image_cnn/itq_model/16-bit/mean_vec.npy")
+    r = np.load(ITQ_ROTATION)
+    mv = np.load(ITQ_MEAN_VEC)
 
     log.info("Making small-codes")
     sc_d_pairs = async_compute_smallcodes(
@@ -202,4 +188,4 @@ def add_descriptors_smallcodes():
 
 if __name__ == "__main__":
     initialize_logging(logging.getLogger(), logging.DEBUG)
-    filenames, itq_index = add_descriptors_smallcodes()
+    uuids, itq_index = add_descriptors_smallcodes()

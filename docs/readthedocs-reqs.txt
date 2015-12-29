@@ -1,0 +1,10 @@
+sphinx
+sphinx_rtd_theme
+sphinx-argparse
+sphinx-prompt
+flask
+flask-login
+flask-basicauth
+requests
+mock
+

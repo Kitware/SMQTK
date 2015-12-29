@@ -7,7 +7,6 @@ import requests
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
-from smqtk.algorithms.nn_index import get_nn_index_impls
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement

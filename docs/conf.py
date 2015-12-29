@@ -22,19 +22,19 @@ from mock import Mock as MagicMock
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../python'))
 sys.path.insert(0, os.path.abspath('../bin'))
- 
+
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
             return Mock()
- 
-MOCK_MODULES = [ 'numpy', 
-    'numpy.core', 
-    'numpy.core.multiarray', 
-    'numpy.matrixlib', 
-    'numpy.matrixlib.defmatrix', 
+
+MOCK_MODULES = [ 'numpy',
+    'numpy.core',
+    'numpy.core.multiarray',
+    'numpy.matrixlib',
+    'numpy.matrixlib.defmatrix',
     'PIL',
-    'PIL.Image', 
+    'PIL.Image',
     'imageio',
     'pymongo' ]
 
@@ -165,7 +165,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

@@ -11,7 +11,7 @@ In order to provide basic functionality:
 * Install python packages detailed in the :file:`requirements.*.txt` files.
 
 In order to run provided SMQTKSearchApp web application, the following are additionally required:
- 
+
 * MongoDB
   * MongoDB is required for the Web application for session storage.
 

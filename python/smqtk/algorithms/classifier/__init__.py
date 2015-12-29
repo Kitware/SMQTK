@@ -1,11 +1,39 @@
+import abc
 import os
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils.plugin import get_plugins
 
 
+__author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
+
+
 class Classifier (SmqtkAlgorithm):
-    pass
+    """
+    Interface for algorithms that classify input descriptors into discrete
+    labels and/or label confidences.
+    """
+
+    @abc.abstractmethod
+    def classify(self, d, factory):
+        """
+        Classify the input descriptor against one or more discrete labels.
+
+        We return values for each label the configured model contains.
+        Implementations may act in a discrete manner whereby only one label is
+        marked with a ``1`` value (others being ``0``), or in a continuous
+        manner whereby each label is given a confidence-like value in the [0, 1]
+        range.
+
+        :param d: Input descriptor to classify
+        :type d: smqtk.representation.DescriptorElement
+
+        :param factory: Classification element factory
+
+        :return: Classification result element
+        :rtype: smqtk.representation.ClassificationElement
+
+        """
 
 
 def get_classifier_impls(reload_modules=False):

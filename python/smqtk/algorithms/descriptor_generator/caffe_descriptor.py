@@ -15,7 +15,7 @@ except ImportError:
     caffe = None
 
 
-__author__ = ['paul.tunison@kitware.com, jacob.becker@kitware.com']
+__author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
 
 __all__ = [
     "CaffeDescriptorGenerator",

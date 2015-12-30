@@ -26,18 +26,15 @@ class NearestNeighborServiceServer (SmqtkWebApp):
     """
     Simple server that takes in a specification of the following form:
 
-        /<descriptor_type>/<uri>[?...]
+        /nn/<path:uri>[?...]
 
-    See the docstring for the ``compute_descriptor()`` method for complete rules
-    on how to form a calling URL.
-
-    Computes the requested descriptor for the given file and returns that via
-    a JSON structure.
+    Computes the nearest neighbor index for the given data and returns a list
+    of nearest neighbors in the following format
 
     Standard return JSON:
     {
         "success": <bool>,
-        "descriptor": [ <float>, ... ]
+        "neighbors": [ <float>, ... ]
         "message": <string>,
         "reference_uri": <uri>
     }
@@ -93,7 +90,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         # Descriptor generator configuration labels
         #: :type: dict[str, dict]
-        self.generator_label_configs = self.json_config['descriptor_generators']
+        self.generator_label_configs = self.json_config['descriptor_generator']
 
         # Cache of DescriptorGenerator instances so we don't have to continuously
         # initialize them as we get requests.
@@ -105,92 +102,13 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             get_nn_index_impls
         )
 
-        @self.route("/")
-        def list_ingest_labels():
-            return flask.jsonify({
-                "labels": sorted(self.generator_label_configs.iterkeys())
-            })
+        self.descriptor_generator_inst = plugin.from_plugin_config(
+                                            self.generator_label_configs,
+                                            get_descriptor_generator_impls)
 
-        @self.route("/all/content_types")
-        def all_content_types():
-            """
-            Of available descriptors, what content types are processable, and
-            what types are associated to which available descriptor generator.
-            """
-            all_types = set()
-            # Mapping of configuration label to content types that generator
-            # can handle
-            r = {}
-            for l in self.generator_label_configs:
-                d = self.get_descriptor_inst(l)
-                all_types.update(d.valid_content_types())
-                r[l] = sorted(d.valid_content_types())
 
-            return flask.jsonify({
-                "all": sorted(all_types),
-                "by-label": r
-            })
-
-        @self.route("/all/compute/<path:uri>")
-        def all_compute(uri):
-            """
-            Compute descriptors over the specified content for all generators
-            that function over the data's content type.
-
-            # JSON Return format
-                {
-                    "success": <bool>
-
-                    "content_type": <str>
-
-                    "message": <str>
-
-                    "descriptors": {  "<label>":  <list[float]>, ... } | None
-
-                    "reference_uri": <str>
-                }
-
-            """
-            message = "execution nominal"
-
-            data_elem = None
-            try:
-                data_elem = self.resolve_data_element(uri)
-            except ValueError, ex:
-                message = "Failed URI resolution: %s" % str(ex)
-
-            descriptors = {}
-            finished_loop = False
-            if data_elem:
-                for l in self.generator_label_configs:
-                    if data_elem.content_type() \
-                            in self.get_descriptor_inst(l).valid_content_types():
-                        d = None
-                        try:
-                            d = self.generate_descriptor(data_elem, l)
-                        except RuntimeError, ex:
-                            message = "Descriptor extraction failure: %s" \
-                                      % str(ex)
-                        except ValueError, ex:
-                            message = "Data content type issue: %s" % str(ex)
-
-                        descriptors[l] = d and d.vector().tolist()
-                if not descriptors:
-                    message = "No descriptors can handle URI content type: %s" \
-                              % data_elem.content_type
-                else:
-                    finished_loop = True
-
-            return flask.jsonify({
-                "success": finished_loop,
-                "content_type": data_elem.content_type(),
-                "message": message,
-                "descriptors": descriptors,
-                "reference_uri": uri
-            })
-
-        @self.route("/<string:descriptor_label>/<path:uri>")
-        def compute_descriptor(descriptor_label, uri):
+        @self.route("/nn/<path:uri>")
+        def compute_nearest_neighbors(uri):
             """
             # Data modes for upload/use
                 - local filepath
@@ -220,7 +138,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
                     "message": <str>
 
-                    "descriptor": <None|list[float]>
+                    "neighbors": <None|list[float]>
 
                     "reference_uri": <str>
                 }
@@ -240,7 +158,12 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             if de:
                 try:
-                    descriptor = self.generate_descriptor(de, descriptor_label)
+                    descriptor = self.descriptor_generator_inst.\
+                        compute_descriptor(de, self.descr_elem_factory)
+
+                    # TODO: Clarify if converting to 1D is necessary
+                    # (it seems for Caffe descriptor)
+                    descriptor.set_vector(descriptor.vector().flatten())
                 except RuntimeError, ex:
                     message = "Descriptor extraction failure: %s" % str(ex)
                 except ValueError, ex:
@@ -250,36 +173,17 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             # Default is 8
             num_neighbors = flask.request.args.get("num_neighbors", 8)
             neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
-            [n.uuid() for n in neighbors]
 
+            # TODO: Return the optional descriptor vector for the neighbors
             return flask.jsonify({
                 "success": descriptor is not None,
                 "message": message,
-                "descriptor":
-                    (descriptor is not None and descriptor.vector().tolist())
-                    or None,
+                "neighbors": [n.uuid() for n in neighbors],
                 "reference_uri": uri
             })
 
     def get_config(self):
         return self.json_config
-
-    def get_descriptor_inst(self, label):
-        """
-        Get the cached content descriptor instance for a configuration label
-        :type label: str
-        :rtype: smqtk.descriptor_generator.DescriptorGenerator
-        """
-        with self.descriptor_cache_lock:
-            if label not in self.descriptor_cache:
-                self.log.debug("Caching descriptor '%s'", label)
-                self.descriptor_cache[label] = \
-                    plugin.from_plugin_config(
-                    self.generator_label_configs[label],
-                        get_descriptor_generator_impls
-                    )
-
-            return self.descriptor_cache[label]
 
     def resolve_data_element(self, uri):
         """
@@ -323,27 +227,5 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                                  "HTTPError: %s" % str(ex))
 
         return de
-
-    def generate_descriptor(self, de, cd_label):
-        """
-        Generate a descriptor for the content pointed to by the given URI using
-        the specified descriptor generator.
-
-        :raises ValueError: Content type mismatch given the descriptor generator
-        :raises RuntimeError: Descriptor extraction failure.
-
-        :type de: smqtk.representation.DataElement
-        :type cd_label: str
-
-        :return: Generated descriptor element instance with vector information.
-        :rtype: smqtk.representation.DescriptorElement
-
-        """
-        with SimpleTimer("Computing descriptor...", self.log.debug):
-            cd = self.get_descriptor_inst(cd_label)
-            descriptor = cd.compute_descriptor(de, self.descr_elem_factory)
-
-        return descriptor
-
 
 APPLICATION_CLASS = NearestNeighborServiceServer

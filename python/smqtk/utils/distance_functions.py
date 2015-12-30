@@ -93,8 +93,11 @@ def euclidean_distance(i, j):
     :rtype: float
 
     """
+    sum_axis = 1
+    if i.ndim == 1 and j.ndim == 1:
+        sum_axis = 0
     # noinspection PyTypeChecker
-    return np.sqrt(np.power(i - j, 2.0).sum())
+    return np.sqrt(np.power(i - j, 2.0).sum(sum_axis))
 
 
 def cosine_similarity(i, j):

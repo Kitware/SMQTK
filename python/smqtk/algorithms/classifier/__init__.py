@@ -14,8 +14,7 @@ class Classifier (SmqtkAlgorithm):
     labels and/or label confidences.
     """
 
-    @abc.abstractmethod
-    def classify(self, d, factory):
+    def classify(self, d, factory, overwrite=False):
         """
         Classify the input descriptor against one or more discrete labels.
 
@@ -29,9 +28,52 @@ class Classifier (SmqtkAlgorithm):
         :type d: smqtk.representation.DescriptorElement
 
         :param factory: Classification element factory
+        :type factory: smqtk.representation.ClassificationElementFactory
+
+        :param overwrite: Recompute classification of the input descriptor and
+            set the results to the ClassificationElement produced by the
+            factory.
+         :type overwrite: bool
 
         :return: Classification result element
         :rtype: smqtk.representation.ClassificationElement
+
+        """
+        c_elem = factory.new_classification(self.name, d.uuid())
+        if overwrite or not c_elem.has_classifications():
+            c = self._classify(d)
+            c_elem.set_classification(c)
+        else:
+            self._log.debug("Found existing classification in generated "
+                            "element")
+
+        return c_elem
+
+    @abc.abstractmethod
+    def get_labels(self):
+        """
+        Get the sequence of integer labels that this classifier can classify
+        descriptors into. The last label is the negative label.
+
+        :return: Sequence of positive integer labels, and the negative label.
+        :rtype: collections.Sequence[int]
+
+        :raises RuntimeError: No model loaded.
+
+        """
+
+    @abc.abstractmethod
+    def _classify(self, d):
+        """
+        Internal method that defines teh generation of the classification map
+        for a given DescriptorElement. This returns a dictionary mapping
+        integer labels to a floating point value.
+
+        :param d:
+        :type d:
+
+        :return:
+        :rtype:
 
         """
 

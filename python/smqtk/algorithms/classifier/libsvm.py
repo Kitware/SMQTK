@@ -1,5 +1,6 @@
 import collections
 from copy import deepcopy
+import ctypes
 import logging
 import os
 
@@ -46,9 +47,9 @@ class LibSvmClassifier (Classifier):
                      '-t': 0,  # linear kernel
                      '-b': 1,  # enable probability estimates
                      '-c': 2,  # SVM parameter C
-                     '-g': 0.0078125,  # initial gamma (1 / 128)
+                     # '-g': 0.0078125,  # initial gamma (1 / 128)
                  },
-                 train_vector_norm_ord=2,
+                 normalize=False,
                  ):
         """
         Initialize the classifier with an empty or existing model.
@@ -66,20 +67,43 @@ class LibSvmClassifier (Classifier):
             documentation for parameter flags and values.
         :type train_params: dict[str, int|float]
 
-        :param train_vector_norm_ord: Vector normalization level (1 = L1,
-            2 = L2, etc.)
-        :type train_vector_norm_ord: int
+        :param normalize: Normalize input vectors to training and
+            classification methods using ``numpy.linalg.norm``. This may either
+            be  ``None``, disabling normalization, or any valid value that could
+            be passed to the ``ord`` parameter in ``numpy.linalg.norm`` for 1D
+            arrays. This is ``None`` by default (no normalization).
+        :type normalize: None | int | float | str
 
         """
         super(LibSvmClassifier, self).__init__()
 
         self.svm_model_fp = svm_model_fp
         self.train_params = train_params
-        self.train_vector_norm_ord = train_vector_norm_ord
+        self.normalize = normalize
+        # Validate normalization parameter by trying it on a random vector
+        if normalize is not None:
+            self._norm_vector(numpy.random.rand(8))
 
         # generated parameters
         self.svm_model = None
+        self._reload_model()
 
+    def __getstate__(self):
+        return self.get_config()
+
+    def __setstate__(self, state):
+        self.svm_model_fp = state['svm_model_fp']
+        self.train_params = state['train_params']
+        self.normalize = state['normalize']
+
+        # C libraries/pointers don't survive across processes.
+        self.svm_model = None
+        self._reload_model()
+
+    def _reload_model(self):
+        """
+        Reload SVM model from configured file path.
+        """
         if self.svm_model_fp and os.path.isfile(self.svm_model_fp):
             self.svm_model = svmutil.svm_load_model(self.svm_model_fp)
 
@@ -89,6 +113,28 @@ class LibSvmClassifier (Classifier):
         Make a single string out of a parameters dictionary
         """
         return ' '.join((str(k)+' '+str(v) for k, v in params.iteritems()))
+
+    def _norm_vector(self, v):
+        """
+        Class standard array normalization. Normalized along max dimension (a=0
+        for a 1D array, a=1 for a 2D array, etc.).
+
+        :param v: Vector to normalize
+        :type v: numpy.ndarray
+
+        :return: Returns the normalized version of input array ``v``.
+        :rtype: numpy.ndarray
+
+        """
+        if self.normalize is not None:
+            n = numpy.linalg.norm(v, self.normalize, v.ndim - 1,
+                                  keepdims=True)
+            # replace 0's with 1's, preventing div-by-zero
+            n[n == 0.] = 1.
+            return v / n
+
+        # Normalization off
+        return v
 
     def get_config(self):
         """
@@ -103,7 +149,7 @@ class LibSvmClassifier (Classifier):
         return {
             "svm_model_fp": self.svm_model_fp,
             "train_params": self.train_params,
-            "train_vector_norm_ord": self.train_vector_norm_ord,
+            "normalize": self.normalize,
         }
 
     def train(self, *class_descriptors, **kwds):
@@ -140,6 +186,9 @@ class LibSvmClassifier (Classifier):
                                "existing trained model @ %s", self.svm_model_fp)
 
         NEGATIVES = 'negatives'
+        # Offset from 0 for positive class labels to use
+        # - not using label of 0 because we think libSVM wants positive labels
+        CLASS_LABEL_OFFSET = 1
 
         # stuff for debug reporting
         etm_ri = None
@@ -156,39 +205,34 @@ class LibSvmClassifier (Classifier):
             class_descriptors = class_descriptors[:-1]
 
         # Form libSVM problem input
+
         self._log.debug("Formatting problem input")
         train_labels = []
         train_vectors = []
         train_group_sizes = []
-        for i, g in enumerate(class_descriptors):
+        for i, g in enumerate(class_descriptors, CLASS_LABEL_OFFSET):
             self._log.debug('-- class %d', i)
             # requires a sequence, so making the iterable ``g`` a tuple
             if not isinstance(g, collections.Sequence):
                 g = tuple(g)
             train_group_sizes.append(len(g))
             x = elements_to_matrix(g, report_interval=etm_ri)
-            # L2 normalize each descriptor before training
-            # noinspection PyTypeChecker
-            n = numpy.linalg.norm(x, self.train_vector_norm_ord, axis=1)
-            n[n == 0] = 1.  # replace 0's with 1's, preventing div-by-zero
-            x /= n.reshape((n.size, 1))  # reshape acting as transpose
-
+            x = self._norm_vector(x)
             train_labels.extend([i]*x.shape[0])
             train_vectors.extend(x.tolist())
-
-            del g
+            del g, x
 
         self._log.debug('-- negatives (-1)')
         if not isinstance(negatives, collections.Sequence):
             negatives = tuple(negatives)
         x = elements_to_matrix(negatives, report_interval=etm_ri)
-        # noinspection PyTypeChecker
-        n = numpy.linalg.norm(x, self.train_vector_norm_ord, axis=1)
-        n[n == 0] = 1.  # replace 0's with 1's, preventing div-by-zero
-        x /= n.reshape((n.size, 1))  # reshape acting as transpose
+        x = self._norm_vector(x)
         train_labels.extend([-1]*x.shape[0])
         train_vectors.extend(x.tolist())
-        del x, n
+        del x
+
+        self._log.debug("Training elements: %d labels, %d vectors",
+                        len(train_labels), len(train_vectors))
 
         self._log.debug("Forming train params")
         #: :type: dict
@@ -196,7 +240,7 @@ class LibSvmClassifier (Classifier):
         params.update(param_debug)
         # Only need to calculate positive class weights when C-SVC type
         if '-s' not in params or int(params['-s']) == 0:
-            for i, n in enumerate(train_group_sizes):
+            for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
                 params['-w'+str(i)] = \
                     max(1.0, len(negatives) / float(n))
 
@@ -206,9 +250,42 @@ class LibSvmClassifier (Classifier):
         svm_problem = svm.svm_problem(train_labels, train_vectors)
         self._log.debug("Training SVM model")
         self.svm_model = svmutil.svm_train(svm_problem, svm_params)
+        self._log.debug("Training SVM model -- Done")
 
         if self.svm_model_fp:
             svmutil.svm_save_model(self.svm_model_fp, self.svm_model)
 
-    def classify(self, d, factory):
-        pass
+    def get_labels(self):
+        """
+        Get the sequence of integer labels that this classifier can classify
+        descriptors into. The last label is the negative label.
+
+        :return: Sequence of positive integer labels, and the negative label.
+        :rtype: collections.Sequence[int]
+
+        :raises RuntimeError: No model loaded.
+
+        """
+        if not self.svm_model:
+            raise RuntimeError("No model loaded")
+        return self.svm_model.get_labels()
+
+    def _classify(self, d):
+        # Get and normalize vector
+        v = d.vector().astype(float)
+        v = self._norm_vector(v)
+
+        nr_class = self.svm_model.get_nr_class()
+        prob_estimates_arr = (ctypes.c_double * nr_class)()
+        v, idx = svm.gen_svm_nodearray(v.tolist())
+        label = svm.libsvm.svm_predict_probability(self.svm_model, v,
+                                                   prob_estimates_arr)
+        values = prob_estimates_arr[:nr_class]
+        return label, values
+
+        #
+        # Platt scaling?
+        #
+        svm_sv_num = self.svm_model.l
+        svm_sv_dim = len(self.svm_model.x_space)
+        svm_sv = self.svm_model.SV[:svm_sv_num]

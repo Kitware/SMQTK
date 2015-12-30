@@ -2,6 +2,9 @@
 *.pyc
 *.pyo
 
+# Sphinx compile files
+/docs/_build/
+
 # ColorDescriptor generated errors log file
 errors.log
 

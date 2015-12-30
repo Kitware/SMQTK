@@ -109,6 +109,7 @@ Currently, we do not package an implementation that requires additional model cr
 The general pattern for ``RelevancyIndex`` instance index model generation:
 
 .. code-block:: python
+
     descriptors = [...]  # some number of descriptors to index
 
     index = RelevancyIndexImpl(...)

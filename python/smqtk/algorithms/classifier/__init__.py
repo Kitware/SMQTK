@@ -16,13 +16,15 @@ class Classifier (SmqtkAlgorithm):
 
     def classify(self, d, factory, overwrite=False):
         """
-        Classify the input descriptor against one or more discrete labels.
+        Classify the input descriptor against one or more discrete labels,
+        outputting a ClassificationElement containing the classification result.
 
-        We return values for each label the configured model contains.
-        Implementations may act in a discrete manner whereby only one label is
-        marked with a ``1`` value (others being ``0``), or in a continuous
-        manner whereby each label is given a confidence-like value in the [0, 1]
-        range.
+
+        We return confidence values for each label the configured model
+        contains. Implementations may act in a discrete manner whereby only one
+        label is marked with a ``1`` value (others being ``0``), or in a
+        continuous manner whereby each label is given a confidence-like value in
+        the [0, 1] range.
 
         :param d: Input descriptor to classify
         :type d: smqtk.representation.DescriptorElement
@@ -33,7 +35,10 @@ class Classifier (SmqtkAlgorithm):
         :param overwrite: Recompute classification of the input descriptor and
             set the results to the ClassificationElement produced by the
             factory.
-         :type overwrite: bool
+        :type overwrite: bool
+
+        :raises RuntimeError: Could not perform classification for some reason
+            (see message).
 
         :return: Classification result element
         :rtype: smqtk.representation.ClassificationElement
@@ -49,14 +54,18 @@ class Classifier (SmqtkAlgorithm):
 
         return c_elem
 
+    #
+    # Abstract methods
+    #
+
     @abc.abstractmethod
     def get_labels(self):
         """
-        Get the sequence of integer labels that this classifier can classify
-        descriptors into. The last label is the negative label.
+        Get the sequence of class labels that this classifier can classify
+        descriptors into..
 
-        :return: Sequence of positive integer labels, and the negative label.
-        :rtype: collections.Sequence[int]
+        :return: Sequence of possible classifier labels.
+        :rtype: collections.Sequence[collections.Hashable]
 
         :raises RuntimeError: No model loaded.
 
@@ -65,15 +74,19 @@ class Classifier (SmqtkAlgorithm):
     @abc.abstractmethod
     def _classify(self, d):
         """
-        Internal method that defines teh generation of the classification map
+        Internal method that defines thh generation of the classification map
         for a given DescriptorElement. This returns a dictionary mapping
         integer labels to a floating point value.
 
-        :param d:
-        :type d:
+        :param d: DescriptorElement containing the vector to classify.
+        :type d: smqtk.representation.DescriptorElement
 
-        :return:
-        :rtype:
+        :raises RuntimeError: Could not perform classification for some reason
+            (see message).
+
+        :return: Dictionary mapping trained labels to classification confidence
+            values
+        :rtype: dict[collections.Hashable, float]
 
         """
 

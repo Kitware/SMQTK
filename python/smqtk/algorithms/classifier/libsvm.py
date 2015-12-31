@@ -1,3 +1,4 @@
+import cPickle
 import collections
 from copy import deepcopy
 import ctypes
@@ -40,8 +41,7 @@ class LibSvmClassifier (Classifier):
         return None not in {svm, svmutil}
 
     # noinspection PyDefaultArgument
-    def __init__(self,
-                 svm_model_fp=None,
+    def __init__(self, svm_model_fp=None, svm_label_map_fp=None,
                  train_params={
                      '-s': 0,  # C-SVC, assumed default if not provided
                      '-t': 0,  # linear kernel
@@ -49,7 +49,7 @@ class LibSvmClassifier (Classifier):
                      '-c': 2,  # SVM parameter C
                      # '-g': 0.0078125,  # initial gamma (1 / 128)
                  },
-                 normalize=False,
+                 normalize=None,
                  ):
         """
         Initialize the classifier with an empty or existing model.
@@ -62,6 +62,10 @@ class LibSvmClassifier (Classifier):
 
         :param svm_model_fp: Path to the libSVM model file.
         :type svm_model_fp: None | str
+
+        :param svm_label_map_fp: Path to the pickle file containing this model's
+            output labels.
+        :type svm_label_map_fp: None | str
 
         :param train_params: SVM parameters used for training. See libSVM
             documentation for parameter flags and values.
@@ -78,6 +82,7 @@ class LibSvmClassifier (Classifier):
         super(LibSvmClassifier, self).__init__()
 
         self.svm_model_fp = svm_model_fp
+        self.svm_label_map_fp = svm_label_map_fp
         self.train_params = train_params
         self.normalize = normalize
         # Validate normalization parameter by trying it on a random vector
@@ -85,7 +90,12 @@ class LibSvmClassifier (Classifier):
             self._norm_vector(numpy.random.rand(8))
 
         # generated parameters
+        #: :type: svm.svm_model
         self.svm_model = None
+        # dictionary mapping SVM integer labels to semantic labels
+        #: :type: dict[int, collections.Hashable]
+        self.svm_label_map = None
+
         self._reload_model()
 
     def __getstate__(self):
@@ -106,6 +116,9 @@ class LibSvmClassifier (Classifier):
         """
         if self.svm_model_fp and os.path.isfile(self.svm_model_fp):
             self.svm_model = svmutil.svm_load_model(self.svm_model_fp)
+        if self.svm_label_map_fp and os.path.isfile(self.svm_label_map_fp):
+            with open(self.svm_label_map_fp, 'rb') as f:
+                self.svm_label_map = cPickle.load(f)
 
     @staticmethod
     def _gen_param_string(params):
@@ -148,74 +161,83 @@ class LibSvmClassifier (Classifier):
         """
         return {
             "svm_model_fp": self.svm_model_fp,
+            "svm_label_map_fp": self.svm_label_map_fp,
             "train_params": self.train_params,
             "normalize": self.normalize,
         }
 
-    def train(self, *class_descriptors, **kwds):
+    def has_model(self):
+        """
+        :return: If this instance currently has a model loaded. If no model is
+            present, classification of descriptors cannot happen.
+        :rtype: bool
+        """
+        return None not in (self.svm_model, self.svm_label_map)
+
+    def train(self, positive_classes, negatives):
         """
         Train the SVM classifier model.
 
-        Positional arguments to this method should be iterables of
-        DescriptorElement instances. Each iterable is assigned an integer label
-        starting with ``0``.
+        The class label ``negative`` is reserved for the negative class.
 
-        Negative examples are required for SVM training. Unless the
-        ``negatives`` keyword argument is provided, we assume the last
-        positional argument is the iterable of negative examples. Negative
-        examples  are given the ``-1`` label.
+        If this instance was constructed with a model filepaths, the trained
+        model and labels will be saved to those paths. If a model is already
+        loaded, we will raise an exception in order to prevent accidental
+        overwrite.
 
-        If this instance was constructed with a model filepath, the trained
-        model will be saved to that path. If a model is already loaded, we will
-        raise an exception in order to prevent accidental overwrite.
+        :param positive_classes: Dictionary mapping positive class labels to
+            iterables of DescriptorElement training examples.
+        :type positive_classes:
+            dict[collections.Hashable,
+                 collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param class_descriptors: Sequence of DescriptorElement iterables for
-            each class to train for, including the negative example iterable if
-            not provided via the ``negatives`` keyword argument
-        :type class_descriptors: collections.Sequence[
-                                    collections.Iterable[
-                                        smqtk.representation.DescriptorElement]]
-
+        :raises ValueError: The ``negative`` label was found in the
+            ``positive_classes`` dictionary. This is reserved for the negative
+            example class.
         :raises RuntimeError: A model file path was configured and has been
             loaded. Following through with training would overwrite this model
             permanently on disk.
 
         """
-        if os.path.isfile(self.svm_model_fp or '') and self.svm_model:
-            raise RuntimeError("Halting training to prevent overwrite of "
-                               "existing trained model @ %s", self.svm_model_fp)
-
-        NEGATIVES = 'negatives'
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
         CLASS_LABEL_OFFSET = 1
+        NEG_LABEL = "negative"
 
-        # stuff for debug reporting
+        if self.has_model():
+            raise RuntimeError("Halting training to prevent overwrite of "
+                               "existing trained model @ %s", self.svm_model_fp)
+
+        if NEG_LABEL in positive_classes:
+            raise ValueError("Found '%s' label in positive_classes map. "
+                             "This label is reserved for negative class."
+                             % NEG_LABEL)
+
+        # Stuff for debug reporting
         etm_ri = None
         param_debug = {'-q': ''}
         if self._log.getEffectiveLevel() <= logging.DEBUG:
             etm_ri = 1.0
             param_debug = {}
 
-        # Collect class and negative groups
-        if NEGATIVES in kwds:
-            negatives = kwds[NEGATIVES]
-        else:
-            negatives = class_descriptors[-1]
-            class_descriptors = class_descriptors[:-1]
-
-        # Form libSVM problem input
-
+        # Form libSVM problem input values
         self._log.debug("Formatting problem input")
         train_labels = []
         train_vectors = []
         train_group_sizes = []
-        for i, g in enumerate(class_descriptors, CLASS_LABEL_OFFSET):
-            self._log.debug('-- class %d', i)
+        self.svm_label_map = {}
+        # Making SVM label assignment deterministic to alphabetic order
+        for i, l in enumerate(sorted(positive_classes), CLASS_LABEL_OFFSET):
+            # Map integer SVM label to semantic label
+            self.svm_label_map[i] = l
+
+            self._log.debug('-- class %d (%s)', i, l)
             # requires a sequence, so making the iterable ``g`` a tuple
+            g = positive_classes[l]
             if not isinstance(g, collections.Sequence):
                 g = tuple(g)
-            train_group_sizes.append(len(g))
+
+            train_group_sizes.append(float(len(g)))
             x = elements_to_matrix(g, report_interval=etm_ri)
             x = self._norm_vector(x)
             train_labels.extend([i]*x.shape[0])
@@ -223,13 +245,17 @@ class LibSvmClassifier (Classifier):
             del g, x
 
         self._log.debug('-- negatives (-1)')
+        # Map integer SVM label to semantic label
+        self.svm_label_map[-1] = NEG_LABEL
+        # requires a sequence, so making the iterable ``negatives`` a tuple
         if not isinstance(negatives, collections.Sequence):
             negatives = tuple(negatives)
+        negatives_size = float(len(negatives))
         x = elements_to_matrix(negatives, report_interval=etm_ri)
         x = self._norm_vector(x)
         train_labels.extend([-1]*x.shape[0])
         train_vectors.extend(x.tolist())
-        del x
+        del negatives, x
 
         self._log.debug("Training elements: %d labels, %d vectors",
                         len(train_labels), len(train_vectors))
@@ -242,7 +268,7 @@ class LibSvmClassifier (Classifier):
         if '-s' not in params or int(params['-s']) == 0:
             for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
                 params['-w'+str(i)] = \
-                    max(1.0, len(negatives) / float(n))
+                    max(1.0, negatives_size / float(n))
 
         self._log.debug("Making parameters obj")
         svm_params = svmutil.svm_parameter(self._gen_param_string(params))
@@ -252,7 +278,12 @@ class LibSvmClassifier (Classifier):
         self.svm_model = svmutil.svm_train(svm_problem, svm_params)
         self._log.debug("Training SVM model -- Done")
 
+        if self.svm_label_map_fp:
+            self._log.debug("saving file -- labels -- %s", self.svm_label_map_fp)
+            with open(self.svm_label_map_fp, 'wb') as f:
+                cPickle.dump(self.svm_label_map, f)
         if self.svm_model_fp:
+            self._log.debug("saving file -- model -- %s", self.svm_model_fp)
             svmutil.svm_save_model(self.svm_model_fp, self.svm_model)
 
     def get_labels(self):
@@ -266,26 +297,60 @@ class LibSvmClassifier (Classifier):
         :raises RuntimeError: No model loaded.
 
         """
-        if not self.svm_model:
+        if not self.has_model():
             raise RuntimeError("No model loaded")
-        return self.svm_model.get_labels()
+        return self.svm_label_map.values()
 
     def _classify(self, d):
+        """
+        Internal method that defines thh generation of the classification map
+        for a given DescriptorElement. This returns a dictionary mapping
+        integer labels to a floating point value.
+
+        :param d: DescriptorElement containing the vector to classify.
+        :type d: smqtk.representation.DescriptorElement
+
+        :raises RuntimeError: Could not perform classification for some reason
+            (see message).
+
+        :return: Dictionary mapping trained labels to classification confidence
+            values
+        :rtype: dict[collections.Hashable, float]
+
+        """
+        if not self.has_model():
+            raise RuntimeError("No SVM model present for classification")
+
         # Get and normalize vector
         v = d.vector().astype(float)
         v = self._norm_vector(v)
-
-        nr_class = self.svm_model.get_nr_class()
-        prob_estimates_arr = (ctypes.c_double * nr_class)()
         v, idx = svm.gen_svm_nodearray(v.tolist())
-        label = svm.libsvm.svm_predict_probability(self.svm_model, v,
-                                                   prob_estimates_arr)
-        values = prob_estimates_arr[:nr_class]
-        return label, values
 
-        #
-        # Platt scaling?
-        #
-        svm_sv_num = self.svm_model.l
-        svm_sv_dim = len(self.svm_model.x_space)
-        svm_sv = self.svm_model.SV[:svm_sv_num]
+        # Effectively reproducing the body of svmutil.svm_predict in order to
+        # simplify and get around excessive prints
+        svm_type = self.svm_model.get_svm_type()
+        nr_class = self.svm_model.get_nr_class()
+        c = dict((l, 0.) for l in self.get_labels())
+
+        if self.svm_model.is_probability_model():
+            if svm_type in [svm.NU_SVR, svm.EPSILON_SVR]:
+                nr_class = 0
+            prob_estimates = (ctypes.c_double * nr_class)()
+            svm.libsvm.svm_predict_probability(self.svm_model, v,
+                                               prob_estimates)
+            # Update dict
+            for l, p in zip(self.svm_model.get_labels(),
+                            prob_estimates[:nr_class]):
+                c[self.svm_label_map[l]] = p
+        else:
+            if svm_type in (svm.ONE_CLASS, svm.EPSILON_SVR, svm.NU_SVC):
+                nr_classifier = 1
+            else:
+                nr_classifier = nr_class*(nr_class-1)//2
+            dec_values = (ctypes.c_double * nr_classifier)()
+            label = svm.libsvm.svm_predict_values(self.svm_model, v, dec_values)
+            # Update dict
+            c[self.svm_label_map[label]] = 1.
+
+        assert len(c) == len(self.svm_label_map)
+        return c

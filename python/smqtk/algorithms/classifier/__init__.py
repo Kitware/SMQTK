@@ -124,5 +124,5 @@ def get_classifier_impls(reload_modules=False):
     this_dir = os.path.abspath(os.path.dirname(__file__))
     env_var = "CLASSIFIER_PATH"
     helper_var = "CLASSIFIER_CLASS"
-    get_plugins(__name__, this_dir, env_var, helper_var, Classifier,
-                reload_modules=reload_modules)
+    return get_plugins(__name__, this_dir, env_var, helper_var, Classifier,
+                       reload_modules=reload_modules)

@@ -31,20 +31,13 @@ class NearestNeighborServiceServer (SmqtkWebApp):
     Computes the nearest neighbor index for the given data and returns a list
     of nearest neighbors in the following format
 
-    Standard return JSON:
+    Standard return JSON::
     {
         "success": <bool>,
         "neighbors": [ <float>, ... ]
         "message": <string>,
         "reference_uri": <uri>
     }
-
-    # Additional Configuration
-
-    ## Environment variable hook
-    We will look for an environment variable `DescriptorService_CONFIG` for a
-    string file path to an additional JSON configuration file to consider.
-
     """
 
     @classmethod
@@ -105,29 +98,36 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         @self.route("/nn/<path:uri>")
         def compute_nearest_neighbors(uri):
             """
-            # Data modes for upload/use
+            Data modes for upload/use::
+
                 - local filepath
                 - base64
                 - http/s URL
 
             The following sub-sections detail how different URI's can be used.
 
-            ## Local Filepath
+            Local Filepath
+            --------------
+
             The URI string must be prefixed with ``file://``, followed by the
             full path to the data file to describe.
 
-            ## Base 64 data
+            Base 64 data
+            ------------
+
             The URI string must be prefixed with "base64://", followed by the
             base64 encoded string. This mode also requires an additional
             ``?content_type=`` to provide data content type information. This
             mode saves the encoded data to temporary file for processing.
 
-            ## HTTP/S address
+            HTTP/S address
+            --------------
+
             This is the default mode when the URI prefix is none of the above.
             This uses the requests module to locally download a data file
             for processing.
 
-            # JSON Return format
+            JSON Return format::
                 {
                     "success": <bool>
 

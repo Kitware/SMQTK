@@ -76,20 +76,24 @@ class MemoryClassificationElement (ClassificationElement):
         else:
             raise NoClassificationError("No classification labels/values")
 
-    def set_classification(self, m):
+    def set_classification(self, m=None, **kwds):
         """
         Set the whole classification map for this element. This will strictly
         overwrite the entire label-confidence mapping (vs. updating it)
 
-        The input map cannot be empty.
+        Label/confidence values may either be provided via keyword arguments or
+        by providing a dictionary mapping labels to confidence values.
+
+        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
+        empty).
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable]
+        :type m: dict[collections.Hashable, float]
 
-        :raises EmptyMapError: The given label-confidence map was empty.
+        :raises ValueError: The given label-confidence map was empty or values
+            did no sum to ``1.0``.
 
         """
-        if m:
-            self._c = m
-        else:
-            raise ValueError("Given map was None or empty")
+        m = super(MemoryClassificationElement, self)\
+            .set_classification(m, **kwds)
+        self._c = m

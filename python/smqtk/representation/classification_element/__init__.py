@@ -13,6 +13,14 @@ __author__ = "paul.tunison@kitware.com"
 class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
     """
     Classification result encapsulation.
+
+    Contains a mapping of arbitrary (but hashable) label values to confidence
+    values (floating point in ``[0,1]`` range). If a classifier does no produce
+    continuous confidence values, it may instead assign a value of ``1.0`` to a
+    single label, and ``0.0`` to the rest.
+
+    The sum of all values should be ``1.0``.
+
     """
 
     def __init__(self, type, uuid):
@@ -129,6 +137,22 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
         c['uuid'] = uuid
         return super(ClassificationElement, cls).from_config(c)
 
+    def max_label(self):
+        """
+        Get the label with the highest confidence.
+
+        :raises NoClassificationError: No classification set.
+
+        :return: The label with the highest confidence.
+        :rtype: collections.Hashable
+
+        """
+        m = (None, 0.)
+        for i in self.get_classification().iteritems():
+            if i[1] > m[1]:
+                m = i
+        return m[0]
+
     #
     # Abstract methods
     #
@@ -159,19 +183,38 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
-    def set_classification(self, m):
+    def set_classification(self, m=None, **kwds):
         """
         Set the whole classification map for this element. This will strictly
         overwrite the entire label-confidence mapping (vs. updating it)
 
-        The input map cannot be empty.
+        Label/confidence values may either be provided via keyword arguments or
+        by providing a dictionary mapping labels to confidence values.
+
+        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
+        empty). Due to possible floating point error, we round to the 9-th
+        decimal digit.
+
+        NOTE TO IMPLEMENTORS: This abstract method will aggregate, and error
+        check, input into a single dictionary and return it. Thus, a ``super``
+        call should be made, which will return a dictionary.
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable]
+        :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty.
+        :raises ValueError: The given label-confidence map was empty or values
+            did no sum to ``1.0``.
 
         """
+        ROUND = 9
+        m = m or {}
+        m.update(kwds)
+        s = sum(m.values())
+        if round(s, ROUND) != 1.0:
+            raise ValueError("Classification map values do not sum "
+                             "sufficiently close to 1.0 (actual = %f)"
+                             % s)
+        return m
 
 
 def get_classification_element_impls(reload_modules=False):

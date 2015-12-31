@@ -155,11 +155,6 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 try:
                     descriptor = self.descriptor_generator_inst.\
                         compute_descriptor(de, self.descr_elem_factory)
-
-                    if descriptor is not None:
-                        descriptor.set_vector(descriptor.vector().flatten())
-                    else:
-                        self.log.error("Descriptor is null or invalid")
                 except RuntimeError, ex:
                     message = "Descriptor extraction failure: %s" % str(ex)
                 except ValueError, ex:

@@ -408,7 +408,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("extracting return layer '%s' into descriptors",
                         self.return_layer)
         for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer].data):
-            descr_elements[uid].set_vector(v)
+            if v.ndim > 1:
+                # In case caffe generates multidimensional array (rows, 1, 1)
+                descr_elements[uid].set_vector(numpy.ravel(v))
+            else:
+                descr_elements[uid].set_vector(v)
 
 
 def _process_load_img_array((data_element, transformer,

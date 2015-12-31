@@ -38,13 +38,9 @@ factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 
 # Compute features on the first image
 descriptors = []
-index = 0
 for item in el:
-    result = cd.compute_descriptor(item, factory)
-    d = DescriptorMemoryElement('unit', result.uuid())
-    d.set_vector(result.vector().flatten())
+    d = cd.compute_descriptor(item, factory)
     descriptors.append(d)
-    index += 1
 index = FlannNearestNeighborsIndex(distance_method="euclidean",
                                    random_seed=42, index_filepath="nn.index",
                                    parameters_filepath="nn.params",

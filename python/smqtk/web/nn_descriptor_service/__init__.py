@@ -90,12 +90,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         # Descriptor generator configuration labels
         #: :type: dict[str, dict]
-        self.generator_label_configs = self.json_config['descriptor_generator']
-
-        # Cache of DescriptorGenerator instances so we don't have to continuously
-        # initialize them as we get requests.
-        self.descriptor_cache = {}
-        self.descriptor_cache_lock = multiprocessing.RLock()
+        self.generator_config = self.json_config['descriptor_generator']
 
         self.nn_index = plugin.from_plugin_config(
             json_config['nn_index'],
@@ -103,7 +98,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         )
 
         self.descriptor_generator_inst = plugin.from_plugin_config(
-                                            self.generator_label_configs,
+                                            self.generator_config,
                                             get_descriptor_generator_impls)
 
 
@@ -161,9 +156,10 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                     descriptor = self.descriptor_generator_inst.\
                         compute_descriptor(de, self.descr_elem_factory)
 
-                    # TODO: Clarify if converting to 1D is necessary
-                    # (it seems for Caffe descriptor)
-                    descriptor.set_vector(descriptor.vector().flatten())
+                    if descriptor is not None:
+                        descriptor.set_vector(descriptor.vector().flatten())
+                    else
+                        self.log.error("Descriptor is null or invalid")
                 except RuntimeError, ex:
                     message = "Descriptor extraction failure: %s" % str(ex)
                 except ValueError, ex:
@@ -172,7 +168,10 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             # fail here if de is None
             # Default is 8
             num_neighbors = flask.request.args.get("num_neighbors", 8)
-            neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
+
+            neighbors = []
+            if descriptor is not None:
+                neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
 
             # TODO: Return the optional descriptor vector for the neighbors
             return flask.jsonify({

@@ -1,7 +1,7 @@
 The following is a concrete example of performing nearest neiborhood computation
-using a set of ten butterfly images. It assumes you have set up the
-caffe (vrc2) environment (http://caffe.berkeleyvision.org/install_apt.html)
-set correctly.
+using a set of ten butterfly images. Following examples is tested using
+caffe (version rc2, http://caffe.berkeleyvision.org/install_apt.html) and may
+work with master version of caffe from github.
 
 Run following scripts to generate image_mean_filepath, network_model_filepath,
 and network_prototxt_filepath
@@ -30,7 +30,6 @@ cd = get_descriptor_generator_impls()['CaffeDescriptorGenerator'](
         network_is_bgr=True,
         data_layer="data",
         load_truncated_images=True)
-# cd.generate_model(el)
 
 # Set up a factory for our vector (here in-memory storage)
 from smqtk.representation.descriptor_element_factory import DescriptorElementFactory

@@ -158,7 +158,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
                     if descriptor is not None:
                         descriptor.set_vector(descriptor.vector().flatten())
-                    else
+                    else:
                         self.log.error("Descriptor is null or invalid")
                 except RuntimeError, ex:
                     message = "Descriptor extraction failure: %s" % str(ex)
@@ -171,7 +171,10 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             neighbors = []
             if descriptor is not None:
-                neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
+                try:
+                    neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
+                except ValueError, ex:
+                    message = "Descriptor or index related issue: %s" % str(ex)
 
             # TODO: Return the optional descriptor vector for the neighbors
             return flask.jsonify({

@@ -208,10 +208,12 @@ class PostgresClassificationElement (ClassificationElement):
             conn.commit()
 
             if not r:
-                return None
+                raise NoClassificationError("No PSQL backed classification for "
+                                            "label='%s' uuid='%s'"
+                                            % (self.type_name, str(self.uuid)))
             else:
                 b = r[0]
-                c = cPickle.loads(b)
+                c = cPickle.loads(str(b))
                 return c
         except:
             conn.rollback()

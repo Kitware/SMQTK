@@ -26,6 +26,10 @@ Tools / Scripts
     Uses JSON configuration file for algorithm and element backend
     specification.
 
+Documentation
+
+  * Added support for [ReadtheDocs.org](smqtk.readthedocs.org)
+
 
 Fixes since v0.2.1
 ------------------

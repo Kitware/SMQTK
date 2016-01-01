@@ -1,0 +1,43 @@
+{
+    "descriptor_factory": {
+        "DescriptorMemoryElement": {},
+        "type": "DescriptorMemoryElement"
+    },
+    "descriptor_generator": {
+      "type": "CaffeDescriptorGenerator",
+      "CaffeDescriptorGenerator": {
+        "network_prototxt_filepath": "caffe/models/bvlc_reference_caffenet/deploy.prototxt",
+        "network_model_filepath": "caffe/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel",
+        "image_mean_filepath": "caffe/data/ilsvrc12/imagenet_mean.binaryproto",
+        "return_layer": "fc7",
+        "batch_size": 1,
+        "use_gpu": false,
+        "gpu_device_id": 0,
+        "network_is_bgr": true,
+        "data_layer": "data",
+        "load_truncated_images": true
+      }
+    },
+    "nn_index": {
+        "FlannNearestNeighborsIndex": {
+            "autotune": false,
+            "descriptor_cache_filepath": "nn.cache",
+            "distance_method": "hik",
+            "index_filepath": "nn.index",
+            "parameters_filepath": "nn.params",
+            "random_seed": 42,
+            "sample_fraction": 0.1,
+            "target_precision": 0.95
+        },
+        "type": "FlannNearestNeighborsIndex"
+    },
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    }
+}

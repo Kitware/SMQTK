@@ -26,6 +26,11 @@ Tools / Scripts
     Uses JSON configuration file for algorithm and element backend
     specification.
 
+Web / Services
+
+  * Added ``NearestNeighborServiceServer``, which provides
+    web-service that returns the nearest `N` neighbors to the given
+    descriptor element.
 
 Fixes since v0.2.1
 ------------------

@@ -103,6 +103,7 @@ class LibSvmClassifier (Classifier):
 
     def __setstate__(self, state):
         self.svm_model_fp = state['svm_model_fp']
+        self.svm_label_map_fp = state['svm_label_map_fp']
         self.train_params = state['train_params']
         self.normalize = state['normalize']
 

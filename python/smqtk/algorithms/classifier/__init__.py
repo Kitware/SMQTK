@@ -1,5 +1,8 @@
 import abc
+import logging
+import multiprocessing.pool
 import os
+import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils.plugin import get_plugins
@@ -54,6 +57,73 @@ class Classifier (SmqtkAlgorithm):
 
         return c_elem
 
+    def classify_async(self, d_iter, factory, overwrite=False, procs=None):
+        """
+        Asynchronously classify the DescriptorElements in the given iterable.
+
+        :param d_iter: Iterable of DescriptorElements
+        :type d_iter:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param factory: Classifier element factory to use for element generation
+        :type factory: smqtk.representation.ClassificationElementFactory
+
+        :param overwrite:
+        :type overwrite:
+
+        :param procs:
+        :type procs:
+
+        :return: Mapping of input DescriptorElement instances to the computed
+            ClassificationElement. ClassificationElement UUID's are congruent
+            with the UUID of the DescriptorElement
+        :rtype:
+
+        """
+        self._log.info("Async classifying descriptors")
+
+        # Mapping of DataElement to async processing result
+        ar_map = {}
+        # Mapping of DescriptorElement to its associated ClassificationElement
+        #: :type: dict[smqtk.representation.DescriptorElement, smqtk.representation.ClassificationElement]
+        d2c_map = {}
+
+        self._log.info("Queueing async work")
+        procs = procs and int(procs)
+        pool = multiprocessing.pool.ThreadPool(procs)
+        for d in d_iter:
+            d2c_map[d] = factory.new_classification(self.name, d.uuid())
+            if overwrite or not d2c_map[d].has_classifications():
+                ar_map[d] = pool.apply_async(_async_helper, args=(self, d))
+        pool.close()
+
+        self._log.info("Collecting results")
+        failures = False
+        p_T = 0.0
+        p_inc = 0.1
+        for i, (d, ar) in enumerate(ar_map.iteritems()):
+            c = ar.get()
+            if c is None:
+                failures = True
+                continue
+            else:
+                d2c_map[d].set_classification(c)
+
+            # progress reporting
+            p = float(i+1) / len(ar_map)
+            if p >= p_T:
+                self._log.debug("Progress: [%d/%d] %3.3f%%",
+                                i+1, len(ar_map),
+                                float(i + 1) / (len(ar_map)) * 100)
+                p_T += p_inc
+        pool.join()
+
+        if failures:
+            raise RuntimeError("Failure occurred during descriptor "
+                               "classification. See logging.")
+
+        return d2c_map
+
     #
     # Abstract methods
     #
@@ -89,6 +159,32 @@ class Classifier (SmqtkAlgorithm):
         :rtype: dict[collections.Hashable, float]
 
         """
+
+
+def _async_helper(c_inst, data):
+    """
+    Helper method for asynchronously producing a descriptor vector.
+
+    :param data: Data to generate feature over
+    :type data: smqtk.representation.DataElement
+
+    :param c_inst: Classifier algorithm instance
+    :type c_inst: Classifier
+
+    :return: UID and associated feature vector
+    :rtype: numpy.core.multiarray.ndarray or None
+    """
+    log = logging.getLogger("_async_feature_generator_helper")
+    try:
+        # noinspection PyProtectedMember
+        return c_inst._classify(data)
+    except Exception, ex:
+        log.error("[%s] Failed feature generation\n"
+                  "Error: %s\n"
+                  "Traceback:\n"
+                  "%s",
+                  data, str(ex), traceback.format_exc())
+        return None
 
 
 def get_classifier_impls(reload_modules=False):

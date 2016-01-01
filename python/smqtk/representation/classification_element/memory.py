@@ -1,3 +1,5 @@
+from threading import RLock
+
 from smqtk.representation.classification_element import (
     ClassificationElement,
     NoClassificationError,
@@ -35,6 +37,7 @@ class MemoryClassificationElement (ClassificationElement):
         # dictionary of classification labels and values
         #: :type: None | dict[collections.Hashable, float]
         self._c = None
+        self._c_lock = RLock()
 
     def get_config(self):
         """
@@ -53,7 +56,8 @@ class MemoryClassificationElement (ClassificationElement):
         :return: If this element has classification information set.
         :rtype: bool
         """
-        return bool(self._c)
+        with self._c_lock:
+            return bool(self._c)
 
     def get_classification(self):
         """
@@ -71,10 +75,11 @@ class MemoryClassificationElement (ClassificationElement):
         :rtype: dict[collections.Hashable, float]
 
         """
-        if self._c:
-            return self._c
-        else:
-            raise NoClassificationError("No classification labels/values")
+        with self._c_lock:
+            if self._c:
+                return self._c
+            else:
+                raise NoClassificationError("No classification labels/values")
 
     def set_classification(self, m=None, **kwds):
         """
@@ -96,4 +101,5 @@ class MemoryClassificationElement (ClassificationElement):
         """
         m = super(MemoryClassificationElement, self)\
             .set_classification(m, **kwds)
-        self._c = m
+        with self._c_lock:
+            self._c = m

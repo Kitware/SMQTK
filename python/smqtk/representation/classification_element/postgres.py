@@ -25,6 +25,7 @@ class PostgresClassificationElement (ClassificationElement):
 
     """
 
+    # Known psql version compatibility: 9.4
     SELECT_TMPL = ' '.join("""
         SELECT {classification_col:s}
           FROM {table_name:s}
@@ -33,6 +34,7 @@ class PostgresClassificationElement (ClassificationElement):
         ;
     """.split())
 
+    # Known psql version compatibility: 9.4
     UPSERT_TMPL = ' '.join("""
         WITH upsert AS (
           UPDATE {table_name:s}
@@ -125,8 +127,8 @@ class PostgresClassificationElement (ClassificationElement):
         super(PostgresClassificationElement, self).__init__(type_name, uuid)
 
         self.table_name = table_name
-        self.uuid_col = uuid_col
         self.type_col = type_col
+        self.uuid_col = uuid_col
         self.classification_col = classification_col
 
         self.db_name = db_name
@@ -138,8 +140,8 @@ class PostgresClassificationElement (ClassificationElement):
     def get_config(self):
         return {
             "table_name": self.table_name,
-            "uuid_col": self.uuid_col,
             "type_col": self.type_col,
+            "uuid_col": self.uuid_col,
             "classification_col": self.classification_col,
 
             "db_name": self.db_name,

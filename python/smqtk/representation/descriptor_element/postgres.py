@@ -61,7 +61,7 @@ class PostgresDescriptorElement (DescriptorElement):
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
                  db_pass=None):
         """
-        Initialize new PgsqlDescriptorElement attached to some database
+        Initialize new PostgresDescriptorElement attached to some database
         credentials.
 
         We require that storage tables treat uuid AND type string columns as
@@ -70,8 +70,8 @@ class PostgresDescriptorElement (DescriptorElement):
 
         Default argument values assume a local PostgreSQL database with a table
         created via the
-        ``smqtk/representation/descriptor_element/postgres_element/example_table_init.sql``
-        file.
+        ``etc/smqtk/postgres/descriptor_element/example_table_init.sql``
+        file (relative to the SMQTK source tree or install root).
 
         NOTES:
             - Not all uuid types used here are necessarily of the ``uuid.UUID``

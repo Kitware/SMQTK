@@ -15,6 +15,8 @@ Classification Elements
 
   * Added in-memory implementation
 
+  * Added PostgreSQL implementation
+
   * Added ClassificationElementFactory implementation.
 
 Data Elements

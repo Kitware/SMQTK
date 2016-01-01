@@ -251,5 +251,6 @@ def get_classification_element_impls(reload_modules=False):
     this_dir = os.path.abspath(os.path.dirname(__file__))
     env_var = "CLASSIFICATION_ELEMENT_PATH"
     helper_var = "CLASSIFICATION_ELEMENT_CLASS"
-    plugin.get_plugins(__name__, this_dir, env_var, helper_var,
-                       ClassificationElement, reload_modules=reload_modules)
+    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
+                              ClassificationElement,
+                              reload_modules=reload_modules)

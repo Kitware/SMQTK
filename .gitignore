@@ -11,9 +11,6 @@ errors.log
 # Coverage report
 .coverage
 
-# Sphinx documentation generation output
-/docs/_build
-
 #
 # TPL
 #

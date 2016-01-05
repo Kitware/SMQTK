@@ -9,6 +9,14 @@ There is at least one implementation available for each interface.
 Some implementations will require additional dependencies that cannot be packaged with SMQTK.
 
 
+Classifier
+++++++++++
+This interface represents algorithms that classify ``DescriptorElement`` instances into discrete labels or label confidences.
+
+.. automodule:: smqtk.algorithms.classifier
+   :members:
+
+
 DescriptorGenerator
 +++++++++++++++++++
 This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.
@@ -26,15 +34,15 @@ This is given an iterable of ``DataElement`` instances, a single ``DescriptorEle
 
 .. automodule:: smqtk.algorithms.descriptor_generator
    :members:
-.. autoclass:: smqtk.algorithms.descriptor_generator.DescriptorGenerator
-   :members:
+
 
 NearestNeighborsIndex
 +++++++++++++++++++++
 
 This interface defines a method to build an index from a set of ``DescriptorElement`` instances (``NearestNeighborsIndex.build_index``) and a nearest-neighbors query function for getting a number of near neighbors to e query ``DescriptorElement`` (``NearestNeighborsIndex.nn``).
 
-Building an index requires that some non-zero number of ``DescriptorElements`` be passed into the ``build_index`` method. Subsequent calls to this method should rebuild the index model, not add to it.
+Building an index requires that some non-zero number of ``DescriptorElement`` instances be passed into the ``build_index`` method.
+Subsequent calls to this method should rebuild the index model, not add to it.
 If an implementation supports persistant storage of the index, it should overwrite the configured index.
 
 The ``nn`` method uses a single ``DescriptorElement`` to query the current index for a specified number of nearest neighbors.
@@ -43,11 +51,9 @@ If the provided query ``DescriptorElement`` does not have a set vector, this met
 
 This interface additionally requires that implementations define a ``count`` method, which returns the number of distinct ``DescriptorElement`` instances are in the index.
 
-
 .. automodule:: smqtk.algorithms.nn_index
    :members:
-.. autoclass:: smqtk.algorithms.nn_index.NearestNeighborsIndex
-   :members:
+
 
 RelevancyIndex
 ++++++++++++++
@@ -58,8 +64,3 @@ The ``rank`` method takes examples of relevant and not-relevant ``DescriptorElem
 
 .. automodule:: smqtk.algorithms.relevancy_index
    :members:
-.. autoclass:: smqtk.algorithms.relevancy_index.RelevancyIndex
-   :members:
-
-
-

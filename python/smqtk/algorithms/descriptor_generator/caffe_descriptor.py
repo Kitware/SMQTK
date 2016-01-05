@@ -1,5 +1,6 @@
 from collections import deque
 import io
+import itertools
 import multiprocessing
 import multiprocessing.pool
 
@@ -15,7 +16,7 @@ except ImportError:
     caffe = None
 
 
-__author__ = ['paul.tunison@kitware.com, jacob.becker@kitware.com']
+__author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
 
 __all__ = [
     "CaffeDescriptorGenerator",
@@ -36,7 +37,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                  return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
-                 load_truncated_images=False):
+                 load_truncated_images=False, pixel_rescale=None):
         """
         Create a Caffe CNN descriptor generator
 
@@ -81,6 +82,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             of truncated image bytes. This is False by default.
         :type load_truncated_images: bool
 
+        :param pixel_rescale: Re-scale image pixel values into the given tuple
+            ``(min, max)`` range. By default, images are loaded in the
+            ``[0, 255]`` range.
+        :type pixel_rescale: None | (float, float)
+
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
@@ -98,6 +104,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self.data_layer = str(data_layer)
 
         self.load_truncated_images = bool(load_truncated_images)
+        self.pixel_rescale = pixel_rescale
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" \
@@ -176,8 +183,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         if self.network_is_bgr:
             self._log.debug("Initializing data transformer -- channel swap")
             self.transformer.set_channel_swap(self.data_layer, (2, 1, 0))
-        self._log.debug("Initializing data transformer -- raw scale")
-        self.transformer.set_raw_scale(self.data_layer, 255.0)
 
     def get_config(self):
         """
@@ -204,6 +209,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             "network_is_bgr": self.network_is_bgr,
             "data_layer": self.data_layer,
             "load_truncated_images": self.load_truncated_images,
+            "pixel_rescale": self.pixel_rescale,
         }
 
     def valid_content_types(self):
@@ -304,7 +310,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             ct = d.content_type()
             if ct not in self.valid_content_types():
                 raise ValueError("Cannot compute descriptor of content type "
-                                 "'%s'" % ct)
+                                 "'%s', (DE: %s" % (ct, d))
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
         self._log.debug("Given %d unique data elements", len(data_elements))
@@ -327,6 +333,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         finally:
             p.close()
             p.join()
+        del p
         self._log.debug("Converting deque to tuple for segmentation")
         uuid4proc = tuple(uuid4proc)
 
@@ -390,9 +397,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             _process_load_img_array,
             zip(
                 [data_elements[uid] for uid in uuids4proc],
-                [self.transformer]*uid_num,
-                [self.data_layer]*uid_num,
-                [self.load_truncated_images]*uid_num,
+                itertools.repeat(self.transformer, uid_num),
+                itertools.repeat(self.data_layer, uid_num),
+                itertools.repeat(self.load_truncated_images, uid_num),
+                itertools.repeat(self.pixel_rescale, uid_num),
             )
         )
         p.close()
@@ -416,7 +424,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
 
 def _process_load_img_array((data_element, transformer,
-                             data_layer, load_truncated_images)):
+                             data_layer, load_truncated_images,
+                             pixel_rescale)):
     """
     Helper function for multiprocessing image data loading
 
@@ -437,9 +446,14 @@ def _process_load_img_array((data_element, transformer,
     img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
     if img.mode != "RGB":
         img = img.convert("RGB")
-    img_a = numpy.asarray(img)
+    # Caffe natively uses float types (32-bit)
+    img_a = numpy.asarray(img, numpy.float32)
     assert img_a.ndim == 3, \
         "Loaded invalid RGB image with shape %s" \
         % img_a.shape
+    if pixel_rescale:
+        pmin, pmax = min(pixel_rescale), max(pixel_rescale)
+        r = pmax - pmin
+        img_a = (img_a / (255. / r)) + pmin
     img_at = transformer.preprocess(data_layer, img_a)
     return img_at

@@ -27,7 +27,7 @@ def default_config():
     }
 
 
-def compute_many_descriptors(file_paths, descr_generator, descr_factory,
+def compute_many_descriptors(file_elements, descr_generator, descr_factory,
                              batch_size=100, overwrite=False,
                              procs=None, **kwds):
     """
@@ -35,7 +35,8 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
     (filepath, DescriptorElement) tuple pairs in the order that they were
     input.
 
-    :param file_paths: Iterable of file path strings of files to work on.
+    :param file_elements: Iterable of DataFileElement instances of files to work
+        on.
     :param descr_generator: DescriptorGenerator implementation instance
         to use to generate descriptor vectors.
     :param descr_factory: DescriptorElement factory to use when producing
@@ -68,8 +69,7 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
         """
         Helper iterator to produce DataFileElement instances from file paths
         """
-        for fp in file_paths:
-            dfe = DataFileElement(fp)
+        for dfe in file_elements:
             dfe_deque.append(dfe)
             yield dfe
 
@@ -121,12 +121,12 @@ def compute_many_descriptors(file_paths, descr_generator, descr_factory,
             yield dfe._filepath, m[dfe]
 
 
-def run_file_list(c, filelist_filepath, checkpoint_filepath):
+def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size):
     log = logging.getLogger(__name__)
 
     file_paths = [l.strip() for l in open(filelist_filepath)]
 
-    log.info("Making memory factory")
+    log.info("Making descriptor factory")
     factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
 
     log.info("Making descriptor generator '%s'",
@@ -139,21 +139,21 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath):
     valid_file_paths = dict()
     invalid_file_paths = dict()
 
-    def iter_valid_files():
+    def iter_valid_elements():
         for fp in file_paths:
             dfe = DataFileElement(fp)
             ct = dfe.content_type()
             if ct in generator.valid_content_types():
                 valid_file_paths[fp] = ct
-                yield fp
+                yield dfe
             else:
                 invalid_file_paths[fp] = ct
 
     log.info("Computing descriptors")
-    m = compute_many_descriptors(iter_valid_files(),
+    m = compute_many_descriptors(iter_valid_elements(),
                                  generator,
                                  factory,
-                                 batch_size=256,
+                                 batch_size=batch_size,
                                  )
 
     # Recording computed file paths and associated file UUIDs (SHA1)
@@ -169,10 +169,10 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath):
 
     # Output valid file and invalid file dictionaries as pickle
     log.info("Writing valid filepaths map")
-    with open('valid_file_map.pickle', 'wb') as f:
+    with open('file_map.valid.pickle', 'wb') as f:
         cPickle.dump(valid_file_paths, f)
     log.info("Writing invalid filepaths map")
-    with open('invalid_file_map.pickle', 'wb') as f:
+    with open('file_map.invalid.pickle', 'wb') as f:
         cPickle.dump(invalid_file_paths, f)
 
     log.info("Done")
@@ -191,6 +191,14 @@ def cli_parser():
     parser.add_argument('-d', '--debug',
                         action='store_true', default=False,
                         help='Show debug logging statements.')
+    parser.add_argument('-b', '--batch-size',
+                        type=int, default=256,
+                        help="Number of files to batch together into a single "
+                             "compute async call. This defines the granularity "
+                             "of the checkpoint file in regards to computation "
+                             "completed. If given 0, we do not batch and will "
+                             "perform a single ``compute_async`` call on the "
+                             "configured generator. Default batch size is 256.")
 
     # Non-config required arguments
     g_required = parser.add_argument_group("required arguments")
@@ -223,6 +231,7 @@ if __name__ == "__main__":
     out_config_fp = args.gen_config
     completed_files_fp = args.completed_files
     filelist_fp = args.file_list
+    batch_size = args.batch_size
 
     # Initialize logging
     llevel = debug and logging.DEBUG or logging.INFO
@@ -263,8 +272,13 @@ if __name__ == "__main__":
         l.error("No complete files output specified")
         exit(104)
 
+    if batch_size < 0:
+        l.error("Batch size must be >= 0.")
+        exit(105)
+
     run_file_list(
         c,
         filelist_fp,
         completed_files_fp,
+        batch_size,
     )

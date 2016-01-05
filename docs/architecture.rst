@@ -38,7 +38,7 @@ We would create a directory and ``__init__.py`` file (python module) to house th
                 └── __init__.py   # new
 
 
-Since we are making a new data representation interface, our new interface should descend from the ``SmqtkRepresentation`` interface defined in the ``smqtk.representation`` module.
+Since we are making a new data representation interface, our new interface should descend from the ``SmqtkRepresentation`` interface defined in the ``smqtk.representation`` module (algorithm interfaces would descend from ``smqtk.algorithms.SmqtkAlgorithm``).
 The ``SmqtkRepresentation`` base-class descends from the [``Configurable``](/python/smqtk/utils/configurable_interface.py#L8) interface (interface class sets ``__metaclass__ = abc.ABCMeta``, thus it is not set in the example below).
 
 The ``__init__.py`` file for our new sub-module might look something like the following, defining a new abstract class:

@@ -7,6 +7,7 @@ import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import SimpleTimer
+from smqtk.utils.plugin import get_plugins
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -225,19 +226,26 @@ def _async_feature_generator_helper(cd_inst, data):
 
 def get_descriptor_generator_impls(reload_modules=False):
     """
-    Discover and return ``DescriptorGenerator`` classes found in the given
-    plugin search directory. Keys in the returned map are the names of the
-    discovered classes, and the paired values are the actual class type objects.
+    Discover and return discovered ``DescriptorGenerator`` classes. Keys in the
+    returned map are the names of the discovered classes, and the paired values
+    are the actual class type objects.
 
-    We look for modules (directories or files) that start with an alphanumeric
-    character ('_' prefixed files/directories are hidden, but not recommended).
+    We search for implementation classes in:
+        - modules next to this file this function is defined in (ones that begin
+          with an alphanumeric character),
+        - python modules listed in the environment variable
+          ``DESCRIPTOR_GENERATOR_PATH``
+            - This variable should contain a sequence of python module
+              specifications, separated by the platform specific PATH separator
+              character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
     ``DESCRIPTOR_GENERATOR_CLASS``, which can either be a single class object or
-    an iterable of class objects, to be exported. If the variable is set to
-    None, we skip that module and do not import anything. If the variable is not
-    present, we look for a class by the same name and casing as the module. If
-    neither are found, the module is skipped.
+    an iterable of class objects, to be specifically exported. If the variable
+    is set to None, we skip that module and do not import anything. If the
+    variable is not present, we look at attributes defined in that module for
+    classes that descend from the given base class type. If none of the above
+    are found, or if an exception occurs, the module is skipped.
 
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
@@ -247,7 +255,6 @@ def get_descriptor_generator_impls(reload_modules=False):
     :rtype: dict[str, type]
 
     """
-    from smqtk.utils.plugin import get_plugins
     this_dir = os.path.abspath(os.path.dirname(__file__))
     env_var = "DESCRIPTOR_GENERATOR_PATH"
     helper_var = "DESCRIPTOR_GENERATOR_CLASS"

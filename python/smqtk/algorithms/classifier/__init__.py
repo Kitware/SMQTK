@@ -190,12 +190,6 @@ class Classifier (SmqtkAlgorithm):
         """
 
 
-def _async_helper_feeder():
-    """
-    Function to execute on a thread to feed work to an input queue
-    """
-
-
 def _async_helper_classify(c_inst, d):
     """
     Helper method for asynchronously producing a descriptor vector.
@@ -209,7 +203,7 @@ def _async_helper_classify(c_inst, d):
     :return: UID and associated feature vector
     :rtype: numpy.core.multiarray.ndarray or None
     """
-    log = logging.getLogger("_async_feature_generator_helper")
+    log = logging.getLogger("_async_helper_classify")
     try:
         # noinspection PyProtectedMember
         return c_inst._classify(d)

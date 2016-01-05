@@ -52,6 +52,10 @@ class MemoryCodeIndex (CodeIndex):
                 self._log.debug("Done loading cached table")
 
     def cache_table(self):
+        """
+        If a file cache has been specified, cache the current memory table state
+        to the cache. Otherwise, this function does nothing.
+        """
         if self._file_cache:
             with SimpleTimer("Caching memory table", self._log.debug):
                 with open(self._file_cache, 'wb') as f:

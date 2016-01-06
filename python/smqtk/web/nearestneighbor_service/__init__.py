@@ -58,9 +58,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         c = super(NearestNeighborServiceServer, cls).get_default_config()
         merge_configs(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
-            "descriptor_generators": {
-                "example": plugin.make_config(get_descriptor_generator_impls)
-            },
+            "descriptor_generator":
+                plugin.make_config(get_descriptor_generator_impls),
             "nn_index": plugin.make_config(get_nn_index_impls),
         })
         return c
@@ -85,18 +84,20 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         #: :type: dict[str, dict]
         self.generator_config = self.json_config['descriptor_generator']
 
+        #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.nn_index = plugin.from_plugin_config(
             json_config['nn_index'],
             get_nn_index_impls
         )
 
+        #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator_inst = plugin.from_plugin_config(
                                             self.generator_config,
                                             get_descriptor_generator_impls)
 
-
         @self.route("/nn/<path:uri>")
-        def compute_nearest_neighbors(uri):
+        @self.route("/nn/n=<int:n>/<path:uri>")
+        def compute_nearest_neighbors(uri, n=10):
             """
             Data modes for upload/use::
 
@@ -138,7 +139,6 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                     "reference_uri": <str>
                 }
 
-            :type descriptor_label: str
             :type uri: str
 
             """
@@ -147,6 +147,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             de = None
             try:
+                self.log.debug("Received URI: %s", uri)
                 de = self.resolve_data_element(uri)
             except ValueError, ex:
                 message = "URI resolution issue: %s" % str(ex)
@@ -162,20 +163,23 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             # fail here if de is None
             # Default is 8
-            num_neighbors = flask.request.args.get("num_neighbors", 8)
+            num_neighbors = flask.request.args.get("num_neighbors", n)
 
             neighbors = []
+            dists = []
             if descriptor is not None:
                 try:
-                    neighbors, _ = self.nn_index.nn(descriptor, n=num_neighbors)
+                    neighbors, dists = \
+                        self.nn_index.nn(descriptor, n=num_neighbors)
                 except ValueError, ex:
                     message = "Descriptor or index related issue: %s" % str(ex)
 
-            # TODO: Return the optional descriptor vector for the neighbors
+            # TODO: Return the optional descriptor vectors for the neighbors
             return flask.jsonify({
                 "success": descriptor is not None,
                 "message": message,
                 "neighbors": [n.uuid() for n in neighbors],
+                "distances": dists,
                 "reference_uri": uri
             })
 

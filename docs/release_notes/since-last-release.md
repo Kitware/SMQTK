@@ -9,6 +9,8 @@ Classifiers
 
   * Added generic Classifier algorithm interface.
 
+  * Added SupervisedClassifier intermediate interface.
+
 Classification Elements
 
   * Added classification result encapsulation interface.
@@ -51,6 +53,9 @@ Tools / Scripts
     Uses JSON configuration file for algorithm and element backend
     specification.
 
+  * Added tool for training a supervised classifier based on an IQR session
+    state (a web-app endpoint return).
+
 Web / Services
 
   * Added ``NearestNeighborServiceServer``, which provides
@@ -59,6 +64,14 @@ Web / Services
 
 Fixes since v0.2.1
 ------------------
+
+Custom LibSVM
+
+  * Fixed an issue where ``svm_save_model`` would crash when saving a 2-class
+    SVM model.
+
+  * Fixed an issue where ``svm_save_model`` would save an extra, unexpected
+    file when saving a 2-class SVM model.
 
 Descriptor Elements
 
@@ -78,3 +91,12 @@ Docs
 
   * Fixed whitespacing issue with ``docs/algorithms.rst`` that prevented
     display of ToC sections.
+
+  * Updated/Fixed various class/function doc-strings.
+
+Utils
+
+  * Fixed ``smqtk.utils.plugin.get_plugins`` to handle skipping intermediate
+    interfaces between the base class and implementation classes, as well as
+    to skip implementation classes that do not fully implement abstract
+    methods.

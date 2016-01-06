@@ -20,7 +20,7 @@ class SmqtkAlgorithm (SmqtkObject, Configurable, plugin.Pluggable):
 
 
 # Import module abstracts and plugin getter functions
-from .classifier import Classifier, get_classifier_impls
+from .classifier import Classifier, SupervisedClassifier, get_classifier_impls
 from .descriptor_generator import DescriptorGenerator, get_descriptor_generator_impls
 from .nn_index import NearestNeighborsIndex, get_nn_index_impls
 from .relevancy_index import RelevancyIndex, get_relevancy_index_impls

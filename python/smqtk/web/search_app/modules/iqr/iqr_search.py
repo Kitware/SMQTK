@@ -7,6 +7,7 @@ import logging
 import os
 import os.path as osp
 import random
+import uuid
 
 import flask
 import PIL.Image
@@ -139,9 +140,10 @@ class IqrSearch (flask.Blueprint, Configurable):
 
         :param nn_index: NearestNeighborsIndex instance for sessions to pull
             their review data sets from.
-        :type nn_index: smqtk.algorithms.nearest
+        :type nn_index: smqtk.algorithms.NearestNeighborsIndex
 
-        :param rel_index_config: Plugin configuration for the
+        :param rel_index_config: Plugin configuration for the RelevancyIndex to
+            use.
         :type rel_index_config: dict
 
         :param working_directory: Directory in which to place working files.
@@ -252,6 +254,11 @@ class IqrSearch (flask.Blueprint, Configurable):
                 # noinspection PyProtectedMember
                 return flask.jsonify({
                     "uuid": iqrs.uuid,
+
+                    "descriptor_type": self._descriptor_generator.name,
+                    "nn_index_type": self._nn_index.name,
+                    "relevancy_index_type": self._rel_index_config['type'],
+
                     "positive_uids":
                         tuple(d.uuid() for d in iqrs.positive_descriptors),
                     "negative_uids":

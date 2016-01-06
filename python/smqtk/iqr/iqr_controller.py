@@ -70,7 +70,7 @@ class IqrController (SmqtkObject):
         """ Initialize a new IQR Session, returning the uuid of that session
 
         :param iqr_session: The IqrSession instance to add
-        :type iqr_session: SMQTK.iqr.iqr_session.IqrSession
+        :type iqr_session: smqtk.iqr.iqr_session.IqrSession
 
         :param session_uuid: Optional manual specification of the UUID to assign
             to the instance. This cannot already exist in the controller.
@@ -105,7 +105,7 @@ class IqrController (SmqtkObject):
         :type session_uuid: str or uuid.UUID
 
         :return: IqrSession instance for the given UUID
-        :rtype: SMQTK.iqr.iqr_session.IqrSession
+        :rtype: smqtk.iqr.iqr_session.IqrSession
 
         """
         with self._map_rlock:

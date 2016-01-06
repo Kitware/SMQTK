@@ -7,7 +7,7 @@ import os
 
 import numpy.linalg
 
-from smqtk.algorithms import Classifier
+from smqtk.algorithms import SupervisedClassifier
 from smqtk.representation.descriptor_element import elements_to_matrix
 
 try:
@@ -21,12 +21,10 @@ except ImportError:
 __author__ = "paul.tunison@kitware.com"
 
 
-class LibSvmClassifier (Classifier):
+class LibSvmClassifier (SupervisedClassifier):
     """
     Classifier that uses libSVM for support-vector machine functionality.
     """
-
-    NEGATIVE_LABEL = "negative"
 
     @classmethod
     def is_usable(cls):
@@ -179,18 +177,22 @@ class LibSvmClassifier (Classifier):
 
     def train(self, positive_classes, negatives):
         """
-        Train the SVM classifier model.
+        Train the supervised SVM classifier model.
 
         The class label ``negative`` is reserved for the negative class.
 
-        If this instance was constructed with a model filepaths, the trained
-        model and labels will be saved to those paths. If a model is already
-        loaded, we will raise an exception in order to prevent accidental
-        overwrite.
+        If a model is already loaded, we will raise an exception in order to
+        prevent accidental overwrite.
+
+        NOTE:
+            This abstract method provides generalized error checking and
+            should be called via ``super`` in implementing methods.
 
         :param positive_classes: Dictionary mapping positive class labels to
             iterables of DescriptorElement training examples.
-        :type positive_classes: dict[collections.Hashable, collections.Iterable[smqtk.representation.DescriptorElement]]
+        :type positive_classes:
+            dict[collections.Hashable,
+                 collections.Iterable[smqtk.representation.DescriptorElement]]
 
         :param negatives: Iterable of negative DescriptorElement examples.
         :type negatives: collections.Iterable[smqtk.representation.DescriptorElement]
@@ -198,23 +200,18 @@ class LibSvmClassifier (Classifier):
         :raises ValueError: The ``negative`` label was found in the
             ``positive_classes`` dictionary. This is reserved for the negative
             example class.
-        :raises RuntimeError: A model file path was configured and has been
-            loaded. Following through with training would overwrite this model
-            permanently on disk.
+        :raises ValueError: There were no positive or negative examples.
+        :raises RuntimeError: A model already exists in this instance.Following
+            through with training would overwrite this model. Throwing an
+            exception for information protection.
+
 
         """
+        super(LibSvmClassifier, self).train(positive_classes, negatives)
+
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
         CLASS_LABEL_OFFSET = 1
-
-        if self.has_model():
-            raise RuntimeError("Halting training to prevent overwrite of "
-                               "existing trained model @ %s", self.svm_model_fp)
-
-        if self.NEGATIVE_LABEL in positive_classes:
-            raise ValueError("Found '%s' label in positive_classes map. "
-                             "This label is reserved for negative class."
-                             % self.NEGATIVE_LABEL)
 
         # Stuff for debug reporting
         etm_ri = None

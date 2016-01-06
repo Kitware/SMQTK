@@ -58,9 +58,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         c = super(NearestNeighborServiceServer, cls).get_default_config()
         merge_configs(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
-            "descriptor_generator": {
-                plugin.make_config(get_descriptor_generator_impls)
-            },
+            "descriptor_generator":
+                plugin.make_config(get_descriptor_generator_impls),
             "nn_index": plugin.make_config(get_nn_index_impls),
         })
         return c

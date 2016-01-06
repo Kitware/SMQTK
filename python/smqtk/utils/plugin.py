@@ -47,6 +47,7 @@ class Pluggable (object):
     """
     Interface for classes that have plugin implementations
     """
+    __metaclass__ = abc.ABCMeta
 
     @classmethod
     @abc.abstractmethod
@@ -91,8 +92,9 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
     your platform. Entries should be paths to importable modules containing
     attributes for potential import.
 
-    We look for module attributes that start with an alphanumeric character ('_'
-    prefixed attributes are hidden from import by this function).
+    When looking at module attributes, we acknowledge those that start with an
+    alphanumeric character ('_' prefixed attributes are hidden from import by
+    this function).
 
     We required that the base class that we are checking for also descends from
     the ``Pluggable`` interface defined above. This allows us to check if a
@@ -222,9 +224,15 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                     log.debug("[%s] Checking attribute '%s'", module_path,
                               attr_name)
                     attr = getattr(module, attr_name)
+                    # If the attribute looks like a class that descends and
+                    # implements the interface, add it to the class list
+                    # - we require that base is pluggable, so if class descends
+                    #   from the given base-class, it will have
+                    #   __abstractmethods__ property.
                     if isinstance(attr, type) and \
                             attr is not baseclass_type and \
-                            issubclass(attr, baseclass_type):
+                            issubclass(attr, baseclass_type) and \
+                            not bool(attr.__abstractmethods__):
                         log.debug("[%s] -- Discovered subclass: %s",
                                   module_path, attr.__name__)
                         classes.append(attr)

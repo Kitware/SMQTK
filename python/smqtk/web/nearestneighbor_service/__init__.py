@@ -96,7 +96,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                                             get_descriptor_generator_impls)
 
         @self.route("/nn/<path:uri>")
-        def compute_nearest_neighbors(uri):
+        @self.route("/nn/<path:uri>?n=<int:n>")
+        def compute_nearest_neighbors(uri, n=10):
             """
             Data modes for upload/use::
 
@@ -161,7 +162,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             # fail here if de is None
             # Default is 8
-            num_neighbors = flask.request.args.get("num_neighbors", 8)
+            num_neighbors = flask.request.args.get("num_neighbors", n)
 
             neighbors = []
             dists = []

@@ -10,6 +10,11 @@ from smqtk.utils.plugin import get_plugins
 
 
 __author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
+__all__ = [
+    "Classifier",
+    "SupervisedClassifier",
+    "get_classifier_impls",
+]
 
 
 class Classifier (SmqtkAlgorithm):
@@ -214,6 +219,72 @@ def _async_helper_classify(c_inst, d):
                   "%s",
                   d, str(ex), traceback.format_exc())
         return None
+
+
+class SupervisedClassifier (Classifier):
+    """
+    Class of classifiers that are trainable via supervised training, i.e. are
+    given specific descriptor examples for class labels (including negative
+    label).
+    """
+
+    NEGATIVE_LABEL = "negative"
+
+    @abc.abstractmethod
+    def has_model(self):
+        """
+        :return: If this instance currently has a model loaded. If no model is
+            present, classification of descriptors cannot happen (needs to be
+            trained).
+        :rtype: bool
+        """
+
+    @abc.abstractmethod
+    def train(self, positive_classes, negatives):
+        """
+        Train the supervised classifier model.
+
+        The class label ``negative`` is reserved for the negative class.
+
+        If a model is already loaded, we will raise an exception in order to
+        prevent accidental overwrite.
+
+        NOTE:
+            This abstract method provides generalized error checking and
+            should be called via ``super`` in implementing methods.
+
+        :param positive_classes: Dictionary mapping positive class labels to
+            iterables of DescriptorElement training examples.
+        :type positive_classes:
+            dict[collections.Hashable,
+                 collections.Iterable[smqtk.representation.DescriptorElement]]
+
+        :param negatives: Iterable of negative DescriptorElement examples.
+        :type negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :raises ValueError: The ``negative`` label was found in the
+            ``positive_classes`` dictionary. This is reserved for the negative
+            example class.
+        :raises ValueError: There were no positive or negative examples.
+        :raises RuntimeError: A model already exists in this instance.Following
+            through with training would overwrite this model. Throwing an
+            exception for information protection.
+
+        """
+        if self.has_model():
+            raise RuntimeError("Instance currently has a model. Halting "
+                               "training to prevent overwrite of existing "
+                               "trained model.")
+
+        if self.NEGATIVE_LABEL in positive_classes:
+            raise ValueError("Found '%s' label in positive_classes map. "
+                             "This label is reserved for negative class."
+                             % self.NEGATIVE_LABEL)
+
+        if not positive_classes:
+            raise ValueError("No positive classes provided")
+        if not negatives:
+            raise ValueError("No negative examples provided.")
 
 
 def get_classifier_impls(reload_modules=False):

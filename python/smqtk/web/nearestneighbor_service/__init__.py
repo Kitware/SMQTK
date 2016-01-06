@@ -96,7 +96,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                                             get_descriptor_generator_impls)
 
         @self.route("/nn/<path:uri>")
-        @self.route("/nn/<path:uri>?n=<int:n>")
+        @self.route("/nn/n=<int:n>/<path:uri>")
         def compute_nearest_neighbors(uri, n=10):
             """
             Data modes for upload/use::
@@ -147,6 +147,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             de = None
             try:
+                self.log.debug("Received URI: %s", uri)
                 de = self.resolve_data_element(uri)
             except ValueError, ex:
                 message = "URI resolution issue: %s" % str(ex)

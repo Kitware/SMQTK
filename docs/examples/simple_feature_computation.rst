@@ -1,11 +1,9 @@
-Examples
-========
+Simple Feature Computation with ColorDescriptor
+-----------------------------------------------
 
+The following is a concrete example of performing feature computation for a set of ten butterfly images using the *CSIFT* descriptor from the ColorDescriptor_ software package. It assumes you have set up the :file:`colordescriptor` executable and python library in your `PATH` and `PYTHONPATH`.  Once set up, the following code will compute a *CSIFT* descriptor:
 
-Simple Feature Computation
---------------------------
-
-The following is a concrete example of performing feature computation for a set of ten butterfly images. It assumes you have set up the colordescriptor executable and python library in your `PATH` and `PYTHONPATH`.
+.. _ColorDescriptor: http://koen.me/research/colordescriptors/
 
 .. code-block:: python
 
@@ -27,5 +25,6 @@ The following is a concrete example of performing feature computation for a set 
     # Compute features on the first image
     result = cd.compute_descriptor(el[0], factory)
     result.vector()
+
     # array([ 0.        ,  0.01254855,  0.        , ...,  0.0035853 ,
     #         0.        ,  0.00388408])

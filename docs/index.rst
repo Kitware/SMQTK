@@ -13,7 +13,7 @@ Contents:
 
    building
    architecture
-   examples
+   examples/overview
 
 Indices and tables
 ==================

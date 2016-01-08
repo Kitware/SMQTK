@@ -124,17 +124,23 @@ def main():
     log.debug("Showing debug messages.")
 
     config = get_default_config()
+    config_loaded = False
     if config_path and os.path.isfile(config_path):
         with open(config_path) as f:
             log.info("Loading configuration: %s", config_path)
             config.update(
                 json.load(f)
             )
+        config_loaded = True
     output_config(generate_config, config, log, config_overwrite, 100)
+
+    if not config_loaded:
+        log.error("No configuration provided")
+        exit(101)
 
     if not os.path.isfile(iqr_state_fp):
         log.error("IQR Session info JSON filepath was invalid")
-        exit(101)
+        exit(102)
 
     train_classifier_iqr(config, iqr_state_fp)
 

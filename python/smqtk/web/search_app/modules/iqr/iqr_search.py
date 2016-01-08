@@ -7,7 +7,8 @@ import logging
 import os
 import os.path as osp
 import random
-import uuid
+from StringIO import StringIO
+import zipfile
 
 import flask
 import PIL.Image
@@ -270,6 +271,45 @@ class IqrSearch (flask.Blueprint, Configurable):
                     "initialized": iqrs.working_index.count() > 0,
                     "index_size": iqrs.working_index.count(),
                 })
+
+        @self.route('/get_iqr_state')
+        @self._parent_app.module_login.login_required
+        def iqr_session_state():
+            """
+            Get IQR session state information composed of positive and negative
+            descriptor vectors.
+            """
+            with self.get_current_iqr_session() as iqrs:
+                iqrs_uuid = str(iqrs.uuid)
+                pos_elements = list(set(
+                    [tuple(d.vector().tolist()) for d
+                     in iqrs.ex_pos_descriptors.values()] +
+                    [tuple(d.vector().tolist()) for d
+                     in iqrs.positive_descriptors],
+                ))
+                neg_elements = list(set(
+                    [tuple(d.vector().tolist()) for d
+                     in iqrs.ex_neg_descriptors.values()] +
+                    [tuple(d.vector().tolist()) for d
+                     in iqrs.negative_descriptors],
+                ))
+
+            z_buffer = StringIO()
+            z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
+            z.writestr(iqrs_uuid, json.dumps({
+                'pos': pos_elements,
+                'neg': neg_elements,
+            }))
+            z.close()
+
+            z_buffer.seek(0)
+
+            return flask.send_file(
+                z_buffer,
+                mimetype='application/octet-stream',
+                as_attachment=True,
+                attachment_filename="%s.IqrState" % iqrs_uuid,
+            )
 
         @self.route("/check_current_iqr_session")
         @self._parent_app.module_login.login_required

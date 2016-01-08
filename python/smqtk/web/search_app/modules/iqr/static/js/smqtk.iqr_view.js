@@ -121,16 +121,9 @@ IqrView.prototype.construct_view = function (container) {
         self.reset_session();
     });
 
-    this.button_state_save.click( function () {
-        $.ajax({
-            url: "iqr_session_info",
-            success: function (data) {
-                var json = JSON.stringify(data, null, 4);
-                var blob = new Blob([json], {type: "octet/stream"});
-                saveAs(blob, "iqr_state.json");
-            }
-        });
-    });
+    this.button_state_save.attr({
+        onclick: "location.href='get_iqr_state'"
+    })
 };
 
 /**

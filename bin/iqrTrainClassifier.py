@@ -6,24 +6,26 @@ Descriptors used in IQR, and thus referenced via their UUIDs in the IQR session
 state dump, must exist external to the IQR web-app (uses a non-memory backend).
 This is needed so that this script might access them for classifier training.
 
-Getting an IQR Session's State Info
-===================================
-After working with the IQR application, when it is believed that the return
-results are being ranked accurately, add ``iqr_session_info`` to the end of
-the current URL. This will return JSON data that should be saved, and used as
-input to this utility. This details the data/descriptor UUIDs that were marked
-as positive and negative that will be used to train the configured classifier.
+Getting an IQR Session's State Information
+==========================================
+Click the "Save IQR State" button to download the IqrState file encapsulating
+the descriptors of positively and negatively marked items. These descriptors
+will be used to train the configured SupervisedClassifier.
 
 """
 import argparse
 import json
 import logging
 import os
+import zipfile
+
+import numpy
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.algorithms import get_classifier_impls
 
-from smqtk.representation import DescriptorElementFactory
+from smqtk.representation.descriptor_element.local_elements \
+    import DescriptorMemoryElement
 
 from smqtk.utils.bin_utils import initialize_logging
 from smqtk.utils.bin_utils import output_config
@@ -50,8 +52,8 @@ def get_cli_parser():
                         help='When generating a configuration file, overwrite '
                              'an existing file.')
 
-    parser.add_argument('-i', '--iqr-session-info',
-                        help="Path to the JSON file saved from an IQR session.")
+    parser.add_argument('-i', '--iqr-state',
+                        help="Path to the ZIP file saved from an IQR session.")
     parser.add_argument('-d', '--debug',
                         action='store_true', default=False,
                         help='Output debug messages')
@@ -61,17 +63,13 @@ def get_cli_parser():
 
 def get_default_config():
     return {
-        "descriptor_element_factory":
-            DescriptorElementFactory.get_default_config(),
         "classifier": make_config(get_classifier_impls),
     }
 
 
-def train_classifier_iqr(config, iqrs_info):
+def train_classifier_iqr(config, iqr_state_fp):
     log = logging.getLogger(__name__)
 
-    factory = DescriptorElementFactory\
-        .from_config(config['descriptor_element_factory'])
     #: :type: smqtk.algorithms.SupervisedClassifier
     classifier = from_plugin_config(config['classifier'], get_classifier_impls)
 
@@ -79,27 +77,33 @@ def train_classifier_iqr(config, iqrs_info):
         raise RuntimeError("Configured classifier must be of the "
                            "SupervisedClassifier type in order to train.")
 
-    log.info("Loading pos/neg descriptors")
-    d_type_str = iqrs_info['descriptor_type']
-    log.info("-- descriptor algo type: %s", d_type_str)
-    # Using sets to handle possible descriptor duplication in example and
-    # neighbor lists.
-    #: :type: set[smqtk.representation.DescriptorElement]
-    pos = set(
-        [factory(d_type_str, uuid) for uuid in iqrs_info['positive_uids']] +
-        [factory(d_type_str, uuid) for uuid in iqrs_info['ex_pos']]
-    )
-    #: :type: set[smqtk.representation.DescriptorElement]
-    neg = set(
-        [factory(d_type_str, uuid) for uuid in iqrs_info['negative_uids']] +
-        [factory(d_type_str, uuid) for uuid in iqrs_info['ex_neg']]
-    )
+    # Get pos/neg descriptors out of iqr state zip
+    z_file = open(iqr_state_fp, 'r')
+    z = zipfile.ZipFile(z_file)
+    if len(z.namelist()) != 1:
+        raise RuntimeError("Invalid IqrState file!")
+    iqrs = json.loads(z.read(z.namelist()[0]))
+    if len(iqrs) != 2:
+        raise RuntimeError("Invalid IqrState file!")
+    if 'pos' not in iqrs or 'neg' not in iqrs:
+        raise RuntimeError("Invalid IqrState file!")
 
-    log.info("Checking that descriptors have values")
-    assert all(d.has_vector() for d in pos), \
-        "Some descriptors in positive set do not have vector values."
-    assert all(d.has_vector() for d in neg), \
-        "Some descriptors in negative set do not have vector values."
+    log.info("Loading pos/neg descriptors")
+    #: :type: list[smqtk.representation.DescriptorElement]
+    pos = []
+    #: :type: list[smqtk.representation.DescriptorElement]
+    neg = []
+    i = 0
+    for v in set(map(tuple, iqrs['pos'])):
+        d = DescriptorMemoryElement('train', i)
+        d.set_vector(numpy.array(v))
+        pos.append(d)
+        i += 1
+    for v in set(map(tuple, iqrs['neg'])):
+        d = DescriptorMemoryElement('train', i)
+        d.set_vector(numpy.array(v))
+        neg.append(d)
+        i += 1
 
     classifier.train({'positive': pos}, negatives=neg)
 
@@ -112,7 +116,7 @@ def main():
     config_path = args.config
     generate_config = args.generate_config
     config_overwrite = args.overwrite
-    iqr_session_info_fp = args.iqr_session_info
+    iqr_state_fp = args.iqr_state
     is_debug = args.debug
 
     initialize_logging(logging.getLogger(),
@@ -128,14 +132,11 @@ def main():
             )
     output_config(generate_config, config, log, config_overwrite, 100)
 
-    if not os.path.isfile(iqr_session_info_fp):
+    if not os.path.isfile(iqr_state_fp):
         log.error("IQR Session info JSON filepath was invalid")
         exit(101)
 
-    with open(iqr_session_info_fp) as f:
-        iqrs_info = json.load(f)
-
-    train_classifier_iqr(config, iqrs_info)
+    train_classifier_iqr(config, iqr_state_fp)
 
 
 if __name__ == "__main__":

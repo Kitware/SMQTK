@@ -11,33 +11,21 @@ configurations used here will now reference valid models. When running the IQR
 demo application, its configuration should mirror the configurations used here
 in order to function properly.
 
-
-TODO
-====
-In the future, this script should be updated to have a command-line interface
-such that it takes in the same configuration JSON file that the IQR demo
-application would (possibly with extra parameters for data file locations),
-which would in turn drive structure/model generation.
-
 """
 import glob
 import json
 import logging
 import argparse
-import sys
 import os.path as osp
 
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.utils import bin_utils, jsmin, plugin
 
-
 __author__ = 'paul.tunison@kitware.com'
 
-
-
 def cli_parser():
-    description = "Generate the IQR Application's Model"
+    description == "Train or generate models for the SMQTK IQR Application"
 
     parser = argparse.ArgumentParser(description=description)
 
@@ -80,10 +68,6 @@ def main():
         exit(1)
 
     search_app_iqr_config = search_app_config["iqr_tabs"][args.tab]
-
-    # Shell glob for where input data is located.
-    input_image_file_glob = "/Users/purg/dev/smqtk/source/data/FileDataSets/" \
-                            "example_image/images/*/*"
 
     # Configure DataSet implementation and parameters
     data_set_config = search_app_iqr_config['data_set']

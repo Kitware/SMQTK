@@ -56,6 +56,9 @@ Tools / Scripts
   * Added tool for training a supervised classifier based on an IQR session
     state (a web-app endpoint return).
 
+  * Converted ``iqr_app_model_generation.py`` to run as a command line tool with 
+    arguments, rather than an example script.
+
 Web / Services
 
   * Added ``NearestNeighborServiceServer``, which provides

@@ -25,7 +25,7 @@ from smqtk.utils import bin_utils, jsmin, plugin
 __author__ = 'paul.tunison@kitware.com'
 
 def cli_parser():
-    description == "Train or generate models for the SMQTK IQR Application"
+    description = "Train or generate models for the SMQTK IQR Application"
 
     parser = argparse.ArgumentParser(description=description)
 

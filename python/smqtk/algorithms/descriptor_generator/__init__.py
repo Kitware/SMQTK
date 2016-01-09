@@ -169,6 +169,10 @@ class DescriptorGenerator (SmqtkAlgorithm):
 
         return de_map
 
+    #
+    # TODO: compute_descriptor_iterator -> see elements_to_matrix for pipeline
+    #
+
     @abc.abstractmethod
     def _compute_descriptor(self, data):
         """

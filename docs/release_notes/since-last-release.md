@@ -19,6 +19,8 @@ Classification Elements
 
   * Added PostgreSQL implementation
 
+  * Added file-based implementation
+
   * Added ClassificationElementFactory implementation.
 
 Data Elements
@@ -54,7 +56,10 @@ Tools / Scripts
     specification.
 
   * Added tool for training a supervised classifier based on an IQR session
-    state (a web-app endpoint return).
+    state.
+
+  * Added tool for classifying a sequence of input file paths, outputting paths
+    that classified as the input label (highest confidence).
 
   * Converted ``iqr_app_model_generation.py`` to run as a command line tool with 
     arguments, rather than an example script.
@@ -64,6 +69,9 @@ Web / Services
   * Added ``NearestNeighborServiceServer``, which provides
     web-service that returns the nearest `N` neighbors to the given
     descriptor element.
+
+  * Added ability to save IQR state via a new button in web interface. This file
+    is used with the IQR classifier training script.
 
 Fixes since v0.2.1
 ------------------

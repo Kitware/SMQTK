@@ -94,7 +94,8 @@ class Classifier (SmqtkAlgorithm):
         :return: Mapping of input DescriptorElement instances to the computed
             ClassificationElement. ClassificationElement UUID's are congruent
             with the UUID of the DescriptorElement
-        :rtype:
+        :rtype: dict[smqtk.representation.DescriptorElement,
+                     smqtk.representation.ClassificationElement]
 
         """
         self._log.info("Async classifying descriptors")
@@ -157,6 +158,10 @@ class Classifier (SmqtkAlgorithm):
                                "classification. See logging.")
 
         return d2c_map
+
+    #
+    # TODO: classify_iterator -> see elements_to_matrix for pipeline
+    #
 
     #
     # Abstract methods

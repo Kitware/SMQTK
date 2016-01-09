@@ -61,6 +61,9 @@ Tools / Scripts
   * Added tool for classifying a sequence of input file paths, outputting paths
     that classified as the input label (highest confidence).
 
+  * Converted ``iqr_app_model_generation.py`` to run as a command line tool with 
+    arguments, rather than an example script.
+
 Web / Services
 
   * Added ``NearestNeighborServiceServer``, which provides

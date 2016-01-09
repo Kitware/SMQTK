@@ -118,8 +118,7 @@ def get_data_set_impls(reload_modules=False):
     We search for implementation classes in:
         - modules next to this file this function is defined in (ones that begin
           with an alphanumeric character),
-        - python modules listed in the environment variable
-          ``DATA_SET_PATH``
+        - python modules listed in the environment variable ``DATA_SET_PATH``
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)

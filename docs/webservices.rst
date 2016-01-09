@@ -1,3 +1,4 @@
+.. _webapplabel:
 Web Service and Demonstration Applications
 ==========================================
 
@@ -31,6 +32,7 @@ Descriptor Similarity Service
 .. autoclass:: smqtk.web.descriptor_service.DescriptorServiceServer
    :members:
 
+.. _iqrdemoapp:
 IQR Demo Application
 ++++++++++++++++++++
 

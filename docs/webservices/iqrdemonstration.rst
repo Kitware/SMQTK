@@ -1,3 +1,4 @@
+.. _iqrdemoapp:
 IQR Demo Application
 ====================
 
@@ -130,17 +131,48 @@ your result set.
 
 
 You can continue this process for as long as you like until you are satisfied with the results that the query is returning.   Once you are happy with the reulsts, you can select the ``Save IQR State``
-element.  This will save a file that contains all of the information requires to use the results of the IQR query as an image classifier.   SMQTK's ``classifyFiles`` command can use this saved
-IQR state to classify a set of files (not necessarily the files in your IQR Applicaiton ingest).  The command has the following form:
+element.  This will save a file that contains all of the information requires to use the results of the IQR query as an image classifier. The process for doing this is described in the next session.
+
+Using and IQR Trained Classifier
+--------------------------------
+
+Before you can use your IQR session as a classifier, you must first train the classifier.  You can do this with the ``iqrTrainClassifier`` command:
+
+.. argparse::
+   :ref: iqrTrainClassifier.get_cli_parser
+   :prog: iqrTrainClassifier
+
+As with other commands from SMQTK the config file is a set of configuration blocks stored in a JSON file.  An example ships in the SMQTK repository:
+
+.. literalinclude:: /../python/smqtk/web/search_app/config.iqrTrainClassifier.json
+   :language: json
+   :linenos:
+
+In this case the only block required, specifies the classifier that will be used, in this case the ``LibSvmClassifier``.  We'll assume that you downloaded your IQR session as
+``1d62a3bb-0b74-479f-be1b-acf03cabf944.IqrState``.  In that case the following command will train your classifier leveraging the descriptors associated with the IQR session that you saved.::
+
+    iqrTrainClassifier.py -c config.iqrTrainClassifier.json -i 1d62a3bb-0b74-479f-be1b-acf03cabf944.IqrState
+
+Once you have trained the classifier, you can use the ``classifyFiles`` command to actually classify a set of files.
 
 .. argparse::
    :ref: classifyFiles.get_cli_parser
    :prog: classifyFiles
 
+Again, we need to provide a config block based configuration file for the command.  As with ``iqrTrainClassifier``, there is a sample configuration file in the repository:
 
-* Demo application for performing Interactive Query Refinement (IQR)
-* Fully configurable 
-* Requires algorithm models to be built
+.. literalinclude:: /../python/smqtk/web/search_app/config.classifyFiles.json
+   :language: json
+   :linenos:
 
-.. autoclass:: smqtk.web.search_app.IqrSearchApp
-   :members:
+Note that the ``classifier`` block on line 10 is the same as the ``classifier`` block in the ``iqrTrainClassfier`` configuration file.  Further, the ``descriptor_generator`` block on line 42 
+matches the descriptor generator used for the IQR application itself (thus matching the type of descriptor used to train the classifier). 
+
+Once you've set up the configuration file to yoru liking, you can classify a set of labels with the following command::
+
+    classifyFiles.py -c config.classifyFiles.json -l positive /path/to/leedsbutterfly/images/*.jpg
+
+If you leave the ``-l`` argument, the command will tell you the labels available with the classifier (in this case *positive* and *negative*).
+
+SMQTK's ``classifyFiles`` command can use this saved
+IQR state to classify a set of files (not necessarily the files in your IQR Applicaiton ingest).  The command has the following form:

@@ -1,0 +1,16 @@
+{
+    "classifier": {
+        "LibSvmClassifier": {
+            "normalize": false, 
+            "svm_label_map_fp": "classifier_workdir/label_map", 
+            "svm_model_fp": "classifier_workdir/model", 
+            "train_params": {
+                "-b": 1, 
+                "-c": 2, 
+                "-s": 0, 
+                "-t": 0
+            }
+        }, 
+        "type": "LibSvmClassifier"
+    }
+}

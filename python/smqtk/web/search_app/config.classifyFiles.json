@@ -1,0 +1,55 @@
+{
+    "classification_factory": {
+        "FileClassificationElement": {
+            "save_dir": "classifier_workdir/classification_element" , 
+            "subdir_split": true
+        }, 
+        "MemoryClassificationElement": {}, 
+        "type": "MemoryClassificationElement"
+    }, 
+    "classifier": {
+        "LibSvmClassifier": {
+            "normalize": false, 
+            "svm_label_map_fp": "classifier_workdir/label_map", 
+            "svm_model_fp": "classifier_workdir/model", 
+            "train_params": {
+                "-b": 1, 
+                "-c": 2, 
+                "-s": 0, 
+                "-t": 0
+            }
+        }, 
+        "type": "LibSvmClassifier"
+    }, 
+    "descriptor_factory": {
+        "DescriptorFileElement": {
+            "save_dir": null, 
+            "subdir_split": null
+        }, 
+        "DescriptorMemoryElement": {}, 
+        "SolrDescriptorElement": {
+            "commit_on_set": true, 
+            "persistent_connection": false, 
+            "solr_conn_addr": null, 
+            "timeout": 10, 
+            "timestamp_field": null, 
+            "type_field": null, 
+            "uuid_field": null, 
+            "vector_field": null
+        }, 
+        "type": "DescriptorMemoryElement"
+    }, 
+    "descriptor_generator": {
+		"ColorDescriptor_Image_csift": {
+			"flann_autotune": false,
+			"flann_sample_fraction": 0.75,
+			"flann_target_precision": 0.95,
+			"kmeans_k": 1024,
+			"model_directory": "workdir/csift",
+			"random_seed": 42,
+			"use_spatial_pyramid": false,
+			"work_directory": "workdir/csift"
+		},
+        "type": "ColorDescriptor_Image_csift"
+    }
+}

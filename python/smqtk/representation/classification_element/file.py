@@ -118,5 +118,6 @@ class FileClassificationElement (ClassificationElement):
         """
         m = super(FileClassificationElement, self)\
             .set_classification(m, **kwds)
+        file_utils.safe_create_dir(osp.dirname(self.filepath))
         with open(self.filepath, 'w') as f:
             cPickle.dump(m, f)

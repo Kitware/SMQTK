@@ -6,15 +6,22 @@
     },
     "iqr_tabs": [
         {
-            "name": "example",
-            "url_prefix": "/example",
-            "working_directory": "/Users/purg/dev/smqtk/source/work/Web/IqrSearchApp/example",
+            "name": "CSIFT",
+            "url_prefix": "/csift",
+            "working_directory": "workdir",
             "data_set": {
+                "DataMemorySet": {
+                    "file_cache": "workdir/csift/MemorySet.cache"
+                }, 
                 "DataFileSet": {
-                    "root_directory": "/Users/purg/dev/smqtk/source/data/FileDataSets/example_image/data",
+                    "root_directory": "workdir/csift/DataFileSetCache",
                     "uuid_chunk": 10
                 },
                 "type": "DataFileSet"
+            },
+            "descriptor_factory": {
+                 "DescriptorMemoryElement": {},
+                 "type": "DescriptorMemoryElement"
             },
             "descr_generator": {
                 "ColorDescriptor_Image_csift": {
@@ -22,10 +29,10 @@
                     "flann_sample_fraction": 0.75,
                     "flann_target_precision": 0.95,
                     "kmeans_k": 1024,
-                    "model_directory": "/Users/purg/dev/smqtk/source/data/ContentDescriptors/ColorDescriptor/csift/example_image",
+                    "model_directory": "workdir/csift",
                     "random_seed": 42,
                     "use_spatial_pyramid": false,
-                    "work_directory": "/Users/purg/dev/smqtk/source/work/ContentDescriptors/ColorDescriptor/csift/example_image"
+                    "work_directory": "workdir/csift"
                 },
                 "type": "ColorDescriptor_Image_csift"
             },
@@ -34,20 +41,20 @@
                     "bit_length": 8,
                     "code_index": {
                         "MemoryCodeIndex": {
-                            "file_cache": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/mem_code_index.pickle"
+                            "file_cache": "workdir/csift/itqnn/mem_code_index.pickle"
                         },
                         "type": "MemoryCodeIndex"
                     },
                     "distance_method": "hik",
                     "itq_iterations": 50,
-                    "mean_vec_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/mean_vec.npy",
+                    "mean_vec_filepath": "workdir/csift/itqnn/mean_vec.npy",
                     "random_seed": 42,
-                    "rotation_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/ITQNearestNeighborsIndex/example_image/csift/rotation.npy"
+                    "rotation_filepath": "workdir/csift/itqnn/rotation.npy"
                 },
                 "FlannNearestNeighborsIndex": {
-                    "index_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.flann",
-                    "parameters_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.parameters",
-                    "descriptor_cache_filepath": "/Users/purg/dev/smqtk/source/data/NearestNeighborsIndex/FlannNearestNeighborsIndex/example_image/csift/index.cache",
+                    "index_filepath": "workdir/csift/flann/index.flann",
+                    "parameters_filepath": "workdir/csift/flann/index.parameters",
+                    "descriptor_cache_filepath": "workdir/csift/flann/index.cache",
                     "autotune": false,
                     "distance_method": "hik",
                     "random_seed": 42
@@ -68,7 +75,7 @@
         "server": "127.0.0.1:27017"
     },
     "server": {
-        "host": "127.0.0.1",
+        "host": "0.0.0.0",
         "port": 5000
     }
 }

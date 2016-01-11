@@ -48,6 +48,16 @@ Descriptor Generators
   * Added ``CaffeDescriptorGenerator`` implementation, which is more
     generalized and model agnostic, using the Caffe python interface.
 
+Documentation
+
+  * Added web-service documentation directory and moved applicable
+    documentation files there.
+
+  * Added more/better documentation on IQR demonstration application.
+
+  * Added documentation on saving IQR state and training/using a supervised
+    classifier based on it.
+
 Tools / Scripts
 
   * Added descriptor compute script that reads from a file-list text file

@@ -17,6 +17,7 @@ Web services should be runnable via the ``bin/runApplication.py`` script.
 
 SmqtkWebApp
 -----------
+This is the base class for all web applications and services in SMQTK.
 
 .. autoclass:: smqtk.web.SmqtkWebApp
    :members:

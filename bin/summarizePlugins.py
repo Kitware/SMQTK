@@ -7,11 +7,13 @@ Plugins that have issues will have a change to emmit warnings or errors here.
 
 """
 import argparse
+import json
 import logging
 
 import smqtk.algorithms
 import smqtk.representation
 import smqtk.utils.bin_utils
+import smqtk.utils.plugin
 
 
 def cli():
@@ -23,6 +25,11 @@ def cli():
     parser.add_argument("-v", "--verbose",
                         default=False, action="store_true",
                         help="Output debugging options as well.")
+    parser.add_argument("--defaults",
+                        default=False, type=str,
+                        help="Optionally generate default configuration blocks "
+                             "for each plugin structure and output as JSON to "
+                             "the specified path.")
 
     return parser
 
@@ -39,6 +46,13 @@ def main():
         llevel = logging.DEBUG
     smqtk.utils.bin_utils.initialize_logging(logging.getLogger("smqtk"), llevel)
 
+    collect_defaults = args.defaults
+    defaults = {}
+
+    def collect_configs(name, impl_getter):
+        if collect_defaults:
+            defaults[name] = smqtk.utils.plugin.make_config(impl_getter)
+
     log = logging.getLogger("smqtk.checkPlugins")
 
     # Key is the interface type name
@@ -53,44 +67,67 @@ def main():
     plugin_type_list.append("DataElement")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_data_element_impls()
+    collect_configs('DataElement',
+                    smqtk.representation.get_data_element_impls)
 
     log.info("Checking DataSet plugins")
     plugin_type_list.append("DataSet")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_data_set_impls()
+    collect_configs('DataSet',
+                    smqtk.representation.get_data_set_impls)
 
     log.info("Checking DescriptorElement plugins")
     plugin_type_list.append("DescriptorElement")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_descriptor_element_impls()
+    collect_configs('DescriptorElement',
+                    smqtk.representation.get_descriptor_element_impls)
 
     log.info("Checking DescriptorIndex plugins")
     plugin_type_list.append("DescriptorIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_descriptor_index_impls()
+    collect_configs('DescriptorIndex',
+                    smqtk.representation.get_descriptor_index_impls)
 
     log.info("Checking CodeIndex plugins")
     plugin_type_list.append("CodeIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_code_index_impls()
+    collect_configs('CodeIndex',
+                    smqtk.representation.get_code_index_impls)
 
     #
     # smqtk.algorithms
     #
+    log.info("Checking Classifier plugins")
+    plugin_type_list.append('Classifier')
+    plugin_info[plugin_type_list[-1]] = \
+        smqtk.algorithms.get_classifier_impls()
+    collect_configs('Classifier',
+                    smqtk.algorithms.get_classifier_impls)
+
     log.info("Checking DescriptorGenerator plugins")
     plugin_type_list.append("DescriptorGenerator")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_descriptor_generator_impls()
+    collect_configs('DescriptorGenerator',
+                    smqtk.algorithms.get_descriptor_generator_impls)
 
     log.info("Checking NearestNeighborIndex plugins")
     plugin_type_list.append("NearestNeighborIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_nn_index_impls()
+    collect_configs('NearestNeighborIndex',
+                    smqtk.algorithms.get_nn_index_impls)
 
     log.info("Checking RelevancyIndex plugins")
     plugin_type_list.append("RelevancyIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_relevancy_index_impls()
+    collect_configs('RelevancyIndex',
+                    smqtk.algorithms.get_relevancy_index_impls)
 
     #
     # Print-out
@@ -108,6 +145,12 @@ def main():
                 print
         print
         print
+
+    if collect_defaults:
+        with open(collect_defaults, 'w') as f:
+            json.dump(defaults, f, indent=4, sort_keys=True)
+        log.info("Wrote default configuration dictionaries to: %s",
+                 collect_defaults)
 
 
 if __name__ == "__main__":

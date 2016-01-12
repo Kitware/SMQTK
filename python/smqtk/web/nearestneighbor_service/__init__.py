@@ -97,8 +97,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")
-        @self.route("/nn/offset=<int:offset>/n=<int:n>/<path:uri>")
-        def compute_nearest_neighbors(uri, offset=0, n=10):
+        @self.route("/nn/n=<int:n>/<int:start_i>:<int:end_i>/<path:uri>")
+        def compute_nearest_neighbors(uri, n=10, start_i=None, end_i=None):
             """
             Data modes for upload/use::
 
@@ -162,19 +162,15 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 except ValueError, ex:
                     message = "Data content type issue: %s" % str(ex)
 
-            # fail here if de is None
-            # Default is 10
-            num_neighbors = flask.request.args.get("num_neighbors", n)
-            page_slice = slice(offset, num_neighbors + offset)
-
+            # Base pagination slicing based on provided start and end indices,
+            # otherwise clamp to beginning/ending of queried neighbor sequence.
+            page_slice = slice(start_i or 0, end_i or n)
             neighbors = []
             dists = []
             if descriptor is not None:
                 try:
-                    # We ask for 1000 as an arbitrarily large number that we can
-                    # pretend to paginate through
                     neighbors, dists = \
-                        self.nn_index.nn(descriptor, n=1000)
+                        self.nn_index.nn(descriptor, n)
                 except ValueError, ex:
                     message = "Descriptor or index related issue: %s" % str(ex)
 

@@ -97,7 +97,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")
-        def compute_nearest_neighbors(uri, n=10):
+        @self.route("/nn/offset=<int:offset>/n=<int:n>/<path:uri>")
+        def compute_nearest_neighbors(uri, offset=0, n=10):
             """
             Data modes for upload/use::
 
@@ -162,15 +163,18 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                     message = "Data content type issue: %s" % str(ex)
 
             # fail here if de is None
-            # Default is 8
+            # Default is 10
             num_neighbors = flask.request.args.get("num_neighbors", n)
+            page_slice = slice(offset, num_neighbors + offset)
 
             neighbors = []
             dists = []
             if descriptor is not None:
                 try:
+                    # We ask for 1000 as an arbitrarily large number that we can
+                    # pretend to paginate through
                     neighbors, dists = \
-                        self.nn_index.nn(descriptor, n=num_neighbors)
+                        self.nn_index.nn(descriptor, n=1000)
                 except ValueError, ex:
                     message = "Descriptor or index related issue: %s" % str(ex)
 
@@ -178,8 +182,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             return flask.jsonify({
                 "success": descriptor is not None,
                 "message": message,
-                "neighbors": [n.uuid() for n in neighbors],
-                "distances": dists,
+                "neighbors": [n.uuid() for n in neighbors[page_slice]],
+                "distances": dists[page_slice],
                 "reference_uri": uri
             })
 

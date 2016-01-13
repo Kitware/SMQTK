@@ -10,7 +10,8 @@ function alert_error(message) {
              style="padding: 0 .7em;"> \
             <span class="ui-icon ui-icon-alert" \
                   style="float: left; margin-right: .3em;"></span> \
-            <strong>Alert:</strong> ' + message + '\
+            <strong>Alert:</strong> \
+                <span style="white-space: pre-wrap">' + message + '</span>\
             <a class="close" data-dismiss="alert">x</a>\
         </div>'
     );
@@ -34,7 +35,8 @@ function alert_info(message) {
              style="padding: 0 .7em;"> \
                 <span class="ui-icon ui-icon-info" \
                       style="float: left; margin-right: .3em;"></span>\
-                <strong>Info:</strong> ' + message + '\
+                <strong>Info:</strong> \
+                <span style="white-space: pre-wrap">' + message + '</span>\
                 <a class="close" data-dismiss="alert">x</a>\
         </div>'
     );
@@ -57,7 +59,8 @@ function alert_success(message) {
              style="padding: 0 .7em; border: 1px solid #3c763d"> \
                 <span class="ui-icon ui-icon-check" \
                       style="float: left; margin-right: .3em;"></span>\
-                <strong>Success:</strong> ' + message + '\
+                <strong>Success:</strong> \
+                <span style="white-space: pre-wrap">' + message + '</span>\
                 <a class="close" data-dismiss="alert">x</a>\
         </div>'
     );

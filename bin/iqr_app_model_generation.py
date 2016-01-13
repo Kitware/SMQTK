@@ -24,15 +24,26 @@ from smqtk.utils import bin_utils, jsmin, plugin
 
 __author__ = 'paul.tunison@kitware.com'
 
+
 def cli_parser():
     description = "Train or generate models for the SMQTK IQR Application"
 
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument("-c","--config",required=True,help="IQR application configuration file.")
-    parser.add_argument("-t","--tab",type=int,default=0,help="The configuration tab to generate the model for.")
+    parser.add_argument("-c", "--config",
+                        required=True,
+                        help="IQR application configuration file.")
+    parser.add_argument("-t", "--tab",
+                        type=int, default=0,
+                        help="The configuration tab to generate the model for.")
+    parser.add_argument('-v', '--verbose',
+                        action='store_true', default=False,
+                        help='Show debug logging.')
 
-    parser.add_argument("input_files",metavar='GLOB',nargs="*")
+    parser.add_argument("input_files",
+                        metavar='GLOB', nargs="*",
+                        help="Shell glob to files to add to the configured "
+                             "data set.")
 
     return parser
 
@@ -45,7 +56,10 @@ def main():
     # Setup logging
     #
     if not logging.getLogger().handlers:
-        bin_utils.initialize_logging(logging.getLogger(), logging.DEBUG)
+        if args.verbose:
+            bin_utils.initialize_logging(logging.getLogger(), logging.DEBUG)
+        else:
+            bin_utils.initialize_logging(logging.getLogger(), logging.INFO)
     log = logging.getLogger("smqtk.scripts.iqr_app_model_generation")
 
     search_app_config = json.loads(jsmin.jsmin(open(args.config).read()))
@@ -92,7 +106,6 @@ def main():
     # Configure DescriptorElementFactory instance, which defines what implementation
     # of DescriptorElement to use for storing generated descriptor vectors below.
     descriptor_elem_factory_config = search_app_iqr_config['descriptor_factory']
-
 
     #
     # Initialize data/algorithms
@@ -141,7 +154,6 @@ def main():
             log.debug("Expanding glob: %s" % fp)
             for g in glob.iglob(fp):
                 data_set.add_data(DataFileElement(g))
-
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

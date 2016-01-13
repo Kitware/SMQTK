@@ -132,12 +132,12 @@ def hamming_distance(i, j):
     places where the bits differ.
 
     :param i: First integer.
-    :type i: int
+    :type i: int | long
     :param j: Second integer.
-    :type j: int
+    :type j: int | long
 
     :return: Integer hamming distance between the two values.
-    :rtype: int
+    :rtype: int | long
 
     """
     # TODO: Find something better than this.

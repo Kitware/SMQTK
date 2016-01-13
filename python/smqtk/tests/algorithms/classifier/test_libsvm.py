@@ -19,6 +19,10 @@ if LibSvmClassifier.is_usable():
 
     class TestLibSvmClassifier (unittest.TestCase):
 
+        def tearDown(self):
+            # Clear MemoryElement content
+            DescriptorMemoryElement.MEMORY_CACHE = {}
+
         def test_simple_classification(self):
             """
             Test libSVM classification functionality using random constructed

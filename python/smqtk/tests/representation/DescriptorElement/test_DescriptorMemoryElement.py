@@ -12,6 +12,16 @@ __author__ = "paul.tunison@kitware.com"
 
 class TestDescriptorMemoryElement (unittest.TestCase):
 
+    def setUp(self):
+        # There should be nothing in the cache
+        assert not DescriptorMemoryElement.MEMORY_CACHE, \
+            "There were things in the memory element cache! %s" \
+            % DescriptorMemoryElement.MEMORY_CACHE
+
+    def tearDown(self):
+        # Reset MemoryElement cache
+        DescriptorMemoryElement.MEMORY_CACHE = {}
+
     def test_configuration(self):
         default_config = DescriptorMemoryElement.get_default_config()
         ntools.assert_equal(default_config, {})
@@ -60,3 +70,80 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         # Cache should now have those entries back in it
         ntools.assert_in(('test', 0), DescriptorMemoryElement.MEMORY_CACHE)
         ntools.assert_in(('test', 1), DescriptorMemoryElement.MEMORY_CACHE)
+
+    def test_input_immutability(self):
+        # make sure that data stored is not susceptible to shifts in the
+        # originating data matrix they were pulled from.
+
+        #
+        # Testing this with a single vector
+        #
+        v = numpy.random.rand(16)
+        t = tuple(v.copy())
+        d = DescriptorMemoryElement('test', 0)
+        d.set_vector(v)
+        v[:] = 0
+        ntools.assert_true((v == 0).all())
+        ntools.assert_false(sum(t) == 0.)
+        numpy.testing.assert_equal(d.vector(), t)
+
+        #
+        # Testing with matrix
+        #
+        m = numpy.random.rand(20, 16)
+
+        v1 = m[3]
+        v2 = m[15]
+        v3 = m[19]
+
+        # Save truth values of arrays as immutable tuples (copies)
+        t1 = tuple(v1.copy())
+        t2 = tuple(v2.copy())
+        t3 = tuple(v3.copy())
+
+        d1 = DescriptorMemoryElement('test', 1)
+        d1.set_vector(v1)
+        d2 = DescriptorMemoryElement('test', 2)
+        d2.set_vector(v2)
+        d3 = DescriptorMemoryElement('test', 3)
+        d3.set_vector(v3)
+
+        numpy.testing.assert_equal(v1, d1.vector())
+        numpy.testing.assert_equal(v2, d2.vector())
+        numpy.testing.assert_equal(v3, d3.vector())
+
+        # Changing the source should not change stored vectors
+        m[:, :] = 0.
+        ntools.assert_true((v1 == 0).all())
+        ntools.assert_true((v2 == 0).all())
+        ntools.assert_true((v3 == 0).all())
+        ntools.assert_false(sum(t1) == 0.)
+        ntools.assert_false(sum(t2) == 0.)
+        ntools.assert_false(sum(t3) == 0.)
+        numpy.testing.assert_equal(d1.vector(), t1)
+        numpy.testing.assert_equal(d2.vector(), t2)
+        numpy.testing.assert_equal(d3.vector(), t3)
+
+    def test_output_immutability(self):
+        # make sure that data stored is not susceptible to modifications after
+        # extraction
+        v = numpy.ones(16)
+        d = DescriptorMemoryElement('test', 0)
+        ntools.assert_false(d.has_vector())
+        d.set_vector(v)
+        r = d.vector()
+        r[:] = 0
+        ntools.assert_equal(r.sum(), 0)
+        ntools.assert_equal(d.vector().sum(), 16)
+
+    def test_none_set(self):
+        d = DescriptorMemoryElement('test', 0)
+        ntools.assert_false(d.has_vector())
+
+        d.set_vector(numpy.ones(16))
+        ntools.assert_true(d.has_vector())
+        numpy.testing.assert_equal(d.vector(), numpy.ones(16))
+
+        d.set_vector(None)
+        ntools.assert_false(d.has_vector())
+        ntools.assert_is(d.vector(), None)

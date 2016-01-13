@@ -39,6 +39,10 @@ class TestIqrSvmHik (unittest.TestCase):
         cls.q_neg = DescriptorMemoryElement('query', 1)
         cls.q_neg.set_vector(np.array([0,   0,   0, .5, .5], float))
 
+    @classmethod
+    def tearDownClass(cls):
+        DescriptorMemoryElement.MEMORY_CACHE = {}
+
     def test_configuration(self):
         c = LibSvmHikRelevancyIndex.get_default_config()
         ntools.assert_in('descr_cache_filepath', c)

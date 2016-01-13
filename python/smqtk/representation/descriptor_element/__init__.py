@@ -21,6 +21,8 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
     descriptor generator should not be considered the same (though, this may be
     up for discussion).
 
+    Stored vectors should be effectively immutable.
+
     """
 
     def __init__(self, type_str, uuid):

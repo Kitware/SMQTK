@@ -116,3 +116,4 @@ class TestDescriptorElemFactory (unittest.TestCase):
         d = factory.new_descriptor('test', 'foo')
         ntools.assert_equal(d.type(), 'test')
         ntools.assert_equal(d.uuid(), 'foo')
+        DescriptorMemoryElement.MEMORY_CACHE = {}

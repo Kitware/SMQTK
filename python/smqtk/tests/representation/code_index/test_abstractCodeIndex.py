@@ -39,6 +39,9 @@ class DummyCodeIndex (CodeIndex):
 
 class TestCodeIndexAbstract (unittest.TestCase):
 
+    def tearDown(self):
+        DescriptorMemoryElement.MEMORY_CACHE = {}
+
     @mock.patch.object(DummyCodeIndex, 'count')
     def test_len(self, mock_count):
         mock_count.return_value = 100

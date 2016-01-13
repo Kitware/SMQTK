@@ -135,7 +135,7 @@ class IqrSession (SmqtkObject):
         #   nn_index instance.
         # Added external data/descriptors not added to this index.
         self.working_index = DescriptorMemoryIndex()
-        
+
         # Initialize book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.
         #: :type: set[collections.Hashable]
@@ -383,6 +383,7 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             self.working_index.clear()
+            self._wi_init_seeds.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
             self.ex_pos_descriptors.clear()

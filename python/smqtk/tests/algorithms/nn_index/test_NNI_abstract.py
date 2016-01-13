@@ -32,8 +32,7 @@ class DummySI (NearestNeighborsIndex):
 
 class TestSimilarityIndexAbstract (unittest.TestCase):
 
-    @classmethod
-    def setUp(cls):
+    def setUp(self):
         # Reset descriptor memory global cache before each test
         DescriptorMemoryElement.MEMORY_CACHE = {}
 

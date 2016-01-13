@@ -12,7 +12,8 @@ __author__ = "paul.tunison@kitware.com"
 
 class DescriptorMemoryElement (DescriptorElement):
     """
-    In-memory representation of descriptor elements.
+    In-memory representation of descriptor elements. Stored vectors are
+    effectively immutable.
     """
 
     # In-memory cache of descriptor vectors
@@ -57,12 +58,21 @@ class DescriptorMemoryElement (DescriptorElement):
 
     def vector(self):
         """
+        Implementation Note
+        -------------------
+        A copy of the internally stored vector is returned in order to mimic
+        immutability.
+
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
         :rtype: numpy.core.multiarray.ndarray or None
+
         """
+        i = self._get_cache_index()
         with self.MEMORY_CACHE_LOCK:
-            return self.MEMORY_CACHE.get(self._get_cache_index(), None)
+            if i in self.MEMORY_CACHE:
+                return numpy.copy(self.MEMORY_CACHE[i])
+            return None
 
     def set_vector(self, new_vec):
         """
@@ -74,6 +84,11 @@ class DescriptorMemoryElement (DescriptorElement):
         ``new_vec`` may be None, which clears this descriptor's vector from the
         cache.
 
+        Implementation Note
+        -------------------
+        This implementation copies input arrays before storage to mimic
+        immutability.
+
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray | None
 
@@ -83,7 +98,7 @@ class DescriptorMemoryElement (DescriptorElement):
             if new_vec is None and idx in self.MEMORY_CACHE:
                 del self.MEMORY_CACHE[self._get_cache_index()]
             else:
-                self.MEMORY_CACHE[idx] = new_vec
+                self.MEMORY_CACHE[idx] = numpy.copy(new_vec)
 
 
 class DescriptorFileElement (DescriptorElement):
@@ -164,8 +179,9 @@ class DescriptorFileElement (DescriptorElement):
 
     def vector(self):
         """
-        :return: The descriptor vector as a numpy array.
-        :rtype: numpy.core.multiarray.ndarray
+        :return: Get the stored descriptor vector as a numpy array. This returns
+            None of there is no vector stored in this container.
+        :rtype: numpy.core.multiarray.ndarray or None
         """
         # TODO: Load as memmap?
         #       i.e. modifications by user to vector will be reflected on disk.

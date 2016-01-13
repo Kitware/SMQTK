@@ -179,8 +179,9 @@ class DescriptorFileElement (DescriptorElement):
 
     def vector(self):
         """
-        :return: The descriptor vector as a numpy array.
-        :rtype: numpy.core.multiarray.ndarray
+        :return: Get the stored descriptor vector as a numpy array. This returns
+            None of there is no vector stored in this container.
+        :rtype: numpy.core.multiarray.ndarray or None
         """
         # TODO: Load as memmap?
         #       i.e. modifications by user to vector will be reflected on disk.

@@ -107,7 +107,6 @@ def main():
     # of DescriptorElement to use for storing generated descriptor vectors below.
     descriptor_elem_factory_config = search_app_iqr_config['descriptor_factory']
 
-
     #
     # Initialize data/algorithms
     #

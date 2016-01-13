@@ -104,6 +104,8 @@ def train_classifier_iqr(config, iqr_state_fp):
         d.set_vector(numpy.array(v))
         neg.append(d)
         i += 1
+    log.info('    positive -> %d', len(pos))
+    log.info('    negative -> %d', len(neg))
 
     classifier.train({'positive': pos}, negatives=neg)
 

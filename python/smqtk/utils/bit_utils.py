@@ -1,6 +1,9 @@
-__author__ = "paul.tunison@kitware.com"
+import numpy
 
 from . import ncr
+
+
+__author__ = "paul.tunison@kitware.com"
 
 
 def next_perm(v):
@@ -91,3 +94,28 @@ def bit_vector_to_int(v):
     for b in v:
         c = (c * 2L) + int(b)
     return c
+
+
+def int_to_bit_vector(i, bits=None):
+    """
+    Transform integer into a bit vector, optionally of a specific length.
+
+    :param i: integer to convert
+
+    :param bits: Optional fixed number of bits that should be represented by the
+        vector.
+
+    :return: Bit vector as numpy array
+
+    """
+    v = numpy.array([int(c) for c in bin(i)[2:]], numpy.bool_)
+    if bits:
+        if bits > v.size:
+            u = v
+            v = numpy.zeros(bits, dtype=numpy.bool_)
+            v[-u.size:] = u
+        elif bits < v.size:
+            raise ValueError("Given integer needs more than %d bits to "
+                             "represent (at least %d)."
+                             % (bits, v.size))
+    return v

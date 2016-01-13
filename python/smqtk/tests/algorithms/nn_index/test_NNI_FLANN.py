@@ -19,6 +19,9 @@ if FlannNearestNeighborsIndex.is_usable():
 
         RAND_SEED = 42
 
+        def tearDown(self):
+            DescriptorMemoryElement.MEMORY_CACHE = {}
+
         def _make_inst(self, dist_method):
             """
             Make an instance of FlannNearestNeighborsIndex

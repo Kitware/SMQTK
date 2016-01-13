@@ -12,6 +12,16 @@ __author__ = "paul.tunison@kitware.com"
 
 class TestDescriptorMemoryElement (unittest.TestCase):
 
+    def setUp(self):
+        # There should be nothing in the cache
+        assert not DescriptorMemoryElement.MEMORY_CACHE, \
+            "There were things in the memory element cache! %s" \
+            % DescriptorMemoryElement.MEMORY_CACHE
+
+    def tearDown(self):
+        # Reset MemoryElement cache
+        DescriptorMemoryElement.MEMORY_CACHE = {}
+
     def test_configuration(self):
         default_config = DescriptorMemoryElement.get_default_config()
         ntools.assert_equal(default_config, {})

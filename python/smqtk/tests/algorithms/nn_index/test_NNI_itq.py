@@ -47,6 +47,7 @@ class TestIqrSimilarityIndex (unittest.TestCase):
 
     def tearDown(self):
         self._clean_cache_files()
+        DescriptorMemoryElement.MEMORY_CACHE = {}
 
     def test_configuration(self):
         c = ITQNearestNeighborsIndex.get_default_config()

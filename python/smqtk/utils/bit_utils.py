@@ -8,15 +8,13 @@ try:
     from numba import jit
 
 except ImportError:
-    import types
 
     def jit(func_or_sig):
+        import types
         if isinstance(func_or_sig, (types.FunctionType, types.MethodType)):
             return func_or_sig
         else:
             return lambda *args, **kwds: func_or_sig
-
-    del types
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -114,7 +112,7 @@ def bit_vector_to_int(v):
     return c
 
 
-def bit_vector_to_int_long(v):
+def bit_vector_to_int_large(v):
     """
     Transform a numpy vector representing a sequence of binary bits [0 | >0]
     into an integer representation.

@@ -134,7 +134,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
-    def remove_many_descriptors(self, **uuids):
+    def remove_many_descriptors(self, *uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 

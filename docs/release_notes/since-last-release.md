@@ -10,6 +10,10 @@ Custom LibSVM
   * Fix compiler error on Windows with Visual Studio < 2013.  Log2 doesn't exist
     until that VS version.  Added stand-in.
 
+DescriptorIndex
+
+  * Added initial Solr backend implementation.
+
 Tests
 
   * Added tests for DescriptorIndex abstract and in-memory implementation.

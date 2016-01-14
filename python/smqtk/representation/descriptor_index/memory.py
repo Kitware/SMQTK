@@ -8,7 +8,7 @@ from smqtk.utils import SimpleTimer
 __author__ = 'paul.tunison@kitware.com'
 
 
-class DescriptorMemoryIndex (DescriptorIndex):
+class MemoryDescriptorIndex (DescriptorIndex):
 
     @classmethod
     def is_usable(cls):
@@ -26,7 +26,7 @@ class DescriptorMemoryIndex (DescriptorIndex):
         :type file_cache: None | str
 
         """
-        super(DescriptorMemoryIndex, self).__init__()
+        super(MemoryDescriptorIndex, self).__init__()
 
         # Mapping of descriptor UUID to the DescriptorElement instance.
         #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
@@ -192,4 +192,4 @@ class DescriptorMemoryIndex (DescriptorIndex):
         return self._table.iteritems()
 
 
-DESCRIPTOR_INDEX_CLASS = DescriptorMemoryIndex
+DESCRIPTOR_INDEX_CLASS = MemoryDescriptorIndex

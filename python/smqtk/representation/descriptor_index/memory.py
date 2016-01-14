@@ -15,9 +15,10 @@ class DescriptorMemoryIndex (DescriptorIndex):
         # no dependencies
         return True
 
-    def __init__(self, file_cache=False):
+    def __init__(self, file_cache=None):
         """
-        Initialize a new in-memory descriptor index, or reload one from a cache.
+        Initialize a new in-memory descriptor index, or reload one from a
+        cache.
 
         :param file_cache: Optional path to a file path, loading an existing
             index if the file already exists. Either way, providing a path to
@@ -80,8 +81,8 @@ class DescriptorMemoryIndex (DescriptorIndex):
         """
         Add a descriptor to this index.
 
-        Adding the same descriptor multiple times should not add multiple copies
-        of the descriptor in the index.
+        Adding the same descriptor multiple times should not add multiple
+        copies of the descriptor in the index.
 
         :param descriptor: Descriptor to index.
         :type descriptor: smqtk.representation.DescriptorElement

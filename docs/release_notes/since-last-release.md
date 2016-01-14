@@ -7,8 +7,12 @@ Updates / New Features since v0.2.2
 
 Custom LibSVM
 
-  * Fix compiler error on Windows with Visual Studio < 2013.  Log2 doesn't exist 
+  * Fix compiler error on Windows with Visual Studio < 2013.  Log2 doesn't exist
     until that VS version.  Added stand-in.
+
+Tests
+
+  * Added tests for DescriptorIndex abstract and in-memory implementation.
 
 Tools / Scripts
 

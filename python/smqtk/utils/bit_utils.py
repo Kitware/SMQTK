@@ -1,6 +1,22 @@
+import math
+
 import numpy
 
 from . import ncr
+
+try:
+    from numba import jit
+
+except ImportError:
+    import types
+
+    def jit(func_or_sig):
+        if isinstance(func_or_sig, (types.FunctionType, types.MethodType)):
+            return func_or_sig
+        else:
+            return lambda *args, **kwds: func_or_sig
+
+    del types
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -77,17 +93,19 @@ def neighbor_codes(b, c, d):
             yield c ^ fltr
 
 
+@jit
 def bit_vector_to_int(v):
     """
     Transform a numpy vector representing a sequence of binary bits [0 | >0]
     into an integer representation.
 
-    Not compatible with numpy.uint64 type for some reason.
+    This version handles vectors of up to 64bits in size.
 
     :param v: 1D Vector of bits
     :type v: numpy.core.multiarray.ndarray
 
     :return: Integer equivalent
+    :rtype: int
 
     """
     c = 0L
@@ -96,26 +114,86 @@ def bit_vector_to_int(v):
     return c
 
 
-def int_to_bit_vector(i, bits=None):
+def bit_vector_to_int_long(v):
+    """
+    Transform a numpy vector representing a sequence of binary bits [0 | >0]
+    into an integer representation.
+
+    This function is the special form that can handle very large integers
+    (>64bit).
+
+    :param v: 1D Vector of bits
+    :type v: numpy.core.multiarray.ndarray
+
+    :return: Integer equivalent
+    :rtype: int
+
+    """
+    c = 0L
+    for b in v:
+        c = (c * 2L) + int(b)
+    return c
+
+
+@jit
+def int_to_bit_vector(integer, bits=0):
     """
     Transform integer into a bit vector, optionally of a specific length.
 
-    :param i: integer to convert
+    This version handles vectors of up to 64bits in size.
+
+    :param integer: integer to convert
+    :type integer: int
 
     :param bits: Optional fixed number of bits that should be represented by the
         vector.
+    :type bits: Optional specification of the size of returned vector.
 
-    :return: Bit vector as numpy array
+    :return: Bit vector as numpy array (big endian), or None if too few
+        ``bits`` were specified to contain the result.
+    :rtype: numpy.ndarray[bool]
 
     """
-    v = numpy.array([int(c) for c in bin(i)[2:]], numpy.bool_)
-    if bits:
-        if bits > v.size:
-            u = v
-            v = numpy.zeros(bits, dtype=numpy.bool_)
-            v[-u.size:] = u
-        elif bits < v.size:
-            raise ValueError("Given integer needs more than %d bits to "
-                             "represent (at least %d)."
-                             % (bits, v.size))
+    # Converting integer to array
+    size = int(numpy.floor(numpy.log2(integer)) + 1)
+    if bits and (bits - size) < 0:
+        return None
+
+    v = numpy.zeros(bits or size, numpy.bool_)
+    for i in xrange(0, size):
+        v[-(i+1)] = integer & 1
+        integer >>= 1
+
+    return v
+
+
+def int_to_bit_vector_large(integer, bits=0):
+    """
+    Transform integer into a bit vector, optionally of a specific length.
+
+    This function is the special form that can handle very large integers
+    (>64bit).
+
+    :param integer: integer to convert
+    :type integer: int
+
+    :param bits: Optional fixed number of bits that should be represented by the
+        vector.
+    :type bits: Optional specification of the size of returned vector.
+
+    :return: Bit vector as numpy array (big endian), or None if too few
+        ``bits`` were specified to contain the result.
+    :rtype: numpy.ndarray[bool]
+
+    """
+    # Converting integer to array
+    size = int(math.floor(math.log(integer, 2)) + 1)
+    if bits and (bits - size) < 0:
+        return None
+
+    v = numpy.zeros(bits or size, numpy.bool_)
+    for i in xrange(0, size):
+        v[-(i+1)] = integer & 1
+        integer >>= 1
+
     return v

@@ -32,7 +32,7 @@ class DescriptorMemoryIndex (DescriptorIndex):
         #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         self._table = {}
         # Record of optional file cache we're using
-        self._file_cache = file_cache
+        self.file_cache = file_cache
 
         if file_cache and osp.isfile(file_cache):
             self._log.debug("Loading cached descriptor index table from file: "
@@ -43,14 +43,14 @@ class DescriptorMemoryIndex (DescriptorIndex):
                 self._table = cPickle.load(f)
 
     def _cache_table(self):
-        if self._file_cache:
+        if self.file_cache:
             with SimpleTimer("Caching descriptor table", self._log.debug):
-                with open(self._file_cache, 'wb') as f:
+                with open(self.file_cache, 'wb') as f:
                     cPickle.dump(self._table, f)
 
     def get_config(self):
         return {
-            'file_cache': self._file_cache,
+            'file_cache': self.file_cache,
         }
 
     def count(self):
@@ -165,9 +165,10 @@ class DescriptorMemoryIndex (DescriptorIndex):
         if not no_cache:
             self._cache_table()
 
-    def remove_many_descriptors(self, **uuids):
+    def remove_many_descriptors(self, *uuids):
         """
-        Remove descriptors associated to given descriptor UUIDs from this index.
+        Remove descriptors associated to given descriptor UUIDs from this
+        index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
         :type uuids: collections.Iterable[collections.Hashable]

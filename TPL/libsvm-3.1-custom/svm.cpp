@@ -22,6 +22,14 @@ template <class S, class T> static inline void clone(T*& dst, S* src, int n)
   dst = new T[n];
   memcpy((void *)dst,(void *)src,sizeof(T)*n);
 }
+#if defined(_MSC_VER) && _MSC_VER < 1800
+// Calculates log2 of number.
+static inline float log2( float n )
+{
+  // log(n)/log(2) is log2.
+  return log( n ) / log( 2.0f );
+}
+#endif
 static inline double powi(double base, int times)
 {
   double tmp = base, ret = 1.0;

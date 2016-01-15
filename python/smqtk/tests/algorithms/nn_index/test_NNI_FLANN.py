@@ -7,6 +7,7 @@ import numpy
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
 
 __author__ = "paul.tunison@kitware.com"
@@ -28,6 +29,10 @@ if FlannNearestNeighborsIndex.is_usable():
             """
             return FlannNearestNeighborsIndex(distance_method=dist_method,
                                               random_seed=self.RAND_SEED)
+
+        def test_impl_findable(self):
+            ntools.assert_in(FlannNearestNeighborsIndex.__name__,
+                             get_nn_index_impls())
 
         def test_known_descriptors_euclidean_unit(self):
             dim = 5

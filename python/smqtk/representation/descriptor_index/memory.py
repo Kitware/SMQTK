@@ -42,7 +42,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
                 #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
                 self._table = cPickle.load(f)
 
-    def _cache_table(self):
+    def cache_table(self):
         if self.file_cache:
             with SimpleTimer("Caching descriptor table", self._log.debug):
                 with open(self.file_cache, 'wb') as f:
@@ -61,7 +61,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         Clear this descriptor index's entries.
         """
         self._table = {}
-        self._cache_table()
+        self.cache_table()
 
     def has_descriptor(self, uuid):
         """
@@ -95,7 +95,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         """
         self._table[descriptor.uuid()] = descriptor
         if not no_cache:
-            self._cache_table()
+            self.cache_table()
 
     def add_many_descriptors(self, descriptors):
         """
@@ -110,7 +110,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         for d in descriptors:
             # using no-cache so we don't trigger multiple file writes
             self.add_descriptor(d, no_cache=True)
-        self._cache_table()
+        self.cache_table()
 
     def get_descriptor(self, uuid):
         """
@@ -163,7 +163,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         """
         del self._table[uuid]
         if not no_cache:
-            self._cache_table()
+            self.cache_table()
 
     def remove_many_descriptors(self, *uuids):
         """
@@ -180,7 +180,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         for uid in uuids:
             # using no-cache so we don't trigger multiple file writes
             self.remove_descriptor(uid, no_cache=True)
-        self._cache_table()
+        self.cache_table()
 
     def iterkeys(self):
         return self._table.iterkeys()

@@ -66,6 +66,10 @@ def histogram_intersection_distance_fast(i, j):
     Use of this implementations is faster when the input will only be 1D
     vectors.
 
+    PENDING DEPRECATION: This function doesn't time much, if any, better than
+        ``histogram_intersection_distance`` (via ipython %timeit using random
+        input).
+
     :param i: Histogram ``i``
     :type i: numpy.core.multiarray.ndarray
 
@@ -126,6 +130,25 @@ def cosine_similarity(i, j):
     return np.dot(i, j) / (np.sqrt(i.dot(i)) * np.sqrt(j.dot(j)))
 
 
+def cosine_distance(i, j):
+    """
+    Inverse of cosine similarity
+
+    See: ``cosine_similarity``, http://en.wikipedia.org/wiki/Cosine_similarity
+
+    :param i: Vector i
+    :type i: numpy.core.multiarray.ndarray
+
+    :param j: Vector j
+    :type j: numpy.core.multiarray.ndarray
+
+    :return: Float similarity.
+    :rtype: float
+
+    """
+    return 1.0 - cosine_similarity(i, j)
+
+
 def hamming_distance(i, j):
     """
     Return the hamming distance between the two given integers, or the number of
@@ -149,8 +172,9 @@ def popcount(v):
     Pure python popcount algorithm adapted implementation at:
     see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     """
-    # TODO: C implemetation of this
-    #       since this version, being in python, isn't faster than above bin use
+    # TODO: C implementation of this
+    #       since this version, being in python, isn't faster than above bin
+    #       use
     if not v:
         return 0
 
@@ -165,6 +189,7 @@ def popcount(v):
     h0f = t//255*15
     h01 = t//255
 
+    # noinspection PyAugmentAssignment
     v = v - ((v >> 1) & h55)
     v = (v & h33) + ((v >> 2) & h33)
     v = (v + (v >> 4)) & h0f

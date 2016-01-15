@@ -10,12 +10,13 @@ __author__ = 'paul.tunison@kitware.com'
 
 class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
     """
-    Index of descriptors, query-able by descriptor UUID.
+    Index of descriptors, keyed and query-able by descriptor UUID.
 
     Note that these indexes do not use the descriptor type strings. Thus, if
-    an set of descriptors has multiple elements with the same UUID, but
+    a set of descriptors has multiple elements with the same UUID, but
     different type strings, they will bash each other in these indexes. In such
-    a case, it is advisable to use multiple indices.
+    a case, when dealing with descriptors for different generators, it is
+    advisable to use multiple indices.
 
     """
 
@@ -150,18 +151,22 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
     def iterkeys(self):
         """
         Return an iterator over indexed descriptor keys, which are their UUIDs.
+        :rtype: collections.Iterator[collections.Hashable]
         """
 
     @abc.abstractmethod
     def iterdescriptors(self):
         """
         Return an iterator over indexed descriptor element instances.
+        :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
         """
 
     @abc.abstractmethod
     def iteritems(self):
         """
         Return an iterator over indexed descriptor key and instance pairs.
+        :rtype: collections.Iterator[(collections.Hashable,
+                                      smqtk.representation.DescriptorElement)]
         """
 
 

@@ -22,6 +22,13 @@ Tools / Scripts
 
   * Added optional global default config generation to ``summarizePlugins.py``
 
+Utilities
+
+  * Added ``cosine_distance`` function (inverse of ``cosine_similarity``)
+
+  * Updated ``compute_distance_kernel`` to be able to take ``numba.jit``
+    compiled functions
+
 Web / Services
 
   * Added query sub-slice return option to NearestNeighborServiceServer web-app.

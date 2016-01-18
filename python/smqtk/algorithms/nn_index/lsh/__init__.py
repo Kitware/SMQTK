@@ -5,8 +5,7 @@ in the base.
 """
 import cPickle
 import os
-
-import numpy
+import time
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
@@ -247,7 +246,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             self._log.debug("Writing out hash2uuid map: %s",
                             self.hash2uuid_cache_filepath)
             with open(self.hash2uuid_cache_filepath, 'w') as f:
-                cPickle.dumps(self._hash2uuid)
+                cPickle.dump(self._hash2uuid, f)
 
     @classmethod
     def build_from_descriptor_index(cls, descriptor_index, hash_index,
@@ -284,12 +283,23 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             """
             Helper to generate hash codes for descriptors as well as add to map
             """
+            l = s = time.time()
             for d in descriptor_index.iterdescriptors():
                 h = hash_functor.get_hash(d.vector())
                 h_int = bit_vector_to_int_large(h)
                 if h_int not in hash2uuid:
                     yield h
                     hash2uuid[h_int] = set()
+
+                    t = time.time()
+                    if t - l >= 1.0:
+                        n = len(hash2uuid)
+                        cls.logger().debug("yielding %f hashes per second "
+                                           "(%d of %d total)",
+                                           n / (t - s), n,
+                                           descriptor_index.count())
+                        l = t
+
                 hash2uuid[h_int].add(d.uuid())
 
         cls.logger().debug("Building hash index from unique hash codes")
@@ -325,8 +335,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self._log.debug("getting UUIDs of descriptors for hashes")
         neighbor_uuids = []
         for h_int in map(bit_vector_to_int_large, hashes):
-            for uuid in self._hash2uuid.get(h_int, ()):
-                neighbor_uuids.append(uuid)
+            neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")

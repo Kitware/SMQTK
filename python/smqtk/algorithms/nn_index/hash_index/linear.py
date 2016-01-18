@@ -94,7 +94,7 @@ class LinearHashIndex (HashIndex):
 
         """
         h_int = bit_vector_to_int_large(h)
-        bits = h.size
+        bits = len(h)
         #: :type: list[int|long]
         near_codes = \
             heapq.nsmallest(n, self.index,

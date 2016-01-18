@@ -18,7 +18,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     built index of descriptors.
 
     Implementations, if they allow persistent storage of their index, should
-    take the necessary parameters at construction time. Persistant storage
+    take the necessary parameters at construction time. Persistent storage
     content should be (over)written ``build_index`` is called.
 
     """

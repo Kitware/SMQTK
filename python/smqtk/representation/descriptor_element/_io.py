@@ -84,7 +84,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         shp = (len(descr_elements),
                descr_elements[0].vector().size)
         log.debug("Creating new matrix with shape: %s", shp)
-        mat = numpy.ndarray(shp, float)
+        mat = numpy.ndarray(shp, descr_elements[0].vector().dtype)
 
     if procs is None:
         procs = multiprocessing.cpu_count()

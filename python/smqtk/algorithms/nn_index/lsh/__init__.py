@@ -243,6 +243,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                                              self.hash_index,
                                              self.lsh_functor)
 
+        if self.hash2uuid_cache_filepath:
+            self._log.debug("Writing out hash2uuid map: %s",
+                            self.hash2uuid_cache_filepath)
+            with open(self.hash2uuid_cache_filepath, 'w') as f:
+                cPickle.dumps(self._hash2uuid)
+
     @classmethod
     def build_from_descriptor_index(cls, descriptor_index, hash_index,
                                     hash_functor):
@@ -280,12 +286,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             """
             for d in descriptor_index.iterdescriptors():
                 h = hash_functor.get_hash(d.vector())
-                yield h
                 h_int = bit_vector_to_int_large(h)
                 if h_int not in hash2uuid:
+                    yield h
                     hash2uuid[h_int] = set()
                 hash2uuid[h_int].add(d.uuid())
 
+        cls.logger().debug("Building hash index from unique hash codes")
         hash_index.build_index(iter_add_hashes())
 
         return hash2uuid

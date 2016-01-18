@@ -24,6 +24,13 @@ class LinearHashIndex (HashIndex):
         return True
 
     def __init__(self, file_cache=None):
+        """
+        Initialize linear, brute-force hash index
+
+        :param file_cache: Optional path to a file to cache our index to.
+        :type file_cache: str
+
+        """
         super(LinearHashIndex, self).__init__()
         self.file_cache = file_cache
         self.index = numpy.array([], bool)
@@ -93,6 +100,8 @@ class LinearHashIndex (HashIndex):
         :rtype: (tuple[numpy.ndarray[bool], tuple[float])
 
         """
+        super(LinearHashIndex, self).nn(h, n)
+
         h_int = bit_vector_to_int_large(h)
         bits = len(h)
         #: :type: list[int|long]

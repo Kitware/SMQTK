@@ -6,6 +6,8 @@ in the base.
 import cPickle
 import os
 
+import numpy
+
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
 from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
@@ -322,7 +324,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         self._log.debug("getting descriptors for neighbor_uuids")
         neighbors = \
-            self.descriptor_index.get_many_descriptors(*neighbor_uuids)
+            list(self.descriptor_index.get_many_descriptors(*neighbor_uuids))
 
         self._log.debug("ordering descriptors via distance method '%s'",
                         self.distance_method)

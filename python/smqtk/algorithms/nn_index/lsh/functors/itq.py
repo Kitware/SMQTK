@@ -94,17 +94,19 @@ class ItqFunctor (LshFunctor):
         }
 
     def has_model(self):
-        return any((self.mean_vec is not None, self.rotation is not None))
+        return (self.mean_vec is not None) and (self.rotation is not None)
 
     def load_model(self):
-        if all((self.mean_vec_filepath, os.path.isfile(self.mean_vec_filepath),
-                self.rotation_filepath, os.path.isfile(self.rotation_filepath))):
+        if (self.mean_vec_filepath and
+                os.path.isfile(self.mean_vec_filepath) and
+                self.rotation_filepath and
+                os.path.isfile(self.rotation_filepath)):
             self.mean_vec = numpy.load(self.mean_vec_filepath)
             self.rotation = numpy.load(self.rotation_filepath)
 
     def save_model(self):
-        if all((self.mean_vec_filepath, self.rotation_filepath,
-                self.mean_vec is not None, self.rotation is not None)):
+        if (self.mean_vec_filepath and self.rotation_filepath and
+                self.mean_vec is not None and self.rotation is not None):
             numpy.save(self.mean_vec_filepath, self.mean_vec)
             numpy.save(self.rotation_filepath, self.rotation)
 
@@ -134,6 +136,8 @@ class ItqFunctor (LshFunctor):
         """
         # initialize with an orthogonal random rotation
         bit = v.shape[1]
+        if self.random_seed is not None:
+            numpy.random.seed(self.random_seed)
         r = numpy.random.randn(bit, bit)
         u11, s2, v2 = numpy.linalg.svd(r)
         r = u11[:, :bit]
@@ -184,7 +188,7 @@ class ItqFunctor (LshFunctor):
         dbg_report_interval = None
         if self.logger().getEffectiveLevel() <= logging.DEBUG:
             dbg_report_interval = 1.0  # seconds
-        x = elements_to_matrix(descriptors,
+        x = elements_to_matrix(list(descriptors),
                                report_interval=dbg_report_interval)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 

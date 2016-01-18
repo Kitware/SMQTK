@@ -253,14 +253,11 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         Return appropriate distance function given a string label
         """
         if distance_method == "euclidean":
-            #: :type: (ndarray, ndarray) -> ndarray
             return distance_functions.euclidean_distance
         elif distance_method == "cosine":
             # Inverse of cosine similarity function return
-            #: :type: (ndarray, ndarray) -> ndarray
-            return lambda i, j: 1.0 - distance_functions.cosine_similarity(i, j)
+            return distance_functions.cosine_distance
         elif distance_method == 'hik':
-            #: :type: (ndarray, ndarray) -> ndarray
             return distance_functions.histogram_intersection_distance_fast
         else:
             raise ValueError("Invalid distance method label. Must be one of "
@@ -447,7 +444,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         with SimpleTimer("Converting bit-vectors into small codes, inserting "
                          "into code index", self._log.info):
             self._code_index.add_many_descriptors(
-                (bit_utils.bit_vector_to_int(c[i]), descr_cache[i])
+                (bit_utils.bit_vector_to_int_large(c[i]), descr_cache[i])
                 for i in xrange(c.shape[0])
             )
         # NOTE: If a sub-sampling effect is implemented above, this will have to
@@ -478,7 +475,7 @@ class ITQNearestNeighborsIndex (NearestNeighborsIndex):
         z = numpy.dot(v - self._mean_vector, self._r)
         b = numpy.zeros(z.shape, dtype=numpy.uint8)
         b[z >= 0] = 1
-        return v, b, bit_utils.bit_vector_to_int(b)
+        return v, b, bit_utils.bit_vector_to_int_large(b)
 
     def nn(self, d, n=1):
         """

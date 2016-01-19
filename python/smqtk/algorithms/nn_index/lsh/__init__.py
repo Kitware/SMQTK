@@ -23,8 +23,14 @@ __author__ = "paul.tunison@kitware.com"
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
     """
-    LSH nearest neighbor algorithm. LSH, or locality sensitive hashing,
-    algorithms consist of:
+    Locality-sensitive hashing based nearest neighbor index
+
+    This type of algorithm relies on a hashing algorithm to hash descriptors
+    such that similar descriptors are hashed the same or similarly. This allows
+    simpler distance functions to be performed on hashes in order to find
+    nearby bins which are more likely to hold similar descriptors.
+
+    LSH nearest neighbor algorithms consist of:
         * Index of descriptors to query over
         * A hashing function that transforms a descriptor vector into a
           hash (bit-vector).
@@ -198,9 +204,9 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def get_config(self):
         return {
-            "lsh_functor": self.lsh_functor,
-            "descriptor_index": self.descriptor_index,
-            "hash_index": self.hash_index,
+            "lsh_functor": plugin.to_plugin_config(self.lsh_functor),
+            "descriptor_index": plugin.to_plugin_config(self.descriptor_index),
+            "hash_index": plugin.to_plugin_config(self.hash_index),
             "hash2uuid_cache_filepath": self.hash2uuid_cache_filepath,
             "distance_method": self.distance_method,
             "read_only": self.read_only,
@@ -354,7 +360,3 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                          key=lambda p: p[1])
         self._log.debug('-- slicing top n=%d', n)
         return zip(*(ordered[:n]))
-
-
-# Legacy ITQ implementation
-from .itq import ITQNearestNeighborsIndex

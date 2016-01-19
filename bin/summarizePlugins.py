@@ -11,6 +11,8 @@ import json
 import logging
 
 import smqtk.algorithms
+import smqtk.algorithms.nn_index.hash_index
+import smqtk.algorithms.nn_index.lsh.functors
 import smqtk.representation
 import smqtk.utils.bin_utils
 import smqtk.utils.plugin
@@ -91,13 +93,6 @@ def main():
     collect_configs('DescriptorIndex',
                     smqtk.representation.get_descriptor_index_impls)
 
-    log.info("Checking CodeIndex plugins")
-    plugin_type_list.append("CodeIndex")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.representation.get_code_index_impls()
-    collect_configs('CodeIndex',
-                    smqtk.representation.get_code_index_impls)
-
     #
     # smqtk.algorithms
     #
@@ -114,6 +109,21 @@ def main():
         smqtk.algorithms.get_descriptor_generator_impls()
     collect_configs('DescriptorGenerator',
                     smqtk.algorithms.get_descriptor_generator_impls)
+
+    log.info("Checking HashIndex plugins")
+    plugin_type_list.append("HashIndex")
+    plugin_info[plugin_type_list[-1]] = \
+        smqtk.algorithms.nn_index.hash_index.get_hash_index_impls()
+    collect_configs('HashIndex',
+                    smqtk.algorithms.nn_index.hash_index.get_hash_index_impls)
+
+    log.info("Checking LshFunctor plugins")
+    plugin_type_list.append("LshFunctor")
+    plugin_info[plugin_type_list[-1]] = \
+        smqtk.algorithms.nn_index.lsh.functors.get_lsh_functor_impls()
+    collect_configs('LshFunctor',
+                    smqtk.algorithms.nn_index.lsh.functors
+                         .get_lsh_functor_impls)
 
     log.info("Checking NearestNeighborIndex plugins")
     plugin_type_list.append("NearestNeighborIndex")

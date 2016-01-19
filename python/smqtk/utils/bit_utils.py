@@ -153,7 +153,10 @@ def int_to_bit_vector(integer, bits=0):
 
     """
     # Converting integer to array
-    size = int(numpy.floor(numpy.log2(integer)) + 1)
+    if integer:
+        size = int(numpy.floor(numpy.log2(integer)) + 1)
+    else:
+        size = 0
     if bits and (bits - size) < 0:
         return None
 
@@ -184,8 +187,11 @@ def int_to_bit_vector_large(integer, bits=0):
     :rtype: numpy.ndarray[bool]
 
     """
-    # Converting integer to array
-    size = int(math.floor(math.log(integer, 2)) + 1)
+    # Converting integer to array'
+    if integer:
+        size = int(math.floor(math.log(integer, 2)) + 1)
+    else:
+        size = 0
     if bits and (bits - size) < 0:
         return None
 

@@ -25,7 +25,7 @@ class ItqFunctor (LshFunctor):
 
     IMPORTANT:
         For consistency, we treat bit vectors such that the bit at index 0 is
-        considered the most significant bit ()bit-endian).
+        considered the most significant bit (big-endian).
 
     """
 

@@ -16,7 +16,7 @@ __author__ = "paul.tunison@kitware.com"
 
 class LinearHashIndex (HashIndex):
     """
-    Basic linear index using heap sort.
+    Basic linear index using heap sort (aka brute force).
     """
 
     @classmethod

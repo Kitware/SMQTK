@@ -90,7 +90,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
         self._log.debug("Building ball tree")
         if self.random_seed is not None:
             numpy.random.seed(self.random_seed)
-        self.bt = BallTree(hashes, self.leaf_size, metric='hamming')
+        # BallTree can't take iterables, so catching input in a list first
+        hash_list = list(hashes)
+        if not hash_list:
+            raise ValueError("No hashes given.")
+        self.bt = BallTree(hash_list, self.leaf_size, metric='hamming')
         self.save_model()
 
     def nn(self, h, n=1):
@@ -116,6 +120,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         super(SkLearnBallTreeHashIndex, self).nn(h, n)
+        # Reselect N based on how many hashes are currently indexes
+        n = min(n, self.count())
         # Reshaping ``h`` into an array of arrays, with just one array (ball
         # tree deprecation warns when giving it a single array.
         dists, idxs = self.bt.query(h.reshape(1, -1), n, return_distance=True)

@@ -1,4 +1,3 @@
-import logging
 import mimetypes
 import requests
 

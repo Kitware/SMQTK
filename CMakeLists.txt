@@ -96,11 +96,7 @@ install(DIRECTORY   docs/
 install(DIRECTORY   etc/
         DESTINATION etc
         )
-
-install(FILES requirements.conda.txt
-        DESTINATION .
-        )
-install(FILES requirements.pip.txt
+install(DIRECTORY requirements/
         DESTINATION .
         )
 

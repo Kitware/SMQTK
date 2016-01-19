@@ -36,8 +36,11 @@ before_install:
 
 # "Install" of SMQTK + immediate deps
 install:
-  - conda install -q --file requirements.conda.txt
-  - pip install -qr requirements.pip.txt
+  - conda install -q \
+    --file requirements/requirements.main.conda.txt \
+    --file requirements/requirements.test.conda.txt
+  - pip install -q \
+    -r requirements/requirements.test.pip.txt
 
   # Build components of SMQTK
   - mkdir _build

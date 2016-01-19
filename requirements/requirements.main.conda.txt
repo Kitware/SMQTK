@@ -1,0 +1,8 @@
+numpy
+Pillow
+requests
+scikit-learn
+scipy
+
+# Recommended for extended console use
+ipython

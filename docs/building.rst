@@ -24,17 +24,18 @@ In order to run provided SMQTKSearchApp web application, the following are addit
 Installing Python dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are two files that list required python packages:
+There are two files that list the main required python packages:
 
-* :file:`requirements.conda.txt`
-* :file:`requirements.pip.txt`
+* :file:`requirements/requirements.main.conda.txt`
+* :file:`requirements/requirements.main.pip.txt`
 
 In addition, if you wish to be able to build the Sphinx_ based documentation for the project there are two additional dependency files:
 
-* :file:`requirements.docs.conda.txt`
-* :file:`requirements.docs.pip.txt`
+* :file:`requirements/requirements.docs.conda.txt`
+* :file:`requirements/requirements.docs.pip.txt`
 
-Required packages have been split up this way because conda does not provide all packages that pip can.  Further, not everyone wishes or needs to build the documentation.
+Required packages for different modes have been split up this way because conda does not provide all packages that pip can.
+Further, not everyone wishes for or needs the dependencies for every mode.
 While conda is generally considered the preferred method of acquiring python dependencies due to their pre-built nature, some of our requirements are not available through conda.
 
 .. _Sphinx: http://sphinx-doc.org/
@@ -46,7 +47,7 @@ The three-step python dependency installation using both conda and pip will look
 
 .. prompt:: bash
 
-    conda create -n <env_name> --file requirements.conda.txt` [--file requirements.docs.conda.txt]
+    conda create -n <env_name> --file requirements.conda.txt [--file requirements.docs.conda.txt ... ]
     . activate <env_name>
     pip install -r requirements.pip.txt [-r requirements.docs.pip.txt]
 
@@ -80,7 +81,7 @@ For example, the ColorDescriptor implementation required a 3rd party tool to dow
 
 * ColorDescriptor
   * For CSIFT, TCH, etc. feature descriptors.
-  
+
     * http://koen.me/research/colordescriptors/
 
  * After unpacking the downloaded ZIP archive, add the directory it was extracted to to the PYTHONPATH so the DescriptorIO.py module can be accessed and used within the SMQTK library.

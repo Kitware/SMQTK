@@ -8,7 +8,7 @@ import uuid
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
-from smqtk.representation.descriptor_index.memory import DescriptorMemoryIndex
+from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
 from smqtk.utils import file_utils
@@ -134,7 +134,7 @@ class IqrSession (SmqtkObject):
         # Local descriptor index for ranking, populated by a query to the
         #   nn_index instance.
         # Added external data/descriptors not added to this index.
-        self.working_index = DescriptorMemoryIndex()
+        self.working_index = MemoryDescriptorIndex()
 
         # Initialize book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.

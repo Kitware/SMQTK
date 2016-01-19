@@ -5,6 +5,7 @@ import ctypes
 import logging
 import os
 
+import numpy
 import numpy.linalg
 
 from smqtk.algorithms import SupervisedClassifier
@@ -257,7 +258,8 @@ class LibSvmClassifier (SupervisedClassifier):
         train_vectors.extend(x.tolist())
         del negatives, x
 
-        self._log.debug("Training elements: %d labels, %d vectors",
+        self._log.debug("Training elements: %d labels, %d vectors "
+                        "(should be the same)",
                         len(train_labels), len(train_vectors))
 
         self._log.debug("Forming train params")

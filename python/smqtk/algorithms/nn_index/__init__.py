@@ -18,7 +18,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     built index of descriptors.
 
     Implementations, if they allow persistent storage of their index, should
-    take the necessary parameters at construction time. Persistant storage
+    take the necessary parameters at construction time. Persistent storage
     content should be (over)written ``build_index`` is called.
 
     """
@@ -38,13 +38,15 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         """
         Build the index over the descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it,
-        or raise an exception to as to protect the current index.
+        Subsequent calls to this method should rebuild the index, not add to
+        it, or raise an exception to as to protect the current index.
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptor elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.representation.DescriptorElement]
+        :param descriptors: Iterable of descriptor elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
 

@@ -33,12 +33,20 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         into a matrix. Each element should contain descriptor vectors of the
         same size.
     :type descr_elements:
-        collections.Sequence[smqtk.representation.DescriptorElement]
+        collections.Sequence[smqtk.representation.DescriptorElement] |
+        collections.Iterable[smqtk.representation.DescriptorElement]
 
-    :param mat: Optionally pre-constructed numpy matrix of the appropriate shape
-        to as loaded vectors into. If supplied this must have rows of the shape:
-        (nDescriptors, nFeatures). If this is not supplied, we create a new
-        matrix to insert vectors into.
+    :param mat: Optionally a pre-constructed numpy matrix of the shape
+        ``(nDescriptors, nFeatures)`` to load descriptor vectors into. We will
+        only iterate ``nDescriptors`` into the given ``descr_elements``
+        iterable. If there are more rows in the given matrix than there are
+        DescriptorElements in ``descr_elements``, then not all rows in the
+        given matrix will be set. Elements yielded by ``descr_elements`` must
+        be of the same dimensionality as this given matrix (``nFeatures``)
+        otherwise an exception will be raised (``ValueError``, by numpy).
+
+        If this is not supplied, we create a new matrix to insert vectors into
+        based on input de
     :type mat: None | numpy.core.multiarray.ndarray
 
     :param procs: Optional specification of the number of threads/cores to use.
@@ -76,10 +84,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         shp = (len(descr_elements),
                descr_elements[0].vector().size)
         log.debug("Creating new matrix with shape: %s", shp)
-        mat = numpy.ndarray(shp, float)
-    else:
-        assert mat.shape[0] == len(descr_elements)
-        assert mat.shape[1] == descr_elements[0].vector().size
+        mat = numpy.ndarray(shp, descr_elements[0].vector().dtype)
 
     if procs is None:
         procs = multiprocessing.cpu_count()
@@ -125,6 +130,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             packet = out_q.get()
             if packet is None:
                 terminals_collected += 1
+            elif isinstance(packet, Exception):
+                raise packet
             else:
                 r, v = packet
                 mat[r] = v
@@ -208,6 +215,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 import DescriptorMemoryElement
 
             for r, d in enumerate(self.descr_elements):
+                # If we've run out of matrix to fill,
+                if r >= self.out_mat.shape[0]:
+                    break
+
                 if isinstance(d, DescriptorMemoryElement):
                     self.out_mat[r] = d.vector()
                 else:
@@ -218,6 +229,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                     break
         except KeyboardInterrupt:
             pass
+        except Exception, ex:
+            self._log.error("Feeder thread encountered an exception: %s",
+                            str(ex))
+            self.q.put(ex)
         finally:
             self._log.debug("Sending in-queue terminal packets")
             for _ in xrange(self.num_terminal_packets):
@@ -248,13 +263,21 @@ class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
         try:
             packet = self.in_q.get()
             while packet is not None:
-                row, elem = packet
-                v = elem.vector()
-                self.out_q.put((row, v))
+                if isinstance(packet, Exception):
+                    self.out_q.put(packet)
+                else:
+                    row, elem = packet
+                    v = elem.vector()
+                    self.out_q.put((row, v))
                 packet = self.in_q.get()
             self.out_q.put(None)
         except KeyboardInterrupt:
             pass
+        except Exception, ex:
+            self._log.error("%s%s encountered an exception: %s",
+                            self.__class__.__name__, self.name,
+                            str(ex))
+            self.out_q.put(ex)
 
 
 class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
@@ -287,13 +310,24 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         return self._stop.isSet()
 
     def run(self):
-        packet = self.in_q.get()
-        while packet is not None and not self.stopped():
-            row, elem = packet
-            v = elem.vector()
-            self.q_put((row, v))
+        try:
             packet = self.in_q.get()
-        self.q_put(None)
+            while packet is not None and not self.stopped():
+                if isinstance(packet, Exception):
+                    self.out_q.put(packet)
+                else:
+                    row, elem = packet
+                    v = elem.vector()
+                    self.q_put((row, v))
+                packet = self.in_q.get()
+            self.q_put(None)
+        except KeyboardInterrupt:
+            pass
+        except Exception, ex:
+            self._log.error("%s%s encountered an exception: %s",
+                            self.__class__.__name__, self.name,
+                            str(ex))
+            self.out_q.put(ex)
 
     def q_put(self, val):
         """

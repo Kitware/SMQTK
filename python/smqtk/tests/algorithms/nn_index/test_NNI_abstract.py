@@ -37,13 +37,11 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         DescriptorMemoryElement.MEMORY_CACHE = {}
 
     def test_get_impls(self):
-        ntools.assert_equal(
-            set(get_nn_index_impls().keys()),
-            {
-                'FlannNearestNeighborsIndex',
-                'ITQNearestNeighborsIndex',
-            }
-        )
+        # Some implementations should be returned
+        m = get_nn_index_impls()
+        ntools.assert_true(m)
+        for cls in m.itervalues():
+            ntools.assert_true(issubclass(cls, NearestNeighborsIndex))
 
     def test_count(self):
         index = DummySI()

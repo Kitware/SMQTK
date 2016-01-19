@@ -1,5 +1,4 @@
 import json
-import os
 
 import smqtk.algorithms.nn_index.lsh.itq
 import smqtk.utils.jsmin as jsmin

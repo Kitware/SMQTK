@@ -265,11 +265,11 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
 
 def make_config(plugin_getter):
     """
-    Generated configuration dictionary for the given plugin getter method (which
-    returns a dictionary of labels to class types)
+    Generated configuration dictionary for the given plugin getter method
+    (which returns a dictionary of labels to class types)
 
-    A types parameters, as listed, at the construction parameters for that type.
-    Default values are inserted where possible, otherwise None values are
+    A types parameters, as listed, at the construction parameters for that
+    type. Default values are inserted where possible, otherwise None values are
     used.
 
     :param plugin_getter: Function that returns a dictionary mapping labels to

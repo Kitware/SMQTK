@@ -40,6 +40,7 @@ install:
     --file requirements/requirements.main.conda.txt
     --file requirements/requirements.test.conda.txt
   - pip install -q
+    -r requirements/requirements.main.pip.txt
     -r requirements/requirements.test.pip.txt
 
   # Build components of SMQTK

@@ -1,3 +1,4 @@
+import cPickle
 import os
 
 import numpy
@@ -45,16 +46,22 @@ class SkLearnBallTreeHashIndex (HashIndex):
         #: :type: sklearn.neighbors.BallTree
         self.bt = None
 
+        self.load_model()
+
     def load_model(self):
         if self.file_cache and os.path.isfile(self.file_cache):
             self._log.debug("Loading mode: %s", self.file_cache)
-            #: :type: sklearn.neighbors.BallTree
-            self.bt = numpy.load(self.file_cache)[0]
+            with open(self.file_cache) as f:
+                #: :type: sklearn.neighbors.BallTree
+                self.bt = cPickle.load(f)
+            self._log.debug("Loading mode: Done")
 
     def save_model(self):
         if self.file_cache and self.bt:
             self._log.debug("Saving model: %s", self.file_cache)
-            numpy.save(self.file_cache, [self.bt])
+            with open(self.file_cache, 'w') as f:
+                cPickle.dump(self.bt, f)
+            self._log.debug("Saving model: Done")
 
     def get_config(self):
         return {
@@ -109,7 +116,9 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         super(SkLearnBallTreeHashIndex, self).nn(h, n)
-        dists, idxs = self.bt.query(h, n, return_distance=True)
+        # Reshaping ``h`` into an array of arrays, with just one array (ball
+        # tree deprecation warns when giving it a single array.
+        dists, idxs = self.bt.query(h.reshape(1, -1), n, return_distance=True)
         # only indexing the first entry became we're only querying with one
         # vector
         neighbors = numpy.asarray(self.bt.data)[idxs[0]].astype(bool)

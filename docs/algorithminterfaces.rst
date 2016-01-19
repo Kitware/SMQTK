@@ -17,7 +17,7 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
    :members:
 
 
-.. _descriptor_generator: 
+.. _descriptor_generator:
 DescriptorGenerator
 +++++++++++++++++++
 This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.
@@ -34,6 +34,27 @@ This interface supports a high-level, implementation agnostic asynchronous descr
 This is given an iterable of ``DataElement`` instances, a single ``DescriptorElementFactory`` that is used to produce all descriptor
 
 .. automodule:: smqtk.algorithms.descriptor_generator
+   :members:
+
+
+HashIndex
++++++++++
+
+This interface describes specialized ``NearestNeighborsIndex`` implementations designed to index hash codes (bit vectors) via the hamming distance function.
+Implementations of this interface are primarily used with the ``LSHNearestNeighborIndex`` implementation.
+
+Unlike the ``NearestNeighborsIndex`` interface from which this interface descends, ``HashIndex`` instances are build with an iterable of ``numpy.ndarray`` and ``nn`` returns a ``numpy.ndarray``.
+
+.. automodule:: smqtk.algorithms.nn_index.hash_index
+   :members:
+
+
+LshFunctor
+++++++++++
+Implementations of this interface define the generation of a locality-sensitive hash code for a given ``DescriptorElement``.
+These are used in ``LSHNearestNeighborIndex`` instances.
+
+.. automodule:: smqtk.algorithms.nn_index.lsh.functors
    :members:
 
 

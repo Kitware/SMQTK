@@ -18,12 +18,12 @@ matching results refined by the user's input.
 
    *Overall workflow of an SMQTK based Interactive Query Refinement application.*
 
-The IQR application is an excellent example application for SMQTK as it makes use of a broad spectrum of SMQTK's capabilities.  
+The IQR application is an excellent example application for SMQTK as it makes use of a broad spectrum of SMQTK's capabilities.
 In order to characterize each image in the archive so that it can be indexed, the :ref:`DescriptorGenerator <descriptor_generator>` algorithm is used.
 The :ref:`NearestNeighborsIndex <nearest_neighbors_index>` is used to understand the relationship between the images in the archive and the
 :ref:`RelevancyIndex <relevancey_index>` is used to rank results based on the user's positive and negative ajudications.
 
-SMQTK comes with a web based application that implements an IQR system using SMQTK's 
+SMQTK comes with a web based application that implements an IQR system using SMQTK's
 services as shown in the :ref:`iqrsmqtk` figure.
 
 
@@ -31,7 +31,7 @@ Running the IQR Application
 ---------------------------
 
 In order to run the IQR demonstration application, you will need an archive of imagery.  SMQTK has facilities for creating indexes that support
-10's or even 100's or 1000's of thousands of images we'll be using simpler implementations for this example.  As a result, we'll use a modest archive 
+10's or even 100's or 1000's of thousands of images we'll be using simpler implementations for this example.  As a result, we'll use a modest archive
 of images.   The `Leeds Butterfly Dataset`_ will serve quite nicely. Download and unzip the archive (which contains over 800 images of different species of butterflys).
 
 .. _`Leeds Butterfly Dataset`: http://www.comp.leeds.ac.uk/scs6jwks/dataset/leedsbutterfly/
@@ -55,17 +55,18 @@ run from an empty directory and will create the sub directories and files that i
 
 Since this configuration file drives both the generation of the models for the application and the application itself,  a closer examination of it is in order.
 
-As a JSON file, the configuration consists of a collection of JSON objects that are used to configure various aspects of the application.  Lines 2, 73 and 77 introduce blocks that configure the way 
-the application itself works: setting the username and password, the location of the MongoDB_ server that the application uses for storing session information and finally the IP address and port that 
+As a JSON file, the configuration consists of a collection of JSON objects that are used to configure various aspects of the application.  Lines 2, 73 and 77 introduce blocks that configure the way
+the application itself works: setting the username and password, the location of the MongoDB_ server that the application uses for storing session information and finally the IP address and port that
 the application listens on.
 
 The array of "tabs" that starts at line 7 is the core of the configuration file.  We'll talk in a moment about why this is an array of tabs but for now we'll examine the the single element in the array.
-The lines blocks introduced at lines 26, 39, and 64 configure the three main algorithms used by the application:  the descriptor used, the nearest neighbors index, and the relevancy index.  Each of these
-of these blocks is passed to the SMQTK plugin system to create the appropriate instance of the algorithm in question.  For example the ``nn_index`` block on that starts at line 39 defines the
-configuration defines the parameters for two different implementations, an ``ITQNearestNeighborsIndex`` which uses Iterative Quantization to generate an index and ``FlannNearestNeighborsIndex`` which
-uses the Flann_ library to do so.  The ``type`` element on line 62 selects ``FlannNearestNeighborsIndex`` to be active for this configuration.
+The blocks introduced at lines 26, 39, and 77 configure the three main algorithms used by the application:  the descriptor used, the nearest neighbors index, and the relevancy index.
+Each of these of these blocks is passed to the SMQTK plugin system to create the appropriate instance of the algorithm in question.
+For example the ``nn_index`` block that starts at line 39 defines the the parameters for two different implementations, an ``LSHNearestNeighborIndex``, configured to use Iterative Quantization (paper_), to generate an index and ``FlannNearestNeighborsIndex`` which uses the Flann_ library to do so.
+The ``type`` element on line 75 selects ``FlannNearestNeighborsIndex`` to be active for this configuration.
 
 .. _MongoDB: http://www.mongodb.org
+.. _paper: http://www.cs.unc.edu/~lazebnik/publications/cvpr11_small_code.pdf
 .. _Flann: http://www.cs.ubc.ca/research/flann/
 
 Once you have the configuration file set up the way that you like it, you can generate all of the models and indexes required by the application by running the following command::
@@ -83,17 +84,17 @@ Once Mongo has been started you can start the ``IqrSearchApp`` with the followin
 
     runApplication.py -a IqrSearchApp -c config.IqrSearchApp.json
 
-When the application starts you should click on the ``login`` element and then enter the credentials you specified in the ``flask_app`` element of the config file. 
+When the application starts you should click on the ``login`` element and then enter the credentials you specified in the ``flask_app`` element of the config file.
 
 .. figure:: figures/iqrlogin.png
    :align: center
 
    *Click on the login element to enter your credentials*
-   
 
-Once you've logged in you will be able to select the ``CSIFT`` tab of the UI.  This tab was named by line 9 in the configuration file and is configure by the first block in the ``tabs`` 
-array.  The ``tabs`` array allows you to configure different combinations of the required algorithms within the same application instance -- useful for example, if you want to compare the 
-performance of different descriptors.  
+
+Once you've logged in you will be able to select the ``CSIFT`` tab of the UI.  This tab was named by line 9 in the configuration file and is configure by the first block in the ``tabs``
+array.  The ``tabs`` array allows you to configure different combinations of the required algorithms within the same application instance -- useful for example, if you want to compare the
+performance of different descriptors.
 
 
 .. figure:: figures/iqrcsifttab.png
@@ -102,7 +103,7 @@ performance of different descriptors.
    *Select the CSIFT tab to begin working with the application*
 
 
-To begin the IQR process drag an exemplar image to the grey load area (marked ``1`` in the next figure).  In this case we've uploaded a picture of a Monarch butterfly (Item 2).  Once 
+To begin the IQR process drag an exemplar image to the grey load area (marked ``1`` in the next figure).  In this case we've uploaded a picture of a Monarch butterfly (Item 2).  Once
 you've done so, click the ``Refine`` element (Item 3) and the system will return a set of images that it believes are similar to the exemplar image based on the descriptor computed.
 
 .. figure:: figures/iqrinitialize.png
@@ -110,7 +111,7 @@ you've done so, click the ``Refine`` element (Item 3) and the system will return
 
    *IQR Initilization*
 
- 
+
 The next figure shows the set of images returned by the system (on the left) and a random selection of images from the archive (by clicking the ``Toggle Random Results`` element).  As you can
 see, even with just one exemplar the system is beginning to learn to return Monarch butterflys (or butterflys that look like Monarchs)
 
@@ -165,8 +166,8 @@ Again, we need to provide a config block based configuration file for the comman
    :language: json
    :linenos:
 
-Note that the ``classifier`` block on line 10 is the same as the ``classifier`` block in the ``iqrTrainClassfier`` configuration file.  Further, the ``descriptor_generator`` block on line 42 
-matches the descriptor generator used for the IQR application itself (thus matching the type of descriptor used to train the classifier). 
+Note that the ``classifier`` block on line 10 is the same as the ``classifier`` block in the ``iqrTrainClassfier`` configuration file.  Further, the ``descriptor_generator`` block on line 42
+matches the descriptor generator used for the IQR application itself (thus matching the type of descriptor used to train the classifier).
 
 Once you've set up the configuration file to yoru liking, you can classify a set of labels with the following command::
 

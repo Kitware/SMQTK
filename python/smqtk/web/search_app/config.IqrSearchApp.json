@@ -12,7 +12,7 @@
             "data_set": {
                 "DataMemorySet": {
                     "file_cache": "workdir/csift/MemorySet.cache"
-                }, 
+                },
                 "DataFileSet": {
                     "root_directory": "workdir/csift/DataFileSetCache",
                     "uuid_chunk": 10
@@ -37,19 +37,32 @@
                 "type": "ColorDescriptor_Image_csift"
             },
             "nn_index": {
-                "ITQNearestNeighborsIndex": {
-                    "bit_length": 8,
-                    "code_index": {
-                        "MemoryCodeIndex": {
-                            "file_cache": "workdir/csift/itqnn/mem_code_index.pickle"
-                        },
-                        "type": "MemoryCodeIndex"
-                    },
+                "LSHNearestNeighborIndex": {
                     "distance_method": "hik",
-                    "itq_iterations": 50,
-                    "mean_vec_filepath": "workdir/csift/itqnn/mean_vec.npy",
-                    "random_seed": 42,
-                    "rotation_filepath": "workdir/csift/itqnn/rotation.npy"
+                    "hash2uuid_cache_filepath": "workdir/csift/itqnn/hash2uuid.pickle",
+                    "read_only": false,
+                    "descriptor_index": {
+                        "MemoryDescriptorIndex": {
+                            "file_cache": "workdir/csift/itqnn/mem_index.pickle"
+                        },
+                        "type": "MemoryDescriptorIndex"
+                    },
+                    "lsh_functor": {
+                        "ItqFunctor": {
+                            "bit_length": 8,
+                            "itq_iterations": 50,
+                            "mean_vec_filepath": "workdir/csift/itqnn/mean_vec.npy",
+                            "random_seed": 42,
+                            "rotation_filepath": "workdir/csift/itqnn/rotation.npy"
+                        },
+                        "type": "ItqFunctor"
+                    },
+                    "hash_index": {
+                        "LinearHashIndex": {
+                            "file_cache": "workdir/csift/itqnn/hash_index_cache.npy"
+                        },
+                        "type": "LinearHashIndex"
+                    }
                 },
                 "FlannNearestNeighborsIndex": {
                     "index_filepath": "workdir/csift/flann/index.flann",

@@ -7,7 +7,7 @@ from . import ncr
 try:
     from numba import jit
 
-except ImportError:
+except (ImportError, TypeError):
 
     def jit(func_or_sig):
         import types

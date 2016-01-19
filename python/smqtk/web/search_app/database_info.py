@@ -77,4 +77,4 @@ class DatabaseInfo (object):
 
         """
         return "DatabaseInfo{host: %s, port: %d, name: %s}" \
-               % (self.host, self.port, self.name)
+#                % (self.host, self.port, self.name)

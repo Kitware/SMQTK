@@ -2,17 +2,17 @@
 Top level flask application
 """
 
-import flask
 import os.path
 
-from smqtk.utils import DatabaseInfo
+import flask
+
 from smqtk.utils.configuration import merge_configs
-from smqtk.utils.mongo_sessions import MongoSessionInterface
 from smqtk.web import SmqtkWebApp
 
-from .modules.login import LoginMod
+from .database_info import DatabaseInfo
 from .modules.iqr import IqrSearch
-
+from .modules.login import LoginMod
+from .mongo_sessions import MongoSessionInterface
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 

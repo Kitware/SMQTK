@@ -44,5 +44,9 @@ with open("descriptor_uuids.train.txt") as f:
 log.info("Loading ITQ index algo")
 itq_index = load_algo()
 
+# Assuming ITQ functor, which needs fitting
+itq_index.lsh_functor.fit(d_elements)
+
 log.info("Building index")
+# includes adding to adding to configured descriptor and hash indexes
 itq_index.build_index(d_elements)

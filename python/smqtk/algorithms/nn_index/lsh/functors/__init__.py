@@ -17,8 +17,8 @@ class LshFunctor (SmqtkAlgorithm):
     with a high probability. In other words, it aims to maximize hash collision
     for similar items.
 
-    Building Models
-    ---------------
+    **Building Models**
+
     Some hash functions want to build a model based on some training set of
     descriptors. Due to the non-standard nature of algorithm training and model
     building, please refer to the specific implementation for further

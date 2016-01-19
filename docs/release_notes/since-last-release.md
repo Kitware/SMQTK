@@ -18,6 +18,11 @@ Custom LibSVM
 DescriptorIndex
 
   * Added initial Solr backend implementation.
+  
+Documentation
+
+  * Updated documentation to references to ``CodeIndex`` and update references
+    to ``ITQNearestNeighborsIndex`` to ``LSHNearestNeighborIndex``.
 
 HashIndex
 

@@ -7,8 +7,11 @@ import cPickle
 import os
 import time
 
+import numpy
+
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
+from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
@@ -110,7 +113,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         return super(LSHNearestNeighborIndex, cls).from_config(merged)
 
-    def __init__(self, lsh_functor, descriptor_index, hash_index,
+    def __init__(self, lsh_functor, descriptor_index, hash_index=None,
                  hash2uuid_cache_filepath=None,
                  distance_method='cosine', read_only=False):
         """
@@ -135,7 +138,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         :param hash_index: ``HashIndex`` for indexing unique hash codes using
             hamming distance.
-        :type hash_index: smqtk.algorithms.nn_index.hash_index.HashIndex
+
+            If this is set to ``None`` (default), we will perform brute-force
+            linear neighbor search for each query based on the hash codes
+            currently in the hash2uuid index using hamming distance
+        :type hash_index: smqtk.algorithms.nn_index.hash_index.HashIndex | None
 
         :param hash2uuid_cache_filepath: Path to save the hash code to
             descriptor UUID mapping. If provided, this is written to when
@@ -203,10 +210,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                              "['euclidean' | 'cosine' | 'hik']")
 
     def get_config(self):
+        hi_conf = None
+        if self.hash_index is not None:
+            hi_conf = plugin.to_plugin_config(self.hash_index)
         return {
             "lsh_functor": plugin.to_plugin_config(self.lsh_functor),
             "descriptor_index": plugin.to_plugin_config(self.descriptor_index),
-            "hash_index": plugin.to_plugin_config(self.hash_index),
+            "hash_index": hi_conf,
             "hash2uuid_cache_filepath": self.hash2uuid_cache_filepath,
             "distance_method": self.distance_method,
             "read_only": self.read_only,
@@ -308,8 +318,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
                 hash2uuid[h_int].add(d.uuid())
 
-        cls.logger().debug("Building hash index from unique hash codes")
-        hash_index.build_index(iter_add_hashes())
+        if hash_index is None:
+            # Scan through above function to fill in hash2uuid mapping
+            list(iter_add_hashes())
+        else:
+            cls.logger().debug("Building hash index from unique hash codes")
+            hash_index.build_index(iter_add_hashes())
 
         return hash2uuid
 
@@ -328,6 +342,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
+        super(LSHNearestNeighborIndex, self).nn(d, n)
+
         self._log.debug("generating has for descriptor")
         d_v = d.vector()
         d_h = self.lsh_functor.get_hash(d_v)
@@ -336,7 +352,14 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             return self._distance_function(d_v, d2_v)
 
         self._log.debug("getting near hashes")
-        hashes, hash_dists = self.hash_index.nn(d_h, n)
+        hi = self.hash_index
+        # Make on-the-fly linear index if we weren't originally set with one
+        if hi is None:
+            hi = LinearHashIndex()
+            # not calling ``build_index`` because we already have the int
+            # hashes.
+            hi.index = numpy.array(self._hash2uuid.keys())
+        hashes, hash_dists = hi.nn(d_h, n)
 
         self._log.debug("getting UUIDs of descriptors for hashes")
         neighbor_uuids = []

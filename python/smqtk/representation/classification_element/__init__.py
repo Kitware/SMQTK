@@ -19,6 +19,8 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
     continuous confidence values, it may instead assign a value of ``1.0`` to a
     single label, and ``0.0`` to the rest.
 
+    UUIDs must maintain unique-ness when transformed into a string.
+
     The sum of all values should be ``1.0``.
 
     """

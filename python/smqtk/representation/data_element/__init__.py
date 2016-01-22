@@ -24,6 +24,8 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     Basic data elements have a UUID, some byte content, a content type, and
     checksum accessor methods.
 
+    UUIDs must maintain unique-ness when transformed into a string.
+
     """
 
     def __init__(self):

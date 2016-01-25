@@ -55,12 +55,6 @@ class PostgresDescriptorIndex (DescriptorIndex):
          WHERE {uuid_col:s} like %(uuid_like)s
     """)
 
-    SELECT_MANY_TMPL = norm_psql_cmd_string("""
-        SELECT {element_col:s}
-          FROM {table_name:s}
-         WHERE {uuid_col:s} in %(uuid_tuple)s
-    """)
-
     # So we can ensure we get back elements in specified order
     #   - reference [1]
     SELECT_MANY_ORDERED_TMPL = norm_psql_cmd_string("""
@@ -72,6 +66,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
           ) AS __ordering__ ({uuid_col:s}, {uuid_col:s}_order)
             ON {table_name:s}.{uuid_col:s} = __ordering__.{uuid_col:s}
           ORDER BY __ordering__.{uuid_col:s}_order
+    """)
+
+    SELECT_LIMIT_OFFSET = norm_psql_cmd_string("""
+        SELECT {col:s}
+          FROM {table_name:s}
+         LIMIT {limit:d}
+        OFFSET {offset:d}
     """)
 
     UPSERT_TMPL = norm_psql_cmd_string("""
@@ -94,7 +95,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     DELETE_MANY_TMPL = norm_psql_cmd_string("""
         DELETE FROM {table_name:s}
-              WHERE {uuid_col:s} in %(uuid_list)s
+              WHERE {uuid_col:s} in %(uuid_tuple)s
+          RETURNING uid
     """)
 
     @classmethod
@@ -176,8 +178,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         # Checking parameters where necessary
         if self.multiquery_batch_size is not None:
+            self.multiquery_batch_size = int(self.multiquery_batch_size)
             assert self.multiquery_batch_size > 0, \
-                "A given batch size must be greater than 0 in size."
+                "A given batch size must be greater than 0 in size " \
+                "(given: %d)." % self.multiquery_batch_size
         assert -1 <= self.pickle_protocol <= 2, \
             ("Given pickle protocol is not in the known valid range. Given: %s"
              % self.pickle_protocol)
@@ -493,10 +497,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.execute(q, v)
 
         self._log.debug("Getting many descriptors")
-        # Query ensures that elements returned are in the UUID order given to
-        #   this method. Thus, if the iterated UUIDs and iterated return rows
-        #   do not match up, the query join failed to match a query UUID to
-        #   something in the database.
+        # The SELECT_MANY_ORDERED_TMPL query ensures that elements returned are
+        #   in the UUID order given to this method. Thus, if the iterated UUIDs
+        #   and iterated return rows do not exactly line up, the query join
+        #   failed to match a query UUID to something in the database.
         #   - We also check that the number of rows we got back is the same
         #     as elements yielded, else there were trailing UUIDs that did not
         #     match anything in the database.
@@ -552,13 +556,34 @@ class PostgresDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         """
+        if self.read_only:
+            raise ReadOnlyError("Cannot clear a read-only index.")
+
+        q = self.DELETE_MANY_TMPL.format(
+            table_name=self.table_name,
+            uuid_col=self.uuid_col,
+        )
+        str_uuid_set = set(str(uid) for uid in uuids)
+        v = {'uuid_tuple': tuple(str_uuid_set)}
+
+        def eh(c):
+            c.execute(q, v)
+
+            # Check query UUIDs against rows that would actually be deleted.
+            deleted_uuid_set = set(r[0] for r in c.fetchall())
+            for uid in str_uuid_set:
+                if uid not in deleted_uuid_set:
+                    raise KeyError(uid)
+
+        list(self._single_execute(eh))
 
     def iterkeys(self):
         """
         Return an iterator over indexed descriptor keys, which are their UUIDs.
         :rtype: collections.Iterator[collections.Hashable]
         """
-        # batch via "... LIMIT <#> OFFSET <#>" increments
+        for d in self.iterdescriptors():
+            yield d.uuid()
 
     def iterdescriptors(self):
         """
@@ -566,6 +591,30 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
         """
         # batch via "... LIMIT <#> OFFSET <#>" increments
+        n = self.count()
+        offset = 0
+        limit = self.multiquery_batch_size
+        if limit is None:
+            limit = n
+
+        self._log.debug("Iterating UUIDs (interval = %d)", limit)
+
+        def eh(c):
+            self._log.debug("Getting descriptors in index range (%d, %d]",
+                            offset, offset + limit)
+            c.execute(self.SELECT_LIMIT_OFFSET.format(
+                col=self.element_col,
+                table_name=self.table_name,
+                limit=limit,
+                offset=offset,
+            ))
+
+        while offset < n:
+            for r in self._single_execute(eh, True):
+                d = cPickle.loads(str(r[0]))
+                yield d
+
+            offset += limit
 
     def iteritems(self):
         """
@@ -573,4 +622,5 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :rtype: collections.Iterator[(collections.Hashable,
                                       smqtk.representation.DescriptorElement)]
         """
-        # batch via "... LIMIT <#> OFFSET <#>" increments
+        for d in self.iterdescriptors():
+            yield d.uuid(), d

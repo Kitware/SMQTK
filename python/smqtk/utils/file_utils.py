@@ -4,6 +4,10 @@ import os
 import numpy
 import re
 import tempfile
+import threading
+import time
+
+from smqtk.utils import SmqtkObject
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -165,3 +169,119 @@ def iter_csv_file(filepath):
         r = csv.reader(f)
         for l in r:
             yield numpy.array(l, dtype=float)
+
+
+class FileUpdateMonitor (SmqtkObject, threading.Thread):
+
+    STATE_WAITING = 0   # Waiting for file to be modified
+    STATE_WATCHING = 1  # Waiting for file to settle
+    STATE_SETTLED = 2   # File has stopped being modified for settle period
+
+    def __init__(self, filepath, monitor_interval, settle_time, callback):
+        """
+        On a separate thread, monitor the modification time of the file at the
+        given file path. When the file is updated (after the file has stopped
+        changing), trigger the provided callback function, given the monitored
+        file path and the file stat event.
+
+        :param filepath: Path to the file to monitor
+        :type filepath: str
+
+        :param monitor_interval: Number of seconds at which the thread checks
+            the file modification time for change.
+
+        :param settle_time: Minimum number of seconds the thread waits after
+            seeing the file update before it calls the provided callback. The
+            purpose of this is to ensure that the file has stopped being
+            modified before calling the callback.
+
+        :param callback: Callback function that will be triggered every time
+            the provided file has been update and the settle time has expired.
+        :type callback: (str) -> None
+
+        :raises ValueError: The given filepath did not point to an existing,
+            valid file.
+
+        """
+        super(FileUpdateMonitor, self).__init__()
+
+        self.filepath = filepath
+        self.monitor_interval = monitor_interval
+        self.settle_time = settle_time
+        self.callback = callback
+
+        self.event_stop = threading.Event()
+        self.event_stop.set()  # make sure false
+
+        self.state = self.STATE_WAITING
+
+        if not os.path.isfile(self.filepath):
+            raise ValueError("Provided filepath did not point to an existing, "
+                             "valid file.")
+
+        if monitor_interval < 0 or settle_time < 0:
+            raise ValueError("Monitor and settle times must be >= 0")
+
+    def stop(self):
+        self._log.debug("stopped externally")
+        self.event_stop.set()
+
+    def stopped(self):
+        return self.event_stop.is_set()
+
+    def start(self):
+        # Clear stop flag
+        self.event_stop.clear()
+        super(FileUpdateMonitor, self).start()
+
+    def run(self):
+        # self._log.debug("starting run method")
+        # mtime baseline
+        last_mtime = os.path.getmtime(self.filepath)
+
+        try:
+            while not self.stopped():
+                mtime = os.path.getmtime(self.filepath)
+
+                # file has been updated
+                if self.state == self.STATE_WAITING and last_mtime != mtime:
+                    self.state = self.STATE_WATCHING
+                    self._log.debug('change detected '
+                                    '(mtime: %f -> %f, diff=%f) '
+                                    ':: state(WAITING -> WATCHING)',
+                                    last_mtime, mtime, mtime - last_mtime)
+
+                # Wait until file is not being modified any more
+                elif self.state == self.STATE_WATCHING:
+                    t = time.time()
+                    if t - mtime >= self.settle_time:
+                        self.state = self.STATE_SETTLED
+                        self._log.debug('file settled '
+                                        '(mtime=%f, t=%f, diff=%f) '
+                                        ':: state(WATCHING -> SETTLED)',
+                                        mtime, t, t - mtime)
+                    else:
+                        self._log.debug('waiting for settle '
+                                        '(mtime=%f, t=%f, diff=%f)...',
+                                        mtime, t, t - mtime)
+                        time.sleep(self.monitor_interval)
+
+                elif self.state == self.STATE_SETTLED:
+                    self.callback(self.filepath)
+                    self.state = self.STATE_WAITING
+                    self._log.debug('calling callback '
+                                    ':: state(SETTLED -> WAITING)')
+
+                # waiting for modification
+                else:
+                    # self._log.debug("waiting...")
+                    time.sleep(self.monitor_interval)
+
+                last_mtime = mtime
+        except KeyboardInterrupt:
+            self._log.debug("Caught keyboard interrupt")
+            pass
+        finally:
+            self.event_stop.set()
+
+        self._log.debug('exiting')

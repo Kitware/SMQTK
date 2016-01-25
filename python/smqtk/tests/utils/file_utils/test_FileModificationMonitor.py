@@ -31,7 +31,9 @@ class TestFileModificationMonitor (unittest.TestCase):
             has_triggered[0] = True
             nose.tools.assert_equal(filepath, fp)
 
-        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, 0.001, 0.5, cb)
+        interval = 0.01
+        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
+                                                                 0.5, cb)
         nose.tools.assert_true(monitor.stopped())
 
         monitor.start()
@@ -43,7 +45,7 @@ class TestFileModificationMonitor (unittest.TestCase):
         monitor.stop()
         # If thread hasn't entered while loop yet, it will immediately kick
         # out, otherwise its sleeping for the given interval.
-        monitor.join(0.01)
+        monitor.join(interval)
 
         try:
             nose.tools.assert_false(has_triggered[0])
@@ -75,8 +77,8 @@ class TestFileModificationMonitor (unittest.TestCase):
             has_triggered[0] = True
             nose.tools.assert_equal(filepath, fp)
 
-        interval = 0.001
-        settle   = 0.01
+        interval = 0.01
+        settle   = 0.1
         monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
                                                                  settle, cb)
         try:
@@ -124,9 +126,9 @@ class TestFileModificationMonitor (unittest.TestCase):
         fp = self._mk_test_fp()
 
         has_triggered = [False]
-        append_interval = 0.002
-        monitor_interval = 0.001
-        monitor_settle = 0.01
+        append_interval = 0.02
+        monitor_interval = 0.01
+        monitor_settle = 0.1
 
         def cb(filepath):
             has_triggered[0] = True

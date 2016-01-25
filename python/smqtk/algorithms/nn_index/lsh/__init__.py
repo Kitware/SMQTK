@@ -167,7 +167,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         :param read_only: If this index should only read from its configured
             descriptor and hash indexes. This will cause a ``ReadOnlyError`` to
-            be raised from build_index. The exception to this is if the
+            be raised from build_index.
+        :type read_only: bool
 
         :raises ValueError: Invalid distance method specified.
 

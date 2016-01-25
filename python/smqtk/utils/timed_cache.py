@@ -10,7 +10,8 @@ import logging
 import multiprocessing
 import time
 
-from smqtk.utils import DistanceKernel, FeatureMemory
+from smqtk.utils.distance_kernel import DistanceKernel
+from smqtk.utils.feature_memory import FeatureMemory
 
 
 class TimedCache (object):

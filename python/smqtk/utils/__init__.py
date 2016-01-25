@@ -74,8 +74,3 @@ from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .safe_config_comment_parser import SafeConfigCommentParser
 from .signal_handler import SignalHandler
 from .simple_timer import SimpleTimer
-
-from .distance_kernel import DistanceKernel
-from .feature_memory import FeatureMemory, FeatureMemoryMap
-from .timed_cache import TimedCache
-from .proxy_manager import ProxyManager

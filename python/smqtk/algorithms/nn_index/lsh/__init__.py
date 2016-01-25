@@ -383,3 +383,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                          key=lambda p: p[1])
         self._log.debug('-- slicing top n=%d', n)
         return zip(*(ordered[:n]))
+
+
+# Marking only LSH as the valid impl, otherwise the hash index default would
+#   also be picked up (because it also descends from NearestNeighborsIndex).
+NN_INDEX_CLASS = LSHNearestNeighborIndex

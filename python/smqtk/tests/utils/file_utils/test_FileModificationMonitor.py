@@ -18,12 +18,12 @@ class TestFileModificationMonitor (unittest.TestCase):
     def _mk_test_fp(self):
         fd, fp = tempfile.mkstemp()
         os.close(fd)
+        atexit.register(lambda: os.remove(fp))
         return fp
 
     def test_monitor_stop(self):
         # test that monitor stops when its told to
         fp = self._mk_test_fp()
-        atexit.register(lambda: os.remove(fp))
 
         has_triggered = [False]
 
@@ -49,10 +49,9 @@ class TestFileModificationMonitor (unittest.TestCase):
             nose.tools.assert_false(has_triggered[0])
             nose.tools.assert_false(monitor.is_alive())
         finally:
-            pass
-            # if monitor.is_alive():
-            #     print "WARNING :: Forcing thread stop by removing filepath var"
-            #     monitor.filepath = None
+            if monitor.is_alive():
+                print "WARNING :: Forcing thread stop by removing filepath var"
+                monitor.filepath = None
 
     def test_short_file_copy(self):
         # where "short" means effectively instantaneous file creation / copy
@@ -69,7 +68,6 @@ class TestFileModificationMonitor (unittest.TestCase):
         #   - wait settle time / 4, check that cb HAS been called.
 
         fp = self._mk_test_fp()
-        atexit.register(lambda: os.remove(fp))
 
         has_triggered = [False]
 
@@ -124,7 +122,6 @@ class TestFileModificationMonitor (unittest.TestCase):
         #   - check that cb called after settle period
 
         fp = self._mk_test_fp()
-        atexit.register(lambda: os.remove(fp))
 
         has_triggered = [False]
         append_interval = 0.002
@@ -183,3 +180,24 @@ class TestFileModificationMonitor (unittest.TestCase):
         finally:
             a_thread.stop()
             m_thread.stop()
+
+    def test_invalid_params(self):
+        fp = self._mk_test_fp()
+
+        # Invalid path value
+        nose.tools.assert_raises(
+            ValueError,
+            smqtk.utils.file_utils.FileModificationMonitor,
+            '/not/real', 1, 1, lambda p: None
+        )
+        # Invalid timers values
+        nose.tools.assert_raises(
+            ValueError,
+            smqtk.utils.file_utils.FileModificationMonitor,
+            fp, -1, 1, lambda p: None
+        )
+        nose.tools.assert_raises(
+            ValueError,
+            smqtk.utils.file_utils.FileModificationMonitor,
+            fp, 1, -1, lambda p: None
+        )

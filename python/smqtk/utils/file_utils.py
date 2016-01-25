@@ -278,9 +278,6 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
                     time.sleep(self.monitor_interval)
 
                 last_mtime = mtime
-        except KeyboardInterrupt:
-            self._log.debug("Caught keyboard interrupt")
-            pass
         finally:
             self.event_stop.set()
 

@@ -38,16 +38,16 @@ class TestFileModificationMonitor (unittest.TestCase):
 
         monitor.start()
 
-        nose.tools.assert_false(has_triggered[0])
-        nose.tools.assert_true(monitor.is_alive())
-        nose.tools.assert_false(monitor.stopped())
-
-        monitor.stop()
-        # If thread hasn't entered while loop yet, it will immediately kick
-        # out, otherwise its sleeping for the given interval.
-        monitor.join(interval)
-
         try:
+            nose.tools.assert_false(has_triggered[0])
+            nose.tools.assert_true(monitor.is_alive())
+            nose.tools.assert_false(monitor.stopped())
+
+            monitor.stop()
+            # If thread hasn't entered while loop yet, it will immediately kick
+            # out, otherwise its sleeping for the given interval.
+            monitor.join(interval*2)
+
             nose.tools.assert_false(has_triggered[0])
             nose.tools.assert_false(monitor.is_alive())
         finally:
@@ -89,7 +89,7 @@ class TestFileModificationMonitor (unittest.TestCase):
 
             time.sleep(interval)
             smqtk.utils.file_utils.touch(fp)
-            time.sleep(interval)
+            time.sleep(interval*2)
             monitor._log.info('checking')
             nose.tools.assert_false(has_triggered[0])
             nose.tools.assert_equal(monitor.state, monitor.STATE_WATCHING)

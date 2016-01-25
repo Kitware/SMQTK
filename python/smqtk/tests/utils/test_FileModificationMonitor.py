@@ -13,7 +13,7 @@ import smqtk.utils.file_utils
 __author__ = "paul.tunison@kitware.com"
 
 
-class TestFileUpdateMonitor (unittest.TestCase):
+class TestFileModificationMonitor (unittest.TestCase):
 
     def _mk_test_fp(self):
         fd, fp = tempfile.mkstemp()
@@ -31,7 +31,7 @@ class TestFileUpdateMonitor (unittest.TestCase):
             has_triggered[0] = True
             nose.tools.assert_equal(filepath, fp)
 
-        monitor = smqtk.utils.file_utils.FileUpdateMonitor(fp, 0.001, 0.5, cb)
+        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, 0.001, 0.5, cb)
         nose.tools.assert_true(monitor.stopped())
 
         monitor.start()
@@ -79,8 +79,8 @@ class TestFileUpdateMonitor (unittest.TestCase):
 
         interval = 0.001
         settle   = 0.01
-        monitor = smqtk.utils.file_utils.FileUpdateMonitor(fp, interval,
-                                                           settle, cb)
+        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
+                                                                 settle, cb)
         try:
             monitor.start()
             # file not touched, should still be waiting
@@ -152,10 +152,10 @@ class TestFileUpdateMonitor (unittest.TestCase):
                         f.write('0')
                     time.sleep(append_interval)
 
-        m_thread = smqtk.utils.file_utils.FileUpdateMonitor(fp,
-                                                            monitor_interval,
-                                                            monitor_settle,
-                                                            cb)
+        m_thread = smqtk.utils.file_utils.FileModificationMonitor(fp,
+                                                                  monitor_interval,
+                                                                  monitor_settle,
+                                                                  cb)
         a_thread = AppendThread()
 
         try:

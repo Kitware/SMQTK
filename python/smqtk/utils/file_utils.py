@@ -171,7 +171,7 @@ def iter_csv_file(filepath):
             yield numpy.array(l, dtype=float)
 
 
-class FileUpdateMonitor (SmqtkObject, threading.Thread):
+class FileModificationMonitor (SmqtkObject, threading.Thread):
 
     STATE_WAITING = 0   # Waiting for file to be modified
     STATE_WATCHING = 1  # Waiting for file to settle
@@ -203,7 +203,7 @@ class FileUpdateMonitor (SmqtkObject, threading.Thread):
             valid file.
 
         """
-        super(FileUpdateMonitor, self).__init__()
+        super(FileModificationMonitor, self).__init__()
 
         self.filepath = filepath
         self.monitor_interval = monitor_interval
@@ -232,7 +232,7 @@ class FileUpdateMonitor (SmqtkObject, threading.Thread):
     def start(self):
         # Clear stop flag
         self.event_stop.clear()
-        super(FileUpdateMonitor, self).start()
+        super(FileModificationMonitor, self).start()
 
     def run(self):
         # self._log.debug("starting run method")

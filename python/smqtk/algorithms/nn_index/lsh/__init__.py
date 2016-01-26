@@ -3,6 +3,7 @@ This module contains a general base locality-sensitive-hashing algorithm for
 nearest neighbor indexing, and various implementations of LSH functors for use
 in the base.
 """
+import atexit
 import cPickle
 import os
 import time
@@ -19,6 +20,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import distance_functions
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
+from smqtk.utils.configuration import merge_configs
 from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import FileModificationMonitor
 
@@ -87,7 +89,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         return default
 
     @classmethod
-    def from_config(cls, config_dict):
+    def from_config(cls, config_dict, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
@@ -99,12 +101,20 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             a configuration.
         :type config_dict: dict
 
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
         :return: Constructed instance from the provided config.
         :rtype: LSHNearestNeighborIndex
 
         """
-        merged = cls.get_default_config()
-        merged.update(config_dict)
+        # Controlling merge here so we can control known comment stripping.
+        if merge_default:
+            merged = cls.get_default_config()
+            merge_configs(merged, config_dict)
+        else:
+            merged = config_dict
 
         merged['lsh_functor'] = \
             plugin.from_plugin_config(merged['lsh_functor'],
@@ -221,6 +231,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self._hash2uuid = {}
         self._hash2uuid_lock = threading.Lock()
         self._hash2uuid_monitor = None
+        self._hash2uuid_sighandler = None
 
         self._distance_function = self._get_dist_func(self.distance_method)
 
@@ -228,13 +239,19 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         if self.hash2uuid_cache_filepath and \
                 os.path.isfile(self.hash2uuid_cache_filepath):
             self._reload_hash2uuid(self.hash2uuid_cache_filepath)
-            self._hash2uuid_monitor = FileModificationMonitor(
-                self.hash2uuid_cache_filepath,
-                self.reload_mon_interval, self.reload_settle_window,
-                self._reload_hash2uuid
-            )
-            self._log.debug("Starting file monitor with reload: hash2uuid")
-            self._hash2uuid_monitor.start()
+
+            if self.live_reload:
+                self._log.debug("Starting file monitor with reload: hash2uuid")
+                self._hash2uuid_monitor = FileModificationMonitor(
+                    self.hash2uuid_cache_filepath,
+                    self.reload_mon_interval, self.reload_settle_window,
+                    self._reload_hash2uuid
+                )
+                self._hash2uuid_monitor.daemon = True
+                self._hash2uuid_monitor.start()
+                atexit.register(self._stop_monitor,
+                                self.hash2uuid_cache_filepath,
+                                self._hash2uuid_monitor)
 
     def __del__(self):
         if hasattr(self, '_hash2uuid_monitor') and self._hash2uuid_monitor:
@@ -258,6 +275,15 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # TODO: Support scipy/scikit-learn distance methods
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
+
+    def _stop_monitor(self, fp, monitor):
+        """
+        Shutdown hook for monitor thread when live reload is on.
+        """
+        self._log.debug("stopping monitor for path: %s", fp)
+        monitor.stop()
+        monitor.join()
+        self._log.debug("stopping monitor for path: %s -- Done", fp)
 
     def _reload_hash2uuid(self, filepath):
         """

@@ -184,6 +184,9 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
         changing), trigger the provided callback function, given the monitored
         file path and the file stat event.
 
+        We initially set ourselves as a daemon as that is the most probable
+        usage of our functionality.
+
         :param filepath: Path to the file to monitor
         :type filepath: str
 
@@ -207,6 +210,8 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
         """
         SmqtkObject.__init__(self)
         threading.Thread.__init__(self, name=self.__class__.__name__)
+
+        self.daemon = True
 
         self.filepath = filepath
         self.monitor_interval = monitor_interval

@@ -247,7 +247,6 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                     self.reload_mon_interval, self.reload_settle_window,
                     self._reload_hash2uuid
                 )
-                self._hash2uuid_monitor.daemon = True
                 self._hash2uuid_monitor.start()
                 atexit.register(self._stop_monitor,
                                 self.hash2uuid_cache_filepath,

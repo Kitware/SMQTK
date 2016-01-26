@@ -6,16 +6,13 @@ import unittest
 import nose.tools as ntools
 import numpy
 
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
-from smqtk.utils.file_utils import make_tempfile
-
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
-from smqtk.algorithms.nn_index.hash_index.sklearn_balltree \
-    import SkLearnBallTreeHashIndex
+from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
+    SkLearnBallTreeHashIndex
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 
 

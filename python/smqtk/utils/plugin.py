@@ -343,8 +343,5 @@ def from_plugin_config(config, plugin_getter, *args):
     """
     t = config['type']
     cls = plugin_getter()[t]
-    try:
-        # noinspection PyUnresolvedReferences
-        return cls.from_config(config[t], *args)
-    except TypeError, ex:
-        raise TypeError(cls.__name__ + '.' + ex.message)
+    # noinspection PyUnresolvedReferences
+    return cls.from_config(config[t], *args)

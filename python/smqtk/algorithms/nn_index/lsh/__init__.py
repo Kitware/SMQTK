@@ -6,6 +6,7 @@ in the base.
 import cPickle
 import os
 import time
+import threading
 
 import numpy
 
@@ -19,6 +20,7 @@ from smqtk.utils import distance_functions
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils.errors import ReadOnlyError
+from smqtk.utils.file_utils import FileModificationMonitor
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -78,6 +80,9 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         hi_default = plugin.make_config(get_hash_index_impls)
         default['hash_index'] = hi_default
+        default['hash_index_comment'] = "'hash_index' may also be null to " \
+                                        "default to a linear index built at " \
+                                        "query time."
 
         return default
 
@@ -107,15 +112,23 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         merged['descriptor_index'] = \
             plugin.from_plugin_config(merged['descriptor_index'],
                                       get_descriptor_index_impls)
-        merged['hash_index'] = \
-            plugin.from_plugin_config(merged['hash_index'],
-                                      get_hash_index_impls)
 
-        return super(LSHNearestNeighborIndex, cls).from_config(merged)
+        # Hash index may be None for a default at-query-time linear indexing
+        if merged['hash_index'] is not None:
+            merged['hash_index'] = \
+                plugin.from_plugin_config(merged['hash_index'],
+                                          get_hash_index_impls)
+
+        # remove possible comment added by default generator
+        if 'hash_index_comment' in merged:
+            del merged['hash_index_comment']
+
+        return super(LSHNearestNeighborIndex, cls).from_config(merged, False)
 
     def __init__(self, lsh_functor, descriptor_index, hash_index=None,
                  hash2uuid_cache_filepath=None,
-                 distance_method='cosine', read_only=False):
+                 distance_method='cosine', read_only=False,  live_reload=False,
+                 reload_mon_interval=0.1, reload_settle_window=1.0):
         """
         Initialize LSH algorithm with a hashing functor, descriptor index and
         hash nearest-neighbor index.
@@ -170,7 +183,26 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             be raised from build_index.
         :type read_only: bool
 
+        :param live_reload: Activate live reloading of local model elements
+            from disk. This option does nothing if ``hash2uuid_cache_filepath``
+            is ``None`` (no cached model on disk).
+
+            This only affects this implementations controlled elements and not
+            this implementation's sub-structures.
+        :type live_reload: bool
+
+        :param reload_mon_interval: Frequency in seconds at which we check file
+            modification times. This must be >= 0.
+        :type reload_mon_interval: float
+
+        :param reload_settle_window: File modification window, after which we
+            consider the file done being modified and reload it. This must be
+            >= 0 and should be >= the ``reload_mon_interval``.
+        :type reload_settle_window: float
+
         :raises ValueError: Invalid distance method specified.
+        :raises ValueError: Live reload is on and the associated options were
+            invalid (see ``FileModificationMonitor`` for details)
 
         """
         super(LSHNearestNeighborIndex, self).__init__()
@@ -181,17 +213,34 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.hash2uuid_cache_filepath = hash2uuid_cache_filepath
         self.distance_method = distance_method
         self.read_only = read_only
+        self.live_reload = live_reload
+        self.reload_mon_interval = reload_mon_interval
+        self.reload_settle_window = reload_settle_window
 
         #: :type: dict[int|long, set[collections.Hashable]]
         self._hash2uuid = {}
+        self._hash2uuid_lock = threading.Lock()
+        self._hash2uuid_monitor = None
+
         self._distance_function = self._get_dist_func(self.distance_method)
 
         # Load hash2uuid model if it exists
         if self.hash2uuid_cache_filepath and \
                 os.path.isfile(self.hash2uuid_cache_filepath):
-            with open(self.hash2uuid_cache_filepath) as f:
-                #: :type: dict[int|long, set[collections.Hashable]]
-                self._hash2uuid = cPickle.load(f)
+            self._reload_hash2uuid(self.hash2uuid_cache_filepath)
+            self._hash2uuid_monitor = FileModificationMonitor(
+                self.hash2uuid_cache_filepath,
+                self.reload_mon_interval, self.reload_settle_window,
+                self._reload_hash2uuid
+            )
+            self._log.debug("Starting file monitor with reload: hash2uuid")
+            self._hash2uuid_monitor.start()
+
+    def __del__(self):
+        if hasattr(self, '_hash2uuid_monitor') and self._hash2uuid_monitor:
+            self._log.debug("stopping hash2uuid monitor thread")
+            self._hash2uuid_monitor.stop()
+            self._hash2uuid_monitor.join()
 
     @staticmethod
     def _get_dist_func(distance_method):
@@ -210,6 +259,20 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
 
+    def _reload_hash2uuid(self, filepath):
+        """
+        Safely reload hash-to-uuid mapping cache from disk
+        """
+        self._log.debug("(Re)Loading hash2uuid from disk")
+        # Load outside of lock, swap with instance attribute inside lock
+        with open(filepath) as f:
+            #: :type: dict[int|long, set[collections.Hashable]]
+            new_hash2uuid = cPickle.load(f)
+
+        with self._hash2uuid_lock:
+            self._hash2uuid = new_hash2uuid
+        self._log.debug("(Re)Loading hash2uuid from disk -- Done")
+
     def get_config(self):
         hi_conf = None
         if self.hash_index is not None:
@@ -221,6 +284,9 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             "hash2uuid_cache_filepath": self.hash2uuid_cache_filepath,
             "distance_method": self.distance_method,
             "read_only": self.read_only,
+            "live_reload": self.live_reload,
+            "reload_mon_interval": self.reload_mon_interval,
+            "reload_settle_window": self.reload_settle_window,
         }
 
     def count(self):
@@ -232,7 +298,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements.
+        Build the index over the descriptor data elements. This in turn builds
+        the configured hash index if one is set.
 
         Subsequent calls to this method should rebuild the index, not add to
         it, or raise an exception to as to protect the current index.
@@ -254,16 +321,19 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.descriptor_index.add_many_descriptors(descriptors)
 
         self._log.debug("Generating hash codes")
-        self._hash2uuid = \
+        new_hash2uuid = \
             self.build_from_descriptor_index(self.descriptor_index,
                                              self.hash_index,
                                              self.lsh_functor)
 
-        if self.hash2uuid_cache_filepath:
-            self._log.debug("Writing out hash2uuid map: %s",
-                            self.hash2uuid_cache_filepath)
-            with open(self.hash2uuid_cache_filepath, 'w') as f:
-                cPickle.dump(self._hash2uuid, f)
+        with self._hash2uuid_lock:
+            self._hash2uuid = new_hash2uuid
+
+            if self.hash2uuid_cache_filepath:
+                self._log.debug("Writing out hash2uuid map: %s",
+                                self.hash2uuid_cache_filepath)
+                with open(self.hash2uuid_cache_filepath, 'w') as f:
+                    cPickle.dump(self._hash2uuid, f)
 
     @classmethod
     def build_from_descriptor_index(cls, descriptor_index, hash_index,
@@ -359,13 +429,15 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             hi = LinearHashIndex()
             # not calling ``build_index`` because we already have the int
             # hashes.
-            hi.index = numpy.array(self._hash2uuid.keys())
+            with self._hash2uuid_lock:
+                hi.index = numpy.array(self._hash2uuid.keys())
         hashes, hash_dists = hi.nn(d_h, n)
 
         self._log.debug("getting UUIDs of descriptors for hashes")
         neighbor_uuids = []
-        for h_int in map(bit_vector_to_int_large, hashes):
-            neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
+        with self._hash2uuid_lock:
+            for h_int in map(bit_vector_to_int_large, hashes):
+                neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")

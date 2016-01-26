@@ -177,7 +177,7 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
     STATE_WATCHING = 1  # Waiting for file to settle
     STATE_SETTLED = 2   # File has stopped being modified for settle period
 
-    def __init__(self, filepath, monitor_interval, settle_time, callback):
+    def __init__(self, filepath, monitor_interval, settle_window, callback):
         """
         On a separate thread, monitor the modification time of the file at the
         given file path. When the file is updated (after the file has stopped
@@ -187,13 +187,15 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
         :param filepath: Path to the file to monitor
         :type filepath: str
 
-        :param monitor_interval: Number of seconds at which the thread checks
-            the file modification time for change.
+        :param monitor_interval: Frequency in seconds at which we check file
+            modification times. This must be >= 0.
+        :type monitor_interval: float
 
-        :param settle_time: Minimum number of seconds the thread waits after
-            seeing the file update before it calls the provided callback. The
-            purpose of this is to ensure that the file has stopped being
-            modified before calling the callback.
+        :param settle_window: If a recently modified file is not modified again
+            for this many seconds in a row, we consider the file done being
+            modified and trigger the triggers ``callback``. This must be >= 0
+            and should be >= the ``monitor_interval``.
+        :type settle_window: float
 
         :param callback: Callback function that will be triggered every time
             the provided file has been update and the settle time has expired.
@@ -203,11 +205,12 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
             valid file.
 
         """
-        super(FileModificationMonitor, self).__init__()
+        SmqtkObject.__init__(self)
+        threading.Thread.__init__(self, name=self.__class__.__name__)
 
         self.filepath = filepath
         self.monitor_interval = monitor_interval
-        self.settle_time = settle_time
+        self.settle_window = settle_window
         self.callback = callback
 
         self.event_stop = threading.Event()
@@ -219,7 +222,7 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
             raise ValueError("Provided filepath did not point to an existing, "
                              "valid file.")
 
-        if monitor_interval < 0 or settle_time < 0:
+        if monitor_interval < 0 or settle_window < 0:
             raise ValueError("Monitor and settle times must be >= 0")
 
     def stop(self):
@@ -254,7 +257,7 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
                 # Wait until file is not being modified any more
                 elif self.state == self.STATE_WATCHING:
                     t = time.time()
-                    if t - mtime >= self.settle_time:
+                    if t - mtime >= self.settle_window:
                         self.state = self.STATE_SETTLED
                         self._log.debug('file settled '
                                         '(mtime=%f, t=%f, diff=%f) '

@@ -26,7 +26,6 @@ def initialize_logging(logger, stream_level=logging.WARNING,
     """
     log_formatter = logging.Formatter(
         "%(levelname)7s - %(asctime)s - %(name)s.%(funcName)s - %(message)s"
-        # "%(levelname)7s - %(asctime)s - %(name)s - %(message)s"
     )
 
     stream_handler = logging.StreamHandler()

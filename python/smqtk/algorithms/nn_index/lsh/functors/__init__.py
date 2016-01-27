@@ -1,3 +1,6 @@
+"""
+Interface and plugin getter for LSH algorithm hash generation functors.
+"""
 import abc
 import os
 

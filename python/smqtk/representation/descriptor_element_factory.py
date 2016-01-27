@@ -2,6 +2,7 @@ from smqtk.representation import \
     SmqtkRepresentation, \
     get_descriptor_element_impls
 from smqtk.utils.plugin import make_config
+from smqtk.utils.configuration import merge_configs
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -49,7 +50,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         return make_config(get_descriptor_element_impls)
 
     @classmethod
-    def from_config(cls, config_dict):
+    def from_config(cls, config_dict, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
@@ -61,15 +62,22 @@ class DescriptorElementFactory (SmqtkRepresentation):
             a configuration.
         :type config_dict: dict
 
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
         :return: Constructed instance from the provided config.
         :rtype: DescriptorElementFactory
 
         """
-        merged_config = cls.get_default_config()
-        merged_config.update(config_dict)
+        if merge_default:
+            merged_config = cls.get_default_config()
+            merge_configs(merged_config, config_dict)
+            config_dict = merged_config
+
         return DescriptorElementFactory(
-            get_descriptor_element_impls()[merged_config['type']],
-            merged_config[merged_config['type']]
+            get_descriptor_element_impls()[config_dict['type']],
+            config_dict[config_dict['type']]
         )
 
     def get_config(self):

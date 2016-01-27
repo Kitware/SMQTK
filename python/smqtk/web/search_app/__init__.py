@@ -38,10 +38,6 @@ class IqrSearchApp (SmqtkWebApp):
         })
         return c
 
-    @classmethod
-    def from_config(cls, config_dict):
-        return cls(config_dict)
-
     def __init__(self, json_config):
         super(IqrSearchApp, self).__init__(json_config)
 

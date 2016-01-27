@@ -2,6 +2,8 @@ import abc
 import inspect
 import types
 
+from smqtk.utils.configuration import merge_configs
+
 
 __author__ = "paul.tunison@kitware.com"
 
@@ -52,7 +54,7 @@ class Configurable (object):
         return {}
 
     @classmethod
-    def from_config(cls, config_dict):
+    def from_config(cls, config_dict, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
@@ -64,6 +66,10 @@ class Configurable (object):
             a configuration.
         :type config_dict: dict
 
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
         :return: Constructed instance from the provided config.
         :rtype: Configurable
 
@@ -72,9 +78,12 @@ class Configurable (object):
         # parameters other than those that can be provided via the JSON
         # specification, which we cover here. If an implementation needs
         # something more special, they can override this function.
-        merged_config = cls.get_default_config()
-        merged_config.update(config_dict)
-        return cls(**merged_config)
+        if merge_default:
+            merged_config = cls.get_default_config()
+            merge_configs(merged_config, config_dict)
+            config_dict = merged_config
+
+        return cls(**config_dict)
 
     @abc.abstractmethod
     def get_config(self):

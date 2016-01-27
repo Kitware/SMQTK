@@ -30,13 +30,10 @@ except ImportError:
 
 from threading import current_thread
 
-from smqtk.utils import (
-    DistanceKernel,
-    FeatureMemory,
-    FeatureMemoryMap,
-    ReadWriteLock,
-    TimedCache
-)
+from .distance_kernel import DistanceKernel
+from .feature_memory import FeatureMemory, FeatureMemoryMap
+from . import ReadWriteLock
+from .timed_cache import TimedCache
 
 
 # Create singleton objects if they don't exist a the time of import

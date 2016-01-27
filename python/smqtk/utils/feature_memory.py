@@ -10,9 +10,9 @@ import logging
 import multiprocessing
 import numpy as np
 
-from smqtk.utils import DistanceKernel
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
+from smqtk.utils.distance_kernel import DistanceKernel
 
 
 class FeatureMemory (object):

@@ -6,16 +6,13 @@ import unittest
 import nose.tools as ntools
 import numpy
 
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
-from smqtk.utils.file_utils import make_tempfile
-
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
-from smqtk.algorithms.nn_index.hash_index.sklearn_balltree \
-    import SkLearnBallTreeHashIndex
+from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
+    SkLearnBallTreeHashIndex
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 
 
@@ -120,6 +117,10 @@ class TestLshIndex (unittest.TestCase):
 
         DescriptorMemoryElement.MEMORY_CACHE = {}
 
+    def test_random_euclidean__itq__None(self):
+        ftor, fit = self._make_ftor_itq()
+        self._random_euclidean(ftor, None, fit)
+
     def test_random_euclidean__itq__linear(self):
         ftor, fit = self._make_ftor_itq()
         hi = self._make_hi_linear()
@@ -175,6 +176,14 @@ class TestLshIndex (unittest.TestCase):
         ntools.assert_equal(dists[0], 0.)
 
         DescriptorMemoryElement.MEMORY_CACHE = {}
+
+    def test_known_unit__euclidean__itq__None(self):
+        ftor, fit = self._make_ftor_itq()
+        self._known_unit(ftor, None, 'euclidean', fit)
+
+    def test_known_unit__hik__itq__None(self):
+        ftor, fit = self._make_ftor_itq()
+        self._known_unit(ftor, None, 'hik', fit)
 
     def test_known_unit__euclidean__itq__linear(self):
         ftor, fit = self._make_ftor_itq()
@@ -232,6 +241,10 @@ class TestLshIndex (unittest.TestCase):
         r, dists = index.nn(q, i)
         for j, d, dist in zip(range(i), r, dists):
             ntools.assert_equal(d.uuid(), j)
+
+    def test_known_ordered_euclidean__itq__None(self):
+        ftor, fit = self._make_ftor_itq(8)
+        self._known_ordered_euclidean(ftor, None, fit)
 
     def test_known_ordered_euclidean__itq__linear(self):
         ftor, fit = self._make_ftor_itq(8)

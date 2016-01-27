@@ -3,19 +3,26 @@ This module contains a general base locality-sensitive-hashing algorithm for
 nearest neighbor indexing, and various implementations of LSH functors for use
 in the base.
 """
+import atexit
 import cPickle
 import os
 import time
+import threading
+
+import numpy
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
+from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import distance_functions
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
+from smqtk.utils.configuration import merge_configs
 from smqtk.utils.errors import ReadOnlyError
+from smqtk.utils.file_utils import FileModificationMonitor
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -75,11 +82,14 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         hi_default = plugin.make_config(get_hash_index_impls)
         default['hash_index'] = hi_default
+        default['hash_index_comment'] = "'hash_index' may also be null to " \
+                                        "default to a linear index built at " \
+                                        "query time."
 
         return default
 
     @classmethod
-    def from_config(cls, config_dict):
+    def from_config(cls, config_dict, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
@@ -91,12 +101,20 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             a configuration.
         :type config_dict: dict
 
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
         :return: Constructed instance from the provided config.
         :rtype: LSHNearestNeighborIndex
 
         """
-        merged = cls.get_default_config()
-        merged.update(config_dict)
+        # Controlling merge here so we can control known comment stripping.
+        if merge_default:
+            merged = cls.get_default_config()
+            merge_configs(merged, config_dict)
+        else:
+            merged = config_dict
 
         merged['lsh_functor'] = \
             plugin.from_plugin_config(merged['lsh_functor'],
@@ -104,15 +122,23 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         merged['descriptor_index'] = \
             plugin.from_plugin_config(merged['descriptor_index'],
                                       get_descriptor_index_impls)
-        merged['hash_index'] = \
-            plugin.from_plugin_config(merged['hash_index'],
-                                      get_hash_index_impls)
 
-        return super(LSHNearestNeighborIndex, cls).from_config(merged)
+        # Hash index may be None for a default at-query-time linear indexing
+        if merged['hash_index'] is not None:
+            merged['hash_index'] = \
+                plugin.from_plugin_config(merged['hash_index'],
+                                          get_hash_index_impls)
 
-    def __init__(self, lsh_functor, descriptor_index, hash_index,
+        # remove possible comment added by default generator
+        if 'hash_index_comment' in merged:
+            del merged['hash_index_comment']
+
+        return super(LSHNearestNeighborIndex, cls).from_config(merged, False)
+
+    def __init__(self, lsh_functor, descriptor_index, hash_index=None,
                  hash2uuid_cache_filepath=None,
-                 distance_method='cosine', read_only=False):
+                 distance_method='cosine', read_only=False,  live_reload=False,
+                 reload_mon_interval=0.1, reload_settle_window=1.0):
         """
         Initialize LSH algorithm with a hashing functor, descriptor index and
         hash nearest-neighbor index.
@@ -135,7 +161,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         :param hash_index: ``HashIndex`` for indexing unique hash codes using
             hamming distance.
-        :type hash_index: smqtk.algorithms.nn_index.hash_index.HashIndex
+
+            If this is set to ``None`` (default), we will perform brute-force
+            linear neighbor search for each query based on the hash codes
+            currently in the hash2uuid index using hamming distance
+        :type hash_index: smqtk.algorithms.nn_index.hash_index.HashIndex | None
 
         :param hash2uuid_cache_filepath: Path to save the hash code to
             descriptor UUID mapping. If provided, this is written to when
@@ -160,9 +190,29 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         :param read_only: If this index should only read from its configured
             descriptor and hash indexes. This will cause a ``ReadOnlyError`` to
-            be raised from build_index. The exception to this is if the
+            be raised from build_index.
+        :type read_only: bool
+
+        :param live_reload: Activate live reloading of local model elements
+            from disk. This option does nothing if ``hash2uuid_cache_filepath``
+            is ``None`` (no cached model on disk).
+
+            This only affects this implementations controlled elements and not
+            this implementation's sub-structures.
+        :type live_reload: bool
+
+        :param reload_mon_interval: Frequency in seconds at which we check file
+            modification times. This must be >= 0.
+        :type reload_mon_interval: float
+
+        :param reload_settle_window: File modification window, after which we
+            consider the file done being modified and reload it. This must be
+            >= 0 and should be >= the ``reload_mon_interval``.
+        :type reload_settle_window: float
 
         :raises ValueError: Invalid distance method specified.
+        :raises ValueError: Live reload is on and the associated options were
+            invalid (see ``FileModificationMonitor`` for details)
 
         """
         super(LSHNearestNeighborIndex, self).__init__()
@@ -173,17 +223,39 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.hash2uuid_cache_filepath = hash2uuid_cache_filepath
         self.distance_method = distance_method
         self.read_only = read_only
+        self.live_reload = live_reload
+        self.reload_mon_interval = reload_mon_interval
+        self.reload_settle_window = reload_settle_window
 
         #: :type: dict[int|long, set[collections.Hashable]]
         self._hash2uuid = {}
+        self._hash2uuid_lock = threading.Lock()
+        self._hash2uuid_monitor = None
+        self._hash2uuid_sighandler = None
+
         self._distance_function = self._get_dist_func(self.distance_method)
 
         # Load hash2uuid model if it exists
         if self.hash2uuid_cache_filepath and \
                 os.path.isfile(self.hash2uuid_cache_filepath):
-            with open(self.hash2uuid_cache_filepath) as f:
-                #: :type: dict[int|long, set[collections.Hashable]]
-                self._hash2uuid = cPickle.load(f)
+            self._reload_hash2uuid(self.hash2uuid_cache_filepath)
+
+            if self.live_reload:
+                self._log.debug("Starting file monitor with reload: hash2uuid")
+                self._hash2uuid_monitor = FileModificationMonitor(
+                    self.hash2uuid_cache_filepath,
+                    self.reload_mon_interval, self.reload_settle_window,
+                    self._reload_hash2uuid
+                )
+                self._hash2uuid_monitor.start()
+                atexit.register(self._stop_monitor,
+                                self.hash2uuid_cache_filepath,
+                                self._hash2uuid_monitor)
+
+    def __del__(self):
+        if hasattr(self, '_hash2uuid_monitor') and self._hash2uuid_monitor:
+            self._stop_monitor(self.hash2uuid_cache_filepath,
+                               self._hash2uuid_monitor)
 
     @staticmethod
     def _get_dist_func(distance_method):
@@ -202,14 +274,43 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
 
+    def _stop_monitor(self, fp, monitor):
+        """
+        Shutdown hook for monitor thread when live reload is on.
+        """
+        self._log.debug("stopping monitor for path: %s", fp)
+        monitor.stop()
+        monitor.join()
+        self._log.debug("stopping monitor for path: %s -- Done", fp)
+
+    def _reload_hash2uuid(self, filepath):
+        """
+        Safely reload hash-to-uuid mapping cache from disk
+        """
+        self._log.debug("(Re)Loading hash2uuid from disk")
+        # Load outside of lock, swap with instance attribute inside lock
+        with open(filepath) as f:
+            #: :type: dict[int|long, set[collections.Hashable]]
+            new_hash2uuid = cPickle.load(f)
+
+        with self._hash2uuid_lock:
+            self._hash2uuid = new_hash2uuid
+        self._log.debug("(Re)Loading hash2uuid from disk -- Done")
+
     def get_config(self):
+        hi_conf = None
+        if self.hash_index is not None:
+            hi_conf = plugin.to_plugin_config(self.hash_index)
         return {
             "lsh_functor": plugin.to_plugin_config(self.lsh_functor),
             "descriptor_index": plugin.to_plugin_config(self.descriptor_index),
-            "hash_index": plugin.to_plugin_config(self.hash_index),
+            "hash_index": hi_conf,
             "hash2uuid_cache_filepath": self.hash2uuid_cache_filepath,
             "distance_method": self.distance_method,
             "read_only": self.read_only,
+            "live_reload": self.live_reload,
+            "reload_mon_interval": self.reload_mon_interval,
+            "reload_settle_window": self.reload_settle_window,
         }
 
     def count(self):
@@ -221,7 +322,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements.
+        Build the index over the descriptor data elements. This in turn builds
+        the configured hash index if one is set.
 
         Subsequent calls to this method should rebuild the index, not add to
         it, or raise an exception to as to protect the current index.
@@ -243,16 +345,19 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.descriptor_index.add_many_descriptors(descriptors)
 
         self._log.debug("Generating hash codes")
-        self._hash2uuid = \
+        new_hash2uuid = \
             self.build_from_descriptor_index(self.descriptor_index,
                                              self.hash_index,
                                              self.lsh_functor)
 
-        if self.hash2uuid_cache_filepath:
-            self._log.debug("Writing out hash2uuid map: %s",
-                            self.hash2uuid_cache_filepath)
-            with open(self.hash2uuid_cache_filepath, 'w') as f:
-                cPickle.dump(self._hash2uuid, f)
+        with self._hash2uuid_lock:
+            self._hash2uuid = new_hash2uuid
+
+            if self.hash2uuid_cache_filepath:
+                self._log.debug("Writing out hash2uuid map: %s",
+                                self.hash2uuid_cache_filepath)
+                with open(self.hash2uuid_cache_filepath, 'w') as f:
+                    cPickle.dump(self._hash2uuid, f)
 
     @classmethod
     def build_from_descriptor_index(cls, descriptor_index, hash_index,
@@ -308,8 +413,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
                 hash2uuid[h_int].add(d.uuid())
 
-        cls.logger().debug("Building hash index from unique hash codes")
-        hash_index.build_index(iter_add_hashes())
+        if hash_index is None:
+            # Scan through above function to fill in hash2uuid mapping
+            list(iter_add_hashes())
+        else:
+            cls.logger().debug("Building hash index from unique hash codes")
+            hash_index.build_index(iter_add_hashes())
 
         return hash2uuid
 
@@ -328,6 +437,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
+        super(LSHNearestNeighborIndex, self).nn(d, n)
+
         self._log.debug("generating has for descriptor")
         d_v = d.vector()
         d_h = self.lsh_functor.get_hash(d_v)
@@ -336,12 +447,21 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             return self._distance_function(d_v, d2_v)
 
         self._log.debug("getting near hashes")
-        hashes, hash_dists = self.hash_index.nn(d_h, n)
+        hi = self.hash_index
+        # Make on-the-fly linear index if we weren't originally set with one
+        if hi is None:
+            hi = LinearHashIndex()
+            # not calling ``build_index`` because we already have the int
+            # hashes.
+            with self._hash2uuid_lock:
+                hi.index = numpy.array(self._hash2uuid.keys())
+        hashes, hash_dists = hi.nn(d_h, n)
 
         self._log.debug("getting UUIDs of descriptors for hashes")
         neighbor_uuids = []
-        for h_int in map(bit_vector_to_int_large, hashes):
-            neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
+        with self._hash2uuid_lock:
+            for h_int in map(bit_vector_to_int_large, hashes):
+                neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")
@@ -360,3 +480,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                          key=lambda p: p[1])
         self._log.debug('-- slicing top n=%d', n)
         return zip(*(ordered[:n]))
+
+
+# Marking only LSH as the valid impl, otherwise the hash index default would
+#   also be picked up (because it also descends from NearestNeighborsIndex).
+NN_INDEX_CLASS = LSHNearestNeighborIndex

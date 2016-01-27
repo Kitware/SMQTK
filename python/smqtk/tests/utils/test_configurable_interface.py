@@ -82,7 +82,7 @@ class TestAlgo2 (Configurable):
         return default
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config, merge_default=True):
         config['child'] = TestAlgo1(**config['child'])
         return cls(**config)
 

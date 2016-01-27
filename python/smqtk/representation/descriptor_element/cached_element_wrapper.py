@@ -1,4 +1,3 @@
-import logging
 import threading
 import time
 
@@ -66,18 +65,15 @@ class CachingDescriptorElement (DescriptorElement):
         return c
 
     @classmethod
-    def from_config(cls, config_dict, type_str, uuid):
-        merged_config = cls.get_default_config()
-        merged_config.update(config_dict)
-
+    def from_config(cls, config_dict, type_str, uuid, merge_default=True):
         # convert factory configuration
-        merged_config['wrapped_element_factory'] = \
+        config_dict['wrapped_element_factory'] = \
             DescriptorElementFactory.from_config(
-                merged_config['wrapped_element_factory']
+                config_dict['wrapped_element_factory']
             )
 
         return super(CachingDescriptorElement, cls).from_config(
-            merged_config, type_str, uuid
+            config_dict, type_str, uuid, merge_default
         )
 
     def __init__(self, type_str, uuid, wrapped_element_factory,

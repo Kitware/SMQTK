@@ -10,6 +10,7 @@ import flask
 
 import smqtk.utils
 from smqtk.utils import plugin
+from smqtk.utils.configuration import merge_configs
 
 
 class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
@@ -52,7 +53,11 @@ class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
         }
 
     @classmethod
-    def from_config(cls, config_dict):
+    def from_config(cls, config_dict, merge_default=True):
+        if merge_default:
+            merged = cls.get_default_config()
+            merge_configs(merged, config_dict)
+            config_dict = merged
         return cls(config_dict)
 
     def __init__(self, json_config):

@@ -3,6 +3,7 @@ import os
 
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
+from smqtk.utils.configuration import merge_configs
 
 from ._exceptions import *
 
@@ -18,6 +19,8 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
     values (floating point in ``[0,1]`` range). If a classifier does no produce
     continuous confidence values, it may instead assign a value of ``1.0`` to a
     single label, and ``0.0`` to the rest.
+
+    UUIDs must maintain unique-ness when transformed into a string.
 
     The sum of all values should be ``1.0``.
 
@@ -108,7 +111,7 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
 
     # noinspection PyMethodOverriding
     @classmethod
-    def from_config(cls, config_dict, type_name, uuid):
+    def from_config(cls, config_dict, type_name, uuid, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
@@ -127,15 +130,19 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
         :param uuid: Unique ID reference of the classification
         :type uuid: collections.Hashable
 
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
         :return: Constructed instance from the provided config.
         :rtype: ClassificationElement
 
         """
         c = {}
-        c.update(config_dict)
+        merge_configs(c, config_dict)
         c['type_name'] = type_name
         c['uuid'] = uuid
-        return super(ClassificationElement, cls).from_config(c)
+        return super(ClassificationElement, cls).from_config(c, merge_default)
 
     def max_label(self):
         """

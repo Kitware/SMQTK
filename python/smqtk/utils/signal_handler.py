@@ -19,8 +19,8 @@ import threading
 
 class SignalHandler(object):
     """
-    Object for handling knowledge of whether a particular system signal has been
-    caught for the current thread of execution.
+    Object for handling knowledge of whether a particular system signal has
+    been caught for the current thread of execution.
 
     This object is thread safe and acts in a synchronous manner.
     """
@@ -50,16 +50,20 @@ class SignalHandler(object):
         Callback method to be registered to signal.signal for a particular
         signal to catch.
         """
-        #print "Caught signal:", signum
+        # print "Caught signal:", signum
         with self.__s_lock:
             self._log.debug("'%s' caught", self._sig_map[signum])
             self.__signal_caught[signum] = True
 
     def _gen_signal_handle(self, custom_func=None):
         """
-        :param custom_func: A custom signal handle function to add functionality
-            to our handler.
-        :type custom_func: types.MethodType or types.FunctionType
+        Generated a callback method to be registered to signal.signal for a
+        particular signal to catch.
+
+        :param custom_func: A custom signal handle function to add
+            functionality to our handler.
+        :type custom_func: (int, None|frame) -> None
+
         :return: Function handle method for registering.
         :rtype: types.FunctionType
 
@@ -68,6 +72,10 @@ class SignalHandler(object):
             """
             Callback method to be registered to signal.signal for a particular
             signal to catch.
+
+            :type signum: int
+            :type stack: None | frame
+
             """
             with self.__s_lock:
                 self._log.debug("'%s' caught", self._sig_map[signum])
@@ -80,7 +88,8 @@ class SignalHandler(object):
 
     def register_signal(self, signum, custom_func=None):
         """
-        Register a signal to be handled and monitored if not already registered.
+        Register a signal to be handled and monitored if not already
+        registered.
         We will override and record the previous handler so that we may put it
         back if/when unregister that signal.
 
@@ -94,11 +103,17 @@ class SignalHandler(object):
 
         If we have already registered the given signal, we return False.
 
-        @type signum: int
-        @param signum: The identifying integer value of the signal to check.
+        :type signum: int
+        :param signum: The identifying integer value of the signal to check.
         (use signal.SIGINT, signal.SIGTERM, etc.)
 
-        @return: True of we successfully registered a new signal, or False if
+        :param custom_func: Custom callback function to be called when the
+            specified signal is caught. This function must take two arguments
+            where the first is the integer signal identifier and the second
+            is the stack frame in which the signal was caught.
+        :type custom_func: (int, frame) -> None
+
+        :return: True of we successfully registered a new signal, or False if
         the signal is already registered.
 
         """
@@ -121,8 +136,8 @@ class SignalHandler(object):
 
         If the given signal is not registered, we return False.
 
-        @type signum: int
-        @param signum: The identifying integer value of the signal to check.
+        :type signum: int
+        :param signum: The identifying integer value of the signal to check.
         (use signal.SIGINT, signal.SIGTERM, etc.)
 
         return: True if we successfully unregistered a signal, or False if the
@@ -145,24 +160,24 @@ class SignalHandler(object):
         """
         Return what signals are currently registered in this handler
 
-        @return: what signals are currently registered in this handler
-        @rtype: list of int
+        :return: what signals are currently registered in this handler
+        :rtype: list of int
 
         """
         return self.__prev_handlers.keys()
 
     def reset_signal(self, signum):
         """
-        Reset our knowledge of whether a particular signal has been caught. This
-        does NOT unregister any handlers.
+        Reset our knowledge of whether a particular signal has been caught.
+        This does NOT unregister any handlers.
 
         If the given signal is not registered, we return False.
 
-        @type signum: int
-        @param signum: The identifying integer value of the signal to check.
+        :type signum: int
+        :param signum: The identifying integer value of the signal to check.
         (use signal.SIGINT, signal.SIGTERM, etc.)
 
-        @return: True if the signal catch record was reset, and False if the
+        :return: True if the signal catch record was reset, and False if the
         given signal is not registered as being monitored.
 
         """
@@ -189,16 +204,16 @@ class SignalHandler(object):
     def is_signal_caught(self, signum):
         """
         Check if we have caught the given signal since the creation of the
-        object or since the last reset. We also return false if the given signal
-        isn't being monitored.
+        object or since the last reset. We also return false if the given
+        signal isn't being monitored.
 
-        @type signum: int
-        @param signum: The identifying integer value of the signal to check.
+        :type signum: int
+        :param signum: The identifying integer value of the signal to check.
         (use signal.SIGINT, signal.SIGTERM, etc.)
 
-        @rtype: bool
-        @return; True if the signal has been seen since creation/reset, or False
-        otherwise.
+        :rtype: bool
+        :return; True if the signal has been seen since creation/reset, or
+            False otherwise.
 
         """
         return self.__signal_caught.get(signum, False)

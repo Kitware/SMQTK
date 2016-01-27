@@ -254,9 +254,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def __del__(self):
         if hasattr(self, '_hash2uuid_monitor') and self._hash2uuid_monitor:
-            self._log.debug("stopping hash2uuid monitor thread")
-            self._hash2uuid_monitor.stop()
-            self._hash2uuid_monitor.join()
+            self._stop_monitor(self.hash2uuid_cache_filepath,
+                               self._hash2uuid_monitor)
 
     @staticmethod
     def _get_dist_func(distance_method):

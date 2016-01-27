@@ -61,7 +61,7 @@ class PostgresClassificationElement (ClassificationElement):
                  type_col='type_name', uuid_col='uid',
                  classification_col='classification',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
-                 db_pass=None):
+                 db_pass=None, pickle_protocol=-1):
         """
         Initialize new PostgresClassificationElement attached to some database
         credentials.
@@ -123,6 +123,10 @@ class PostgresClassificationElement (ClassificationElement):
             None if no password is to be used.
         :type db_pass: str | None
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(PostgresClassificationElement, self).__init__(type_name, uuid)
 
@@ -137,6 +141,8 @@ class PostgresClassificationElement (ClassificationElement):
         self.db_user = db_user
         self.db_pass = db_pass
 
+        self.pickle_protocol = pickle_protocol
+
     def get_config(self):
         return {
             "table_name": self.table_name,
@@ -149,6 +155,8 @@ class PostgresClassificationElement (ClassificationElement):
             "db_port": self.db_port,
             "db_user": self.db_user,
             "db_pass": self.db_pass,
+
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def get_psql_connection(self):
@@ -260,7 +268,8 @@ class PostgresClassificationElement (ClassificationElement):
                 "uuid_col": self.uuid_col,
             })
             q_values = {
-                "classification_val": psycopg2.Binary(cPickle.dumps(m)),
+                "classification_val":
+                    psycopg2.Binary(cPickle.dumps(m, self.pickle_protocol)),
                 "type_val": self.type_name,
                 "uuid_val": str(self.uuid),
             }

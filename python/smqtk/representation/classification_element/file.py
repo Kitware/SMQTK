@@ -19,7 +19,8 @@ class FileClassificationElement (ClassificationElement):
     def is_usable(cls):
         return True
 
-    def __init__(self, type_name, uuid, save_dir, subdir_split=None):
+    def __init__(self, type_name, uuid, save_dir, subdir_split=None,
+                 pickle_protocol=-1):
         """
         Initialize a file-base descriptor element.
 
@@ -44,10 +45,15 @@ class FileClassificationElement (ClassificationElement):
             element).
         :type subdir_split: None | int
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(FileClassificationElement, self).__init__(type_name, uuid)
 
         self.save_dir = osp.abspath(osp.expanduser(save_dir))
+        self.pickle_protocol = pickle_protocol
 
         # Saving components
         self.subdir_split = subdir_split
@@ -66,7 +72,8 @@ class FileClassificationElement (ClassificationElement):
     def get_config(self):
         return {
             "save_dir": self.save_dir,
-            'subdir_split': self.subdir_split
+            'subdir_split': self.subdir_split,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def has_classifications(self):
@@ -120,4 +127,4 @@ class FileClassificationElement (ClassificationElement):
             .set_classification(m, **kwds)
         file_utils.safe_create_dir(osp.dirname(self.filepath))
         with open(self.filepath, 'w') as f:
-            cPickle.dump(m, f)
+            cPickle.dump(m, f, self.pickle_protocol)

@@ -43,7 +43,7 @@ class DataFileSet (DataSet):
         """
         return True
 
-    def __init__(self, root_directory, uuid_chunk=10):
+    def __init__(self, root_directory, uuid_chunk=10, pickle_protocol=-1):
         """
         Initialize a new or existing file set from a root directory.
 
@@ -56,11 +56,16 @@ class DataFileSet (DataSet):
             into when saving element serializations.
         :type uuid_chunk: int
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(DataFileSet, self).__init__()
 
         self._root_dir = os.path.abspath(os.path.expanduser(root_directory))
         self._uuid_chunk = uuid_chunk
+        self.pickle_protocol = pickle_protocol
 
         self._log.debug("Initializing FileSet under root dir: %s",
                         self._root_dir)
@@ -115,6 +120,7 @@ class DataFileSet (DataSet):
         return {
             "root_directory": self._root_dir,
             "uuid_chunk": self._uuid_chunk,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def count(self):
@@ -166,7 +172,7 @@ class DataFileSet (DataSet):
             fp = self._fp_for_uuid(uuid)
             file_utils.safe_create_dir(osp.dirname(fp))
             with open(fp, 'wb') as f:
-                cPickle.dump(e, f)
+                cPickle.dump(e, f, self.pickle_protocol)
             self._log.debug("Wrote out element %s", e)
 
     def get_data(self, uuid):

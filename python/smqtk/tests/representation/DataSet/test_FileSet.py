@@ -14,6 +14,7 @@ class TestDataFileSet (unittest.TestCase):
         ntools.assert_equal(default_config, {
             'root_directory': None,
             'uuid_chunk': 10,
+            'pickle_protocol': -1,
         })
 
         default_config['root_directory'] = '/some/dir'

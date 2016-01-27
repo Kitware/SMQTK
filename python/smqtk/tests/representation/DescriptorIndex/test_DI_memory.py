@@ -118,28 +118,28 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
     def test_default_config(self):
         ntools.assert_equal(
             MemoryDescriptorIndex.get_default_config(),
-            {"file_cache": None}
+            {"file_cache": None, "pickle_protocol": -1}
         )
 
     def test_get_config(self):
         ntools.assert_equal(
             MemoryDescriptorIndex().get_config(),
-            {'file_cache': None}
+            {'file_cache': None, "pickle_protocol": -1}
         )
 
         ntools.assert_equal(
             MemoryDescriptorIndex(None).get_config(),
-            {'file_cache': None}
+            {'file_cache': None, "pickle_protocol": -1}
         )
 
         ntools.assert_equal(
             MemoryDescriptorIndex('/some/abs/path').get_config(),
-            {'file_cache': '/some/abs/path'}
+            {'file_cache': '/some/abs/path', "pickle_protocol": -1}
         )
 
         ntools.assert_equal(
             MemoryDescriptorIndex('some/rel/path').get_config(),
-            {'file_cache': 'some/rel/path'}
+            {'file_cache': 'some/rel/path', "pickle_protocol": -1}
         )
 
     def test_from_config(self):

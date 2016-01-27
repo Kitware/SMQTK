@@ -60,7 +60,9 @@ class SkLearnBallTreeHashIndex (HashIndex):
         if self.file_cache and self.bt:
             self._log.debug("Saving model: %s", self.file_cache)
             with open(self.file_cache, 'w') as f:
-                cPickle.dump(self.bt, f)
+                # Explicitly using protocol 0 because this breaks using other
+                # protocols when the model is large enough.
+                cPickle.dump(self.bt, f, 0)
             self._log.debug("Saving model: Done")
 
     def get_config(self):

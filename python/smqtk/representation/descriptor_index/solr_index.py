@@ -34,7 +34,8 @@ class SolrDescriptorIndex (DescriptorIndex):
     def __init__(self, solr_conn_addr, index_uuid,
                  index_uuid_field, d_uid_field, descriptor_field,
                  timestamp_field, solr_params=None,
-                 commit_on_add=True, max_boolean_clauses=1024):
+                 commit_on_add=True, max_boolean_clauses=1024,
+                 pickle_protocol=-1):
         """
         Construct a descriptor index pointing to a Solr instance.
 
@@ -77,6 +78,10 @@ class SolrDescriptorIndex (DescriptorIndex):
             instance's set value.
         :type max_boolean_clauses: int
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(SolrDescriptorIndex, self).__init__()
 
@@ -90,6 +95,8 @@ class SolrDescriptorIndex (DescriptorIndex):
         self.commit_on_add = commit_on_add
         self.max_boolean_clauses = int(max_boolean_clauses)
         assert self.max_boolean_clauses >= 2, "Need more clauses"
+
+        self.pickle_protocol = pickle_protocol
 
         self.solr_params = solr_params
         self.solr = solr.Solr(solr_conn_addr, **solr_params)
@@ -126,6 +133,7 @@ class SolrDescriptorIndex (DescriptorIndex):
             "solr_params": self.solr_params,
             "commit_on_add": self.commit_on_add,
             "max_boolean_clauses": self.max_boolean_clauses,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def count(self):
@@ -180,7 +188,8 @@ class SolrDescriptorIndex (DescriptorIndex):
 
         """
         doc = self._doc_for_code_descr(descriptor)
-        doc[self.descriptor_field] = cPickle.dumps(descriptor)
+        doc[self.descriptor_field] = cPickle.dumps(descriptor,
+                                                   self.pickle_protocol)
         doc[self.timestamp_field] = time.time()
         self.solr.add(doc, commit=self.commit_on_add)
 
@@ -201,7 +210,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         documents = []
         for d in descriptors:
             doc = self._doc_for_code_descr(d)
-            doc[self.descriptor_field] = cPickle.dumps(d)
+            doc[self.descriptor_field] = cPickle.dumps(d, self.pickle_protocol)
             doc[self.timestamp_field] = time.time()
             documents.append(doc)
         self.solr.add_many(documents)

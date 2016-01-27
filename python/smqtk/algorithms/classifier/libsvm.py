@@ -283,7 +283,7 @@ class LibSvmClassifier (SupervisedClassifier):
         if self.svm_label_map_fp:
             self._log.debug("saving file -- labels -- %s", self.svm_label_map_fp)
             with open(self.svm_label_map_fp, 'wb') as f:
-                cPickle.dump(self.svm_label_map, f)
+                cPickle.dump(self.svm_label_map, f, -1)
         if self.svm_model_fp:
             self._log.debug("saving file -- model -- %s", self.svm_model_fp)
             svmutil.svm_save_model(self.svm_model_fp, self.svm_model)

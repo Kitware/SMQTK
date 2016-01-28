@@ -119,6 +119,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             w.start()
 
         log.debug("Sending work packets")
+        in_queue_t.daemon = True
         in_queue_t.start()
 
         # Collect work from async

@@ -2,6 +2,10 @@ import json
 import logging
 import logging.handlers
 import os
+import time
+
+
+__author__ = "paul.tunison@kitware.com"
 
 
 def initialize_logging(logger, stream_level=logging.WARNING,
@@ -98,3 +102,49 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
                 json.dump(config_dict, f, indent=4, check_circular=True,
                           sort_keys=True)
             exit(0)
+
+
+def report_progress(log, state, interval):
+    """
+    Loop progress reporting function that logs (when in debug) loops per
+    second, loops in the last reporting period and total loops executed.
+
+    The ``state`` given to this function must be a list of 7 floats, initially
+    all set to 0. This function will update the fields of the state as its is
+    called to control when reporting should happen and what to report.
+
+    :param log: Logger to send debug message to.
+    :type log: logging.Logger
+
+    :param state: Reporting state. This should be initialized to a list of 6
+        zeros (floats), and then should not be modified externally from this
+        function.
+    :type state: list[float]
+
+    :param interval: Frequency in seconds that reporting messages should be
+        made. This should be greater than 0.
+    :type interval: float
+
+    """
+    # State format:
+    #   [lc, c, dc, lt, t, dt, st]
+    #   [ 0, 1,  2,  3, 4,  5,  6]
+
+    # Starting time
+    if not state[6]:
+        state[6] = time.time()
+
+    state[1] += 1
+    state[4] = time.time()
+    state[5] = state[4] - state[3]
+    if state[5] >= interval:
+        state[2] = state[1] - state[0]
+        # TODO: Could possibly to something with ncurses
+        #       - to maintain a single
+        #       line.
+        log.debug("Loops per second %f (avg %f) (%d / %d total)",
+                  state[2] / state[5],
+                  state[1] / (state[4] - state[6]),
+                  state[2], state[1])
+        state[3] = state[4]
+        state[0] = state[1]

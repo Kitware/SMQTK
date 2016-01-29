@@ -1,6 +1,7 @@
 import heapq
 import logging
 import multiprocessing
+import multiprocessing.queues
 import Queue
 import sys
 import threading
@@ -74,7 +75,7 @@ def parallel_map(data_iter, work_func,
     # Choose parallel types
     worker_kwds = {}
     if use_multiprocessing:
-        queue_t = multiprocessing.Queue
+        queue_t = multiprocessing.queues.Queue
         worker_t = _WorkProcess
     else:
         queue_t = Queue.Queue
@@ -198,7 +199,6 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     def __init__(self, data_iter, q, num_terminal_packets):
         super(_FeedQueueThread, self).__init__()
-        # self.daemon = True
 
         self.data_iter = data_iter
         self.q = q
@@ -242,7 +242,6 @@ class _WorkProcess (SmqtkObject, multiprocessing.Process):
 
     def __init__(self, i, work_function, in_q, out_q):
         super(_WorkProcess, self).__init__(name='[w%d]' % i)
-        # self.daemon = True
 
         self._log.debug("Making process worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
@@ -284,7 +283,6 @@ class _WorkThread (SmqtkObject, threading.Thread):
         """
         SmqtkObject.__init__(self)
         threading.Thread.__init__(self, name='[w%d]' % i)
-        # self.daemon = True
 
         self._log.debug("Making thread worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
@@ -356,8 +354,6 @@ class _ResultCollectionThread (SmqtkObject, threading.Thread):
         """
         SmqtkObject.__init__(self)
         threading.Thread.__init__(self)
-
-        # self.daemon = True
 
         self.q_in = q_in
         self.q_out = q_out

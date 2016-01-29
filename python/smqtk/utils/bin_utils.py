@@ -4,6 +4,8 @@ import logging.handlers
 import os
 import time
 
+from . import configuration
+
 
 __author__ = "paul.tunison@kitware.com"
 
@@ -50,6 +52,36 @@ def initialize_logging(logger, stream_level=logging.WARNING,
     #   * the logging object's level
     #   * The stream handlers level
     logger.setLevel(min(stream_level, file_level or stream_level))
+
+
+def load_config(config_path, defaults=None):
+    """
+    Load the JSON configuration dictionary from the specified filepath.
+
+    If the given path does not point to a valid file, we return an empty
+    dictionary or the default dictionary if one was provided, returning False
+    as our second return argument.
+
+    :param config_path: Path to the (valid) JSON configuration file.
+    :type config_path: str
+
+    :param defaults: Optional default configuration dictionary to merge loaded
+        configuration into. If provided, it will be modified in place.
+    :type defaults: dict | None
+
+    :return: The result configuration dictionary and if we successfully loaded
+        a JSON dictionary from the given filepath.
+    :rtype: (dict, bool)
+
+    """
+    if defaults is None:
+        defaults = {}
+    loaded = False
+    if config_path and os.path.isfile(config_path):
+        with open(config_path) as cf:
+            configuration.merge_configs(defaults, json.load(cf))
+            loaded = True
+    return defaults, loaded
 
 
 def output_config(output_path, config_dict, log=None, overwrite=False,
@@ -100,7 +132,7 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
             log.info("Outputting JSON configuration to: %s", output_path)
             with open(output_path, 'w') as f:
                 json.dump(config_dict, f, indent=4, check_circular=True,
-                          sort_keys=True)
+                          separators=(',', ': '), sort_keys=True)
             exit(0)
 
 

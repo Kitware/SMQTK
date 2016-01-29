@@ -12,6 +12,8 @@ Utilities
 
   * Added helper function for loop progress reporting and timing.
 
+  * Added helper function for JSON configuration loading.
+
 
 Fixes since v0.3.0
 ------------------

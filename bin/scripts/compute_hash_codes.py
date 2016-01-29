@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 import cPickle
 import logging
+import os
 
 from smqtk.algorithms import (
     get_lsh_functor_impls,
 )
-from smqtk.compute_functions import async_compute_hash_codes
+from smqtk.compute_functions import compute_hash_codes
 from smqtk.representation import (
     get_descriptor_index_impls,
 )
 from smqtk.utils import (
     bin_utils,
+    file_utils,
     plugin,
 )
 
@@ -67,6 +69,9 @@ def cli_parser():
     Due to using an input file-list of UUIDs, we require that the UUIDs of
     indexed descriptors be strings, or equality comparable to the UUIDs' string
     representation.
+
+    This script can be used to live update the ``hash2uuid_cache_filepath``
+    model file for the ``LSHNearestNeighborIndex`` algorithm.
     """
 
     parser = argparse.ArgumentParser(
@@ -75,6 +80,7 @@ def cli_parser():
     )
 
     parser.add_argument('-v', '--verbose',
+                        action='store_true', default=False,
                         help='Be more verbose (add debug logging).')
 
     g_config = parser.add_argument_group('Configuration')
@@ -121,13 +127,23 @@ def main():
     use_multiprocessing = config['utility']['use_multiprocessing']
     pickle_protocol = config['utility']['pickle_protocol']
 
+    #
+    # Checking parameters
+    #
+    if uuid_list_filepath is None or not os.path.isfile(uuid_list_filepath):
+        raise ValueError("No UUID list file given!")
+
+    #
     # Loading stuff
+    #
     log.info("Loading descriptor index")
+    #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
         get_descriptor_index_impls
     )
     log.info("Loading LSH functor")
+    #: :type: smqtk.algorithms.LshFunctor
     lsh_functor = plugin.from_plugin_config(
         config['plugins']['lsh_functor'],
         get_lsh_functor_impls
@@ -138,16 +154,38 @@ def main():
         with open(uuid_list_filepath) as f:
             for l in f:
                 yield l.strip()
-    log.info("Loading has2uuids mapping")
-    with open(hash2uuids_input_filepath) as f:
-        hash2uuids = cPickle.load(f)
 
-    async_compute_hash_codes(
+    # load map if it exists, else start with empty dictionary
+    if os.path.isfile(hash2uuids_input_filepath):
+        log.info("Loading hash2uuids mapping")
+        with open(hash2uuids_input_filepath) as f:
+            hash2uuids = cPickle.load(f)
+    else:
+        log.info("Creating new hash2uuids mapping for output")
+        hash2uuids = {}
+
+    #
+    # Compute codes
+    #
+    compute_hash_codes(
         uuids_for_processing(iter_uuids(), hash2uuids),
         descriptor_index,
         lsh_functor,
-        hash2uuids
+        hash2uuids,
+        report_interval=report_interval,
+        use_mp=use_multiprocessing,
     )
+
+    #
+    # Output results
+    #
+    tmp_output_filepath = hash2uuids_output_filepath+'.WRITING'
+    log.info("Writing hash-to-uuids map to disk: %s", tmp_output_filepath)
+    file_utils.safe_create_dir(os.path.dirname(hash2uuids_output_filepath))
+    with open(tmp_output_filepath, 'wb') as f:
+        cPickle.dump(hash2uuids, f, pickle_protocol)
+    log.info("Moving on top of input: %s", hash2uuids_output_filepath)
+    os.rename(tmp_output_filepath, hash2uuids_output_filepath)
 
 
 def test():

@@ -131,7 +131,7 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
             )
 
             log.debug("-- adding to index")
-            descr_index.add_many_descriptors(m.values())
+            descr_index.add_many_descriptors(m.itervalues())
 
             log.debug("-- yielding generated descriptor elements")
             for dfe in dfe_deque:
@@ -157,13 +157,17 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
             yield dfe._filepath, m[dfe]
 
 
-def async_compute_hash_codes(uuids, index, functor, hash2uuids=None,
-                             report_interval=1.0, use_mp=False):
+def compute_hash_codes(uuids, index, functor, hash2uuids=None,
+                       report_interval=1.0, use_mp=False):
     """
-    Given an iterable of DescriptorElement UUIDs, access them from the given
-    ``index``, asynchronously compute hash codes via ``functor`` and  convert
-    to an integer, and finally update the hash-uuids relationship map given in
-    ``update_map``.
+    Given an iterable of DescriptorElement UUIDs, asynchronously access them
+    from the given ``index``, asynchronously compute hash codes via ``functor``
+    and  convert to an integer, and finally update the hash-uuids relationship
+    map given in ``update_map``.
+
+    The dictionary input and returned is of the same format used by the
+    ``LSHNearestNeighborIndex`` implementation (mapping pointed to by the
+    ``hash2uuid_cache_filepath`` attribute).
 
     :param uuids: Sequence of UUIDs to process
     :type uuids: collections.Iterable[collections.Hashable]
@@ -198,13 +202,16 @@ def async_compute_hash_codes(uuids, index, functor, hash2uuids=None,
     if hash2uuids is None:
         hash2uuids = {}
 
+    # TODO: parallel map fetch elements from index
+    #       -> separately from compute
+
     def get_hash(u):
         v = index.get_descriptor(u).vector()
         return u, bit_utils.bit_vector_to_int_large(functor.get_hash(v))
 
     # Setup log and reporting function
     log = logging.getLogger(__name__)
-    report_state = [0.] * 7
+    report_state = [0] * 7
 
     # noinspection PyGlobalUndefined
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:

@@ -141,7 +141,7 @@ def report_progress(log, state, interval):
     Loop progress reporting function that logs (when in debug) loops per
     second, loops in the last reporting period and total loops executed.
 
-    The ``state`` given to this function must be a list of 7 floats, initially
+    The ``state`` given to this function must be a list of 7 integers, initially
     all set to 0. This function will update the fields of the state as its is
     called to control when reporting should happen and what to report.
 
@@ -164,7 +164,7 @@ def report_progress(log, state, interval):
 
     # Starting time
     if not state[6]:
-        state[6] = time.time()
+        state[3] = state[6] = time.time()
 
     state[1] += 1
     state[4] = time.time()

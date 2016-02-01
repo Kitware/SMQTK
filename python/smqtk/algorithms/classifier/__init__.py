@@ -1,11 +1,11 @@
 import abc
 import logging
-import multiprocessing.pool
 import os
-import time
 import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
+import smqtk.utils.bin_utils
+import smqtk.utils.parallel
 from smqtk.utils.plugin import get_plugins
 
 
@@ -105,67 +105,28 @@ class Classifier (SmqtkAlgorithm):
         self._log.info("Async classifying descriptors")
         ri = ri and ri > 0 and ri
 
-        # Mapping of DataElement to async processing result
-        ar_map = {}
-        # Mapping of DescriptorElement to its associated ClassificationElement
-        #: :type: dict[smqtk.representation.DescriptorElement, smqtk.representation.ClassificationElement]
-        d2c_map = {}
+        def work(d_elem):
+            return d_elem, self.classify(d_elem, factory, overwrite)
 
-        procs = procs and int(procs)
-        if use_multiprocessing:
-            pool = multiprocessing.pool.Pool(procs)
+        classifications = smqtk.utils.parallel.parallel_map(
+            d_iter, work, procs,
+            ordered=False,
+            use_multiprocessing=use_multiprocessing
+        )
+
+        r_state = [0] * 7
+        if ri:
+            r_progress = smqtk.utils.bin_utils.report_progress
         else:
-            pool = multiprocessing.pool.ThreadPool(procs)
+            r_progress = lambda *a: None
 
-        self._log.info("Queueing async work")
-        i = j = 0
-        s = lt = time.time()
-        for d in d_iter:
-            d2c_map[d] = factory.new_classification(self.name, d.uuid())
-            i += 1
-            if overwrite or not d2c_map[d].has_classifications():
-                ar_map[d] = pool.apply_async(_async_helper_classify,
-                                             args=(self, d))
-                j += 1
+        d2c_map = {}
+        for d, c in classifications:
+            d2c_map[d] = c
 
-            t = time.time()
-            if ri and t - lt >= ri:
-                self._log.debug("-- Scanned = %d :: Queued = %d "
-                                "(per second = %f)",
-                                i, j, i / (t - s))
-                lt = t
-        # Close pool input
-        pool.close()
-
-        self._log.info("Collecting results")
-        failures = False
-        s = lt = time.time()
-        for i, (d, ar) in enumerate(ar_map.iteritems()):
-            c = ar.get()
-            if c is None:
-                failures = True
-                continue
-            else:
-                d2c_map[d].set_classification(c)
-
-            # progress reporting
-            t = time.time()
-            if ri and t - lt >= ri:
-                self._log.debug("-- Complete = %d "
-                                "(per second = %f)",
-                                i, i / (t - s))
-                lt = t
-        pool.join()
-
-        if failures:
-            raise RuntimeError("Failure occurred during descriptor "
-                               "classification. See logging.")
+            r_progress(self._log, r_state, ri)
 
         return d2c_map
-
-    #
-    # TODO: classify_iterator -> see elements_to_matrix for pipeline
-    #
 
     #
     # Abstract methods

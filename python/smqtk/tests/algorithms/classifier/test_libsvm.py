@@ -89,28 +89,34 @@ if LibSvmClassifier.is_usable():
                 d_neg_sync[d] = c
 
             # test that async classify produces the same results
+            # -- d_pos
             m_pos = classifier.classify_async(d_pos, c_factory)
             ntools.assert_equal(m_pos, d_pos_sync,
                                 "Async computation of pos set did not yield "
                                 "the same results as synchronous "
                                 "classification.")
+            # -- d_neg
             m_neg = classifier.classify_async(d_neg, c_factory)
             ntools.assert_equal(m_neg, d_neg_sync,
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous "
                                 "classification.")
-
+            # -- combined -- threaded
             combined_truth = dict(d_pos_sync.iteritems())
             combined_truth.update(d_neg_sync)
-            m_combined = classifier.classify_async(d_pos + d_neg,
-                                                   c_factory)
+            m_combined = classifier.classify_async(
+                d_pos + d_neg, c_factory,
+                use_multiprocessing=False,
+            )
             ntools.assert_equal(m_combined, combined_truth,
                                 "Async computation of all test descriptors "
                                 "did not yield the same results as "
                                 "synchronous classification.")
-            # trying diff input order for kicks
-            m_combined = classifier.classify_async(d_neg + d_pos,
-                                                   c_factory)
+            # -- combined -- multiprocess
+            m_combined = classifier.classify_async(
+                d_pos + d_neg, c_factory,
+                use_multiprocessing=True,
+            )
             ntools.assert_equal(m_combined, combined_truth,
                                 "Async computation of all test descriptors "
                                 "(mixed order) did not yield the same results "
@@ -226,19 +232,23 @@ if LibSvmClassifier.is_usable():
             ntools.assert_equal(async_neg, d_neg_sync,
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous computation.")
-            # -- combined
+            # -- combined -- threaded
             sync_combined = dict(d_p1_sync.iteritems())
             sync_combined.update(d_p2_sync)
             sync_combined.update(d_neg_sync)
-            async_combined = classifier.classify_async(d_p1 + d_p2 + d_neg,
-                                                       c_factory)
+            async_combined = classifier.classify_async(
+                d_p1 + d_p2 + d_neg, c_factory,
+                use_multiprocessing=False
+            )
             ntools.assert_equal(async_combined, sync_combined,
                                 "Async computation of all test descriptors "
                                 "did not yield the same results as "
                                 "synchronous classification.")
-            # -- combined -- different order
-            async_combined = classifier.classify_async(d_p2 + d_neg + d_p1,
-                                                       c_factory)
+            # -- combined -- multiprocess
+            async_combined = classifier.classify_async(
+                d_p1 + d_p2 + d_neg, c_factory,
+                use_multiprocessing=True
+            )
             ntools.assert_equal(async_combined, sync_combined,
                                 "Async computation of all test descriptors "
                                 "(mixed order) did not yield the same results "

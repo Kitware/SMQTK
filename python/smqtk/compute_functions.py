@@ -202,7 +202,7 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
     if hash2uuids is None:
         hash2uuids = {}
 
-    # TODO: parallel map fetch elements from index
+    # TODO: parallel map fetch elements from index?
     #       -> separately from compute
 
     def get_hash(u):

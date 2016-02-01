@@ -17,22 +17,20 @@ def parallel_map(data_iter, work_func,
                  use_multiprocessing=False, thread_q_put_interval=0.001):
     """
     Generalized local parallelization helper for executing embarrassingly
-    parallel functions on an iterable of input data. This function the yields
-    work results for data in the order that they were provided to this
+    parallel functions on an iterable of input data. This function then yields
+    work results for data, optionally the order that they were provided to this
     function.
 
-    work_func(i, data) -> result | None
-        - Where ``i`` is the index in the input data iteration this data is
-            from, and ``data`` is the data element.
-        - When in multiprocessing mode, this cannot be a local function or a
-          transport error will occur when trying to move the function to the
-          worker process..
+    :TODO: This currently only works for functions that take a single parameter
+    but can be fairly easily extended to take multiple argument sequences +
+    an option on whether to stop on the shorted or longest sequence (i.e. map
+    vs. imap semantics)
 
-    :param data_iter:
+    :param data_iter: Input data to map to the given ``work_func``.
     :type data_iter: collections.Iterable
 
     :param work_func:
-        Function that performs some work on some data, resulting in some
+        Function that performs some work on input data, resulting in some
         returned value.
 
         When in multiprocessing mode, this cannot be a local function or a

@@ -32,3 +32,7 @@ Utilities
 
 Fixes since v0.3.0
 ------------------
+
+ClassificationElement
+
+  * Fixed memory implementation serialization

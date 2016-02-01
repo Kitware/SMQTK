@@ -39,13 +39,21 @@ class MemoryClassificationElement (ClassificationElement):
         self._c_lock = RLock()
 
     def __getstate__(self):
+        state = {
+            'type': self.type_name,
+            'uuid': self.uuid
+        }
         with self._c_lock:
-            return self._c
+            state['c'] = self._c
+        return state
 
     def __setstate__(self, state):
+        self.type_name = state['type']
+        self.uuid = state['uuid']
         self._c_lock = RLock()
-        #: :type: None | dict[collections.Hashable, float]
-        self._c = state
+        with self._c_lock:
+            #: :type: None | dict[collections.Hashable, float]
+            self._c = state['c']
 
     def get_config(self):
         """

@@ -21,6 +21,20 @@ def parallel_map(data_iter, work_func,
     work results for data, optionally the order that they were provided to this
     function.
 
+    This is intended to be able to replace ``multiprocessing.pool.Pool`` and
+    ``multiprocessing.pool.ThreadPool`` uses with the added benefit of:
+        - No set-up or clean-up needed
+        - No performance loss compared to ``multiprocessing.pool`` classes
+          for non-trivial work functions (like IO operations).
+        - We iterate results as they are ready (optionally in order of
+          input)
+        - Lambda or on-the-fly function can be provided as the work function
+          when using multiprocessing.
+
+    This function is, however, slower than multiprocessing.pool classes for
+    trivial functions, like using the function ``ord`` over a set of
+    characters.
+
     :TODO: This currently only works for functions that take a single parameter
     but can be fairly easily extended to take multiple argument sequences +
     an option on whether to stop on the shorted or longest sequence (i.e. map
@@ -86,39 +100,46 @@ def parallel_map(data_iter, work_func,
 
     queue_work = queue_t()
     queue_results = queue_t(int(procs * buffer_factor))
-    # between collector thread and here
-    queue_output = Queue.Queue(int(procs * buffer_factor))
+
     log.debug("Constructing worker processes")
     workers = [worker_t(i, work_func, queue_work, queue_results, **worker_kwds)
                for i in range(procs)]
 
     log.debug("Constructing feeder thread")
     feeder_thread = _FeedQueueThread(data_iter, queue_work, len(workers))
-    log.debug("Constructing collection thread")
-    collection_thread = _ResultCollectionThread(queue_results, queue_output,
-                                                len(workers), ordered,
-                                                thread_q_put_interval)
 
     try:
         log.debug("Starting worker processes")
         for w in workers:
             w.start()
 
-        log.debug("Starting collection thread")
-        collection_thread.start()
         log.debug("Starting feeder thread")
         feeder_thread.start()
 
         # Collect/Yield work results
-        log.debug("Aggregating results")
-        results_left = True
-        while results_left:
-            r = queue_output.get()
-            if is_terminal(r):
-                log.debug("main received terminal")
-                results_left = False
+        found_terminals = 0
+        heap = []
+        next_index = 0
+        while found_terminals < len(workers):
+            packet = queue_results.get()
+
+            if is_terminal(packet):
+                found_terminals += 1
             else:
-                yield r
+                i, result = packet
+                if ordered:
+                    heapq.heappush(heap, (i, result))
+                    if heap[0][0] == next_index:
+                        _, result = heapq.heappop(heap)
+                        yield result
+                        next_index += 1
+                else:
+                    yield result
+        # If we're in ordered mode, there may still be things left in the heap
+        # (received out of order).
+        while heap:
+            i, result = heapq.heappop(heap)
+            yield result
 
         # All work should be exhausted at this point
         if use_multiprocessing and sys.platform == 'darwin':
@@ -146,9 +167,6 @@ def parallel_map(data_iter, work_func,
         log.debug("Stopping feeder thread")
         feeder_thread.stop()
         feeder_thread.join()
-        log.debug("Stopping collection thread")
-        collection_thread.stop()
-        collection_thread.join()
 
         if use_multiprocessing:
             log.debug("Terminating/Joining worker processes")
@@ -321,98 +339,6 @@ class _WorkThread (SmqtkObject, threading.Thread):
         while not put and not self.stopped():
             try:
                 self.out_q.put(val, timeout=self.q_put_interval)
-                put = True
-            except Queue.Full:
-                pass
-
-
-class _ResultCollectionThread (SmqtkObject, threading.Thread):
-    """
-    Helper thread to accumulate results from workers and publish results to a
-    given queue.
-    """
-
-    def __init__(self, q_in, q_out, num_parent_workers, ordered,
-                 q_put_interval):
-        """
-
-        :param q_in: Expected contents in the format of (i, <result?)
-        :type q_in: Queue.Queue
-
-        :param q_out: Output format: <result>
-        :type q_out: Queue.Queue
-
-        :param num_parent_workers: Number of parent workers. Determines how
-            many terminal packets we expect to see in queue.
-        :type num_parent_workers: int
-
-        :param ordered: If results should be returned in index order or FIFO.
-        :type ordered: bool
-
-        """
-        SmqtkObject.__init__(self)
-        threading.Thread.__init__(self)
-
-        self.q_in = q_in
-        self.q_out = q_out
-        self.num_parent_workers = num_parent_workers
-        self.ordered = ordered
-        self.q_put_interval = q_put_interval
-
-        self._stop = threading.Event()
-
-    def stop(self):
-        self._stop.set()
-
-    def stopped(self):
-        return self._stop.isSet()
-
-    def run(self):
-        found_terminals = 0
-
-        # For maintaining return order
-        heap = []
-        next_index = 0
-
-        try:
-            while (found_terminals < self.num_parent_workers and
-                   not self.stopped()):
-                packet = self.q_in.get()
-
-                if is_terminal(packet):
-                    found_terminals += 1
-                else:
-                    i, result = packet
-
-                    if self.ordered:
-                        heapq.heappush(heap, (i, result))
-                        if heap[0][0] == next_index:
-                            _, result = heapq.heappop(heap)
-                            self.q_put(result)
-                            next_index += 1
-                    else:
-                        self.q_put(result)
-
-            # If we're in ordered mode, there may still be things left in the
-            # heap (received out of order).
-            while heap:
-                i, result = heapq.heappop(heap)
-                self.q_put(result)
-        finally:
-            self.q_put(_TerminalPacket())
-
-    def q_put(self, val):
-        """
-        Try to put the given value into the output queue until it is inserted
-        (if it was previously full), or the stop signal was given.
-
-        :param val: value to put into the output queue.
-
-        """
-        put = False
-        while not put and not self.stopped():
-            try:
-                self.q_out.put(val, timeout=self.q_put_interval)
                 put = True
             except Queue.Full:
                 pass

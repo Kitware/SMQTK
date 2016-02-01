@@ -27,3 +27,13 @@ class TestParallelMap (unittest.TestCase):
         r = list(parallel_map(self.test_string, self.test_func,
                               ordered=True, use_multiprocessing=True))
         nose.tools.assert_equal(r, self.expected)
+
+    def test_simple_unordered_threaded(self):
+        r = list(parallel_map(self.test_string, self.test_func,
+                              ordered=False, use_multiprocessing=False))
+        nose.tools.assert_equal(set(r), set(self.expected))
+
+    def test_simple_unordered_multiprocess(self):
+        r = list(parallel_map(self.test_string, self.test_func,
+                              ordered=False, use_multiprocessing=True))
+        nose.tools.assert_equal(set(r), set(self.expected))

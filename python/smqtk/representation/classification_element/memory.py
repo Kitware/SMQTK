@@ -35,7 +35,17 @@ class MemoryClassificationElement (ClassificationElement):
         # dictionary of classification labels and values
         #: :type: None | dict[collections.Hashable, float]
         self._c = None
+        # Cannot be pickled. New lock initialized upon pickle/unpickle
         self._c_lock = RLock()
+
+    def __getstate__(self):
+        with self._c_lock:
+            return self._c
+
+    def __setstate__(self, state):
+        self._c_lock = RLock()
+        #: :type: None | dict[collections.Hashable, float]
+        self._c = state
 
     def get_config(self):
         """

@@ -14,6 +14,12 @@ Compute Functions
   * Added function for asynchronously computing LSH codes for some number of
     input descriptor elements.
 
+Tools / Scripts
+
+  * Added CLI script for hash code generation and output to file. This script
+    is primarilly for support of LSHNearestNeighborsIndex live-reload
+    functionality.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an

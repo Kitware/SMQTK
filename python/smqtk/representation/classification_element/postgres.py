@@ -1,7 +1,7 @@
 import cPickle
 
 from smqtk.representation import ClassificationElement
-from smqtk.representation.classification_element import NoClassificationError
+from smqtk.utils.errors import NoClassificationError
 
 # Try to import required modules
 try:

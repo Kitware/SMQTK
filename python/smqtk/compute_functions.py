@@ -1,5 +1,9 @@
 """
 Collection of higher level functions to perform operational tasks.
+
+Some day, this module could have a companion module containing the CLI logic
+for these functions instead of scripts in ``<source>/bin/scripts``.
+
 """
 import collections
 import io
@@ -162,8 +166,7 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
     """
     Given an iterable of DescriptorElement UUIDs, asynchronously access them
     from the given ``index``, asynchronously compute hash codes via ``functor``
-    and  convert to an integer, and finally update the hash-uuids relationship
-    map given in ``update_map``.
+    and  convert to an integer, yielding (DescriptorElement, hash-int) pairs.
 
     The dictionary input and returned is of the same format used by the
     ``LSHNearestNeighborIndex`` implementation (mapping pointed to by the

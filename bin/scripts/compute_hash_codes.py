@@ -71,7 +71,8 @@ def cli_parser():
     representation.
 
     This script can be used to live update the ``hash2uuid_cache_filepath``
-    model file for the ``LSHNearestNeighborIndex`` algorithm.
+    model file for the ``LSHNearestNeighborIndex`` algorithm as output
+    dictionary format is the same as used by that implementation.
     """
 
     parser = argparse.ArgumentParser(

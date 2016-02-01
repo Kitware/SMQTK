@@ -1,12 +1,10 @@
 import cPickle
 import os.path as osp
 
-from smqtk.representation.classification_element import (
-    ClassificationElement,
-    NoClassificationError,
-)
+from smqtk.representation.classification_element import ClassificationElement
 
 from smqtk.utils import file_utils
+from smqtk.utils.errors import NoClassificationError
 from smqtk.utils.string_utils import partition_string
 
 

@@ -26,14 +26,17 @@ class Classifier (SmqtkAlgorithm):
     def classify(self, d, factory, overwrite=False):
         """
         Classify the input descriptor against one or more discrete labels,
-        outputting a ClassificationElement containing the classification result.
-
+        outputting a ClassificationElement containing the classification
+        result.
 
         We return confidence values for each label the configured model
         contains. Implementations may act in a discrete manner whereby only one
         label is marked with a ``1`` value (others being ``0``), or in a
-        continuous manner whereby each label is given a confidence-like value in
-        the [0, 1] range.
+        continuous manner whereby each label is given a confidence-like value
+        in the [0, 1] range.
+
+        The returned ``ClassificationElement`` will have the same UUID as the
+        input ``DescriptorElement``.
 
         :param d: Input descriptor to classify
         :type d: smqtk.representation.DescriptorElement
@@ -72,7 +75,8 @@ class Classifier (SmqtkAlgorithm):
         :type d_iter:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param factory: Classifier element factory to use for element generation
+        :param factory: Classifier element factory to use for element
+            generation.
         :type factory: smqtk.representation.ClassificationElementFactory
 
         :param overwrite: Recompute classification of the input descriptor and

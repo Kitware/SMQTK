@@ -1,9 +1,7 @@
 from threading import RLock
 
-from smqtk.representation.classification_element import (
-    ClassificationElement,
-    NoClassificationError,
-)
+from smqtk.representation.classification_element import ClassificationElement
+from smqtk.utils.errors import NoClassificationError
 
 
 __author__ = "paul.tunison@kitware.com"

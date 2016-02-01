@@ -21,7 +21,8 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
 
     UUIDs must maintain unique-ness when transformed into a string.
 
-    The sum of all values should be ``1.0``.
+    Element equality based on classification labels and values, not the type or
+    UUID.
 
     """
 
@@ -157,6 +158,9 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
         for i in self.get_classification().iteritems():
             if i[1] > m[1]:
                 m = i
+        if m[0] is None:
+            raise NoClassificationError("No classifications set to pick the "
+                                        "max of.")
         return m[0]
 
     #
@@ -196,30 +200,23 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
 
         Label/confidence values may either be provided via keyword arguments or
         by providing a dictionary mapping labels to confidence values.
+        Non-string labels must be provided via an input dictionary (``m``
+        parameter).
 
-        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
-        empty). Due to possible floating point error, we round to the 9-th
-        decimal digit.
-
-        NOTE TO IMPLEMENTORS: This abstract method will aggregate, and error
-        check, input into a single dictionary and return it. Thus, a ``super``
-        call should be made, which will return a dictionary.
+        NOTE TO IMPLEMENTORS: This abstract method will aggregate input into a
+        single dictionary, checks that there is anything in it and return it.
+        Thus, a ``super`` call should be made, which will return a dictionary.
 
         :param m: New labels-to-confidence mapping to set.
         :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty or values
-            did no sum to ``1.0``.
+        :raises ValueError: The given label-confidence map was empty.
 
         """
-        ROUND = 9
         m = m or {}
         m.update(kwds)
-        s = sum(m.values())
-        if round(s, ROUND) != 1.0:
-            raise ValueError("Classification map values do not sum "
-                             "sufficiently close to 1.0 (actual = %f)"
-                             % s)
+        if not m:
+            raise ValueError("No classification labels/values given.")
         return m
 
 

@@ -110,15 +110,10 @@ class FileClassificationElement (ClassificationElement):
         Label/confidence values may either be provided via keyword arguments or
         by providing a dictionary mapping labels to confidence values.
 
-        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
-        empty). Due to possible floating point error, we round to the 9-th
-        decimal digit.
-
         :param m: New labels-to-confidence mapping to set.
         :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty or values
-            did no sum to ``1.0``.
+        :raises ValueError: The given label-confidence map was empty.
 
         """
         m = super(FileClassificationElement, self)\

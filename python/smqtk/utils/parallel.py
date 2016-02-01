@@ -30,6 +30,9 @@ def parallel_map(data_iter, work_func,
           input)
         - Lambda or on-the-fly function can be provided as the work function
           when using multiprocessing.
+        - Buffered input/output queues so that mapping work of a very large
+          input set doesn't overrun your memory (e.g. iterating over many large
+          vectors/matrices).
 
     This function is, however, slower than multiprocessing.pool classes for
     trivial functions, like using the function ``ord`` over a set of
@@ -98,7 +101,7 @@ def parallel_map(data_iter, work_func,
             % thread_q_put_interval
         worker_kwds['q_put_interval'] = thread_q_put_interval
 
-    queue_work = queue_t()
+    queue_work = queue_t(int(procs * buffer_factor))
     queue_results = queue_t(int(procs * buffer_factor))
 
     log.debug("Constructing worker processes")
@@ -106,7 +109,8 @@ def parallel_map(data_iter, work_func,
                for i in range(procs)]
 
     log.debug("Constructing feeder thread")
-    feeder_thread = _FeedQueueThread(data_iter, queue_work, len(workers))
+    feeder_thread = _FeedQueueThread(data_iter, queue_work, len(workers),
+                                     thread_q_put_interval)
 
     try:
         log.debug("Starting worker processes")
@@ -213,12 +217,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, data_iter, q, num_terminal_packets):
+    def __init__(self, data_iter, q, num_terminal_packets, q_put_interval):
         super(_FeedQueueThread, self).__init__()
 
         self.data_iter = data_iter
         self.q = q
         self.num_terminal_packets = num_terminal_packets
+        self.q_put_interval = q_put_interval
 
         self._stop = threading.Event()
 
@@ -232,7 +237,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         try:
             for r, d in enumerate(self.data_iter):
                 if d:
-                    self.q.put((r, d))
+                    self.q_put((r, d))
 
                 # If we're told to stop, immediately quit out of processing
                 if self.stopped():
@@ -243,8 +248,24 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         finally:
             self._log.debug("Sending in-queue terminal packets")
             for _ in xrange(self.num_terminal_packets):
-                self.q.put(_TerminalPacket())
+                self.q_put(_TerminalPacket())
             self._log.debug("Closing in-queue")
+
+    def q_put(self, val):
+        """
+        Try to put the given value into the output queue until it is inserted
+        (if it was previously full), or the stop signal was given.
+
+        :param val: value to put into the output queue.
+
+        """
+        put = False
+        while not put and not self.stopped():
+            try:
+                self.q.put(val, timeout=self.q_put_interval)
+                put = True
+            except Queue.Full:
+                pass
 
 
 class _WorkProcess (SmqtkObject, multiprocessing.Process):

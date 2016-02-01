@@ -165,32 +165,6 @@ class Classifier (SmqtkAlgorithm):
         """
 
 
-def _async_helper_classify(c_inst, d):
-    """
-    Helper method for asynchronously producing a descriptor vector.
-
-    :param d: DescriptorElement to classify
-    :type d: smqtk.representation.DescriptorElement
-
-    :param c_inst: Classifier algorithm instance
-    :type c_inst: Classifier
-
-    :return: UID and associated feature vector
-    :rtype: numpy.core.multiarray.ndarray or None
-    """
-    log = logging.getLogger("_async_helper_classify")
-    try:
-        # noinspection PyProtectedMember
-        return c_inst._classify(d)
-    except Exception, ex:
-        log.error("[%s] Failed feature generation\n"
-                  "Error: %s\n"
-                  "Traceback:\n"
-                  "%s",
-                  d, str(ex), traceback.format_exc())
-        return None
-
-
 class SupervisedClassifier (Classifier):
     """
     Class of classifiers that are trainable via supervised training, i.e. are

@@ -59,9 +59,7 @@ def default_config():
     }
 
 
-def cli_parser():
-    import argparse
-
+def main():
     description = """
     Compute LSH hash codes based on the provided functor on specific
     descriptors from the configured index given a file-list of UUIDs.
@@ -74,49 +72,9 @@ def cli_parser():
     model file for the ``LSHNearestNeighborIndex`` algorithm as output
     dictionary format is the same as used by that implementation.
     """
-
-    parser = argparse.ArgumentParser(
-        description=description,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-
-    parser.add_argument('-v', '--verbose',
-                        action='store_true', default=False,
-                        help='Be more verbose (add debug logging).')
-
-    g_config = parser.add_argument_group('Configuration')
-    g_config.add_argument('-c', '--config',
-                          help='Path to the configuration file.')
-    g_config.add_argument('-g', '--generate-config',
-                          help='Optionally generate a default configuration '
-                               'file at the specified path. If a '
-                               'configuration file was provided, we update '
-                               'the default configuration with the contents '
-                               'of the given configuration.')
-
-    return parser
-
-
-def main():
-    parser = cli_parser()
-    args = parser.parse_args()
-
-    config_filepath = args.config
-    config_generate = args.generate_config
-    verbose = args.verbose
-
-    llevel = logging.INFO
-    if verbose:
-        llevel = logging.DEBUG
-    bin_utils.initialize_logging(logging.getLogger(), llevel)
+    args, config = bin_utils.utility_main_helper(default_config(),
+                                                 description)
     log = logging.getLogger(__name__)
-
-    config, config_loaded = bin_utils.load_config(config_filepath,
-                                                  default_config())
-    bin_utils.output_config(config_generate, config, log, True)
-
-    if not config_loaded:
-        raise RuntimeError("No configuration loaded (not trusting default).")
 
     #
     # Load configuration contents
@@ -157,7 +115,7 @@ def main():
                 yield l.strip()
 
     # load map if it exists, else start with empty dictionary
-    if os.path.isfile(hash2uuids_input_filepath):
+    if hash2uuids_input_filepath and os.path.isfile(hash2uuids_input_filepath):
         log.info("Loading hash2uuids mapping")
         with open(hash2uuids_input_filepath) as f:
             hash2uuids = cPickle.load(f)
@@ -187,29 +145,6 @@ def main():
         cPickle.dump(hash2uuids, f, pickle_protocol)
     log.info("Moving on top of input: %s", hash2uuids_output_filepath)
     os.rename(tmp_output_filepath, hash2uuids_output_filepath)
-
-
-def test():
-    import logging
-    from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
-    from smqtk.representation.descriptor_index.memory import \
-        MemoryDescriptorIndex
-    from smqtk.utils.bin_utils import initialize_logging
-
-    if not logging.getLogger().handlers:
-        initialize_logging(logging.getLogger(), logging.DEBUG)
-
-    index = MemoryDescriptorIndex("/home/purg/data/memex/jpl_weapons/"
-                                  "smqtk_nnss_docker/smqtk_nnss_data-v3/nn/"
-                                  "memory_descriptor_index_cache.pickle")
-    uuids = list(index.iterkeys())
-    functor = ItqFunctor("/home/purg/data/memex/jpl_weapons/smqtk_nnss_docker/"
-                         "smqtk_nnss_data-v3/nn/itq.256.mean_vec.npy",
-                         "/home/purg/data/memex/jpl_weapons/smqtk_nnss_docker/"
-                         "smqtk_nnss_data-v3/nn/itq.256.rotation.npy",
-                         256, random_seed=0)
-
-    return index, uuids, functor
 
 
 if __name__ == '__main__':

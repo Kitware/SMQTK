@@ -1,3 +1,4 @@
+import argparse
 import json
 import logging
 import logging.handlers
@@ -172,11 +173,105 @@ def report_progress(log, state, interval):
     if state[5] >= interval:
         state[2] = state[1] - state[0]
         # TODO: Could possibly to something with ncurses
-        #       - to maintain a single
-        #       line.
+        #       - to maintain a single line.
         log.debug("Loops per second %f (avg %f) (%d / %d total)",
                   state[2] / state[5],
                   state[1] / (state[4] - state[6]),
                   state[2], state[1])
         state[3] = state[4]
         state[0] = state[1]
+
+
+def basic_cli_parser(description=None):
+    """
+    Generate an ``argparse.ArgumentParser`` with the given description and the
+    basic options for verbosity and configuration/generation paths.
+
+    The returned parser instance has an option for extra verbosity
+    (-v/--verbose) and a group for configuration specification (-c/--config and
+    configuration generation (-g/--generate-config).
+
+    :param description: Optional description string for the parser.
+    :type description: str
+
+    :return: Argument parser instance with basic options.
+    :rtype: argparse.ArgumentParser
+
+    """
+    parser = argparse.ArgumentParser(
+        description=description,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    parser.add_argument('-v', '--verbose',
+                        default=False, action='store_true',
+                        help='Output additional debug logging.')
+
+    g_config = parser.add_argument_group('Configuration')
+    g_config.add_argument('-c', '--config',
+                          help='Path to the JSON configuration file.')
+    g_config.add_argument('-g', '--generate-config',
+                          help='Optionally generate a default configuration '
+                               'file at the specified path. If a '
+                               'configuration file was provided, we update '
+                               'the default configuration with the contents '
+                               'of the given configuration.')
+
+    return parser
+
+
+def utility_main_helper(default_config, parser_description=None,
+                        parser_extension=lambda p: p):
+    """
+    Helper function for utilities standardizing logging initialization, CLI
+    parsing and configuration loading/generation.
+
+    Specific utilities should use this as their main function. This
+    encapsulates the following standard actions:
+
+        - generating ``argparse`` parser (see ``basic_cli_parser``) and parsing
+          CLI arguments.
+        - handling configuration merger onto the default
+        - handling configuration generation based on given default and possibly
+          specified input config.
+
+    This takes a hook function ``parser_extension``, which is a function that
+    takes the ``ArgumentParser`` instance to allow for adding additional
+    arguments and groups.
+
+    :param default_config: Default configuration (JSON) dictionary for the
+        utility.
+    :type default_config: dict
+
+    :param parser_description: Optional description to give to the generated
+        argument parser.
+    :type parser_description: str
+
+    :param parser_extension: Function to extend argparse parser.
+    :type parser_extension: (argparse.ArgumentParser) -> argparse.ArgumentParser
+
+    :return: Parsed arguments structure and loaded configuration dictionary.
+    :rtype: (argparse.ArgumentParser, dict)
+
+    """
+    parser = parser_extension(
+        basic_cli_parser(description=parser_description)
+    )
+    args = parser.parse_args()
+
+    config_filepath = args.config
+    config_generate = args.generate_config
+    verbose = args.verbose
+
+    llevel = logging.INFO
+    if verbose:
+        llevel = logging.DEBUG
+    initialize_logging(logging.getLogger(), llevel)
+
+    config, config_loaded = load_config(config_filepath, default_config)
+    output_config(config_generate, config, overwrite=True)
+
+    if not config_loaded:
+        raise RuntimeError("No configuration loaded (not trusting default).")
+
+    return args, config

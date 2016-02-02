@@ -80,7 +80,7 @@ def parallel_map(work_func, *sequences, **kwargs):
               growth size of the result queue coming from worker processes
               (``int(procs * buffer_factor)``). This is utilized so we don't
               overrun our RAM buffering results.
-            - type: flaat
+            - type: float
             - default: 2.0
 
         - procs
@@ -120,7 +120,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     if heart_beat <= 0:
         raise ValueError("heart_beat must be >0.")
 
-    if not procs or procs <= 0:
+    if procs is None or procs <= 0:
         procs = multiprocessing.cpu_count()
         log.debug("Using all cores (%d)", procs)
     else:

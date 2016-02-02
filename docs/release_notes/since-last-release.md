@@ -20,6 +20,9 @@ Tools / Scripts
     is primarilly for support of LSHNearestNeighborsIndex live-reload
     functionality.
 
+  * Added script for asynchronously computing classifications on descriptors
+    in an index via a list of descriptor UUIDs.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an
@@ -29,10 +32,13 @@ Utilities
 
   * Added helper function for JSON configuration loading.
 
+  * Added helper for utilities, encapsulating standard argument parser and
+    configuration loading/generation steps.
+
 
 Fixes since v0.3.0
 ------------------
 
 ClassificationElement
 
-  * Fixed memory implementation serialization
+  * Fixed memory implementation serialization bug.

@@ -1,7 +1,5 @@
 from __future__ import print_function
 
-import multiprocessing.pool
-import random
 import unittest
 
 import mock
@@ -40,60 +38,6 @@ class DummyDescriptorGenerator (DescriptorGenerator):
 
     def _compute_descriptor(self, data):
         return
-
-
-# class TestAsyncHelper (unittest.TestCase):
-#
-#     mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-#
-#     def test_valid_data(self):
-#         expected_vector = numpy.random.randint(0, 100, 10)
-#
-#         cd = DummyDescriptorGenerator()
-#         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
-#
-#         v = _async_feature_generator_helper(cd, self.mDataElement())
-#
-#         ntools.assert_true(cd._compute_descriptor.called)
-#         ntools.assert_equal(cd._compute_descriptor.call_count, 1)
-#         cd._compute_descriptor.assert_called_once_with(self.mDataElement())
-#         ntools.assert_true(numpy.array_equal(v, expected_vector))
-#
-#     def test_nan_data(self):
-#         # Makes a vector of NaN values. A vector of not-zeros makes a vector of
-#         # inf values.
-#         with warnings.catch_warnings():
-#             warnings.simplefilter("ignore")
-#             expected_vector = numpy.zeros(10) / 0
-#
-#         cd = DummyDescriptorGenerator()
-#         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
-#
-#         v = _async_feature_generator_helper(cd, self.mDataElement())
-#
-#         ntools.assert_is_none(v)
-#
-#     def test_inf_data(self):
-#         with warnings.catch_warnings():
-#             warnings.simplefilter("ignore")
-#             expected_vector = numpy.arange(1, 10) / 0.
-#
-#         cd = DummyDescriptorGenerator()
-#         cd._compute_descriptor = mock.Mock(return_value=expected_vector)
-#
-#         v = _async_feature_generator_helper(cd, self.mDataElement())
-#
-#         ntools.assert_is_none(v)
-#
-#     @mock.patch('smqtk.algorithms.descriptor_generator.numpy')
-#     def test_exception(self, mNumpy):
-#         cd = DummyDescriptorGenerator()
-#         cd._compute_descriptor = mock.Mock(side_effect=Exception('Some error'))
-#
-#         v = _async_feature_generator_helper(cd, self.mDataElement())
-#
-#         ntools.assert_false(mNumpy.isnan.called)
-#         ntools.assert_is_none(v)
 
 
 class TestDescriptorGeneratorAbstract (unittest.TestCase):

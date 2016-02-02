@@ -118,7 +118,8 @@ class Classifier (SmqtkAlgorithm):
         if ri:
             r_progress = smqtk.utils.bin_utils.report_progress
         else:
-            r_progress = lambda *a: None
+            def r_progress(*_):
+                return
 
         d2c_map = {}
         for d, c in classifications:

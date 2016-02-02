@@ -12,7 +12,7 @@ from smqtk.utils import SmqtkObject
 __author__ = "paul.tunison@kitware.com"
 
 
-def parallel_map(data_iter, work_func,
+def parallel_map(work_func, data_iter,
                  procs=None, ordered=False, buffer_factor=2,
                  use_multiprocessing=False, heart_beat=0.001):
     """
@@ -46,9 +46,6 @@ def parallel_map(data_iter, work_func,
     an option on whether to stop on the shorted or longest sequence (i.e. map
     vs. imap semantics)
 
-    :param data_iter: Input data to map to the given ``work_func``.
-    :type data_iter: collections.Iterable
-
     :param work_func:
         Function that performs some work on input data, resulting in some
         returned value.
@@ -57,6 +54,9 @@ def parallel_map(data_iter, work_func,
         transport error will occur when trying to move the function to the
         worker process.
     :type work_func: (object)-> object
+
+    :param data_iter: Input data to map to the given ``work_func``.
+    :type data_iter: collections.Iterable
 
     :param procs: Optional specification of the number of threads/cores to use.
         If None, we will attempt to use all available threads/cores.

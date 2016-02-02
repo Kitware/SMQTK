@@ -19,22 +19,22 @@ class TestParallelMap (unittest.TestCase):
 
     def test_simple_ordered_threaded(self):
         # Make sure results are still in order as requested
-        r = list(parallel_map(self.test_string, self.test_func,
+        r = list(parallel_map(self.test_func, self.test_string,
                               ordered=True, use_multiprocessing=False))
         nose.tools.assert_equal(r, self.expected)
 
     def test_simple_ordered_multiprocess(self):
-        r = list(parallel_map(self.test_string, self.test_func,
+        r = list(parallel_map(self.test_func, self.test_string,
                               ordered=True, use_multiprocessing=True))
         nose.tools.assert_equal(r, self.expected)
 
     def test_simple_unordered_threaded(self):
-        r = list(parallel_map(self.test_string, self.test_func,
+        r = list(parallel_map(self.test_func, self.test_string,
                               ordered=False, use_multiprocessing=False))
         nose.tools.assert_equal(set(r), set(self.expected))
 
     def test_simple_unordered_multiprocess(self):
-        r = list(parallel_map(self.test_string, self.test_func,
+        r = list(parallel_map(self.test_func, self.test_string,
                               ordered=False, use_multiprocessing=True))
         nose.tools.assert_equal(set(r), set(self.expected))
 
@@ -45,7 +45,7 @@ class TestParallelMap (unittest.TestCase):
         nose.tools.assert_raises(
             RuntimeError,
             list,
-            parallel_map([1], raise_ex, use_multiprocessing=False)
+            parallel_map(raise_ex, [1], use_multiprocessing=False)
         )
 
     def test_exception_handing_multiprocess(self):
@@ -55,5 +55,5 @@ class TestParallelMap (unittest.TestCase):
         nose.tools.assert_raises(
             RuntimeError,
             list,
-            parallel_map([1], raise_ex, use_multiprocessing=True)
+            parallel_map(raise_ex, [1], use_multiprocessing=True)
         )

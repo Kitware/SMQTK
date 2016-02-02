@@ -223,7 +223,7 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
         report_progress = bin_utils.report_progress
 
     # Don't want to use multiprocessing because the given index could be large
-    for uuid, hash_int in parallel.parallel_map(uuids, get_hash,
+    for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
                                                 ordered=False,
                                                 use_multiprocessing=use_mp):
         if hash_int not in hash2uuids:

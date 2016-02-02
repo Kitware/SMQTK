@@ -14,7 +14,7 @@ __author__ = "paul.tunison@kitware.com"
 
 def parallel_map(data_iter, work_func,
                  procs=None, ordered=False, buffer_factor=2,
-                 use_multiprocessing=False, thread_q_put_interval=0.001):
+                 use_multiprocessing=False, heart_beat=0.001):
     """
     Generalized local parallelization helper for executing embarrassingly
     parallel functions on an iterable of input data. This function then yields
@@ -37,6 +37,9 @@ def parallel_map(data_iter, work_func,
     This function is, however, slower than multiprocessing.pool classes for
     trivial functions, like using the function ``ord`` over a set of
     characters.
+
+    Input data from ``data_iter`` must be picklable in order to transport to
+    worker threads/processes.
 
     :TODO: This currently only works for functions that take a single parameter
     but can be fairly easily extended to take multiple argument sequences +
@@ -74,43 +77,45 @@ def parallel_map(data_iter, work_func,
         parallelization agent vs python threads.
     :type use_multiprocessing: bool
 
-    :param thread_q_put_interval: Interval at worker threads check for stopped
-        message when waiting to put data into a queue. This is for dead-lock
-        protection due to size-limited output queue. This must be >0.
-    :type thread_q_put_interval: float
+    :param heart_beat: Interval at which workers check for operational messages
+        while waiting on locks (e.g. waiting to push or pull messages). This
+        ensures that workers are not left hanging, or hang the program, when
+        and error or interruption occurs, or when waiting on an full edge. This
+        must be >0.
+    :type heart_beat: float
 
     """
     log = logging.getLogger(__name__)
 
-    if thread_q_put_interval <= 0:
-        raise ValueError("Thread queue")
+    if heart_beat <= 0:
+        raise ValueError("heart_beat must be >0.")
+
     if not procs or procs <= 0:
         procs = multiprocessing.cpu_count()
+        log.debug("Using all cores (%d)", procs)
+    else:
+        log.debug("Only using %d cores", procs)
 
     # Choose parallel types
-    worker_kwds = {}
+    hb_arg = {}
     if use_multiprocessing:
         queue_t = multiprocessing.queues.Queue
         worker_t = _WorkProcess
     else:
         queue_t = Queue.Queue
         worker_t = _WorkThread
-
-        assert thread_q_put_interval >= 0, \
-            "Thread queue.put interval must be >= 0. (given: %f)" \
-            % thread_q_put_interval
-        worker_kwds['q_put_interval'] = thread_q_put_interval
+        hb_arg['heart_beat'] = heart_beat
 
     queue_work = queue_t(int(procs * buffer_factor))
     queue_results = queue_t(int(procs * buffer_factor))
 
     log.debug("Constructing worker processes")
-    workers = [worker_t(i, work_func, queue_work, queue_results, **worker_kwds)
+    workers = [worker_t(i, work_func, queue_work, queue_results, **hb_arg)
                for i in range(procs)]
 
     log.debug("Constructing feeder thread")
     feeder_thread = _FeedQueueThread(data_iter, queue_work, len(workers),
-                                     thread_q_put_interval)
+                                     heart_beat)
 
     try:
         log.debug("Starting worker processes")
@@ -129,6 +134,8 @@ def parallel_map(data_iter, work_func,
 
             if is_terminal(packet):
                 found_terminals += 1
+            elif isinstance(packet, Exception):
+                raise packet
             else:
                 i, result = packet
                 if ordered:
@@ -144,6 +151,8 @@ def parallel_map(data_iter, work_func,
         while heap:
             i, result = heapq.heappop(heap)
             yield result
+
+        # Done performing work and collecting results at this point
 
         # All work should be exhausted at this point
         if use_multiprocessing and sys.platform == 'darwin':
@@ -217,13 +226,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, data_iter, q, num_terminal_packets, q_put_interval):
+    def __init__(self, data_iter, q, num_terminal_packets, heart_beat):
         super(_FeedQueueThread, self).__init__()
 
         self.data_iter = data_iter
         self.q = q
         self.num_terminal_packets = num_terminal_packets
-        self.q_put_interval = q_put_interval
+        self.heart_beat = heart_beat
 
         self._stop = threading.Event()
 
@@ -236,8 +245,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
     def run(self):
         try:
             for r, d in enumerate(self.data_iter):
-                if d:
-                    self.q_put((r, d))
+                self.q_put((r, d))
 
                 # If we're told to stop, immediately quit out of processing
                 if self.stopped():
@@ -262,7 +270,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         put = False
         while not put and not self.stopped():
             try:
-                self.q.put(val, timeout=self.q_put_interval)
+                self.q.put(val, timeout=self.heart_beat)
                 put = True
             except Queue.Full:
                 pass
@@ -296,6 +304,10 @@ class _WorkProcess (SmqtkObject, multiprocessing.Process):
                 packet = self.in_q.get()
         except KeyboardInterrupt:
             pass
+        # Transport back any exceptions raised
+        except Exception, ex:
+            self.out_q.put(ex)
+            raise
         finally:
             self._log.debug("%s finished work", self.name)
             self.out_q.put(_TerminalPacket())
@@ -310,13 +322,13 @@ class _WorkThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, i, work_function, in_q, out_q, q_put_interval):
+    def __init__(self, i, work_function, in_q, out_q, heart_beat):
         """
         :type i: int
         :type work_function:
         :type in_q: Queue.Queue
         :type out_q: Queue.Queue
-        :type q_put_interval: float
+        :type heart_beat: float
         """
         SmqtkObject.__init__(self)
         threading.Thread.__init__(self, name='[w%d]' % i)
@@ -326,7 +338,7 @@ class _WorkThread (SmqtkObject, threading.Thread):
         self.work_function = work_function
         self.in_q = in_q
         self.out_q = out_q
-        self.q_put_interval = q_put_interval
+        self.heart_beat = heart_beat
 
         self._stop = threading.Event()
 
@@ -338,20 +350,38 @@ class _WorkThread (SmqtkObject, threading.Thread):
 
     def run(self):
         try:
-            packet = self.in_q.get()
+            packet = self.q_get()
             while not is_terminal(packet) and not self.stopped():
                 i, data = packet
                 result = self.work_function(data)
                 self.q_put((i, result))
-                packet = self.in_q.get()
+                packet = self.q_get()
+        # Transport back any exceptions raised
+        except Exception, ex:
+            self.q_put(ex)
+            raise
         finally:
             self._log.debug("%s finished work", self.name)
             self.q_put(_TerminalPacket())
 
+    def q_get(self):
+        """
+        Try to get a value from the queue while keeping an eye out for an exit
+        request.
+
+        :return: next value on the input queue
+
+        """
+        while not self.stopped():
+            try:
+                return self.in_q.get(timeout=self.heart_beat)
+            except Queue.Empty:
+                pass
+
     def q_put(self, val):
         """
-        Try to put the given value into the output queue until it is inserted
-        (if it was previously full), or the stop signal was given.
+        Try to put the given value into the output queue while keeping an eye
+        out for an exit request.
 
         :param val: value to put into the output queue.
 
@@ -359,7 +389,7 @@ class _WorkThread (SmqtkObject, threading.Thread):
         put = False
         while not put and not self.stopped():
             try:
-                self.out_q.put(val, timeout=self.q_put_interval)
+                self.out_q.put(val, timeout=self.heart_beat)
                 put = True
             except Queue.Full:
                 pass

@@ -37,3 +37,23 @@ class TestParallelMap (unittest.TestCase):
         r = list(parallel_map(self.test_string, self.test_func,
                               ordered=False, use_multiprocessing=True))
         nose.tools.assert_equal(set(r), set(self.expected))
+
+    def test_exception_handing_threaded(self):
+        def raise_ex(_):
+            raise RuntimeError("Expected exception")
+
+        nose.tools.assert_raises(
+            RuntimeError,
+            list,
+            parallel_map([1], raise_ex, use_multiprocessing=False)
+        )
+
+    def test_exception_handing_multiprocess(self):
+        def raise_ex(_):
+            raise RuntimeError("Expected exception")
+
+        nose.tools.assert_raises(
+            RuntimeError,
+            list,
+            parallel_map([1], raise_ex, use_multiprocessing=True)
+        )

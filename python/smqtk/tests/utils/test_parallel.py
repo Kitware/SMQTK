@@ -57,3 +57,45 @@ class TestParallelMap (unittest.TestCase):
             list,
             parallel_map(raise_ex, [1], use_multiprocessing=True)
         )
+
+    def test_multisequence(self):
+        def test_func(a, b, c):
+            return a + b + c
+
+        s1 = [1] * 10
+        s2 = [2] * 10
+        s3 = [3] * 10
+        r = list(parallel_map(test_func, s1, s2, s3,
+                              use_multiprocessing=False))
+
+        expected = [6] * 10
+        nose.tools.assert_equal(r, expected)
+
+    def test_multisequence_short_cutoff(self):
+        def test_func(a, b, c):
+            return a + b + c
+
+        s1 = [1] * 10
+        s2 = [2] * 4
+        s3 = [3] * 10
+        r = list(parallel_map(test_func, s1, s2, s3,
+                              use_multiprocessing=False,
+                              ordered=True))
+
+        exp = [6] * 4
+        nose.tools.assert_equal(r, exp)
+
+    def test_multisequence_fill_void(self):
+        def test_func(a, b, c):
+            return a + b + c
+
+        s1 = [1] * 10
+        s2 = [2] * 4
+        s3 = [3] * 10
+        r = list(parallel_map(test_func, s1, s2, s3,
+                              use_multiprocessing=False,
+                              fill_void=10,
+                              ordered=True))
+
+        expected = [6] * 4 + [14] * 6
+        nose.tools.assert_equal(r, expected)

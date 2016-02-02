@@ -1,4 +1,5 @@
 import heapq
+import itertools
 import logging
 import multiprocessing
 import multiprocessing.queues
@@ -12,14 +13,19 @@ from smqtk.utils import SmqtkObject
 __author__ = "paul.tunison@kitware.com"
 
 
-def parallel_map(work_func, data_iter,
-                 procs=None, ordered=False, buffer_factor=2,
-                 use_multiprocessing=False, heart_beat=0.001):
+def parallel_map(work_func, *sequences, **kwargs):
     """
     Generalized local parallelization helper for executing embarrassingly
     parallel functions on an iterable of input data. This function then yields
-    work results for data, optionally the order that they were provided to this
-    function.
+    work results for data, optionally in the order that they were provided to
+    this function.
+
+    By default, we act like ``itertools.izip`` in regards to input sequences,
+    whereby we stop performing work as soon as one of the input sequences is
+    exhausted. The optional keyword argument ``fill_void`` may be specified to
+    enable sequence handling like ``itertools.izip_longest`` where the longest
+    sequence determines what is iterated, and the value given to ``fill_void``
+    is used as the fill value.
 
     This is intended to be able to replace ``multiprocessing.pool.Pool`` and
     ``multiprocessing.pool.ThreadPool`` uses with the added benefit of:
@@ -38,13 +44,8 @@ def parallel_map(work_func, data_iter,
     trivial functions, like using the function ``ord`` over a set of
     characters.
 
-    Input data from ``data_iter`` must be picklable in order to transport to
-    worker threads/processes.
-
-    :TODO: This currently only works for functions that take a single parameter
-    but can be fairly easily extended to take multiple argument sequences +
-    an option on whether to stop on the shorted or longest sequence (i.e. map
-    vs. imap semantics)
+    Input data given to ``sequences`` must be picklable in order to transport
+    to worker threads/processes.
 
     :param work_func:
         Function that performs some work on input data, resulting in some
@@ -53,39 +54,68 @@ def parallel_map(work_func, data_iter,
         When in multiprocessing mode, this cannot be a local function or a
         transport error will occur when trying to move the function to the
         worker process.
-    :type work_func: (object)-> object
+    :type work_func: (object, ...)-> object
 
-    :param data_iter: Input data to map to the given ``work_func``.
-    :type data_iter: collections.Iterable
+    :param sequences: Input data to apply to the given ``work_func`` function.
+        If more than one sequence is given, the function is called with an
+        argument list consisting of the corresponding item of each sequence.
+    :type sequences: collections.Iterable[collections.Iterable]
 
-    :param procs: Optional specification of the number of threads/cores to use.
-        If None, we will attempt to use all available threads/cores.
-    :type procs: None | int | long
+    :param kwargs: Optionally available keyword arguments are as follows:
 
-    :param ordered: If results for input elements should be returned should be
-        in the same order as input elements. If False, we yield results as soon
-        as they are collected.
-    :type ordered: bool
+        - fill_void
+            - Optional value that, if specified, activates sequence handling
+              like that of ``__builtin__.map`` except that the value provided
+              is used to
 
-    :param buffer_factor: Multiplier against the number of processes used to
-        limit the growth size of the result queue coming from worker processes
-        (``int(procs * buffer_factor)``). This is utilized so we don't overrun
-        our RAM buffering results.
-    :type buffer_factor: float
+        - ordered
+            - If results for input elements should be yielded in the same order
+              as input elements. If False, we yield results as soon as they are
+              collected.
+            - type: bool
+            - default: False
 
-    :param use_multiprocessing: Whether or not to use discrete processes as the
-        parallelization agent vs python threads.
-    :type use_multiprocessing: bool
+        - buffer_factor
+            - Multiplier against the number of processes used to limit the
+              growth size of the result queue coming from worker processes
+              (``int(procs * buffer_factor)``). This is utilized so we don't
+              overrun our RAM buffering results.
+            - type: flaat
+            - default: 2.0
 
-    :param heart_beat: Interval at which workers check for operational messages
-        while waiting on locks (e.g. waiting to push or pull messages). This
-        ensures that workers are not left hanging, or hang the program, when
-        and error or interruption occurs, or when waiting on an full edge. This
-        must be >0.
-    :type heart_beat: float
+        - procs
+            - Optional specification of the number of threads/cores to use. If
+              None, we will attempt to use all available threads/cores.
+            - type: None | int | long
+            - default: None
+
+        - use_multiprocessing
+            - Whether or not to use discrete processes as the parallelization
+              agent vs python threads.
+            - type: bool
+            - default: False
+
+        - heart_beat
+            - Interval at which workers check for operational messages while
+              waiting on locks (e.g. waiting to push or pull messages). This
+              ensures that workers are not left hanging, or hang the program,
+              when and error or interruption occurs, or when waiting on an full
+              edge. This must be >0.
+            - type: float
+            - default: 0.001
+    :type kwargs: dict
 
     """
     log = logging.getLogger(__name__)
+
+    # kwargs
+    procs = kwargs.get('procs', None)
+    ordered = kwargs.get('ordered', False)
+    buffer_factor = kwargs.get('buffer_factor', 2.0)
+    use_multiprocessing = kwargs.get('use_multiprocessing', False)
+    heart_beat = kwargs.get('heart_beat', 0.001)
+    fill_activate = 'fill_void' in kwargs
+    fill_value = kwargs.get('fill_void', None)
 
     if heart_beat <= 0:
         raise ValueError("heart_beat must be >0.")
@@ -114,8 +144,8 @@ def parallel_map(work_func, data_iter,
                for i in range(procs)]
 
     log.debug("Constructing feeder thread")
-    feeder_thread = _FeedQueueThread(data_iter, queue_work, len(workers),
-                                     heart_beat)
+    feeder_thread = _FeedQueueThread(sequences, queue_work, len(workers),
+                                     heart_beat, fill_activate, fill_value)
 
     try:
         log.debug("Starting worker processes")
@@ -226,13 +256,16 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, data_iter, q, num_terminal_packets, heart_beat):
+    def __init__(self, arg_sequences, q, num_terminal_packets, heart_beat,
+                 do_fill, fill_value):
         super(_FeedQueueThread, self).__init__()
 
-        self.data_iter = data_iter
+        self.arg_sequences = arg_sequences
         self.q = q
         self.num_terminal_packets = num_terminal_packets
         self.heart_beat = heart_beat
+        self.do_fill = do_fill
+        self.fill_value = fill_value
 
         self._stop = threading.Event()
 
@@ -243,9 +276,16 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         return self._stop.isSet()
 
     def run(self):
+        if self.do_fill:
+            izip = itertools.izip_longest
+            izip_kwds = {'fillvalue': self.fill_value}
+        else:
+            izip = itertools.izip
+            izip_kwds = {}
+
         try:
-            for r, d in enumerate(self.data_iter):
-                self.q_put((r, d))
+            for r, args in enumerate(izip(*self.arg_sequences, **izip_kwds)):
+                self.q_put((r, args))
 
                 # If we're told to stop, immediately quit out of processing
                 if self.stopped():
@@ -298,8 +338,8 @@ class _WorkProcess (SmqtkObject, multiprocessing.Process):
         try:
             packet = self.in_q.get()
             while not is_terminal(packet):
-                i, data = packet
-                result = self.work_function(data)
+                i, args = packet
+                result = self.work_function(*args)
                 self.out_q.put((i, result))
                 packet = self.in_q.get()
         except KeyboardInterrupt:
@@ -352,8 +392,8 @@ class _WorkThread (SmqtkObject, threading.Thread):
         try:
             packet = self.q_get()
             while not is_terminal(packet) and not self.stopped():
-                i, data = packet
-                result = self.work_function(data)
+                i, args = packet
+                result = self.work_function(*args)
                 self.q_put((i, result))
                 packet = self.q_get()
         # Transport back any exceptions raised

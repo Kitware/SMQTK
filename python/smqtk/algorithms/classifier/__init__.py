@@ -109,7 +109,8 @@ class Classifier (SmqtkAlgorithm):
             return d_elem, self.classify(d_elem, factory, overwrite)
 
         classifications = smqtk.utils.parallel.parallel_map(
-            work, d_iter, procs,
+            work, d_iter,
+            procs=procs,
             ordered=False,
             use_multiprocessing=use_multiprocessing
         )

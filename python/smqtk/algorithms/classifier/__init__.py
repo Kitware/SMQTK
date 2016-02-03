@@ -126,7 +126,7 @@ class Classifier (SmqtkAlgorithm):
         for d, c in classifications:
             d2c_map[d] = c
 
-            r_progress(self._log, r_state, ri)
+            r_progress(self._log.debug, r_state, ri)
 
         return d2c_map
 

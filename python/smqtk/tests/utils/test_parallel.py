@@ -130,19 +130,23 @@ class TestParallelMap (unittest.TestCase):
         g1 = parallel_map(lambda e: e, self.test_string,
                           ordered=True,
                           use_multiprocessing=False,
-                          procs=2)
+                          procs=2,
+                          name='g1')
         g2 = parallel_map(ord, g1,
                           ordered=True,
                           use_multiprocessing=False,
-                          procs=2)
+                          procs=2,
+                          name='g2')
         g3 = parallel_map(chr, g2,
                           ordered=True,
                           use_multiprocessing=False,
-                          procs=2)
+                          procs=2,
+                          name='g3')
         g4 = parallel_map(ord, g3,
                           ordered=True,
                           use_multiprocessing=False,
-                          procs=2)
+                          procs=2,
+                          name='g4')
 
         expected = map(ord, self.test_string)
         nose.tools.assert_equal(

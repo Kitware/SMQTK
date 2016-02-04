@@ -1,8 +1,12 @@
+import atexit
+import collections
 import heapq
 import itertools
 import logging
 import multiprocessing
+import multiprocessing.process
 import multiprocessing.queues
+import multiprocessing.synchronize
 import Queue
 import sys
 import threading
@@ -103,11 +107,15 @@ def parallel_map(work_func, *sequences, **kwargs):
               edge. This must be >0.
             - type: float
             - default: 0.001
+
+        - name
+            - Optional string name for identifying workers and logging
+              messages. ``None`` means no names are added.
+            - type: str
+            - default: None
     :type kwargs: dict
 
     """
-    log = logging.getLogger(__name__)
-
     # kwargs
     procs = kwargs.get('procs', None)
     ordered = kwargs.get('ordered', False)
@@ -116,6 +124,12 @@ def parallel_map(work_func, *sequences, **kwargs):
     heart_beat = kwargs.get('heart_beat', 0.001)
     fill_activate = 'fill_void' in kwargs
     fill_value = kwargs.get('fill_void', None)
+    name = kwargs.get('name', None)
+
+    if name:
+        log = logging.getLogger(__name__ + '[%s]' % name)
+    else:
+        log = logging.getLogger(__name__)
 
     if heart_beat <= 0:
         raise ValueError("heart_beat must be >0.")
@@ -127,107 +141,29 @@ def parallel_map(work_func, *sequences, **kwargs):
         log.debug("Only using %d cores", procs)
 
     # Choose parallel types
-    hb_arg = {}
     if use_multiprocessing:
         queue_t = multiprocessing.queues.Queue
-        worker_t = _WorkProcess
+        worker_t = _WorkerProcess
     else:
         queue_t = Queue.Queue
-        worker_t = _WorkThread
-        hb_arg['heart_beat'] = heart_beat
+        worker_t = _WorkerThread
 
     queue_work = queue_t(int(procs * buffer_factor))
     queue_results = queue_t(int(procs * buffer_factor))
 
     log.debug("Constructing worker processes")
-    workers = [worker_t(i, work_func, queue_work, queue_results, **hb_arg)
+    workers = [worker_t(name, i, work_func, queue_work, queue_results,
+                        heart_beat)
                for i in range(procs)]
 
     log.debug("Constructing feeder thread")
-    feeder_thread = _FeedQueueThread(sequences, queue_work, len(workers),
-                                     heart_beat, fill_activate, fill_value)
+    feeder_thread = _FeedQueueThread(name, sequences, queue_work,
+                                     len(workers), heart_beat, fill_activate,
+                                     fill_value)
 
-    try:
-        log.debug("Starting worker processes")
-        for w in workers:
-            w.start()
-
-        log.debug("Starting feeder thread")
-        feeder_thread.start()
-
-        # Collect/Yield work results
-        found_terminals = 0
-        heap = []
-        next_index = 0
-        while found_terminals < len(workers):
-            packet = queue_results.get()
-
-            if is_terminal(packet):
-                found_terminals += 1
-            elif isinstance(packet, Exception):
-                raise packet
-            else:
-                i, result = packet
-                if ordered:
-                    heapq.heappush(heap, (i, result))
-                    if heap[0][0] == next_index:
-                        _, result = heapq.heappop(heap)
-                        yield result
-                        next_index += 1
-                else:
-                    yield result
-        # If we're in ordered mode, there may still be things left in the heap
-        # (received out of order).
-        while heap:
-            i, result = heapq.heappop(heap)
-            yield result
-
-        # Done performing work and collecting results at this point
-
-        # All work should be exhausted at this point
-        if use_multiprocessing and sys.platform == 'darwin':
-            # multiprocessing.Queue.qsize doesn't work on OSX
-            # - Try to get something from each queue, expecting an empty
-            #   exception.
-            try:
-                queue_work.get(block=False)
-            except multiprocessing.queues.Empty:
-                pass
-            else:
-                raise AssertionError("In queue not empty")
-            try:
-                queue_results.get(block=False)
-            except multiprocessing.queues.Empty:
-                pass
-            else:
-                raise AssertionError("Out queue not empty")
-        else:
-            assert queue_work.qsize() == 0, \
-                "In queue not empty (%d)" % queue_work.qsize()
-            assert queue_results.qsize() == 0, \
-                "Out queue not empty (%d)" % queue_results.qsize()
-    finally:
-        log.debug("Stopping feeder thread")
-        feeder_thread.stop()
-        feeder_thread.join()
-
-        if use_multiprocessing:
-            log.debug("Terminating/Joining worker processes")
-            for w in workers:
-                if w.is_alive():
-                    w.terminate()
-                w.join()
-
-            log.debug("Cleaning up queues")
-            for q in (queue_work, queue_results):
-                q.close()
-                q.join_thread()
-        else:
-            log.debug("Stopping worker threads")
-            for w in workers:
-                w.stop()
-
-    log.debug("Done")
+    return ParallelResultsIterator(name, ordered, use_multiprocessing,
+                                   heart_beat, queue_work,
+                                   queue_results, feeder_thread, workers)
 
 
 class _TerminalPacket (object):
@@ -250,15 +186,211 @@ def is_terminal(p):
     return isinstance(p, _TerminalPacket)
 
 
+class ParallelResultsIterator (SmqtkObject, collections.Iterator):
+
+    def __init__(self, name, ordered, is_multiprocessing, heart_beat,
+                 work_queue, results_queue,
+                 feeder_thread, workers):
+        """
+        :type ordered: bool
+        :type is_multiprocessing: bool
+        :type heart_beat: float
+        :type work_queue: Queue.Queue | multiprocessing.queues.Queue
+        :type results_queue: Queue.Queue | multiprocessing.queues.Queue
+        :type feeder_thread: _FeedQueueThread
+        :type workers: list[_WorkerThread|_WorkerProcess]
+        """
+        if name:
+            self.name = '[' + name + ']'
+        else:
+            self.name = ''
+
+        self.ordered = ordered
+        self.heart_beat = heart_beat
+        self.is_multiprocessing = is_multiprocessing
+
+        self.work_queue = work_queue
+        self.results_queue = results_queue
+        self.feeder_thread = feeder_thread
+        self.workers = workers
+
+        self.has_started_workers = False
+        self.has_cleaned_up = False
+
+        self.found_terminals = 0
+        self.result_heap = []
+        self.next_index = 0
+
+        self.stop_event = threading.Event()
+        self.stop_event_lock = threading.Lock()
+
+    @property
+    def _log(self):
+        return logging.getLogger(
+            self.logger().name + self.name
+        )
+
+    def __repr__(self):
+        sfx = ''
+        if self.name:
+            sfx = '[' + self.name + ']'
+        return "<%(module)s.%(class)s%(sfx)s at %(address)s>" % {
+            "module": self.__module__,
+            "class": self.__class__.__name__,
+            "sfx": sfx,
+            "address": hex(id(self)),
+        }
+
+    def next(self):
+        try:
+            if not self.has_started_workers:
+                self.start_workers()
+
+            while (self.found_terminals < len(self.workers) and
+                   not self.stopped()):
+                packet = self.results_q_get()
+
+                if is_terminal(packet):
+                    self._log.debug('Found terminal')
+                    self.found_terminals += 1
+                elif isinstance(packet, Exception):
+                    self._log.debug('Received exception')
+                    raise packet
+                else:
+                    i, result = packet
+                    if self.ordered:
+                        heapq.heappush(self.result_heap, (i, result))
+                        if self.result_heap[0][0] == self.next_index:
+                            _, result = heapq.heappop(self.result_heap)
+                            self.next_index += 1
+                            return result
+                    else:
+                        return result
+
+            # Go through heap if there's anything in it
+            if self.result_heap:
+                _, result = heapq.heappop(self.result_heap)
+                return result
+
+            # Nothing left
+            if not self.stopped():
+                self._log.debug("Asserting empty queues on what looks like a "
+                                "full iteration.")
+                self.assert_queues_empty()
+
+            raise StopIteration()
+
+        except:
+            self.stop()
+            raise
+
+    def start_workers(self):
+        """
+        Start worker threads/processes
+        """
+        self._log.debug("Starting worker processes")
+        for w in self.workers:
+            w.start()
+
+        self._log.debug("Starting feeder thread")
+        # self.feeder_thread.daemon = True
+        self.feeder_thread.start()
+
+        self.has_started_workers = True
+
+    def clean_up(self):
+        """
+        Clean up any live resources if we haven't done so already.
+        """
+        if self.has_started_workers and not self.has_cleaned_up:
+            self._log.debug("Stopping feeder thread")
+            self.feeder_thread.stop()
+            self.feeder_thread.join()
+
+            self._log.debug("Stopping workers")
+            for w in self.workers:
+                w.stop()
+                w.join()
+
+            if self.is_multiprocessing:
+                self._log.debug("Closing/Joining process queues")
+                for q in (self.work_queue, self.results_queue):
+                    q.close()
+                    q.join_thread()
+
+            self.has_cleaned_up = True
+
+    def stop(self):
+        """
+        Stop this iterator.
+
+        This does not clean up resources (see ``clean_up`` for that).
+        """
+        with self.stop_event_lock:
+            self.stop_event.set()
+            self.clean_up()
+
+    def stopped(self):
+        """
+        :return: if this iterator has been stopped
+        :rtype: bool
+        """
+        return self.stop_event.is_set()
+
+    def results_q_get(self):
+        """
+        Attempts to get something from the results queue.
+
+        :raises StopIteration: when we've been told to stop.
+
+        """
+        while not self.stopped():
+            try:
+                return self.results_queue.get(timeout=self.heart_beat)
+            except Queue.Empty:
+                pass
+        raise StopIteration()
+
+    def assert_queues_empty(self):
+        # All work should be exhausted at this point
+        if self.is_multiprocessing and sys.platform == 'darwin':
+            # multiprocessing.Queue.qsize doesn't work on OSX
+            # - Try to get something from each queue, expecting an empty
+            #   exception.
+            try:
+                self.work_queue.get(block=False)
+            except multiprocessing.queues.Empty:
+                pass
+            else:
+                raise AssertionError("In queue not empty")
+            try:
+                self.results_queue.get(block=False)
+            except multiprocessing.queues.Empty:
+                pass
+            else:
+                raise AssertionError("Out queue not empty")
+        else:
+            assert self.work_queue.qsize() == 0, \
+                "In queue not empty (%d)" % self.work_queue.qsize()
+            assert self.results_queue.qsize() == 0, \
+                "Out queue not empty (%d)" % self.results_queue.qsize()
+
+
 class _FeedQueueThread (SmqtkObject, threading.Thread):
     """
     Helper thread for putting data into the work queue
 
     """
 
-    def __init__(self, arg_sequences, q, num_terminal_packets, heart_beat,
+    def __init__(self, name, arg_sequences, q, num_terminal_packets, heart_beat,
                  do_fill, fill_value):
-        super(_FeedQueueThread, self).__init__()
+        threading.Thread.__init__(self, name=name)
+        SmqtkObject.__init__(self)
+
+        if name:
+            self.name = '[' + name + ']'
+        else:
+            self.name = ''
 
         self.arg_sequences = arg_sequences
         self.q = q
@@ -269,6 +401,14 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
         self._stop = threading.Event()
 
+        # self.daemon = True
+
+    @property
+    def _log(self):
+        return logging.getLogger(
+            self.logger().name + self.name
+        )
+
     def stop(self):
         self._stop.set()
 
@@ -276,6 +416,8 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         return self._stop.isSet()
 
     def run(self):
+        self._log.debug("Starting")
+
         if self.do_fill:
             izip = itertools.izip_longest
             izip_kwds = {'fillvalue': self.fill_value}
@@ -284,20 +426,31 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
             izip_kwds = {}
 
         try:
-            for r, args in enumerate(izip(*self.arg_sequences, **izip_kwds)):
+            r = 0
+            for args in izip(*self.arg_sequences, **izip_kwds):
                 self.q_put((r, args))
+                r += 1
 
                 # If we're told to stop, immediately quit out of processing
                 if self.stopped():
                     self._log.debug("Told to stop prematurely")
                     break
-        except KeyboardInterrupt:
-            pass
-        finally:
+        except Exception, ex:
+            self._log.debug("Caught exception %s", type(ex))
+            self.q_put(ex)
+            self.stop()
+        else:
             self._log.debug("Sending in-queue terminal packets")
             for _ in xrange(self.num_terminal_packets):
                 self.q_put(_TerminalPacket())
-            self._log.debug("Closing in-queue")
+        finally:
+            # Explicitly stop any nested parallel maps
+            for s in self.arg_sequences:
+                if isinstance(s, ParallelResultsIterator):
+                    self._log.debug("Stopping nested parallel map: %s", s)
+                    s.stop()
+
+            self._log.debug("Closing")
 
     def q_put(self, val):
         """
@@ -316,93 +469,70 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 pass
 
 
-class _WorkProcess (SmqtkObject, multiprocessing.Process):
-    """
-    Helper process for extracting DescriptorElement vectors on a separate
-    process. This terminates with a None packet fed to in_q. Otherwise, in_q
-    values are expected to be (row, element) pairs. Tuples of the form
-    (row, vector) are published to the out_q.
+class _Worker (SmqtkObject):
 
-    """
-
-    def __init__(self, i, work_function, in_q, out_q):
-        super(_WorkProcess, self).__init__(name='[w%d]' % i)
-
-        self._log.debug("Making process worker (%d, %s, %s)", i, in_q, out_q)
-        self.i = i
-        self.work_function = work_function
-        self.in_q = in_q
-        self.out_q = out_q
-
-    def run(self):
-        try:
-            packet = self.in_q.get()
-            while not is_terminal(packet):
-                i, args = packet
-                result = self.work_function(*args)
-                self.out_q.put((i, result))
-                packet = self.in_q.get()
-        except KeyboardInterrupt:
-            pass
-        # Transport back any exceptions raised
-        except Exception, ex:
-            self.out_q.put(ex)
-            raise
-        finally:
-            self._log.debug("%s finished work", self.name)
-            self.out_q.put(_TerminalPacket())
-
-
-class _WorkThread (SmqtkObject, threading.Thread):
-    """
-    Helper process for extracting DescriptorElement vectors on a separate
-    process. This terminates with a None packet fed to in_q. Otherwise, in_q
-    values are expected to be (row, element) pairs. Tuples of the form
-    (row, vector) are published to the out_q.
-
-    """
-
-    def __init__(self, i, work_function, in_q, out_q, heart_beat):
+    def __init__(self, name, i, work_function, in_q, out_q, heart_beat):
         """
+        :type name: str
         :type i: int
-        :type work_function:
-        :type in_q: Queue.Queue
-        :type out_q: Queue.Queue
+        :type work_function: (*args) -> object
+        :type in_q: multiprocessing.queues.Queue
+        :type out_q: multiprocessing.queues.Queue
         :type heart_beat: float
         """
-        SmqtkObject.__init__(self)
-        threading.Thread.__init__(self, name='[w%d]' % i)
+        if name:
+            self.name = '[' + name + '::%d]' % i
+        else:
+            self.name = '::%d' % i
 
-        self._log.debug("Making thread worker (%d, %s, %s)", i, in_q, out_q)
         self.i = i
         self.work_function = work_function
         self.in_q = in_q
         self.out_q = out_q
         self.heart_beat = heart_beat
+        self._log.debug("Making process worker (%d, %s, %s)", i, in_q, out_q)
 
-        self._stop = threading.Event()
+        self._stop = self._make_event()
+
+    @property
+    def _log(self):
+        return logging.getLogger(
+            self.logger().name + self.name
+        )
+
+    def _make_event(self):
+        raise NotImplementedError()
 
     def stop(self):
         self._stop.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop.is_set()
 
     def run(self):
         try:
             packet = self.q_get()
-            while not is_terminal(packet) and not self.stopped():
-                i, args = packet
-                result = self.work_function(*args)
-                self.q_put((i, result))
-                packet = self.q_get()
+            while not self.stopped():
+                if is_terminal(packet):
+                    self._log.debug("sending terminal")
+                    self.q_put(packet)
+                    self.stop()
+                elif isinstance(packet, Exception):
+                    # Pass exception along
+                    self.q_put(packet)
+                    self.stop()
+                else:
+                    i, args = packet
+                    result = self.work_function(*args)
+                    self.q_put((i, result))
+                    packet = self.q_get()
         # Transport back any exceptions raised
         except Exception, ex:
+            self._log.debug("Caught exception %s", type(ex))
             self.q_put(ex)
-            raise
+            self.stop()
         finally:
-            self._log.debug("%s finished work", self.name)
-            self.q_put(_TerminalPacket())
+            self._log.debug("Closing")
 
     def q_get(self):
         """
@@ -433,3 +563,35 @@ class _WorkThread (SmqtkObject, threading.Thread):
                 put = True
             except Queue.Full:
                 pass
+
+
+class _WorkerProcess (_Worker, multiprocessing.process.Process):
+
+    def __init__(self, name, i, work_function, in_q, out_q, heart_beat):
+        multiprocessing.Process.__init__(self)
+        _Worker.__init__(self, name, i, work_function, in_q, out_q, heart_beat)
+        # if name:
+        #     self.name = name + "::%d" % i
+
+        # self.daemon = True
+
+    def _make_event(self):
+        return multiprocessing.Event()
+
+    run = _Worker.run
+
+
+class _WorkerThread (_Worker, threading.Thread):
+
+    def __init__(self, name, i, work_function, in_q, out_q, heart_beat):
+        threading.Thread.__init__(self)
+        _Worker.__init__(self, name, i, work_function, in_q, out_q, heart_beat)
+        # if name:
+        #     self.name = name + "::%d" % i
+
+        # self.daemon = True
+
+    def _make_event(self):
+        return threading.Event()
+
+    run = _Worker.run

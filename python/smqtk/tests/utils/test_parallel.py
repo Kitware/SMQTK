@@ -99,3 +99,53 @@ class TestParallelMap (unittest.TestCase):
 
         expected = [6] * 4 + [14] * 6
         nose.tools.assert_equal(r, expected)
+
+    def test_nested_multiprocessing(self):
+        # char -> char -> ord -> char -> ord
+        g1 = parallel_map(lambda e: e, self.test_string,
+                          ordered=True,
+                          use_multiprocessing=True,
+                          procs=2)
+        g2 = parallel_map(ord, g1,
+                          ordered=True,
+                          use_multiprocessing=True,
+                          procs=2)
+        g3 = parallel_map(chr, g2,
+                          ordered=True,
+                          use_multiprocessing=True,
+                          procs=2)
+        g4 = parallel_map(ord, g3,
+                          ordered=True,
+                          use_multiprocessing=True,
+                          procs=2)
+
+        expected = map(ord, self.test_string)
+        nose.tools.assert_equal(
+            list(g4),
+            expected
+        )
+
+    def test_nested_threading(self):
+        # char -> char -> ord -> char -> ord
+        g1 = parallel_map(lambda e: e, self.test_string,
+                          ordered=True,
+                          use_multiprocessing=False,
+                          procs=2)
+        g2 = parallel_map(ord, g1,
+                          ordered=True,
+                          use_multiprocessing=False,
+                          procs=2)
+        g3 = parallel_map(chr, g2,
+                          ordered=True,
+                          use_multiprocessing=False,
+                          procs=2)
+        g4 = parallel_map(ord, g3,
+                          ordered=True,
+                          use_multiprocessing=False,
+                          procs=2)
+
+        expected = map(ord, self.test_string)
+        nose.tools.assert_equal(
+            list(g4),
+            expected
+        )

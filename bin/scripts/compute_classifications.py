@@ -146,6 +146,7 @@ def main():
         descr_for_uuid, iter_uuids(),
         use_multiprocessing=p_use_multiprocessing,
         procs=p_index_extraction_cores,
+        name="descr_for_uuid",
     )
 
     log.info("Initializing descriptor-to-classification parallel map")
@@ -154,6 +155,7 @@ def main():
         classify_descr, element_iter,
         use_multiprocessing=p_use_multiprocessing,
         procs=p_classification_cores,
+        name='classify_descr',
     )
 
     c_labels = classifier.get_labels()
@@ -185,6 +187,10 @@ def main():
         for c in classification_iter:
             w.writerow(make_row(c))
             bin_utils.report_progress(log.info, r_state, 1.0)
+
+    # Final report
+    r_state[1] -= 1
+    bin_utils.report_progress(log.info, r_state, 0)
 
     log.info("Done")
 

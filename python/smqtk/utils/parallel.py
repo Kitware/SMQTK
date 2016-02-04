@@ -1,4 +1,3 @@
-import atexit
 import collections
 import heapq
 import itertools

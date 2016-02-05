@@ -128,7 +128,7 @@ your result set.
 .. figure:: figures/iqrrefine.png
    :align: center
 
-    *Query Refinement*
+   *Query Refinement*
 
 
 You can continue this process for as long as you like until you are satisfied with the results that the query is returning.   Once you are happy with the reulsts, you can select the ``Save IQR State``

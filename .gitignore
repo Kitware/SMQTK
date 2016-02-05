@@ -5,6 +5,11 @@
 # Sphinx compile files
 /docs/_build/
 
+# Ignore generated files from examples
+/docs/examples/nnss_incremental_update/leedsbutterfly_dataset_v1.0.zip
+/docs/examples/nnss_incremental_update/leedsbutterfly
+/docs/examples/nnss_incremental_update/2a.completed_files.csv
+
 # ColorDescriptor generated errors log file
 errors.log
 

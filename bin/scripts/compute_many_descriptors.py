@@ -15,6 +15,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import initialize_logging, output_config
+from smqtk.utils.configuration import merge_configs
 from smqtk.utils import plugin
 from smqtk.utils.jsmin import jsmin
 
@@ -189,7 +190,7 @@ def main():
     if config_fp:
         if os.path.isfile(config_fp):
             with open(config_fp) as f:
-                c.update(json.loads(jsmin(f.read())))
+                merge_configs(c, json.loads(jsmin(f.read())))
             config_loaded = True
         else:
             l.error("Config file path not valid")

@@ -1,0 +1,48 @@
+{
+    "descriptor_factory": {
+        "PostgresDescriptorElement": {
+            "binary_col": "vector",
+            "db_host": null,
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": null,
+            "db_user": null,
+            "table_name": "descriptors",
+            "type_col": "type_str",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorElement"
+    },
+    "descriptor_generator": {
+        "CaffeDescriptorGenerator": {
+            "batch_size": 256,
+            "data_layer": "data",
+            "gpu_device_id": 0,
+            "image_mean_filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+            "load_truncated_images": false,
+            "network_is_bgr": true,
+            "network_model_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+            "network_prototxt_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+            "pixel_rescale": null,
+            "return_layer": "fc7",
+            "use_gpu": false
+        },
+        "type": "CaffeDescriptorGenerator"
+    },
+    "descriptor_index": {
+        "PostgresDescriptorIndex": {
+            "db_host": null,
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": null,
+            "db_user": null,
+            "element_col": "element",
+            "multiquery_batch_size": 1000,
+            "pickle_protocol": -1,
+            "read_only": false,
+            "table_name": "descriptor_index",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorIndex"
+    }
+}

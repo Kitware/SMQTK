@@ -15,6 +15,7 @@ from livereload import Server, shell
 server = Server()
 server.watch('*.rst', shell('make html', cwd='.'))
 server.watch('examples/*.rst', shell('make html', cwd='.'))
+server.watch('examples/nnss_incremental_update/*.rst', shell('make html', cwd='.'))
 server.watch('webservices/*.rst', shell('make html', cwd='.'))
 server.watch('conf.py', shell('make html', cwd='.'))
 server.serve(root='_build/html')

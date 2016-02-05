@@ -1,6 +1,7 @@
 from collections import deque
 import io
 import itertools
+import logging
 import multiprocessing
 import multiprocessing.pool
 
@@ -12,7 +13,9 @@ from smqtk.algorithms import DescriptorGenerator
 
 try:
     import caffe
-except ImportError:
+except ImportError, ex:
+    logging.getLogger(__name__).warning("Failed to import caffe module: %s",
+                                        str(ex))
     caffe = None
 
 
@@ -29,7 +32,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
     def is_usable(cls):
         valid = caffe is not None
         if not valid:
-            cls.logger().debug("Caffe python module not importable")
+            cls.logger().debug("Caffe python module cannot be imported")
         return valid
 
     def __init__(self, network_prototxt_filepath, network_model_filepath,
@@ -84,7 +87,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         :param pixel_rescale: Re-scale image pixel values into the given tuple
             ``(min, max)`` range. By default, images are loaded in the
-            ``[0, 255]`` range.
+            ``[0, 255]`` range. Refer to the model being used for desired input
+            pixel scale.
         :type pixel_rescale: None | (float, float)
 
         """

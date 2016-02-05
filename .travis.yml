@@ -8,9 +8,8 @@ addons:
   apt:
     packages:
       # basics
-      - linux-headers-3.13.0-40-generic  # its the only choice we have
+      - linux-headers-3.13.0-40-generic
       - build-essential
-      - gfortran
       # For building things
       - cmake
 

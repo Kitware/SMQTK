@@ -19,9 +19,9 @@ matching results refined by the user's input.
    *Overall workflow of an SMQTK based Interactive Query Refinement application.*
 
 The IQR application is an excellent example application for SMQTK as it makes use of a broad spectrum of SMQTK's capabilities.
-In order to characterize each image in the archive so that it can be indexed, the :ref:`DescriptorGenerator <descriptor_generator>` algorithm is used.
-The :ref:`NearestNeighborsIndex <nearest_neighbors_index>` is used to understand the relationship between the images in the archive and the
-:ref:`RelevancyIndex <relevancey_index>` is used to rank results based on the user's positive and negative ajudications.
+In order to characterize each image in the archive so that it can be indexed, the :class:`.DescriptorGenerator` algorithm is used.
+The :class:`.NearestNeighborsIndex` is used to understand the relationship between the images in the archive and the
+:class:`.RelevancyIndex` is used to rank results based on the user's positive and negative ajudications.
 
 SMQTK comes with a web based application that implements an IQR system using SMQTK's
 services as shown in the :ref:`iqrsmqtk` figure.

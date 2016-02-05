@@ -18,7 +18,6 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
 .. autofunction:: smqtk.algorithms.classifier.get_classifier_impls
 
 
-.. _descriptor_generator:
 DescriptorGenerator
 +++++++++++++++++++
 This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.

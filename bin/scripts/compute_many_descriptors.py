@@ -70,9 +70,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls)
 
-    valid_file_paths = dict()
-    invalid_file_paths = dict()
-
     def iter_valid_elements():
         """
         :rtype:
@@ -106,14 +103,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
             ))
     finally:
         cf.close()
-
-    # Output valid file and invalid file dictionaries as pickle
-    log.info("Writing valid filepaths map")
-    with open('file_map.valid.pickle', 'wb') as f:
-        cPickle.dump(valid_file_paths, f, -1)
-    log.info("Writing invalid filepaths map")
-    with open('file_map.invalid.pickle', 'wb') as f:
-        cPickle.dump(invalid_file_paths, f, -1)
 
     log.info("Done")
 

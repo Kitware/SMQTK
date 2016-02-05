@@ -110,9 +110,9 @@ class Classifier (SmqtkAlgorithm):
 
         classifications = smqtk.utils.parallel.parallel_map(
             work, d_iter,
-            procs=procs,
+            cores=procs,
             ordered=False,
-            use_multiprocessing=use_multiprocessing
+            use_multiprocessing=use_multiprocessing,
         )
 
         r_state = [0] * 7

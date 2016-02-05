@@ -81,12 +81,12 @@ def parallel_map(work_func, *sequences, **kwargs):
         - buffer_factor
             - Multiplier against the number of processes used to limit the
               growth size of the result queue coming from worker processes
-              (``int(procs * buffer_factor)``). This is utilized so we don't
+              (``int(cores * buffer_factor)``). This is utilized so we don't
               overrun our RAM buffering results.
             - type: float
             - default: 2.0
 
-        - procs
+        - cores
             - Optional specification of the number of threads/cores to use. If
               None, we will attempt to use all available threads/cores.
             - type: None | int | long
@@ -116,7 +116,7 @@ def parallel_map(work_func, *sequences, **kwargs):
 
     """
     # kwargs
-    procs = kwargs.get('procs', None)
+    cores = kwargs.get('cores', None)
     ordered = kwargs.get('ordered', False)
     buffer_factor = kwargs.get('buffer_factor', 2.0)
     use_multiprocessing = kwargs.get('use_multiprocessing', False)
@@ -133,11 +133,11 @@ def parallel_map(work_func, *sequences, **kwargs):
     if heart_beat <= 0:
         raise ValueError("heart_beat must be >0.")
 
-    if procs is None or procs <= 0:
-        procs = multiprocessing.cpu_count()
-        log.debug("Using all cores (%d)", procs)
+    if cores is None or cores <= 0:
+        cores = multiprocessing.cpu_count()
+        log.debug("Using all cores (%d)", cores)
     else:
-        log.debug("Only using %d cores", procs)
+        log.debug("Only using %d cores", cores)
 
     # Choose parallel types
     if use_multiprocessing:
@@ -147,13 +147,13 @@ def parallel_map(work_func, *sequences, **kwargs):
         queue_t = Queue.Queue
         worker_t = _WorkerThread
 
-    queue_work = queue_t(int(procs * buffer_factor))
-    queue_results = queue_t(int(procs * buffer_factor))
+    queue_work = queue_t(int(cores * buffer_factor))
+    queue_results = queue_t(int(cores * buffer_factor))
 
     log.debug("Constructing worker processes")
     workers = [worker_t(name, i, work_func, queue_work, queue_results,
                         heart_beat)
-               for i in range(procs)]
+               for i in range(cores)]
 
     log.debug("Constructing feeder thread")
     feeder_thread = _FeedQueueThread(name, sequences, queue_work,

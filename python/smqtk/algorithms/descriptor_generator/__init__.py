@@ -127,7 +127,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
             return d, self.compute_descriptor(d, descr_factory, overwrite)
 
         results = smqtk.utils.parallel.parallel_map(work, data_iter,
-                                                    procs=procs,
+                                                    cores=procs,
                                                     ordered=False,
                                                     use_multiprocessing=use_mp)
 

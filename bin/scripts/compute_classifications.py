@@ -145,7 +145,7 @@ def main():
     element_iter = parallel.parallel_map(
         descr_for_uuid, iter_uuids(),
         use_multiprocessing=p_use_multiprocessing,
-        procs=p_index_extraction_cores,
+        cores=p_index_extraction_cores,
         name="descr_for_uuid",
     )
 
@@ -154,7 +154,7 @@ def main():
     classification_iter = parallel.parallel_map(
         classify_descr, element_iter,
         use_multiprocessing=p_use_multiprocessing,
-        procs=p_classification_cores,
+        cores=p_classification_cores,
         name='classify_descr',
     )
 

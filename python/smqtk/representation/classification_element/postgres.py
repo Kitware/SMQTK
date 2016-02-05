@@ -1,7 +1,7 @@
 import cPickle
 
 from smqtk.representation import ClassificationElement
-from smqtk.representation.classification_element import NoClassificationError
+from smqtk.utils.errors import NoClassificationError
 
 # Try to import required modules
 try:
@@ -61,7 +61,7 @@ class PostgresClassificationElement (ClassificationElement):
                  type_col='type_name', uuid_col='uid',
                  classification_col='classification',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
-                 db_pass=None):
+                 db_pass=None, pickle_protocol=-1):
         """
         Initialize new PostgresClassificationElement attached to some database
         credentials.
@@ -123,6 +123,10 @@ class PostgresClassificationElement (ClassificationElement):
             None if no password is to be used.
         :type db_pass: str | None
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(PostgresClassificationElement, self).__init__(type_name, uuid)
 
@@ -137,6 +141,8 @@ class PostgresClassificationElement (ClassificationElement):
         self.db_user = db_user
         self.db_pass = db_pass
 
+        self.pickle_protocol = pickle_protocol
+
     def get_config(self):
         return {
             "table_name": self.table_name,
@@ -149,6 +155,8 @@ class PostgresClassificationElement (ClassificationElement):
             "db_port": self.db_port,
             "db_user": self.db_user,
             "db_pass": self.db_pass,
+
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def get_psql_connection(self):
@@ -232,19 +240,10 @@ class PostgresClassificationElement (ClassificationElement):
         Label/confidence values may either be provided via keyword arguments or
         by providing a dictionary mapping labels to confidence values.
 
-        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
-        empty). Due to possible floating point error, we round to the 9-th
-        decimal digit.
-
-        NOTE TO IMPLEMENTORS: This abstract method will aggregate, and error
-        check, input into a single dictionary and return it. Thus, a ``super``
-        call should be made, which will return a dictionary.
-
         :param m: New labels-to-confidence mapping to set.
         :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty or values
-            did no sum to ``1.0``.
+        :raises ValueError: The given label-confidence map was empty.
 
         """
         m = super(PostgresClassificationElement, self)\
@@ -260,7 +259,8 @@ class PostgresClassificationElement (ClassificationElement):
                 "uuid_col": self.uuid_col,
             })
             q_values = {
-                "classification_val": psycopg2.Binary(cPickle.dumps(m)),
+                "classification_val":
+                    psycopg2.Binary(cPickle.dumps(m, self.pickle_protocol)),
                 "type_val": self.type_name,
                 "uuid_val": str(self.uuid),
             }

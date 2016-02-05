@@ -15,7 +15,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         # no dependencies
         return True
 
-    def __init__(self, file_cache=None):
+    def __init__(self, file_cache=None, pickle_protocol=-1):
         """
         Initialize a new in-memory descriptor index, or reload one from a
         cache.
@@ -25,6 +25,10 @@ class MemoryDescriptorIndex (DescriptorIndex):
             this enabled file caching when descriptors are added to this index.
         :type file_cache: None | str
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(MemoryDescriptorIndex, self).__init__()
 
@@ -33,6 +37,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         self._table = {}
         # Record of optional file cache we're using
         self.file_cache = file_cache
+        self.pickle_protocol = pickle_protocol
 
         if file_cache and osp.isfile(file_cache):
             self._log.debug("Loading cached descriptor index table from file: "
@@ -46,11 +51,12 @@ class MemoryDescriptorIndex (DescriptorIndex):
         if self.file_cache:
             with SimpleTimer("Caching descriptor table", self._log.debug):
                 with open(self.file_cache, 'wb') as f:
-                    cPickle.dump(self._table, f)
+                    cPickle.dump(self._table, f, self.pickle_protocol)
 
     def get_config(self):
         return {
             'file_cache': self.file_cache,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def count(self):

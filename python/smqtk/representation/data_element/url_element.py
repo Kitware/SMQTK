@@ -1,4 +1,3 @@
-import logging
 import mimetypes
 import requests
 
@@ -20,12 +19,14 @@ class DataUrlElement (DataElement):
     def is_usable(cls):
         # have to be able to connect to the internet
         try:
+            # using github because that's where this repo has been hosted.
             r = requests.get('http://github.com')
             _ = r.content
             return True
         except Exception, ex:
             cls.logger().warning(
-                "DataUrlElement not usable, cannot connect to github.com"
+                "DataUrlElement not usable, cannot connect to "
+                "http://github.com"
             )
             return False
 

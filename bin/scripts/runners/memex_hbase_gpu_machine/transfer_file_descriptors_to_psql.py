@@ -11,7 +11,7 @@ import re
 
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
-from smqtk.representation.descriptor_element.postgres_element import PostgresDescriptorElement
+from smqtk.representation.descriptor_element.postgres import PostgresDescriptorElement
 from smqtk.utils import bin_utils
 from smqtk.utils import file_utils
 
@@ -90,19 +90,19 @@ def main():
         log.info("Loading filename list")
         with open("descriptor_file_names.5.3mil.pickle") as f:
             fname_list = cPickle.load(f)
-   
+
         log.info("Running through filename list")
         for n in fname_list:
             m = fname_re.match(n)
             assert m
-    
+
             type_str = m.group(1)
             uuid_str = m.group(2)
-    
+
             #print type_str, uuid_str
             #break
             in_queue.put( (type_str, uuid_str) )
-    
+
         log.info("Sending worker terminal packets")
         for w in workers:
             in_queue.put(None)

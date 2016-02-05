@@ -152,7 +152,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         if self._descr_cache_fp:
             with open(self._descr_cache_fp, 'wb') as f:
-                cPickle.dump(self._descr_cache, f)
+                cPickle.dump(self._descr_cache, f, -1)
 
     def rank(self, pos, neg):
         """

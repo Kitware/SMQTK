@@ -260,7 +260,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                             self._descr_cache_filepath)
             safe_create_dir(osp.dirname(self._descr_cache_filepath))
             with open(self._descr_cache_filepath, 'wb') as f:
-                cPickle.dump(self._descr_cache, f)
+                cPickle.dump(self._descr_cache, f, -1)
 
         params = {
             "target_precision": self._build_target_precision,
@@ -300,7 +300,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             }
             safe_create_dir(osp.dirname(self._index_param_filepath))
             with open(self._index_param_filepath, 'w') as f:
-                cPickle.dump(state, f)
+                cPickle.dump(state, f, -1)
 
         self._pid = multiprocessing.current_process().pid
 

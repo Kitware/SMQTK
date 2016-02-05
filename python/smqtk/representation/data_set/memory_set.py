@@ -29,7 +29,7 @@ class DataMemorySet (DataSet):
         """
         return True
 
-    def __init__(self, file_cache=None):
+    def __init__(self, file_cache=None, pickle_protocol=-1):
         """
         Initialize a new in-memory data set instance.
 
@@ -44,6 +44,10 @@ class DataMemorySet (DataSet):
             is not set, the ``cache()`` method does nothing.
         :type file_cache: None | str
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(DataMemorySet, self).__init__()
 
@@ -52,20 +56,23 @@ class DataMemorySet (DataSet):
         self._element_map = {}
         self._element_map_lock = multiprocessing.RLock()
 
-        # Optional path to a file that will act as a cache of our internal table
+        # Optional path to a file that will act as a cache of our internal
+        # table
         self.file_cache = file_cache
         if file_cache and os.path.isfile(file_cache):
             with open(file_cache) as f:
                 #: :type: dict[collections.Hashable, DataElement]
                 self._element_map = cPickle.load(f)
 
+        self.pickle_protocol = pickle_protocol
+
     def __iter__(self):
         """
         :return: Generator over the DataElements contained in this set in no
             particular order.
         """
-        # making copy of UUIDs so we don't block when between yields, as well as
-        # so we aren't walking a possibly modified map
+        # making copy of UUIDs so we don't block when between yields, as well
+        # as so we aren't walking a possibly modified map
         uuids = self.uuids()
         with self._element_map_lock:
             for k in uuids:
@@ -76,7 +83,8 @@ class DataMemorySet (DataSet):
             with self._element_map_lock:
                 with SimpleTimer("Caching memory data-set table", self._log.info):
                     with open(self.file_cache, 'wb') as f:
-                        cPickle.dump(self._element_map, f)
+                        cPickle.dump(self._element_map, f,
+                                     self.pickle_protocol)
 
     def get_config(self):
         """
@@ -88,6 +96,7 @@ class DataMemorySet (DataSet):
         """
         return {
             "file_cache": self.file_cache,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def count(self):

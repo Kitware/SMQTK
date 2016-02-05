@@ -7,6 +7,7 @@ import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import SimpleTimer
+import smqtk.utils.parallel
 from smqtk.utils.plugin import get_plugins
 
 
@@ -67,8 +68,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
 
         # Produce the descriptor element container via the provided factory
         # - If the generated element already contains a vector, because the
-        #   implementation provides some kind of persistent caching mechanism or
-        #   something, don't compute another descriptor vector unless the
+        #   implementation provides some kind of persistent caching mechanism
+        #   or something, don't compute another descriptor vector unless the
         #   overwrite flag is True
         descr_elem = descr_factory.new_descriptor(self.name, data.uuid())
         if overwrite or not descr_elem.has_vector():
@@ -83,6 +84,10 @@ class DescriptorGenerator (SmqtkAlgorithm):
                                  overwrite=False, procs=None, **kwds):
         """
         Asynchronously compute feature data for multiple data items.
+
+        Additional keyword arguments:
+            use_mp [= False]
+                If multi-processing should be used vs. multi-threading.
 
         :param data_iter: Iterable of data elements to compute features for.
             These must have UIDs assigned for feature association in return
@@ -106,11 +111,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
             cores.
         :type procs: int | None
 
-        :param pool_type: multiprocessing pool type to use. If no provided, we
-            use a normal multiprocessing.pool.Pool instance. By default we use
-            the ThreadPool type when None.
-        :type pool_type: type | None
-
         :return: Mapping of input DataElement instances to the computed
             descriptor element.
             DescriptorElement UUID's are congruent with the UUID of the data
@@ -121,57 +121,21 @@ class DescriptorGenerator (SmqtkAlgorithm):
         """
         self._log.info("Async compute features")
 
-        # Mapping of DataElement to async processing result
-        #: :type: dict[smqtk.representation.DataElement, multiprocessing.pool.ApplyResult]
-        ar_map = {}
-        # Mapping of DataElement to the DescriptorElement for it.
-        #: :type: dict[smqtk.representation.DataElement, smqtk.representation.DescriptorElement]
+        use_mp = kwds.get('use_mp', False)
+
+        def work(d):
+            return d, self.compute_descriptor(d, descr_factory, overwrite)
+
+        results = smqtk.utils.parallel.parallel_map(work, data_iter,
+                                                    procs=procs,
+                                                    ordered=False,
+                                                    use_multiprocessing=use_mp)
+
         de_map = {}
-
-        # Queue up descriptor generation for descriptor elements that
-        procs = procs and int(procs)
-        pool_t = kwds.get("pool_type", multiprocessing.pool.ThreadPool)
-        pool = pool_t(processes=procs)
-        with SimpleTimer("Queuing descriptor computation...", self._log.debug):
-            for d in data_iter:
-                de_map[d] = descr_factory.new_descriptor(self.name, d.uuid())
-                if overwrite or not de_map[d].has_vector():
-                    ar_map[d] = \
-                        pool.apply_async(_async_feature_generator_helper,
-                                         args=(self, d))
-        pool.close()
-
-        failures = False
-        # noinspection PyPep8Naming
-        perc_T = 0.0
-        perc_inc = 0.1
-        with SimpleTimer("Collecting async results...", self._log.debug):
-            for i, (d, ar) in enumerate(ar_map.iteritems()):
-                descriptor = ar.get()
-                if descriptor is None:
-                    failures = True
-                    continue
-                else:
-                    de_map[d].set_vector(descriptor)
-
-                perc = float(i + 1) / len(ar_map)
-                if perc >= perc_T:
-                    self._log.debug("Progress: [%d/%d] %3.3f%%",
-                                    i + 1, len(ar_map),
-                                    float(i + 1) / (len(ar_map)) * 100)
-                    perc_T += perc_inc
-        pool.join()
-
-        # Check for failed generation
-        if failures:
-            raise RuntimeError("Failure occurred during data feature "
-                               "computation. See logging.")
+        for data, descriptor in results:
+            de_map[data] = descriptor
 
         return de_map
-
-    #
-    # TODO: compute_descriptor_iterator -> see elements_to_matrix for pipeline
-    #
 
     @abc.abstractmethod
     def _compute_descriptor(self, data):
@@ -191,41 +155,6 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :rtype: numpy.core.multiarray.ndarray
 
         """
-
-
-def _async_feature_generator_helper(cd_inst, data):
-    """
-    Helper method for asynchronously producing a descriptor vector.
-
-    :param data: Data to generate feature over
-    :type data: smqtk.representation.DataElement
-
-    :param cd_inst: Content descriptor that will generate the feature
-    :type cd_inst: smqtk.descriptor_generator.DescriptorGenerator
-
-    :return: UID and associated feature vector
-    :rtype: numpy.core.multiarray.ndarray or None
-    """
-    log = logging.getLogger("_async_feature_generator_helper")
-    try:
-        # noinspection PyProtectedMember
-        feat = cd_inst._compute_descriptor(data)
-        # Invalid feature matrix if there are inf or NaN values
-        # noinspection PyUnresolvedReferences
-        if numpy.isnan(feat.sum()):
-            log.error("[%s] Computed feature has NaN values.", data)
-            return None
-        elif float('inf') in feat:
-            log.error("[%s] Computed feature has infinite values", data)
-            return None
-        return feat
-    except Exception, ex:
-        log.error("[%s] Failed feature generation\n"
-                  "Error: %s\n"
-                  "Traceback:\n"
-                  "%s",
-                  data, str(ex), traceback.format_exc())
-        return None
 
 
 def get_descriptor_generator_impls(reload_modules=False):

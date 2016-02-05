@@ -1,9 +1,7 @@
 from threading import RLock
 
-from smqtk.representation.classification_element import (
-    ClassificationElement,
-    NoClassificationError,
-)
+from smqtk.representation.classification_element import ClassificationElement
+from smqtk.utils.errors import NoClassificationError
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -37,7 +35,25 @@ class MemoryClassificationElement (ClassificationElement):
         # dictionary of classification labels and values
         #: :type: None | dict[collections.Hashable, float]
         self._c = None
+        # Cannot be pickled. New lock initialized upon pickle/unpickle
         self._c_lock = RLock()
+
+    def __getstate__(self):
+        state = {
+            'type': self.type_name,
+            'uuid': self.uuid
+        }
+        with self._c_lock:
+            state['c'] = self._c
+        return state
+
+    def __setstate__(self, state):
+        self.type_name = state['type']
+        self.uuid = state['uuid']
+        self._c_lock = RLock()
+        with self._c_lock:
+            #: :type: None | dict[collections.Hashable, float]
+            self._c = state['c']
 
     def get_config(self):
         """
@@ -89,14 +105,10 @@ class MemoryClassificationElement (ClassificationElement):
         Label/confidence values may either be provided via keyword arguments or
         by providing a dictionary mapping labels to confidence values.
 
-        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
-        empty).
-
         :param m: New labels-to-confidence mapping to set.
         :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty or values
-            did no sum to ``1.0``.
+        :raises ValueError: The given label-confidence map was empty.
 
         """
         m = super(MemoryClassificationElement, self)\

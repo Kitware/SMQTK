@@ -9,6 +9,12 @@ def merge_configs(a, b):
     This is different than normal dictionary update in that we don't bash
     nested dictionaries, instead recursively updating them.
 
+    :param a: The "base" dictionary.
+    :type a: dict
+
+    :param b: The dictionary to merge into ``a`` recursively.
+    :type b: dict
+
     """
     for k in b:
         if k in a and isinstance(a[k], dict) and isinstance(b[k], dict):

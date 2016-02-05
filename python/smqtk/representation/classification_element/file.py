@@ -1,12 +1,10 @@
 import cPickle
 import os.path as osp
 
-from smqtk.representation.classification_element import (
-    ClassificationElement,
-    NoClassificationError,
-)
+from smqtk.representation.classification_element import ClassificationElement
 
 from smqtk.utils import file_utils
+from smqtk.utils.errors import NoClassificationError
 from smqtk.utils.string_utils import partition_string
 
 
@@ -19,7 +17,8 @@ class FileClassificationElement (ClassificationElement):
     def is_usable(cls):
         return True
 
-    def __init__(self, type_name, uuid, save_dir, subdir_split=None):
+    def __init__(self, type_name, uuid, save_dir, subdir_split=None,
+                 pickle_protocol=-1):
         """
         Initialize a file-base descriptor element.
 
@@ -44,10 +43,15 @@ class FileClassificationElement (ClassificationElement):
             element).
         :type subdir_split: None | int
 
+        :param pickle_protocol: Pickling protocol to use. We will use -1 by
+            default (latest version, probably binary).
+        :type pickle_protocol: int
+
         """
         super(FileClassificationElement, self).__init__(type_name, uuid)
 
         self.save_dir = osp.abspath(osp.expanduser(save_dir))
+        self.pickle_protocol = pickle_protocol
 
         # Saving components
         self.subdir_split = subdir_split
@@ -66,7 +70,8 @@ class FileClassificationElement (ClassificationElement):
     def get_config(self):
         return {
             "save_dir": self.save_dir,
-            'subdir_split': self.subdir_split
+            'subdir_split': self.subdir_split,
+            "pickle_protocol": self.pickle_protocol,
         }
 
     def has_classifications(self):
@@ -105,19 +110,14 @@ class FileClassificationElement (ClassificationElement):
         Label/confidence values may either be provided via keyword arguments or
         by providing a dictionary mapping labels to confidence values.
 
-        The sum of all confidence values, must be ``1.0`` (e.g. input cannot be
-        empty). Due to possible floating point error, we round to the 9-th
-        decimal digit.
-
         :param m: New labels-to-confidence mapping to set.
         :type m: dict[collections.Hashable, float]
 
-        :raises ValueError: The given label-confidence map was empty or values
-            did no sum to ``1.0``.
+        :raises ValueError: The given label-confidence map was empty.
 
         """
         m = super(FileClassificationElement, self)\
             .set_classification(m, **kwds)
         file_utils.safe_create_dir(osp.dirname(self.filepath))
         with open(self.filepath, 'w') as f:
-            cPickle.dump(m, f)
+            cPickle.dump(m, f, self.pickle_protocol)

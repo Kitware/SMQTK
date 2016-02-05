@@ -357,7 +357,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 self._log.debug("Writing out hash2uuid map: %s",
                                 self.hash2uuid_cache_filepath)
                 with open(self.hash2uuid_cache_filepath, 'w') as f:
-                    cPickle.dump(self._hash2uuid, f)
+                    cPickle.dump(self._hash2uuid, f, -1)
 
     @classmethod
     def build_from_descriptor_index(cls, descriptor_index, hash_index,

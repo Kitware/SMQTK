@@ -95,8 +95,6 @@ This step yields two side effects:
             - want to quickly back-reference the original file for a given UUID, as UUIDs for descriptor and classification elements are currently the same as the original file they are computed from.
 
 
-.. _`step 2b`:
-
 [2b] Training ITQ Model
 '''''''''''''''''''''''
 To train the ITQ model, we will use the script: :file:`./bin/scripts/train_itq.py`.
@@ -206,7 +204,7 @@ We can now start the service using::
 
 We can test the server by calling its web api via curl using one of our ingested images, :file:`leedsbutterfly/images/001_0001.jpg`::
 
-    $ curl http://127.0.0.1:5000/nn/file:///home/purg/data/smqtk/leedsbutterfly/images/001_0001.jpg
+    $ curl http://127.0.0.1:5000/nn/n=10/file:///home/purg/data/smqtk/leedsbutterfly/images/001_0001.jpg
     {
       "distances": [
         -2440.0882132202387,
@@ -239,23 +237,65 @@ We can test the server by calling its web api via curl using one of our ingested
 
 If we compare the result neighbor UUIDs to the SHA1 hash signatures of the original files (that descritpors were computed from), listed in the `step 2a`_ result file :file:`2a.completed_files.csv`, we find that the above results are all of the class ``001``, or monarch butterflies.
 
+If we used either of the files :file:`leedsbutterfly/images/001_0042.jpg` or :file:`leedsbutterfly/images/001_0063.jpg`, which are not in our initial ingest, but in the subsequent ingests, and set ``.../n=832/...`` (the maximum size we will see in ingest grow to), we would see that the API does not return their UUIDs since they have not been ingested yet.
+We will also see that only 418 neighbors are returned even though we asked for 832, since there are only 418 elements currently in the index.
+We will use these three files as proof that we are actually expanding the searchable content after each incremental ingest.
+
+We provide a helper bash script, :file:`test_in_index.sh`, for checking if a file is findable via in the search API.
+A call of the form::
+
+    $ ./test_in_index.sh leedsbutterfly/images/001_0001.jpg 832
+
+... performs a curl call to the server's default host address and port for the 832 nearest neighbors to the query image file, and checks if the UUIDs of the given file (the sha1sum) is in the returned list of UUIDs.
+
 
 [3] First Incremental Update
 ````````````````````````````
 Now that we have a live :class:`.NearestNeighborServiceServer` instance running, we can incrementally process the files listed in :file:`3.ingest_files_2.txt`, making them available for search without having to shut down or otherwise do anything to the running server instance.
 
-We will be performing the same actions taken in steps 2a_ and 2c_, but with different inputs and outputs.
-
 .. _2a: `step 2a`_
 .. _2c: `step 2c`_
 
-First, we can re-use the configuration file for :file:`compute_many_descriptors.py` as there is no input/output specification in the file.
+We will be performing the same actions taken in steps 2a_ and 2c_, but with different inputs and outputs:
 
-- `3.ingest_files_2.txt` -> `compute_many_descriptors.py` -> `compute_hash_codes.py`
-- test via running NNSS
+  1. Compute descriptors for files listed in :file:`3.ingest_files_2.txt` using script :file:`compute_many_descriptors.py`, outputting file :file:`3.completed_files.csv`.
+  2. Create a list of descriptor UUIDs just computed (see :file:`2c.extract_ingest_uuids.sh`) and compute hash codes for those descriptors, overwriting :file:`2d.hash2uuids.pickle` (which causes the server the :class:`.LSHNearestNeighborIndex` instance to update itself).
+
+The following is the updated configuration file for hash code generation. Note the highlighted lines for differences from `step 2c`_ (notes to follow):
+
+.. literalinclude:: 3.config.compute_hash_codes.json
+   :language: json
+   :linenos:
+   :emphasize-lines: 31,32,36
+
+Line notes:
+
+    - Lines ``31`` and ``32`` are set to the model file that the :class:`.LSHNearestNeighborIndex` implementation for the server was configured to use.
+    - Line ``36`` should be set to the descriptor UUIDs file generated from :file:`3.completed_files.csv` (see :file:`2c.extract_ingest_uuids.sh`)
+
+The provided :file:`3.run.sh` script is an example of the commands to run for updating the indices and models:
+
+.. literalinclude:: 3.run.sh
+   :language: bash
+   :linenos:
+
+After calling the :file:`compute_hash_codes.py` script, the server logging should yield messages (if run in debug/verbose mode) showing that the :class:`.LSHNearestNeighborIndex` updated its model.
+
+We can now test that the :class:`.NearestNeighborServiceServer` using the query examples used at the end of `step 2d`_.
+Using images :file:`leedsbutterfly/images/001_0001.jpg` and :file:`leedsbutterfly/images/001_0042.jpg` as our query examples (and ``.../n=832/...``), we can see that both are in the index (each image is the nearest neighbor to itself).
+We also see that a total of 627 neighbors are returned, which is the current number of elements now in the index after this update.
+The sha1 of the third image file, :file:`leedsbutterfly/images/001_0082.jpg`, when used as the query example, is not included in the returned neighbors and thus found in the index.
 
 
 [4] Second Incremental Update
 `````````````````````````````
-- `4.ingest_files_3.txt` -> `compute_many_descriptors.py` -> `compute_hash_codes.py`
-- test via running NNSS
+Let us repeat again the above process, but using the third increment set (highlighted lines different from :file:`3.run.sh`):
+
+.. literalinclude:: 4.run.sh
+  :language: bash
+  :linenos:
+  :emphasize-lines: 11,12,15,19
+
+After this, we should be able to query all three example files used before and see that they are all now included in the index.
+We will now also see that all 832 neighbors requested are returned for each of the queries, which equals the total number of files we have ingested over the above steps.
+If we increase ``n`` for a query, only 832 neighbors are returned, showing that there are 832 elements in the index at this point.

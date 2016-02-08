@@ -11,8 +11,12 @@
 /docs/examples/nnss_incremental_update/2a.completed_files.csv
 /docs/examples/nnss_incremental_update/2b.itq.256bit.mean_vec.npy
 /docs/examples/nnss_incremental_update/2b.itq.256bit.rotation.npy
-2c.hash2uuids.pickle
-2d.hash2uuids.pickle
+/docs/examples/nnss_incremental_update/2c.hash2uuids.pickle
+/docs/examples/nnss_incremental_update/2d.hash2uuids.pickle
+/docs/examples/nnss_incremental_update/3.completed_files.csv
+/docs/examples/nnss_incremental_update/3.uuids_for_processing.txt
+/docs/examples/nnss_incremental_update/4.completed_files.csv
+/docs/examples/nnss_incremental_update/4.uuids_for_processing.txt
 
 # ColorDescriptor generated errors log file
 errors.log

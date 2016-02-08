@@ -44,6 +44,8 @@ See the [SMQTK README] file for additional information.
 
 SMQTK uses GitHub for code review and [Travis-CI] for continuous testing as new
 pull requests are made.
+All checks/tests must pass before a PR can be merged.
+
 Sphinx is used for manual and automatic API [documentation]. 
 
 

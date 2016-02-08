@@ -13,6 +13,10 @@ Compute Functions
 
   * Added function for asynchronously computing LSH codes for some number of
     input descriptor elements.
+    
+Documentation
+
+  * Added ``CONTRIBUTING.md`` file.
 
 Tools / Scripts
 

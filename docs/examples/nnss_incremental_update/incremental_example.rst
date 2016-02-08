@@ -14,6 +14,15 @@ All scripts used in this example's proceedure have a command line interface that
 Their available options can be listed by giving the ``-h``/``--help`` option.
 Additional debug logging can be seen output by providing a ``-d`` or ``-v`` option, depending on the script.
 
+This example assumes that you have a basic understanding of:
+
+    - JSON for configuring files
+    - how to use the :file:`bin/runApplication.py`
+    - SMQTK's NearestNeighborServiceServer application and algorithmic/data-structure components.
+        - :class:`.NearestNeighborsIndex`, specific the implementation :class:`.LSHNearestNeighborIndex`
+        - :class:`.DescriptorIndex` abstract and implementations with an updatable persistance storage mechanism (e.g. :class:`.PostgresDescriptorIndex`).
+        - :class:`.LshFunctor` abstract and implementations
+
 Dependencies
 ````````````
 Due to our use of the :class:`.PostgresDescriptorIndex` in this example, a minimum installed version of PostgreSQL 9.4 is required, as is the ``psycopg2`` python module (``conda`` and ``pip`` installable).
@@ -111,8 +120,8 @@ This step produces the following side effects:
 
     - Writes the two file components of the model as configured.
         - We configured the output files:
-            - :file:`nnss.itq.256bit.mean_vec.npy`
-            - :file:`nnss.itq.256bit.rotation.npy`
+            - :file:`2b.itq.256bit.mean_vec.npy`
+            - :file:`2b.nnss.itq.256bit.rotation.npy`
 
 
 .. _`step 2c`:
@@ -150,9 +159,8 @@ We can now move forward and run the computation script:
 
 This step produces the following side effects:
 
-    - Writed the file :file:`nnss.hash2uuids.pickle`
-        - This file will be used in configuring the :class:`.LSHNearestNeighborIndex` for the :class:`.NearestNeighborServiceServer`
-
+    - Writed the file :file:`2c.hash2uuids.pickle`
+        - This file will be copied and used in configuring the :class:`.LSHNearestNeighborIndex` for the :class:`.NearestNeighborServiceServer`
 
 
 .. _`step 2d`:
@@ -160,5 +168,94 @@ This step produces the following side effects:
 [2d] Starting the :class:`.NearestNeighborServiceServer`
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-Normally, the :class:`.NearestNeighborsIndex` would need to be built before it can be used.
+Normally, a :class:`.NearestNeighborsIndex` instance would need to be have its index built before it can be used.
 However, we have effectively already done this in the preceeding steps, so are instead able to get right to configuring and starting the :class:`.NearestNeighborServiceServer`.
+A default configuration may be generated using the generic :file:`bin/runApplication.py` script (since web applications/servers are plugins) using the command::
+
+    $ runApplication.py -a NearestNeighborServiceServer --output-config 2d.config.nnss_app.json
+
+An example configuration has been provided in :file:`2d.config.nnss_app.json`.
+The :class:`.DescriptorIndex`, :class:`.DescriptorGenerator` and :class:`.LshFunctor` configuration sections should be the same as used in the preceeding sections.
+
+Before configuring, we are copying :file:`2c.hash2uuids.pickle` to :file:`2d.hash2uuids.pickle`.
+Since we will be overwriting this file (the ``2d`` version) in steps to come, we want to separate it from the results of `step 2c`_.
+
+Note the highlighted lines for configurations of note for the :class:`.LSHNearestNeighborIndex` implementation.
+These will be explained below.
+
+.. literalinclude:: 2d.config.nnss_app.json
+   :language: json
+   :linenos:
+   :emphasize-lines: 55,56,58,61,72
+
+Emphasized line explanations:
+
+    - On line ``55``, we are using the ``hik`` distance method, or histogram intersection distance, as it has been experimentally shown to out perform other distance metrics for AlexNet descriptors.
+    - On line ``56``, we are using the output generated during `step 2c`_.
+      This file will be updated during incremental updates, along with the configured :class:`.DescriptorIndex`.
+    - On line ``58``, we are choosing not to use a pre-computed :class:`.HashIndex`.
+      This means that a :class:`.LinearHashIndex` will be created and used at query time.
+      Other implementations in the future may incorporate live-reload functionality.
+    - On line ``61``, we are telling the :class:`.LSHNearestNeighborIndex` to reload its implementation-specific model files when it detects that they've changed.
+        - We listed :class:`.LSHNearestNeighborIndex` implementation's only model file on line ``56`` and will be updated via the :file:`bin/scripts/compute_hash_codes.py`
+    - On line ``72``, we are telling the implementation to make sure it does not write to any of its resources.
+
+We can now start the service using::
+
+    $ runApplication.py -a NearestNeighborServiceServer -c 2d.config.nnss_app.json
+
+We can test the server by calling its web api via curl using one of our ingested images, :file:`leedsbutterfly/images/001_0001.jpg`::
+
+    $ curl http://127.0.0.1:5000/nn/file:///home/purg/data/smqtk/leedsbutterfly/images/001_0001.jpg
+    {
+      "distances": [
+        -2440.0882132202387,
+        -1900.5749250203371,
+        -1825.7734497860074,
+        -1771.708476960659,
+        -1753.6621350347996,
+        -1729.6928340941668,
+        -1684.2977819740772,
+        -1627.438737615943,
+        -1608.4607088603079,
+        -1536.5930510759354
+      ],
+      "message": "execution nominal",
+      "neighbors": [
+        "84f62ef716fb73586231016ec64cfeed82305bba",
+        "ad4af38cf36467f46a3d698c1720f927ff729ed7",
+        "2dffc1798596bc8be7f0af8629208c28606bba65",
+        "8f5b4541f1993a7c69892844e568642247e4acf2",
+        "e1e5f3e21d8e3312a4c59371f3ad8c49a619bbca",
+        "e8627a1a3a5a55727fe76848ba980c989bcef103",
+        "750e88705efeee2f12193b45fb34ec10565699f9",
+        "e21b695a99fee6ff5af8d2b86d4c3e8fe3295575",
+        "0af474b31fc8002fa9b9a2324617227069649f43",
+        "7da0501f7d6322aef0323c34002d37a986a3bf74"
+      ],
+      "reference_uri": "file:///home/purg/data/smqtk/leedsbutterfly/images/001_0001.jpg",
+      "success": true
+    }
+
+If we compare the result neighbor UUIDs to the SHA1 hash signatures of the original files (that descritpors were computed from), listed in the `step 2a`_ result file :file:`2a.completed_files.csv`, we find that the above results are all of the class ``001``, or monarch butterflies.
+
+
+[3] First Incremental Update
+````````````````````````````
+Now that we have a live :class:`.NearestNeighborServiceServer` instance running, we can incrementally process the files listed in :file:`3.ingest_files_2.txt`, making them available for search without having to shut down or otherwise do anything to the running server instance.
+
+We will be performing the same actions taken in steps 2a_ and 2c_, but with different inputs and outputs.
+
+.. _2a: `step 2a`_
+.. _2c: `step 2c`_
+
+First, we can re-use the configuration file for :file:`compute_many_descriptors.py` as there is no input/output specification in the file.
+
+- `3.ingest_files_2.txt` -> `compute_many_descriptors.py` -> `compute_hash_codes.py`
+- test via running NNSS
+
+
+[4] Second Incremental Update
+`````````````````````````````
+- `4.ingest_files_3.txt` -> `compute_many_descriptors.py` -> `compute_hash_codes.py`
+- test via running NNSS

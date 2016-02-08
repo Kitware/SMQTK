@@ -20,16 +20,16 @@
             "ItqFunctor": {
                 "bit_length": 256,
                 "itq_iterations": 50,
-                "mean_vec_filepath": "nnss.itq.256bit.mean_vec.npy",
+                "mean_vec_filepath": "2b.itq.256bit.mean_vec.npy",
                 "random_seed": 0,
-                "rotation_filepath": "nnss.itq.256bit.rotation.npy"
+                "rotation_filepath": "2b.itq.256bit.rotation.npy"
             },
             "type": "ItqFunctor"
         }
     },
     "utility": {
         "hash2uuids_input_filepath": null,
-        "hash2uuids_output_filepath": "nnss.hash2uuids.pickle",
+        "hash2uuids_output_filepath": "2c.hash2uuids.pickle",
         "pickle_protocol": -1,
         "report_interval": 1.0,
         "use_multiprocessing": true,

@@ -18,9 +18,9 @@
     "itq_config": {
         "bit_length": 256,
         "itq_iterations": 50,
-        "mean_vec_filepath": "nnss.itq.256bit.mean_vec.npy",
+        "mean_vec_filepath": "2b.itq.256bit.mean_vec.npy",
         "random_seed": 0,
-        "rotation_filepath": "nnss.itq.256bit.rotation.npy"
+        "rotation_filepath": "2b.itq.256bit.rotation.npy"
     },
     "parallel": {
         "index_load_cores": 4,

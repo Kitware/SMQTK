@@ -9,8 +9,10 @@
 /docs/examples/nnss_incremental_update/leedsbutterfly_dataset_v1.0.zip
 /docs/examples/nnss_incremental_update/leedsbutterfly
 /docs/examples/nnss_incremental_update/2a.completed_files.csv
-/docs/examples/nnss_incremental_update/itq.256bit.mean_vec.npy
-/docs/examples/nnss_incremental_update/itq.256bit.rotation.npy
+/docs/examples/nnss_incremental_update/2b.itq.256bit.mean_vec.npy
+/docs/examples/nnss_incremental_update/2b.itq.256bit.rotation.npy
+2c.hash2uuids.pickle
+2d.hash2uuids.pickle
 
 # ColorDescriptor generated errors log file
 errors.log

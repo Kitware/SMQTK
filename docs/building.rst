@@ -80,7 +80,7 @@ For example, the ColorDescriptor implementation required a 3rd party tool to dow
 
 * ColorDescriptor
   * For CSIFT, TCH, etc. feature descriptors.
-  
+
     * http://koen.me/research/colordescriptors/
 
  * After unpacking the downloaded ZIP archive, add the directory it was extracted to to the PYTHONPATH so the DescriptorIO.py module can be accessed and used within the SMQTK library.
@@ -106,11 +106,11 @@ If the desired build directory, and run the following, filling in ``<...>`` with
 
 .. prompt:: bash
 
-    $ cmake <source_dir_path>`
+    cmake <source_dir_path>
 
 Optionally, the `ccmake` command line utility, or the GUI version, may be run in order to modify options for building additional modules.
 Currently, the selection is very minimal, but may be expanded over time.
- 
+
 Example
 """""""
 
@@ -131,14 +131,14 @@ Example
     . build/setup_env.build.sh
     # Running tests
     source/run_tests.sh
-    
+
 Building the Documentation
 --------------------------
 
-All of the documentation for SMQTK is maintained as a collection of `reStructuredText_` documents in the :file:`docs` folder of the project.  
+All of the documentation for SMQTK is maintained as a collection of `reStructuredText_` documents in the :file:`docs` folder of the project.
 This documentation can be processed by the :program:`Sphinx` documentation tool into a variety of documentation formats, the most common of which is HTML.
 
-Within the :file:`docs` directory is a Unix :file:`Makefile` (for Windows systems, a :file:`make.bat` file with similar capabilities exists).  This :file:`Makefile` 
+Within the :file:`docs` directory is a Unix :file:`Makefile` (for Windows systems, a :file:`make.bat` file with similar capabilities exists).  This :file:`Makefile`
 takes care of the work required to run :program:`Sphinx` to convert the raw documentation to an attractive output format.  For example::
 
     make html
@@ -156,8 +156,8 @@ Will show the other documentation formats that may be available (although be awa
 Live Preview
 ^^^^^^^^^^^^
 
-While writing documentation in a mark up format such as ``reStructuredText`` it is very helpful to be able to preview the formated version of the text.  While it is possible to 
-simply run the ``make html`` command periodically, a more seamless version of this is available.  Within the :file:`docs` directory is a small Python script called 
+While writing documentation in a mark up format such as ``reStructuredText`` it is very helpful to be able to preview the formated version of the text.  While it is possible to
+simply run the ``make html`` command periodically, a more seamless version of this is available.  Within the :file:`docs` directory is a small Python script called
 :file:`sphinx_server.py`.   If you execute that file with the following command::
 
     python sphinx_server.py

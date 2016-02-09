@@ -147,6 +147,7 @@ class ItqFunctor (LshFunctor):
                         n_iter)
         for i in range(n_iter):
             self._log.debug("ITQ iter %d", i + 1)
+            # TODO: @numba.jit decorate
             z = numpy.dot(v, r)
             ux = numpy.ones(z.shape) * (-1)
             ux[z >= 0] = 1

@@ -145,6 +145,7 @@ def main():
         cPickle.dump(hash2uuids, f, pickle_protocol)
     log.info("Moving on top of input: %s", hash2uuids_output_filepath)
     os.rename(tmp_output_filepath, hash2uuids_output_filepath)
+    log.info("Done")
 
 
 if __name__ == '__main__':

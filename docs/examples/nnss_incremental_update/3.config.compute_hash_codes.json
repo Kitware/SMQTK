@@ -1,0 +1,38 @@
+{
+    "plugins": {
+        "descriptor_index": {
+            "PostgresDescriptorIndex": {
+                "db_host": "/dev/shm",
+                "db_name": "postgres",
+                "db_pass": null,
+                "db_port": null,
+                "db_user": null,
+                "element_col": "element",
+                "multiquery_batch_size": 1000,
+                "pickle_protocol": -1,
+                "read_only": false,
+                "table_name": "descriptor_index",
+                "uuid_col": "uid"
+            },
+            "type": "PostgresDescriptorIndex"
+        },
+        "lsh_functor": {
+            "ItqFunctor": {
+                "bit_length": 256,
+                "itq_iterations": 50,
+                "mean_vec_filepath": "2b.itq.256bit.mean_vec.npy",
+                "random_seed": 0,
+                "rotation_filepath": "2b.itq.256bit.rotation.npy"
+            },
+            "type": "ItqFunctor"
+        }
+    },
+    "utility": {
+        "hash2uuids_input_filepath": "2d.hash2uuids.pickle",
+        "hash2uuids_output_filepath": "2d.hash2uuids.pickle",
+        "pickle_protocol": -1,
+        "report_interval": 1.0,
+        "use_multiprocessing": true,
+        "uuid_list_filepath": "3.uuids_for_processing.txt"
+    }
+}

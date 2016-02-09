@@ -254,7 +254,7 @@ def utility_main_helper(default_config, parser_description=None,
     :type parser_extension: (argparse.ArgumentParser) -> argparse.ArgumentParser
 
     :return: Parsed arguments structure and loaded configuration dictionary.
-    :rtype: (argparse.ArgumentParser, dict)
+    :rtype: (argparse.Namespace, dict)
 
     """
     parser = parser_extension(

@@ -13,11 +13,11 @@ Classifier
 ++++++++++
 This interface represents algorithms that classify ``DescriptorElement`` instances into discrete labels or label confidences.
 
-.. automodule:: smqtk.algorithms.classifier
+.. autoclass:: smqtk.algorithms.classifier.Classifier
    :members:
+.. autofunction:: smqtk.algorithms.classifier.get_classifier_impls
 
 
-.. _descriptor_generator:
 DescriptorGenerator
 +++++++++++++++++++
 This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.
@@ -33,8 +33,9 @@ If the ``overwrite`` parameter is ``True``, the ``DescriptorGenerator`` instance
 This interface supports a high-level, implementation agnostic asynchronous descriptor computation method.
 This is given an iterable of ``DataElement`` instances, a single ``DescriptorElementFactory`` that is used to produce all descriptor
 
-.. automodule:: smqtk.algorithms.descriptor_generator
+.. autoclass:: smqtk.algorithms.descriptor_generator.DescriptorGenerator
    :members:
+.. autofunction:: smqtk.algorithms.descriptor_generator.get_descriptor_generator_impls
 
 
 HashIndex
@@ -45,17 +46,19 @@ Implementations of this interface are primarily used with the ``LSHNearestNeighb
 
 Unlike the ``NearestNeighborsIndex`` interface from which this interface descends, ``HashIndex`` instances are build with an iterable of ``numpy.ndarray`` and ``nn`` returns a ``numpy.ndarray``.
 
-.. automodule:: smqtk.algorithms.nn_index.hash_index
+.. autoclass:: smqtk.algorithms.nn_index.hash_index.HashIndex
    :members:
+.. autofunction:: smqtk.algorithms.nn_index.hash_index.get_hash_index_impls
 
 
 LshFunctor
 ++++++++++
-Implementations of this interface define the generation of a locality-sensitive hash code for a given ``DescriptorElement``.
-These are used in ``LSHNearestNeighborIndex`` instances.
+Implementations of this interface define the generation of a locality-sensitive hash code for a given :class:`DescriptorElement`.
+These are used in :class:`LSHNearestNeighborIndex` instances.
 
-.. automodule:: smqtk.algorithms.nn_index.lsh.functors
+.. autoclass:: smqtk.algorithms.nn_index.lsh.functors.LshFunctor
    :members:
+.. autofunction:: smqtk.algorithms.nn_index.lsh.functors.get_lsh_functor_impls
 
 
 NearestNeighborsIndex
@@ -73,8 +76,9 @@ If the provided query ``DescriptorElement`` does not have a set vector, this met
 
 This interface additionally requires that implementations define a ``count`` method, which returns the number of distinct ``DescriptorElement`` instances are in the index.
 
-.. automodule:: smqtk.algorithms.nn_index
+.. autoclass:: smqtk.algorithms.nn_index.NearestNeighborsIndex
    :members:
+.. autofunction:: smqtk.algorithms.nn_index.get_nn_index_impls
 
 
 RelevancyIndex
@@ -84,5 +88,6 @@ This interface defines two methods: ``build_index`` and ``rank``.
 The ``build_index`` method is, like a ``NearestNeighborsIndex``, used to build an index of ``DescriptorElement`` instances.
 The ``rank`` method takes examples of relevant and not-relevant ``DescriptorElement`` examples with which the algorithm uses to rank (think sort) the indexed ``DescriptorElement`` instances by relevancy (on a ``[0, 1]`` scale).
 
-.. automodule:: smqtk.algorithms.relevancy_index
+.. autoclass:: smqtk.algorithms.relevancy_index.RelevancyIndex
    :members:
+.. autofunction:: smqtk.algorithms.relevancy_index.get_relevancy_index_impls

@@ -15,6 +15,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import initialize_logging, output_config
+from smqtk.utils.configuration import merge_configs
 from smqtk.utils import plugin
 from smqtk.utils.jsmin import jsmin
 
@@ -69,9 +70,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls)
 
-    valid_file_paths = dict()
-    invalid_file_paths = dict()
-
     def iter_valid_elements():
         """
         :rtype:
@@ -105,14 +103,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
             ))
     finally:
         cf.close()
-
-    # Output valid file and invalid file dictionaries as pickle
-    log.info("Writing valid filepaths map")
-    with open('file_map.valid.pickle', 'wb') as f:
-        cPickle.dump(valid_file_paths, f, -1)
-    log.info("Writing invalid filepaths map")
-    with open('file_map.invalid.pickle', 'wb') as f:
-        cPickle.dump(invalid_file_paths, f, -1)
 
     log.info("Done")
 
@@ -189,7 +179,7 @@ def main():
     if config_fp:
         if os.path.isfile(config_fp):
             with open(config_fp) as f:
-                c.update(json.loads(jsmin(f.read())))
+                merge_configs(c, json.loads(jsmin(f.read())))
             config_loaded = True
         else:
             l.error("Config file path not valid")

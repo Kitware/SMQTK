@@ -18,10 +18,13 @@ Documentation
 
   * Added ``CONTRIBUTING.md`` file.
 
+  * Added example of setting up a NearestNeighborServiceServer with live-reload
+    enabled and how to add/process incremental ingests.
+
 Tools / Scripts
 
   * Added CLI script for hash code generation and output to file. This script
-    is primarilly for support of LSHNearestNeighborsIndex live-reload
+    is primarily for support of LSHNearestNeighborIndex live-reload
     functionality.
 
   * Added script for asynchronously computing classifications on descriptors

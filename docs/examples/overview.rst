@@ -1,8 +1,9 @@
-Examples 
+Examples
 ========
 
 .. toctree::
-   :maxdepth: 2
- 
+   :maxdepth: 1
+
    simple_feature_computation
    caffe_build_index
+   nnss_incremental_update/incremental_example

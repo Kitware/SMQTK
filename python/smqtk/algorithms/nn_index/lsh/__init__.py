@@ -124,10 +124,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                                       get_descriptor_index_impls)
 
         # Hash index may be None for a default at-query-time linear indexing
-        if merged['hash_index'] is not None:
+        if merged['hash_index']['type'] is not None:
             merged['hash_index'] = \
                 plugin.from_plugin_config(merged['hash_index'],
                                           get_hash_index_impls)
+        else:
+            merged['hash_index'] = None
 
         # remove possible comment added by default generator
         if 'hash_index_comment' in merged:
@@ -137,7 +139,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def __init__(self, lsh_functor, descriptor_index, hash_index=None,
                  hash2uuid_cache_filepath=None,
-                 distance_method='cosine', read_only=False,  live_reload=False,
+                 distance_method='cosine', read_only=False, live_reload=False,
                  reload_mon_interval=0.1, reload_settle_window=1.0):
         """
         Initialize LSH algorithm with a hashing functor, descriptor index and

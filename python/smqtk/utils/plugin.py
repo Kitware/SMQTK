@@ -3,17 +3,18 @@ Helper interface and functions for higher level plugin module getter methods.
 
 Plugin configuration dictionaries take the following general format:
 
+.. code-block:: json
+
     {
         "type": "name",
         "impl_name": {
             "param1": "val1",
-            "param2": "val2",
-            ...
+            "param2": "val2"
         },
         "other_impl": {
-            ...
-        },
-        ... (etc.)
+            "p1": 4.5,
+            "p2": null
+        }
     }
 
 """

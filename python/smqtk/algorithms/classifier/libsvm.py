@@ -4,6 +4,7 @@ from copy import deepcopy
 import ctypes
 import logging
 import os
+import tempfile
 
 import numpy
 import numpy.linalg
@@ -25,6 +26,11 @@ __author__ = "paul.tunison@kitware.com"
 class LibSvmClassifier (SupervisedClassifier):
     """
     Classifier that uses libSVM for support-vector machine functionality.
+
+    **Note**: *If pickled without a having model file paths configured, this
+    implementation will write out temporary files upon pickling and loading.
+    This is required because the model instance is not transportable via
+    serialization due to libSVM being an external C library.*
     """
 
     @classmethod
@@ -74,9 +80,9 @@ class LibSvmClassifier (SupervisedClassifier):
 
         :param normalize: Normalize input vectors to training and
             classification methods using ``numpy.linalg.norm``. This may either
-            be  ``None``, disabling normalization, or any valid value that could
-            be passed to the ``ord`` parameter in ``numpy.linalg.norm`` for 1D
-            arrays. This is ``None`` by default (no normalization).
+            be  ``None``, disabling normalization, or any valid value that
+            could be passed to the ``ord`` parameter in ``numpy.linalg.norm``
+            for 1D arrays. This is ``None`` by default (no normalization).
         :type normalize: None | int | float | str
 
         """
@@ -100,7 +106,28 @@ class LibSvmClassifier (SupervisedClassifier):
         self._reload_model()
 
     def __getstate__(self):
-        return self.get_config()
+        # If we don't have a model, or if we have one but its not being saved
+        # to files.
+        if not self.has_model() or (self.svm_model_fp is not None and
+                                    self.svm_label_map_fp is not None):
+            return self.get_config()
+        else:
+            self._log.debug("Saving model to temp file for pickling")
+            fd, fp = tempfile.mkstemp()
+            try:
+                os.close(fd)
+
+                state = self.get_config()
+                state['__LOCAL__'] = True
+                state['__LOCAL_LABELS__'] = self.svm_label_map
+
+                svmutil.svm_save_model(fp, self.svm_model)
+                with open(fp, 'rb') as model_f:
+                    state['__LOCAL_MODEL__'] = model_f.read()
+
+                return state
+            finally:
+                os.remove(fp)
 
     def __setstate__(self, state):
         self.svm_model_fp = state['svm_model_fp']
@@ -109,8 +136,24 @@ class LibSvmClassifier (SupervisedClassifier):
         self.normalize = state['normalize']
 
         # C libraries/pointers don't survive across processes.
-        self.svm_model = None
-        self._reload_model()
+        if '__LOCAL__' in state:
+            fd, fp = tempfile.mkstemp()
+            try:
+                os.close(fd)
+
+                self.svm_label_map = state['__LOCAL_LABELS__']
+
+                # write model binary to file, then load via libSVM
+                with open(fp, 'wb') as model_f:
+                    model_f.write(state['__LOCAL_MODEL__'])
+
+                self.svm_model = svmutil.svm_load_model(fp)
+
+            finally:
+                os.remove(fp)
+        else:
+            self.svm_model = None
+            self._reload_model()
 
     def _reload_model(self):
         """
@@ -258,9 +301,12 @@ class LibSvmClassifier (SupervisedClassifier):
         train_vectors.extend(x.tolist())
         del negatives, x
 
-        self._log.debug("Training elements: %d labels, %d vectors "
-                        "(should be the same)",
-                        len(train_labels), len(train_vectors))
+        # self._log.debug("Training elements: %d labels, %d vectors "
+        #                 "(should be the same)",
+        #                 len(train_labels), len(train_vectors))
+        assert len(train_labels) == len(train_vectors), \
+            "Count miss-match between labels and vectors (%d != %d)" \
+            % (len(train_labels), len(train_vectors))
 
         self._log.debug("Forming train params")
         #: :type: dict

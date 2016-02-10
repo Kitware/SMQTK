@@ -1,12 +1,12 @@
 import abc
-import logging
 import os
-import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
-import smqtk.utils.bin_utils
-import smqtk.utils.parallel
-from smqtk.utils.plugin import get_plugins
+from smqtk.utils import (
+    bin_utils,
+    parallel,
+    plugin,
+)
 
 
 __author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
@@ -108,7 +108,7 @@ class Classifier (SmqtkAlgorithm):
         def work(d_elem):
             return d_elem, self.classify(d_elem, factory, overwrite)
 
-        classifications = smqtk.utils.parallel.parallel_map(
+        classifications = parallel.parallel_map(
             work, d_iter,
             cores=procs,
             ordered=False,
@@ -117,7 +117,7 @@ class Classifier (SmqtkAlgorithm):
 
         r_state = [0] * 7
         if ri:
-            r_progress = smqtk.utils.bin_utils.report_progress
+            r_progress = bin_utils.report_progress
         else:
             def r_progress(*_):
                 return
@@ -277,5 +277,5 @@ def get_classifier_impls(reload_modules=False, sub_interface=None):
         assert issubclass(sub_interface, Classifier), \
             "The given sub-interface type must descend from `Classifier`."
         base_class = sub_interface
-    return get_plugins(__name__, this_dir, env_var, helper_var, base_class,
-                       reload_modules=reload_modules)
+    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
+                              base_class, reload_modules=reload_modules)

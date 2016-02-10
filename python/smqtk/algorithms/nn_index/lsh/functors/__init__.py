@@ -50,10 +50,10 @@ def get_lsh_functor_impls(reload_modules=False):
     actual class type objects.
 
     We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
+        - modules next to this file this function is defined in (ones that
+          begin with an alphanumeric character),
         - python modules listed in the environment variable
-          ``LSH_FUNCTOR_PATH``
+          :envvar:`LSH_FUNCTOR_PATH`
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)
@@ -69,7 +69,7 @@ def get_lsh_functor_impls(reload_modules=False):
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``LshFunctor``
+    :return: Map of discovered class object of type :class:`.LshFunctor`
         whose keys are the string names of the classes.
     :rtype: dict[str, type]
 

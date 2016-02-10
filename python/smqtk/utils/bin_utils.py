@@ -212,8 +212,10 @@ def basic_cli_parser(description=None):
 
     g_config = parser.add_argument_group('Configuration')
     g_config.add_argument('-c', '--config',
+                          metavar="PATH",
                           help='Path to the JSON configuration file.')
     g_config.add_argument('-g', '--generate-config',
+                          metavar="PATH",
                           help='Optionally generate a default configuration '
                                'file at the specified path. If a '
                                'configuration file was provided, we update '

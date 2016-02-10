@@ -43,9 +43,9 @@ class DescriptorServiceServer (SmqtkWebApp):
         }
 
     Additional Configuration
-    
 
-   
+
+
     .. note:: We will look for an environment variable `DescriptorService_CONFIG` for a
               string file path to an additional JSON configuration file to consider.
 
@@ -70,7 +70,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         merge_configs(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generators": {
-                "example": plugin.make_config(get_descriptor_generator_impls)
+                "example": plugin.make_config(get_descriptor_generator_impls())
             }
         })
         return c
@@ -275,7 +275,7 @@ class DescriptorServiceServer (SmqtkWebApp):
                 self.descriptor_cache[label] = \
                     plugin.from_plugin_config(
                     self.generator_label_configs[label],
-                        get_descriptor_generator_impls
+                        get_descriptor_generator_impls()
                     )
 
             return self.descriptor_cache[label]

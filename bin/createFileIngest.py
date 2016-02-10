@@ -16,7 +16,7 @@ from smqtk.utils import bin_utils, plugin
 
 def default_config():
     return {
-        "data_set": plugin.make_config(get_data_set_impls)
+        "data_set": plugin.make_config(get_data_set_impls())
     }
 
 
@@ -71,7 +71,7 @@ def main():
         exit(1)
 
     #: :type: smqtk.representation.DataSet
-    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls)
+    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls())
     log.debug("Script arguments:\n%s" % args)
 
     def ingest_file(fp):

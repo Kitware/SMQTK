@@ -21,7 +21,7 @@ from smqtk.utils import bin_utils, plugin
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
-        "content_descriptor": plugin.make_config(get_descriptor_generator_impls),
+        "content_descriptor": plugin.make_config(get_descriptor_generator_impls()),
     }
 
 
@@ -112,7 +112,7 @@ def main():
     factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
     #: :type: smqtk.algorithms.descriptor_generator.DescriptorGenerator
     cd = plugin.from_plugin_config(config['content_descriptor'],
-                                   get_descriptor_generator_impls)
+                                   get_descriptor_generator_impls())
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

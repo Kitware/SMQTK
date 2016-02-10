@@ -22,7 +22,7 @@ class TestPluginTools (unittest.TestCase):
 
     def test_make_config(self):
         ntools.assert_equal(
-            make_config(dummy_getter),
+            make_config(dummy_getter()),
             {
                 'type': None,
                 'TestAlgo1': TestAlgo1.get_default_config(),
@@ -62,7 +62,7 @@ class TestPluginTools (unittest.TestCase):
         }
 
         #: :type: TestAlgo1
-        i = from_plugin_config(test_config, dummy_getter)
+        i = from_plugin_config(test_config, dummy_getter())
         ntools.assert_is_instance(i, TestAlgo1)
         ntools.assert_equal(i.foo, 256)
         ntools.assert_equal(i.bar, 'Some string value')

@@ -63,13 +63,13 @@ class IqrSearch (flask.Blueprint, Configurable):
         del d['parent_app']
 
         # fill in plugin configs
-        d['data_set'] = plugin.make_config(get_data_set_impls)
+        d['data_set'] = plugin.make_config(get_data_set_impls())
 
-        d['descr_generator'] = plugin.make_config(get_descriptor_generator_impls)
+        d['descr_generator'] = plugin.make_config(get_descriptor_generator_impls())
 
-        d['nn_index'] = plugin.make_config(get_nn_index_impls)
+        d['nn_index'] = plugin.make_config(get_nn_index_impls())
 
-        ri_config = plugin.make_config(get_relevancy_index_impls)
+        ri_config = plugin.make_config(get_relevancy_index_impls())
         if d['rel_index_config']:
             ri_config.update(d['rel_index_config'])
         d['rel_index_config'] = ri_config
@@ -105,13 +105,13 @@ class IqrSearch (flask.Blueprint, Configurable):
         # construct nested objects via configurations
         merged['data_set'] = \
             plugin.from_plugin_config(merged['data_set'],
-                                      get_data_set_impls)
+                                      get_data_set_impls())
         merged['descr_generator'] = \
             plugin.from_plugin_config(merged['descr_generator'],
-                                      get_descriptor_generator_impls)
+                                      get_descriptor_generator_impls())
         merged['nn_index'] = \
             plugin.from_plugin_config(merged['nn_index'],
-                                      get_nn_index_impls)
+                                      get_nn_index_impls())
 
         merged['descriptor_factory'] = \
             DescriptorElementFactory.from_config(merged['descriptor_factory'])

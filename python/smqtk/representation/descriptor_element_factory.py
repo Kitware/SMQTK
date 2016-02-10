@@ -47,7 +47,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(get_descriptor_element_impls)
+        return make_config(get_descriptor_element_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):

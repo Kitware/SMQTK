@@ -58,8 +58,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         merge_configs(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generator":
-                plugin.make_config(get_descriptor_generator_impls),
-            "nn_index": plugin.make_config(get_nn_index_impls),
+                plugin.make_config(get_descriptor_generator_impls()),
+            "nn_index": plugin.make_config(get_nn_index_impls()),
         })
         return c
 
@@ -86,13 +86,13 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.nn_index = plugin.from_plugin_config(
             json_config['nn_index'],
-            get_nn_index_impls
+            get_nn_index_impls()
         )
 
         #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator_inst = plugin.from_plugin_config(
                                             self.generator_config,
-                                            get_descriptor_generator_impls)
+                                            get_descriptor_generator_impls())
 
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")

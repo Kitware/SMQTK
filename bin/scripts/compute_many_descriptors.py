@@ -23,10 +23,10 @@ from smqtk.utils.jsmin import jsmin
 def default_config():
     return {
         "descriptor_generator":
-            plugin.make_config(get_descriptor_generator_impls),
+            plugin.make_config(get_descriptor_generator_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "descriptor_index":
-            plugin.make_config(get_descriptor_index_impls)
+            plugin.make_config(get_descriptor_index_impls())
     }
 
 
@@ -62,13 +62,13 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     log.info("Making descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(c['descriptor_index'],
-                                                 get_descriptor_index_impls)
+                                                 get_descriptor_index_impls())
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
     #: :type: smqtk.algorithms.DescriptorGenerator
     generator = plugin.from_plugin_config(c['descriptor_generator'],
-                                          get_descriptor_generator_impls)
+                                          get_descriptor_generator_impls())
 
     def iter_valid_elements():
         """

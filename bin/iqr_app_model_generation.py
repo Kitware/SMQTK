@@ -121,21 +121,21 @@ def main():
     #: :type: representation.DataSet
     data_set = \
         plugin.from_plugin_config(data_set_config,
-                                  representation.get_data_set_impls)
+                                  representation.get_data_set_impls())
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
-                                  algorithms.get_descriptor_generator_impls)
+                                  algorithms.get_descriptor_generator_impls())
 
     #: :type: algorithms.NearestNeighborsIndex
     nn_index = \
         plugin.from_plugin_config(nn_index_config,
-                                  algorithms.get_nn_index_impls)
+                                  algorithms.get_nn_index_impls())
 
     #: :type: algorithms.RelevancyIndex
     rel_index = \
         plugin.from_plugin_config(rel_index_config,
-                                  algorithms.get_relevancy_index_impls)
+                                  algorithms.get_relevancy_index_impls())
 
     #
     # Build models

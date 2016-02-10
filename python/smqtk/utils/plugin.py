@@ -264,7 +264,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
     return class_map
 
 
-def make_config(plugin_getter):
+def make_config(plugin_map):
     """
     Generated configuration dictionary for the given plugin getter method
     (which returns a dictionary of labels to class types)
@@ -273,9 +273,8 @@ def make_config(plugin_getter):
     type. Default values are inserted where possible, otherwise None values are
     used.
 
-    :param plugin_getter: Function that returns a dictionary mapping labels to
-        class types.
-    :type plugin_getter: () -> dict[str, type]
+    :param plugin_map: A dictionary mapping class names to class types.
+    :type plugin_map: dict[str, type]
 
     :return: Base configuration dictionary with an empty ``type`` field, and
         containing the types and initialization parameter specification for all
@@ -284,7 +283,7 @@ def make_config(plugin_getter):
 
     """
     d = {"type": None}
-    for label, cls in plugin_getter().iteritems():
+    for label, cls in plugin_map.iteritems():
         # noinspection PyUnresolvedReferences
         d[label] = cls.get_default_config()
     return d
@@ -316,7 +315,7 @@ def to_plugin_config(cp_inst):
     }
 
 
-def from_plugin_config(config, plugin_getter, *args):
+def from_plugin_config(config, plugin_map, *args):
     """
     Helper method for instantiating an instance of a class available via the
     provided ``plugin_getter`` function given the plugin configuration
@@ -330,9 +329,8 @@ def from_plugin_config(config, plugin_getter, *args):
     :param config: Configuration dictionary to draw from.
     :type config: dict
 
-    :param plugin_getter: Function that returns a dictionary mapping labels to
-        class types.
-    :type plugin_getter: () -> dict[str, type]
+    :param plugin_map: A dictionary mapping class names to class types.
+    :type plugin_map: dict[str, type]
 
     :param args: Additional argument to be passed to the ``from_config`` method
         on the configured class type.
@@ -343,6 +341,6 @@ def from_plugin_config(config, plugin_getter, *args):
 
     """
     t = config['type']
-    cls = plugin_getter()[t]
+    cls = plugin_map[t]
     # noinspection PyUnresolvedReferences
     return cls.from_config(config[t], *args)

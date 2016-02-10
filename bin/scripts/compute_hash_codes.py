@@ -53,8 +53,8 @@ def default_config():
             "pickle_protocol": -1,
         },
         "plugins": {
-            "descriptor_index": plugin.make_config(get_descriptor_index_impls),
-            "lsh_functor": plugin.make_config(get_lsh_functor_impls),
+            "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
+            "lsh_functor": plugin.make_config(get_lsh_functor_impls()),
         },
     }
 
@@ -99,13 +99,13 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls
+        get_descriptor_index_impls()
     )
     log.info("Loading LSH functor")
     #: :type: smqtk.algorithms.LshFunctor
     lsh_functor = plugin.from_plugin_config(
         config['plugins']['lsh_functor'],
-        get_lsh_functor_impls
+        get_lsh_functor_impls()
     )
 
     log.info("Loading UUIDs list")

@@ -74,13 +74,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         default = super(LSHNearestNeighborIndex, cls).get_default_config()
 
-        lf_default = plugin.make_config(get_lsh_functor_impls)
+        lf_default = plugin.make_config(get_lsh_functor_impls())
         default['lsh_functor'] = lf_default
 
-        di_default = plugin.make_config(get_descriptor_index_impls)
+        di_default = plugin.make_config(get_descriptor_index_impls())
         default['descriptor_index'] = di_default
 
-        hi_default = plugin.make_config(get_hash_index_impls)
+        hi_default = plugin.make_config(get_hash_index_impls())
         default['hash_index'] = hi_default
         default['hash_index_comment'] = "'hash_index' may also be null to " \
                                         "default to a linear index built at " \
@@ -118,16 +118,16 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         merged['lsh_functor'] = \
             plugin.from_plugin_config(merged['lsh_functor'],
-                                      get_lsh_functor_impls)
+                                      get_lsh_functor_impls())
         merged['descriptor_index'] = \
             plugin.from_plugin_config(merged['descriptor_index'],
-                                      get_descriptor_index_impls)
+                                      get_descriptor_index_impls())
 
         # Hash index may be None for a default at-query-time linear indexing
         if merged['hash_index']['type'] is not None:
             merged['hash_index'] = \
                 plugin.from_plugin_config(merged['hash_index'],
-                                          get_hash_index_impls)
+                                          get_hash_index_impls())
         else:
             merged['hash_index'] = None
 

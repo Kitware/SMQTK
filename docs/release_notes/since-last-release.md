@@ -30,6 +30,9 @@ Tools / Scripts
   * Added script for asynchronously computing classifications on descriptors
     in an index via a list of descriptor UUIDs.
 
+  * Added script for cross validating a classifier configuration for some
+    truthed descriptors within an index.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an

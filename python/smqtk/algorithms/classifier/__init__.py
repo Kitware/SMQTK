@@ -1,5 +1,9 @@
 import abc
+import copy
+import itertools
 import os
+
+import numpy
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import (
@@ -138,7 +142,7 @@ class Classifier (SmqtkAlgorithm):
     def get_labels(self):
         """
         Get the sequence of class labels that this classifier can classify
-        descriptors into..
+        descriptors into. This includes the negative label.
 
         :return: Sequence of possible classifier labels.
         :rtype: collections.Sequence[collections.Hashable]
@@ -279,3 +283,78 @@ def get_classifier_impls(reload_modules=False, sub_interface=None):
         base_class = sub_interface
     return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
                               base_class, reload_modules=reload_modules)
+
+
+def multiclass_precision_recall(label_index, classifications, truth_values,
+                                num_thresholds=50, use_mp=True, cores=None):
+    """
+    Compute precision and recall pair values for a spread of probability
+    thresholds.
+
+    :param label_index: Ordered sequence of classification labels. This
+        determines how we interpret truth sequences. The negative label should
+        NOT be included in this list. Basically, this should be the output of
+        :py:meth:`Classifier.get_labels` with the "negative" label removed.
+    :type label_index: collections.Sequence[collections.Hashable]
+
+    :param classifications: Iterable of classifications to test.
+    :type classifications:
+        collections.Iterable[smqtk.representation.ClassificationElement]
+
+    :param truth_values: An iterable containing the same number of truth labels
+        for each classification element (must be the same length as the
+        :ref:`classifications` iterable).
+
+    :param num_thresholds: Number of evenly spaced thresholds to use when
+        determining precision and recall values.
+
+    :return: Sequence of precision (y-axis) and recall (x-axis) values in
+        separate sequences.
+
+    """
+    # Pick confidence thresholds to test over.
+    thresholds = numpy.linspace(0., 1., num=num_thresholds, endpoint=True)
+    base_count_element = {'tp': 0, 'fp': 0, 'fn': 0}
+
+    # for c in classifications, truth_values:
+    #     m = c.get_classification()
+    #     l_confidence = [m[l] for l in label_index]
+
+    def find_counts(classification, truth):
+        # count_map format:
+        # {
+        #   <t>: {
+        #       'tp': <int>,
+        #       'fp': <int>,
+        #       'fn': <int>,
+        #   },
+        #   ...
+        # }
+        count_map = dict((t, copy.copy(base_count_element)) for t in thresholds)
+        c_m = classification.get_classification()
+
+        assert len(label_index) == len(truth), \
+            "Don't have a truth value for evey label"
+
+        for T in thresholds:
+            for l, t in itertools.izip(label_index, truth):
+                c = c_m[l]
+                if c >= T and t:
+                    count_map[T]['tp'] += 1
+                elif c >= T and not t:
+                    count_map[T]['fp'] += 1
+                elif c < T and t:
+                    count_map[T]['fn'] += 1
+
+        return count_map
+
+    count_map_iter = parallel.parallel_map(
+        find_counts, classifications, truth_values,
+        use_multiprocessing=use_mp, cores=cores,
+        name="multiclass_precision_recall"
+    )
+
+    # Accumulate count maps into master
+    master_count = dict((t, copy.copy(base_count_element)) for t in thresholds)
+    for cm in count_map_iter:
+        pass

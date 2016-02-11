@@ -20,7 +20,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import distance_functions
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import FileModificationMonitor
 
@@ -112,7 +112,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         # Controlling merge here so we can control known comment stripping.
         if merge_default:
             merged = cls.get_default_config()
-            merge_configs(merged, config_dict)
+            merge_dict(merged, config_dict)
         else:
             merged = config_dict
 

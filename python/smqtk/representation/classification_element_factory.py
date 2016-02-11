@@ -3,7 +3,7 @@ from smqtk.representation import (
     get_classification_element_impls
 )
 from smqtk.utils.plugin import make_config
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -76,7 +76,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         """
         if merge_default:
             mc = cls.get_default_config()
-            merge_configs(mc, config_dict)
+            merge_dict(mc, config_dict)
             config_dict = mc
 
         return ClassificationElementFactory(

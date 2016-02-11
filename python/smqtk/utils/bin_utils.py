@@ -5,7 +5,7 @@ import logging.handlers
 import os
 import time
 
-from . import configuration
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -80,7 +80,7 @@ def load_config(config_path, defaults=None):
     loaded = False
     if config_path and os.path.isfile(config_path):
         with open(config_path) as cf:
-            configuration.merge_configs(defaults, json.load(cf))
+            merge_dict(defaults, json.load(cf))
             loaded = True
     return defaults, loaded
 

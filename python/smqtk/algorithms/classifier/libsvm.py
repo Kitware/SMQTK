@@ -336,11 +336,11 @@ class LibSvmClassifier (SupervisedClassifier):
 
     def get_labels(self):
         """
-        Get the sequence of integer labels that this classifier can classify
-        descriptors into. The last label is the negative label.
+        Get the sequence of class labels that this classifier can classify
+        descriptors into. This includes the negative label.
 
-        :return: Sequence of positive integer labels, and the negative label.
-        :rtype: collections.Sequence[int]
+        :return: Sequence of possible classifier labels.
+        :rtype: collections.Sequence[collections.Hashable]
 
         :raises RuntimeError: No model loaded.
 

@@ -45,6 +45,9 @@ Utilities
   * Added helper for utilities, encapsulating standard argument parser and
     configuration loading/generation steps.
 
+  * Renamed "merge_config" to "merge_dict" and moved it to the smqtk.utils
+    module level.
+
 
 Fixes since v0.3.0
 ------------------

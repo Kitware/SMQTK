@@ -6,7 +6,7 @@ import flask
 import os.path
 
 from smqtk.utils import DatabaseInfo
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 from smqtk.utils.mongo_sessions import MongoSessionInterface
 from smqtk.web import SmqtkWebApp
 
@@ -26,7 +26,7 @@ class IqrSearchApp (SmqtkWebApp):
     @classmethod
     def get_default_config(cls):
         c = super(IqrSearchApp, cls).get_default_config()
-        merge_configs(c, {
+        merge_dict(c, {
             "mongo": {
                 "server": "127.0.0.1:27017",
                 "database": "smqtk",

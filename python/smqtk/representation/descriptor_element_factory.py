@@ -2,7 +2,7 @@ from smqtk.representation import \
     SmqtkRepresentation, \
     get_descriptor_element_impls
 from smqtk.utils.plugin import make_config
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -72,7 +72,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         """
         if merge_default:
             merged_config = cls.get_default_config()
-            merge_configs(merged_config, config_dict)
+            merge_dict(merged_config, config_dict)
             config_dict = merged_config
 
         return DescriptorElementFactory(

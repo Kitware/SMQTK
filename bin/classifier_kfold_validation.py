@@ -194,6 +194,7 @@ def classifier_kfold_validation():
         log.info("-- Compute PR curve for each non-negative label")
         fold_y_true = []
         fold_probs = []
+        # Only considering positive labels
         for t_label in pos_map:
             y_true = [l == t_label for l in truth_labels[test]]
             fold_y_true.extend(y_true)

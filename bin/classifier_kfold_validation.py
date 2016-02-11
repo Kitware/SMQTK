@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-K-Fold cross validate a supervised classifier, producing an ROC curve image
-output.
+K-Fold cross validate a supervised classifier, producing PR and/or ROC curve
+image output.
 """
 import csv
 import logging
@@ -49,11 +49,17 @@ def default_config():
             "random_seed": None,
             "classification_use_multiprocessing": True,
         },
-        "pr_curve": {
+        "pr_curves": {
             "enabled": True,
             "show": False,
-            "plot_output_directory": None,
-            "plot_file_prefix": None,
+            "output_directory": None,
+            "file_prefix": None,
+        },
+        "roc_curves": {
+            "enabled": True,
+            "show": False,
+            "output_directory": None,
+            "file_prefix": None,
         },
     }
 
@@ -92,7 +98,7 @@ def classifier_kfold_validation():
             If we should use multiprocessing (vs threading) when classifying
             elements.
 
-    - pr_curve
+    - pr_curves
         - enabled
             If Precision/Recall plots should be generated.
 
@@ -100,11 +106,28 @@ def classifier_kfold_validation():
             If we should attempt to show the graph after it has been generated
             (matplotlib).
 
-        - plot_output_directory
+        - output_directory
             Directory to save generated plots to. If None, we will not save
-            plots.
+            plots. Otherwise we will create the directory (and required parent
+            directories) if it does not exist.
 
-        - plot_file_prefix
+        - file_prefix
+            String prefix to prepend to standard plot file names.
+
+    - roc_curves
+        - enabled
+            If ROC curves should be generated
+
+        - show
+            If we should attempt to show the plot after it has been generated
+            (matplotlib).
+
+        - output_directory
+            Directory to save generated plots to. If None, we will not save
+            plots. Otherwise we will create the directory (and required parent
+            directories) if it does not exist.
+
+        - file_prefix
             String prefix to prepend to standard plot file names.
     """
     args, config = bin_utils.utility_main_helper(default_config(), description)
@@ -115,10 +138,15 @@ def classifier_kfold_validation():
     #
     use_mp = config['cross_validation']['classification_use_multiprocessing']
 
-    pr_enabled = config['pr_curve']['enabled']
-    pr_output_dir = config['pr_curve']['plot_output_directory']
-    pr_file_prefix = config['pr_curve']['plot_file_prefix'] or ''
-    pr_show = config['pr_curve']['show']
+    pr_enabled = config['pr_curves']['enabled']
+    pr_output_dir = config['pr_curves']['output_directory']
+    pr_file_prefix = config['pr_curves']['file_prefix'] or ''
+    pr_show = config['pr_curves']['show']
+
+    roc_enabled = config['roc_curves']['enabled']
+    roc_output_dir = config['roc_curves']['output_directory']
+    roc_file_prefix = config['roc_curves']['file_prefix'] or ''
+    roc_show = config['roc_curves']['show']
 
     log.info("Initializing DescriptorIndex (%s)",
              config['plugins']['descriptor_index']['type'])
@@ -221,14 +249,13 @@ def classifier_kfold_validation():
 
         i += 1
 
-        # DEBUG
-        if i==2: break
-
     #
-    # PR Curve generation
+    # Curve generation
     #
     if pr_enabled:
         make_pr_curves(fold_data, pr_output_dir, pr_file_prefix, pr_show)
+    if roc_enabled:
+        make_roc_curves(fold_data, roc_output_dir, roc_file_prefix, roc_show)
 
 
 def format_plt(title, x_label, y_label):
@@ -248,13 +275,19 @@ def save_plt(output_dir, file_name, show):
         plt.show()
 
 
-def make_pr_curves(fold_data, output_dir, plot_prefix, show):
-    log = logging.getLogger(__name__)
+def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
+                output_dir, plot_prefix, show):
+    """
+    Generic method for PR/ROC curve generation
+
+    :param skl_curve_func: scikit-learn curve generation function. This should
+        be wrapped to return (x, y) value arrays.
+    """
     file_utils.safe_create_dir(output_dir)
 
-    log.info("Generating PR curves for per-folds and overall")
-    # in-order list of fold (recall, precision) value lists
-    fold_pr = []
+    log.info("Generating %s curves for per-folds and overall", title_hook)
+    # in-order list of fold (x, y) value lists
+    fold_xy = []
     fold_auc = []
 
     # all truth and proba pairs
@@ -271,23 +304,24 @@ def make_pr_curves(fold_data, output_dir, plot_prefix, show):
             log.info("   -- label '%s'", label)
             l_truth = fold_data[i][label]['truth']
             l_proba = fold_data[i][label]['proba']
-            p, r, _ = sklearn.metrics.precision_recall_curve(l_truth, l_proba)
-            auc = sklearn.metrics.auc(r, p)
-            plt.plot(r, p, label="class '%s' (auc=%f)" % (label, auc))
+            x, y = skl_curve_func(l_truth, l_proba)
+            auc = sklearn.metrics.auc(x, y)
+            plt.plot(x, y, label="class '%s' (auc=%f)" % (label, auc))
 
             f_truth.extend(l_truth)
             f_proba.extend(l_proba)
 
         # Plot for fold
-        p, r, _ = sklearn.metrics.precision_recall_curve(f_truth, f_proba)
-        auc = sklearn.metrics.auc(r, p)
-        plt.plot(r, p, label="Fold (auc=%f)" % auc)
+        x, y = skl_curve_func(f_truth, f_proba)
+        auc = sklearn.metrics.auc(x, y)
+        plt.plot(x, y, label="Fold (auc=%f)" % auc)
 
-        format_plt("Classifier PR - Fold %d" % i, "Recall", "Precision")
-        filename = plot_prefix + 'pr.fold_%d.png' % i
+        format_plt("Classifier %s - Fold %d" % (title_hook, i),
+                   x_label, y_label)
+        filename = plot_prefix + 'fold_%d.png' % i
         save_plt(output_dir, filename, show)
 
-        fold_pr.append([r, p])
+        fold_xy.append([x, y])
         fold_auc.append(auc)
         g_truth.extend(f_truth)
         g_proba.extend(f_proba)
@@ -296,16 +330,39 @@ def make_pr_curves(fold_data, output_dir, plot_prefix, show):
     log.info("-- All folds")
     plt.clf()
     for i in fold_data:
-        plt.plot(fold_pr[i][0], fold_pr[i][1],
+        plt.plot(fold_xy[i][0], fold_xy[i][1],
                  label="Fold %d (auc=%f)" % (i, fold_auc[i]))
 
-    p, r, _ = sklearn.metrics.precision_recall_curve(g_truth, g_proba)
-    auc = sklearn.metrics.auc(r, p)
-    plt.plot(r, p, label="All (auc=%f)" % auc)
+    x, y = skl_curve_func(g_truth, g_proba)
+    auc = sklearn.metrics.auc(x, y)
+    plt.plot(x, y, label="All (auc=%f)" % auc)
 
-    format_plt("classifier PR - All", "Recall", "Precision")
-    filename = plot_prefix + "pr.all_validataion.png"
+    format_plt("Classifier %s - Validation" % title_hook, x_label, y_label)
+    filename = plot_prefix + "validation.png"
     save_plt(output_dir, filename, show)
+
+
+def make_pr_curves(fold_data, output_dir, plot_prefix, show):
+    log = logging.getLogger(__name__)
+
+    def skl_pr_curve(truth, proba):
+        p, r, _ = sklearn.metrics.precision_recall_curve(truth, proba)
+        return r, p
+
+    make_curves(log, skl_pr_curve, "PR", "Recall", "Precision", fold_data,
+                output_dir, plot_prefix + 'pr.', show)
+
+
+def make_roc_curves(fold_data, output_dir, plot_prefix, show):
+    log = logging.getLogger(__name__)
+
+    def skl_roc_curve(truth, proba):
+        fpr, tpr, _ = sklearn.metrics.roc_curve(truth, proba)
+        return fpr, tpr
+
+    make_curves(log, skl_roc_curve, "ROC", "False Positive Rate",
+                "True Positive Rate", fold_data, output_dir,
+                plot_prefix + 'roc.', show)
 
 
 if __name__ == '__main__':

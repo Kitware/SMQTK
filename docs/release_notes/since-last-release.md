@@ -31,7 +31,7 @@ Tools / Scripts
     in an index via a list of descriptor UUIDs.
 
   * Added script for cross validating a classifier configuration for some
-    truthed descriptors within an index.
+    truthed descriptors within an index. Can generate PR and ROC curves.
 
 Utilities
 

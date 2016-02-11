@@ -45,7 +45,6 @@ def default_config():
         "cross_validation": {
             "truth_labels": None,
             "num_folds": 6,
-            "confidence_threshold": 0.5,
             "random_seed": None,
             "classification_use_multiprocessing": True,
         },
@@ -83,11 +82,6 @@ def classifier_kfold_validation():
 
         - num_folds
             Number of folds to make for cross validation.
-
-        - confidence_threshold
-            Classification confidence threshold to use for considering a
-            predicted classification a positive or negative in relation to is
-            truth label.
 
         - random_seed
             Optional fixed seed for the
@@ -170,6 +164,7 @@ def classifier_kfold_validation():
         )
 
         log.info("-- gathering descriptors")
+        #: :type: dict[str, list[smqtk.representation.DescriptorElement]]
         pos_map = {}
         for idx in train:
             if truth_labels[idx] not in pos_map:
@@ -212,19 +207,13 @@ def classifier_kfold_validation():
                 y_true, probs
             )
             auc = sklearn.metrics.auc(r, p)
-            plt.plot(r, p,
-                     label="%s - AUC=%f" % (t_label, auc))
+            plt.plot(r, p, label="Class '%s' - AUC=%f" % (t_label, auc))
 
         p, r, _ = sklearn.metrics.precision_recall_curve(
             fold_y_true, fold_probs
         )
-        aps = sklearn.metrics.average_precision_score(fold_y_true, fold_probs,
-                                                      'micro')
-        auc = sklearn.metrics.average_precision_score(fold_y_true, fold_probs,
-                                                      'macro')
-        plt.plot(r, p,
-                 label="Average (AUC-micro=%0.2f, AUC-macro=%f)"
-                       % (aps, auc))
+        auc = sklearn.metrics.auc(r, p)
+        plt.plot(r, p, 'k--', label="All Classes (AUC=%f)" % auc)
 
         plt.xlim([0., 1.])
         plt.ylim([0., 1.05])
@@ -235,7 +224,7 @@ def classifier_kfold_validation():
         if plot_output_dir is not None:
             log.info("-- writing fold %d plot", i)
             of = os.path.join(plot_output_dir,
-                              plot_file_prefix + 'fold-%d.png' % i)
+                              plot_file_prefix + 'pr.fold-%d.png' % i)
             plt.savefig(of)
         if plot_show:
             plt.show()
@@ -249,7 +238,7 @@ def classifier_kfold_validation():
     auc = sklearn.metrics.auc(r, p)
 
     plt.clf()
-    plt.plot(r, p, label='Global Cross-validation PR (AUC=%f)' % auc)
+    plt.plot(r, p, 'k--', label='Global Cross-validation PR (AUC=%f)' % auc)
     plt.xlim([0., 1.])
     plt.ylim([0., 1.05])
     plt.xlabel("Recall")
@@ -259,7 +248,7 @@ def classifier_kfold_validation():
     if plot_output_dir is not None:
         log.info("-- writing global plot")
         of = os.path.join(plot_output_dir,
-                          plot_file_prefix + 'global.png')
+                          plot_file_prefix + 'pr.global.png')
         plt.savefig(of)
     if plot_show:
         plt.show()

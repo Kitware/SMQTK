@@ -20,6 +20,7 @@ from smqtk.representation import (
 )
 from smqtk.utils import (
     bin_utils,
+    file_utils,
     parallel,
     plugin,
 )
@@ -49,6 +50,7 @@ def default_config():
             "classification_use_multiprocessing": True,
         },
         "pr_curve": {
+            "enabled": True,
             "show": False,
             "plot_output_directory": None,
             "plot_file_prefix": None,
@@ -91,6 +93,9 @@ def classifier_kfold_validation():
             elements.
 
     - pr_curve
+        - enabled
+            If Precision/Recall plots should be generated.
+
         - show
             If we should attempt to show the graph after it has been generated
             (matplotlib).
@@ -109,9 +114,11 @@ def classifier_kfold_validation():
     # Load configurations / Setup data
     #
     use_mp = config['cross_validation']['classification_use_multiprocessing']
-    plot_output_dir = config['pr_curve']['plot_output_directory']
-    plot_file_prefix = config['pr_curve']['plot_file_prefix'] or ''
-    plot_show = config['pr_curve']['show']
+
+    pr_enabled = config['pr_curve']['enabled']
+    pr_output_dir = config['pr_curve']['plot_output_directory']
+    pr_file_prefix = config['pr_curve']['plot_file_prefix'] or ''
+    pr_show = config['pr_curve']['show']
 
     log.info("Initializing DescriptorIndex (%s)",
              config['plugins']['descriptor_index']['type'])
@@ -128,14 +135,18 @@ def classifier_kfold_validation():
     )
 
     log.info("Loading truth data")
+    #: :type: list[str]
     uuids = []
+    #: :type: list[str]
     truth_labels = []
     with open(config['cross_validation']['truth_labels']) as f:
         f_csv = csv.reader(f)
         for row in f_csv:
             uuids.append(row[0])
             truth_labels.append(row[1])
+    #: :type: numpy.ndarray[str]
     uuids = numpy.array(uuids)
+    #: :type: numpy.ndarray[str]
     truth_labels = numpy.array(truth_labels)
 
     #
@@ -146,15 +157,28 @@ def classifier_kfold_validation():
         random_state=config['cross_validation']['random_seed']
     )
 
-    # Accumulation of binary true/false labels for each class for each fold
-    global_y_true = []
-    global_probs = []
+    """
+    Truth and classification probability results for test data per fold.
+    Format:
+        {
+            0: {
+                '<label>':  {
+                    "truth": [...],   # Parallel truth and classification
+                    "proba": [...],   # probability values
+                },
+                ...
+            },
+            ...
+        }
+    """
+    fold_data = {}
 
     i = 0
     for train, test in kfolds:
         log.info("Fold %d", i)
         log.info("-- %d training examples", len(train))
         log.info("-- %d test examples", len(test))
+        fold_data[i] = {}
 
         log.info("-- creating classifier")
         #: :type: SupervisedClassifier
@@ -179,83 +203,109 @@ def classifier_kfold_validation():
         classifier.train(pos_map, negatives)
 
         log.info("-- Classifying test set")
-        def iter_test_descrs():
-            for idx in test:
-                yield descriptor_index.get_descriptor(uuids[idx])
-        m = classifier.classify_async(iter_test_descrs(),
-                                      classification_factory,
-                                      use_multiprocessing=use_mp,
-                                      ri=1.0)
+        m = classifier.classify_async(
+            (descriptor_index.get_descriptor(uuids[idx]) for idx in test),
+            classification_factory,
+            use_multiprocessing=use_mp, ri=1.0
+        )
         uuid2c = dict((d.uuid(), c.get_classification())
                       for d, c in m.iteritems())
 
-        plt.clf()
-
-        log.info("-- Compute PR curve for each non-negative label")
-        fold_y_true = []
-        fold_probs = []
+        log.info("-- Pairing truth and computed probabilities")
         # Only considering positive labels
         for t_label in pos_map:
-            y_true = [l == t_label for l in truth_labels[test]]
-            fold_y_true.extend(y_true)
-            global_y_true.extend(y_true)
-
-            probs = [uuid2c[uuid][t_label] for uuid in uuids[test]]
-            fold_probs.extend(probs)
-            global_probs.extend(probs)
-
-            p, r, _ = sklearn.metrics.precision_recall_curve(
-                y_true, probs
-            )
-            auc = sklearn.metrics.auc(r, p)
-            plt.plot(r, p, label="Class '%s' - AUC=%f" % (t_label, auc))
-
-        p, r, _ = sklearn.metrics.precision_recall_curve(
-            fold_y_true, fold_probs
-        )
-        auc = sklearn.metrics.auc(r, p)
-        plt.plot(r, p, 'k--', label="All Classes (AUC=%f)" % auc)
-
-        plt.xlim([0., 1.])
-        plt.ylim([0., 1.05])
-        plt.xlabel("Recall")
-        plt.ylabel("Precision")
-        plt.title("Classifier PR - Fold %d" % i)
-        plt.legend(loc='best')
-        if plot_output_dir is not None:
-            log.info("-- writing fold %d plot", i)
-            of = os.path.join(plot_output_dir,
-                              plot_file_prefix + 'pr.fold-%d.png' % i)
-            plt.savefig(of)
-        if plot_show:
-            plt.show()
+            fold_data[i][t_label] = {
+                "truth": [l == t_label for l in truth_labels[test]],
+                "proba": [uuid2c[uuid][t_label] for uuid in uuids[test]]
+            }
 
         i += 1
 
-    log.info("Creating global PR curve")
-    p, r, _ = sklearn.metrics.precision_recall_curve(
-        global_y_true, global_probs
-    )
-    auc = sklearn.metrics.auc(r, p)
+        # DEBUG
+        if i==2: break
 
-    plt.clf()
-    plt.plot(r, p, 'k--', label='Global Cross-validation PR (AUC=%f)' % auc)
+    #
+    # PR Curve generation
+    #
+    if pr_enabled:
+        make_pr_curves(fold_data, pr_output_dir, pr_file_prefix, pr_show)
+
+
+def format_plt(title, x_label, y_label):
     plt.xlim([0., 1.])
     plt.ylim([0., 1.05])
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.title("Classification PR - Global")
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
     plt.legend(loc='best')
-    if plot_output_dir is not None:
-        log.info("-- writing global plot")
-        of = os.path.join(plot_output_dir,
-                          plot_file_prefix + 'pr.global.png')
-        plt.savefig(of)
-    if plot_show:
+
+
+def save_plt(output_dir, file_name, show):
+    file_utils.safe_create_dir(output_dir)
+    save_path = os.path.join(output_dir, file_name)
+    plt.savefig(save_path)
+    if show:
         plt.show()
 
 
-# TODO: Implement in a parallel manner using smqtk...parallel_map
+def make_pr_curves(fold_data, output_dir, plot_prefix, show):
+    log = logging.getLogger(__name__)
+    file_utils.safe_create_dir(output_dir)
+
+    log.info("Generating PR curves for per-folds and overall")
+    # in-order list of fold (recall, precision) value lists
+    fold_pr = []
+    fold_auc = []
+
+    # all truth and proba pairs
+    g_truth = []
+    g_proba = []
+
+    for i in fold_data:
+        log.info("-- Fold %i", i)
+        f_truth = []
+        f_proba = []
+
+        plt.clf()
+        for label in fold_data[i]:
+            log.info("   -- label '%s'", label)
+            l_truth = fold_data[i][label]['truth']
+            l_proba = fold_data[i][label]['proba']
+            p, r, _ = sklearn.metrics.precision_recall_curve(l_truth, l_proba)
+            auc = sklearn.metrics.auc(r, p)
+            plt.plot(r, p, label="class '%s' (auc=%f)" % (label, auc))
+
+            f_truth.extend(l_truth)
+            f_proba.extend(l_proba)
+
+        # Plot for fold
+        p, r, _ = sklearn.metrics.precision_recall_curve(f_truth, f_proba)
+        auc = sklearn.metrics.auc(r, p)
+        plt.plot(r, p, label="Fold (auc=%f)" % auc)
+
+        format_plt("Classifier PR - Fold %d" % i, "Recall", "Precision")
+        filename = plot_prefix + 'pr.fold_%d.png' % i
+        save_plt(output_dir, filename, show)
+
+        fold_pr.append([r, p])
+        fold_auc.append(auc)
+        g_truth.extend(f_truth)
+        g_proba.extend(f_proba)
+
+    # Plot global curve
+    log.info("-- All folds")
+    plt.clf()
+    for i in fold_data:
+        plt.plot(fold_pr[i][0], fold_pr[i][1],
+                 label="Fold %d (auc=%f)" % (i, fold_auc[i]))
+
+    p, r, _ = sklearn.metrics.precision_recall_curve(g_truth, g_proba)
+    auc = sklearn.metrics.auc(r, p)
+    plt.plot(r, p, label="All (auc=%f)" % auc)
+
+    format_plt("classifier PR - All", "Recall", "Precision")
+    filename = plot_prefix + "pr.all_validataion.png"
+    save_plt(output_dir, filename, show)
 
 
 if __name__ == '__main__':

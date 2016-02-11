@@ -41,12 +41,12 @@ def default_config():
             }
         },
         "plugins": {
-            "classifier": plugin.make_config(get_classifier_impls),
+            "classifier": plugin.make_config(get_classifier_impls()),
             "classification_factory": plugin.make_config(
-                get_classification_element_impls
+                get_classification_element_impls()
             ),
             "descriptor_index": plugin.make_config(
-                get_descriptor_index_impls
+                get_descriptor_index_impls()
             ),
         }
     }
@@ -104,7 +104,7 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls
+        get_descriptor_index_impls()
     )
 
     log.info("Initializing classification factory")
@@ -115,7 +115,7 @@ def main():
     log.info("Initializing classifier")
     #: :type: smqtk.algorithms.Classifier
     classifier = plugin.from_plugin_config(
-        config['plugins']['classifier'], get_classifier_impls
+        config['plugins']['classifier'], get_classifier_impls()
     )
 
     #

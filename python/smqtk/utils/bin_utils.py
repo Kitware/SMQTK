@@ -5,7 +5,7 @@ import logging.handlers
 import os
 import time
 
-from . import configuration
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -80,7 +80,7 @@ def load_config(config_path, defaults=None):
     loaded = False
     if config_path and os.path.isfile(config_path):
         with open(config_path) as cf:
-            configuration.merge_configs(defaults, json.load(cf))
+            merge_dict(defaults, json.load(cf))
             loaded = True
     return defaults, loaded
 
@@ -212,8 +212,10 @@ def basic_cli_parser(description=None):
 
     g_config = parser.add_argument_group('Configuration')
     g_config.add_argument('-c', '--config',
+                          metavar="PATH",
                           help='Path to the JSON configuration file.')
     g_config.add_argument('-g', '--generate-config',
+                          metavar="PATH",
                           help='Optionally generate a default configuration '
                                'file at the specified path. If a '
                                'configuration file was provided, we update '

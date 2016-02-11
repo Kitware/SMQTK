@@ -1,12 +1,19 @@
 import abc
+import copy
+import itertools
 import logging
 import os
-import traceback
+import sys
+
+import numpy
 
 from smqtk.algorithms import SmqtkAlgorithm
-import smqtk.utils.bin_utils
-import smqtk.utils.parallel
-from smqtk.utils.plugin import get_plugins
+from smqtk.utils import (
+    bin_utils,
+    merge_dict,
+    parallel,
+    plugin,
+)
 
 
 __author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
@@ -108,7 +115,7 @@ class Classifier (SmqtkAlgorithm):
         def work(d_elem):
             return d_elem, self.classify(d_elem, factory, overwrite)
 
-        classifications = smqtk.utils.parallel.parallel_map(
+        classifications = parallel.parallel_map(
             work, d_iter,
             cores=procs,
             ordered=False,
@@ -117,7 +124,7 @@ class Classifier (SmqtkAlgorithm):
 
         r_state = [0] * 7
         if ri:
-            r_progress = smqtk.utils.bin_utils.report_progress
+            r_progress = bin_utils.report_progress
         else:
             def r_progress(*_):
                 return
@@ -138,7 +145,7 @@ class Classifier (SmqtkAlgorithm):
     def get_labels(self):
         """
         Get the sequence of class labels that this classifier can classify
-        descriptors into..
+        descriptors into. This includes the negative label.
 
         :return: Sequence of possible classifier labels.
         :rtype: collections.Sequence[collections.Hashable]
@@ -233,16 +240,17 @@ class SupervisedClassifier (Classifier):
             raise ValueError("No negative examples provided.")
 
 
-def get_classifier_impls(reload_modules=False):
+def get_classifier_impls(reload_modules=False, sub_interface=None):
     """
     Discover and return discovered ``Classifier`` classes. Keys in the returned
     map are the names of the discovered classes, and the paired values are the
     actual class type objects.
 
     We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
-        - python modules listed in the environment variable ``CLASSIFIER_PATH``
+        - modules next to this file this function is defined in (ones that
+          begin with an alphanumeric character),
+        - python modules listed in the environment variable
+          :envvar:`CLASSIFIER_PATH`
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)
@@ -250,15 +258,19 @@ def get_classifier_impls(reload_modules=False):
     Within a module we first look for a helper variable by the name
     ``CLASSIFIER_CLASS``, which can either be a single class object or an
     iterable of class objects, to be specifically exported. If the variable is
-    set to None, we skip that module and do not import anything. If the variable
-    is not present, we look at attributes defined in that module for classes
-    that descend from the given base class type. If none of the above are found,
-    or if an exception occurs, the module is skipped.
+    set to None, we skip that module and do not import anything. If the
+    variable is not present, we look at attributes defined in that module for
+    classes that descend from the given base class type. If none of the above
+    are found, or if an exception occurs, the module is skipped.
 
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``Classifier``
+    :param sub_interface: Only return implementations that also descend from
+        the given sub-interface. The given interface must also descend from
+        :class:`Classifier`.
+
+    :return: Map of discovered class object of type :class:`Classifier`
         whose keys are the string names of the classes.
     :rtype: dict[str, type]
 
@@ -266,5 +278,11 @@ def get_classifier_impls(reload_modules=False):
     this_dir = os.path.abspath(os.path.dirname(__file__))
     env_var = "CLASSIFIER_PATH"
     helper_var = "CLASSIFIER_CLASS"
-    return get_plugins(__name__, this_dir, env_var, helper_var, Classifier,
-                       reload_modules=reload_modules)
+    if sub_interface is None:
+        base_class = Classifier
+    else:
+        assert issubclass(sub_interface, Classifier), \
+            "The given sub-interface type must descend from `Classifier`."
+        base_class = sub_interface
+    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
+                              base_class, reload_modules=reload_modules)

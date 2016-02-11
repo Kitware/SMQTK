@@ -63,7 +63,7 @@ def get_cli_parser():
 
 def get_default_config():
     return {
-        "classifier": make_config(get_classifier_impls),
+        "classifier": make_config(get_classifier_impls()),
     }
 
 
@@ -71,7 +71,7 @@ def train_classifier_iqr(config, iqr_state_fp):
     log = logging.getLogger(__name__)
 
     #: :type: smqtk.algorithms.SupervisedClassifier
-    classifier = from_plugin_config(config['classifier'], get_classifier_impls)
+    classifier = from_plugin_config(config['classifier'], get_classifier_impls())
 
     if not isinstance(classifier, SupervisedClassifier):
         raise RuntimeError("Configured classifier must be of the "

@@ -2,8 +2,8 @@ import unittest
 
 import nose.tools as ntools
 
-from smqtk.utils.configuration import (
-    merge_configs
+from smqtk.utils import (
+    merge_dict
 )
 
 
@@ -25,7 +25,7 @@ class TestMergeConfigs (unittest.TestCase):
             'b': 2,
             'c': 3,
         }
-        merge_configs(a, b)
+        merge_dict(a, b)
         ntools.assert_equal(a, expected)
 
     def test_subset_merge(self):
@@ -40,7 +40,7 @@ class TestMergeConfigs (unittest.TestCase):
             'a': 3,
             'b': 2,
         }
-        merge_configs(a, b)
+        merge_dict(a, b)
         ntools.assert_equal(a, expected)
 
     def test_partial_update(self):
@@ -57,7 +57,7 @@ class TestMergeConfigs (unittest.TestCase):
             'b': 2,
             'c': 4,
         }
-        merge_configs(a, b)
+        merge_dict(a, b)
         ntools.assert_equal(a, expected)
 
     def test_overrides(self):
@@ -76,7 +76,7 @@ class TestMergeConfigs (unittest.TestCase):
                 'c': 3,
             }
         }
-        merge_configs(a, b)
+        merge_dict(a, b)
         ntools.assert_equal(a, expected)
 
     def test_nested(self):
@@ -116,5 +116,5 @@ class TestMergeConfigs (unittest.TestCase):
             },
             'j': 8,
         }
-        merge_configs(a, b)
+        merge_dict(a, b)
         ntools.assert_equal(a, expected)

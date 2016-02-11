@@ -8,7 +8,7 @@ import os
 from flask.ext.basicauth import BasicAuth
 
 from smqtk.utils import bin_utils
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 from smqtk.utils.jsmin import jsmin
 import smqtk.web
 
@@ -117,7 +117,7 @@ def main():
     if args.config:
         if os.path.isfile(args.config):
             with open(args.config, 'r') as f:
-                merge_configs(config, json.load(f))
+                merge_dict(config, json.load(f))
             config_loaded = True
         elif not os.path.isfile(args.config):
             log.error("Configuration file path not valid.")

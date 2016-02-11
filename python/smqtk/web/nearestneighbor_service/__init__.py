@@ -1,5 +1,4 @@
 import mimetypes
-import multiprocessing
 import os
 
 import flask
@@ -12,7 +11,7 @@ from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.utils import plugin
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 from smqtk.web import SmqtkWebApp
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -55,11 +54,11 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         """
         c = super(NearestNeighborServiceServer, cls).get_default_config()
-        merge_configs(c, {
+        merge_dict(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generator":
-                plugin.make_config(get_descriptor_generator_impls),
-            "nn_index": plugin.make_config(get_nn_index_impls),
+                plugin.make_config(get_descriptor_generator_impls()),
+            "nn_index": plugin.make_config(get_nn_index_impls()),
         })
         return c
 
@@ -86,13 +85,13 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.nn_index = plugin.from_plugin_config(
             json_config['nn_index'],
-            get_nn_index_impls
+            get_nn_index_impls()
         )
 
         #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator_inst = plugin.from_plugin_config(
                                             self.generator_config,
-                                            get_descriptor_generator_impls)
+                                            get_descriptor_generator_impls())
 
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")

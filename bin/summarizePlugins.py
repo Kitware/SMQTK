@@ -51,9 +51,13 @@ def main():
     collect_defaults = args.defaults
     defaults = {}
 
-    def collect_configs(name, impl_getter):
+    def collect_configs(name, impl_map):
+        """
+        :type name: str
+        :type impl_map: dict
+        """
         if collect_defaults:
-            defaults[name] = smqtk.utils.plugin.make_config(impl_getter)
+            defaults[name] = smqtk.utils.plugin.make_config(impl_map)
 
     log = logging.getLogger("smqtk.checkPlugins")
 
@@ -70,28 +74,28 @@ def main():
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_data_element_impls()
     collect_configs('DataElement',
-                    smqtk.representation.get_data_element_impls)
+                    smqtk.representation.get_data_element_impls())
 
     log.info("Checking DataSet plugins")
     plugin_type_list.append("DataSet")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_data_set_impls()
     collect_configs('DataSet',
-                    smqtk.representation.get_data_set_impls)
+                    smqtk.representation.get_data_set_impls())
 
     log.info("Checking DescriptorElement plugins")
     plugin_type_list.append("DescriptorElement")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_descriptor_element_impls()
     collect_configs('DescriptorElement',
-                    smqtk.representation.get_descriptor_element_impls)
+                    smqtk.representation.get_descriptor_element_impls())
 
     log.info("Checking DescriptorIndex plugins")
     plugin_type_list.append("DescriptorIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.representation.get_descriptor_index_impls()
     collect_configs('DescriptorIndex',
-                    smqtk.representation.get_descriptor_index_impls)
+                    smqtk.representation.get_descriptor_index_impls())
 
     #
     # smqtk.algorithms
@@ -101,21 +105,21 @@ def main():
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_classifier_impls()
     collect_configs('Classifier',
-                    smqtk.algorithms.get_classifier_impls)
+                    smqtk.algorithms.get_classifier_impls())
 
     log.info("Checking DescriptorGenerator plugins")
     plugin_type_list.append("DescriptorGenerator")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_descriptor_generator_impls()
     collect_configs('DescriptorGenerator',
-                    smqtk.algorithms.get_descriptor_generator_impls)
+                    smqtk.algorithms.get_descriptor_generator_impls())
 
     log.info("Checking HashIndex plugins")
     plugin_type_list.append("HashIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.nn_index.hash_index.get_hash_index_impls()
     collect_configs('HashIndex',
-                    smqtk.algorithms.nn_index.hash_index.get_hash_index_impls)
+                    smqtk.algorithms.nn_index.hash_index.get_hash_index_impls())
 
     log.info("Checking LshFunctor plugins")
     plugin_type_list.append("LshFunctor")
@@ -123,21 +127,21 @@ def main():
         smqtk.algorithms.nn_index.lsh.functors.get_lsh_functor_impls()
     collect_configs('LshFunctor',
                     smqtk.algorithms.nn_index.lsh.functors
-                         .get_lsh_functor_impls)
+                         .get_lsh_functor_impls())
 
     log.info("Checking NearestNeighborIndex plugins")
     plugin_type_list.append("NearestNeighborIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_nn_index_impls()
     collect_configs('NearestNeighborIndex',
-                    smqtk.algorithms.get_nn_index_impls)
+                    smqtk.algorithms.get_nn_index_impls())
 
     log.info("Checking RelevancyIndex plugins")
     plugin_type_list.append("RelevancyIndex")
     plugin_info[plugin_type_list[-1]] = \
         smqtk.algorithms.get_relevancy_index_impls()
     collect_configs('RelevancyIndex',
-                    smqtk.algorithms.get_relevancy_index_impls)
+                    smqtk.algorithms.get_relevancy_index_impls())
 
     #
     # Print-out

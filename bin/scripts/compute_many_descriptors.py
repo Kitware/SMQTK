@@ -15,7 +15,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import initialize_logging, output_config
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 from smqtk.utils import plugin
 from smqtk.utils.jsmin import jsmin
 
@@ -23,10 +23,10 @@ from smqtk.utils.jsmin import jsmin
 def default_config():
     return {
         "descriptor_generator":
-            plugin.make_config(get_descriptor_generator_impls),
+            plugin.make_config(get_descriptor_generator_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "descriptor_index":
-            plugin.make_config(get_descriptor_index_impls)
+            plugin.make_config(get_descriptor_index_impls())
     }
 
 
@@ -62,13 +62,13 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     log.info("Making descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(c['descriptor_index'],
-                                                 get_descriptor_index_impls)
+                                                 get_descriptor_index_impls())
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
     #: :type: smqtk.algorithms.DescriptorGenerator
     generator = plugin.from_plugin_config(c['descriptor_generator'],
-                                          get_descriptor_generator_impls)
+                                          get_descriptor_generator_impls())
 
     def iter_valid_elements():
         """
@@ -179,7 +179,7 @@ def main():
     if config_fp:
         if os.path.isfile(config_fp):
             with open(config_fp) as f:
-                merge_configs(c, json.loads(jsmin(f.read())))
+                merge_dict(c, json.loads(jsmin(f.read())))
             config_loaded = True
         else:
             l.error("Config file path not valid")

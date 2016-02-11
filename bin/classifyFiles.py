@@ -64,11 +64,11 @@ def get_default_config():
         "descriptor_factory":
             DescriptorElementFactory.get_default_config(),
         "descriptor_generator":
-            plugin.make_config(get_descriptor_generator_impls),
+            plugin.make_config(get_descriptor_generator_impls()),
         "classification_factory":
             ClassificationElementFactory.get_default_config(),
         "classifier":
-            plugin.make_config(get_classifier_impls),
+            plugin.make_config(get_classifier_impls()),
     }
 
 
@@ -115,7 +115,7 @@ def classify_files(config, label, file_globs):
     #: :type: smqtk.algorithms.Classifier
     classifier = \
         plugin.from_plugin_config(config['classifier'],
-                                  get_classifier_impls)
+                                  get_classifier_impls())
 
     def log_avaialable_labels():
         log.info("Available classifier labels:")
@@ -155,7 +155,7 @@ def classify_files(config, label, file_globs):
     #: :type: smqtk.algorithms.DescriptorGenerator
     descriptor_generator = \
         plugin.from_plugin_config(config['descriptor_generator'],
-                                  get_descriptor_generator_impls)
+                                  get_descriptor_generator_impls())
     descr_map = descriptor_generator\
         .compute_descriptor_async(data_elements, descriptor_factory)
 

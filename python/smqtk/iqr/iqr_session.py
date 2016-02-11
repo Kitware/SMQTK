@@ -303,7 +303,7 @@ class IqrSession (SmqtkObject):
         self._log.info("Creating new relevancy index over working index.")
         #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
         self.rel_index = plugin.from_plugin_config(self.rel_index_config,
-                                                   get_relevancy_index_impls)
+                                                   get_relevancy_index_impls())
         self.rel_index.build_index(self.working_index.iterdescriptors())
 
     def adjudicate(self, new_positives=(), new_negatives=(),

@@ -13,7 +13,7 @@ Compute Functions
 
   * Added function for asynchronously computing LSH codes for some number of
     input descriptor elements.
-    
+
 Documentation
 
   * Added ``CONTRIBUTING.md`` file.
@@ -30,6 +30,9 @@ Tools / Scripts
   * Added script for asynchronously computing classifications on descriptors
     in an index via a list of descriptor UUIDs.
 
+  * Added script for cross validating a classifier configuration for some
+    truthed descriptors within an index. Can generate PR and ROC curves.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an
@@ -41,6 +44,9 @@ Utilities
 
   * Added helper for utilities, encapsulating standard argument parser and
     configuration loading/generation steps.
+
+  * Renamed "merge_config" to "merge_dict" and moved it to the smqtk.utils
+    module level.
 
 
 Fixes since v0.3.0

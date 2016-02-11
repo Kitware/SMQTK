@@ -1,3 +1,4 @@
+import cPickle
 import unittest
 
 import multiprocessing
@@ -22,6 +23,76 @@ if LibSvmClassifier.is_usable():
         def tearDown(self):
             # Clear MemoryElement content
             DescriptorMemoryElement.MEMORY_CACHE = {}
+
+        def test_no_save_model_pickle(self):
+            # Test model preservation across pickling even without model cache
+            # file paths set.
+            classifier = LibSvmClassifier(
+                train_params={
+                    '-t': 0,  # linear kernel
+                    '-b': 1,  # enable probability estimates
+                    '-c': 2,  # SVM-C parameter C
+                    '-q': '',  # quite mode
+                },
+                normalize=None,  # DO NOT normalize descriptors
+            )
+            ntools.assert_true(classifier.svm_model is None)
+            # Empty model should not trigger __LOCAL__ content in pickle
+            ntools.assert_not_in('__LOCAL__', classifier.__getstate__())
+            _ = cPickle.loads(cPickle.dumps(classifier))
+
+            # train arbitrary model (same as ``test_simple_classification``)
+            DIM = 2
+            N = 1000
+            POS_LABEL = 'positive'
+            d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
+            c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
+
+            def make_element((i, v)):
+                d = d_factory.new_descriptor('test', i)
+                d.set_vector(v)
+                return d
+
+            # Constructing artificial descriptors
+            x = numpy.random.rand(N, DIM)
+            x_pos = x[x[:, 1] <= 0.45]
+            x_neg = x[x[:, 1] >= 0.55]
+            p = multiprocessing.pool.ThreadPool()
+            d_pos = p.map(make_element, enumerate(x_pos))
+            d_neg = p.map(make_element, enumerate(x_neg, start=N//2))
+            p.close()
+            p.join()
+
+            # Training
+            classifier.train({POS_LABEL: d_pos}, d_neg)
+
+            # Test original classifier
+            t_v = numpy.random.rand(DIM)
+            t = d_factory.new_descriptor('query', 0)
+            t.set_vector(t_v)
+            c_expected = classifier.classify(t, c_factory)
+
+            # Should see __LOCAL__ content in pickle state now
+            p_state = classifier.__getstate__()
+            ntools.assert_in('__LOCAL__', p_state)
+            ntools.assert_in('__LOCAL_LABELS__', p_state)
+            ntools.assert_in('__LOCAL_MODEL__', p_state)
+            ntools.assert_true(len(p_state['__LOCAL_LABELS__']) > 0)
+            ntools.assert_true(len(p_state['__LOCAL_MODEL__']) > 0)
+
+            # Restored classifier should classify the same test descriptor the
+            # same
+            #: :type: LibSvmClassifier
+            classifier2 = cPickle.loads(cPickle.dumps(classifier))
+            c_post_pickle = classifier2.classify(t, c_factory)
+            # There may be floating point error, so extract actual confidence
+            # values and check post round
+            c_pp_positive = c_post_pickle['positive']
+            c_pp_negative = c_post_pickle['negative']
+            c_e_positive = c_expected['positive']
+            c_e_negative = c_expected['negative']
+            ntools.assert_almost_equal(c_e_positive, c_pp_positive, 5)
+            ntools.assert_almost_equal(c_e_negative, c_pp_negative, 5)
 
         def test_simple_classification(self):
             """

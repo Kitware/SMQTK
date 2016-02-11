@@ -4,7 +4,7 @@ import os
 
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -120,7 +120,7 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
 
         """
         c = {}
-        merge_configs(c, config_dict)
+        merge_dict(c, config_dict)
         c['type_str'] = type_str
         c['uuid'] = uuid
         return super(DescriptorElement, cls).from_config(c, merge_default)

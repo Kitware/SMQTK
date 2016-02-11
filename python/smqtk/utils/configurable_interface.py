@@ -2,7 +2,7 @@ import abc
 import inspect
 import types
 
-from smqtk.utils.configuration import merge_configs
+from smqtk.utils import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -80,7 +80,7 @@ class Configurable (object):
         # something more special, they can override this function.
         if merge_default:
             merged_config = cls.get_default_config()
-            merge_configs(merged_config, config_dict)
+            merge_dict(merged_config, config_dict)
             config_dict = merged_config
 
         return cls(**config_dict)

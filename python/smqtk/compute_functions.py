@@ -80,6 +80,10 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     #: :type: deque[smqtk.representation.data_element.file_element.DataFileElement]
     dfe_deque = collections.deque()
 
+    # Counts for logging
+    total = 0
+    unique = 0
+
     def data_file_element_iter():
         """
         Helper iterator to collect the file elements as we iterate over them
@@ -113,9 +117,14 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
             if len(dfe_deque) == batch_size:
                 batch_i += 1
                 log.debug("Computing batch %d", batch_i)
+
+                total += len(dfe_deque)
                 m = descr_generator.compute_descriptor_async(
                     dfe_deque, descr_factory, overwrite, procs, **kwds
                 )
+                unique += len(m)
+                log.debug("-- Processed %d so far (%d total data elements "
+                          "input)", unique, total)
 
                 log.debug("-- adding to index")
                 descr_index.add_many_descriptors(m.itervalues())

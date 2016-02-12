@@ -295,6 +295,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cores.
         :type procs: int
 
+        :raises ValueError: An input DataElement was of a content type that we
+            cannot handle.
+
         :return: Mapping of input DataElement instances to the computed
             descriptor element.
             DescriptorElement UUID's are congruent with the UUID of the data

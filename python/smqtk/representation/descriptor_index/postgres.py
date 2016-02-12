@@ -27,6 +27,7 @@ def norm_psql_cmd_string(s):
     return ' '.join(s.split())
 
 
+# noinspection SqlNoDataSourceInspection
 class PostgresDescriptorIndex (DescriptorIndex):
     """
     DescriptorIndex implementation that stored DescriptorElement references in
@@ -536,14 +537,14 @@ class PostgresDescriptorIndex (DescriptorIndex):
         )
         v = {'uuid_like': str(uuid)}
 
-        def eh(c):
+        def execute(c):
             c.execute(q, v)
             # Nothing deleted if rowcount == 0
             # (otherwise 1 when deleted a thing)
             if c.rowcount == 0:
                 raise KeyError(uuid)
 
-        list(self._single_execute(eh))
+        list(self._single_execute(execute))
 
     def remove_many_descriptors(self, *uuids):
         """
@@ -566,7 +567,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         str_uuid_set = set(str(uid) for uid in uuids)
         v = {'uuid_tuple': tuple(str_uuid_set)}
 
-        def eh(c):
+        def execute(c):
             c.execute(q, v)
 
             # Check query UUIDs against rows that would actually be deleted.
@@ -575,7 +576,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 if uid not in deleted_uuid_set:
                     raise KeyError(uid)
 
-        list(self._single_execute(eh))
+        list(self._single_execute(execute))
 
     def iterkeys(self):
         """
@@ -599,7 +600,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         self._log.debug("Iterating UUIDs (interval = %d)", limit)
 
-        def eh(c):
+        def execute(c):
             self._log.debug("Getting descriptors in index range (%d, %d]",
                             offset, offset + limit)
             c.execute(self.SELECT_LIMIT_OFFSET.format(
@@ -610,7 +611,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ))
 
         while offset < n:
-            for r in self._single_execute(eh, True):
+            for r in self._single_execute(execute, True):
                 d = cPickle.loads(str(r[0]))
                 yield d
 

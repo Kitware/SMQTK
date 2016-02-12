@@ -70,7 +70,7 @@ def main():
     """
 
     args, config = bin_utils.utility_main_helper(
-        default_config(),
+        default_config,
         description,
     )
     log = logging.getLogger()

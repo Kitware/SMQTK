@@ -251,14 +251,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                     self._reload_hash2uuid
                 )
                 self._hash2uuid_monitor.start()
-                atexit.register(self._stop_monitor,
-                                self.hash2uuid_cache_filepath,
-                                self._hash2uuid_monitor)
+                atexit.register(self._stop_monitor, self._hash2uuid_monitor)
 
     def __del__(self):
         if hasattr(self, '_hash2uuid_monitor') and self._hash2uuid_monitor:
-            self._stop_monitor(self.hash2uuid_cache_filepath,
-                               self._hash2uuid_monitor)
+            self._stop_monitor(self._hash2uuid_monitor)
 
     @staticmethod
     def _get_dist_func(distance_method):
@@ -277,14 +274,16 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             raise ValueError("Invalid distance method label. Must be one of "
                              "['euclidean' | 'cosine' | 'hik']")
 
-    def _stop_monitor(self, fp, monitor):
+    def _stop_monitor(self, monitor):
         """
         Shutdown hook for monitor thread when live reload is on.
+        :type monitor: smqtk.utils.file_utils.FileModificationMonitor
         """
-        self._log.debug("stopping monitor for path: %s", fp)
+        self._log.debug("stopping monitor for path: %s", monitor.filepath)
         monitor.stop()
         monitor.join()
-        self._log.debug("stopping monitor for path: %s -- Done", fp)
+        self._log.debug("stopping monitor for path: %s -- Done",
+                        monitor.filepath)
 
     def _reload_hash2uuid(self, filepath):
         """

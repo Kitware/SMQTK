@@ -72,8 +72,7 @@ def main():
     model file for the ``LSHNearestNeighborIndex`` algorithm as output
     dictionary format is the same as used by that implementation.
     """
-    args, config = bin_utils.utility_main_helper(default_config(),
-                                                 description)
+    args, config = bin_utils.utility_main_helper(default_config, description)
     log = logging.getLogger(__name__)
 
     #

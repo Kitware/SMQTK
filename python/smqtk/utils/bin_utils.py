@@ -244,9 +244,9 @@ def utility_main_helper(default_config, parser_description=None,
     takes the ``ArgumentParser`` instance to allow for adding additional
     arguments and groups.
 
-    :param default_config: Default configuration (JSON) dictionary for the
-        utility.
-    :type default_config: dict
+    :param default_config: Function returning default configuration (JSON)
+        dictionary for the utility. This should take no arguments.
+    :type default_config: () -> dict
 
     :param parser_description: Optional description to give to the generated
         argument parser.
@@ -273,7 +273,7 @@ def utility_main_helper(default_config, parser_description=None,
         llevel = logging.DEBUG
     initialize_logging(logging.getLogger(), llevel)
 
-    config, config_loaded = load_config(config_filepath, default_config)
+    config, config_loaded = load_config(config_filepath, default_config())
     output_config(config_generate, config, overwrite=True)
 
     if not config_loaded:

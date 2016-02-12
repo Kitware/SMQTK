@@ -44,7 +44,7 @@ def main():
     train on. This only works if the stored descriptors' UUID is a type of
     string.
     """
-    args, config = bin_utils.utility_main_helper(default_config(), description)
+    args, config = bin_utils.utility_main_helper(default_config, description)
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']

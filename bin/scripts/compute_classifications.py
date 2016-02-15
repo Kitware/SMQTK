@@ -30,9 +30,6 @@ __author__ = "paul.tunison@kitware.com"
 def default_config():
     return {
         "utility": {
-            "uuids_list_filepath": "CHANGE ME :: PATH",
-            "output_csv_header_filepath": "CHANGE ME :: PATH",
-            "output_csv_filepath": "CHANGE ME :: PATH",
             "classify_overwrite": False,
             "parallel": {
                 "use_multiprocessing": False,
@@ -50,6 +47,21 @@ def default_config():
             ),
         }
     }
+
+
+def extend_parser(parser):
+    """
+    :type parser: argparse.ArgumentParser
+    :rtype: argparse.ArgumentParser
+    """
+    g_io = parser.add_argument_group("Input Output Files")
+    g_io.add_argument('--uuids-list', metavar='PATH',
+                      help='Path to the input file listing UUIDs to process.')
+    g_io.add_argument('--csv-header', metavar='PATH',
+                      help='Path to the file to output column header labels.')
+    g_io.add_argument('--csv-data', metavar='PATH',
+                      help='Path to the file to output the CSV data to.')
+    return parser
 
 
 def main():
@@ -72,16 +84,16 @@ def main():
     args, config = bin_utils.utility_main_helper(
         default_config,
         description,
+        extend_parser,
     )
-    log = logging.getLogger()
+    log = logging.getLogger(__name__)
 
     # - parallel_map UUIDs to load from the configured index
     # - classify iterated descriptors
 
-    uuids_list_filepath = config['utility']['uuids_list_filepath']
-    output_csv_filepath = config['utility']['output_csv_filepath']
-    output_csv_header_filepath = \
-        config['utility']['output_csv_header_filepath']
+    uuids_list_filepath = args.uuids_list
+    output_csv_filepath = args.csv_data
+    output_csv_header_filepath = args.csv_header
     classify_overwrite = config['utility']['classify_overwrite']
 
     p_use_multiprocessing = \
@@ -95,6 +107,10 @@ def main():
         raise ValueError("No uuids_list_filepath specified.")
     elif not os.path.isfile(uuids_list_filepath):
         raise ValueError("Given uuids_list_filepath did not point to a file.")
+    if output_csv_header_filepath is None:
+        raise ValueError("Need a path to save CSV header labels")
+    if output_csv_filepath is None:
+        raise ValueError("Need a path to save CSV data.")
 
     #
     # Initialize configured plugins
@@ -158,6 +174,10 @@ def main():
         name='classify_descr',
     )
 
+    #
+    # Write/Output files
+    #
+
     c_labels = classifier.get_labels()
 
     def make_row(c):
@@ -166,10 +186,6 @@ def main():
         """
         c_m = c.get_classification()
         return [c.uuid] + [c_m[l] for l in c_labels]
-
-    #
-    # Write/Output files
-    #
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)

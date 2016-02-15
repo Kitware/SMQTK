@@ -67,9 +67,9 @@ class Classifier (SmqtkAlgorithm):
         if overwrite or not c_elem.has_classifications():
             c = self._classify(d)
             c_elem.set_classification(c)
-        else:
-            self._log.debug("Found existing classification in generated "
-                            "element")
+        # else:
+        #     self._log.debug("Found existing classification in generated "
+        #                     "element")
 
         return c_elem
 

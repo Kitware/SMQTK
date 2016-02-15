@@ -45,9 +45,6 @@ def uuids_for_processing(uuids, hash2uuids):
 def default_config():
     return {
         "utility": {
-            "uuid_list_filepath": None,
-            "hash2uuids_input_filepath": None,
-            "hash2uuids_output_filepath": None,
             "report_interval": 1.0,
             "use_multiprocessing": False,
             "pickle_protocol": -1,
@@ -59,12 +56,39 @@ def default_config():
     }
 
 
+def extend_parser(parser):
+    """
+    :type parser: argparse.ArgumentParser
+    """
+    g_io = parser.add_argument_group("I/O")
+    g_io.add_argument("--uuids-list",
+                      default=None, metavar="PATH",
+                      help='Optional path to a file listing UUIDs of '
+                           'descriptors to computed hash codes for. If '
+                           'not provided we compute hash codes for all '
+                           'descriptors in the configured descriptor index.')
+
+    g_io.add_argument('--input-hash2uuids',
+                      default=None, metavar="PATH",
+                      help='Optional path to an existing hash2uuids map '
+                           'pickle file to load in for updating. If one is '
+                           'not specified, we create a new map. This file '
+                           'is only modified if it is also the output file.')
+
+    g_io.add_argument('--output-hash2uuids',
+                      metavar="PATH",
+                      help='File path to output updated/new hash2uuids map '
+                           'to, saved in binary pickle format.')
+
+    return parser
+
+
 def main():
     description = """
     Compute LSH hash codes based on the provided functor on specific
     descriptors from the configured index given a file-list of UUIDs.
 
-    Due to using an input file-list of UUIDs, we require that the UUIDs of
+    When using an input file-list of UUIDs, we require that the UUIDs of
     indexed descriptors be strings, or equality comparable to the UUIDs' string
     representation.
 
@@ -72,15 +96,16 @@ def main():
     model file for the ``LSHNearestNeighborIndex`` algorithm as output
     dictionary format is the same as used by that implementation.
     """
-    args, config = bin_utils.utility_main_helper(default_config, description)
+    args, config = bin_utils.utility_main_helper(default_config, description,
+                                                 extend_parser)
     log = logging.getLogger(__name__)
 
     #
     # Load configuration contents
     #
-    uuid_list_filepath = config['utility']['uuid_list_filepath']
-    hash2uuids_input_filepath = config['utility']['hash2uuids_input_filepath']
-    hash2uuids_output_filepath = config['utility']['hash2uuids_output_filepath']
+    uuid_list_filepath = args.uuids_list
+    hash2uuids_input_filepath = args.input_hash2uuids
+    hash2uuids_output_filepath = args.output_hash2uuids
     report_interval = config['utility']['report_interval']
     use_multiprocessing = config['utility']['use_multiprocessing']
     pickle_protocol = config['utility']['pickle_protocol']
@@ -107,7 +132,6 @@ def main():
         get_lsh_functor_impls()
     )
 
-    log.info("Loading UUIDs list")
     def iter_uuids():
         with open(uuid_list_filepath) as f:
             for l in f:

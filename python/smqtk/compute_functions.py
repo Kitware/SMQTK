@@ -232,11 +232,14 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     # noinspection PyGlobalUndefined
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:
-        def report_progress(*_): return
+        def report_progress(*_):
+            return
+        log.debug("Not logging progress")
     else:
+        log.debug("Logging progress at %f second intervals", report_interval)
         report_progress = bin_utils.report_progress
 
-    # Don't want to use multiprocessing because the given index could be large
+    log.debug("Starting computation")
     for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
                                                 ordered=False,
                                                 use_multiprocessing=use_mp):

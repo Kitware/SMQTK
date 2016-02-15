@@ -32,14 +32,17 @@ def uuids_for_processing(uuids, hash2uuids):
         of descriptors that generated the hash.
     :type hash2uuids: dict[int|long, set[collections.Hashable]]
 
-    :return:
-    :rtype:
+    :return: Iterator over UUIDs to process
+    :rtype: __generator[collections.Hashable]
 
     """
+    log = logging.getLogger(__name__)
     already_there = frozenset(v for vs in hash2uuids.itervalues() for v in vs)
     for uuid in uuids:
         if uuid not in already_there:
             yield uuid
+        else:
+            log.debug("UUID %s already has a hash code", uuid)
 
 
 def default_config():
@@ -149,6 +152,7 @@ def main():
     #
     # Compute codes
     #
+    log.info("Starting hash code computation")
     compute_hash_codes(
         uuids_for_processing(iter_uuids(), hash2uuids),
         descriptor_index,

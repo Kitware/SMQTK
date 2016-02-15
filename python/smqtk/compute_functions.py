@@ -139,9 +139,14 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         if len(dfe_deque):
             log.debug("Computing final batch of size %d",
                       len(dfe_deque))
+
+            total += len(dfe_deque)
             m = descr_generator.compute_descriptor_async(
                 dfe_deque, descr_factory, overwrite, procs, **kwds
             )
+            unique += len(m)
+            log.debug("-- Processed %d so far (%d total data elements "
+                      "input)", unique, total)
 
             log.debug("-- adding to index")
             descr_index.add_many_descriptors(m.itervalues())

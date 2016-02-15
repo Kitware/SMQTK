@@ -341,10 +341,13 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             p.close()
             p.join()
         del p
-        self._log.debug("Converting deque to tuple for segmentation")
-        uuid4proc = tuple(uuid4proc)
+        self._log.debug("%d descriptors already computed",
+                        len(data_elements) - len(uuid4proc))
 
         if uuid4proc:
+            self._log.debug("Converting deque to tuple for segmentation")
+            uuid4proc = tuple(uuid4proc)
+
             # Split UUIDs into groups equal to our batch size, and an option
             # tail group that is less than our batch size.
             tail_size = len(uuid4proc) % self.batch_size

@@ -15,3 +15,12 @@ These steps are encapsulated in the ``run.compute_many_descriptors.sh`` and ``ru
 ## Computing Classification results
 
 ### 3-way gun classifier
+Model files:
+
+    - classifier.svm.weapons_3_class_alexnet.labels
+    - classifier.svm.weapons_3_class_alexnet.model
+
+Use the ``run.compute_classifications.sh`` script, which wraps a call to the ``compute_classifications.py`` script but with more tightly defined I/O paths.
+See the configuration file ``config.jpl_weapons_v3.compute_classifications.json``.
+This will classify descriptors based on a UUIDs list, which is created when executing ``run.compute_hash_codes.sh``.
+Classifications are stored in the postgres database, as well as output to a CSV file for transport elsewhere (``image_dump.<ts>.classifications.data.csv``).

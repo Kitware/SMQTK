@@ -11,8 +11,7 @@ __author__ = 'paul.tunison@kitware.com'
 
 class DataMemorySet (DataSet):
     """
-    In-memory DataSet implementation. This does not support a persistant
-    representation.
+    In-memory DataSet implementation.
     """
 
     @classmethod
@@ -79,6 +78,9 @@ class DataMemorySet (DataSet):
                 yield self._element_map[k]
 
     def cache(self):
+        """
+        Cache the current table if a cache has been configured.
+        """
         if self.file_cache:
             with self._element_map_lock:
                 with SimpleTimer("Caching memory data-set table", self._log.info):

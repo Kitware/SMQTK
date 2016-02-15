@@ -24,7 +24,7 @@ fi
 
 # Translate computed files CSV into just a UUIDs list
 uuids_list="image_dump.${now}.uuids_list.txt"
-cat "${input_computed_files}" | cut -d, -f2 >"${uuids_list}"
+cat "${input_computed_files}" | cut -d, -f2 | sort | uniq >"${uuids_list}"
 
 # Compute hash codes for UUIDs
 models_dir="models"

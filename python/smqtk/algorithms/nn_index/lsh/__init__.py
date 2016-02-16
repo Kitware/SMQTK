@@ -124,11 +124,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                                       get_descriptor_index_impls())
 
         # Hash index may be None for a default at-query-time linear indexing
-        if merged['hash_index']['type'] is not None:
+        if merged['hash_index'] and merged['hash_index']['type']:
             merged['hash_index'] = \
                 plugin.from_plugin_config(merged['hash_index'],
                                           get_hash_index_impls())
         else:
+            cls.logger().debug("No HashIndex impl given. Passing ``None``.")
             merged['hash_index'] = None
 
         # remove possible comment added by default generator

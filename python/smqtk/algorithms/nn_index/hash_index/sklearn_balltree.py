@@ -1,4 +1,3 @@
-import cPickle
 import os
 
 import numpy
@@ -6,9 +5,10 @@ import numpy
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 
 try:
-    from sklearn.neighbors import BallTree
+    from sklearn.neighbors import BallTree, DistanceMetric
 except ImportError:
     BallTree = None
+    DistanceMetric = None
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -17,6 +17,11 @@ __author__ = "paul.tunison@kitware.com"
 class SkLearnBallTreeHashIndex (HashIndex):
     """
     Hash index using the ball tree implementation in scikit-learn.
+
+    *Note:* **When saving this object's model or pickling, we do not naively
+    pickle the underlying ball tree due to issues when saving the state of a
+    large ball tree. We instead get the state and split its contents up for
+    separate serialization via known safe methods.**
     """
 
     @classmethod
@@ -27,7 +32,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         """
         Initialize Scikit-Learn BallTree index for hash codes.
 
-        :param file_cache: Optional path to a file to cache our index to.
+        :param file_cache: Optional path to a file to cache our index to. This
+            must have the `.npz` suffix.
         :type file_cache: str
 
         :param leaf_size: Number of points at which to switch to brute-force.
@@ -42,28 +48,44 @@ class SkLearnBallTreeHashIndex (HashIndex):
         self.leaf_size = leaf_size
         self.random_seed = random_seed
 
+        if self.file_cache and not self.file_cache.endswith('.npz'):
+            raise ValueError("File cache path given does not specify and npz "
+                             "file.")
+
         # the actual index
         #: :type: sklearn.neighbors.BallTree
         self.bt = None
 
         self.load_model()
 
-    def load_model(self):
-        if self.file_cache and os.path.isfile(self.file_cache):
-            self._log.debug("Loading mode: %s", self.file_cache)
-            with open(self.file_cache) as f:
-                #: :type: sklearn.neighbors.BallTree
-                self.bt = cPickle.load(f)
-            self._log.debug("Loading mode: Done")
-
     def save_model(self):
         if self.file_cache and self.bt:
             self._log.debug("Saving model: %s", self.file_cache)
-            with open(self.file_cache, 'w') as f:
-                # Explicitly using protocol 0 because this breaks using other
-                # protocols when the model is large enough.
-                cPickle.dump(self.bt, f, 0)
+            # Saving BT component matrices in separate files using numpy.save
+            # - Not saving distance function because its always going to be
+            #   hamming distance (see ``build_index``).
+            s = self.bt.__getstate__()
+            tail = s[4:11]
+            numpy.savez(self.file_cache,
+                        data_arr=s[0],
+                        idx_array_arr=s[1],
+                        node_data_arr=s[2],
+                        node_bounds_arr=s[3],
+                        tail=tail)
             self._log.debug("Saving model: Done")
+
+    def load_model(self):
+        if self.file_cache and os.path.isfile(self.file_cache):
+            self._log.debug("Loading mode: %s", self.file_cache)
+            with numpy.load(self.file_cache) as cache:
+                tail = tuple(cache['tail'])
+                s = (cache['data_arr'], cache['idx_array_arr'],
+                     cache['node_data_arr'], cache['node_bounds_arr']) +\
+                    tail + (DistanceMetric.get_metric('hamming'),)
+            #: :type: sklearn.neighbors.BallTree
+            self.bt = BallTree.__new__(BallTree)
+            self.bt.__setstate__(s)
+            self._log.debug("Loading mode: Done")
 
     def get_config(self):
         return {
@@ -96,6 +118,9 @@ class SkLearnBallTreeHashIndex (HashIndex):
         hash_list = list(hashes)
         if not hash_list:
             raise ValueError("No hashes given.")
+
+        # If distance metric ever changes, need to update save/load model
+        # functions.
         self.bt = BallTree(hash_list, self.leaf_size, metric='hamming')
         self.save_model()
 
@@ -125,8 +150,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         # Reselect N based on how many hashes are currently indexes
         n = min(n, self.count())
         # Reshaping ``h`` into an array of arrays, with just one array (ball
-        # tree deprecation warns when giving it a single array.
-        dists, idxs = self.bt.query(h.reshape(1, -1), n, return_distance=True)
+        # tree deprecation warns when giving it a single array).
+        dists, idxs = self.bt.query([h], n, return_distance=True)
         # only indexing the first entry became we're only querying with one
         # vector
         neighbors = numpy.asarray(self.bt.data)[idxs[0]].astype(bool)

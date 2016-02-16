@@ -55,3 +55,9 @@ Fixes since v0.3.0
 ClassificationElement
 
   * Fixed memory implementation serialization bug.
+
+HashIndex
+
+  * Fixed SkLearnBallTreeHashIndex model load/save functions to not use pickle
+    due to save size issues. Now uses ``numpy.savez`` instead, providing better
+    serialization and run time.

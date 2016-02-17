@@ -13,7 +13,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import utility_main_helper
-from smqtk.utils import plugin
+from smqtk.utils import plugin, parallel
 
 
 def default_config():
@@ -66,21 +66,25 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls())
 
+    def is_valid_element(fp):
+        dfe = DataFileElement(fp)
+        ct = dfe.content_type()
+        if ct in generator.valid_content_types():
+            return dfe
+        else:
+            log.debug("Skipping file (invalid content) type for "
+                      "descriptor generator (fp='%s', ct=%s)",
+                      fp, ct)
+            return None
+
     def iter_valid_elements():
-        """
-        :rtype:
-            __generator[smqtk.representation.data_element
-                        .file_element.DataFileElement]
-        """
-        for p in file_paths:
-            dfe = DataFileElement(p)
-            ct = dfe.content_type()
-            if ct in generator.valid_content_types():
+        valid_files_filter = parallel.parallel_map(is_valid_element,
+                                                   file_paths,
+                                                   name="check-file-type",
+                                                   use_multiprocessing=True)
+        for dfe in valid_files_filter:
+            if dfe is not None:
                 yield dfe
-            else:
-                log.debug("Skipping file (invalid content) type for "
-                          "descriptor generator (fp='%s', ct=%s)",
-                          p, ct)
 
     log.info("Computing descriptors")
     m = compute_many_descriptors(iter_valid_elements(),

@@ -2,12 +2,33 @@
 #
 # Execute full update stack
 #
-# SMQTK setup script should be sourced before running this.
+# Instructions:
+#   - SMQTK setup script should be sourced before running this.
+#   - Generate and modify configuration files for the following scripts:
 #
-# Configuration Nodes:
+#       <source>/bin/memex/list_ido_solr_images.py
+#       <source>/bin/scripts/compute_many_descriptors.py
+#       <source>/bin/scripts/compute_hash_codes.py
+#       <source>/bin/scripts/compute_classifications.py
+#
+#   - Change/Update any settings values below upon first run as appropriate.
+#   - Before each run, optionally update the "entries_after" setting with a
+#     specific minimum "indexedAt" timestamp of images to process. If this is
+#     empty, we will check if there are other directories in the ``run_dir``
+#     and use their names (which are valid timestamps themselves) as the
+#     minimum "indexedAt" times. If there are no other directories in the
+#     ``run_dir``, we use "*" as the minimum timestamp (i.e. no minimum).
+#
+# This lets the process know to not consider images added
+#     before that timestamp (they've already been processed). If this is the
+#     first run, this should be set to "*".
+#
+#
+# Configuration Notes:
 #   - Data representation backends used should be ones that store data
 #     persistently, otherwise this process will yield no net gain of
 #     information when completed.
+#
 #
 # Important result files:
 #   - .../cmd.computed_files.csv
@@ -45,7 +66,7 @@ config_chc="configs/config.compute_hash_codes.json"
 config_cc="configs/config.compute_classifications.json"
 
 # Base directory for intermediate and result files
-output_base="runs"
+run_dir="runs"
 
 # Server where image files are located based on indexed paths in Solr instance
 image_server="imagecat.dyndns.org"
@@ -57,7 +78,7 @@ image_transfer_directory="images"
 # We will collect/compute images that have been ingested after this time stamp.
 # This may be be "*" to indicate no start bounds.
 # - Format: "{Y}-{m}-{d}T{H}:{M}:{S}Z" or "*"
-entries_after="*"
+entries_after=  # none, use run directory logic
 
 # Initial hash2uuids.pickle index to use as a base when computing new hash
 # codes. The output index will include the content of this base. This may be
@@ -112,8 +133,10 @@ fi
 
 
 # Working file paths
-work_dir="${output_base}/${now}"
-mkdir -p "${work_dir}"
+work_dir="${run_dir}/${now}"
+
+# File marker of a complete run
+complete_file=".complete"
 
 # List of image files on remote server to compute over
 remote_file_list="${work_dir}/file_list.remote.txt"
@@ -129,6 +152,27 @@ hash2uuids_index="${work_dir}/hash2uuids.pickle"
 classifications_header="${work_dir}/classifications.columns.csv"
 classifications_data="${work_dir}/classifications.data.csv"
 
+#
+# Find last run timestamp if one wasn't manually provided and there is one
+#
+if [ -z "$entries_after" ]
+then
+    if [ -n "$(ls "$run_dir")" ]
+    then
+        entries_after="$(ls "$run_dir" | tail -n1)"
+        # Only use this directory as a time stamp if it completed fully,
+        # exiting if it did not
+        if [ ! -f "$entries_after/$complete_file" ]
+        then
+            log "Previous run did not fully complete (missing completion marker)"
+            exit 1
+        fi
+    else
+        entries_after="*"
+    fi
+fi
+
+mkdir -p "${work_dir}"
 
 #
 # Gather images from Solr instance
@@ -226,3 +270,7 @@ fi
 
 
 # TODO: (?) Fit new ball tree
+
+
+log Marking successful completeion
+touch "${work_dir}/${complete_file}"

@@ -90,10 +90,6 @@ base_hash2uuids="models/lsh.hash2uuid.pickle"
 # DO NOT MODIFY BELOW THIS POINT #
 ##################################
 
-function log() {
-    echo "LOG :: $@"
-}
-
 # Timestamp in Solr time format
 now="$(python -c "
 import time
@@ -134,6 +130,7 @@ fi
 
 # Working file paths
 work_dir="${run_dir}/${now}"
+work_log="${work_dir}/log.update.txt"
 
 # File marker of a complete run
 complete_file=".complete"
@@ -151,6 +148,15 @@ hash2uuids_index="${work_dir}/hash2uuids.pickle"
 # Output classifications columns header and data
 classifications_header="${work_dir}/classifications.columns.csv"
 classifications_data="${work_dir}/classifications.data.csv"
+
+function log() {
+    echo "LOG :: $@"
+
+    if [ -f "${work_log}" ]
+    then
+        echo "LOG :: $@" >"${work_log}"
+    fi
+}
 
 #
 # Find last run timestamp if one wasn't manually provided and there is one
@@ -173,6 +179,7 @@ then
 fi
 
 mkdir -p "${work_dir}"
+touch "${work_log}"  # Start log recording
 
 #
 # Gather images from Solr instance
@@ -197,22 +204,30 @@ if [ ! -f "${local_file_list}" ]; then
     log "Gathering images from Solr"
     log_remote_local_rsync="${work_dir}/log.1.rsync.txt"
 
+    # Some files might not transfer or paths in index might have been incorrect
+    # (its happened before). Will check for actually transferred files right
+    # after the rsync.
+    set +e
     rsync -PRvh --size-only --files-from="${remote_file_list}" \
           ${image_server_username}@${image_server}:/ \
           "${image_transfer_directory}" \
           2>&1 | tee "${log_remote_local_rsync}"
+    set -e
 
+    log "Finding transferred files..."
     python -c "
 import os
 base=os.path.abspath(os.path.expanduser('${image_transfer_directory}'))
 with open('${remote_file_list}') as pth_f:
     for l in pth_f:
         pth = l.strip().lstrip('/')
-        print os.path.join(base, pth)
+        local = os.path.join(base, pth)
+        if os.path.isfile(local):
+            print local
     " >"${local_file_list}"
 
     if [ ! -s "${local_file_list}" ]; then
-        log "Failed to generate local paths"
+        log "Failed to transfer any remote files locally"
         rm "${local_file_list}"
         exit 1
     fi

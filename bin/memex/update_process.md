@@ -12,7 +12,8 @@ Follow the incremental update example at:
     
 These steps are encapsulated in the ``run.compute_many_descriptors.sh`` and ``run.compute_hash_codes.sh`` scripts.
     
-## Computing Classification results
+## Full-stack
+Now, the full update process is encapsulated in the ``run.update.sh`` script.
 
 ### 3-way gun classifier
 Model files:

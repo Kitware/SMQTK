@@ -11,12 +11,12 @@ from smqtk.utils import (
 )
 
 
-def solr_image_paths(solr_addr, begin_time, username, password, batch_size):
+def solr_image_paths(solr_addr, begin_time, end_time, username, password, batch_size):
     log = logging.getLogger(__name__)
 
     conn = solr.Solr(solr_addr, http_user=username, http_pass=password)
     # Query for number of matching documents
-    q = 'mainType:image AND indexedAt:[%s TO *]' % begin_time
+    q = 'mainType:image AND indexedAt:[%s TO %s]' % (begin_time, end_time)
     r = conn.select(q, fields=['id'], rows=0)
 
     num_results = r.numFound
@@ -53,6 +53,11 @@ def extend_parser(parser):
                              '"2016-01-01T00:00:00.000Z"). Sub-seconds are '
                              'optional. Timestamps should be in UTC (Zulu). '
                              'The constraint is inclusive.')
+    parser.add_argument('--before-time', metavar='TIMESTAMP',
+                        help='Optional timestamp to constrin that we look for '
+                             'entries added before the given time stamp. See '
+                             'the description of `--after-time` for format '
+                             'info.')
 
     g_required = parser.add_argument_group("Required options")
     g_required.add_argument('-p', '--paths-file',
@@ -81,6 +86,7 @@ def main():
 
     paths_file = args.paths_file
     after_time = args.after_time
+    before_time = args.before_time
 
     #
     # Check dir/file locations
@@ -95,9 +101,10 @@ def main():
     # Start collection
     #
     remote_paths = solr_image_paths(
-        config['solr_address'], after_time or '*',
+        config['solr_address'],
+        after_time or '*', before_time or '*',
         config['solr_username'], config['solr_password'],
-        config['batch_size'],
+        config['batch_size']
     )
 
     log.info("Writing file paths")

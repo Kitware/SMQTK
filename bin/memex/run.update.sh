@@ -24,24 +24,55 @@
 #     first run, this should be set to "*".
 #
 #
-# Configuration Notes:
-#   - Data representation backends used should be ones that store data
-#     persistently, otherwise this process will yield no net gain of
-#     information when completed.
+# Confirming that everything was run that was able
+# ------------------------------------------------
+# It is possible (even probable) that the number of remote files fetched
+# from the Solr index (listed in the ``file_list.local.txt``) will be greater
+# than the number of descriptors actually generated and inserted into the
+# configured DescriptorIndex. This is due to multiple points at which an image
+# may be invalidated or considered unfit for processing. The following are
+# things to look for in the ``log.2.cmd.txt`` file to trace why fewer
+# descriptors were possibly generated than input files:
+#
+#     - Image could be skipped due to being a file type the descriptor
+#       generator algorithm cannot handle.
+#         - Search for the text: "Skipping file"
+#     - The image file could not be loaded for some reason
+#         - Search for the text: "Failed to convert"
+#     - Multiple images in the input set were duplicates of each other.
+#         - This can be seen by either looking at:
+#             - the number of unique UUIDs (SHA1 checksums) vs input files in
+#               the ``cmd.computed_files.csv`` output file.
+#             - the difference in the counts tracked in the log file (search
+#               for "Processed \d+ so far (\d+ total data elements input)").
+#
+# The total number of remote files transferred minus the counts for bullets one
+# and two above should equal the number of files for which descriptors were
+# computed (lines in ``cmd.computed_files.csv``). The number of unique
+# descriptors, however, should be equal to the number of unique UUIDs listed in
+# ``cmd.computed_files.csv`` (extracted into the ``uuids_list.txt`` file).
 #
 #
-# Important result files:
-#   - .../cmd.computed_files.csv
-#       - Matches computed files with their SHA1 values, which is also used as
-#         component UUIDs in the SMQTK ecosystem. This will contain the
-#         absolute path of the file used locally, but due to the full relative
-#         transfer during transfer, the full path on the remove server is
-#         embedded inside this path. This file would be used to match ids to
-#         SMQTK element UUIDs and vice versa.
-#   - .../chc.hash2uuids.pickle
-#       - This is the updated LSH algorithm hash mapping. This should be
-#         swapped into place for new or live-updating systems using the LSH
-#         neighbors index implementation.
+# Configuration Notes
+# -------------------
+# - Data representation backends used should be ones that store data
+#   persistently, otherwise this process will yield no net gain of
+#   information when completed.
+#
+#
+# Important result files
+# ----------------------
+# - .../cmd.computed_files.csv
+#     - Matches computed files with their SHA1 values, which is also used as
+#       component UUIDs in the SMQTK ecosystem. This will contain the
+#       absolute path of the file used locally, but due to the full relative
+#       transfer during transfer, the full path on the remove server is
+#       embedded inside this path. This file would be used to match ids to
+#       SMQTK element UUIDs and vice versa.
+# - .../chc.hash2uuids.pickle
+#     - This is the updated LSH algorithm hash mapping. This should be
+#       swapped into place for new or live-updating systems using the LSH
+#       neighbors index implementation.
 #
 set -e
 set -o pipefail
@@ -90,6 +121,24 @@ base_hash2uuids="models/lsh.hash2uuid.pickle"
 # DO NOT MODIFY BELOW THIS POINT #
 ##################################
 
+function log() {
+    echo "LOG :: $@"
+
+    if [ -f "${work_log}" ]
+    then
+        echo "LOG :: $@" >>"${work_log}"
+    fi
+}
+
+function error() {
+    echo "ERROR :: $@"
+
+    if [ -f "${work_log}" ]
+    then
+        echo "ERROR :: $@" >>"${work_log}"
+    fi
+}
+
 # Timestamp in Solr time format
 now="$(python -c "
 import time
@@ -102,28 +151,28 @@ print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
 # Check configuration
 #
 if [ ! -f "${script_lsi}" ]; then
-    echo "ERROR: Could not find '${script_lsi}' script"
+    error "Could not find '${script_lsi}' script"
     exit 1
 elif [ ! -f "${script_cmd}" ]; then
-    echo "ERROR: Could not find '${script_cmd}' script"
+    error "Could not find '${script_cmd}' script"
     exit 1
 elif [ ! -f "${script_chc}" ]; then
-    echo "ERROR: Could not find '${script_chc}' script"
+    error "Could not find '${script_chc}' script"
     exit 1
 elif [ ! -f "${script_cc}" ]; then
-    echo "ERROR: Could not find '${script_cc}' script"
+    error "Could not find '${script_cc}' script"
     exit 1
 elif [ ! -f "${config_lsi}" ]; then
-    echo "ERROR: Could not find '${config_lsi}' configuration file"
+    error "Could not find '${config_lsi}' configuration file"
     exit 1
 elif [ ! -f "${config_cmd}" ]; then
-    echo "ERROR: Could not find '${config_cmd}' configuration file"
+    error "Could not find '${config_cmd}' configuration file"
     exit 1
 elif [ ! -f "${config_chc}" ]; then
-    echo "ERROR: Could not find '${config_chc}' configuration file"
+    error "Could not find '${config_chc}' configuration file"
     exit 1
 elif [ ! -f "${config_cc}" ]; then
-    echo "ERROR: Could not find '${config_cc}' configuration file"
+    error "Could not find '${config_cc}' configuration file"
     exit 1
 fi
 
@@ -148,15 +197,6 @@ hash2uuids_index="${work_dir}/hash2uuids.pickle"
 # Output classifications columns header and data
 classifications_header="${work_dir}/classifications.columns.csv"
 classifications_data="${work_dir}/classifications.data.csv"
-
-function log() {
-    echo "LOG :: $@"
-
-    if [ -f "${work_log}" ]
-    then
-        echo "LOG :: $@" >"${work_log}"
-    fi
-}
 
 #
 # Find last run timestamp if one wasn't manually provided and there is one
@@ -249,6 +289,21 @@ if [ ! -f "${uuids_list}" ]; then
     cat "${cmd_computed_files}" | cut -d, -f2 | sort | uniq >"${uuids_list}"
 fi
 
+# Validate the number of descriptors generated (output UUIDs)
+num_input_files=$(cat ${local_file_list} | wc -l)
+num_bad_ct=$(grep "Skipping file" | wc -l)
+num_bad_file=$(grep "Failed to convert" | wc -l)
+expected_processed=$(echo ${num_input_files} - ${num_bad_ct} - ${num_bad_file} | bc)
+true_proccessed=$(cat "${cmd_computed_files}" | wc -l)
+if [ "${expected_processed}" -ne "${true_proccessed}" ]
+then
+    error "Could not account for processed output counts "\
+          "(${expected_processed} != ${true_proccessed})"
+    exit 1
+fi
+num_uuids=$(cat ${uuids_list} | wc -l)
+
+
 #
 # Compute hash codes
 #
@@ -275,7 +330,7 @@ ln -sf "${rel_path}" "${base_hash2uuids}"
 #
 if [ ! -s "${classifications_data}" ]; then
     log "Computing classifications"
-    log_cc="${work_dir}/log.3.cc.txt"
+    log_cc="${work_dir}/log.4.cc.txt"
 
     "${script_cc}" -v -c "${config_cc}" --uuids-list "${uuids_list}" \
                    --csv-header "${classifications_header}" \

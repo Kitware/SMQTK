@@ -29,6 +29,9 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     (filepath, DescriptorElement) tuple pairs in the order that they were
     input.
 
+    *Note:* **This function currently only operated over images due to the
+    specific data validity check/filter performed.*
+
     :param file_elements: Iterable of DataFileElement instances of files to
         work on.
     :type file_elements: collections.Iterable[smqtk.representation.data_element

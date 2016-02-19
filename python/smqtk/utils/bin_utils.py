@@ -226,7 +226,8 @@ def basic_cli_parser(description=None):
 
 
 def utility_main_helper(default_config, parser_description=None,
-                        parser_extension=lambda p: p):
+                        parser_extension=lambda p: p,
+                        additional_logging_domains=()):
     """
     Helper function for utilities standardizing logging initialization, CLI
     parsing and configuration loading/generation.
@@ -244,9 +245,9 @@ def utility_main_helper(default_config, parser_description=None,
     takes the ``ArgumentParser`` instance to allow for adding additional
     arguments and groups.
 
-    :param default_config: Default configuration (JSON) dictionary for the
-        utility.
-    :type default_config: dict
+    :param default_config: Function returning default configuration (JSON)
+        dictionary for the utility. This should take no arguments.
+    :type default_config: () -> dict
 
     :param parser_description: Optional description to give to the generated
         argument parser.
@@ -254,6 +255,11 @@ def utility_main_helper(default_config, parser_description=None,
 
     :param parser_extension: Function to extend argparse parser.
     :type parser_extension: (argparse.ArgumentParser) -> argparse.ArgumentParser
+
+    :param additional_logging_domains: We initialize logging on the base
+        ``smqtk`` and ``__main__`` namespace. Any additional namespaces under
+        which logging should be reported should be added here as an iterable.
+    :type additional_logging_domains: collections.Iterable[str]
 
     :return: Parsed arguments structure and loaded configuration dictionary.
     :rtype: (argparse.Namespace, dict)
@@ -271,9 +277,12 @@ def utility_main_helper(default_config, parser_description=None,
     llevel = logging.INFO
     if verbose:
         llevel = logging.DEBUG
-    initialize_logging(logging.getLogger(), llevel)
+    initialize_logging(logging.getLogger('smqtk'), llevel)
+    initialize_logging(logging.getLogger('__main__'), llevel)
+    for d in additional_logging_domains:
+        initialize_logging(logging.getLogger(d), llevel)
 
-    config, config_loaded = load_config(config_filepath, default_config)
+    config, config_loaded = load_config(config_filepath, default_config())
     output_config(config_generate, config, overwrite=True)
 
     if not config_loaded:

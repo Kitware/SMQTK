@@ -37,7 +37,24 @@ __author__ = "paul.tunison@kitware.com"
 
 
 def get_cli_parser():
-    parser = argparse.ArgumentParser()
+    description = """
+    Train a supervised classifier based on an IQR session state dump.
+
+    Descriptors used in IQR, and thus referenced via their UUIDs in the IQR
+    session state dump, must exist external to the IQR web-app (uses a
+    non-memory backend). This is needed so that this script might access them
+    for classifier training.
+
+    Getting an IQR Session's State Information
+    ==========================================
+    Click the "Save IQR State" button to download the IqrState file
+    encapsulating the descriptors of positively and negatively marked items.
+    These descriptors will be used to train the configured
+    SupervisedClassifier.
+    """
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=
+                                     argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('-c', '--config',
                         help='Path to the configuration file to use (JSON).')

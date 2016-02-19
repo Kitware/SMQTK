@@ -130,7 +130,7 @@ def classifier_kfold_validation():
         - file_prefix
             String prefix to prepend to standard plot file names.
     """
-    args, config = bin_utils.utility_main_helper(default_config(), description)
+    args, config = bin_utils.utility_main_helper(default_config, description)
     log = logging.getLogger(__name__)
 
     #

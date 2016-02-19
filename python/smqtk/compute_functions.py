@@ -29,6 +29,9 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     (filepath, DescriptorElement) tuple pairs in the order that they were
     input.
 
+    *Note:* **This function currently only operated over images due to the
+    specific data validity check/filter performed.*
+
     :param file_elements: Iterable of DataFileElement instances of files to
         work on.
     :type file_elements: collections.Iterable[smqtk.representation.data_element
@@ -80,6 +83,10 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     #: :type: deque[smqtk.representation.data_element.file_element.DataFileElement]
     dfe_deque = collections.deque()
 
+    # Counts for logging
+    total = 0
+    unique = 0
+
     def data_file_element_iter():
         """
         Helper iterator to collect the file elements as we iterate over them
@@ -113,9 +120,14 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
             if len(dfe_deque) == batch_size:
                 batch_i += 1
                 log.debug("Computing batch %d", batch_i)
+
+                total += len(dfe_deque)
                 m = descr_generator.compute_descriptor_async(
                     dfe_deque, descr_factory, overwrite, procs, **kwds
                 )
+                unique += len(m)
+                log.debug("-- Processed %d so far (%d total data elements "
+                          "input)", unique, total)
 
                 log.debug("-- adding to index")
                 descr_index.add_many_descriptors(m.itervalues())
@@ -130,9 +142,14 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         if len(dfe_deque):
             log.debug("Computing final batch of size %d",
                       len(dfe_deque))
+
+            total += len(dfe_deque)
             m = descr_generator.compute_descriptor_async(
                 dfe_deque, descr_factory, overwrite, procs, **kwds
             )
+            unique += len(m)
+            log.debug("-- Processed %d so far (%d total data elements "
+                      "input)", unique, total)
 
             log.debug("-- adding to index")
             descr_index.add_many_descriptors(m.itervalues())
@@ -218,11 +235,14 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     # noinspection PyGlobalUndefined
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:
-        def report_progress(*_): return
+        def report_progress(*_):
+            return
+        log.debug("Not logging progress")
     else:
+        log.debug("Logging progress at %f second intervals", report_interval)
         report_progress = bin_utils.report_progress
 
-    # Don't want to use multiprocessing because the given index could be large
+    log.debug("Starting computation")
     for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
                                                 ordered=False,
                                                 use_multiprocessing=use_mp):

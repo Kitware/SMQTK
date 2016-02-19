@@ -9,6 +9,7 @@ import multiprocessing.synchronize
 import Queue
 import sys
 import threading
+import traceback
 
 from smqtk.utils import SmqtkObject
 
@@ -252,8 +253,9 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
                 if is_terminal(packet):
                     self._log.debug('Found terminal')
                     self.found_terminals += 1
-                elif isinstance(packet, Exception):
-                    self._log.debug('Received exception')
+                elif isinstance(packet[0], Exception):
+                    self._log.debug('Received exception: %s\n%s',
+                                    *packet)
                     raise packet
                 else:
                     i, result = packet
@@ -436,7 +438,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                     break
         except Exception, ex:
             self._log.debug("Caught exception %s", type(ex))
-            self.q_put(ex)
+            self.q_put((ex, traceback.format_exc()))
             self.stop()
         else:
             self._log.debug("Sending in-queue terminal packets")
@@ -516,7 +518,7 @@ class _Worker (SmqtkObject):
                     self._log.debug("sending terminal")
                     self.q_put(packet)
                     self.stop()
-                elif isinstance(packet, Exception):
+                elif isinstance(packet[0], Exception):
                     # Pass exception along
                     self.q_put(packet)
                     self.stop()
@@ -528,7 +530,7 @@ class _Worker (SmqtkObject):
         # Transport back any exceptions raised
         except Exception, ex:
             self._log.debug("Caught exception %s", type(ex))
-            self.q_put(ex)
+            self.q_put((ex, traceback.format_exc()))
             self.stop()
         finally:
             self._log.debug("Closing")

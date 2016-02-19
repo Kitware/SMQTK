@@ -201,7 +201,8 @@ class FileModificationMonitor (SmqtkObject, threading.Thread):
         :type settle_window: float
 
         :param callback: Callback function that will be triggered every time
-            the provided file has been update and the settle time has expired.
+            the provided file has been updated and the settle time has safely
+            expired.
         :type callback: (str) -> None
 
         :raises ValueError: The given filepath did not point to an existing,

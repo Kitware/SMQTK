@@ -274,7 +274,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                                              histogram_intersection_distance,
                                              row_wise=True)
 
-        self._log.debug("Platt scalling")
+        self._log.debug("Platt scaling")
         # the actual platt scaling stuff
         weights = numpy.array(svm_model.get_sv_coef()).flatten()
         margins = numpy.dot(weights, svm_test_k)

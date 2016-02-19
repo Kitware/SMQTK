@@ -2,8 +2,6 @@
 """
 Compute many descriptors from a set of file paths loaded from file.
 """
-import cPickle
-import json
 import logging
 import os
 
@@ -14,10 +12,8 @@ from smqtk.representation import (
     get_descriptor_index_impls,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import initialize_logging, output_config
-from smqtk.utils import merge_dict
-from smqtk.utils import plugin
-from smqtk.utils.jsmin import jsmin
+from smqtk.utils.bin_utils import utility_main_helper
+from smqtk.utils import plugin, parallel
 
 
 def default_config():
@@ -70,21 +66,25 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls())
 
+    def is_valid_element(fp):
+        dfe = DataFileElement(fp)
+        ct = dfe.content_type()
+        if ct in generator.valid_content_types():
+            return dfe
+        else:
+            log.debug("Skipping file (invalid content) type for "
+                      "descriptor generator (fp='%s', ct=%s)",
+                      fp, ct)
+            return None
+
     def iter_valid_elements():
-        """
-        :rtype:
-            __generator[smqtk.representation.data_element
-                        .file_element.DataFileElement]
-        """
-        for p in file_paths:
-            dfe = DataFileElement(p)
-            ct = dfe.content_type()
-            if ct in generator.valid_content_types():
+        valid_files_filter = parallel.parallel_map(is_valid_element,
+                                                   file_paths,
+                                                   name="check-file-type",
+                                                   use_multiprocessing=True)
+        for dfe in valid_files_filter:
+            if dfe is not None:
                 yield dfe
-            else:
-                log.debug("Skipping file (invalid content) type for "
-                          "descriptor generator (fp='%s', ct=%s)",
-                          p, ct)
 
     log.info("Computing descriptors")
     m = compute_many_descriptors(iter_valid_elements(),
@@ -107,21 +107,9 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     log.info("Done")
 
 
-def cli_parser():
-    import argparse
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('-g', '--gen-config',
-                        default=None,
-                        help='Optional path to output a default '
-                             'JSON configuration to. This option is required '
-                             'for running.')
-    parser.add_argument('-d', '--debug',
-                        action='store_true', default=False,
-                        help='Show debug logging statements.')
+def extend_parser(parser):
     parser.add_argument('-b', '--batch-size',
-                        type=int, default=256,
+                        type=int, default=256, metavar='INT',
                         help="Number of files to batch together into a single "
                              "compute async call. This defines the "
                              "granularity of the checkpoint file in regards "
@@ -131,19 +119,16 @@ def cli_parser():
                              "generator. Default batch size is 256.")
 
     # Non-config required arguments
-    g_required = parser.add_argument_group("required arguments")
-    g_required.add_argument('-c', '--config',
-                            type=str, default=None,
-                            help="Path to the JSON configuration file.")
+    g_required = parser.add_argument_group("Required Arguments")
     g_required.add_argument('-f', '--file-list',
-                            type=str, default=None,
+                            type=str, default=None, metavar='PATH',
                             help="Path to a file that lists data file paths. "
                                  "Paths in this file may be relative, but "
                                  "will at some point be coerced into absolute "
                                  "paths based on the current working "
                                  "directory.")
-    g_required.add_argument('--completed-files',
-                            default=None,
+    g_required.add_argument('-p', '--completed-files',
+                            default=None, metavar='PATH',
                             help='Path to a file into which we add CSV '
                                  'format lines detailing filepaths that have '
                                  'been computed from the file-list provided, '
@@ -154,44 +139,18 @@ def cli_parser():
 
 
 def main():
-    p = cli_parser()
-    args = p.parse_args()
+    description = """
+    """
 
-    debug = args.debug
-    config_fp = args.config
-    out_config_fp = args.gen_config
+    args, config = utility_main_helper(default_config, description,
+                                       extend_parser)
+    l = logging.getLogger(__name__)
+
     completed_files_fp = args.completed_files
     filelist_fp = args.file_list
     batch_size = args.batch_size
 
-    # Initialize logging
-    llevel = debug and logging.DEBUG or logging.INFO
-    if not logging.getLogger('smqtk').handlers:
-        initialize_logging(logging.getLogger('smqtk'), llevel)
-    if not logging.getLogger('__main__').handlers:
-        initialize_logging(logging.getLogger('__main__'), llevel)
-
-    l = logging.getLogger(__name__)
-
-    # Merge loaded config with default
-    config_loaded = False
-    c = default_config()
-    if config_fp:
-        if os.path.isfile(config_fp):
-            with open(config_fp) as f:
-                merge_dict(c, json.loads(jsmin(f.read())))
-            config_loaded = True
-        else:
-            l.error("Config file path not valid")
-            exit(100)
-
-    output_config(out_config_fp, c, overwrite=True)
-
     # Input checking
-    if not config_loaded:
-        l.error("No configuration provided")
-        exit(101)
-
     if not filelist_fp:
         l.error("No file-list file specified")
         exit(102)
@@ -208,7 +167,7 @@ def main():
         exit(105)
 
     run_file_list(
-        c,
+        config,
         filelist_fp,
         completed_files_fp,
         batch_size,

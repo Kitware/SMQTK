@@ -33,6 +33,9 @@ Tools / Scripts
   * Added script for cross validating a classifier configuration for some
     truthed descriptors within an index. Can generate PR and ROC curves.
 
+  * Added some MEMEX specific scripts for processing and updating data from a
+    known Solr index source.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an

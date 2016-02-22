@@ -20,12 +20,8 @@ class IqrController (SmqtkObject):
 
     def __init__(self):
         # Map of uuid to the search state
-        #: :type: dict of (uuid.UUID, IqrSession)
+        #: :type: dict[uuid.UUID, IqrSession]
         self._iqr_sessions = {}
-        # RLock for each iqr session. managed in parallel to iqr_session map.
-        # This is the same lock in the IqrSession instance.
-        #: :type: dict of (uuid.UUID, RLock)
-        self._iqr_sessions_locks = {}
 
         # RLock for iqr_session{_locks} maps.
         self._map_rlock = multiprocessing.RLock()
@@ -124,25 +120,3 @@ class IqrController (SmqtkObject):
         with self._map_rlock:
             with self._iqr_sessions[session_uuid]:
                 del self._iqr_sessions[session_uuid]
-
-    def with_session(self, session_uuid):
-        """
-        Return a context object to allow use of a session while access locked.
-        This prevents removal while being used.
-
-        :param session_uuid: UUID of the session to get
-        :type session_uuid: uuid.UUID
-
-        :raises KeyError: There is no session associated with the given UUID
-            (may have never been or removed already).
-
-        :return: Return an object to use with the python with-statement to allow
-            use of the requested session within a protection lock.
-        :rtype: _session_context_
-
-        """
-        with self._map_rlock:
-            if session_uuid not in self._iqr_sessions:
-                raise KeyError(session_uuid)
-
-            return self._iqr_sessions[session_uuid]

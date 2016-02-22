@@ -51,7 +51,7 @@ class TestIqrSvmHik (unittest.TestCase):
         c['descr_cache_filepath'] = 'foobar.thing'
 
         iqr_index = LibSvmHikRelevancyIndex.from_config(c)
-        ntools.assert_equal(iqr_index._descr_cache_fp,
+        ntools.assert_equal(iqr_index.descr_cache_fp,
                             c['descr_cache_filepath'])
 
         # test config idempotency

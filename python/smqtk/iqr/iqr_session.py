@@ -1,21 +1,14 @@
 import logging
 import multiprocessing
 import multiprocessing.pool
-import os.path as osp
-import shutil
 import uuid
 
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
-from smqtk.representation import DescriptorElementFactory
-from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
-from smqtk.utils import file_utils
 
 
-DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
-                                                     {})
 DFLT_REL_INDEX_CONFIG = {
     "type": "LibSvmHikRelevancyIndex",
     "LibSvmHikRelevancyIndex": {
@@ -43,7 +36,8 @@ class IqrResultsDict (dict):
         If E present and lacks .keys() method, does: for (k, v) in E: D[k] = v
         In either case, this is followed by: for k in F: D[k] = F[k]
 
-        Reimplemented so as to use override __setitem__ method.
+        Reimplemented so as to use override __setitem__ method so values are
+        known to be floats.
         """
         if hasattr(other, 'keys'):
             for k in other:
@@ -110,7 +104,7 @@ class IqrSession (SmqtkObject):
         :type session_uid: str or uuid.UUID
 
         """
-        self.uuid = session_uid or uuid.uuid1()
+        self.uuid = session_uid or str(uuid.uuid1()).replace('-', '')
         self.lock = multiprocessing.RLock()
 
         self.pos_seed_neighbors = int(pos_seed_neighbors)
@@ -178,6 +172,38 @@ class IqrSession (SmqtkObject):
                                     reverse=True))
             return None
 
+    def adjudicate(self, new_positives=(), new_negatives=(),
+                   un_positives=(), un_negatives=()):
+        """
+        Update current state of working index positive and negative
+        adjudications based on descriptor UUIDs.
+
+        :param new_positives: Descriptors of elements in our working index to
+            now be considered to be positively relevant.
+        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param new_negatives: Descriptors of elements in our working index to
+            now be considered to be negatively relevant.
+        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param un_positives: Descriptors of elements in our working index to now
+            be considered not positive any more.
+        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param un_negatives: Descriptors of elements in our working index to now
+            be considered not negative any more.
+        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self.lock:
+            self.positive_descriptors.update(new_positives)
+            self.positive_descriptors.difference_update(un_positives)
+            self.positive_descriptors.difference_update(new_negatives)
+
+            self.negative_descriptors.update(new_negatives)
+            self.negative_descriptors.difference_update(un_negatives)
+            self.negative_descriptors.difference_update(new_positives)
+
     def update_working_index(self, nn_index):
         """
         Initialize or update our current working index using the given
@@ -216,38 +242,6 @@ class IqrSession (SmqtkObject):
         self.rel_index = plugin.from_plugin_config(self.rel_index_config,
                                                    get_relevancy_index_impls())
         self.rel_index.build_index(self.working_index.iterdescriptors())
-
-    def adjudicate(self, new_positives=(), new_negatives=(),
-                   un_positives=(), un_negatives=()):
-        """
-        Update current state of working index positive and negative
-        adjudications based on descriptor UUIDs.
-
-        :param new_positives: Descriptors of elements in our working index to
-            now be considered to be positively relevant.
-        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
-
-        :param new_negatives: Descriptors of elements in our working index to
-            now be considered to be negatively relevant.
-        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
-
-        :param un_positives: Descriptors of elements in our working index to now
-            be considered not positive any more.
-        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
-
-        :param un_negatives: Descriptors of elements in our working index to now
-            be considered not negative any more.
-        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-        with self.lock:
-            self.positive_descriptors.update(new_positives)
-            self.positive_descriptors.difference_update(un_positives)
-            self.positive_descriptors.difference_update(new_negatives)
-
-            self.negative_descriptors.update(new_negatives)
-            self.negative_descriptors.difference_update(un_negatives)
-            self.negative_descriptors.difference_update(new_positives)
 
     def refine(self):
         """ Refine current model results based on current adjudication state

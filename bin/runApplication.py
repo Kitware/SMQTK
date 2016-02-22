@@ -31,15 +31,15 @@ def cli_parser():
     group_configuration.add_argument('-c', '--config', default=None,
                                      help='Path to application JSON '
                                           'configuration file.')
-    group_configuration.add_argument('--output-config', default=None,
-                                     help='Optional path to output default '
-                                          'JSON configuration to.')
-    group_configuration.add_argument('--overwrite',
-                                     default=False, action='store_true',
-                                     help="When outputting a configuration "
-                                          "file, overwrite an existing file if "
-                                          "one already exists by the specified "
-                                          "output file path.")
+    group_configuration.add_argument('-g', '--generate-config',
+                                     default=None,
+                                     help='Optionally generate a default '
+                                          'configuration file at the '
+                                          'specified path. If a configuration '
+                                          'file was provided, we update the '
+                                          'default configuration with the '
+                                          'contents of the given '
+                                          'configuration.')
 
     # Server options
     group_server = parser.add_argument_group("Server options")
@@ -124,7 +124,7 @@ def main():
             exit(1)
 
     # Output config and exit if requested
-    bin_utils.output_config(args.output_config, config, log, args.overwrite)
+    bin_utils.output_config(args.generate_config, config, log, True)
 
     # Configuration must have been loaded at this point since we can't normally
     # trust the default.

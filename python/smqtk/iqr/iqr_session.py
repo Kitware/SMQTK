@@ -73,12 +73,11 @@ class IqrSession (SmqtkObject):
             "[%s]" % self.uuid
         )
 
-    def __init__(self, work_directory, descriptor, nn_index,
-                 pos_seed_neighbors=500,
+    def __init__(self, pos_seed_neighbors=500,
                  rel_index_config=DFLT_REL_INDEX_CONFIG,
-                 descriptor_factory=DFLT_MEMORY_DESCR_FACTORY,
                  session_uid=None):
-        """ Initialize the IQR session
+        """
+        Initialize the IQR session
 
         This does not initialize the working index for ranking as there are no
         known positive descriptor examples at this time.
@@ -88,18 +87,6 @@ class IqrSession (SmqtkObject):
         Adjudications are carried through between initializations. This allows
         indexed material adjudicated through-out the lifetime of the session to
         stay relevant.
-
-        :param work_directory: Directory assigned to this session for temporary
-            and working files.
-        :type work_directory: str
-
-        :param descriptor: Descriptor to use for this IQR session
-        :type descriptor:
-            smqtk.algorithms.descriptor_generator.DescriptorGenerator
-
-        :param nn_index: NearestNeighborIndex to draw from when initializing IQR
-            session.
-        :type nn_index: smqtk.algorithms.nn_index.NearestNeighborsIndex
 
         :param pos_seed_neighbors: Number of neighbors to pull from the given
             ``nn_index`` for each positive exemplar when populating the working
@@ -119,11 +106,6 @@ class IqrSession (SmqtkObject):
             intersection metric.
         :type rel_index_config: dict
 
-        :param descriptor_factory: DescriptorElementFactory instance to use to
-            produce new descriptors in output extension data. By default, we
-            use a factory that produces in-memory descriptors.
-        :type descriptor_factory: DescriptorElementFactory
-
         :param session_uid: Optional manual specification of session UUID.
         :type session_uid: str or uuid.UUID
 
@@ -131,15 +113,17 @@ class IqrSession (SmqtkObject):
         self.uuid = session_uid or uuid.uuid1()
         self.lock = multiprocessing.RLock()
 
+        self.pos_seed_neighbors = int(pos_seed_neighbors)
+
         # Local descriptor index for ranking, populated by a query to the
         #   nn_index instance.
         # Added external data/descriptors not added to this index.
         self.working_index = MemoryDescriptorIndex()
 
-        # Initialize book-keeping set so we know what positive descriptors
+        # Book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.
         #: :type: set[collections.Hashable]
-        self._wi_init_seeds = set()
+        self._wi_seeds_used = set()
 
         # Descriptor references from our index (above) that have been
         #   adjudicated.
@@ -147,22 +131,6 @@ class IqrSession (SmqtkObject):
         self.positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
         self.negative_descriptors = set()
-
-        # Example pos/neg data and descriptors added to this session
-        #   (external to our working index).
-        # All maps keyed on UUID values (some kind of content checksum,
-        #   i.e. SHA1).
-        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
-        self.ex_data = dict()
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
-        self.ex_pos_descriptors = dict()
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
-        self.ex_neg_descriptors = dict()
-
-        self.pos_seed_neighbors = int(pos_seed_neighbors)
-
-        # Working directory assigned to this session
-        self._work_dir = work_directory
 
         # Mapping of a DescriptorElement in our relevancy search index (not the
         #   index that the nn_index uses) to the relevancy score given the
@@ -174,12 +142,6 @@ class IqrSession (SmqtkObject):
         #
         # Algorithm Instances [+Config]
         #
-        # DescriptorGenerator instance assigned to this session.
-        self.descriptor = descriptor
-        # Factory for generating DescriptorElements of a configured impl type.
-        self.descriptor_factory = descriptor_factory
-        # NearestNeighborIndex instance assigned to this session.
-        self.nn_index = nn_index
         # RelevancyIndex configuration and instance that is used for producing
         #   results.
         # This is only [re]constructed when initializing the session.
@@ -188,11 +150,6 @@ class IqrSession (SmqtkObject):
         # exemplar data has been added.
         #: :type: None | smqtk.algorithms.relevancy_index.RelevancyIndex
         self.rel_index = None
-
-    def __del__(self):
-        # Clean up working directory
-        if osp.isdir(self.work_dir):
-            shutil.rmtree(self.work_dir)
 
     def __enter__(self):
         """
@@ -204,11 +161,6 @@ class IqrSession (SmqtkObject):
     # noinspection PyUnusedLocal
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
-
-    @property
-    def work_dir(self):
-        file_utils.safe_create_dir(self._work_dir)
-        return self._work_dir
 
     def ordered_results(self):
         """
@@ -226,78 +178,37 @@ class IqrSession (SmqtkObject):
                                     reverse=True))
             return None
 
-    def add_positive_data(self, *data_elements):
+    def update_working_index(self, nn_index):
         """
-        Add one or more data elements to this IQR session as positive examples.
-        This produces descriptors on the input data with our configured
-        descriptor generator.
+        Initialize or update our current working index using the given
+        :class:`.NearestNeighborsIndex` instance given our current positively
+        labeled descriptor elements.
 
-        :param data_elements: Iterable of data elements to add as positive
-            examples.
-        :type data_elements: collections.Iterable[smqtk.representation.DataElement]
+        We only query from the index for new positive elements since the last
+        update or reset.
 
-        """
-        with self.lock:
-            r = self.descriptor.compute_descriptor_async(
-                data_elements, self.descriptor_factory
-            )
-            for da in r:
-                self.ex_pos_descriptors[da.uuid()] = r[da]
-                self.ex_data[da.uuid()] = da
-
-    def add_negative_data(self, *data_elements):
-        """
-        Add one or more data elements to this IQR session as negative examples.
-        This produces descriptors on the input data with our configured
-        descriptor generator.
-
-        :param data_elements: Iterable of data elements to add as positive
-            examples.
-        :type data_elements: collections.Iterable[smqtk.representation.DataElement]
-
-        """
-        with self.lock:
-            r = self.descriptor.compute_descriptor_async(
-                data_elements, self.descriptor_factory
-            )
-            for da in r:
-                self.ex_neg_descriptors[da.uuid()] = r[da]
-                self.ex_data[da.uuid()] = da
-
-    def initialize(self):
-        """
-        Initialize working index based on currently set positive exemplar data.
-
-        This takes into account the currently set positive data descriptors as
-        well as positively adjudicated descriptors from the lifetime of this
-        session.
+        :param nn_index: :class:`.NearestNeighborsIndex` to query from.
+        :type nn_index: smqtk.algorithms.NearestNeighborsIndex
 
         :raises RuntimeError: There are no positive example descriptors in this
             session to use as a basis for querying.
 
         """
-        if len(self.ex_pos_descriptors) + \
-                len(self.positive_descriptors) <= 0:
+        if len(self.positive_descriptors) <= 0:
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
-        # Not clearing index because this step is intended to be additive
 
-        # build up new working index
-        # TODO: Only query using new positives since previous queries
-        for p in self.ex_pos_descriptors.itervalues():
-            if p.uuid() not in self._wi_init_seeds:
-                self._log.info("Querying neighbors to: %s", p)
-                self.working_index.add_many_descriptors(
-                    self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
-                )
-                self._wi_init_seeds.add(p.uuid())
+        # Not clearing working index because this step is intended to be
+        # additive.
+
+        # adding to working index
         for p in self.positive_descriptors:
-            if p.uuid() not in self._wi_init_seeds:
+            if p.uuid() not in self._wi_seeds_used:
                 self._log.info("Querying neighbors to: %s", p)
                 self.working_index.add_many_descriptors(
-                    self.nn_index.nn(p, n=self.pos_seed_neighbors)[0]
+                    nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
-                self._wi_init_seeds.add(p.uuid())
+                self._wi_seeds_used.add(p.uuid())
 
         # Make new relevancy index
         self._log.info("Creating new relevancy index over working index.")
@@ -341,8 +252,11 @@ class IqrSession (SmqtkObject):
     def refine(self):
         """ Refine current model results based on current adjudication state
 
-        :raises RuntimeError: There are no adjudications to run on. We must have
-            at least one positive adjudication.
+        :raises RuntimeError: No working index has been initialized.
+            :meth:`update_working_index` should have been called after
+            adjudicating some positive examples.
+        :raises RuntimeError: There are no adjudications to run on. We must
+            have at least one positive adjudication.
 
         """
         with self.lock:
@@ -351,8 +265,8 @@ class IqrSession (SmqtkObject):
                                    "initialized session (no working index).")
 
             # fuse pos/neg adjudications + added positive data descriptors
-            pos = self.ex_pos_descriptors.values() + list(self.positive_descriptors)
-            neg = self.ex_neg_descriptors.values() + list(self.negative_descriptors)
+            pos = self.positive_descriptors
+            neg = self.negative_descriptors
 
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
@@ -383,15 +297,9 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             self.working_index.clear()
-            self._wi_init_seeds.clear()
+            self._wi_seeds_used.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
-            self.ex_pos_descriptors.clear()
-            self.ex_neg_descriptors.clear()
-            self.ex_data.clear()
 
             self.rel_index = None
             self.results = None
-
-            # clear contents of working directory
-            shutil.rmtree(self.work_dir)

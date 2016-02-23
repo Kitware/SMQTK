@@ -226,6 +226,7 @@ class IqrSession (SmqtkObject):
 
         # Not clearing working index because this step is intended to be
         # additive.
+        updated = False
 
         # adding to working index
         for p in self.positive_descriptors:
@@ -235,13 +236,15 @@ class IqrSession (SmqtkObject):
                     nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
                 self._wi_seeds_used.add(p.uuid())
+                updated = True
 
         # Make new relevancy index
-        self._log.info("Creating new relevancy index over working index.")
-        #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
-        self.rel_index = plugin.from_plugin_config(self.rel_index_config,
-                                                   get_relevancy_index_impls())
-        self.rel_index.build_index(self.working_index.iterdescriptors())
+        if updated:
+            self._log.info("Creating new relevancy index over working index.")
+            #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
+            self.rel_index = plugin.from_plugin_config(self.rel_index_config,
+                                                       get_relevancy_index_impls())
+            self.rel_index.build_index(self.working_index.iterdescriptors())
 
     def refine(self):
         """ Refine current model results based on current adjudication state

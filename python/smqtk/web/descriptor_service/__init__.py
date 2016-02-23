@@ -86,7 +86,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         super(DescriptorServiceServer, self).__init__(json_config)
 
         # Descriptor factory setup
-        self.log.info("Initializing DescriptorElementFactory")
+        self._log.info("Initializing DescriptorElementFactory")
         self.descr_elem_factory = DescriptorElementFactory.from_config(
             self.json_config['descriptor_factory']
         )
@@ -271,7 +271,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         with self.descriptor_cache_lock:
             if label not in self.descriptor_cache:
-                self.log.debug("Caching descriptor '%s'", label)
+                self._log.debug("Caching descriptor '%s'", label)
                 self.descriptor_cache[label] = \
                     plugin.from_plugin_config(
                     self.generator_label_configs[label],
@@ -295,7 +295,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         # Resolve URI into appropriate DataElement instance
         if uri[:7] == "file://":
-            self.log.debug("Given local disk filepath")
+            self._log.debug("Given local disk filepath")
             filepath = uri[7:]
             if not os.path.isfile(filepath):
                 raise ValueError("File URI did not point to an existing file "
@@ -304,9 +304,9 @@ class DescriptorServiceServer (SmqtkWebApp):
                 de = DataFileElement(filepath)
 
         elif uri[:9] == "base64://":
-            self.log.debug("Given base64 string")
+            self._log.debug("Given base64 string")
             content_type = flask.request.args.get('content_type', None)
-            self.log.debug("Content type: %s", content_type)
+            self._log.debug("Content type: %s", content_type)
             if not content_type:
                 raise ValueError("No content-type with given base64 data")
             else:
@@ -314,7 +314,7 @@ class DescriptorServiceServer (SmqtkWebApp):
                 de = DataMemoryElement.from_base64(b64str, content_type)
 
         else:
-            self.log.debug("Given URL")
+            self._log.debug("Given URL")
             try:
                 de = DataUrlElement(uri)
             except requests.HTTPError, ex:
@@ -338,7 +338,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         :rtype: smqtk.representation.DescriptorElement
 
         """
-        with SimpleTimer("Computing descriptor...", self.log.debug):
+        with SimpleTimer("Computing descriptor...", self._log.debug):
             cd = self.get_descriptor_inst(cd_label)
             descriptor = cd.compute_descriptor(de, self.descr_elem_factory)
 

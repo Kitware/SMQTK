@@ -1,26 +1,21 @@
 
 import flask
-import logging
 import multiprocessing
 import os
 from StringIO import StringIO
 import tempfile
 
+from smqtk.utils import SmqtkObject
 from smqtk.utils import file_utils
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-class FileUploadMod (flask.Blueprint):
+class FileUploadMod (SmqtkObject, flask.Blueprint):
     """
     Flask blueprint for file uploading.
     """
-
-    @property
-    def log(self):
-        return logging.getLogger('.'.join((self.__module__,
-                                           self.__class__.__name__)))
 
     def __init__(self, name, parent_app, working_directory, url_prefix=None):
         """
@@ -71,7 +66,7 @@ class FileUploadMod (flask.Blueprint):
 
             """
             form = flask.request.form
-            self.log.debug("POST form contents: %s" % str(flask.request.form))
+            self._log.debug("POST form contents: %s" % str(flask.request.form))
 
             fid = form['flowIdentifier']
             success = True
@@ -93,7 +88,7 @@ class FileUploadMod (flask.Blueprint):
                     % (current_chunk, total_chunks, filename)
 
                 if total_chunks == len(self._file_chunks[fid]):
-                    self.log.debug("[%s] Final chunk uploaded",
+                    self._log.debug("[%s] Final chunk uploaded",
                                    filename+"::"+fid)
                     # have all chucks in memory now
                     try:
@@ -102,7 +97,7 @@ class FileUploadMod (flask.Blueprint):
                         file_saved_path = self._write_file_chunks(
                             self._file_chunks[fid], file_ext
                         )
-                        self.log.debug("[%s] saved from chunks: %s",
+                        self._log.debug("[%s] saved from chunks: %s",
                                        filename+"::"+fid, file_saved_path)
                         # now in file, free up dict memory
 
@@ -110,7 +105,7 @@ class FileUploadMod (flask.Blueprint):
                         message = "[%s] Completed upload" % (filename+"::"+fid)
 
                     except IOError, ex:
-                        self.log.debug("[%s] Failed to write combined chunks",
+                        self._log.debug("[%s] Failed to write combined chunks",
                                        filename+"::"+fid)
                         success = False
                         message = "Failed to write out combined chunks for " \
@@ -212,7 +207,7 @@ class FileUploadMod (flask.Blueprint):
             file_utils.safe_create_dir(self.working_dir)
         tmp_fd, tmp_path = tempfile.mkstemp(file_extension,
                                             dir=self.working_dir)
-        self.log.debug("Combining chunks into temporary file: %s", tmp_path)
+        self._log.debug("Combining chunks into temporary file: %s", tmp_path)
         tmp_file = open(tmp_path, 'wb')
         for idx, chunk in sorted(chunk_map.items(), key=lambda p: p[0]):
             data = chunk.read()

@@ -3,7 +3,6 @@ IQR Search blueprint module
 """
 
 import json
-import logging
 import os
 import os.path as osp
 import random
@@ -17,10 +16,11 @@ from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.nn_index import get_nn_index_impls
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.iqr import IqrController, IqrSession
-from smqtk.iqr.iqr_session import DFLT_MEMORY_DESCR_FACTORY, DFLT_REL_INDEX_CONFIG
+from smqtk.iqr.iqr_session import DFLT_REL_INDEX_CONFIG
 from smqtk.representation import get_data_set_impls, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import Configurable
+from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
@@ -33,7 +33,7 @@ __author__ = 'paul.tunison@kitware.com'
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class IqrSearch (flask.Blueprint, Configurable):
+class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
     """
     IQR Search Tab blueprint
 
@@ -403,12 +403,12 @@ class IqrSearch (flask.Blueprint, Configurable):
                 iqr_sess = self.get_current_iqr_session()
                 fid = flask.request.form['fid']
 
-                self.log.debug("[%s::%s] Getting temporary filepath from "
+                self._log.debug("[%s::%s] Getting temporary filepath from "
                                "uploader module", iqr_sess.uuid, fid)
                 upload_filepath = self.mod_upload.get_path_for_id(fid)
                 self.mod_upload.clear_completed(fid)
 
-                self.log.debug("[%s::%s] Moving uploaded file",
+                self._log.debug("[%s::%s] Moving uploaded file",
                                iqr_sess.uuid, fid)
                 sess_upload = osp.join(iqr_sess.work_dir,
                                        osp.basename(upload_filepath))
@@ -417,7 +417,7 @@ class IqrSearch (flask.Blueprint, Configurable):
                 upload_data.uuid()
 
                 # Extend session ingest -- modifying
-                self.log.debug("[%s::%s] Adding new data to session positives",
+                self._log.debug("[%s::%s] Adding new data to session positives",
                                iqr_sess.uuid, fid)
                 iqr_sess.add_positive_data(upload_data)
 
@@ -521,9 +521,9 @@ class IqrSearch (flask.Blueprint, Configurable):
             neg_to_add = json.loads(fetch.get('add_neg', '[]'))
             neg_to_remove = json.loads(fetch.get('remove_neg', '[]'))
 
-            self.log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
-                           % (pos_to_add, pos_to_remove,
-                              neg_to_add, neg_to_remove))
+            self._log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
+                            % (pos_to_add, pos_to_remove,
+                               neg_to_add, neg_to_remove))
 
             with self.get_current_iqr_session() as iqrs:
                 iqrs.adjudicate(
@@ -532,8 +532,8 @@ class IqrSearch (flask.Blueprint, Configurable):
                     tuple(iqrs.working_index.get_many_descriptors(*pos_to_remove)),
                     tuple(iqrs.working_index.get_many_descriptors(*neg_to_remove)),
                 )
-                self.log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
-                self.log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)
+                self._log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
+                self._log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)
 
             return flask.jsonify({
                 "success": True,
@@ -648,10 +648,6 @@ class IqrSearch (flask.Blueprint, Configurable):
             state.app.register_blueprint(blueprint, **options)
 
         self.record(deferred)
-
-    @property
-    def log(self):
-        return logging.getLogger("smqtk.IQRSearch(%s)" % self.name)
 
     @property
     def work_dir(self):

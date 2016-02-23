@@ -9,11 +9,13 @@ import os
 import flask
 
 import smqtk.utils
+from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
 from smqtk.utils import merge_dict
 
 
-class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
+class SmqtkWebApp (SmqtkObject, flask.Flask,
+                   smqtk.utils.Configurable, plugin.Pluggable):
     """
     Base class for SMQTK web applications
     """
@@ -90,11 +92,6 @@ class SmqtkWebApp (flask.Flask, smqtk.utils.Configurable, plugin.Pluggable):
 
     def get_config(self):
         return self.json_config
-
-    @property
-    def log(self):
-        return logging.getLogger('.'.join((self.__module__,
-                                           self.__class__.__name__)))
 
     def run(self, host=None, port=None, debug=False, **options):
         """

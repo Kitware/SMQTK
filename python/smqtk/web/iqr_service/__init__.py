@@ -221,6 +221,7 @@ class IqrService (SmqtkWebApp):
                         pos_descrs = self.descriptor_index.get_many_descriptors(pos_uuids)
                         neg_descrs = self.descriptor_index.get_many_descriptors(neg_uuids)
                         iqrs.adjudicate(pos_descrs, neg_descrs)
+                        msg = "[set adjudications]"
                     except KeyError, ex:
                         err_uuid = str(ex)
                         return make_response_json(
@@ -232,7 +233,12 @@ class IqrService (SmqtkWebApp):
                         ), 404
 
                     iqrs.update_working_index(self.neighbor_index)
+                    msg += '[updated working index]'
+
                     iqrs.refine()
+                    msg += '[refinement completed]'
+
+            return make_response_json("Steps completed: %s" % msg), 201
 
         except KeyError:
             return make_response_json("session_id '%s' not found" % sid,

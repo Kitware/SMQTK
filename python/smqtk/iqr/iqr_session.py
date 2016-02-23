@@ -130,7 +130,7 @@ class IqrSession (SmqtkObject):
         #   index that the nn_index uses) to the relevancy score given the
         #   recorded positive and negative adjudications.
         # This is None before any initialization or refinement occurs.
-        #: :type: None or dict of (collections.Hashable, float)
+        #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results = None
 
         #
@@ -177,6 +177,10 @@ class IqrSession (SmqtkObject):
         """
         Update current state of working index positive and negative
         adjudications based on descriptor UUIDs.
+
+        If the same descriptor element is listed in both new positives and
+        negatives, they cancel each other out, causing that descriptor to not
+        be included in the adjudication.
 
         :param new_positives: Descriptors of elements in our working index to
             now be considered to be positively relevant.
@@ -269,11 +273,11 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
-            id_probability_map = self.rel_index.rank(pos, neg)
+            element_probability_map = self.rel_index.rank(pos, neg)
 
             if self.results is None:
                 self.results = IqrResultsDict()
-            self.results.update(id_probability_map)
+            self.results.update(element_probability_map)
 
             # Force adjudicated positives and negatives to be probability 1 and
             # 0, respectively, since we want to control where they show up in

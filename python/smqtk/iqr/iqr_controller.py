@@ -9,11 +9,11 @@ class IqrController (SmqtkObject):
     Main controlling object for one or more IQR Sessions.
 
     In order to interface with a web server, methods defined here are
-    non-blocking (except for thread contention) and thread-safe.
+    thread-safe.
 
     This class may be used with the ``with`` statement. This will enable the
-    instance's primary lock, preventing any other action from being performed on
-    the instance while inside the with statement. The lock is reentrant, so
+    instance's primary lock, preventing any other action from being performed
+    on the instance while inside the with statement. The lock is reentrant, so
     nested with-statements will not dead-lock.
 
     """

@@ -275,7 +275,7 @@ class IqrService (SmqtkWebApp):
                                       sid=sid), 404
 
     # GET
-    def results(self):
+    def get_results(self):
         """
         Get the ordered ranking results between two index positions (inclusive,
         exclusive).
@@ -331,6 +331,20 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/init_session',
                           view_func=self.init_session,
                           methods=['PUT'])
-        self.add_url_rule('/reset_session')
+        self.add_url_rule('/reset_session',
+                          view_func=self.reset_session,
+                          methods=['PUT'])
+        self.add_url_rule('/clean_session',
+                          view_func=self.clean_session,
+                          methods=['PUT'])
+        self.add_url_rule('/refine',
+                          view_func=self.refine,
+                          methods=['PUT'])
+        self.add_url_rule('/num_results',
+                          view_func=self.num_results,
+                          methods=['GET'])
+        self.add_url_rule('/get_results',
+                          view_func=self.get_results,
+                          methods=['GET'])
 
         super(IqrService, self).run(host, port, debug, **options)

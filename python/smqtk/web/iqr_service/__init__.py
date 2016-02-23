@@ -1,4 +1,6 @@
+import json
 import time
+import traceback
 import uuid
 
 import flask
@@ -26,7 +28,7 @@ __author__ = "paul.tunison@kitware.com"
 
 
 def new_uuid():
-    return uuid.uuid1(clock_seq=int(time.time() * 1000000))
+    return str(uuid.uuid1(clock_seq=int(time.time() * 1000000))).replace('-', '')
 
 
 def make_response_json(message, **params):
@@ -38,10 +40,18 @@ def make_response_json(message, **params):
         }
     }
     merge_dict(r, params)
-    return r
+    return flask.jsonify(**r)
 
 
 class IqrService (SmqtkWebApp):
+    """
+    Configuration Notes
+    -------------------
+    ``descriptor_index`` will currently be configured twice: once for the
+    global index and once for the nearest neighbors index. These will probably
+    be the set to the same index. In more detail, the global descriptor index
+    is used when the "refine" endpoint is given descriptor UUIDs
+    """
 
     @classmethod
     def is_usable(cls):
@@ -67,8 +77,8 @@ class IqrService (SmqtkWebApp):
                         "such a way that instances are created, built and "
                         "destroyed often.",
                     "descriptor_index":
-                        "This is the index from which near descriptors are "
-                        "queried from.",
+                        "This is the index from which given positive and "
+                        "negative descriptors are retrieved from.",
                     "neighbor_index":
                         "This is the neighbor index to pull initial near-"
                         "positive descriptors from."
@@ -93,17 +103,17 @@ class IqrService (SmqtkWebApp):
 
         #: :type: smqtk.representation.DescriptorIndex
         self.descriptor_index = plugin.from_plugin_config(
-            json_config['iqr_service']['descriptor_index'],
+            json_config['iqr_service']['plugins']['descriptor_index'],
             get_descriptor_index_impls(),
         )
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.neighbor_index = plugin.from_plugin_config(
-            json_config['iqr_service']['neighbor_index'],
+            json_config['iqr_service']['plugins']['neighbor_index'],
             get_nn_index_impls(),
         )
 
         self.rel_index_config = \
-            json_config['iqr_service']['relevancy_index_config']
+            json_config['iqr_service']['plugins']['relevancy_index_config']
 
         self.controller = iqr_controller.IqrController()
 
@@ -192,6 +202,9 @@ class IqrService (SmqtkWebApp):
         Create or update the session's working index as necessary, ranking
         content by order of relevance.
 
+        Positive and negative UUIDs must be specified as a JSON list. This
+        means that string UUIDs must be quoted.
+
         Form args:
             session_id
                 UUID of the session to use
@@ -203,14 +216,15 @@ class IqrService (SmqtkWebApp):
         """
         sid = flask.request.form.get('session_id', None)
         pos_uuids = flask.request.form.get('pos_uuids', None)
-        neg_uuids = flask.request.form.get('neg_uuids', None)
+        neg_uuids = flask.request.form.get('neg_uuids', '[]')
 
         if sid is None:
             return make_response_json("No session_id provided"), 400
         elif pos_uuids is None:
             return make_response_json("No positive UUIDs given"), 400
-        elif neg_uuids is None:
-            neg_uuids = []
+
+        pos_uuids = json.loads(pos_uuids)
+        neg_uuids = json.loads(neg_uuids)
 
         try:
             with self.controller:
@@ -218,12 +232,13 @@ class IqrService (SmqtkWebApp):
                     # Get appropriate descriptor elements from index for
                     # setting new adjudication state.
                     try:
-                        pos_descrs = self.descriptor_index.get_many_descriptors(pos_uuids)
-                        neg_descrs = self.descriptor_index.get_many_descriptors(neg_uuids)
+                        pos_descrs = self.descriptor_index.get_many_descriptors(*pos_uuids)
+                        neg_descrs = self.descriptor_index.get_many_descriptors(*neg_uuids)
                         iqrs.adjudicate(pos_descrs, neg_descrs)
                         msg = "[set adjudications]"
                     except KeyError, ex:
                         err_uuid = str(ex)
+                        self._log.warn(traceback.format_exc())
                         return make_response_json(
                             "Descriptor UUID '%s' cannot be found in the "
                             "configured descriptor index."
@@ -254,7 +269,7 @@ class IqrService (SmqtkWebApp):
                 UUID of the session to use
 
         """
-        sid = flask.request.form.get('session_id', None)
+        sid = flask.request.args.get('session_id', None)
 
         if sid is None:
             return make_response_json("No session_id provided"), 400
@@ -295,31 +310,35 @@ class IqrService (SmqtkWebApp):
                 Ending index (exclusive)
 
         """
-        sid = flask.request.form.get('session_id', None)
-        i = flask.request.form.get('i', None)
-        j = flask.request.form.get('j', None)
+        sid = flask.request.args.get('session_id', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
 
         if sid is None:
             return make_response_json("No session_id provided"), 400
-        elif i is None:
-            return make_response_json("No min bounds given"), 400
-        elif j is None:
-            return make_response_json("No max bounds given"), 400
-
-        try:
-            i = int(i)
-            j = int(j)
-        except ValueError:
-            return make_response_json("Invalid bounds index value(s)"), 400
 
         try:
             with self.controller:
                 with self.controller.get_session(sid) as iqrs:
+                    num_results = (iqrs.results and len(iqrs.results)) or 0
+
+                    if i is None:
+                        i = 0
+                    if j is None:
+                        j = num_results
+
+                    try:
+                        i = int(i)
+                        j = int(j)
+                    except ValueError:
+                        return make_response_json("Invalid bounds index value(s)"), 400
+
                     r = []
                     if iqrs.results:
                         r = iqrs.ordered_results()[i:j]
                         r = [[d.uuid(), v] for d, v in r]
             return make_response_json("Returning result pairs",
+                                      i=i, j=j, total_results=num_results,
                                       results=r,
                                       sid=sid), 200
         except KeyError:

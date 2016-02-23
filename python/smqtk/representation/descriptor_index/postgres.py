@@ -515,7 +515,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
             i += 1
 
         if len(uuid_order) != i:
-            raise KeyError("bad UUIDs: %s" % set(uuid_order[i:]))
+            # just report the first one that's bad
+            raise KeyError(uuid_order[i])
 
     def remove_descriptor(self, uuid):
         """

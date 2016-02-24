@@ -18,7 +18,7 @@ Standard return message: {
     <other names params>
 }
 
-[PUT] /init_session
+[POST] /init_session
     Creates a new session and returns given or new SID.
 
     Form Args:
@@ -44,7 +44,7 @@ Standard return message: {
         sid=<session_id>
     }
 
-[PUT] /clean_session
+[DELETE] /clean_session
     Clear the resources associated with the given session id. The given session
     id will not be usable until initialized again.
 

@@ -357,13 +357,13 @@ class IqrService (SmqtkWebApp):
         # Setup REST API here, register methods
         self.add_url_rule('/init_session',
                           view_func=self.init_session,
-                          methods=['PUT'])
+                          methods=['POST'])
         self.add_url_rule('/reset_session',
                           view_func=self.reset_session,
                           methods=['PUT'])
         self.add_url_rule('/clean_session',
                           view_func=self.clean_session,
-                          methods=['PUT'])
+                          methods=['DELETE'])
         self.add_url_rule('/refine',
                           view_func=self.refine,
                           methods=['PUT'])

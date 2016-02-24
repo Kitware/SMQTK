@@ -441,7 +441,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         super(LSHNearestNeighborIndex, self).nn(d, n)
 
-        self._log.debug("generating has for descriptor")
+        self._log.debug("generating hash for descriptor")
         d_v = d.vector()
         d_h = self.lsh_functor.get_hash(d_v)
 
@@ -459,7 +459,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 hi.index = numpy.array(self._hash2uuid.keys())
         hashes, hash_dists = hi.nn(d_h, n)
 
-        self._log.debug("getting UUIDs of descriptors for hashes")
+        self._log.debug("getting UUIDs of descriptors for nearby hashes")
         neighbor_uuids = []
         with self._hash2uuid_lock:
             for h_int in map(bit_vector_to_int_large, hashes):

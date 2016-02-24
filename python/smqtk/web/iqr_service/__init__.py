@@ -78,7 +78,11 @@ class IqrService (SmqtkWebApp):
                         "destroyed often.",
                     "descriptor_index":
                         "This is the index from which given positive and "
-                        "negative descriptors are retrieved from.",
+                        "negative example descriptors are retrieved from. "
+                        "Not used for nearest neighbor querying. "
+                        "This index must contain all descriptors that could "
+                        "possibly be used as positive/negative examples and "
+                        "updated accordingly.",
                     "neighbor_index":
                         "This is the neighbor index to pull initial near-"
                         "positive descriptors from."
@@ -232,8 +236,12 @@ class IqrService (SmqtkWebApp):
                     # Get appropriate descriptor elements from index for
                     # setting new adjudication state.
                     try:
-                        pos_descrs = self.descriptor_index.get_many_descriptors(*pos_uuids)
-                        neg_descrs = self.descriptor_index.get_many_descriptors(*neg_uuids)
+                        pos_descrs = list(
+                            self.descriptor_index.get_many_descriptors(*pos_uuids)
+                        )
+                        neg_descrs = list(
+                            self.descriptor_index.get_many_descriptors(*neg_uuids)
+                        )
                         iqrs.adjudicate(pos_descrs, neg_descrs)
                         msg = "[set adjudications]"
                     except KeyError, ex:

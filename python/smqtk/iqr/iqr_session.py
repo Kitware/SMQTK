@@ -182,6 +182,9 @@ class IqrSession (SmqtkObject):
         negatives, they cancel each other out, causing that descriptor to not
         be included in the adjudication.
 
+        The given iterables must be re-traversable. Otherwise the given
+        descriptors will not be properly registered.
+
         :param new_positives: Descriptors of elements in our working index to
             now be considered to be positively relevant.
         :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]

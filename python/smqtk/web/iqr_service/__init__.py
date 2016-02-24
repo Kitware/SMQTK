@@ -261,7 +261,7 @@ class IqrService (SmqtkWebApp):
                     iqrs.refine()
                     msg += '[refinement completed]'
 
-            return make_response_json("Steps completed: %s" % msg), 201
+            return make_response_json("Steps completed: %s" % msg, sid=sid), 201
 
         except KeyError:
             return make_response_json("session_id '%s' not found" % sid,

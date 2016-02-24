@@ -63,8 +63,8 @@ Standard return message: {
 
     Form Args:
         session_id=<str>
-        pos=[element_id, ...]
-        neg=[element_id, ...]
+        pos_uuids=[element_id, ...]
+        neg_uuids=[element_id, ...]
 
     Returns: {
         ...

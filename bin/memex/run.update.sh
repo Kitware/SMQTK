@@ -201,16 +201,17 @@ classifications_data="${work_dir}/classifications.data.csv"
 #
 # Find last run timestamp if one wasn't manually provided and there is one
 #
-if [ -z "$entries_after" ]
+if [ -z "${entries_after}" ]
 then
-    if [ -n "$(ls "$run_dir")" ]
+    if [ -n "$(ls "${run_dir}")" ]
     then
-        entries_after="$(ls "$run_dir" | tail -n1)"
+        entries_after="$(ls "${run_dir}" | tail -n1)"
         # Only use this directory as a time stamp if it completed fully,
         # exiting if it did not
-        if [ ! -f "$entries_after/$complete_file" ]
+        if [ ! -f "${run_dir}/${entries_after}/${complete_file}" ]
         then
-            log "Previous run did not fully complete (missing completion marker)"
+            error "Previous run did not fully complete (missing completion marker)"
+            error "(missing '$entries_after/$complete_file')"
             exit 1
         fi
     else
@@ -225,7 +226,7 @@ touch "${work_log}"  # Start log recording
 # Gather images from Solr instance
 #
 if [ ! -f "${remote_file_list}" ]; then
-    log "Getting new remote image paths"
+    log "Getting new remote image paths after_time='${entries_after}' before_time='${now}'"
     log_remote_image_listing="${work_dir}/log.0.list_remote_files.txt"
 
     "${script_lsi}" -v -c "${config_lsi}" -p "${remote_file_list}" \

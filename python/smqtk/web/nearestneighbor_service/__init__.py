@@ -110,6 +110,15 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             get_descriptor_generator_impls()
         )
 
+        @self.route("/count", methods=['GET'])
+        def count():
+            """
+            Return the number of elements represented in this index.
+            """
+            return flask.jsonify(**{
+                "count": self.nn_index.count(),
+            })
+
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")
         @self.route("/nn/n=<int:n>/<int:start_i>:<int:end_i>/<path:uri>")
@@ -119,6 +128,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
                 - local filepath
                 - base64
+                - direct descriptor vector
                 - http/s URL
 
             The following sub-sections detail how different URI's can be used.
@@ -136,6 +146,14 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             base64 encoded string. This mode also requires an additional
             ``?content_type=`` to provide data content type information. This
             mode saves the encoded data to temporary file for processing.
+
+            Direct Descriptor Vector
+            ------------------------
+
+            THe URI string must be prefixed with "descriptor://", followed by
+            the JSON list of the float values the vector is composed of.
+            Using this option requires knowledge of what descriptor type is
+            being used
 
             HTTP/S address
             --------------
@@ -159,9 +177,10 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             """
             message = "execution nominal"
-            descriptor = None
 
             de = None
+            descriptor = None
+
             try:
                 self._log.debug("Received URI: %s", uri)
                 de = self.resolve_data_element(uri)
@@ -193,6 +212,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                     message = "Descriptor or index related issue: %s" % str(ex)
 
             # TODO: Return the optional descriptor vectors for the neighbors
+            # noinspection PyTypeChecker
             return flask.jsonify({
                 "success": descriptor is not None,
                 "message": message,

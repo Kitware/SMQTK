@@ -19,11 +19,11 @@ function alert_error(message) {
     c.append(alert);
     alert.fadeIn('fast');
 
-//    // message timeout
-//    // TODO: add a little "loading bar" to show timeout
-//    setTimeout(function() {
-//        alert.fadeOut();
-//    }, 3000)
+    //// message timeout
+    //// TODO: add a little "loading bar" to show timeout
+    //setTimeout(function() {
+    //    alert.fadeOut();
+    //}, 3000)
 }
 
 
@@ -68,8 +68,8 @@ function alert_success(message) {
     c.append(alert);
     alert.fadeIn('fast');
 
-    //// message timeout
-    //setTimeout(function() {
-    //    alert.fadeOut();
-    //}, 3000)
+    // message timeout
+    setTimeout(function() {
+        alert.fadeOut();
+    }, 3000)
 }

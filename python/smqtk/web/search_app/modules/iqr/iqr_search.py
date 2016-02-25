@@ -444,12 +444,12 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
                                     "positives", iqrs.uuid, fid)
                     # iqrs.add_positive_data(upload_data)
                     try:
-                        upload_descr = self._descriptor_generator.compute_descriptor(
-                            upload_data, self._descr_elem_factory
-                        )
+                        upload_descr = \
+                            self._descriptor_generator.compute_descriptor(
+                                upload_data, self._descr_elem_factory
+                            )
                     except ValueError, ex:
-                        return "Invalid input image type: %s" \
-                               % upload_data.content_type(), 400
+                        return "Input Error: %s" % str(ex), 400
 
                     self._iqr_example_pos_descr[iqrs.uuid][uuid] = upload_descr
                     iqrs.adjudicate((upload_descr,))
@@ -519,10 +519,12 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
                 is_p = (
-                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors)
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.positive_descriptors)
                 )
                 is_n = (
-                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors)
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.negative_descriptors)
                 )
 
                 return flask.jsonify({
@@ -680,17 +682,20 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
             'url_prefix': self.url_prefix,
             'working_directory': self._working_dir,
             'data_set': plugin.to_plugin_config(self._data_set),
-            'descr_generator': plugin.to_plugin_config(self._descriptor_generator),
+            'descr_generator':
+                plugin.to_plugin_config(self._descriptor_generator),
             'nn_index': plugin.to_plugin_config(self._nn_index),
             'rel_index_config': self._rel_index_config,
             'descriptor_factory': self._descr_elem_factory.get_config(),
         }
 
     def register_blueprint(self, blueprint, **options):
-        """ Add sub-blueprint to a blueprint. """
+        """ Add sub-blueprint to a blueprint.
+        :param blueprint: Nested blueprint instance to register.
+        """
         # Defer registration of blueprint until after this blueprint has been
-        # registered. Needed to do this because of a bad thing that happens that
-        # I don't remember any more.
+        # registered. Needed to do this because of a bad thing that happens
+        # that I don't remember any more.
         def deferred(state):
             if blueprint.url_prefix:
                 blueprint.url_prefix = self.url_prefix + blueprint.url_prefix
@@ -722,7 +727,8 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
                                       self._rel_index_config,
                                       sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
-                self._iqr_work_dirs[iqr_sess.uuid] = osp.join(self.work_dir, sid)
+                self._iqr_work_dirs[iqr_sess.uuid] = \
+                    osp.join(self.work_dir, sid)
                 safe_create_dir(self._iqr_work_dirs[iqr_sess.uuid])
                 self._iqr_example_data[iqr_sess.uuid] = {}
                 self._iqr_example_pos_descr[iqr_sess.uuid] = {}

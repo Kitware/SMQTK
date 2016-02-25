@@ -20,7 +20,7 @@ class IqrController (SmqtkObject):
 
     def __init__(self):
         # Map of uuid to the search state
-        #: :type: dict[uuid.UUID, IqrSession]
+        #: :type: dict[collections.Hashable, IqrSession]
         self._iqr_sessions = {}
 
         # RLock for iqr_session{_locks} maps.
@@ -38,7 +38,7 @@ class IqrController (SmqtkObject):
         Return a tuple of all currently registered IqrSessions.
 
         :return: a tuple of all currently registered IqrSessions.
-        :rtype: tuple of uuid.UUID
+        :rtype: tuple of collections.Hashable
 
         """
         with self._map_rlock:
@@ -52,7 +52,7 @@ class IqrController (SmqtkObject):
         and performing a linear search.
 
         :param session_uuid: Possible UUID of a session
-        :type session_uuid: uuid.UUID
+        :type session_uuid: collections.Hashable
 
         :return: True of the given UUID references a session in this controller
             and false if not.
@@ -70,10 +70,10 @@ class IqrController (SmqtkObject):
 
         :param session_uuid: Optional manual specification of the UUID to assign
             to the instance. This cannot already exist in the controller.
-        :type session_uuid: str or uuid.UUID
+        :type session_uuid: collections.Hashable
 
         :return: UUID of new IQR Session
-        :rtype: uuid.UUID or str
+        :rtype: collections.Hashable
 
         """
         with self._map_rlock:
@@ -98,7 +98,7 @@ class IqrController (SmqtkObject):
         :raises KeyError: The given UUID doesn't exist in this controller.
 
         :param session_uuid: UUID if the session to get
-        :type session_uuid: str or uuid.UUID
+        :type session_uuid: collections.Hashable
 
         :return: IqrSession instance for the given UUID
         :rtype: smqtk.iqr.iqr_session.IqrSession
@@ -114,7 +114,7 @@ class IqrController (SmqtkObject):
         :raises KeyError: The given UUID doesn't exist in this controller.
 
         :param session_uuid: Session UUID
-        :type session_uuid: uuid.UUID or str
+        :type session_uuid: collections.Hashable
 
         """
         with self._map_rlock:

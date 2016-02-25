@@ -18,11 +18,11 @@ Standard return message: {
     <other names params>
 }
 
-[POST] /init_session
+[POST] /session
     Creates a new session and returns given or new SID.
 
     Form Args:
-        session_id=<str>
+        sid=<session_id>
             - Optional. If not given we will generate a new UUID string and
               return it.
 
@@ -31,25 +31,25 @@ Standard return message: {
         sid=<session_id>
     }
 
-[PUT] /reset_session
+[PUT] /session
     Resets an existing session. This basically means the results call will not
     return anything until a refine occurs again. Session ID is still usable
     after this call (resources not cleaned).
 
     Form Args:
-        session_id=<str>
+        sid=<session_id>
 
     Returns {
         ...
         sid=<session_id>
     }
 
-[DELETE] /clean_session
+[DELETE] /session
     Clear the resources associated with the given session id. The given session
     id will not be usable until initialized again.
 
     Form args:
-        session_id=str
+        sid=str
 
     Returns: {
         ...
@@ -62,7 +62,7 @@ Standard return message: {
     the future?).
 
     Form Args:
-        session_id=<str>
+        sid=<session_id>
         pos_uuids=[element_id, ...]
         neg_uuids=[element_id, ...]
 
@@ -77,7 +77,7 @@ Standard return message: {
     of the working index.
 
     Form Args:
-        session_id=<str>
+        sid=<session_id>
 
     Returns: {
         ...
@@ -85,13 +85,13 @@ Standard return message: {
         num_results=<int>
     }
 
-[GET] /get_results(session_id:str, i:int, j:int) -> list[element_id:str]
+[GET] /get_results
     Get ordered results between the optionally specified indices. If ``i`` is
     omitted, we assume a starting index of 0. If ``j`` is omitted, we assume the
     ending index is the size of the working index.
 
     Form Args:
-        session_id=<str>
+        sid=<session_id>
         i=<int> [optional]
         j=<int> [optional]
 
@@ -102,4 +102,19 @@ Standard return message: {
         i=<int>,
         j=<int>,
         results=[(element_id, float), ...]
+    }
+
+[GET] /classify
+    Classify a given set of descriptors based on the adjudication state of the
+    current session.
+
+    Form Args:
+        sid=<session_id>
+        uuids=[<element_id>, ...]
+
+    Return: {
+        ...
+        sid=<session_id>,
+        uuids=[<element_id>, ...],
+        proba=[<float>, ...],
     }

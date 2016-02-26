@@ -2,15 +2,16 @@
 import flask
 import functools
 import json
-import logging
 import os.path
+
+from smqtk.utils import SmqtkObject
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 # noinspection PyUnusedLocal
-class LoginMod (flask.Blueprint):
+class LoginMod (SmqtkObject, flask.Blueprint):
 
     def __init__(self, name, parent_app, url_prefix=None):
         """
@@ -26,8 +27,6 @@ class LoginMod (flask.Blueprint):
             template_folder=os.path.join(script_dir, 'templates'),
             url_prefix=url_prefix
         )
-
-        self.log = logging.getLogger('LoginMod')
 
         # Pull in users configuration file from etc directory
         users_config_file = os.path.join(script_dir, 'users.json')
@@ -68,7 +67,7 @@ class LoginMod (flask.Blueprint):
             if userid in self.__users:
                 # Load user
                 user = self.__users[userid]
-                self.log.debug("User info selected: %s", user)
+                self._log.debug("User info selected: %s", user)
 
                 if flask.request.form['passwd'] != user['passwd']:
                     flask.flash("Authentication error for user id: %s" % userid,

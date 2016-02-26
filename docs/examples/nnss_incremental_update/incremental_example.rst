@@ -170,7 +170,7 @@ Normally, a :class:`.NearestNeighborsIndex` instance would need to be have its i
 However, we have effectively already done this in the preceeding steps, so are instead able to get right to configuring and starting the :class:`.NearestNeighborServiceServer`.
 A default configuration may be generated using the generic :file:`bin/runApplication.py` script (since web applications/servers are plugins) using the command::
 
-    $ runApplication.py -a NearestNeighborServiceServer --output-config 2d.config.nnss_app.json
+    $ runApplication.py -a NearestNeighborServiceServer -g 2d.config.nnss_app.json
 
 An example configuration has been provided in :file:`2d.config.nnss_app.json`.
 The :class:`.DescriptorIndex`, :class:`.DescriptorGenerator` and :class:`.LshFunctor` configuration sections should be the same as used in the preceeding sections.

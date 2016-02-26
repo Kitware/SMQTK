@@ -76,7 +76,7 @@ class IqrSearchApp (SmqtkWebApp):
         self._navigable_blueprints = []
 
         # Login module
-        self.log.info("Initializing Login Blueprint")
+        self._log.info("Initializing Login Blueprint")
 
         self.module_login = LoginMod('login', self)
         self.register_blueprint(self.module_login)
@@ -86,9 +86,9 @@ class IqrSearchApp (SmqtkWebApp):
         #   instance.
         self._iqr_search_modules = []
         for iqr_search_config in self.json_config['iqr_tabs']:
-            self.log.info("Initializing IQR tab '%s'",
-                          iqr_search_config['name'])
-            self.log.debug("IQR tab config:\n%s", iqr_search_config)
+            self._log.info("Initializing IQR tab '%s'",
+                           iqr_search_config['name'])
+            self._log.debug("IQR tab config:\n%s", iqr_search_config)
             m = IqrSearch.from_config(iqr_search_config, self)
             self.register_blueprint(m)
             self.add_navigable_blueprint(m)
@@ -101,7 +101,7 @@ class IqrSearchApp (SmqtkWebApp):
         @self.route('/home')
         @self.route('/')
         def smqtk_index():
-            self.log.info("Session: %s", flask.session.items())
+            self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
             return flask.render_template("index.html", **self.nav_bar_content())
 

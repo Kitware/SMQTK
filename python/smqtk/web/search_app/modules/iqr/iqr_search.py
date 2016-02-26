@@ -3,25 +3,30 @@ IQR Search blueprint module
 """
 
 import json
-import logging
 import os
 import os.path as osp
 import random
+import shutil
 from StringIO import StringIO
 import zipfile
 
 import flask
 import PIL.Image
 
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.algorithms.descriptor_generator import \
+    get_descriptor_generator_impls
 from smqtk.algorithms.nn_index import get_nn_index_impls
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.iqr import IqrController, IqrSession
-from smqtk.iqr.iqr_session import DFLT_MEMORY_DESCR_FACTORY, DFLT_REL_INDEX_CONFIG
+from smqtk.iqr.iqr_session import DFLT_REL_INDEX_CONFIG
 from smqtk.representation import get_data_set_impls, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 from smqtk.utils import Configurable
+from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
+from smqtk.utils.file_utils import safe_create_dir
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
@@ -32,8 +37,11 @@ __author__ = 'paul.tunison@kitware.com'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
+                                                     {})
 
-class IqrSearch (flask.Blueprint, Configurable):
+
+class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
     """
     IQR Search Tab blueprint
 
@@ -65,7 +73,8 @@ class IqrSearch (flask.Blueprint, Configurable):
         # fill in plugin configs
         d['data_set'] = plugin.make_config(get_data_set_impls())
 
-        d['descr_generator'] = plugin.make_config(get_descriptor_generator_impls())
+        d['descr_generator'] = \
+            plugin.make_config(get_descriptor_generator_impls())
 
         d['nn_index'] = plugin.make_config(get_nn_index_impls())
 
@@ -137,7 +146,8 @@ class IqrSearch (flask.Blueprint, Configurable):
 
         :param descr_generator: DescriptorGenerator instance to use in IQR
             sessions for generating descriptors on new data.
-        :type descr_generator: smqtk.algorithms.descriptor_generator.DescriptorGenerator
+        :type descr_generator:
+            smqtk.algorithms.descriptor_generator.DescriptorGenerator
 
         :param nn_index: NearestNeighborsIndex instance for sessions to pull
             their review data sets from.
@@ -215,11 +225,21 @@ class IqrSearch (flask.Blueprint, Configurable):
                                         url_prefix='/uploader')
         self.register_blueprint(self.mod_upload)
 
-        # IQR Session control
+        # IQR Session control and resources
         # TODO: Move session management to database/remote?
         #       Create web-specific IqrSession class that stores/gets its state
         #       directly from database.
         self._iqr_controller = IqrController()
+        # Mapping of session IDs to their work directory
+        #: :type: dict[collections.Hashable, str]
+        self._iqr_work_dirs = {}
+        # Mapping of session ID to a dictionary of the custom example data for
+        # a session (uuid -> DataElement)
+        #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.representation.DataElement]]
+        self._iqr_example_data = {}
+        # Descriptors of example data
+        #: :type: dict[collections.Hashable, dict[collections.Hashable, smqtk.representation.DescriptorElement]]
+        self._iqr_example_pos_descr = {}
 
         # Preview Image Caching
         self._preview_cache = PreviewCache(osp.join(self._static_data_dir,
@@ -265,8 +285,8 @@ class IqrSearch (flask.Blueprint, Configurable):
                     "negative_uids":
                         tuple(d.uuid() for d in iqrs.negative_descriptors),
 
-                    "ex_pos": tuple(iqrs.ex_pos_descriptors),
-                    "ex_neg": tuple(iqrs.ex_neg_descriptors),
+                    # UUIDs of example positive descriptors
+                    "ex_pos": tuple(self._iqr_example_pos_descr[iqrs.uuid]),
 
                     "initialized": iqrs.working_index.count() > 0,
                     "index_size": iqrs.working_index.count(),
@@ -282,14 +302,16 @@ class IqrSearch (flask.Blueprint, Configurable):
             with self.get_current_iqr_session() as iqrs:
                 iqrs_uuid = str(iqrs.uuid)
                 pos_elements = list(set(
+                    # Pos user examples
                     [tuple(d.vector().tolist()) for d
-                     in iqrs.ex_pos_descriptors.values()] +
+                     in self._iqr_example_pos_descr[iqrs.uuid].values()] +
+                    # Adjudicated examples
                     [tuple(d.vector().tolist()) for d
                      in iqrs.positive_descriptors],
                 ))
                 neg_elements = list(set(
-                    [tuple(d.vector().tolist()) for d
-                     in iqrs.ex_neg_descriptors.values()] +
+                    # No negative user example support yet
+                    # Adjudicated examples
                     [tuple(d.vector().tolist()) for d
                      in iqrs.negative_descriptors],
                 ))
@@ -347,13 +369,13 @@ class IqrSearch (flask.Blueprint, Configurable):
 
             # Try to find a DataElement by the given UUID in our indexed data
             # or in the session's example data.
-            #: :type: smqtk.representation.DataElement
-            de = None
             if self._data_set.has_uuid(uid):
+                #: :type: smqtk.representation.DataElement
                 de = self._data_set.get_data(uid)
             else:
                 with self.get_current_iqr_session() as iqrs:
-                    de = iqrs.ex_data.get(uid, None)
+                    #: :type: smqtk.representation.DataElement | None
+                    de = self._iqr_example_data[iqrs.uuid].get(uid, None)
 
             if not de:
                 info["success"] = False
@@ -400,28 +422,39 @@ class IqrSearch (flask.Blueprint, Configurable):
 
             # Start the ingest of a FID when POST
             if flask.request.method == "POST":
-                iqr_sess = self.get_current_iqr_session()
-                fid = flask.request.form['fid']
+                with self.get_current_iqr_session() as iqrs:
+                    fid = flask.request.form['fid']
 
-                self.log.debug("[%s::%s] Getting temporary filepath from "
-                               "uploader module", iqr_sess.uuid, fid)
-                upload_filepath = self.mod_upload.get_path_for_id(fid)
-                self.mod_upload.clear_completed(fid)
+                    self._log.debug("[%s::%s] Getting temporary filepath from "
+                                    "uploader module", iqrs.uuid, fid)
+                    upload_filepath = self.mod_upload.get_path_for_id(fid)
+                    self.mod_upload.clear_completed(fid)
 
-                self.log.debug("[%s::%s] Moving uploaded file",
-                               iqr_sess.uuid, fid)
-                sess_upload = osp.join(iqr_sess.work_dir,
-                                       osp.basename(upload_filepath))
-                os.rename(upload_filepath, sess_upload)
-                upload_data = DataFileElement(sess_upload)
-                upload_data.uuid()
+                    self._log.debug("[%s::%s] Moving uploaded file",
+                                    iqrs.uuid, fid)
+                    sess_upload = osp.join(self._iqr_work_dirs[iqrs.uuid],
+                                           osp.basename(upload_filepath))
+                    os.rename(upload_filepath, sess_upload)
+                    upload_data = DataFileElement(sess_upload)
+                    uuid = upload_data.uuid()
+                    self._iqr_example_data[iqrs.uuid][uuid] = upload_data
 
-                # Extend session ingest -- modifying
-                self.log.debug("[%s::%s] Adding new data to session positives",
-                               iqr_sess.uuid, fid)
-                iqr_sess.add_positive_data(upload_data)
+                    # Extend session ingest -- modifying
+                    self._log.debug("[%s::%s] Adding new data to session "
+                                    "positives", iqrs.uuid, fid)
+                    # iqrs.add_positive_data(upload_data)
+                    try:
+                        upload_descr = \
+                            self._descriptor_generator.compute_descriptor(
+                                upload_data, self._descr_elem_factory
+                            )
+                    except ValueError, ex:
+                        return "Input Error: %s" % str(ex), 400
 
-                return str(upload_data.uuid())
+                    self._iqr_example_pos_descr[iqrs.uuid][uuid] = upload_descr
+                    iqrs.adjudicate((upload_descr,))
+
+                    return str(uuid)
 
         @self.route("/iqr_initialize", methods=["POST"])
         @self._parent_app.module_login.login_required
@@ -432,7 +465,7 @@ class IqrSearch (flask.Blueprint, Configurable):
             """
             with self.get_current_iqr_session() as iqrs:
                 try:
-                    iqrs.initialize()
+                    iqrs.update_working_index(self._nn_index)
                     return flask.jsonify({
                         "success": True,
                         "message": "Completed initialization",
@@ -459,8 +492,9 @@ class IqrSearch (flask.Blueprint, Configurable):
             """
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
-                is_p = (elem_uuid in iqrs.ex_pos_descriptors)
-                is_n = (elem_uuid in iqrs.ex_neg_descriptors)
+                is_p = elem_uuid in self._iqr_example_pos_descr[iqrs.uuid]
+                # Currently no negative example support
+                is_n = False
 
                 return flask.jsonify({
                     "is_pos": is_p,
@@ -485,10 +519,12 @@ class IqrSearch (flask.Blueprint, Configurable):
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
                 is_p = (
-                    elem_uuid in set(d.uuid() for d in iqrs.positive_descriptors)
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.positive_descriptors)
                 )
                 is_n = (
-                    elem_uuid in set(d.uuid() for d in iqrs.negative_descriptors)
+                    elem_uuid in set(d.uuid() for d
+                                     in iqrs.negative_descriptors)
                 )
 
                 return flask.jsonify({
@@ -521,9 +557,10 @@ class IqrSearch (flask.Blueprint, Configurable):
             neg_to_add = json.loads(fetch.get('add_neg', '[]'))
             neg_to_remove = json.loads(fetch.get('remove_neg', '[]'))
 
-            self.log.debug("Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
-                           % (pos_to_add, pos_to_remove,
-                              neg_to_add, neg_to_remove))
+            self._log.debug("Adjudicated Positive{+%s, -%s}, "
+                            "Negative{+%s, -%s} "
+                            % (pos_to_add, pos_to_remove,
+                               neg_to_add, neg_to_remove))
 
             with self.get_current_iqr_session() as iqrs:
                 iqrs.adjudicate(
@@ -532,12 +569,13 @@ class IqrSearch (flask.Blueprint, Configurable):
                     tuple(iqrs.working_index.get_many_descriptors(*pos_to_remove)),
                     tuple(iqrs.working_index.get_many_descriptors(*neg_to_remove)),
                 )
-                self.log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
-                self.log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)
+                self._log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
+                self._log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)
 
             return flask.jsonify({
                 "success": True,
-                "message": "Adjudicated Positive{+%s, -%s}, Negative{+%s, -%s} "
+                "message": "Adjudicated Positive{+%s, -%s}, "
+                           "Negative{+%s, -%s} "
                            % (pos_to_add, pos_to_remove,
                               neg_to_add, neg_to_remove)
             })
@@ -599,6 +637,16 @@ class IqrSearch (flask.Blueprint, Configurable):
             """
             with self.get_current_iqr_session() as iqrs:
                 iqrs.reset()
+
+                # Clearing working directory
+                if os.path.isdir(self._iqr_work_dirs[iqrs.uuid]):
+                    shutil.rmtree(self._iqr_work_dirs[iqrs.uuid])
+                safe_create_dir(self._iqr_work_dirs[iqrs.uuid])
+
+                # Clearing example data + descriptors
+                self._iqr_example_data[iqrs.uuid].clear()
+                self._iqr_example_pos_descr[iqrs.uuid].clear()
+
                 return flask.jsonify({
                     "success": True
                 })
@@ -623,23 +671,31 @@ class IqrSearch (flask.Blueprint, Configurable):
                 "uids": all_ids
             })
 
+    def __del__(self):
+        for wdir in self._iqr_work_dirs.values():
+            if os.path.isdir(wdir):
+                shutil.rmtree(wdir)
+
     def get_config(self):
         return {
             'name': self.name,
             'url_prefix': self.url_prefix,
             'working_directory': self._working_dir,
             'data_set': plugin.to_plugin_config(self._data_set),
-            'descr_generator': plugin.to_plugin_config(self._descriptor_generator),
+            'descr_generator':
+                plugin.to_plugin_config(self._descriptor_generator),
             'nn_index': plugin.to_plugin_config(self._nn_index),
             'rel_index_config': self._rel_index_config,
             'descriptor_factory': self._descr_elem_factory.get_config(),
         }
 
     def register_blueprint(self, blueprint, **options):
-        """ Add sub-blueprint to a blueprint. """
+        """ Add sub-blueprint to a blueprint.
+        :param blueprint: Nested blueprint instance to register.
+        """
         # Defer registration of blueprint until after this blueprint has been
-        # registered. Needed to do this because of a bad thing that happens that
-        # I don't remember any more.
+        # registered. Needed to do this because of a bad thing that happens
+        # that I don't remember any more.
         def deferred(state):
             if blueprint.url_prefix:
                 blueprint.url_prefix = self.url_prefix + blueprint.url_prefix
@@ -648,10 +704,6 @@ class IqrSearch (flask.Blueprint, Configurable):
             state.app.register_blueprint(blueprint, **options)
 
         self.record(deferred)
-
-    @property
-    def log(self):
-        return logging.getLogger("smqtk.IQRSearch(%s)" % self.name)
 
     @property
     def work_dir(self):
@@ -671,14 +723,14 @@ class IqrSearch (flask.Blueprint, Configurable):
         with self._iqr_controller:
             sid = flask.session.sid
             if not self._iqr_controller.has_session_uuid(sid):
-                sid_work_dir = osp.join(self.work_dir, sid)
-
-                iqr_sess = IqrSession(sid_work_dir, self._descriptor_generator,
-                                      self._nn_index,
-                                      self._pos_seed_neighbors,
+                iqr_sess = IqrSession(self._pos_seed_neighbors,
                                       self._rel_index_config,
-                                      self._descr_elem_factory,
                                       sid)
                 self._iqr_controller.add_session(iqr_sess, sid)
+                self._iqr_work_dirs[iqr_sess.uuid] = \
+                    osp.join(self.work_dir, sid)
+                safe_create_dir(self._iqr_work_dirs[iqr_sess.uuid])
+                self._iqr_example_data[iqr_sess.uuid] = {}
+                self._iqr_example_pos_descr[iqr_sess.uuid] = {}
 
             return self._iqr_controller.get_session(sid)

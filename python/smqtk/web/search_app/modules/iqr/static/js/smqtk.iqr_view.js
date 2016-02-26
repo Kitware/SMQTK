@@ -107,8 +107,8 @@ IqrView.prototype.construct_view = function (container) {
             error: function(jqXHR, textStatus, errorThrown) {
                 bar.on("ERROR: "+errorThrown);
                 bar.stop_active("danger");
-                alert_error("Error during FID upload POST: "
-                            + textStatus);
+                alert_error("Error during file upload: "
+                            + jqXHR.responseText);
             }
         });
     });

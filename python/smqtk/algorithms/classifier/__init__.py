@@ -202,14 +202,12 @@ class SupervisedClassifier (Classifier):
         If a model is already loaded, we will raise an exception in order to
         prevent accidental overwrite.
 
-        NOTE:
-            This abstract method provides generalized error checking and
-            should be called via ``super`` in implementing methods.
+        NOTE: This abstract method provides generalized error checking and
+        should be called via ``super`` in implementing methods.
 
         :param positive_classes: Dictionary mapping positive class labels to
             iterables of DescriptorElement training examples.
-        :type positive_classes:
-            dict[collections.Hashable,
+        :type positive_classes: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
         :param negatives: Iterable of negative DescriptorElement examples.

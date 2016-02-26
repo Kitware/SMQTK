@@ -9,6 +9,7 @@ from smqtk.utils.distance_kernel import (
     compute_distance_matrix
 )
 from smqtk.utils.distance_functions import histogram_intersection_distance
+from smqtk.utils.parallel import parallel_map
 
 try:
     import svm
@@ -51,7 +52,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         return svm and svmutil
 
-    def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1):
+    def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1,
+                 multiprocess_fetch=False, cores=None):
         """
         Initialize a new or existing index.
 
@@ -71,11 +73,22 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             make this value too large.
         :type autoneg_select_ratio: int
 
+        :param multiprocess_fetch: Use multiprocessing vs threading when
+            fetching descriptor vectors during ``build_index``. Default is
+            False.
+        :type multiprocess_fetch: bool
+
+        :param cores: Cores to use when performing parallel operations. A value
+            of None means to use all available cores.
+        :type cores: int | None
+
         """
         super(LibSvmHikRelevancyIndex, self).__init__()
 
-        self._descr_cache_fp = descr_cache_filepath
-        self._autoneg_select_ratio = int(autoneg_select_ratio)
+        self.descr_cache_fp = descr_cache_filepath
+        self.autoneg_select_ratio = int(autoneg_select_ratio)
+        self.multiprocess_fetch = multiprocess_fetch
+        self.cores = cores
 
         # Descriptor elements in this index
         self._descr_cache = []
@@ -88,14 +101,14 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # # Distance kernel matrix (symmetric)
         # self._dist_kernel = None
 
-        if self._descr_cache_fp and osp.exists(self._descr_cache_fp):
-            with open(self._descr_cache_fp, 'rb') as f:
+        if self.descr_cache_fp and osp.exists(self.descr_cache_fp):
+            with open(self.descr_cache_fp, 'rb') as f:
                 descriptors = cPickle.load(f)
                 # Temporarily unsetting so we don't cause an extra write inside
                 # build_index.
-                self._descr_cache_fp = None
+                self.descr_cache_fp = None
                 self.build_index(descriptors)
-                self._descr_cache_fp = descr_cache_filepath
+                self.descr_cache_fp = descr_cache_filepath
 
     @staticmethod
     def _gen_w1_weight(num_pos, num_neg):
@@ -112,8 +125,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
     def get_config(self):
         return {
-            "descr_cache_filepath": self._descr_cache_fp,
-            'autoneg_select_ratio': self._autoneg_select_ratio,
+            "descr_cache_filepath": self.descr_cache_fp,
+            'autoneg_select_ratio': self.autoneg_select_ratio,
+            'multiprocess_fetch': self.multiprocess_fetch,
+            'cores': self.cores,
         }
 
     def count(self):
@@ -138,20 +153,30 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         self._descr2index = {}
         # matrix for creating distance kernel
         self._descr_matrix = []
-        for i, d in enumerate(descriptors):
-            v = d.vector()
+
+        def get_vector(d):
+            return d, d.vector()
+
+        vector_iter = parallel_map(get_vector, descriptors,
+                                   name='vector_iter',
+                                   use_multiprocessing=self.multiprocess_fetch,
+                                   cores=self.cores,
+                                   ordered=True)
+
+        for i, (d, v) in enumerate(vector_iter):
             self._descr_cache.append(d)
             self._descr_matrix.append(v)
             self._descr2index[tuple(v)] = i
         self._descr_matrix = numpy.array(self._descr_matrix)
-        # TODO: For when we optimize SVM SV kernel computation
+
+        # TODO: (?) For when we optimize SVM SV kernel computation
         # self._dist_kernel = \
         #    compute_distance_kernel(self._descr_matrix,
         #                            histogram_intersection_distance2,
         #                            row_wise=True)
 
-        if self._descr_cache_fp:
-            with open(self._descr_cache_fp, 'wb') as f:
+        if self.descr_cache_fp:
+            with open(self.descr_cache_fp, 'wb') as f:
                 cPickle.dump(self._descr_cache, f, -1)
 
     def rank(self, pos, neg):
@@ -197,7 +222,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         neg_autoselect = set()
         if not neg:
             self._log.info("Auto-selecting negative examples. (%d per positive)",
-                           self._autoneg_select_ratio)
+                           self.autoneg_select_ratio)
             # ``train_vectors`` only composed of positive examples at this point
             for p in pos:
                 # where d is the distance vector to descriptor elements in cache
@@ -211,7 +236,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 for i in xrange(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i
-                        if len(m_set) > self._autoneg_select_ratio:
+                        if len(m_set) > self.autoneg_select_ratio:
                             if m_val in m_set:
                                 del m_set[m_val]
                         m_val = min(m_set)

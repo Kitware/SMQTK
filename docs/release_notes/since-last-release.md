@@ -21,6 +21,11 @@ Documentation
   * Added example of setting up a NearestNeighborServiceServer with live-reload
     enabled and how to add/process incremental ingests.
 
+IQR
+
+  * Revised IqrSession class for generalized use (pruned down attributes to
+    what is needed). Fixed IqrSearchApp due to changes.
+
 Tools / Scripts
 
   * Added CLI script for hash code generation and output to file. This script
@@ -50,6 +55,11 @@ Utilities
 
   * Renamed "merge_config" to "merge_dict" and moved it to the smqtk.utils
     module level.
+
+Web
+
+  * Added IQR mostly-RESTful service application. Comes with companion text
+    file outlining web API.
 
 
 Fixes since v0.3.0

@@ -272,6 +272,9 @@ def default_config():
         "stored_http_auth": {
             'name': None,
             'pass': None,
+        },
+        "parallel": {
+            "cores": None,
         }
     }
 
@@ -281,10 +284,18 @@ def extend_parser(parser):
     :type parser: argparse.ArgumentParser
     :rtype: argparse.ArgumentParser
     """
+    parser.add_argument('-s', '--report-size',
+                        action='store_true', default=False,
+                        help="Report the number of elements that would be "
+                             "scanned by the ElasticSearch query generated "
+                             "and then exit.")
+
     g_output = parser.add_argument_group("Output")
     g_output.add_argument('-d', '--output-dir',
+                          metavar='PATH',
                           help='Output image directory path.')
     g_output.add_argument('-l', '--file-list',
+                          metavar='PATH',
                           help='Path to an output CSV file where downloaded '
                                'files are recorded along with their '
                                'associated CDR identifier as SHA1 checksum.')
@@ -315,6 +326,9 @@ def main():
     """
     args, config = utility_main_helper(default_config, description,
                                        extend_parser)
+    log = logging.getLogger(__name__)
+
+    report_size = args.report_size
 
     #
     # Check config properties
@@ -329,9 +343,9 @@ def main():
             raise ValueError("Image type '%s' is not a valid image MIMETYPE "
                              "sub-type." % t)
 
-    if args.output_dir is None:
+    if not report_size and args.output_dir is None:
         raise ValueError("Require an output directory!")
-    if args.file_list is None:
+    if not report_size and args.file_list is None:
         raise ValueError("Require an output CSV file path!")
 
     #
@@ -359,8 +373,12 @@ def main():
 
     q = cdr_images_after(es, config['elastic_search']['index'],
                          config['image_types'])
-    # print q.execute().hits.total
-    fetch_cdr_query_images(q, 'test_output', 'test_output.csv',
+
+    if report_size:
+        log.info("Query Size: %d", q[0:0].execute().hits.total)
+        exit(0)
+
+    fetch_cdr_query_images(q, args.output_dir, args.file_list,
                            stored_http_auth=http_auth)
 
 

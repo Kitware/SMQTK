@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 
 ES Compatibility: 1.x
@@ -10,13 +11,17 @@ import os
 
 import certifi
 import elasticsearch
+import elasticsearch.helpers
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 import requests
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import (
+    report_progress,
+    utility_main_helper,
+)
 from smqtk.utils.file_utils import safe_create_dir
 from smqtk.utils.parallel import parallel_map
 
@@ -43,20 +48,7 @@ if '.jpe' in mimetypes.types_map:
 #     return now
 
 
-ES_INSTANCE = 'CHANGE ME'
-ES_USER = 'CHANGE ME'
-ES_PASS = 'CHANGE ME'
-
-
-es = elasticsearch.Elasticsearch(
-    ES_INSTANCE,
-    http_auth=(ES_USER, ES_PASS),
-    use_ssl=True, verify_certs=True,
-    ca_certs=certifi.where(),
-)
-
-
-def cdr_images_after(es_instance, image_types, after_date=None,
+def cdr_images_after(es_instance, index, image_types, after_date=None,
                      agg_img_types=False, domain='weapons'):
     """
     Return query and return an iterator over ES entries.
@@ -66,6 +58,9 @@ def cdr_images_after(es_instance, image_types, after_date=None,
 
     :param es_instance: elasticsearch.Elasticsearch instance.
     :type es_instance:
+
+    :param index: ElasticSearch index to draw from.
+    :type index: str
 
     :param image_types: List of image content type suffixes
         (e.g. ['png', 'jpeg'])
@@ -88,7 +83,7 @@ def cdr_images_after(es_instance, image_types, after_date=None,
 
     base_search = elasticsearch_dsl.Search()\
         .using(es_instance)\
-        .index('memex-domains')\
+        .index(index)\
         .fields(['_id', '_timestamp', '_type',
                  'content_type', 'obj_original_url', 'obj_stored_url',
                  'timestamp', 'version',
@@ -133,7 +128,8 @@ def cdr_images_after(es_instance, image_types, after_date=None,
     return q
 
 
-def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
+def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
+                           stored_http_auth=None):
     """
     Queries for and saves image content underneath a nested directory from the
     given output directory.
@@ -149,6 +145,14 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
     :param scan_record: Path to the file to write scan records to. We write out
         in CSV format (',' delimiter).
 
+    :param cores: number of multiprocessing cores to use for asynchronous data
+        downloading.
+
+    :param stored_http_auth: Optional HTTP authentication username, password
+        pair tuple to use when fetching the stored image data. This will not be
+        applied when fetching from the original data URL.
+    :type stored_http_auth: None | (str, str)
+
     """
     log = logging.getLogger(__name__)
     log.info("Starting CDR image fetch")
@@ -158,7 +162,7 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
 
     def try_download(uri):
         try:
-            r = requests.get(uri)
+            r = requests.get(uri, auth=stored_http_auth)
             if r.ok:
                 return True, r
         except Exception, ex:
@@ -170,7 +174,7 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
         obj_stored_url = meta['fields']['obj_stored_url'][0]
         obj_original_url = meta['fields']['obj_original_url'][0]
 
-        c_ext = m.guess_extension(c_type)
+        c_ext = m.guess_extension(c_type, strict=False)
         save_dir = os.path.abspath(os.path.expanduser(
             os.path.join(output_dir, meta['index'], meta['doc_type'])
         ))
@@ -208,26 +212,29 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
         return meta['id'], save_path, d.uuid()
 
     def iter_scan_meta():
-        # for h in q.scan():
-        #     # noinspection PyProtectedMember
-        #     yield h.meta._d_
-
         q_scan = q
-        timed_out = False
+        restart = True
         i = 0
-        while timed_out:
-            timed_out = False
+        while restart:
+            restart = False
             try:
+                log.debug("Starting scan from index %d", i)
                 for h in q_scan.scan():
                     # noinspection PyProtectedMember
                     yield h.meta._d_
                     # Index of the next element to yield if scan fails in next
                     # iteration.
                     i += 1
-            except elasticsearch.ConnectionTimeout:
-                log.warning("ElasticSearch timed out, restarting from index "
-                            "%d", i)
-                timed_out = True
+            except elasticsearch.ConnectionTimeout, ex:
+                log.warning("ElasticSearch timed out (error = %s)", str(ex))
+                restart = True
+                log.debug("Restarting query from index %d", i)
+                q_scan = q_scan[i:]
+            except elasticsearch.helpers.ScanError, ex:
+                log.warning("ElasticSearch scan scan exception (error = %s)",
+                            str(ex))
+                restart = True
+                log.debug("Restarting query from index %d", i)
                 q_scan = q_scan[i:]
 
     log.info("Initializing image download/record parallel iterator")
@@ -253,6 +260,38 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
         report_progress(log.debug, rp_state, 0)
 
 
+def default_config():
+    return {
+        "image_types": ['jpeg', 'png', 'tiff'],
+        "elastic_search": {
+            "instance_address": "CHANGEME",
+            "index": "CHANGEME",
+            "username": "CHANGEME",
+            "password": "CHANGEME",
+        },
+        "stored_http_auth": {
+            'name': None,
+            'pass': None,
+        }
+    }
+
+
+def extend_parser(parser):
+    """
+    :type parser: argparse.ArgumentParser
+    :rtype: argparse.ArgumentParser
+    """
+    g_output = parser.add_argument_group("Output")
+    g_output.add_argument('-d', '--output-dir',
+                          help='Output image directory path.')
+    g_output.add_argument('-l', '--file-list',
+                          help='Path to an output CSV file where downloaded '
+                               'files are recorded along with their '
+                               'associated CDR identifier as SHA1 checksum.')
+
+    return parser
+
+
 def main():
     description = """
     Utility for fetching remotely stored image data from the CDR ElasticSearch
@@ -262,13 +301,68 @@ def main():
 
         <output_dir>/<index>/<_type>/<id>.<type_extension>
 
+    Configuration Notes:
+
+        image_types
+            This is a list of image MIMETYPE suffixes to include when querying
+            the ElasticSearch instance. If all types should be considered, this
+            should be set to an empty list.
+
+        stored_http_auth
+            This is only used for stored-data URLs and only if both a username
+            and password is given.
+
     """
+    args, config = utility_main_helper(default_config, description,
+                                       extend_parser)
+
+    #
+    # Check config properties
+    #
+    m = mimetypes.MimeTypes()
+    # non-strict types (see use of ``guess_extension`` above)
+    m_img_types = set(m.types_map_inv[0].keys() + m.types_map_inv[1].keys())
+    if not isinstance(config['image_types'], list):
+        raise ValueError("The 'image_types' property was not set to a list.")
+    for t in config['image_types']:
+        if ('image/' + t) not in m_img_types:
+            raise ValueError("Image type '%s' is not a valid image MIMETYPE "
+                             "sub-type." % t)
+
+    if args.output_dir is None:
+        raise ValueError("Require an output directory!")
+    if args.file_list is None:
+        raise ValueError("Require an output CSV file path!")
+
+    #
+    # Initialize ElasticSearch stuff
+    #
+    es_auth = None
+    if config['elastic_search']['username'] and config['elastic_search']['password']:
+        es_auth = (config['elastic_search']['username'],
+                   config['elastic_search']['password'])
+
+    es = elasticsearch.Elasticsearch(
+        config['elastic_search']['instance_address'],
+        http_auth=es_auth,
+        use_ssl=True, verify_certs=True,
+        ca_certs=certifi.where(),
+    )
+
+    #
+    # Query and Run
+    #
+    http_auth = None
+    if config['stored_http_auth']['name'] and config['stored_http_auth']['pass']:
+        http_auth = (config['stored_http_auth']['name'],
+                     config['stored_http_auth']['pass'])
+
+    q = cdr_images_after(es, config['elastic_search']['index'],
+                         config['image_types'])
+    # print q.execute().hits.total
+    fetch_cdr_query_images(q, 'test_output', 'test_output.csv',
+                           stored_http_auth=http_auth)
 
 
-from smqtk.utils.bin_utils import logging, initialize_logging
-if not logging.getLogger('smqtk').handlers:
-    initialize_logging(logging.getLogger('smqtk'), logging.DEBUG)
-    initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
-
-q = cdr_images_after(es, ['jpeg', 'png'])
-# fetch_cdr_query_images(q, 'test_output', 'test_output.csv')
+if __name__ == '__main__':
+    main()

@@ -85,13 +85,13 @@ set -u
 #
 
 # Script locations
-script_lsi="scripts/list_ido_solr_images.py"
+script_gci="scripts/get_cdr_images.py"
 script_cmd="scripts/compute_many_descriptors.py"
 script_chc="scripts/compute_hash_codes.py"
 script_cc="scripts/compute_classifications.py"
 
 # Configuration files
-config_lsi="configs/config.list_solr_images.json"
+config_gci="configs/config.get_cdr_images.json"
 config_cmd="configs/config.compute_many_descriptors.json"
 config_chc="configs/config.compute_hash_codes.json"
 config_cc="configs/config.compute_classifications.json"
@@ -146,12 +146,13 @@ t=time.gmtime()
 print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
     Y=t.tm_year, m=t.tm_mon, d=t.tm_mday, H=t.tm_hour, M=t.tm_min, S=t.tm_sec
 )")"
+now='2016-02-29T20:35:55Z'
 
 #
 # Check configuration
 #
-if [ ! -f "${script_lsi}" ]; then
-    error "Could not find '${script_lsi}' script"
+if [ ! -f "${script_gci}" ]; then
+    error "Could not find '${script_gci}' script"
     exit 1
 elif [ ! -f "${script_cmd}" ]; then
     error "Could not find '${script_cmd}' script"
@@ -162,8 +163,8 @@ elif [ ! -f "${script_chc}" ]; then
 elif [ ! -f "${script_cc}" ]; then
     error "Could not find '${script_cc}' script"
     exit 1
-elif [ ! -f "${config_lsi}" ]; then
-    error "Could not find '${config_lsi}' configuration file"
+elif [ ! -f "${config_gci}" ]; then
+    error "Could not find '${config_gci}' configuration file"
     exit 1
 elif [ ! -f "${config_cmd}" ]; then
     error "Could not find '${config_cmd}' configuration file"
@@ -186,6 +187,8 @@ complete_file=".complete"
 
 # List of image files on remote server to compute over
 remote_file_list="${work_dir}/file_list.remote.txt"
+# CDR fetch records
+cdr_fetch_record="${work_dir}/cdr_fetch_record.csv"
 # List of image files locally to compute over after transfer
 local_file_list="${work_dir}/file_list.local.txt"
 # CSV mapping files descriptors were computed for with their SHA1/UUID values.
@@ -201,11 +204,19 @@ classifications_data="${work_dir}/classifications.data.csv"
 #
 # Find last run timestamp if one wasn't manually provided and there is one
 #
+log "run_dir = '$run_dir'"
+log "now = '${now}'"
+
 if [ -z "${entries_after}" ]
 then
-    if [ -n "$(ls "${run_dir}")" ]
+    # if grep doesn't match anything, it returns a non-zero code
+    set +e
+    last_run="$(ls "${run_dir}" | grep -v "${now}" | tail -n1)"
+    set -e
+    log "last run: '${last_run}'"
+
+    if [ -n "${last_run}" ]
     then
-        entries_after="$(ls "${run_dir}" | tail -n1)"
         # Only use this directory as a time stamp if it completed fully,
         # exiting if it did not
         if [ ! -f "${run_dir}/${entries_after}/${complete_file}" ]
@@ -214,65 +225,35 @@ then
             error "(missing '$entries_after/$complete_file')"
             exit 1
         fi
+        entries_after="${last_run}"
     else
+        log "No previous runs"
         entries_after="*"
     fi
 fi
+log "Fetching Entries After: '${entries_after}'"
 
 mkdir -p "${work_dir}"
 touch "${work_log}"  # Start log recording
 
-#
-# Gather images from Solr instance
-#
-if [ ! -f "${remote_file_list}" ]; then
-    log "Getting new remote image paths after_time='${entries_after}' before_time='${now}'"
-    log_remote_image_listing="${work_dir}/log.0.list_remote_files.txt"
 
-    "${script_lsi}" -v -c "${config_lsi}" -p "${remote_file_list}" \
-                    --after-time "${entries_after}" \
-                    --before-time "${now}" \
-                    2>&1 | tee "${log_remote_image_listing}"
+#
+# Get images from new CDR entries
+#
+if [ ! -f "${local_file_list}" ]
+then
+    log "Fetching new image content from CDR"
 
-    if [ ! -s "${remote_file_list}" ]; then
-        log "No new image files since ${entries_after}"
-        rm "${remote_file_list}"
-        exit 0
-    fi
+    log_gci="${work_dir}/log.1.gci.txt"
+
+    "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
+                    -l "${cdr_fetch_record}" \
+                    2>&1 | tee "${log_gci}"
+
+    # Transform record file into local file image list
+    cat "${cdr_fetch_record}" | cut -d, -f2 >"${local_file_list}"
 fi
 
-if [ ! -f "${local_file_list}" ]; then
-    log "Gathering images from Solr"
-    log_remote_local_rsync="${work_dir}/log.1.rsync.txt"
-
-    # Some files might not transfer or paths in index might have been incorrect
-    # (its happened before). Will check for actually transferred files right
-    # after the rsync.
-    set +e
-    rsync -PRvh --size-only --files-from="${remote_file_list}" \
-          ${image_server_username}@${image_server}:/ \
-          "${image_transfer_directory}" \
-          2>&1 | tee "${log_remote_local_rsync}"
-    set -e
-
-    log "Finding transferred files..."
-    python -c "
-import os
-base=os.path.abspath(os.path.expanduser('${image_transfer_directory}'))
-with open('${remote_file_list}') as pth_f:
-    for l in pth_f:
-        pth = l.strip().lstrip('/')
-        local = os.path.join(base, pth)
-        if os.path.isfile(local):
-            print local
-    " >"${local_file_list}"
-
-    if [ ! -s "${local_file_list}" ]; then
-        log "Failed to transfer any remote files locally"
-        rm "${local_file_list}"
-        exit 1
-    fi
-fi
 
 #
 # Compute descriptors

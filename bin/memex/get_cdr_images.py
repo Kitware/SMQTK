@@ -61,6 +61,9 @@ def cdr_images_after(es_instance, image_types, after_date=None,
     """
     Return query and return an iterator over ES entries.
 
+    Results yielded in ascending CDR insertion order (i.e. FIFO). This should
+    cause slicing to be stable.
+
     :param es_instance: elasticsearch.Elasticsearch instance.
     :type es_instance:
 
@@ -121,7 +124,7 @@ def cdr_images_after(es_instance, image_types, after_date=None,
 
     q = base_search\
         .filter(f)\
-        .sort({'_timestamp': {"order": "desc"}})
+        .sort({'_timestamp': {"order": "asc"}})
 
     if agg_img_types:
         log.debug("Aggregating image content type information")
@@ -205,9 +208,27 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None):
         return meta['id'], save_path, d.uuid()
 
     def iter_scan_meta():
-        for h in q.scan():
-            # noinspection PyProtectedMember
-            yield h.meta._d_
+        # for h in q.scan():
+        #     # noinspection PyProtectedMember
+        #     yield h.meta._d_
+
+        q_scan = q
+        timed_out = False
+        i = 0
+        while timed_out:
+            timed_out = False
+            try:
+                for h in q_scan.scan():
+                    # noinspection PyProtectedMember
+                    yield h.meta._d_
+                    # Index of the next element to yield if scan fails in next
+                    # iteration.
+                    i += 1
+            except elasticsearch.ConnectionTimeout:
+                log.warning("ElasticSearch timed out, restarting from index "
+                            "%d", i)
+                timed_out = True
+                q_scan = q_scan[i:]
 
     log.info("Initializing image download/record parallel iterator")
     img_dl_records = parallel_map(
@@ -245,8 +266,9 @@ def main():
 
 
 from smqtk.utils.bin_utils import logging, initialize_logging
-initialize_logging(logging.getLogger('smqtk'), logging.DEBUG)
-initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
+if not logging.getLogger('smqtk').handlers:
+    initialize_logging(logging.getLogger('smqtk'), logging.DEBUG)
+    initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
 
 q = cdr_images_after(es, ['jpeg', 'png'])
-fetch_cdr_query_images(q, 'test_output', 'test_output.csv')
+# fetch_cdr_query_images(q, 'test_output', 'test_output.csv')

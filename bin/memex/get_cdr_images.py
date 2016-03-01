@@ -99,8 +99,9 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
     if elasticsearch_dsl.VERSION[0] == 2:
         # ES 2.x version
         f = Q('term', version='2.0') \
-            & Q('term', content_type='image') \
-            & Q('terms', content_type=image_types)
+            & Q('term', content_type='image')
+        if image_types:
+            f &= Q('terms', content_type=image_types)
         if domain:
             log.debug("Constraining _type: %s", domain)
             f &= Q('term', _type=domain)
@@ -111,8 +112,9 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         # ES 1.x version
         from elasticsearch_dsl.filter import F
         f = F('term', version='2.0') \
-            & F('term', content_type='image') \
-            & F('terms', content_type=image_types)
+            & F('term', content_type='image')
+        if image_types:
+            f &= F('terms', content_type=image_types)
         if domain:
             log.debug("Constraining _type: %s", domain)
             f &= F('term', _type=domain)

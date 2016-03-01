@@ -387,15 +387,15 @@ def main():
         m = re.match('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z',
                      after_ts)
         if m is None:
-            raise ValueError("Given timestamp not in correct format: '%s'",
-                             after_ts)
+            raise ValueError("Given timestamp not in correct format: '%s'"
+                             % after_ts)
         after_ts = datetime.datetime(*[int(e) for e in m.groups()])
 
     q = cdr_images_after(es, config['elastic_search']['index'],
                          config['image_types'], after_ts)
 
+    log.info("Query Size: %d", q[0:0].execute().hits.total)
     if report_size:
-        log.info("Query Size: %d", q[0:0].execute().hits.total)
         exit(0)
 
     fetch_cdr_query_images(q, args.output_dir, args.file_list,

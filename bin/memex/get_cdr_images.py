@@ -180,6 +180,11 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
         obj_original_url = meta['fields']['obj_original_url'][0]
 
         c_ext = m.guess_extension(c_type, strict=False)
+        if c_ext is None:
+            log.warn("Guessed 'None' extension for content-type '%s', "
+                     "skipping.", c_type)
+            return None
+
         save_dir = os.path.abspath(os.path.expanduser(
             os.path.join(output_dir, meta['index'], meta['doc_type'])
         ))

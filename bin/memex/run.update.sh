@@ -244,10 +244,10 @@ then
     then
         # Only use this directory as a time stamp if it completed fully,
         # exiting if it did not
-        if [ ! -f "${run_dir}/${entries_after}/${complete_file}" ]
+        if [ ! -f "${run_dir}/${last_run}/${complete_file}" ]
         then
             error "Previous run did not fully complete (missing completion marker)"
-            error "(missing '$entries_after/$complete_file')"
+            error "(missing '${run_dir}/${last_run}/${complete_file}')"
             exit 1
         fi
         entries_after="${last_run}"
@@ -274,7 +274,7 @@ then
     after_time_opt=""
     if [ "${entries_after}" != "*" ]
     then
-        after_time_opt="--after-time '${entries_after}'"
+        after_time_opt="--after-time ${entries_after}"
     fi
 
     "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
@@ -341,22 +341,22 @@ print os.path.relpath('${hash2uuids_index}', '$(dirname "${base_hash2uuids}")')
 ln -sf "${rel_path}" "${base_hash2uuids}"
 
 
+##
+## Compute classifications
+##
+#if [ ! -s "${classifications_data}" ]; then
+#    log "Computing classifications"
+#    log_cc="${work_dir}/log.4.cc.txt"
 #
-# Compute classifications
-#
-if [ ! -s "${classifications_data}" ]; then
-    log "Computing classifications"
-    log_cc="${work_dir}/log.4.cc.txt"
-
-    "${script_cc}" -v -c "${config_cc}" --uuids-list "${uuids_list}" \
-                   --csv-header "${classifications_header}" \
-                   --csv-data "${classifications_data}" \
-                   2>&1 | tee "${log_cc}"
-fi
+#    "${script_cc}" -v -c "${config_cc}" --uuids-list "${uuids_list}" \
+#                   --csv-header "${classifications_header}" \
+#                   --csv-data "${classifications_data}" \
+#                   2>&1 | tee "${log_cc}"
+#fi
 
 
 # TODO: (?) Fit new ball tree
 
 
-log Marking successful completeion
+log "Marking successful completion"
 touch "${work_dir}/${complete_file}"

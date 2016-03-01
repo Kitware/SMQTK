@@ -56,10 +56,28 @@ Standard return message: {
         sid=<session_id>
     }
 
+[PUT] /adjudicate
+    Update the internal adjudication state given lists of new positive/negative
+    UUIDs and now-neutral UUIDs. All are optionally specified.
+
+    Form Args:
+        sid=<session_id>
+        pos=[element_id, ...]
+        neg=[element_id, ...]
+        neutral=[element_id, ...]
+
+    Returns {
+        ...
+        sid=<session_id>
+    }
+
 [PUT] /refine
     Update working index and create/refine result ranking based on given
-    positive and negative adjudication UUIDs. (Flask SSE for progress status in
-    the future?).
+    positive and negative adjudication UUIDs. Adjudication given to this
+    function is absolute (does not stack with previous refines/adjudications,
+    but overwrites).
+
+    (Flask SSE for progress status in the future?)
 
     Form Args:
         sid=<session_id>

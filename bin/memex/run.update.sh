@@ -360,6 +360,12 @@ with open('${remote_file_list}') as pth_f:
     fi
 fi
 
+if [ "$(cat "${local_file_list}" | wc -l)" -eq 0 ]
+then
+    error "No local files downloaded"
+    exit 1
+fi
+
 
 #
 # Compute descriptors

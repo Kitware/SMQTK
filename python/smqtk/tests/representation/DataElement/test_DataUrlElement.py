@@ -23,7 +23,7 @@ if internet_available:
 
     # Public domain rose image
     EXAMPLE_URL = \
-        'http://www.public-domain-photos.com/free-stock-photos-4/flowers/yellow-rose-3.jpg'
+        'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png'
 
 
     class TestDataUrlElement (unittest.TestCase):

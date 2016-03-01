@@ -85,19 +85,24 @@ set -u
 #
 
 # Script locations
+script_gci="scripts/get_cdr_images.py"
 script_lsi="scripts/list_ido_solr_images.py"
 script_cmd="scripts/compute_many_descriptors.py"
 script_chc="scripts/compute_hash_codes.py"
 script_cc="scripts/compute_classifications.py"
 
 # Configuration files
-config_lsi="configs/config.list_solr_images.json"
+config_gci="configs/config.get_cdr_images.json"
+config_lsi="configs/config.list_ido_solr_images.json"
 config_cmd="configs/config.compute_many_descriptors.json"
 config_chc="configs/config.compute_hash_codes.json"
 config_cc="configs/config.compute_classifications.json"
 
 # Base directory for intermediate and result files
 run_dir="runs"
+
+# Batch size for descriptor computation
+cmd_batch_size=256
 
 # Server where image files are located based on indexed paths in Solr instance
 image_server="imagecat.dyndns.org"
@@ -115,6 +120,11 @@ entries_after=  # none, use run directory logic
 # codes. The output index will include the content of this base. This may be
 # empty to not include a base index.
 base_hash2uuids="models/lsh.hash2uuid.pickle"
+
+# We will either get images from the configured CDR location or the paired Solr
+# instance and file host.
+# Valid values: "cdr" | "solr"
+transfer_method="cdr"
 
 
 ##################################
@@ -146,12 +156,38 @@ t=time.gmtime()
 print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
     Y=t.tm_year, m=t.tm_mon, d=t.tm_mday, H=t.tm_hour, M=t.tm_min, S=t.tm_sec
 )")"
+set +u
+if [ -n "$1" ]
+then
+    log "Manually specified time entry / run-dir: '$1'"
+    now="$1"
+    # Checking timestamp format validity
+    set +e
+    python -c """
+import re
+m = re.match('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', '$1')
+if m is None:
+    exit(1)
+exit(0)
+"""
+    if [ "$?" -eq 1 ]
+    then
+        error "Manual entry of incorrect timestamp format."
+        exit 1
+    fi
+    set -e
+fi
+set -u
+
 
 #
 # Check configuration
 #
-if [ ! -f "${script_lsi}" ]; then
-    error "Could not find '${script_lsi}' script"
+if [ "${transfer_method}" = "cdr" -a ! -f "${script_gci}" ]; then
+    error "Could not find '${script_gci}' script"
+    exit 1
+elif [ "${transfer_method}" = "solr" -a ! -f "${script_lsi}" ]; then
+    error "Count not find '${script_lsi}' script"
     exit 1
 elif [ ! -f "${script_cmd}" ]; then
     error "Could not find '${script_cmd}' script"
@@ -162,7 +198,10 @@ elif [ ! -f "${script_chc}" ]; then
 elif [ ! -f "${script_cc}" ]; then
     error "Could not find '${script_cc}' script"
     exit 1
-elif [ ! -f "${config_lsi}" ]; then
+elif [ "${transfer_method}" = "cdr" -a ! -f "${config_gci}" ]; then
+    error "Could not find '${config_gci}' configuration file"
+    exit 1
+elif [ "${transfer_method}" = "solr" -a ! -f "${config_lsi}" ]; then
     error "Could not find '${config_lsi}' configuration file"
     exit 1
 elif [ ! -f "${config_cmd}" ]; then
@@ -184,8 +223,10 @@ work_log="${work_dir}/log.update.txt"
 # File marker of a complete run
 complete_file=".complete"
 
-# List of image files on remote server to compute over
+# List of image files on remote server to compute over (Solr transfer ONLY)
 remote_file_list="${work_dir}/file_list.remote.txt"
+# CDR fetch records (CDR transfer ONLY)
+cdr_fetch_record="${work_dir}/cdr_fetch_record.csv"
 # List of image files locally to compute over after transfer
 local_file_list="${work_dir}/file_list.local.txt"
 # CSV mapping files descriptors were computed for with their SHA1/UUID values.
@@ -201,62 +242,103 @@ classifications_data="${work_dir}/classifications.data.csv"
 #
 # Find last run timestamp if one wasn't manually provided and there is one
 #
+log "run_dir = '$run_dir'"
+log "now = '${now}'"
+
 if [ -z "${entries_after}" ]
 then
-    if [ -n "$(ls "${run_dir}")" ]
+    # if grep doesn't match anything, it returns a non-zero code
+    set +e
+    last_run="$(ls "${run_dir}" | grep -v "${now}" | tail -n1)"
+    set -e
+    log "last run: '${last_run}'"
+
+    if [ -n "${last_run}" ]
     then
-        entries_after="$(ls "${run_dir}" | tail -n1)"
         # Only use this directory as a time stamp if it completed fully,
         # exiting if it did not
-        if [ ! -f "${run_dir}/${entries_after}/${complete_file}" ]
+        if [ ! -f "${run_dir}/${last_run}/${complete_file}" ]
         then
             error "Previous run did not fully complete (missing completion marker)"
-            error "(missing '$entries_after/$complete_file')"
+            error "(missing '${run_dir}/${last_run}/${complete_file}')"
             exit 1
         fi
+        entries_after="${last_run}"
     else
+        log "No previous runs"
         entries_after="*"
     fi
 fi
+log "Fetching Entries After: '${entries_after}'"
 
 mkdir -p "${work_dir}"
 touch "${work_log}"  # Start log recording
 
+
 #
-# Gather images from Solr instance
+# Get images from source
 #
-if [ ! -f "${remote_file_list}" ]; then
-    log "Getting new remote image paths after_time='${entries_after}' before_time='${now}'"
-    log_remote_image_listing="${work_dir}/log.0.list_remote_files.txt"
+if [ ! -f "${local_file_list}" ]
+then
+    if [ "${transfer_method}" = "cdr" ]
+    then
+        #
+        # CDR source
+        #
+        log "Fetching new image content from CDR"
 
-    "${script_lsi}" -v -c "${config_lsi}" -p "${remote_file_list}" \
-                    --after-time "${entries_after}" \
-                    --before-time "${now}" \
-                    2>&1 | tee "${log_remote_image_listing}"
+        log_gci="${work_dir}/log.1.gci.txt"
 
-    if [ ! -s "${remote_file_list}" ]; then
-        log "No new image files since ${entries_after}"
-        rm "${remote_file_list}"
-        exit 0
-    fi
-fi
+        after_time_opt=""
+        if [ "${entries_after}" != "*" ]
+        then
+            after_time_opt="--after-time ${entries_after}"
+        fi
 
-if [ ! -f "${local_file_list}" ]; then
-    log "Gathering images from Solr"
-    log_remote_local_rsync="${work_dir}/log.1.rsync.txt"
+        "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
+                        -l "${cdr_fetch_record}" ${after_time_opt} \
+                        2>&1 | tee "${log_gci}"
 
-    # Some files might not transfer or paths in index might have been incorrect
-    # (its happened before). Will check for actually transferred files right
-    # after the rsync.
-    set +e
-    rsync -PRvh --size-only --files-from="${remote_file_list}" \
-          ${image_server_username}@${image_server}:/ \
-          "${image_transfer_directory}" \
-          2>&1 | tee "${log_remote_local_rsync}"
-    set -e
+        # Transform record file into local file image list
+        cat "${cdr_fetch_record}" | cut -d, -f2 >"${local_file_list}"
 
-    log "Finding transferred files..."
-    python -c "
+    elif [ "${transfer_method}" = "solr" ]
+    then
+        #
+        # Solr / Server source
+        #
+        log "Gathering images from Solr"
+
+        if [ ! -f "${remote_file_list}" ]
+        then
+            log "Getting new remote image paths after_time='${entries_after}' before_time='${now}'"
+            log_remote_image_listing="${work_dir}/log.0.list_remote_files.txt"
+
+            "${script_lsi}" -v -c "${config_lsi}" -p "${remote_file_list}" \
+                            --after-time "${entries_after}" \
+                            --before-time "${now}" \
+                            2>&1 | tee "${log_remote_image_listing}"
+
+            if [ ! -s "${remote_file_list}" ]; then
+                log "No new image files since ${entries_after}"
+                rm "${remote_file_list}"
+                exit 0
+            fi
+        fi
+
+        log_remote_local_rsync="${work_dir}/log.1.rsync.txt"
+        # Some files might not transfer or paths in index might have been incorrect
+        # (its happened before). Will check for actually transferred files right
+        # after the rsync.
+        set +e
+        rsync -PRvh --size-only --files-from="${remote_file_list}" \
+              ${image_server_username}@${image_server}:/ \
+              "${image_transfer_directory}" \
+              2>&1 | tee "${log_remote_local_rsync}"
+        set -e
+
+        log "Finding transferred files..."
+        python -c "
 import os
 base=os.path.abspath(os.path.expanduser('${image_transfer_directory}'))
 with open('${remote_file_list}') as pth_f:
@@ -265,14 +347,19 @@ with open('${remote_file_list}') as pth_f:
         local = os.path.join(base, pth)
         if os.path.isfile(local):
             print local
-    " >"${local_file_list}"
+        " >"${local_file_list}"
 
-    if [ ! -s "${local_file_list}" ]; then
-        log "Failed to transfer any remote files locally"
-        rm "${local_file_list}"
+        if [ ! -s "${local_file_list}" ]; then
+            log "Failed to transfer any remote files locally"
+            rm "${local_file_list}"
+            exit 1
+        fi
+    else
+        error "Invalid transfer method setting: '${transfer_method}'"
         exit 1
     fi
 fi
+
 
 #
 # Compute descriptors
@@ -282,27 +369,30 @@ if [ ! -f "${cmd_computed_files}" ]; then
     log_cmd="${work_dir}/log.2.cmd.txt"
 
     "${script_cmd}" -v -c "${config_cmd}" -f "${local_file_list}" \
-                    -p "${cmd_computed_files}" \
+                    -p "${cmd_computed_files}" -b "${cmd_batch_size}" \
                     2>&1 | tee "${log_cmd}"
+
+    # Validate the number of descriptors generated (output UUIDs)
+    log "Validating computed descriptor counts"
+    num_input_files=$(cat "${local_file_list}" | wc -l)
+    num_bad_ct=$(grep "Skipping file" "${log_cmd}" | wc -l)
+    num_bad_file=$(grep "Failed to convert" "${log_cmd}" | wc -l)
+    expected_processed=$(echo ${num_input_files} - ${num_bad_ct} - ${num_bad_file} | bc)
+    true_processed=$(cat "${cmd_computed_files}" | wc -l)
+    if [ "${expected_processed}" -ne "${true_processed}" ]
+    then
+        error "Could not account for processed output counts "\
+              "(${expected_processed} != ${true_processed})"
+        exit 1
+    fi
 fi
 
 if [ ! -f "${uuids_list}" ]; then
+    log "Extracting UUIDs from computed descriptors"
     cat "${cmd_computed_files}" | cut -d, -f2 | sort | uniq >"${uuids_list}"
 fi
-
-# Validate the number of descriptors generated (output UUIDs)
-num_input_files=$(cat ${local_file_list} | wc -l)
-num_bad_ct=$(grep "Skipping file" | wc -l)
-num_bad_file=$(grep "Failed to convert" | wc -l)
-expected_processed=$(echo ${num_input_files} - ${num_bad_ct} - ${num_bad_file} | bc)
-true_proccessed=$(cat "${cmd_computed_files}" | wc -l)
-if [ "${expected_processed}" -ne "${true_proccessed}" ]
-then
-    error "Could not account for processed output counts "\
-          "(${expected_processed} != ${true_proccessed})"
-    exit 1
-fi
 num_uuids=$(cat ${uuids_list} | wc -l)
+log "Total UUIDs: ${num_uuids}"
 
 
 #
@@ -326,22 +416,22 @@ print os.path.relpath('${hash2uuids_index}', '$(dirname "${base_hash2uuids}")')
 ln -sf "${rel_path}" "${base_hash2uuids}"
 
 
+##
+## Compute classifications
+##
+#if [ ! -s "${classifications_data}" ]; then
+#    log "Computing classifications"
+#    log_cc="${work_dir}/log.4.cc.txt"
 #
-# Compute classifications
-#
-if [ ! -s "${classifications_data}" ]; then
-    log "Computing classifications"
-    log_cc="${work_dir}/log.4.cc.txt"
-
-    "${script_cc}" -v -c "${config_cc}" --uuids-list "${uuids_list}" \
-                   --csv-header "${classifications_header}" \
-                   --csv-data "${classifications_data}" \
-                   2>&1 | tee "${log_cc}"
-fi
+#    "${script_cc}" -v -c "${config_cc}" --uuids-list "${uuids_list}" \
+#                   --csv-header "${classifications_header}" \
+#                   --csv-data "${classifications_data}" \
+#                   2>&1 | tee "${log_cc}"
+#fi
 
 
 # TODO: (?) Fit new ball tree
 
 
-log Marking successful completeion
+log "Marking successful completion"
 touch "${work_dir}/${complete_file}"

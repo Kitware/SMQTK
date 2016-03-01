@@ -5,9 +5,11 @@ ES Compatibility: 1.x
 
 """
 
+import datetime
 import logging
 import mimetypes
 import os
+import re
 
 import certifi
 import elasticsearch
@@ -66,8 +68,9 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         (e.g. ['png', 'jpeg'])
     :type image_types:
 
-    :param after_date:
-    :type after_date:
+    :param after_date: Optional timestamp to constrain query elements to only
+        those inserted after this time.
+    :type after_date: datetime.datetime
 
     :param agg_img_types: If we should add an aggregation on image types to the
         query (prevents scanning).
@@ -289,6 +292,12 @@ def extend_parser(parser):
                         help="Report the number of elements that would be "
                              "scanned by the ElasticSearch query generated "
                              "and then exit.")
+    parser.add_argument('-a', '--after-time',
+                        default=None,
+                        help="Optional minimum timestamp bounds. "
+                             "Only ElasticSearch entries inserted after this "
+                             "time are allowed. Time should be in UTC."
+                             "Timestamp format like: '2016-01-01T12:00:00Z'")
 
     g_output = parser.add_argument_group("Output")
     g_output.add_argument('-d', '--output-dir',
@@ -329,6 +338,7 @@ def main():
     log = logging.getLogger(__name__)
 
     report_size = args.report_size
+    after_ts = args.after_time
 
     #
     # Check config properties
@@ -371,8 +381,16 @@ def main():
         http_auth = (config['stored_http_auth']['name'],
                      config['stored_http_auth']['pass'])
 
+    if after_ts:
+        m = re.match('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z',
+                     after_ts)
+        if m is None:
+            raise ValueError("Given timestamp not in correct format: '%s'",
+                             after_ts)
+        after_ts = datetime.datetime(*[int(e) for e in m.groups()])
+
     q = cdr_images_after(es, config['elastic_search']['index'],
-                         config['image_types'])
+                         config['image_types'], after_ts)
 
     if report_size:
         log.info("Query Size: %d", q[0:0].execute().hits.total)

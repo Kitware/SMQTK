@@ -99,6 +99,9 @@ config_cc="configs/config.compute_classifications.json"
 # Base directory for intermediate and result files
 run_dir="runs"
 
+# Batch size for descriptor computation
+cmd_batch_size=256
+
 # Server where image files are located based on indexed paths in Solr instance
 image_server="imagecat.dyndns.org"
 # User to SSH into the above machine as
@@ -146,6 +149,29 @@ t=time.gmtime()
 print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
     Y=t.tm_year, m=t.tm_mon, d=t.tm_mday, H=t.tm_hour, M=t.tm_min, S=t.tm_sec
 )")"
+set +u
+if [ -n "$1" ]
+then
+    log "Manually specified time entry / run-dir: '$1'"
+    now="$1"
+    # Checking timestamp format validity
+    set +e
+    python -c """
+import re
+m = re.match('\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z', '$1')
+if m is None:
+    exit(1)
+exit(0)
+"""
+    if [ "$?" -eq 1 ]
+    then
+        error "Manual entry of incorrect timestamp format."
+        exit 1
+    fi
+    set -e
+fi
+set -u
+
 
 #
 # Check configuration
@@ -245,8 +271,14 @@ then
 
     log_gci="${work_dir}/log.1.gci.txt"
 
+    after_time_opt=""
+    if [ "${entries_after}" != "*" ]
+    then
+        after_time_opt="--after-time '${entries_after}'"
+    fi
+
     "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
-                    -l "${cdr_fetch_record}" \
+                    -l "${cdr_fetch_record}" ${after_time_opt} \
                     2>&1 | tee "${log_gci}"
 
     # Transform record file into local file image list
@@ -262,27 +294,30 @@ if [ ! -f "${cmd_computed_files}" ]; then
     log_cmd="${work_dir}/log.2.cmd.txt"
 
     "${script_cmd}" -v -c "${config_cmd}" -f "${local_file_list}" \
-                    -p "${cmd_computed_files}" \
+                    -p "${cmd_computed_files}" -b "${cmd_batch_size}" \
                     2>&1 | tee "${log_cmd}"
+
+    # Validate the number of descriptors generated (output UUIDs)
+    log "Validating computed descriptor counts"
+    num_input_files=$(cat "${local_file_list}" | wc -l)
+    num_bad_ct=$(grep "Skipping file" "${log_cmd}" | wc -l)
+    num_bad_file=$(grep "Failed to convert" "${log_cmd}" | wc -l)
+    expected_processed=$(echo ${num_input_files} - ${num_bad_ct} - ${num_bad_file} | bc)
+    true_processed=$(cat "${cmd_computed_files}" | wc -l)
+    if [ "${expected_processed}" -ne "${true_processed}" ]
+    then
+        error "Could not account for processed output counts "\
+              "(${expected_processed} != ${true_processed})"
+        exit 1
+    fi
 fi
 
 if [ ! -f "${uuids_list}" ]; then
+    log "Extracting UUIDs from computed descriptors"
     cat "${cmd_computed_files}" | cut -d, -f2 | sort | uniq >"${uuids_list}"
 fi
-
-# Validate the number of descriptors generated (output UUIDs)
-num_input_files=$(cat ${local_file_list} | wc -l)
-num_bad_ct=$(grep "Skipping file" | wc -l)
-num_bad_file=$(grep "Failed to convert" | wc -l)
-expected_processed=$(echo ${num_input_files} - ${num_bad_ct} - ${num_bad_file} | bc)
-true_proccessed=$(cat "${cmd_computed_files}" | wc -l)
-if [ "${expected_processed}" -ne "${true_proccessed}" ]
-then
-    error "Could not account for processed output counts "\
-          "(${expected_processed} != ${true_proccessed})"
-    exit 1
-fi
 num_uuids=$(cat ${uuids_list} | wc -l)
+log "Total UUIDs: ${num_uuids}"
 
 
 #

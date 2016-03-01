@@ -251,6 +251,91 @@ class IqrService (SmqtkWebApp):
                                       sid=sid), 404
 
     # PUT
+    def adjudicate(self):
+        """
+        Incrementally update internal adjudication state given new positives
+        and negatives, and optionally IDs for descriptors now marked neutral.
+
+        If the same UUID is present in both positive and negative sets, they
+        cancel each other out (remains neutral).
+
+        Form Args:
+            sid
+                UUID of session to interact with.
+            pos
+                List of descriptor UUIDs that should be marked positive.
+            neg
+                List of descriptor UUIDs that should be marked negative.
+            neutral
+                List of descriptor UUIDs that should not be marked positive or
+                negative. If a UUID present in this list and in either pos or
+                neg will be considered neutral.
+
+        """
+        sid = flask.request.form.get('sid', None)
+        pos_uuids = flask.request.form.get('pos', '[]')
+        neg_uuids = flask.request.form.get('neg', '[]')
+        neu_uuids = flask.request.form.get('neutral', '[]')
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+        elif pos_uuids is None:
+            return make_response_json("No positive UUIDs given"), 400
+
+        pos_uuids = set(json.loads(pos_uuids))
+        neg_uuids = set(json.loads(neg_uuids))
+        neu_uuids = set(json.loads(neu_uuids))
+
+        try:
+            # KeyError if nothing for sid
+            with self.controller.get_session(sid) as iqrs:
+                self._log.debug("Getting the descriptors for UUIDs")
+                try:
+                    pos_d = set(
+                        self.descriptor_index.get_many_descriptors(*pos_uuids)
+                    )
+                    neg_d = set(
+                        self.descriptor_index.get_many_descriptors(*neg_uuids)
+                    )
+                    neu_d = set(
+                        self.descriptor_index.get_many_descriptors(*neu_uuids)
+                    )
+                except KeyError, ex:
+                    err_uuid = str(ex)
+                    self._log.warn(traceback.format_exc())
+                    return make_response_json(
+                        "Descriptor UUID '%s' cannot be found in the "
+                        "configured descriptor index."
+                        % err_uuid,
+                        sid=sid,
+                        uuid=err_uuid,
+                    ), 404
+
+                orig_pos = set(iqrs.positive_descriptors)
+                orig_neg = set(iqrs.negative_descriptors)
+
+                self._log.debug("Adjudicating")
+                iqrs.adjudicate(pos_d, neg_d, neu_d, neu_d)
+
+                # Flag classifier as dirty if change in pos/neg sets
+                diff_pos = \
+                    iqrs.positive_descriptors.symmetric_difference(orig_pos)
+                diff_neg = \
+                    iqrs.negative_descriptors.symmetric_difference(orig_neg)
+                if diff_pos or diff_neg:
+                    self._log.debug("[%s] session Classifier dirty", sid)
+                    self.session_classifier_dirty[sid] = True
+
+                return make_response_json(
+                    "Finished adjudication",
+                    sid=sid,
+                ), 200
+
+        except KeyError:
+            return make_response_json("session id '%s' not found" % sid,
+                                      sid=sid), 404
+
+    # PUT
     def refine(self):
         """
         Create or update the session's working index as necessary, ranking
@@ -312,6 +397,7 @@ class IqrService (SmqtkWebApp):
                     neg_descrs.symmetric_difference(
                         iqrs.negative_descriptors)
                 if diff_pos or diff_neg:
+                    self._log.debug("[%s] session Classifier dirty", sid)
                     self.session_classifier_dirty[sid] = True
 
                 iqrs.positive_descriptors = pos_descrs

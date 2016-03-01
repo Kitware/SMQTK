@@ -86,12 +86,14 @@ set -u
 
 # Script locations
 script_gci="scripts/get_cdr_images.py"
+script_lsi="scripts/list_ido_solr_images.py"
 script_cmd="scripts/compute_many_descriptors.py"
 script_chc="scripts/compute_hash_codes.py"
 script_cc="scripts/compute_classifications.py"
 
 # Configuration files
 config_gci="configs/config.get_cdr_images.json"
+config_lsi="configs/config.list_ido_solr_images.json"
 config_cmd="configs/config.compute_many_descriptors.json"
 config_chc="configs/config.compute_hash_codes.json"
 config_cc="configs/config.compute_classifications.json"
@@ -118,6 +120,11 @@ entries_after=  # none, use run directory logic
 # codes. The output index will include the content of this base. This may be
 # empty to not include a base index.
 base_hash2uuids="models/lsh.hash2uuid.pickle"
+
+# We will either get images from the configured CDR location or the paired Solr
+# instance and file host.
+# Valid values: "cdr" | "solr"
+transfer_method="cdr"
 
 
 ##################################
@@ -176,8 +183,11 @@ set -u
 #
 # Check configuration
 #
-if [ ! -f "${script_gci}" ]; then
+if [ "${transfer_method}" = "cdr" -a ! -f "${script_gci}" ]; then
     error "Could not find '${script_gci}' script"
+    exit 1
+elif [ "${transfer_method}" = "solr" -a ! -f "${script_lsi}" ]; then
+    error "Count not find '${script_lsi}' script"
     exit 1
 elif [ ! -f "${script_cmd}" ]; then
     error "Could not find '${script_cmd}' script"
@@ -188,8 +198,11 @@ elif [ ! -f "${script_chc}" ]; then
 elif [ ! -f "${script_cc}" ]; then
     error "Could not find '${script_cc}' script"
     exit 1
-elif [ ! -f "${config_gci}" ]; then
+elif [ "${transfer_method}" = "cdr" -a ! -f "${config_gci}" ]; then
     error "Could not find '${config_gci}' configuration file"
+    exit 1
+elif [ "${transfer_method}" = "solr" -a ! -f "${config_lsi}" ]; then
+    error "Could not find '${config_lsi}' configuration file"
     exit 1
 elif [ ! -f "${config_cmd}" ]; then
     error "Could not find '${config_cmd}' configuration file"
@@ -210,9 +223,9 @@ work_log="${work_dir}/log.update.txt"
 # File marker of a complete run
 complete_file=".complete"
 
-# List of image files on remote server to compute over
+# List of image files on remote server to compute over (Solr transfer ONLY)
 remote_file_list="${work_dir}/file_list.remote.txt"
-# CDR fetch records
+# CDR fetch records (CDR transfer ONLY)
 cdr_fetch_record="${work_dir}/cdr_fetch_record.csv"
 # List of image files locally to compute over after transfer
 local_file_list="${work_dir}/file_list.local.txt"
@@ -263,26 +276,88 @@ touch "${work_log}"  # Start log recording
 
 
 #
-# Get images from new CDR entries
+# Get images from source
 #
 if [ ! -f "${local_file_list}" ]
 then
-    log "Fetching new image content from CDR"
-
-    log_gci="${work_dir}/log.1.gci.txt"
-
-    after_time_opt=""
-    if [ "${entries_after}" != "*" ]
+    if [ "${transfer_method}" = "cdr" ]
     then
-        after_time_opt="--after-time ${entries_after}"
+        #
+        # CDR source
+        #
+        log "Fetching new image content from CDR"
+
+        log_gci="${work_dir}/log.1.gci.txt"
+
+        after_time_opt=""
+        if [ "${entries_after}" != "*" ]
+        then
+            after_time_opt="--after-time ${entries_after}"
+        fi
+
+        "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
+                        -l "${cdr_fetch_record}" ${after_time_opt} \
+                        2>&1 | tee "${log_gci}"
+
+        # Transform record file into local file image list
+        cat "${cdr_fetch_record}" | cut -d, -f2 >"${local_file_list}"
+
+    elif [ "${transfer_method}" = "solr" ]
+    then
+        #
+        # Solr / Server source
+        #
+        log "Gathering images from Solr"
+
+        if [ ! -f "${remote_file_list}" ]
+        then
+            log "Getting new remote image paths after_time='${entries_after}' before_time='${now}'"
+            log_remote_image_listing="${work_dir}/log.0.list_remote_files.txt"
+
+            "${script_lsi}" -v -c "${config_lsi}" -p "${remote_file_list}" \
+                            --after-time "${entries_after}" \
+                            --before-time "${now}" \
+                            2>&1 | tee "${log_remote_image_listing}"
+
+            if [ ! -s "${remote_file_list}" ]; then
+                log "No new image files since ${entries_after}"
+                rm "${remote_file_list}"
+                exit 0
+            fi
+        fi
+
+        log_remote_local_rsync="${work_dir}/log.1.rsync.txt"
+        # Some files might not transfer or paths in index might have been incorrect
+        # (its happened before). Will check for actually transferred files right
+        # after the rsync.
+        set +e
+        rsync -PRvh --size-only --files-from="${remote_file_list}" \
+              ${image_server_username}@${image_server}:/ \
+              "${image_transfer_directory}" \
+              2>&1 | tee "${log_remote_local_rsync}"
+        set -e
+
+        log "Finding transferred files..."
+        python -c "
+import os
+base=os.path.abspath(os.path.expanduser('${image_transfer_directory}'))
+with open('${remote_file_list}') as pth_f:
+    for l in pth_f:
+        pth = l.strip().lstrip('/')
+        local = os.path.join(base, pth)
+        if os.path.isfile(local):
+            print local
+        " >"${local_file_list}"
+
+        if [ ! -s "${local_file_list}" ]; then
+            log "Failed to transfer any remote files locally"
+            rm "${local_file_list}"
+            exit 1
+        fi
+    else
+        error "Invalid transfer method setting: '${transfer_method}'"
+        exit 1
     fi
-
-    "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \
-                    -l "${cdr_fetch_record}" ${after_time_opt} \
-                    2>&1 | tee "${log_gci}"
-
-    # Transform record file into local file image list
-    cat "${cdr_fetch_record}" | cut -d, -f2 >"${local_file_list}"
 fi
 
 

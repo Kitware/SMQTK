@@ -38,18 +38,6 @@ if '.jpe' in mimetypes.types_map:
     del mimetypes.types_map['.jpe']
 
 
-# def now_utc_datetime():
-#     import datetime
-#     import time
-#
-#     t = time.time()
-#     s = time.gmtime(t)
-#     now = datetime.datetime(s.tm_year, s.tm_mon, s.tm_mday,
-#                             s.tm_hour, s.tm_min, s.tm_sec,
-#                             int((t - int(t)) * 1000))
-#     return now
-
-
 def cdr_images_after(es_instance, index, image_types, after_date=None,
                      agg_img_types=False, domain='weapons'):
     """

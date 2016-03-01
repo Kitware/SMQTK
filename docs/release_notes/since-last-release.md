@@ -41,6 +41,9 @@ Tools / Scripts
   * Added some MEMEX specific scripts for processing and updating data from a
     known Solr index source.
 
+  * Added MEMEX-specific script for fetching image data from an ElasticSearch
+    instance and transfering it locally.
+
 Utilities
 
   * Added helper wrapper for generalized asynchronous function mapping to an

@@ -146,7 +146,6 @@ t=time.gmtime()
 print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
     Y=t.tm_year, m=t.tm_mon, d=t.tm_mday, H=t.tm_hour, M=t.tm_min, S=t.tm_sec
 )")"
-now='2016-02-29T20:35:55Z'
 
 #
 # Check configuration

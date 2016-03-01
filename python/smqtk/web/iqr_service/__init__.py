@@ -174,6 +174,12 @@ class IqrService (SmqtkWebApp):
         if sid is None:
             sid = new_uuid()
 
+        if self.controller.has_session_uuid(sid):
+            return make_response_json(
+                "Session with id '%s' already exists" % sid,
+                sid=sid,
+            ), 409  # CONFLICT
+
         iqrs = iqr_session.IqrSession()
         with self.controller:
             with iqrs:
@@ -182,7 +188,7 @@ class IqrService (SmqtkWebApp):
                 self.session_classifier_dirty[sid] = True
 
         return make_response_json("Created new session with ID '%s'" % sid,
-                                  sid=sid), 201
+                                  sid=sid), 201  # CREATED
 
     # PUT
     def reset_session(self):

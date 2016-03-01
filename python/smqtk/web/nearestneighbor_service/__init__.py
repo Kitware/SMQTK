@@ -119,6 +119,45 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 "count": self.nn_index.count(),
             })
 
+        @self.route("/compute/<path:uri>", methods=["POST"])
+        def compute(uri):
+            """
+            Compute the descriptor for a URI specified data element using the
+            configured descriptor generator.
+
+            If the a descriptor index was configured and update was turned on,
+            we add the computed descriptor to the index.
+
+            JSON Return format::
+                {
+                    "success": <bool>
+
+                    "message": <str>
+
+                    "descriptor": <None|list[float]>
+
+                    "reference_uri": <str>
+                }
+
+            :param uri: URI data specification.
+
+            """
+            descriptor = None
+            try:
+                _, descriptor = self.generate_descriptor_for_uri(uri)
+                message = "Descriptor generated"
+            except ValueError, ex:
+                message = "Input value issue: %s" % str(ex)
+            except RuntimeError, ex:
+                message = "Descriptor extraction failure: %s" % str(ex)
+
+            return flask.jsonify(
+                success=descriptor is not None,
+                message=message,
+                descriptor=map(float, descriptor.vector()),
+                reference_uri=uri,
+            )
+
         @self.route("/nn/<path:uri>")
         @self.route("/nn/n=<int:n>/<path:uri>")
         @self.route("/nn/n=<int:n>/<int:start_i>:<int:end_i>/<path:uri>")
@@ -147,14 +186,6 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             ``?content_type=`` to provide data content type information. This
             mode saves the encoded data to temporary file for processing.
 
-            Direct Descriptor Vector
-            ------------------------
-
-            THe URI string must be prefixed with "descriptor://", followed by
-            the JSON list of the float values the vector is composed of.
-            Using this option requires knowledge of what descriptor type is
-            being used
-
             HTTP/S address
             --------------
 
@@ -173,31 +204,22 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                     "reference_uri": <str>
                 }
 
+            :param n: Number of neighbors to query for
+            :param start_i: The starting index of the neighbor vectors to slice
+                into for return.
+            :param end_i: The ending index of the neighbor vectors to slice
+                into for return.
             :type uri: str
 
             """
-            message = "execution nominal"
-
-            de = None
             descriptor = None
-
             try:
-                self._log.debug("Received URI: %s", uri)
-                de = self.resolve_data_element(uri)
+                _, descriptor = self.generate_descriptor_for_uri(uri)
+                message = "descriptor computed"
             except ValueError, ex:
-                message = "URI resolution issue: %s" % str(ex)
-
-            if de:
-                try:
-                    descriptor = self.descriptor_generator_inst.\
-                        compute_descriptor(de, self.descr_elem_factory)
-                    if self.update_index:
-                        self._log.info("Updating index with new descriptor")
-                        self.descr_index.add_descriptor(descriptor)
-                except RuntimeError, ex:
-                    message = "Descriptor extraction failure: %s" % str(ex)
-                except ValueError, ex:
-                    message = "Data content type issue: %s" % str(ex)
+                message = "Input data issue: %s" % str(ex)
+            except RuntimeError, ex:
+                message = "Descriptor generation failure: %s" % str(ex)
 
             # Base pagination slicing based on provided start and end indices,
             # otherwise clamp to beginning/ending of queried neighbor sequence.
@@ -237,6 +259,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         :rtype: smqtk.representation.DataElement
 
         """
+        self._log.debug("Resolving URI: %s", uri)
         # Resolve URI into appropriate DataElement instance
         if uri[:7] == "file://":
             self._log.debug("Given local disk filepath")
@@ -266,6 +289,28 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                                  "HTTPError: %s" % str(ex))
 
         return de
+
+    def generate_descriptor_for_uri(self, uri):
+        """
+        Given the URI to some data, resolve it and compute its descriptor,
+        returning a DescriptorElement.
+
+        :param uri: URI to data
+        :type uri: str
+
+        :return: DescriptorElement instance of the generate descriptor.
+        :rtype: (smqtk.representation.DataElement,
+                 smqtk.representation.DescriptorElement)
+
+        """
+        de = self.resolve_data_element(uri)
+        descriptor = self.descriptor_generator_inst.compute_descriptor(
+            de, self.descr_elem_factory
+        )
+        if self.update_index:
+            self._log.info("Updating index with new descriptor")
+            self.descr_index.add_descriptor(descriptor)
+        return de, descriptor
 
 
 APPLICATION_CLASS = NearestNeighborServiceServer

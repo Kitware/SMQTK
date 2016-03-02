@@ -38,8 +38,9 @@ if '.jpe' in mimetypes.types_map:
     del mimetypes.types_map['.jpe']
 
 
-def cdr_images_after(es_instance, index, image_types, after_date=None,
-                     agg_img_types=False, domain='weapons'):
+def cdr_images_after(es_instance, index, image_types, crawled_after=None,
+                     inserted_after=None, agg_img_types=False,
+                     domain='weapons'):
     """
     Return query and return an iterator over ES entries.
 
@@ -56,9 +57,13 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         (e.g. ['png', 'jpeg'])
     :type image_types:
 
-    :param after_date: Optional timestamp to constrain query elements to only
-        those inserted after this time.
-    :type after_date: datetime.datetime
+    :param crawled_after: Optional timestamp to constrain query elements to
+        only those collected/crawled after this time.
+    :type crawled_after: datetime.datetime
+
+    :param inserted_after: Optional timestamp to constrain query elements to
+        only those inserted into the ES instance/index after this time.
+    :param inserted_after: datetime.datetime
 
     :param agg_img_types: If we should add an aggregation on image types to the
         query (prevents scanning).
@@ -78,7 +83,7 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         .fields(['_id', '_timestamp', '_type',
                  'content_type', 'obj_original_url', 'obj_stored_url',
                  'timestamp', 'version',
-                 ])\
+                 ])
 
     if domain:
         base_search = base_search.doc_type(domain)
@@ -93,9 +98,14 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         if domain:
             log.debug("Constraining _type: %s", domain)
             f &= Q('term', _type=domain)
-        if after_date:
-            log.debug("Constraining _timestamp to after: %s", after_date)
-            f &= Q('range', _timestamp={'gt': after_date})
+        if crawled_after:
+            log.debug("Constraining to entries crawled after: %s",
+                      crawled_after)
+            f &= Q('range', timestamp={'gt': crawled_after})
+        if inserted_after:
+            log.debug("Constraining to entries inserted after: %s",
+                      inserted_after)
+            f &= Q('range', _timestamp={'gt': inserted_after})
     else:
         # ES 1.x version
         from elasticsearch_dsl.filter import F
@@ -106,9 +116,14 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
         if domain:
             log.debug("Constraining _type: %s", domain)
             f &= F('term', _type=domain)
-        if after_date:
-            log.debug("Constraining _timestamp to after: %s", after_date)
-            f &= F('range', _timestamp={'gt': after_date})
+        if crawled_after:
+            log.debug("Constraining to entries crawled after: %s",
+                      crawled_after)
+            f &= F('range', timestamp={'gt': crawled_after})
+        if inserted_after:
+            log.debug("Constraining to entries inserted after: %s",
+                      inserted_after)
+            f &= F('range', _timestamp={'gt': inserted_after})
 
     q = base_search\
         .filter(f)\
@@ -122,7 +137,7 @@ def cdr_images_after(es_instance, index, image_types, after_date=None,
 
 
 def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
-                           stored_http_auth=None):
+                           stored_http_auth=None, batch_size=1000):
     """
     Queries for and saves image content underneath a nested directory from the
     given output directory.
@@ -145,6 +160,10 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
         pair tuple to use when fetching the stored image data. This will not be
         applied when fetching from the original data URL.
     :type stored_http_auth: None | (str, str)
+
+    :param batch_size: Number of hits returned by a single execute during
+        result iteration.
+    :type batch_size: int
 
     """
     log = logging.getLogger(__name__)
@@ -209,31 +228,55 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
 
         return meta['id'], save_path, d.uuid()
 
+    # def iter_scan_meta():
+    #     q_scan = q.params(size=batch_size)
+    #     restart = True
+    #     i = 0
+    #     while restart:
+    #         restart = False
+    #         try:
+    #             log.debug("Starting scan from index %d", i)
+    #             for h in q_scan.scan():
+    #                 # noinspection PyProtectedMember
+    #                 yield h.meta._d_
+    #                 # Index of the next element to yield if scan fails in
+    #                 # next iteration.
+    #                 i += 1
+    #         except elasticsearch.ConnectionTimeout, ex:
+    #             log.warning("ElasticSearch timed out (error = %s)", str(ex))
+    #             restart = True
+    #             log.debug("Restarting query from index %d", i)
+    #             q_scan = q_scan[i:]
+    #         except elasticsearch.helpers.ScanError, ex:
+    #             log.warning("ElasticSearch scan scan exception (error = %s)",
+    #                         str(ex))
+    #             restart = True
+    #             log.debug("Restarting query from index %d", i)
+    #             q_scan = q_scan[i:]
+
     def iter_scan_meta():
-        q_scan = q
+        """
+        Using batch iteration vs. scan function. Tested speed difference was
+        negligible and this allows for more confident ordering on restart
+        """
         restart = True
         i = 0
+        total = q[0:0].execute().hits.total
         while restart:
             restart = False
             try:
-                log.debug("Starting scan from index %d", i)
-                for h in q_scan.scan():
-                    # noinspection PyProtectedMember
-                    yield h.meta._d_
-                    # Index of the next element to yield if scan fails in next
-                    # iteration.
-                    i += 1
+                log.debug("Starting ordered scan from index %d", i)
+                while i < total:
+                    b_start = i
+                    b_end = i + batch_size
+                    for h in q[b_start:b_end].execute():
+                        # noinspection PyProtectedMember
+                        yield h.meta._d_
+                        i += 1
             except elasticsearch.ConnectionTimeout, ex:
                 log.warning("ElasticSearch timed out (error = %s)", str(ex))
                 restart = True
                 log.debug("Restarting query from index %d", i)
-                q_scan = q_scan[i:]
-            except elasticsearch.helpers.ScanError, ex:
-                log.warning("ElasticSearch scan scan exception (error = %s)",
-                            str(ex))
-                restart = True
-                log.debug("Restarting query from index %d", i)
-                q_scan = q_scan[i:]
 
     log.info("Initializing image download/record parallel iterator")
     img_dl_records = parallel_map(
@@ -266,6 +309,7 @@ def default_config():
             "index": "CHANGEME",
             "username": "CHANGEME",
             "password": "CHANGEME",
+            "batch_size": 10000,
         },
         "stored_http_auth": {
             'name': None,
@@ -287,11 +331,18 @@ def extend_parser(parser):
                         help="Report the number of elements that would be "
                              "scanned by the ElasticSearch query generated "
                              "and then exit.")
-    parser.add_argument('-a', '--after-time',
+    parser.add_argument('--crawled-after',
                         default=None,
-                        help="Optional minimum timestamp bounds. "
-                             "Only ElasticSearch entries inserted after this "
-                             "time are allowed. Time should be in UTC."
+                        help="Optional timestamp constraint to only get "
+                             "content that was crawled after the given time. "
+                             "Time should be in UTC."
+                             "Timestamp format like: '2016-01-01T12:00:00Z'")
+    parser.add_argument('--inserted-after',
+                        default=None,
+                        help="Optional timestamp constraint to only get "
+                             "content that was inserted into the "
+                             "ElasticSearch instance/index after the given "
+                             "time. Time should be in UTC."
                              "Timestamp format like: '2016-01-01T12:00:00Z'")
 
     g_output = parser.add_argument_group("Output")
@@ -327,13 +378,18 @@ def main():
             This is only used for stored-data URLs and only if both a username
             and password is given.
 
+        elastic_search
+            batch_size
+                The number of query hits to fetch at a time from the instance.
+
     """
     args, config = utility_main_helper(default_config, description,
                                        extend_parser)
     log = logging.getLogger(__name__)
 
     report_size = args.report_size
-    after_ts = args.after_time
+    crawled_after = args.crawled_after
+    inserted_after = args.inserted_after
 
     #
     # Check config properties
@@ -376,23 +432,32 @@ def main():
         http_auth = (config['stored_http_auth']['name'],
                      config['stored_http_auth']['pass'])
 
-    if after_ts:
-        m = re.match('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z',
-                     after_ts)
+    ts_re = re.compile('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z')
+    if crawled_after:
+        m = ts_re.match(crawled_after)
         if m is None:
-            raise ValueError("Given timestamp not in correct format: '%s'"
-                             % after_ts)
-        after_ts = datetime.datetime(*[int(e) for e in m.groups()])
+            raise ValueError("Given 'crawled-after' timestamp not in correct "
+                             "format: '%s'" % crawled_after)
+        crawled_after = datetime.datetime(*[int(e) for e in m.groups()])
+    if inserted_after:
+        m = ts_re.match(inserted_after)
+        if m is None:
+            raise ValueError("Given 'inserted-after' timestamp not in correct "
+                             "format: '%s'" % inserted_after)
+        inserted_after = datetime.datetime(*[int(e) for e in m.groups()])
 
     q = cdr_images_after(es, config['elastic_search']['index'],
-                         config['image_types'], after_ts)
+                         config['image_types'], crawled_after, inserted_after)
 
     log.info("Query Size: %d", q[0:0].execute().hits.total)
     if report_size:
         exit(0)
 
     fetch_cdr_query_images(q, args.output_dir, args.file_list,
-                           stored_http_auth=http_auth)
+                           cores=int(config['parallel']['cores']),
+                           stored_http_auth=http_auth,
+                           batch_size=int(config['elastic_search']
+                                                ['batch_size']))
 
 
 if __name__ == '__main__':

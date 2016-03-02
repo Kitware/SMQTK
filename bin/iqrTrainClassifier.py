@@ -124,7 +124,7 @@ def train_classifier_iqr(config, iqr_state_fp):
     log.info('    positive -> %d', len(pos))
     log.info('    negative -> %d', len(neg))
 
-    classifier.train({'positive': pos}, negatives=neg)
+    classifier.train(positive=pos, negative=neg)
 
 
 def main():

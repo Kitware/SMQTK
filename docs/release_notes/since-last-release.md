@@ -5,6 +5,13 @@ Changes Since Last Release
 Updates / New Features since v0.3.0
 -----------------------------------
 
+Classifiers
+
+  * Updated supervised classifier interface to no assume presence of a
+    "negative" class.
+
+  * Fixed libSVM implementation train method to not assume "negative" class.
+
 Compute Functions
 
   * Refactored ``compute_many_descriptors.py`` main work function into a new

@@ -224,11 +224,11 @@ def classifier_kfold_validation():
             pos_map[truth_labels[idx]].append(
                 descriptor_index.get_descriptor(uuids[idx])
             )
-        negatives = pos_map['negative']
-        del pos_map['negative']
+        # negatives = pos_map['negative']
+        # del pos_map['negative']
 
         log.info("-- Training classifier")
-        classifier.train(pos_map, negatives)
+        classifier.train(pos_map)
 
         log.info("-- Classifying test set")
         m = classifier.classify_async(

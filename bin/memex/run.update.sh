@@ -292,7 +292,7 @@ then
         after_time_opt=""
         if [ "${entries_after}" != "*" ]
         then
-            after_time_opt="--after-time ${entries_after}"
+            after_time_opt="--inserted-after ${entries_after}"
         fi
 
         "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \

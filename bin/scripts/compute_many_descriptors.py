@@ -12,7 +12,7 @@ from smqtk.representation import (
     get_descriptor_index_impls,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import utility_main_helper
+from smqtk.utils.bin_utils import utility_main_helper, report_progress
 from smqtk.utils import plugin, parallel
 
 
@@ -97,10 +97,15 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     # Recording computed file paths and associated file UUIDs (SHA1)
     cf = open(checkpoint_filepath, 'w')
     try:
+        rps = [0] * 7
         for fp, descr in m:
             cf.write("{:s},{:s}\n".format(
                 fp, descr.uuid()
             ))
+            report_progress(log.debug, rps, 1.)
+        # Final report
+        rps[1] -= 1
+        report_progress(log.debug, rps, 0.)
     finally:
         cf.close()
 

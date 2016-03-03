@@ -38,11 +38,14 @@ def uuids_for_processing(uuids, hash2uuids):
     """
     log = logging.getLogger(__name__)
     already_there = frozenset(v for vs in hash2uuids.itervalues() for v in vs)
+    skipped = 0
     for uuid in uuids:
         if uuid not in already_there:
             yield uuid
         else:
-            log.debug("UUID %s already has a hash code", uuid)
+            skipped += 1
+    log.debug("Skipped %d UUIDs already represented in previous hash table",
+              skipped)
 
 
 def default_config():

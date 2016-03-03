@@ -67,9 +67,6 @@ class Classifier (SmqtkAlgorithm):
         if overwrite or not c_elem.has_classifications():
             c = self._classify(d)
             c_elem.set_classification(c)
-        # else:
-        #     self._log.debug("Found existing classification in generated "
-        #                     "element")
 
         return c_elem
 
@@ -177,11 +174,8 @@ class Classifier (SmqtkAlgorithm):
 class SupervisedClassifier (Classifier):
     """
     Class of classifiers that are trainable via supervised training, i.e. are
-    given specific descriptor examples for class labels (including negative
-    label).
+    given specific descriptor examples for class labels.
     """
-
-    NEGATIVE_LABEL = "negative"
 
     @abc.abstractmethod
     def has_model(self):
@@ -193,30 +187,32 @@ class SupervisedClassifier (Classifier):
         """
 
     @abc.abstractmethod
-    def train(self, positive_classes, negatives):
+    def train(self, class_examples=None, **kwds):
         """
         Train the supervised classifier model.
-
-        The class label ``negative`` is reserved for the negative class.
 
         If a model is already loaded, we will raise an exception in order to
         prevent accidental overwrite.
 
-        NOTE: This abstract method provides generalized error checking and
-        should be called via ``super`` in implementing methods.
+        If the same label is provided to both ``class_examples`` and ``kwds``,
+        the examples given to the reference in ``kwds`` will prevail.
 
-        :param positive_classes: Dictionary mapping positive class labels to
-            iterables of DescriptorElement training examples.
-        :type positive_classes: dict[collections.Hashable,
+        *NOTE:* **This abstract method provides generalized error checking and
+        combines input mappings into a single dictionary which we return. Thus,
+        this should be called via ``super`` in implementing methods.**
+
+        :param class_examples: Dictionary mapping class labels to iterables of
+            DescriptorElement training examples.
+        :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param negatives: Iterable of negative DescriptorElement examples.
-        :type negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :param kwds: Keyword assignment of labels to iterables of
+            DescriptorElement training examples.
+        :type kwds: dict[str,
+                 collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :raises ValueError: The ``negative`` label was found in the
-            ``positive_classes`` dictionary. This is reserved for the negative
-            example class.
-        :raises ValueError: There were no positive or negative examples.
+        :raises ValueError: There were no class examples provided.
+        :raises ValueError: Less than 2 classes were given.
         :raises RuntimeError: A model already exists in this instance.Following
             through with training would overwrite this model. Throwing an
             exception for information protection.
@@ -227,15 +223,20 @@ class SupervisedClassifier (Classifier):
                                "training to prevent overwrite of existing "
                                "trained model.")
 
-        if self.NEGATIVE_LABEL in positive_classes:
-            raise ValueError("Found '%s' label in positive_classes map. "
-                             "This label is reserved for negative class."
-                             % self.NEGATIVE_LABEL)
+        if class_examples is None:
+            class_examples = {}
 
-        if not positive_classes:
-            raise ValueError("No positive classes provided")
-        if not negatives:
-            raise ValueError("No negative examples provided.")
+        merged = {}
+        merge_dict(merged, class_examples)
+        merge_dict(merged, kwds)
+
+        if not merged:
+            raise ValueError("No class examples were provided.")
+        elif len(merged) < 2:
+            raise ValueError("Need 2 or more classes for training. Given %d",
+                             len(merged))
+
+        return merged
 
 
 def get_classifier_impls(reload_modules=False, sub_interface=None):

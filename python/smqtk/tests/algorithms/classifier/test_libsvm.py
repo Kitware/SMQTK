@@ -45,6 +45,7 @@ if LibSvmClassifier.is_usable():
             DIM = 2
             N = 1000
             POS_LABEL = 'positive'
+            NEG_LABEL = 'negative'
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
 
@@ -64,7 +65,7 @@ if LibSvmClassifier.is_usable():
             p.join()
 
             # Training
-            classifier.train({POS_LABEL: d_pos}, d_neg)
+            classifier.train({POS_LABEL: d_pos, NEG_LABEL: d_neg})
 
             # Test original classifier
             t_v = numpy.random.rand(DIM)
@@ -87,10 +88,10 @@ if LibSvmClassifier.is_usable():
             c_post_pickle = classifier2.classify(t, c_factory)
             # There may be floating point error, so extract actual confidence
             # values and check post round
-            c_pp_positive = c_post_pickle['positive']
-            c_pp_negative = c_post_pickle['negative']
-            c_e_positive = c_expected['positive']
-            c_e_negative = c_expected['negative']
+            c_pp_positive = c_post_pickle[POS_LABEL]
+            c_pp_negative = c_post_pickle[NEG_LABEL]
+            c_e_positive = c_expected[POS_LABEL]
+            c_e_negative = c_expected[NEG_LABEL]
             ntools.assert_almost_equal(c_e_positive, c_pp_positive, 5)
             ntools.assert_almost_equal(c_e_negative, c_pp_negative, 5)
 
@@ -104,6 +105,7 @@ if LibSvmClassifier.is_usable():
             DIM = 2
             N = 1000
             POS_LABEL = 'positive'
+            NEG_LABEL = 'negative'
             p = multiprocessing.pool.ThreadPool()
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
@@ -131,7 +133,7 @@ if LibSvmClassifier.is_usable():
                 },
                 normalize=None,  # DO NOT normalize descriptors
             )
-            classifier.train({POS_LABEL: d_pos}, d_neg)
+            classifier.train({POS_LABEL: d_pos, NEG_LABEL: d_neg})
 
             # Test classifier
             x = numpy.random.rand(N, DIM)
@@ -153,8 +155,7 @@ if LibSvmClassifier.is_usable():
             d_neg_sync = {}
             for d in d_neg:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(),
-                                    LibSvmClassifier.NEGATIVE_LABEL,
+                ntools.assert_equal(c.max_label(), NEG_LABEL,
                                     "Found False negative: %s :: %s" %
                                     (d.vector(), c.get_classification()))
                 d_neg_sync[d] = c
@@ -208,6 +209,7 @@ if LibSvmClassifier.is_usable():
             N = 1000
             P1_LABEL = 'p1'
             P2_LABEL = 'p2'
+            P3_LABEL = 'p3'
             p = multiprocessing.pool.ThreadPool()
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
@@ -222,14 +224,14 @@ if LibSvmClassifier.is_usable():
             x = numpy.random.rand(N, DIM)
             x_p1 = x[x[:, 1] <= 0.30]
             x_p2 = x[(x[:, 1] >= 0.36) & (x[:, 1] <= 0.63)]
-            x_neg = x[x[:, 1] >= 0.69]
+            x_p3 = x[x[:, 1] >= 0.69]
 
             d_p1 = p.map(make_element, enumerate(x_p1, di))
             di += len(d_p1)
             d_p2 = p.map(make_element, enumerate(x_p2, di))
             di += len(d_p2)
-            d_neg = p.map(make_element, enumerate(x_neg, di))
-            di += len(d_neg)
+            d_p3 = p.map(make_element, enumerate(x_p3, di))
+            di += len(d_p3)
 
             # Create/Train test classifier
             classifier = LibSvmClassifier(
@@ -241,20 +243,20 @@ if LibSvmClassifier.is_usable():
                 },
                 normalize=None,  # DO NOT normalize descriptors
             )
-            classifier.train({P1_LABEL: d_p1, P2_LABEL: d_p2}, d_neg)
+            classifier.train({P1_LABEL: d_p1, P2_LABEL: d_p2, P3_LABEL: d_p3})
 
             # Test classifier
             x = numpy.random.rand(N, DIM)
             x_p1 = x[x[:, 1] <= 0.30]
             x_p2 = x[(x[:, 1] >= 0.36) & (x[:, 1] <= 0.63)]
-            x_neg = x[x[:, 1] >= 0.69]
+            x_p3 = x[x[:, 1] >= 0.69]
 
             d_p1 = p.map(make_element, enumerate(x_p1, di))
             di += len(d_p1)
             d_p2 = p.map(make_element, enumerate(x_p2, di))
             di += len(d_p2)
-            d_neg = p.map(make_element, enumerate(x_neg, di))
-            di += len(d_neg)
+            d_p3 = p.map(make_element, enumerate(x_p3, di))
+            di += len(d_p3)
 
             d_p1_sync = {}
             for d in d_p1:
@@ -277,13 +279,12 @@ if LibSvmClassifier.is_usable():
                 d_p2_sync[d] = c
 
             d_neg_sync = {}
-            for d in d_neg:
+            for d in d_p3:
                 c = classifier.classify(d, c_factory)
                 ntools.assert_equal(c.max_label(),
-                                    LibSvmClassifier.NEGATIVE_LABEL,
+                                    P3_LABEL,
                                     "Incorrect %s label: %s :: %s" %
-                                    (LibSvmClassifier.NEGATIVE_LABEL,
-                                     d.vector(),
+                                    (P3_LABEL, d.vector(),
                                      c.get_classification()))
                 d_neg_sync[d] = c
 
@@ -299,7 +300,7 @@ if LibSvmClassifier.is_usable():
                                 "Async computation of p2 set did not yield "
                                 "the same results as synchronous computation.")
             # -- neg
-            async_neg = classifier.classify_async(d_neg, c_factory)
+            async_neg = classifier.classify_async(d_p3, c_factory)
             ntools.assert_equal(async_neg, d_neg_sync,
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous computation.")
@@ -308,7 +309,7 @@ if LibSvmClassifier.is_usable():
             sync_combined.update(d_p2_sync)
             sync_combined.update(d_neg_sync)
             async_combined = classifier.classify_async(
-                d_p1 + d_p2 + d_neg, c_factory,
+                d_p1 + d_p2 + d_p3, c_factory,
                 use_multiprocessing=False
             )
             ntools.assert_equal(async_combined, sync_combined,
@@ -317,7 +318,7 @@ if LibSvmClassifier.is_usable():
                                 "synchronous classification.")
             # -- combined -- multiprocess
             async_combined = classifier.classify_async(
-                d_p1 + d_p2 + d_neg, c_factory,
+                d_p1 + d_p2 + d_p3, c_factory,
                 use_multiprocessing=True
             )
             ntools.assert_equal(async_combined, sync_combined,

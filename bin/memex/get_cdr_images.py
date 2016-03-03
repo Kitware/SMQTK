@@ -454,10 +454,9 @@ def main():
         exit(0)
 
     fetch_cdr_query_images(q, args.output_dir, args.file_list,
-                           cores=int(config['parallel']['cores']),
+                           cores=config['parallel']['cores'],
                            stored_http_auth=http_auth,
-                           batch_size=int(config['elastic_search']
-                                                ['batch_size']))
+                           batch_size=config['elastic_search']['batch_size'])
 
 
 if __name__ == '__main__':

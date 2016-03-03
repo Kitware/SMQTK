@@ -21,6 +21,11 @@ Compute Functions
   * Added function for asynchronously computing LSH codes for some number of
     input descriptor elements.
 
+Descriptor Index
+
+  * Update to postgresql backend to lazy-connect during batch executions,
+    preventing a connection from being made if nothing is being added.
+
 Documentation
 
   * Added ``CONTRIBUTING.md`` file.

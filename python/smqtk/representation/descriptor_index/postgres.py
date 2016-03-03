@@ -266,11 +266,16 @@ class PostgresDescriptorIndex (DescriptorIndex):
         self._log.debug("starting multi operation (batching: %s)",
                         self.multiquery_batch_size)
 
-        conn = self._get_psql_connection()
+        # Lazy initialize -- only if there are elements to iterate over
+        #: :type: None | psycopg2._psycopg.connection
+        conn = None
         try:
             batch = []
             i = 0
             for e in iterable:
+                if conn is None:
+                    conn = self._get_psql_connection()
+
                 batch.append(e)
 
                 if self.multiquery_batch_size and \
@@ -297,7 +302,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         finally:
             # conn.__exit__ doesn't close connection, just the transaction
-            conn.close()
+            if conn is not None:
+                conn.close()
             self._log.debug('-- done')
 
     def count(self):

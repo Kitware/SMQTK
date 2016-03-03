@@ -214,7 +214,7 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
         to dangerously high RAM consumption.
     :type use_mp: bool
 
-    :return: The ``update_map`` provided, or if none was provided a new
+    :return: The ``update_map`` provided or, if None was provided, a new
         mapping.
     :rtype: dict[int|long, set[collections.Hashable]]
 

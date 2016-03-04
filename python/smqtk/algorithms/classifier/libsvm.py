@@ -284,21 +284,6 @@ class LibSvmClassifier (SupervisedClassifier):
             train_vectors.extend(x.tolist())
             del g, x
 
-        # self._log.debug('-- negatives (-1)')
-        # # Map integer SVM label to semantic label
-        # self.svm_label_map[-1] = self.NEGATIVE_LABEL
-        # # requires a sequence, so making the iterable ``negatives`` a tuple
-        # if not isinstance(negatives, collections.Sequence):
-        #     negatives = tuple(negatives)
-        # negatives_size = float(len(negatives))
-        # x = elements_to_matrix(negatives, report_interval=etm_ri)
-        # x = self._norm_vector(x)
-        # train_labels.extend([-1]*x.shape[0])
-        # train_vectors.extend(x.tolist())
-        # del negatives, x
-        # TODO: Might have to force one of the classes to -1
-        #       to fill "negative" roll for libSVM
-
         assert len(train_labels) == len(train_vectors), \
             "Count miss-match between parallel labels and descriptor vectors" \
             "being sent to libSVM (%d != %d)" \
@@ -315,8 +300,10 @@ class LibSvmClassifier (SupervisedClassifier):
                 # weight is the ratio of between number of other-class examples
                 # to the number of examples in this class.
                 other_class_examples = total_examples - n
-                params['-w' + str(i)] = \
-                    max(1.0, other_class_examples / float(n))
+                w = max(1.0, other_class_examples / float(n))
+                params['-w' + str(i)] = w
+                self._log.debug("-- class '%s' weight: %s",
+                                self.svm_label_map[i], w)
 
         self._log.debug("Making parameters obj")
         svm_params = svmutil.svm_parameter(self._gen_param_string(params))

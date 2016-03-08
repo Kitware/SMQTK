@@ -154,7 +154,7 @@ class Classifier (SmqtkAlgorithm):
     @abc.abstractmethod
     def _classify(self, d):
         """
-        Internal method that defines thh generation of the classification map
+        Internal method that defines the generation of the classification map
         for a given DescriptorElement. This returns a dictionary mapping
         integer labels to a floating point value.
 

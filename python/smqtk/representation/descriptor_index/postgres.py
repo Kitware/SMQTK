@@ -7,13 +7,16 @@ References:
 """
 import cPickle
 import itertools
+import logging
 
 from smqtk.representation import DescriptorIndex
 from smqtk.utils.errors import ReadOnlyError
 
 try:
     import psycopg2
-except ImportError:
+except ImportError, ex:
+    logging.getLogger(__name__)\
+           .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
 
 

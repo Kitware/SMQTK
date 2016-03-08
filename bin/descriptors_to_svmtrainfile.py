@@ -47,6 +47,10 @@ def main():
 
     This is the same as the format requested for other scripts like
     ``classifier_model_validation.py``.
+
+    This is very useful for searching for -c and -g parameter values for a
+    training sample of data using the ``tools/grid.py`` script, found in the
+    libSVM source tree.
     """
     args, config = bin_utils.utility_main_helper(default_config, description,
                                                  extend_parser)

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import csv
 import logging
+import math
 
 import matplotlib.pyplot as plt
 import numpy
+import scipy.stats
 import sklearn.metrics
 
 from smqtk.algorithms import (
@@ -39,6 +41,8 @@ def default_config():
             'csv_filepath': 'CHAMGEME :: PATH :: a csv file',
             'output_plot_pr': None,
             'output_plot_roc': None,
+            'curve_confidence_interval': True,
+            'curve_confidence_interval_alpha': 0.4,
         },
         "parallelism": {
             "descriptor_fetch_cores": 4,
@@ -95,6 +99,8 @@ def main():
     do_train = config['utility']['train']
     plot_filepath_pr = config['utility']['output_plot_pr']
     plot_filepath_roc = config['utility']['output_plot_roc']
+    plot_ci = config['utility']['curve_confidence_interval']
+    plot_ci_alpha = config['utility']['curve_confidence_interval_alpha']
 
     #
     # Construct mapping of label to the DescriptorElement instances for that
@@ -158,10 +164,12 @@ def main():
     #
     if plot_filepath_pr:
         log.info("Making PR curve")
-        make_pr_curves(label2classifications, plot_filepath_pr)
+        make_pr_curves(label2classifications, plot_filepath_pr,
+                       plot_ci, plot_ci_alpha)
     if plot_filepath_roc:
         log.info("Making ROC curve")
-        make_roc_curves(label2classifications, plot_filepath_roc)
+        make_roc_curves(label2classifications, plot_filepath_roc,
+                        plot_ci, plot_ci_alpha)
 
 
 def format_plt(title, x_label, y_label):
@@ -170,15 +178,25 @@ def format_plt(title, x_label, y_label):
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.title(title)
-    plt.legend(loc='best')
+    plt.legend(loc='best', fancybox=True, framealpha=0.5)
+
+
+def select_color_marker(i):
+    colors = ['b', 'g', 'r', 'c', 'y', 'k']
+    style = ['-', '--', '-.', ':']
+    ci = i % len(colors)
+    si = (i // len(colors)) % len(style)
+    return '%s%s' % (colors[ci], style[si])
 
 
 def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
-               label2classifications):
+               label2classifications, plot_ci, plot_ci_alpha):
     """
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays of the curve plot.
-    :type skl_curve_func: (list[float], list[float]) -> (list[float], list[float])
+    :type skl_curve_func:
+        (list[float], list[float]) ->
+            (numpy.ndarray[float], numpy.ndarray[float], numpy.ndarray[float])
 
     :param label2classifications: Mapping of label to the classification
         elements that should be that label.
@@ -197,6 +215,8 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     g_proba = []
 
     plt.clf()
+    plt.figure(figsize=(15, 12))
+    line_i = 0
     for l in label2classifications:
         # record binary truth relation with respect to label `l`
         l_truth = []
@@ -205,42 +225,107 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
             l_truth.append(int(c in label2classifications[l]))
             l_proba.append(c[l])
         assert len(l_truth) == len(l_proba) == len(all_classifications)
-        x, y = skl_curve_func(numpy.array(l_truth),
-                              numpy.array(l_proba))
+        x, y, t = skl_curve_func(numpy.array(l_truth), numpy.array(l_proba))
         auc = sklearn.metrics.auc(x, y)
-        plt.plot(x, y, label="%s (auc=%f)" % (l, auc))
+        m = select_color_marker(line_i)
+        plt.plot(x, y, m, label="%s (auc=%f)" % (l, auc))
+
+        if plot_ci:
+            # Confidence interval calculation using Wilson's score interval
+            x_u, x_l = curve_wilson_ci(x, len(l_proba))
+            y_u, y_l = curve_wilson_ci(y, len(l_proba))
+            ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
+                                  facecolor=m[0], edgecolor=m[0],
+                                  alpha=plot_ci_alpha)
+            plt.gca().add_patch(ci_poly)
+
+            format_plt(title+' - '+l, xlabel, ylabel)
+            fp_segs = output_filepath.split('.')
+            fp = '.'.join(fp_segs[:-1] + [l] + [fp_segs[-1]])
+            log.info("Saving: %s", fp)
+            plt.savefig(fp)
+            plt.clf()
 
         g_truth.extend(l_truth)
         g_proba.extend(l_proba)
 
-    x, y = skl_curve_func(numpy.array(g_truth),
-                          numpy.array(g_proba))
+        line_i += 1
+
+    x, y, t = skl_curve_func(numpy.array(g_truth), numpy.array(g_proba))
     auc = sklearn.metrics.auc(x, y)
-    plt.plot(x, y, label="Overall (auc=%f)" % auc)
+    m = select_color_marker(line_i)
+    plt.plot(x, y, m, label="Overall (auc=%f)" % auc)
 
-    format_plt(title, xlabel, ylabel)
-    plt.savefig(output_filepath)
+    if plot_ci:
+        # Confidence interval generation
+        x_u, x_l = curve_wilson_ci(x, len(g_proba))
+        y_u, y_l = curve_wilson_ci(y, len(g_proba))
+        ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
+                              facecolor=m[0], edgecolor=m[0],
+                              alpha=plot_ci_alpha)
+        plt.gca().add_patch(ci_poly)
+
+        format_plt(title+' - All Classes', xlabel, ylabel)
+        fp_segs = output_filepath.split('.')
+        fp = '.'.join(fp_segs[:-1] + ['all_classes'] + [fp_segs[-1]])
+        log.info("Saving: %s", fp)
+        plt.savefig(fp)
+    else:
+        format_plt(title, xlabel, ylabel)
+        log.info("Saving: %s", output_filepath)
+        plt.savefig(output_filepath)
 
 
-def make_pr_curves(label2classifications, output_filepath):
+def make_pr_curves(label2classifications, output_filepath, plot_ci,
+                   plot_ci_alpha):
     def skl_pr_curve(truth, proba):
-        p, r, _ = sklearn.metrics.precision_recall_curve(truth, proba,
+        p, r, t = sklearn.metrics.precision_recall_curve(truth, proba,
                                                          pos_label=1)
-        return r, p
+        return r, p, t
 
     log = logging.getLogger(__name__)
     make_curve(log, skl_pr_curve, "PR", "Recall", "Precision", output_filepath,
-               label2classifications)
+               label2classifications, plot_ci, plot_ci_alpha)
 
 
-def make_roc_curves(label2classifications, output_filepath):
+def make_roc_curves(label2classifications, output_filepath, plot_ci,
+                    plot_ci_alpha):
     def skl_roc_curve(truth, proba):
-        fpr, tpr, _ = sklearn.metrics.roc_curve(truth, proba, pos_label=1)
-        return fpr, tpr
+        fpr, tpr, t = sklearn.metrics.roc_curve(truth, proba, pos_label=1)
+        return fpr, tpr, t
 
     log = logging.getLogger(__name__)
     make_curve(log, skl_roc_curve, "ROC", "False Positive Rate",
-               "True Positive Rate", output_filepath, label2classifications)
+               "True Positive Rate", output_filepath, label2classifications,
+               plot_ci, plot_ci_alpha)
+
+
+def curve_wilson_ci(p, n, confidence=0.95):
+    """
+    Generate upper and lower bounds confidence interval, using the Wilson score
+    interval, for PR and ROC curves.
+
+    :param p: Array of points for an axis.
+    :type p: numpy.ndarray[float]
+
+    :param n: number of source predictions that led to the ``p`` array.
+    :type n: int
+
+    :param confidence: (0, 1) confidence value for interval generation. Default
+        of 0.95, or 95% confidence bounds.
+    :type confidence: float
+
+    :return: Upper and lower bounds arrays.
+    :rtype: (numpy.ndarray[float], numpy.ndarray[float])
+
+    """
+    z = scipy.stats.norm.ppf(1-(1-float(confidence))/2)
+    n = float(n)
+    u = (1/(1+(z*z/n))) * \
+        (p + (z*z)/(2*n) + z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
+    l = (1/(1+(z*z/n))) * \
+        (p + (z*z)/(2*n) - z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
+    return u, l
 
 
 if __name__ == '__main__':

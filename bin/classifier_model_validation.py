@@ -233,8 +233,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
             # Confidence interval calculation using Wilson's score interval
             x_u, x_l = curve_wilson_ci(x, len(l_proba))
             y_u, y_l = curve_wilson_ci(y, len(l_proba))
-            ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u),
-                                                      reversed(y_u)),
+            ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
                                   facecolor=m[0], edgecolor=m[0],
                                   alpha=plot_ci_alpha)
             plt.gca().add_patch(ci_poly)
@@ -262,8 +261,8 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     plt.savefig(output_filepath)
 
 
-def make_pr_curves(label2classifications, output_filepath,
-                   plot_ci, plot_ci_alpha):
+def make_pr_curves(label2classifications, output_filepath, plot_ci,
+                   plot_ci_alpha):
     def skl_pr_curve(truth, proba):
         p, r, t = sklearn.metrics.precision_recall_curve(truth, proba,
                                                          pos_label=1)
@@ -274,8 +273,8 @@ def make_pr_curves(label2classifications, output_filepath,
                label2classifications, plot_ci, plot_ci_alpha)
 
 
-def make_roc_curves(label2classifications, output_filepath,
-                   plot_ci, plot_ci_alpha):
+def make_roc_curves(label2classifications, output_filepath, plot_ci,
+                    plot_ci_alpha):
     def skl_roc_curve(truth, proba):
         fpr, tpr, t = sklearn.metrics.roc_curve(truth, proba, pos_label=1)
         return fpr, tpr, t

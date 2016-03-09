@@ -253,4 +253,8 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
         # Progress reporting
         report_progress(log.debug, report_state, report_interval)
 
+    # Final report
+    report_state[1] -= 1
+    report_progress(log.debug, report_state, 0.0)
+
     return hash2uuids

@@ -50,7 +50,12 @@ def main():
 
     This is very useful for searching for -c and -g parameter values for a
     training sample of data using the ``tools/grid.py`` script, found in the
-    libSVM source tree.
+    libSVM source tree. For example:
+
+        <smqtk_source>/TPL/libsvm-3.1-custom/tools/grid.py \\
+            -log2c -5,15,2 -log2c 3,-15,-2 -v 5 -out libsvm.grid.out \\
+            -png libsvm.grid.png -t 0 -w1 3.46713615023 -w2 12.2613240418 \\
+            output_of_this_script.txt
     """
     args, config = bin_utils.utility_main_helper(default_config, description,
                                                  extend_parser)

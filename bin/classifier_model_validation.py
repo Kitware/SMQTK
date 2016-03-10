@@ -239,12 +239,12 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                                   alpha=plot_ci_alpha)
             plt.gca().add_patch(ci_poly)
 
-            format_plt(title+' - '+l, xlabel, ylabel)
-            fp_segs = output_filepath.split('.')
-            fp = '.'.join(fp_segs[:-1] + [l] + [fp_segs[-1]])
-            log.info("Saving: %s", fp)
-            plt.savefig(fp)
-            plt.clf()
+        format_plt(title+' - '+l, xlabel, ylabel)
+        fp_segs = output_filepath.split('.')
+        fp = '.'.join(fp_segs[:-1] + [l] + [fp_segs[-1]])
+        log.info("Saving: %s", fp)
+        plt.savefig(fp)
+        plt.clf()
 
         g_truth.extend(l_truth)
         g_proba.extend(l_proba)
@@ -265,15 +265,11 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                               alpha=plot_ci_alpha)
         plt.gca().add_patch(ci_poly)
 
-        format_plt(title+' - All Classes', xlabel, ylabel)
-        fp_segs = output_filepath.split('.')
-        fp = '.'.join(fp_segs[:-1] + ['all_classes'] + [fp_segs[-1]])
-        log.info("Saving: %s", fp)
-        plt.savefig(fp)
-    else:
-        format_plt(title, xlabel, ylabel)
-        log.info("Saving: %s", output_filepath)
-        plt.savefig(output_filepath)
+    format_plt(title+' - All Classes', xlabel, ylabel)
+    fp_segs = output_filepath.split('.')
+    fp = '.'.join(fp_segs[:-1] + ['all_classes'] + [fp_segs[-1]])
+    log.info("Saving: %s", fp)
+    plt.savefig(fp)
 
 
 def make_pr_curves(label2classifications, output_filepath, plot_ci,

@@ -85,10 +85,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             of truncated image bytes. This is False by default.
         :type load_truncated_images: bool
 
-        :param pixel_rescale: Re-scale image pixel values into the given tuple
-            ``(min, max)`` range. By default, images are loaded in the
-            ``[0, 255]`` range. Refer to the model being used for desired input
-            pixel scale.
+        :param pixel_rescale: Re-scale post-mean-subtracted image pixel values
+            into the given tuple ``(min, max)`` range. By default, images are
+            loaded in the ``[0, 255]`` range. Refer to the model being used for
+            desired input pixel scale.
         :type pixel_rescale: None | (float, float)
 
         """
@@ -461,9 +461,9 @@ def _process_load_img_array((data_element, transformer,
     assert img_a.ndim == 3, \
         "Loaded invalid RGB image with shape %s" \
         % img_a.shape
+    img_at = transformer.preprocess(data_layer, img_a)
     if pixel_rescale:
         pmin, pmax = min(pixel_rescale), max(pixel_rescale)
         r = pmax - pmin
-        img_a = (img_a / (255. / r)) + pmin
-    img_at = transformer.preprocess(data_layer, img_a)
+        img_at = (img_at / (255. / r)) + pmin
     return img_at

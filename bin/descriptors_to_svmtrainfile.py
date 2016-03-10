@@ -80,6 +80,7 @@ def main():
         label2int = {}
         next_int = 1
         uuids, labels = zip(*input_uuid_labels)
+        log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
                     itertools.izip(labels,
                                    descriptor_index.get_many_descriptors(*uuids))

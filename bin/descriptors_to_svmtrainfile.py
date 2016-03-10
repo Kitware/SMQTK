@@ -60,7 +60,7 @@ def main():
     """
     args, config = bin_utils.utility_main_helper(default_config, description,
                                                  extend_parser)
-    log = logging.getLogger()
+    log = logging.getLogger(__name__)
 
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
@@ -80,6 +80,7 @@ def main():
         label2int = {}
         next_int = 1
         uuids, labels = zip(*input_uuid_labels)
+
         log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
                     itertools.izip(labels,

@@ -158,6 +158,9 @@ def main():
                 procs=config['parallelism']['classification_cores'],
                 ri=1.0,
             ).values())
+    log.info("Label classification counts:")
+    for l in label2classifications:
+        log.info("  %s :: %d", l, len(label2classifications[l]))
 
     #
     # Create PR/ROC curves via scikit learn tools

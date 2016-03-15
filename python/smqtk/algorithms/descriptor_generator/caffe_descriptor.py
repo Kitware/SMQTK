@@ -40,7 +40,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                  return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
-                 load_truncated_images=False, pixel_rescale=None):
+                 load_truncated_images=False, pixel_rescale=None,
+                 input_scale=None):
         """
         Create a Caffe CNN descriptor generator
 
@@ -85,11 +86,17 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             of truncated image bytes. This is False by default.
         :type load_truncated_images: bool
 
-        :param pixel_rescale: Re-scale image pixel values into the given tuple
-            ``(min, max)`` range. By default, images are loaded in the
-            ``[0, 255]`` range. Refer to the model being used for desired input
-            pixel scale.
+        :param pixel_rescale: Re-scale image pixel values before being
+            transformed by caffe (before mean subtraction, etc)
+            into the given tuple ``(min, max)`` range. By default, images are
+            loaded in the ``[0, 255]`` range. Refer to the image mean being used
+            for desired input pixel scale.
         :type pixel_rescale: None | (float, float)
+
+        :param input_scale: Optional floating-point scalar value to scale values
+            of caffe network input data AFTER mean subtraction. This value is
+            directly multiplied against the pixel values.
+        :type input_scale: None | float
 
         """
         super(CaffeDescriptorGenerator, self).__init__()
@@ -109,6 +116,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self.load_truncated_images = bool(load_truncated_images)
         self.pixel_rescale = pixel_rescale
+        self.input_scale = input_scale
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" \
@@ -187,6 +195,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         if self.network_is_bgr:
             self._log.debug("Initializing data transformer -- channel swap")
             self.transformer.set_channel_swap(self.data_layer, (2, 1, 0))
+        if self.input_scale:
+            self._log.debug("Initializing data transformer -- input scale")
+            self.transformer.set_input_scale(self.data_layer, self.input_scale)
 
     def get_config(self):
         """

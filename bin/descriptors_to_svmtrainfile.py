@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import csv
 import itertools
+import logging
 
 from smqtk.representation import (
     get_descriptor_index_impls,
@@ -59,6 +60,7 @@ def main():
     """
     args, config = bin_utils.utility_main_helper(default_config, description,
                                                  extend_parser)
+    log = logging.getLogger(__name__)
 
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
@@ -78,11 +80,13 @@ def main():
         label2int = {}
         next_int = 1
         uuids, labels = zip(*input_uuid_labels)
+
+        log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
                     itertools.izip(labels,
                                    descriptor_index.get_many_descriptors(*uuids))
                 ):
-            print i, d.uuid()
+            log.debug("%d %s", i, d.uuid())
             if l not in label2int:
                 label2int[l] = next_int
                 next_int += 1
@@ -93,6 +97,10 @@ def main():
                           if f != 0.0]) +
                 '\n'
             )
+
+    log.info("Integer label association:")
+    for i, l in sorted((i, l) for l, i in label2int.iteritems()):
+        log.info('\t%d :: %s', i, l)
 
 
 if __name__ == '__main__':

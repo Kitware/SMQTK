@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import csv
 import logging
-import math
 
 import matplotlib.pyplot as plt
 import numpy
@@ -41,7 +40,8 @@ def default_config():
             'csv_filepath': 'CHAMGEME :: PATH :: a csv file',
             'output_plot_pr': None,
             'output_plot_roc': None,
-            'curve_confidence_interval': True,
+            'output_plot_confusion_matrix': None,
+            'curve_confidence_interval': False,
             'curve_confidence_interval_alpha': 0.4,
         },
         "parallelism": {
@@ -73,6 +73,11 @@ def main():
     The UUID is of the descriptor to which the label applies. The label may be
     any arbitrary string value, but all labels must be consistent in
     application.
+
+    Some metrics presented assume the highest confidence class as the single
+    predicted class for an element:
+
+        - confusion matrix
     """
     args, config = bin_utils.utility_main_helper(default_config, description)
     log = logging.getLogger(__name__)
@@ -99,6 +104,7 @@ def main():
     do_train = config['utility']['train']
     plot_filepath_pr = config['utility']['output_plot_pr']
     plot_filepath_roc = config['utility']['output_plot_roc']
+    plot_filepath_cm = config['utility']['output_plot_confusion_matrix']
     plot_ci = config['utility']['curve_confidence_interval']
     plot_ci_alpha = config['utility']['curve_confidence_interval_alpha']
 
@@ -159,8 +165,17 @@ def main():
                 ri=1.0,
             ).values())
     log.info("Label classification counts:")
-    for l in label2classifications:
+    for l in sorted(label2classifications):
         log.info("  %s :: %d", l, len(label2classifications[l]))
+
+    #
+    # Confusion Matrix
+    #
+    conf_mat, labels = gen_confusion_matrix(label2classifications)
+    log.info("Confusion_matrix")
+    log_cm(log.info, conf_mat, labels)
+    if plot_filepath_cm:
+        plot_cm(conf_mat, labels, plot_filepath_cm)
 
     #
     # Create PR/ROC curves via scikit learn tools
@@ -173,6 +188,90 @@ def main():
         log.info("Making ROC curve")
         make_roc_curves(label2classifications, plot_filepath_roc,
                         plot_ci, plot_ci_alpha)
+
+
+def gen_confusion_matrix(label2classifications):
+    """
+    Generate numpy confusion matrix based on classification highest confidence
+    score.
+
+    :param label2classifications: Mapping of true label for mapped set of
+        classifications.
+    :type label2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
+
+    :return: Numpy confusion matrix and label vectors for rows and columns
+    :rtype: numpy.ndarray[int], list[str], list[str]
+
+    """
+    # List of true and predicted classes for classifications
+    true_classes = []
+    pred_classes = []
+
+    for true_label in label2classifications:
+        for c in label2classifications[true_label]:
+            true_classes.append(true_label)
+            pred_classes.append(c.max_label())
+
+    labels = sorted(set(true_classes).union(pred_classes))
+    confusion_mat = sklearn.metrics.confusion_matrix(true_classes,
+                                                     pred_classes)
+
+    return confusion_mat, labels
+
+
+def log_cm(p_func, conf_mat, labels):
+    print_mat = numpy.zeros((conf_mat.shape[0] + 2, conf_mat.shape[1] + 1),
+                            dtype=object)
+    print_mat[0, 0] = "Predicted"
+    print_mat[1, 0] = "Actual"
+    print_mat[2:, 1:] = conf_mat.astype(str)
+    print_mat[0, 1:] = labels
+    print_mat[1, 1:] = ''
+    print_mat[2:, 0] = labels
+
+    # get col max widths
+    col_max_lens = []
+    for x in xrange(print_mat.shape[1]):
+        col_max_lens.append(max(map(len, print_mat[:, x].flatten().tolist())))
+
+    # Construct printed rows based on column max width
+    p_func("Confusion Matrix (Counts)")
+    for r in print_mat:
+        segs = []
+        for i, w in enumerate(r):
+            segs.append(' ' * (col_max_lens[i] - len(w)) + w)
+        p_func(' '.join(segs))
+
+
+def plot_cm(conf_mat, labels, output_path):
+    """
+    :param conf_mat: Confusion matrix with items counts
+    :type conf_mat: numpy.ndarray
+
+    :param labels: Symmetric row/column labels
+    :type labels: list[str]
+
+    :param output_path: Path to save generated figure.
+    :type output_path: str
+
+    :return:
+    :rtype:
+
+    """
+    #: :type: numpy.ndarray
+    cm = conf_mat.copy()
+    cm = cm / cm.sum(0).astype(float)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    cax = ax.matshow(cm)
+    fig.colorbar(cax)
+    ax.set_xticklabels([''] + labels)
+    ax.set_yticklabels([''] + labels)
+    ax.set_title('Confusion Matrix - Percent Makeup')
+    ax.set_xlabel('Predicted Class')
+    ax.set_ylabel('True Class')
+    fig.savefig(output_path)
 
 
 def format_plt(title, x_label, y_label):

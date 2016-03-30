@@ -13,11 +13,12 @@
 #
 #   - Change/Update any settings values below upon first run as appropriate.
 #   - Before each run, optionally update the "entries_after" setting with a
-#     specific minimum "indexedAt" timestamp of images to process. If this is
-#     empty, we will check if there are other directories in the ``run_dir``
-#     and use their names (which are valid timestamps themselves) as the
-#     minimum "indexedAt" times. If there are no other directories in the
-#     ``run_dir``, we use "*" as the minimum timestamp (i.e. no minimum).
+#     specific minimum "indexedAt" timestamp of images to process (time the
+#     image was crawled). If this is empty, we will check if there are other
+#     directories in the ``run_dir`` and use their names (which are valid
+#     timestamps themselves) as the minimum "indexedAt" times. If there are no
+#     other directories in the ``run_dir``, we use "*" as the minimum timestamp
+#     (i.e. no minimum).
 #
 # This lets the process know to not consider images added
 #     before that timestamp (they've already been processed). If this is the
@@ -292,7 +293,7 @@ then
         after_time_opt=""
         if [ "${entries_after}" != "*" ]
         then
-            after_time_opt="--inserted-after ${entries_after}"
+            after_time_opt="--crawled-after ${entries_after}"
         fi
 
         "${script_gci}" -v -c "${config_gci}" -d "${image_transfer_directory}" \

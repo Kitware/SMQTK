@@ -182,51 +182,58 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
         return False, None
 
     def dl_image(meta):
-        c_type = meta['fields']['content_type'][0]
-        obj_stored_url = meta['fields']['obj_stored_url'][0]
-        obj_original_url = meta['fields']['obj_original_url'][0]
+        try:
+            c_type = meta['fields']['content_type'][0]
+            obj_stored_url = meta['fields']['obj_stored_url'][0]
+            obj_original_url = meta['fields']['obj_original_url'][0]
 
-        c_ext = m.guess_extension(c_type, strict=False)
-        if c_ext is None:
-            log.warn("Guessed 'None' extension for content-type '%s', "
-                     "skipping.", c_type)
-            return None
+            c_ext = m.guess_extension(c_type, strict=False)
+            if c_ext is None:
+                log.warn("Guessed 'None' extension for content-type '%s', "
+                         "skipping.", c_type)
+                return None
 
-        save_dir = os.path.abspath(os.path.expanduser(
-            os.path.join(output_dir, meta['index'], meta['doc_type'])
-        ))
-        save_file = meta['id'] + c_ext
-        save_path = os.path.join(save_dir, save_file)
+            save_dir = os.path.abspath(os.path.expanduser(
+                os.path.join(output_dir, meta['index'], meta['doc_type'])
+            ))
+            save_file = meta['id'] + c_ext
+            save_path = os.path.join(save_dir, save_file)
 
-        # Save/write file if needed
-        if not os.path.isfile(save_path):
-            # First try 'stored' url, fallback on original
-            # Return None if failed to download anything
-            ok, r = try_download(obj_stored_url)
-            if not ok:
-                log.warn("Failed to download stored-data URL \"%s\" "
-                         "(error=%s)",
-                         obj_stored_url, str(r))
-
-                ok, r = try_download(obj_original_url)
+            # Save/write file if needed
+            if not os.path.isfile(save_path):
+                # First try 'stored' url, fallback on original
+                # Return None if failed to download anything
+                ok, r = try_download(obj_stored_url)
                 if not ok:
-                    log.warn("Failed to download original URL \"%s\" "
+                    log.warn("Failed to download stored-data URL \"%s\" "
                              "(error=%s)",
                              obj_stored_url, str(r))
-                    return None
 
-            # Assuming OK at this point
-            content = r.content
+                    ok, r = try_download(obj_original_url)
+                    if not ok:
+                        log.warn("Failed to download original URL \"%s\" "
+                                 "(error=%s)",
+                                 obj_stored_url, str(r))
+                        return None
 
-            d = DataMemoryElement(content, c_type)
+                # Assuming OK at this point
+                content = r.content
 
-            safe_create_dir(save_dir)
-            with open(save_path, 'wb') as out:
-                out.write(content)
-        else:
-            d = DataFileElement(save_path)
+                d = DataMemoryElement(content, c_type)
 
-        return meta['id'], save_path, d.uuid()
+                safe_create_dir(save_dir)
+                with open(save_path, 'wb') as out:
+                    log.debug("Saving to file: '%s'", save_path)
+                    out.write(content)
+            else:
+                #log.debug("Image for id '%s' already downloaded", meta['id'])
+                d = DataFileElement(save_path)
+
+            return meta['id'], save_path, d.uuid()
+        except KeyError, ex:
+            log.error("Failed to find key %s in meta block: %s",
+                      str(ex), meta)
+            raise
 
     # def iter_scan_meta():
     #     q_scan = q.params(size=batch_size)

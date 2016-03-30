@@ -231,7 +231,7 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
 
             return meta['id'], save_path, d.uuid()
         except KeyError, ex:
-            log.error("Failed to find key '%s' in meta block: %s",
+            log.error("Failed to find key %s in meta block: %s",
                       str(ex), meta)
             raise
 

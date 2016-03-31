@@ -119,8 +119,8 @@ def main():
     #
     # Checking parameters
     #
-    if uuid_list_filepath is None or not os.path.isfile(uuid_list_filepath):
-        raise ValueError("No UUID list file given!")
+    if not hash2uuids_output_filepath:
+        raise ValueError("No hash2uuids map output file provided!")
 
     #
     # Loading stuff
@@ -139,9 +139,15 @@ def main():
     )
 
     def iter_uuids():
-        with open(uuid_list_filepath) as f:
-            for l in f:
-                yield l.strip()
+        if uuid_list_filepath:
+            log.info("Using UUIDs list file")
+            with open(uuid_list_filepath) as f:
+                for l in f:
+                    yield l.strip()
+        else:
+            log.info("Using all UUIDs resent in descriptor index")
+            for k in descriptor_index.iterkeys():
+                yield k
 
     # load map if it exists, else start with empty dictionary
     if hash2uuids_input_filepath and os.path.isfile(hash2uuids_input_filepath):
@@ -168,7 +174,7 @@ def main():
     #
     # Output results
     #
-    tmp_output_filepath = hash2uuids_output_filepath+'.WRITING'
+    tmp_output_filepath = hash2uuids_output_filepath + '.WRITING'
     log.info("Writing hash-to-uuids map to disk: %s", tmp_output_filepath)
     file_utils.safe_create_dir(os.path.dirname(hash2uuids_output_filepath))
     with open(tmp_output_filepath, 'wb') as f:

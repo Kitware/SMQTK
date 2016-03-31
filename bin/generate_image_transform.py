@@ -4,6 +4,7 @@ import logging
 import os
 
 import PIL.Image
+import PIL.ImageEnhance
 import numpy
 
 import smqtk.utils.bin_utils
@@ -88,8 +89,52 @@ def image_crop_quadrant_pyramid(image, n_levels):
                 )
 
 
+def image_brightness_intervals(image, n):
+    """
+    Generate a number of images with different brightness levels using linear
+    interpolation to choose levels between 0 (black) and 1 (original image) as
+    well as between 1 and 2.
+
+    Results will not include contrast level 0, 1 or 2 images.
+
+    """
+    n = int(n)
+    if n <= 0:
+        raise ValueError("Can't produce 0 intervals")
+
+    b = numpy.linspace(0, 1, n+2, endpoint=True, dtype=float)
+    for v in b[1:-1]:
+        yield v, PIL.ImageEnhance.Brightness(image).enhance(v)
+    b = numpy.linspace(1, 2, n + 2, endpoint=True, dtype=float)
+    for v in b[1:-1]:
+        yield v, PIL.ImageEnhance.Brightness(image).enhance(v)
+
+
+def image_contrast_intervals(image, n):
+    """
+    Generate a number of images with different contrast levels using linear
+    interpolation to choose levels between 0 (black) and 1 (original image) as
+    well as between 1 and 2.
+
+    Results will not include contrast level 0, 1 or 2 images.
+
+    """
+    n = int(n)
+    if n <= 0:
+        raise ValueError("Can't produce 0 intervals")
+
+    b = numpy.linspace(0, 1, n + 2, endpoint=True, dtype=float)
+    for v in b[1:-1]:
+        yield v, PIL.ImageEnhance.Contrast(image).enhance(v)
+    b = numpy.linspace(1, 2, n + 2, endpoint=True, dtype=float)
+    for v in b[1:-1]:
+        yield v, PIL.ImageEnhance.Contrast(image).enhance(v)
+
+
 def generate_image_transformations(image_path,
                                    crop_center_n, crop_quadrant_levels,
+                                   brigntness_intervals,
+                                   contrast_intervals,
                                    output_dir=None):
     """
     Transform an input image into different crops or other transforms,
@@ -128,6 +173,16 @@ def generate_image_transformations(image_path,
                                                         crop_quadrant_levels):
             save_image(c, [tag, str(l), "q_{:d}_{:d}".format(i, j)])
 
+    if brigntness_intervals:
+        log.info("Computing brightness variants")
+        for b, i in image_brightness_intervals(image, brigntness_intervals):
+            save_image(i, ['brightness', str(b)])
+
+    if contrast_intervals:
+        log.info("Computing contrast variants")
+        for c, i in image_contrast_intervals(image, contrast_intervals):
+            save_image(i, ['contrast', str(c)])
+
 
 def default_config():
     return {
@@ -136,7 +191,9 @@ def default_config():
             "center_levels": 3,
             # 0 means disabled, 2 meaning 2x2 and 4x4
             "quadrant_pyramid_levels": 2,
-        }
+        },
+        "brightness_levels": 3,
+        "contrast_levels": 3,
     }
 
 
@@ -176,10 +233,13 @@ def main():
 
     crop_center_levels = config['crop']['center_levels']
     crop_quad_levels = config['crop']['quadrant_pyramid_levels']
+    b_levels = config['brightness_levels']
+    c_levels = config['contrast_levels']
 
     generate_image_transformations(
         input_image_path,
         crop_center_levels, crop_quad_levels,
+        b_levels, c_levels,
         output_dir
     )
 

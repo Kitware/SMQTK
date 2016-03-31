@@ -3,6 +3,7 @@ import json
 import logging
 import logging.handlers
 import os
+import sys
 import time
 
 from smqtk.utils import merge_dict
@@ -128,13 +129,13 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
         if os.path.exists(output_path) and not overwrite:
             log.error("Output configuration file path already exists! (%s)",
                       output_path)
-            exit(error_rc)
+            sys.exit(error_rc)
         else:
             log.info("Outputting JSON configuration to: %s", output_path)
             with open(output_path, 'w') as f:
                 json.dump(config_dict, f, indent=4, check_circular=True,
                           separators=(',', ': '), sort_keys=True)
-            exit(0)
+            sys.exit(0)
 
 
 def report_progress(log, state, interval):

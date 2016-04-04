@@ -13,6 +13,13 @@ except ImportError:
 __author__ = "paul.tunison@kitware.com"
 
 
+# Fix global MIMETYPE map
+if '.jfif' in mimetypes.types_map:
+    del mimetypes.types_map['.jfif']
+if '.jpe' in mimetypes.types_map:
+    del mimetypes.types_map['.jpe']
+
+
 class DataFileElement (DataElement):
     """
     File-based data element

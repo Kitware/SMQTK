@@ -72,18 +72,15 @@ def main():
 
     log.debug("Script arguments:\n%s" % args)
 
-    def create_element(fp):
-        return DataFileElement(fp)
-
     def iter_input_elements():
         for f in args.input_files:
             f = osp.expanduser(f)
             if osp.isfile(f):
-                yield create_element(f)
+                yield DataFileElement(f)
             else:
                 log.debug("Expanding glob: %s" % f)
                 for g in glob.glob(f):
-                    yield create_element(g)
+                    yield DataFileElement(g)
 
     log.info("Adding elements to data set")
     #: :type: smqtk.representation.DataSet

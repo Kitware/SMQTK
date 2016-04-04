@@ -10,6 +10,7 @@ import logging
 import mimetypes
 import os
 import re
+import time
 
 import certifi
 import elasticsearch
@@ -136,6 +137,21 @@ def cdr_images_after(es_instance, index, image_types, crawled_after=None,
     return q
 
 
+def try_download(uri, auth=None):
+    """
+    Attempt URI download via get, return success and request instance if
+    successful, or the optional error that occurred if false.
+    """
+    if uri:
+        try:
+            r = requests.get(uri, auth=auth)
+            if r.ok:
+                return True, r
+        except Exception, ex:
+            return False, ex
+    return False, None
+
+
 def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
                            stored_http_auth=None, batch_size=1000):
     """
@@ -172,15 +188,6 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
     # DL record info :: [ CDR ID, local image path, SMQTK UUID ]
     m = mimetypes.MimeTypes()
 
-    def try_download(uri):
-        try:
-            r = requests.get(uri, auth=stored_http_auth)
-            if r.ok:
-                return True, r
-        except Exception, ex:
-            return False, ex
-        return False, None
-
     def dl_image(meta):
         try:
             c_type = meta['fields']['content_type'][0]
@@ -203,7 +210,7 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
             if not os.path.isfile(save_path):
                 # First try 'stored' url, fallback on original
                 # Return None if failed to download anything
-                ok, r = try_download(obj_stored_url)
+                ok, r = try_download(obj_stored_url, stored_http_auth)
                 if not ok:
                     log.warn("Failed to download stored-data URL \"%s\" "
                              "(error=%s)",
@@ -226,7 +233,6 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
                     log.debug("Saving to file: '%s'", save_path)
                     out.write(content)
             else:
-                #log.debug("Image for id '%s' already downloaded", meta['id'])
                 d = DataFileElement(save_path)
 
             return meta['id'], save_path, d.uuid()
@@ -461,9 +467,9 @@ def main():
         exit(0)
 
     fetch_cdr_query_images(q, args.output_dir, args.file_list,
-                           cores=config['parallel']['cores'],
+                           cores=int(config['parallel']['cores']),
                            stored_http_auth=http_auth,
-                           batch_size=config['elastic_search']['batch_size'])
+                           batch_size=int(config['elastic_search']['batch_size']))
 
 
 if __name__ == '__main__':

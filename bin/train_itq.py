@@ -70,9 +70,7 @@ def main():
                     yield l.strip()
         log.info("Loading UUIDs list from file: %s", uuids_list_filepath)
     else:
-        def uuids_iter():
-            for uuid in descriptor_index.iterkeys():
-                yield uuid
+        uuids_iter = descriptor_index.iterkeys
         log.info("Using UUIDs from loaded DescriptorIndex (count=%d)",
                  len(descriptor_index))
 

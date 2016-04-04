@@ -103,7 +103,7 @@ config_cc="configs/config.compute_classifications.json"
 run_dir="runs"
 
 # Batch size for descriptor computation
-cmd_batch_size=256
+cmd_batch_size=1024
 
 # Server where image files are located based on indexed paths in Solr instance
 image_server="imagecat.dyndns.org"

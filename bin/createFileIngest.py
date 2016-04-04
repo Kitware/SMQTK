@@ -48,7 +48,7 @@ def main():
     args = parser.parse_args()
 
     bin_utils.initialize_logging(logging.getLogger(),
-                                 logging.INFO - (10*args.verbose))
+                                 logging.INFO - (10 * args.verbose))
     log = logging.getLogger("main")
 
     # Merge loaded config with default
@@ -70,21 +70,22 @@ def main():
         log.error("No configuration provided")
         exit(1)
 
-    #: :type: smqtk.representation.DataSet
-    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls())
     log.debug("Script arguments:\n%s" % args)
 
-    def ingest_file(fp):
-        ds.add_data(DataFileElement(fp))
+    def iter_input_elements():
+        for f in args.input_files:
+            f = osp.expanduser(f)
+            if osp.isfile(f):
+                yield DataFileElement(f)
+            else:
+                log.debug("Expanding glob: %s" % f)
+                for g in glob.glob(f):
+                    yield DataFileElement(g)
 
-    for f in args.input_files:
-        f = osp.expanduser(f)
-        if osp.isfile(f):
-            ingest_file(f)
-        else:
-            log.debug("Expanding glob: %s" % f)
-            for g in glob.glob(f):
-                ingest_file(g)
+    log.info("Adding elements to data set")
+    #: :type: smqtk.representation.DataSet
+    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls())
+    ds.add_data(*iter_input_elements())
 
 
 if __name__ == '__main__':

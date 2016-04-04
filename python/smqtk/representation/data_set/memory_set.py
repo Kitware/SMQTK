@@ -83,7 +83,7 @@ class DataMemorySet (DataSet):
         """
         if self.file_cache:
             with self._element_map_lock:
-                with SimpleTimer("Caching memory data-set table", self._log.info):
+                with SimpleTimer("Caching memory data-set table", self._log.debug):
                     with open(self.file_cache, 'wb') as f:
                         cPickle.dump(self._element_map, f,
                                      self.pickle_protocol)

@@ -2,8 +2,11 @@
 """
 Compute many descriptors from a set of file paths loaded from file.
 """
+import io
 import logging
 import os
+
+import PIL.Image
 
 from smqtk.algorithms import get_descriptor_generator_impls
 from smqtk.compute_functions import compute_many_descriptors
@@ -26,14 +29,15 @@ def default_config():
     }
 
 
-def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
+def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
+                  check_image=False):
     """
     Top level function handling configuration and inputs/outputs.
 
     :param c: Configuration dictionary (JSON)
     :type c: dict
 
-    :param filelist_filepath: Path to a text file that lists paths to image
+    :param filelist_filepath: Path to a text file that lists paths to data
         files, separated by new lines.
     :type filelist_filepath: str
 
@@ -66,11 +70,25 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None):
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls())
 
+    def test_image_load(dfe):
+        try:
+            PIL.Image.open(io.BytesIO(dfe.get_bytes()))
+            return True
+        except IOError, ex:
+            # noinspection PyProtectedMember
+            log.warn("Failed to convert '%s' bytes into an image "
+                     "(error: %s). Skipping",
+                     dfe._filepath, str(ex))
+            return False
+
     def is_valid_element(fp):
         dfe = DataFileElement(fp)
         ct = dfe.content_type()
         if ct in generator.valid_content_types():
-            return dfe
+            if not check_image or test_image_load(dfe):
+                return dfe
+            else:
+                return None
         else:
             log.debug("Skipping file (invalid content) type for "
                       "descriptor generator (fp='%s', ct=%s)",
@@ -122,6 +140,13 @@ def extend_parser(parser):
                              "batch and will perform a single "
                              "``compute_async`` call on the configured "
                              "generator. Default batch size is 256.")
+    parser.add_argument('--check-image',
+                        default=False, action='store_true',
+                        help="If se should check image pixel loading before "
+                             "queueing an input image for processing. If we "
+                             "cannot load the image pixels via "
+                             "``PIL.Image.open``, the input image is not "
+                             "queued for processing")
 
     # Non-config required arguments
     g_required = parser.add_argument_group("Required Arguments")
@@ -145,6 +170,10 @@ def extend_parser(parser):
 
 def main():
     description = """
+    Descriptor computation helper utility. Checks dat content type with respect
+    to the configured descriptor generator to skip content that does not match
+    the accepted types. Optionally, we can additionally filter out image content
+    whose image bytes we cannot load via ``PIL.Image.open``.
     """
 
     args, config = utility_main_helper(default_config, description,
@@ -154,6 +183,7 @@ def main():
     completed_files_fp = args.completed_files
     filelist_fp = args.file_list
     batch_size = args.batch_size
+    check_image = args.check_image
 
     # Input checking
     if not filelist_fp:
@@ -176,6 +206,7 @@ def main():
         filelist_fp,
         completed_files_fp,
         batch_size,
+        check_image
     )
 
 

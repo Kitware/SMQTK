@@ -6,10 +6,7 @@ for these functions instead of scripts in ``<source>/bin/scripts``.
 
 """
 import collections
-import io
 import logging
-
-import PIL.Image
 
 from smqtk.utils import (
     bin_utils,
@@ -87,34 +84,12 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     total = 0
     unique = 0
 
-    def data_file_element_iter():
-        """
-        Helper iterator to collect the file elements as we iterate over them
-        when not batching.
-        :rtype: __generator[smqtk.representation.data_element
-                            .file_element.DataFileElement]
-        """
-        for fe in file_elements:
-            # checking that we can load that data as a valid image.
-            try:
-                PIL.Image.open(io.BytesIO(fe.get_bytes()))
-            except IOError, ex:
-                # noinspection PyProtectedMember
-                log.warn("Failed to convert '%s' into an image "
-                         "(error: %s). Skipping",
-                         fe._filepath, str(ex))
-                continue
-
-            dfe_deque.append(fe)
-
-            yield fe
-
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
 
         batch_i = 0
 
-        for dfe in data_file_element_iter():
+        for dfe in file_elements:
             # element captured in dfe_deque
 
             if len(dfe_deque) == batch_size:
@@ -165,7 +140,7 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         # Just do everything in one call
         log.debug("Computing descriptors")
         m = descr_generator.compute_descriptor_async(
-            data_file_element_iter(), descr_factory,
+            file_elements, descr_factory,
             overwrite, procs, **kwds
         )
 

@@ -12,9 +12,11 @@ from numpy.core.multiarray import ndarray  # for shortening doc strings
 
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
+from smqtk.utils.parallel import parallel_map
+from smqtk.utils.bin_utils import report_progress
 
 
-def compute_distance_kernel(m, dist_func, row_wise=False):
+def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     """
     Method for computing the distance kernel of an array of vectors given a
     distance function that works on two supplied 1D arrays.
@@ -32,6 +34,10 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
         matrix, and computes pair-wise distances, returning a vector of
         distances between the given vector and each row of the matrix.
     :type row_wise: bool
+
+    :param parallel: If distances should be calculated in parallel. This is true
+        by default.
+    :type parallel: bool
 
     :return: Computed symmetric distance kernel
     :rtype: numpy.core.multiarray.ndarray
@@ -60,24 +66,43 @@ def compute_distance_kernel(m, dist_func, row_wise=False):
     log.info("Computing distance kernel")
     side = m.shape[0]
     mat = np.ndarray((side, side), dtype=float)
-    log.debug("computing distances")
 
     if row_wise:
         log.debug("Computing row-wise distances")
         # For all rows except the last one. We'll have computed all distanced by
         # the time reach m[side-1]
-        for i in xrange(side):
-            # Compute col/row wise distances
-            mat[i, i] = 0.
-            if i < (side-1):
-                mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
+        if parallel:
+            def work_func(i):
+                mat[i, i] = 0.
+                if i < (side - 1):
+                    mat[i + 1:, i] = mat[i, i + 1:] = dist_func(m[i, :],
+                                                                m[i + 1:, :])
+            s = [0] * 7
+            for _ in parallel_map(work_func, xrange(side)):
+                report_progress(log.debug, s, 1.)
+        else:
+            for i in xrange(side):
+                # Compute col/row wise distances
+                mat[i, i] = 0.
+                if i < (side-1):
+                    mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
     else:
         log.debug("Computing element-wise distances")
-        for i in xrange(side):
-            mat[i, i] = 0
-            # cols to the left of diagonal index for this row
-            for j in xrange(i):
-                mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
+        if parallel:
+            def work_func(i):
+                mat[i, i] = 0
+                # cols to the left of diagonal index for this row
+                for j in xrange(i):
+                    mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
+            s = [0] * 7
+            for _ in parallel_map(work_func, xrange(side)):
+                report_progress(log.debug, s, 1.)
+        else:
+            for i in xrange(side):
+                mat[i, i] = 0
+                # cols to the left of diagonal index for this row
+                for j in xrange(i):
+                    mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
 
     return mat
 

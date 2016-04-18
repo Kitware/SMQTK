@@ -84,13 +84,18 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
     total = 0
     unique = 0
 
+    def iter_capture_elements():
+        for dfe in file_elements:
+            dfe_deque.append(dfe)
+            yield dfe
+
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
 
         batch_i = 0
 
-        for dfe in file_elements:
-            # element captured in dfe_deque
+        for dfe in iter_capture_elements():
+            # elements captured in iter_capture_elements
 
             if len(dfe_deque) == batch_size:
                 batch_i += 1
@@ -140,7 +145,7 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         # Just do everything in one call
         log.debug("Computing descriptors")
         m = descr_generator.compute_descriptor_async(
-            file_elements, descr_factory,
+            iter_capture_elements(), descr_factory,
             overwrite, procs, **kwds
         )
 

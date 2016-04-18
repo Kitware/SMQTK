@@ -34,7 +34,8 @@ class ItqFunctor (LshFunctor):
         return True
 
     def __init__(self, mean_vec_filepath=None, rotation_filepath=None,
-                 bit_length=8, itq_iterations=50, random_seed=None):
+                 bit_length=8, itq_iterations=50, normalize=None,
+                 random_seed=None):
         """
         Initialize IQR functor.
 
@@ -66,6 +67,13 @@ class ItqFunctor (LshFunctor):
             perform. This must be greater than 0.
         :type itq_iterations: int
 
+        :param normalize: Normalize input vectors when fitting and generation
+            hash vectors using ``numpy.linalg.norm``. This may either
+            be  ``None``, disabling normalization, or any valid value that
+            could be passed to the ``ord`` parameter in ``numpy.linalg.norm``
+            for 1D arrays. This is ``None`` by default (no normalization).
+        :type normalize: None | int | float | str
+
         :param random_seed: Integer to use as the random number generator seed.
         :type random_seed: int
 
@@ -76,13 +84,40 @@ class ItqFunctor (LshFunctor):
         self.rotation_filepath = rotation_filepath
         self.bit_length = bit_length
         self.itq_iterations = itq_iterations
+        self.normalize = normalize
         self.random_seed = random_seed
+
+        # Validate normalization parameter by trying it on a random vector
+        if normalize is not None:
+            self._norm_vector(numpy.random.rand(8))
 
         # Model components
         self.mean_vec = None
         self.rotation = None
 
         self.load_model()
+
+    def _norm_vector(self, v):
+        """
+        Class standard array normalization. Normalized along max dimension (a=0
+        for a 1D array, a=1 for a 2D array, etc.).
+
+        :param v: Vector to normalize
+        :type v: numpy.ndarray
+
+        :return: Returns the normalized version of input array ``v``.
+        :rtype: numpy.ndarray
+
+        """
+        if self.normalize is not None:
+            n = numpy.linalg.norm(v, self.normalize, v.ndim - 1,
+                                  keepdims=True)
+            # replace 0's with 1's, preventing div-by-zero
+            n[n == 0.] = 1.
+            return v / n
+
+        # Normalization off
+        return v
 
     def get_config(self):
         return {
@@ -193,6 +228,10 @@ class ItqFunctor (LshFunctor):
                                report_interval=dbg_report_interval)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 
+        self._log.debug("Info normalizing descriptors by factor: %s",
+                        self.normalize)
+        x = self._norm_vector(x)
+
         self._log.info("Centering data")
         self.mean_vec = numpy.mean(x, axis=0)
         x -= self.mean_vec
@@ -248,7 +287,8 @@ class ItqFunctor (LshFunctor):
         :rtype: numpy.ndarray[bool]
 
         """
-        z = numpy.dot(descriptor - self.mean_vec, self.rotation)
+        z = numpy.dot(self._norm_vector(descriptor) - self.mean_vec,
+                      self.rotation)
         b = numpy.zeros(z.shape, dtype=bool)
         b[z >= 0] = True
         return b

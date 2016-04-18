@@ -6,12 +6,18 @@ import os
 import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
+from smqtk.representation import DescriptorElementFactory
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 from smqtk.utils import SimpleTimer
 import smqtk.utils.parallel
 from smqtk.utils.plugin import get_plugins
 
 
 __author__ = "paul.tunison@kitware.com"
+
+
+DFLT_DESCRIPTOR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})
 
 
 class DescriptorGenerator (SmqtkAlgorithm):
@@ -27,7 +33,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :rtype: set[str]
         """
 
-    def compute_descriptor(self, data, descr_factory, overwrite=False):
+    def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
+                           overwrite=False):
         """
         Given some kind of data, return a descriptor element containing a
         descriptor vector.
@@ -80,7 +87,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
 
         return descr_elem
 
-    def compute_descriptor_async(self, data_iter, descr_factory,
+    def compute_descriptor_async(self, data_iter,
+                                 descr_factory=DFLT_DESCRIPTOR_FACTORY,
                                  overwrite=False, procs=None, **kwds):
         """
         Asynchronously compute feature data for multiple data items.

@@ -9,7 +9,11 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 
-from smqtk.algorithms import DescriptorGenerator
+from smqtk.algorithms.descriptor_generator import \
+    DescriptorGenerator, \
+    DFLT_DESCRIPTOR_FACTORY
+
+from smqtk.utils.bin_utils import report_progress
 
 try:
     import caffe
@@ -244,7 +248,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                   "compute_descriptor[_async] is being "
                                   "overridden")
 
-    def compute_descriptor(self, data, descr_factory, overwrite=False):
+    def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
+                           overwrite=False):
         """
         Given some kind of data, return a descriptor element containing a
         descriptor vector.
@@ -279,7 +284,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                           procs=1)
         return m[data]
 
-    def compute_descriptor_async(self, data_iter, descr_factory,
+    def compute_descriptor_async(self, data_iter,
+                                 descr_factory=DFLT_DESCRIPTOR_FACTORY,
                                  overwrite=False, procs=None, **kwds):
         """
         Asynchronously compute feature data for multiple data items.

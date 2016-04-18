@@ -330,6 +330,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         descr_elements = {}
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
+        prog_rep_state = [0] * 7
         for d in data_iter:
             ct = d.content_type()
             if ct not in self.valid_content_types():
@@ -337,6 +338,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                  "'%s', (DE: %s" % (ct, d))
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
+            report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
@@ -376,7 +378,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
             if batch_groups:
                 for g in xrange(batch_groups):
-                    self._log.debug("Starting batch: %d", g)
+                    self._log.debug("Starting batch: %d of %d", g, batch_groups)
                     batch_uuids = \
                         uuid4proc[g*self.batch_size:(g+1)*self.batch_size]
                     self._process_batch(batch_uuids, data_elements,

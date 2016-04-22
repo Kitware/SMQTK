@@ -125,27 +125,28 @@ def main():
 
     def get_descr(r):
         """ Fetch descriptors from configured index """
-        uuid, label = r
-        return label, descriptor_index.get_descriptor(uuid)
+        uuid, truth_label = r
+        return truth_label, descriptor_index.get_descriptor(uuid)
 
-    label_element_iter = parallel.parallel_map(
+    tlabel_element_iter = parallel.parallel_map(
         get_descr, iter_uuid_label(),
         name="cmv_get_descriptors",
         use_multiprocessing=True,
         cores=config['parallelism']['descriptor_fetch_cores'],
     )
 
+    # Map of truth labels to descriptors of labeled data
     #: :type: dict[str, list[smqtk.representation.DescriptorElement]]
-    label2descriptors = {}
-    for label, d in label_element_iter:
-        label2descriptors.setdefault(label, []).append(d)
+    tlabel2descriptors = {}
+    for tlabel, d in tlabel_element_iter:
+        tlabel2descriptors.setdefault(tlabel, []).append(d)
 
     # Train classifier if the one given has a ``train`` method and training
     # was turned enabled.
     if do_train:
         if isinstance(classifier, SupervisedClassifier):
             log.info("Training classifier model")
-            classifier.train(label2descriptors)
+            classifier.train(tlabel2descriptors)
             exit(0)
         else:
             ValueError("Configured classifier is not a SupervisedClassifier "
@@ -154,24 +155,26 @@ def main():
     #
     # Apply classifier to descriptors for predictions
     #
+
+    # Truth label to predicted classification results
     #: :type: dict[str, set[smqtk.representation.ClassificationElement]]
-    label2classifications = {}
-    for label, descriptors in label2descriptors.iteritems():
-        label2classifications[label] = \
+    tlabel2classifications = {}
+    for tlabel, descriptors in tlabel2descriptors.iteritems():
+        tlabel2classifications[tlabel] = \
             set(classifier.classify_async(
                 descriptors, classification_factory,
                 use_multiprocessing=True,
                 procs=config['parallelism']['classification_cores'],
                 ri=1.0,
             ).values())
-    log.info("Label classification counts:")
-    for l in sorted(label2classifications):
-        log.info("  %s :: %d", l, len(label2classifications[l]))
+    log.info("Truth label counts:")
+    for l in sorted(tlabel2classifications):
+        log.info("  %s :: %d", l, len(tlabel2classifications[l]))
 
     #
     # Confusion Matrix
     #
-    conf_mat, labels = gen_confusion_matrix(label2classifications)
+    conf_mat, labels = gen_confusion_matrix(tlabel2classifications)
     log.info("Confusion_matrix")
     log_cm(log.info, conf_mat, labels)
     if plot_filepath_cm:
@@ -182,39 +185,40 @@ def main():
     #
     if plot_filepath_pr:
         log.info("Making PR curve")
-        make_pr_curves(label2classifications, plot_filepath_pr,
+        make_pr_curves(tlabel2classifications, plot_filepath_pr,
                        plot_ci, plot_ci_alpha)
     if plot_filepath_roc:
         log.info("Making ROC curve")
-        make_roc_curves(label2classifications, plot_filepath_roc,
+        make_roc_curves(tlabel2classifications, plot_filepath_roc,
                         plot_ci, plot_ci_alpha)
 
 
-def gen_confusion_matrix(label2classifications):
+def gen_confusion_matrix(tlabel2classifications):
     """
     Generate numpy confusion matrix based on classification highest confidence
     score.
 
-    :param label2classifications: Mapping of true label for mapped set of
+    :param tlabel2classifications: Mapping of true label for mapped set of
         classifications.
-    :type label2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
+    :type tlabel2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
 
     :return: Numpy confusion matrix and label vectors for rows and columns
-    :rtype: numpy.ndarray[int], list[str], list[str]
+    :rtype: numpy.ndarray[int], list[str]
 
     """
     # List of true and predicted classes for classifications
     true_classes = []
     pred_classes = []
 
-    for true_label in label2classifications:
-        for c in label2classifications[true_label]:
+    for true_label in tlabel2classifications:
+        for c in tlabel2classifications[true_label]:
             true_classes.append(true_label)
             pred_classes.append(c.max_label())
 
     labels = sorted(set(true_classes).union(pred_classes))
     confusion_mat = sklearn.metrics.confusion_matrix(true_classes,
-                                                     pred_classes)
+                                                     pred_classes,
+                                                     labels)
 
     return confusion_mat, labels
 
@@ -258,14 +262,27 @@ def plot_cm(conf_mat, labels, output_path):
     :rtype:
 
     """
+    log = logging.getLogger(__name__)
+
     #: :type: numpy.ndarray
     cm = conf_mat.copy()
-    cm = cm / cm.sum(0).astype(float)
+    log.debug("raw conf mat:\n%s", cm)
+
+    # each row represents a true class
+    cm_f = cm / cm.sum(1).astype(float)[:, numpy.newaxis]
+    log.debug("normalized conf mat:\n%s", cm_f)
 
     fig = plt.figure()
+    #: :type: matplotlib.axes._axes.Axes
     ax = fig.add_subplot(111)
-    cax = ax.matshow(cm)
+    cax = ax.matshow(cm_f)
     fig.colorbar(cax)
+
+    # Annotate cells with count values
+    for y in xrange(cm.shape[0]):
+        for x in xrange(cm.shape[1]):
+            ax.annotate(s=str(cm[y, x]), xy=(x, y), xycoords='data')
+
     ax.set_xticklabels([''] + labels)
     ax.set_yticklabels([''] + labels)
     ax.set_title('Confusion Matrix - Percent Makeup')

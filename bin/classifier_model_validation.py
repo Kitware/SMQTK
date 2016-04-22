@@ -200,7 +200,7 @@ def gen_confusion_matrix(label2classifications):
     :type label2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
 
     :return: Numpy confusion matrix and label vectors for rows and columns
-    :rtype: numpy.ndarray[int], list[str], list[str]
+    :rtype: numpy.ndarray[int], list[str]
 
     """
     # List of true and predicted classes for classifications
@@ -260,7 +260,8 @@ def plot_cm(conf_mat, labels, output_path):
     """
     #: :type: numpy.ndarray
     cm = conf_mat.copy()
-    cm = cm / cm.sum(0).astype(float)
+    # each row represents a true class
+    cm = cm / cm.sum(1).astype(float)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)

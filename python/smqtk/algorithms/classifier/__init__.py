@@ -100,7 +100,7 @@ class Classifier (SmqtkAlgorithm):
                      smqtk.representation.ClassificationElement]
 
         """
-        self._log.info("Async classifying descriptors")
+        self._log.debug("Async classifying descriptors")
         ri = ri and ri > 0 and ri
 
         def work(d_elem):

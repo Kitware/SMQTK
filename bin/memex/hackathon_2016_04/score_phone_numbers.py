@@ -75,7 +75,7 @@ if isinstance(PHONE2TRUTH, basestring) and PHONE2TRUTH:
             ax.annotate(s=str(cm[y, x]), xy=(x, y), xycoords='data')
     ax.set_xticklabels([''] + labels)
     ax.set_yticklabels([''] + labels)
-    ax.set_title('Confusion Matrix - Percent Makeup')
+    ax.set_title('Confusion Matrix - Count Makeup')
     ax.set_xlabel('Predicted Class')
     ax.set_ylabel('True Class')
     f.savefig(PLOT_CM_OUTPUT)

@@ -19,7 +19,7 @@ is_win32 = (sys.platform == 'win32')
 if not is_win32:
 #       svmtrain_exe = "/Users/sun/bin/svm-train"
 #       gnuplot_exe = "/opt/local/bin/gnuplot"
-       svmtrain_exe = "/home/sun/prog/kwocv/src/libsvm/svm-train"
+       svmtrain_exe = "/home/purg/dev/smqtk/source/TPL/libsvm-3.1-custom/svm-train"
        gnuplot_exe = "/usr/bin/gnuplot"
 else:
        # example for windows
@@ -28,7 +28,7 @@ else:
 
 # global parameters and their default values
 
-fold = 5
+fold = 3
 c_begin, c_end, c_step = -5,  15, 2
 g_begin, g_end, g_step =  3, -15, -2
 global dataset_pathname, dataset_title, pass_through_string
@@ -38,7 +38,7 @@ global out_filename, png_filename
 
 telnet_workers = []
 ssh_workers = []
-nr_local_worker = 1
+nr_local_worker = 10
 
 # process command line options, set global parameters
 def process_options(argv=sys.argv):
@@ -354,19 +354,24 @@ def main():
             while (c, g) not in done_jobs:
                 (worker,c1,g1,rate) = result_queue.get()
                 done_jobs[(c1,g1)] = rate
-                result_file.write('{0} {1} {2}\n'.format(c1,g1,rate))
-                result_file.flush()
+
                 if (rate > best_rate) or (rate==best_rate and g1==best_g1 and c1<best_c1):
                     best_rate = rate
                     best_c1,best_g1=c1,g1
                     best_c = 2.0**c1
                     best_g = 2.0**g1
-                print("[{0}] {1} {2} {3} (best c={4}, g={5}, rate={6})".format \
-        (worker,c1,g1,rate, best_c, best_g, best_rate))
+                result_file.write('{} {} {} :: best {} {} {}\n'
+                                  .format(2 ** c1, 2 ** g1, rate,
+                                          best_c, best_g, best_rate))
+                result_file.flush()
+                print("[{0}] c1={1} g1={2} rate={3} (best c={4}, g={5}, rate={6})"
+                      .format(worker,c1,g1,rate, best_c, best_g, best_rate))
             db.append((c,g,done_jobs[(c,g)]))
 #        redraw(db,[best_c1, best_g1, best_rate])
 #        redraw(db,[best_c1, best_g1, best_rate],True)
 
     job_queue.put((WorkerStopToken,None))
-    print("{0} {1} {2}".format(best_c, best_g, best_rate))
+    result_file.write('Best: {} {} {}\n'.format(best_c, best_g, best_rate))
+    print("Best c/g/rate: {0} {1} {2}".format(best_c, best_g, best_rate))
+
 main()

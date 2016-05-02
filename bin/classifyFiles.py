@@ -145,7 +145,7 @@ def classify_files(config, label, file_globs):
             for fp in glob.iglob(g):
                 d = DataFileElement(fp)
                 data_elements.append(d)
-                uuid2filepath = fp
+                uuid2filepath[d.uuid()] = fp
     if not data_elements:
         raise RuntimeError("No files provided for classification.")
 

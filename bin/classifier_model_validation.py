@@ -1,5 +1,12 @@
 #!/usr/bin/env python
+"""
+See Scikit-Learn PR and ROC curve explanations and examples:
+- http://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html
+- http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+"""
+import collections
 import csv
+import json
 import logging
 
 import matplotlib.pyplot as plt
@@ -41,6 +48,7 @@ def default_config():
             'output_plot_pr': None,
             'output_plot_roc': None,
             'output_plot_confusion_matrix': None,
+            'output_uuid_confusion_matrix': None,
             'curve_confidence_interval': False,
             'curve_confidence_interval_alpha': 0.4,
         },
@@ -78,6 +86,12 @@ def main():
     predicted class for an element:
 
         - confusion matrix
+
+    The output UUID confusion matrix is a JSON dictionary where the top-level
+    keys are the true labels, and the inner dictionary is the mapping of
+    predicted labels to the UUIDs of the classifications/descriptors that
+    yielded the prediction. Again, this is based on the maximum probability
+    label for a classification result (T=0.5).
     """
     args, config = bin_utils.utility_main_helper(default_config, description)
     log = logging.getLogger(__name__)
@@ -102,6 +116,7 @@ def main():
 
     uuid2label_filepath = config['utility']['csv_filepath']
     do_train = config['utility']['train']
+    output_uuid_cm = config['utility']['output_uuid_confusion_matrix']
     plot_filepath_pr = config['utility']['output_plot_pr']
     plot_filepath_roc = config['utility']['output_plot_roc']
     plot_filepath_cm = config['utility']['output_plot_confusion_matrix']
@@ -179,6 +194,25 @@ def main():
     log_cm(log.info, conf_mat, labels)
     if plot_filepath_cm:
         plot_cm(conf_mat, labels, plot_filepath_cm)
+
+    # CM of descriptor UUIDs to output json
+    if output_uuid_cm:
+        # Top dictionary keys are true labels, inner dictionary keys are UUID
+        # predicted labels.
+        log.info("Computing UUID Confusion Matrix")
+        #: :type: dict[str, dict[str, set | list]]
+        uuid_cm = {}
+        for tlabel in tlabel2classifications:
+            uuid_cm[tlabel] = collections.defaultdict(set)
+            for c in tlabel2classifications[tlabel]:
+                uuid_cm[tlabel][c.max_label()].add(c.uuid)
+            # convert sets to lists
+            for plabel in uuid_cm[tlabel]:
+                uuid_cm[tlabel][plabel] = list(uuid_cm[tlabel][plabel])
+        with open(output_uuid_cm, 'w') as f:
+            log.info("Saving UUID Confusion Matrix: %s", output_uuid_cm)
+            json.dump(uuid_cm, f, indent=2, separators=(',', ': '))
+
 
     #
     # Create PR/ROC curves via scikit learn tools
@@ -330,6 +364,8 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
         all_classifications.update(s)
 
     # collection of all binary truth-probability pairs
+    # This is equivalent of the y_test.ravel() and y_score.ravel() seen in
+    #   sklearn examples.
     g_truth = []
     g_proba = []
 
@@ -358,7 +394,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                                   alpha=plot_ci_alpha)
             plt.gca().add_patch(ci_poly)
 
-        format_plt(title+' - '+l, xlabel, ylabel)
+        format_plt(title + ' - ' + l + ' vs. Rest', xlabel, ylabel)
         fp_segs = output_filepath.split('.')
         fp = '.'.join(fp_segs[:-1] + [l] + [fp_segs[-1]])
         log.info("Saving: %s", fp)
@@ -370,10 +406,11 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
 
         line_i += 1
 
+    # Micro-average curve and area
     x, y, t = skl_curve_func(numpy.array(g_truth), numpy.array(g_proba))
     auc = sklearn.metrics.auc(x, y)
     m = select_color_marker(line_i)
-    plt.plot(x, y, m, label="Overall (auc=%f)" % auc)
+    plt.plot(x, y, m, label="Micro-average (auc=%f)" % auc)
 
     if plot_ci:
         # Confidence interval generation
@@ -384,7 +421,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                               alpha=plot_ci_alpha)
         plt.gca().add_patch(ci_poly)
 
-    format_plt(title+' - All Classes', xlabel, ylabel)
+    format_plt(title + ' - Micro-average', xlabel, ylabel)
     fp_segs = output_filepath.split('.')
     fp = '.'.join(fp_segs[:-1] + ['all_classes'] + [fp_segs[-1]])
     log.info("Saving: %s", fp)

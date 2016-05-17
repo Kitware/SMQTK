@@ -25,6 +25,17 @@ from smqtk.utils.file_utils import safe_create_dir
 from smqtk.utils.parallel import parallel_map
 
 
+################################################################################
+# PARAMETERS
+
+# Confirmed there are no conflicting truth labels on a CDR and URL basis
+ad_image_csv = "ad-images.source.url_ad_label.csv"
+ad_phone_csv = "ad-images.source.ad_phone.csv"
+image_output_dir = "ad-images"
+
+################################################################################
+
+
 initialize_logging(logging.getLogger('__main__'), logging.INFO)
 initialize_logging(logging.getLogger('smqtk'), logging.INFO)
 log = logging.getLogger(__name__)
@@ -62,7 +73,7 @@ def dl_ad_image(url, output_dir):
         return None, None, None
 
     segs = url.split('/')
-    dirpath = os.path.join('ad-images', *segs[2:-1])
+    dirpath = os.path.join(output_dir, *segs[2:-1])
     safe_create_dir(dirpath)
 
     basename = os.path.splitext(segs[-1])[0]
@@ -83,10 +94,7 @@ def dl_ad_image(url, output_dir):
     return url, save_pth, sha1_checksum
 
 
-# Confirmed there are no conflicting truth labels on a CDR and URL basis
-ad_image_csv = "/home/purg/dev/memex/hackathons/2016_04/cp1a/ad-images.source.url_ad_label.csv"
-ad_phone_csv = "/home/purg/dev/memex/hackathons/2016_04/cp1a/ad-images.source.ad_phone.csv"
-image_output_dir = "/home/purg/dev/memex/hackathons/2016_04/cp1a/ad-images"
+log.info("Loading resource files")
 with open(ad_image_csv) as f:
     url_ad_label_rows = list(csv.reader(f))
 with open(ad_phone_csv) as f:
@@ -180,8 +188,6 @@ with open('ad-images.map.ad2label.json', 'w') as f:
 
 with open('ad-images.map.sha2label.csv', 'w') as f:
     w = csv.writer(f).writerows(sha2label.iteritems())
-    # for sha1, label in sha2label.iteritems():
-    #     w.writerow([sha1, label])
 
 with open('ad-images.map.phone2ads.json', 'w') as f:
     # convert set to list

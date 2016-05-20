@@ -41,7 +41,8 @@ class DataFileElement (DataElement):
         """
         super(DataFileElement, self).__init__()
 
-        self._filepath = osp.abspath(osp.expanduser(filepath))
+        # Just expand a user-home `~` if present, keep relative if given.
+        self._filepath = osp.expanduser(filepath)
 
         self._content_type = None
         if tika_detector:

@@ -77,8 +77,10 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                 if i < (side - 1):
                     mat[i + 1:, i] = mat[i, i + 1:] = dist_func(m[i, :],
                                                                 m[i + 1:, :])
+            # Using threading for in-place modification
             s = [0] * 7
-            for _ in parallel_map(work_func, xrange(side)):
+            for _ in parallel_map(work_func, xrange(side),
+                                  use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
             for i in xrange(side):
@@ -94,8 +96,10 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                 # cols to the left of diagonal index for this row
                 for j in xrange(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
+            # Using threading for in-place modification
             s = [0] * 7
-            for _ in parallel_map(work_func, xrange(side)):
+            for _ in parallel_map(work_func, xrange(side),
+                                  use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
             for i in xrange(side):

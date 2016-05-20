@@ -6,6 +6,7 @@ import os.path as osp
 import numpy
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
 
 try:
@@ -276,8 +277,9 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         pyflann.set_distance_type(self._distance_method)
 
         self._log.debug("Accumulating descriptor vectors into matrix for FLANN")
-        pts_array = [d.vector() for d in self._descr_cache]
-        pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
+        pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
+
+        self._log.debug('Building FLANN index')
         self._flann = pyflann.FLANN()
         self._flann_build_params = self._flann.build_index(pts_array, **params)
         del pts_array
@@ -328,14 +330,14 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         #
         # FLANN asserts that we query for <= index size, thus the use of min()
         if self._distance_method == 'hik':
-            #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+            #: :type: numpy.ndarray, numpy.ndarray
             idxs, dists = self._flann.nn_index(vec, len(self._descr_cache),
                                                **self._flann_build_params)
             # Invert values to stay consistent with other distance value norms
             dists = [1.0 - d for d in dists]
 
         else:
-            #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+            #: :type: numpy.ndarray, numpy.ndarray
             idxs, dists = self._flann.nn_index(vec,
                                                min(n, len(self._descr_cache)),
                                                **self._flann_build_params)
@@ -348,7 +350,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         if self._distance_method == 'hik':
             idxs = tuple(reversed(idxs))[:n]
             dists = tuple(reversed(dists))[:n]
-        return [self._descr_cache[i] for i in idxs], dists
+        return [self._descr_cache[i] for i in idxs], dists.tolist()
 
 
 NN_INDEX_CLASS = FlannNearestNeighborsIndex

@@ -65,16 +65,6 @@ configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
 # System Installation
 #
 
-# Initially set custom install path
-# User can change this later as desired after the first configuration pass has
-#   completed
-if (NOT SMQTK_FIRST_PASS_COMPLETE)
-  set(CMAKE_INSTALL_PREFIX "/opt/kitware/SMQTK"
-    CACHE PATH
-    "Install path prefix, prepended onto install directories."
-    FORCE)
-endif(NOT SMQTK_FIRST_PASS_COMPLETE)
-
 install(DIRECTORY DESTINATION var/data)
 
 if(UNIX)
@@ -141,8 +131,3 @@ set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_SYSTEM_NAME}")
 
 include(CPack)
-
-if (NOT SMQTK_FIRST_PASS_COMPLETE)
-  set(SMQTK_FIRST_PASS_COMPLETE True CACHE BOOL "SMQTK first pass configuration complete" FORCE)
-  mark_as_advanced(SMQTK_FIRST_PASS_COMPLETE)
-endif(NOT SMQTK_FIRST_PASS_COMPLETE)

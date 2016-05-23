@@ -151,8 +151,12 @@ def cosine_distance(i, j):
 
 def hamming_distance(i, j):
     """
-    Return the hamming distance between the two given integers, or the number of
-    places where the bits differ.
+    Return the hamming distance between the two given pythonic integers, or the
+    number of places where the bits differ.
+
+    **Note:** *We say "pythonic" integer here because this function has no cap
+    on the number of bits used to represent said integer. This function will
+    execute correctly regardless whether i/j is 32 bits or 512 bits, etc."
 
     :param i: First integer.
     :type i: int | long
@@ -163,7 +167,7 @@ def hamming_distance(i, j):
     :rtype: int | long
 
     """
-    # TODO: Find something better than this.
+    # TODO: Find something better than this?
     return bin(i ^ j).count('1')
 
 
@@ -171,6 +175,9 @@ def popcount(v):
     """
     Pure python popcount algorithm adapted implementation at:
     see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
+    This is limited to 32-bit integer representation.
+
     """
     # TODO: C implementation of this
     #       since this version, being in python, isn't faster than above bin

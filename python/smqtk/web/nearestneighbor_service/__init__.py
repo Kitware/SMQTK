@@ -167,7 +167,6 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
                 - local filepath
                 - base64
-                - direct descriptor vector
                 - http/s URL
 
             The following sub-sections detail how different URI's can be used.
@@ -193,7 +192,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             This uses the requests module to locally download a data file
             for processing.
 
-            JSON Return format::
+            JSON Return format
+            ------------------
                 {
                     "success": <bool>
 
@@ -235,13 +235,14 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             # TODO: Return the optional descriptor vectors for the neighbors
             # noinspection PyTypeChecker
-            return flask.jsonify({
-                "success": descriptor is not None,
+            d = {
+                "success": bool(descriptor is not None),
                 "message": message,
                 "neighbors": [n.uuid() for n in neighbors[page_slice]],
                 "distances": dists[page_slice],
                 "reference_uri": uri
-            })
+            }
+            return flask.jsonify(d)
 
     def get_config(self):
         return self.json_config

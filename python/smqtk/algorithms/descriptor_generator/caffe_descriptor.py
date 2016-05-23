@@ -264,7 +264,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type data: smqtk.representation.DataElement
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance.
+            descriptor element instance. In-Memory descriptor factory by
+            default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -296,7 +297,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type data_iter: collections.Iterable[smqtk.representation.DataElement]
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instances.
+            descriptor element instances. In-Memory descriptor factory by
+            default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -378,7 +380,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
             if batch_groups:
                 for g in xrange(batch_groups):
-                    self._log.debug("Starting batch: %d of %d", g, batch_groups)
+                    self._log.debug("Starting batch: %d of %d",
+                                    g + 1, batch_groups)
                     batch_uuids = \
                         uuid4proc[g*self.batch_size:(g+1)*self.batch_size]
                     self._process_batch(batch_uuids, data_elements,

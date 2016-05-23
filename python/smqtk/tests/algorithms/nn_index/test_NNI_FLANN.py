@@ -78,6 +78,7 @@ if FlannNearestNeighborsIndex.is_usable():
             r, dists = index.nn(q, i)
             for j, d, dist in zip(range(i), r, dists):
                 ntools.assert_equal(d.uuid(), j)
+                numpy.testing.assert_equal(d.vector(), [j, j*2])
 
         def test_known_descriptors_hik_unit(self):
             dim = 5

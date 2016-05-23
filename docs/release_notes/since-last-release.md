@@ -13,3 +13,7 @@ Classifier
 
 Fixes since v0.4.0
 ------------------
+
+CMake
+
+  * Removed ``SMQTK_FIRST_PASS_COMPLETE`` stuff in root CMakeLists.txt

@@ -17,11 +17,10 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_equal(d._filepath, fp)
 
     def test_init_relFilepath_normal(self):
-        # relative paths should be stored as absolute within the element
+        # relative paths should be stored as given within the element
         fp = 'foo.txt'
         d = DataFileElement(fp)
-        ntools.assert_equal(d._filepath,
-                            os.path.join(os.getcwd(), fp))
+        ntools.assert_equal(d._filepath, fp)
 
     def test_content_type(self):
         d = DataFileElement('foo.txt')

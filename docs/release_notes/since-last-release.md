@@ -37,7 +37,7 @@ Scripts
     matrix and ROC/PR confidence interval.
 
   * Moved async batch computation scripts for descriptors, hash codes and
-    classifications to ``bin/``.
+    classifications to ``bin/``.
 
   * Added script to transform a descriptor index (or part of one) into the
     file format that libSVM likes: ``descriptors_to_svmtrainfile.py``

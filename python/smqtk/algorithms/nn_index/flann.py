@@ -330,12 +330,11 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         #
         # FLANN asserts that we query for <= index size, thus the use of min()
         if self._distance_method == 'hik':
+            # This call is different than the else version in that k is the size
+            # of the full data set, so that we can reverse the distances
             #: :type: numpy.ndarray, numpy.ndarray
             idxs, dists = self._flann.nn_index(vec, len(self._descr_cache),
                                                **self._flann_build_params)
-            # Invert values to stay consistent with other distance value norms
-            dists = [1.0 - d for d in dists]
-
         else:
             #: :type: numpy.ndarray, numpy.ndarray
             idxs, dists = self._flann.nn_index(vec,
@@ -347,10 +346,16 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         if len(idxs.shape) > 1:
             idxs = idxs[0]
             dists = dists[0]
+
         if self._distance_method == 'hik':
+            # Invert values to stay consistent with other distance value norms
+            dists = [1.0 - d for d in dists]
             idxs = tuple(reversed(idxs))[:n]
             dists = tuple(reversed(dists))[:n]
-        return [self._descr_cache[i] for i in idxs], dists.tolist()
+        else:
+            dists = tuple(dists)
+
+        return [self._descr_cache[i] for i in idxs], dists
 
 
 NN_INDEX_CLASS = FlannNearestNeighborsIndex

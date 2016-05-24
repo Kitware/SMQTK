@@ -5,6 +5,7 @@ import numpy
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.utils.bin_utils import report_progress
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -220,12 +221,19 @@ class ItqFunctor (LshFunctor):
         if self.has_model():
             raise RuntimeError("Model components have already been loaded.")
 
-        self._log.info("Creating matrix of descriptors for fitting")
         dbg_report_interval = None
         if self.logger().getEffectiveLevel() <= logging.DEBUG:
             dbg_report_interval = 1.0  # seconds
-        x = elements_to_matrix(list(descriptors),
-                               report_interval=dbg_report_interval)
+        if not hasattr(descriptors, "__len__"):
+            self._log.info("Creating sequence from iterable")
+            descriptors_l = []
+            rs = [0]*7
+            for d in descriptors:
+                descriptors_l.append(d)
+                report_progress(self._log.debug, rs, dbg_report_interval)
+            descriptors = descriptors_l
+        self._log.info("Creating matrix of descriptors for fitting")
+        x = elements_to_matrix(descriptors, report_interval=dbg_report_interval)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 
         self._log.debug("Info normalizing descriptors by factor: %s",

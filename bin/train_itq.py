@@ -24,10 +24,6 @@ def default_config():
         "itq_config": ItqFunctor.get_default_config(),
         "uuids_list_filepath": None,
         "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
-        "parallel": {
-            "index_load_cores": 2,
-            "use_multiprocessing": True,
-        },
     }
 
 
@@ -48,8 +44,6 @@ def main():
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']
-    p_index_load_cores = config['parallel']['index_load_cores']
-    p_use_multiprocessing = config['parallel']['use_multiprocessing']
 
     log.info("Initializing ITQ functor")
     #: :type: smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor
@@ -69,21 +63,14 @@ def main():
                 for l in f:
                     yield l.strip()
         log.info("Loading UUIDs list from file: %s", uuids_list_filepath)
+        d_iter = descriptor_index.get_many_descriptors(uuids_iter())
     else:
-        uuids_iter = descriptor_index.iterkeys
         log.info("Using UUIDs from loaded DescriptorIndex (count=%d)",
                  len(descriptor_index))
-
-    def extract_element(uuid):
-        return descriptor_index.get_descriptor(uuid)
-
-    element_iter = parallel.parallel_map(
-        extract_element, uuids_iter(),
-        use_multiprocessing=p_use_multiprocessing, cores=p_index_load_cores
-    )
+        d_iter = descriptor_index
 
     log.info("Fitting ITQ model")
-    functor.fit(element_iter)
+    functor.fit(d_iter)
     log.info("Done")
 
 

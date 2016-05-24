@@ -27,7 +27,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         return self.get_descriptor(uuid)
 
     def __iter__(self):
-        return self.iterkeys()
+        return self.iterdescriptors()
 
     def __len__(self):
         return self.count()

@@ -77,16 +77,17 @@ class TestDescriptorIndexAbstract (unittest.TestCase):
         di.remove_descriptor.assert_called_once_with('foo')
 
     def test_iter(self):
+        # Iterating over a DescriptorIndex should yield the descriptor elements
         di = DummyDescriptorIndex()
 
         def dumb_iterator():
             for i in range(3):
                 yield i
 
-        di.iterkeys = mock.Mock(side_effect=dumb_iterator)
+        di.iterdescriptors = mock.Mock(side_effect=dumb_iterator)
 
         for i, v in enumerate(iter(di)):
             ntools.assert_equal(i, v)
         ntools.assert_equal(list(di), [0, 1, 2])
         ntools.assert_equal(tuple(di), (0, 1, 2))
-        ntools.assert_equal(di.iterkeys.call_count, 3)
+        ntools.assert_equal(di.iterdescriptors.call_count, 3)

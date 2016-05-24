@@ -53,6 +53,11 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     """
 
+    SELECT_TMPL = norm_psql_cmd_string("""
+        SELECT {col:s}
+          FROM {table_name:s}
+    """)
+
     SELECT_LIKE_TMPL = norm_psql_cmd_string("""
         SELECT {element_col:s}
           FROM {table_name:s}
@@ -70,13 +75,6 @@ class PostgresDescriptorIndex (DescriptorIndex):
           ) AS __ordering__ ({uuid_col:s}, {uuid_col:s}_order)
             ON {table_name:s}.{uuid_col:s} = __ordering__.{uuid_col:s}
           ORDER BY __ordering__.{uuid_col:s}_order
-    """)
-
-    SELECT_LIMIT_OFFSET = norm_psql_cmd_string("""
-        SELECT {col:s}
-          FROM {table_name:s}
-         LIMIT {limit:d}
-        OFFSET {offset:d}
     """)
 
     UPSERT_TMPL = norm_psql_cmd_string("""
@@ -593,6 +591,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
         Return an iterator over indexed descriptor keys, which are their UUIDs.
         :rtype: collections.Iterator[collections.Hashable]
         """
+        # Getting UUID through the element because the UUID might not be a
+        # string type, and the true type is encoded with the DescriptorElement
+        # instance.
         for d in self.iterdescriptors():
             yield d.uuid()
 
@@ -601,31 +602,15 @@ class PostgresDescriptorIndex (DescriptorIndex):
         Return an iterator over indexed descriptor element instances.
         :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
         """
-        # batch via "... LIMIT <#> OFFSET <#>" increments
-        n = self.count()
-        offset = 0
-        limit = self.multiquery_batch_size
-        if limit is None:
-            limit = n
-
-        self._log.debug("Iterating UUIDs (interval = %d)", limit)
-
         def execute(c):
-            self._log.debug("Getting descriptors in index range (%d, %d]",
-                            offset, offset + limit)
-            c.execute(self.SELECT_LIMIT_OFFSET.format(
+            c.execute(self.SELECT_TMPL.format(
                 col=self.element_col,
-                table_name=self.table_name,
-                limit=limit,
-                offset=offset,
+                table_name=self.table_name
             ))
 
-        while offset < n:
-            for r in self._single_execute(execute, True):
-                d = cPickle.loads(str(r[0]))
-                yield d
-
-            offset += limit
+        for r in self._single_execute(execute, True):
+            d = cPickle.loads(str(r[0]))
+            yield d
 
     def iteritems(self):
         """

@@ -463,12 +463,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         neighbor_uuids = []
         with self._hash2uuid_lock:
             for h_int in map(bit_vector_to_int_large, hashes):
+                # If descriptor hash not in our map, we effectively skip it
                 neighbor_uuids.extend(self._hash2uuid.get(h_int, ()))
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")
         neighbors = \
-            list(self.descriptor_index.get_many_descriptors(*neighbor_uuids))
+            list(self.descriptor_index.get_many_descriptors(neighbor_uuids))
 
         self._log.debug("ordering descriptors via distance method '%s'",
                         self.distance_method)

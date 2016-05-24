@@ -470,7 +470,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         r = list(self._single_execute(eh, True))
         return cPickle.loads(str(r[0][0]))
 
-    def get_many_descriptors(self, *uuids):
+    def get_many_descriptors(self, uuids):
         """
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
@@ -481,7 +481,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: __generator[smqtk.representation.DescriptorElement]
 
         """
         q = self.SELECT_MANY_ORDERED_TMPL.format(
@@ -554,7 +554,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         list(self._single_execute(execute))
 
-    def remove_many_descriptors(self, *uuids):
+    def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 

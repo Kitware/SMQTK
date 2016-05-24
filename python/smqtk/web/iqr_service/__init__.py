@@ -292,13 +292,13 @@ class IqrService (SmqtkWebApp):
                 self._log.debug("Getting the descriptors for UUIDs")
                 try:
                     pos_d = set(
-                        self.descriptor_index.get_many_descriptors(*pos_uuids)
+                        self.descriptor_index.get_many_descriptors(pos_uuids)
                     )
                     neg_d = set(
-                        self.descriptor_index.get_many_descriptors(*neg_uuids)
+                        self.descriptor_index.get_many_descriptors(neg_uuids)
                     )
                     neu_d = set(
-                        self.descriptor_index.get_many_descriptors(*neu_uuids)
+                        self.descriptor_index.get_many_descriptors(neu_uuids)
                     )
                 except KeyError, ex:
                     err_uuid = str(ex)
@@ -371,10 +371,10 @@ class IqrService (SmqtkWebApp):
                 # setting new adjudication state.
                 try:
                     pos_descrs = set(
-                        self.descriptor_index.get_many_descriptors(*pos_uuids)
+                        self.descriptor_index.get_many_descriptors(pos_uuids)
                     )
                     neg_descrs = set(
-                        self.descriptor_index.get_many_descriptors(*neg_uuids)
+                        self.descriptor_index.get_many_descriptors(neg_uuids)
                     )
 
                 except KeyError, ex:
@@ -555,7 +555,7 @@ class IqrService (SmqtkWebApp):
                 # Get descriptor elements for classification
                 try:
                     descriptors = list(self.descriptor_index
-                                           .get_many_descriptors(*uuids))
+                                           .get_many_descriptors(uuids))
                 except KeyError, ex:
                     err_uuid = str(ex)
                     self._log.warn(traceback.format_exc())

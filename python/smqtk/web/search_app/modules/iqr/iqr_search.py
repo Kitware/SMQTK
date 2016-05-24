@@ -564,10 +564,10 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
 
             with self.get_current_iqr_session() as iqrs:
                 iqrs.adjudicate(
-                    tuple(iqrs.working_index.get_many_descriptors(*pos_to_add)),
-                    tuple(iqrs.working_index.get_many_descriptors(*neg_to_add)),
-                    tuple(iqrs.working_index.get_many_descriptors(*pos_to_remove)),
-                    tuple(iqrs.working_index.get_many_descriptors(*neg_to_remove)),
+                    tuple(iqrs.working_index.get_many_descriptors(pos_to_add)),
+                    tuple(iqrs.working_index.get_many_descriptors(neg_to_add)),
+                    tuple(iqrs.working_index.get_many_descriptors(pos_to_remove)),
+                    tuple(iqrs.working_index.get_many_descriptors(neg_to_remove)),
                 )
                 self._log.debug("Now positive UUIDs: %s", iqrs.positive_descriptors)
                 self._log.debug("Now negative UUIDs: %s", iqrs.negative_descriptors)

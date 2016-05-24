@@ -21,7 +21,7 @@ class DummyDescriptorIndex (DescriptorIndex):
     def get_descriptor(self, uuid):
         pass
 
-    def get_many_descriptors(self, *uuids):
+    def get_many_descriptors(self, uuids):
         pass
 
     def iterkeys(self):
@@ -33,7 +33,7 @@ class DummyDescriptorIndex (DescriptorIndex):
     def iterdescriptors(self):
         pass
 
-    def remove_many_descriptors(self, **uuids):
+    def remove_many_descriptors(self, uuids):
         pass
 
     def has_descriptor(self, uuid):
@@ -53,7 +53,6 @@ class DummyDescriptorIndex (DescriptorIndex):
 
     def add_descriptor(self, descriptor):
         pass
-
 
 
 class TestDescriptorIndexAbstract (unittest.TestCase):

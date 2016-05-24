@@ -106,7 +106,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
-    def get_many_descriptors(self, *uuids):
+    def get_many_descriptors(self, uuids):
         """
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
@@ -117,7 +117,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: __generator[smqtk.representation.DescriptorElement]
 
         """
 
@@ -135,7 +135,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
-    def remove_many_descriptors(self, *uuids):
+    def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 

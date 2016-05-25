@@ -84,7 +84,7 @@ def main():
         log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
                     itertools.izip(labels,
-                                   descriptor_index.get_many_descriptors(*uuids))
+                                   descriptor_index.get_many_descriptors(uuids))
                 ):
             log.debug("%d %s", i, d.uuid())
             if l not in label2int:

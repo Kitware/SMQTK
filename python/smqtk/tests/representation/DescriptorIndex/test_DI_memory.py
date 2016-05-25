@@ -213,8 +213,8 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         ntools.assert_equal(r, descrs[1])
 
         # multiple descriptor reference
-        r = list(index.get_many_descriptors(descrs[0].uuid(),
-                                            descrs[3].uuid()))
+        r = list(index.get_many_descriptors([descrs[0].uuid(),
+                                             descrs[3].uuid()]))
         ntools.assert_equal(len(r), 2)
         ntools.assert_equal(set(r),
                             {descrs[0], descrs[3]})
@@ -253,7 +253,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
         # remove many
         rm_d = descrs[slice(45, 80, 3)]
-        i.remove_many_descriptors(*(d.uuid() for d in rm_d))
+        i.remove_many_descriptors((d.uuid() for d in rm_d))
         ntools.assert_equal(len(i), 99 - len(rm_d))
         ntools.assert_equal(set(i.iterdescriptors()),
                             set(descrs[1:]).difference(rm_d))

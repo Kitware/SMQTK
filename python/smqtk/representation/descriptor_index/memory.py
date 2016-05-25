@@ -134,7 +134,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         """
         return self._table[uuid]
 
-    def get_many_descriptors(self, *uuids):
+    def get_many_descriptors(self, uuids):
         """
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
@@ -145,7 +145,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: __generator[smqtk.representation.DescriptorElement]
 
         """
         for uid in uuids:
@@ -171,7 +171,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         if not no_cache:
             self.cache_table()
 
-    def remove_many_descriptors(self, *uuids):
+    def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this
         index.

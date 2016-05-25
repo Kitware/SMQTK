@@ -52,7 +52,7 @@ def default_config():
     return {
         "utility": {
             "report_interval": 1.0,
-            "use_multiprocessing": True,
+            "use_multiprocessing": False,
             "pickle_protocol": -1,
         },
         "plugins": {

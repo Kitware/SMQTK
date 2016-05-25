@@ -146,6 +146,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             try:
                 _, descriptor = self.generate_descriptor_for_uri(uri)
                 message = "Descriptor generated"
+                descriptor = map(float, descriptor.vector())
             except ValueError, ex:
                 message = "Input value issue: %s" % str(ex)
             except RuntimeError, ex:
@@ -154,7 +155,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             return flask.jsonify(
                 success=descriptor is not None,
                 message=message,
-                descriptor=map(float, descriptor.vector()),
+                descriptor=descriptor,
                 reference_uri=uri,
             )
 
@@ -311,6 +312,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         if self.update_index:
             self._log.info("Updating index with new descriptor")
             self.descr_index.add_descriptor(descriptor)
+        if not descriptor.has_vector():
+            raise RuntimeError("No descriptor content")
         return de, descriptor
 
 

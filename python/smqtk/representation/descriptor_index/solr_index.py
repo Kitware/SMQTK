@@ -238,34 +238,49 @@ class SolrDescriptorIndex (DescriptorIndex):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: tuple[collections.Hashable]
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
-        :return: Iterator of descriptors associated to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :return: Iterator of descriptors associated 1-to-1 to given uuid values.
+        :rtype: __generator[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
-        max_ors = self.max_boolean_clauses - 1
-        or_batches = (len(uuids) // max_ors) + 1
-        for i in xrange(or_batches):
-            self._log.debug('OR batch %d / %d', i, or_batches)
-            uuid_chunk = uuids[i*max_ors: (i+1)*max_ors]
-            uuid_query = ' OR '.join([self.d_uid_field + (':%s' % uid)
-                                      for uid in uuid_chunk])
+
+        def batch_query(batch):
+            """
+            :type batch: list[collections.Hashable]
+            """
+            query = ' OR '.join([self.d_uid_field + (':%s' % uid)
+                                 for uid in batch])
             r = self.solr.select("%s:%s AND (%s)"
                                  % (self.index_uuid_field, self.index_uuid,
-                                    uuid_query))
+                                    query))
             # result batches come in chunks of 10
             for doc in r.results:
                 yield cPickle.loads(doc[self.descriptor_field])
-
             for j in xrange(r.numFound // 10):
                 r = r.next_batch()
                 for doc in r.results:
                     yield cPickle.loads(doc[self.descriptor_field])
+
+        batch = []
+        for uid in uuids:
+            batch.append(uid)
+
+            # Will end up using max_clauses-1 OR statements, and one AND
+            if len(batch) == self.max_boolean_clauses:
+                for d in batch_query(batch):
+                    yield d
+                batch = []
+
+        # tail batch
+        if batch:
+            assert len(batch) < self.max_boolean_clauses
+            for d in batch_query(batch):
+                yield d
 
     def remove_descriptor(self, uuid):
         """
@@ -280,7 +295,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         """
         self.remove_many_descriptors(uuid)
 
-    def remove_many_descriptors(self, *uuids):
+    def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 
@@ -291,16 +306,30 @@ class SolrDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         """
-        max_ors = self.max_boolean_clauses - 1
-        or_batches = (len(uuids) // max_ors) + 1
-        for i in xrange(or_batches):
-            self._log.debug('OR batch %d / %d', i, or_batches)
-            uuid_chunk = uuids[i*max_ors: (i+1)*max_ors]
+        # Chunk up operation based on max clauses available to us
+
+        def batch_op(batch):
+            """
+            :type batch: list[collections.Hashable]
+            """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(uid))
-                                      for uid in uuid_chunk])
+                                      for uid in batch])
             self.solr.delete("%s:%s AND (%s)"
-                              % (self.index_uuid_field, self.index_uuid,
-                                 uuid_query))
+                             % (self.index_uuid_field, self.index_uuid,
+                                uuid_query))
+
+        batch = []
+        for uid in uuids:
+            batch.append(uid)
+
+            # Will end up using max_clauses-1 OR statements, and one AND
+            if len(batch) == self.max_boolean_clauses:
+                batch_op(batch)
+            batch = []
+
+        # tail batch
+        if batch:
+            batch_op(batch)
 
     def iterkeys(self):
         """

@@ -46,7 +46,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         otherwise an exception will be raised (``ValueError``, by numpy).
 
         If this is not supplied, we create a new matrix to insert vectors into
-        based on input de
+        based on the number of input descriptor elements. This mode required
+        that the input elements are in a container that defines __len__
     :type mat: None | numpy.core.multiarray.ndarray
 
     :param procs: Optional specification of the number of threads/cores to use.
@@ -81,10 +82,12 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     # Create/check matrix
     if mat is None:
+        sample = descr_elements.__iter__().next()
+        sample_v = sample.vector()
         shp = (len(descr_elements),
-               descr_elements[0].vector().size)
+               sample_v.size)
         log.debug("Creating new matrix with shape: %s", shp)
-        mat = numpy.ndarray(shp, descr_elements[0].vector().dtype)
+        mat = numpy.ndarray(shp, sample_v.dtype)
 
     if procs is None:
         procs = multiprocessing.cpu_count()

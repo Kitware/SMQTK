@@ -21,7 +21,7 @@ class DummyDescriptorIndex (DescriptorIndex):
     def get_descriptor(self, uuid):
         pass
 
-    def get_many_descriptors(self, *uuids):
+    def get_many_descriptors(self, uuids):
         pass
 
     def iterkeys(self):
@@ -33,7 +33,7 @@ class DummyDescriptorIndex (DescriptorIndex):
     def iterdescriptors(self):
         pass
 
-    def remove_many_descriptors(self, **uuids):
+    def remove_many_descriptors(self, uuids):
         pass
 
     def has_descriptor(self, uuid):
@@ -53,7 +53,6 @@ class DummyDescriptorIndex (DescriptorIndex):
 
     def add_descriptor(self, descriptor):
         pass
-
 
 
 class TestDescriptorIndexAbstract (unittest.TestCase):
@@ -78,16 +77,17 @@ class TestDescriptorIndexAbstract (unittest.TestCase):
         di.remove_descriptor.assert_called_once_with('foo')
 
     def test_iter(self):
+        # Iterating over a DescriptorIndex should yield the descriptor elements
         di = DummyDescriptorIndex()
 
         def dumb_iterator():
             for i in range(3):
                 yield i
 
-        di.iterkeys = mock.Mock(side_effect=dumb_iterator)
+        di.iterdescriptors = mock.Mock(side_effect=dumb_iterator)
 
         for i, v in enumerate(iter(di)):
             ntools.assert_equal(i, v)
         ntools.assert_equal(list(di), [0, 1, 2])
         ntools.assert_equal(tuple(di), (0, 1, 2))
-        ntools.assert_equal(di.iterkeys.call_count, 3)
+        ntools.assert_equal(di.iterdescriptors.call_count, 3)

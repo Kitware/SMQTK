@@ -154,7 +154,10 @@ def int_to_bit_vector(integer, bits=0):
     """
     # Converting integer to array
     if integer:
-        size = int(numpy.floor(numpy.log2(integer)) + 1)
+        # Can-t use math version because floating-point precision runs out after
+        # about 2^48
+        # -2 to remove length of '0b' string prefix
+        size = len(bin(integer)) - 2
     else:
         size = 0
     if bits and (bits - size) < 0:
@@ -189,7 +192,10 @@ def int_to_bit_vector_large(integer, bits=0):
     """
     # Converting integer to array'
     if integer:
-        size = int(math.floor(math.log(integer, 2)) + 1)
+        # Can-t use math version because floating-point precision runs out after
+        # about 2^48
+        # -2 to remove length of '0b' string prefix
+        size = len(bin(integer)) - 2
     else:
         size = 0
     if bits and (bits - size) < 0:

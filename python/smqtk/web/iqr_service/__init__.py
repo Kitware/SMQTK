@@ -581,8 +581,7 @@ class IqrService (SmqtkWebApp):
                         {pos_label: iqrs.positive_descriptors,
                          neg_label: iqrs.negative_descriptors}
                     )
-                    if sid in self.session_classifier_dirty:
-                        del self.session_classifier_dirty[sid]
+                    self.session_classifier_dirty[sid] = False
 
                 classifications = classifier.classify_async(
                     descriptors, self.classification_factory,

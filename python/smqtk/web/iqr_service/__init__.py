@@ -572,6 +572,9 @@ class IqrService (SmqtkWebApp):
                 pos_label = "positive"
                 neg_label = "negative"
                 if self.session_classifier_dirty[sid] or classifier is None:
+                    self._log.debug("Training new classifier for current "
+                                    "refine state")
+
                     #: :type: SupervisedClassifier
                     classifier = plugin.from_plugin_config(
                         self.classifier_config,
@@ -581,6 +584,8 @@ class IqrService (SmqtkWebApp):
                         {pos_label: iqrs.positive_descriptors,
                          neg_label: iqrs.negative_descriptors}
                     )
+
+                    self.session_classifiers[sid] = classifier
                     self.session_classifier_dirty[sid] = False
 
                 classifications = classifier.classify_async(

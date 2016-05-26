@@ -77,7 +77,7 @@ RUN pip install -r /smqtk/source/requirements.conda.txt \
 # Application setup
 RUN mkdir -p /data \
              /app /app/scripts /app/configs \
-             /app/models /app/models/itq /app/models/lsh \
+             /app/models /app/models/itq /app/models/lsh /app/models/flann \
              /logs
 VOLUME /data /logs
 

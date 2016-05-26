@@ -52,6 +52,16 @@
         "SECRET_KEY": "MySuperUltraSecret"
     },
     "nn_index": {
+        "FlannNearestNeighborsIndex": {
+            "autotune": false,
+            "descriptor_cache_filepath": "/app/models/flann/descr_cache",
+            "distance_method": "euclidean",
+            "index_filepath": "/app/models/flann/index",
+            "parameters_filepath": "/app/models/flann/parameters",
+            "random_seed": 0,
+            "sample_fraction": 0.1,
+            "target_precision": 0.95
+        },
         "LSHNearestNeighborIndex": {
             "descriptor_index": {
                 "PostgresDescriptorIndex": {
@@ -96,7 +106,7 @@
             "reload_mon_interval": 0.1,
             "reload_settle_window": 1.0
         },
-        "type": "LSHNearestNeighborIndex"
+        "type": "FlannNearestNeighborsIndex"
     },
     "server": {
         "host": "0.0.0.0",

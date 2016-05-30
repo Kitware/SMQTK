@@ -13,7 +13,7 @@ IMAGE_DIR=""
 #
 # Argument Parsing
 #
-while [[ $# > 0 ]]
+while [[ $# -gt 0 ]]
 do
 key="$1"
 shift  # past key

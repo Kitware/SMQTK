@@ -33,7 +33,7 @@
             },
             "descriptor_index": {
                 "PostgresDescriptorIndex": {
-                    "db_host": "postgres",
+                    "db_host": "smqtk-postgres",
                     "db_name": "postgres",
                     "db_pass": null,
                     "db_port": null,
@@ -61,7 +61,7 @@
                 "LSHNearestNeighborIndex": {
                     "descriptor_index": {
                         "PostgresDescriptorIndex": {
-                            "db_host": "postgres",
+                            "db_host": "smqtk-postgres",
                             "db_name": "postgres",
                             "db_pass": null,
                             "db_port": null,
@@ -102,7 +102,7 @@
                     "reload_mon_interval": 0.1,
                     "reload_settle_window": 1.0
                 },
-                "type": "LSHNearestNeighborIndex"
+                "type": "FlannNearestNeighborsIndex"
             },
             "relevancy_index_config": {
                 "LibSvmHikRelevancyIndex": {

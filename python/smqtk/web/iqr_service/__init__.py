@@ -626,6 +626,9 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/session',
                           view_func=self.clean_session,
                           methods=['DELETE'])
+        self.add_url_rule('/adjudicate',
+                          view_func=self.adjudicate,
+                          methods=['PUT'])
         self.add_url_rule('/refine',
                           view_func=self.refine,
                           methods=['PUT'])

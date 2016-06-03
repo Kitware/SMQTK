@@ -9,6 +9,7 @@ PREFIX=smqtk
 DOCKER_POSTGRES="${PREFIX}-postgres"
 DOCKER_SMQTK="${PREFIX}-services"
 IMAGE_DIR=""
+DOCKER_NETWORK="smqtk-network"
 
 #
 # Argument Parsing
@@ -20,6 +21,10 @@ shift  # past key
 case ${key} in
     -i|--images)
     IMAGE_DIR="$1"
+    shift  # past value
+    ;;
+    -n|--docker-network)
+    DOCKER_NETWORK="$1"
     shift  # past value
     ;;
     *)  # unknown option
@@ -38,11 +43,29 @@ then
     exit 2
 fi
 
+if [ -z "${DOCKER_NETWORK}" ]
+then
+    echo "ERROR: No docker network name given"
+    exit 3
+fi
+
+#
+# Make sure docker network exists / is created
+#
+if [ -z "$(docker network ls 2>/dev/null | tail -n +2 | grep "${DOCKER_NETWORK}")" ]
+then
+    # network doesn't exist yet, create it
+    echo "Creating new docker network \"${DOCKER_NETWORK}\" using bridge driver"
+    docker network create --driver bridge "${DOCKER_NETWORK}"
+else
+    echo "Found docker network \"${DOCKER_NETWORK}\" already exists"
+fi
+
 #
 # Start and Initialize PostgreSQL container
 #
 echo "Starting up PostgreSQL docker"
-docker run -d --name "${DOCKER_POSTGRES}" postgres
+docker run -d --name "${DOCKER_POSTGRES}" --net=${DOCKER_NETWORK} postgres
 
 # Wait until PSQL instance is up and running by poking psql
 echo "Waiting for a responsive database"
@@ -59,7 +82,7 @@ unset q trigger
 # Create new tables in DB, pulling init scripts from SMQTK container
 echo "Creating required tables"
 docker exec -i ${DOCKER_POSTGRES} psql postgres postgres 1>/dev/null <<-EOSQL
-    $(docker run --rm --entrypoint bash ${DOCKER_SMQTK} \
+    $(docker run --rm --entrypoint bash smqtk-services \
         -c "cat \
             /smqtk/install/etc/smqtk/postgres/descriptor_element/example_table_init.sql \
             /smqtk/install/etc/smqtk/postgres/descriptor_index/example_table_init.sql")
@@ -71,7 +94,7 @@ EOSQL
 echo "Starting SMQTK Services docker"
 mkdir -p smqtk_logs
 docker run -d --name ${DOCKER_SMQTK} \
-    --link ${DOCKER_POSTGRES}:postgres \
+    --net="${DOCKER_NETWORK}" \
     -v "${IMAGE_DIR}":/data \
     -v $PWD/smqtk_logs:/logs \
     -p 12345:12345 \
@@ -79,4 +102,4 @@ docker run -d --name ${DOCKER_SMQTK} \
     smqtk-services -b
 
 # Tail the expected logs
-tail -f smqtk_logs/compute_models.log smqtk_logs/smqtk.nnss.log
+tail -f smqtk_logs/compute_models.log smqtk_logs/smqtk.nnss.log smqtk_logs/smqtk.iqr.log

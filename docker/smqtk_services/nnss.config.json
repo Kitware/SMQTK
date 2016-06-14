@@ -1,0 +1,116 @@
+{
+    "descriptor_factory": {
+        "PostgresDescriptorElement": {
+            "binary_col": "vector",
+            "db_host": "smqtk-postgres",
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": null,
+            "db_user": "postgres",
+            "table_name": "descriptors",
+            "type_col": "type_str",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorElement"
+    },
+    "descriptor_generator": {
+        "CaffeDescriptorGenerator": {
+            "batch_size": 1,
+            "data_layer": "data",
+            "gpu_device_id": 0,
+            "image_mean_filepath": "/caffe/models/imagenet_mean.binaryproto",
+            "input_scale": null,
+            "load_truncated_images": false,
+            "network_is_bgr": true,
+            "network_model_filepath": "/caffe/models/bvlc_alexnet.caffemodel",
+            "network_prototxt_filepath": "/caffe/models/deploy.prototxt",
+            "pixel_rescale": null,
+            "return_layer": "fc7",
+            "use_gpu": false
+        },
+        "type": "CaffeDescriptorGenerator"
+    },
+    "descriptor_index": {
+        "PostgresDescriptorIndex": {
+            "db_host": "smqtk-postgres",
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": null,
+            "db_user": "postgres",
+            "element_col": "element",
+            "multiquery_batch_size": 1000,
+            "pickle_protocol": -1,
+            "read_only": false,
+            "table_name": "descriptor_index",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorIndex"
+    },
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "nn_index": {
+        "FlannNearestNeighborsIndex": {
+            "autotune": false,
+            "descriptor_cache_filepath": "/app/models/flann/descr_cache",
+            "distance_method": "euclidean",
+            "index_filepath": "/app/models/flann/index",
+            "parameters_filepath": "/app/models/flann/parameters",
+            "random_seed": 0,
+            "sample_fraction": 0.1,
+            "target_precision": 0.95
+        },
+        "LSHNearestNeighborIndex": {
+            "descriptor_index": {
+                "PostgresDescriptorIndex": {
+                    "db_host": "smqtk-postgres",
+                    "db_name": "postgres",
+                    "db_pass": null,
+                    "db_port": null,
+                    "db_user": "postgres",
+                    "element_col": "element",
+                    "multiquery_batch_size": 1000,
+                    "pickle_protocol": -1,
+                    "read_only": true,
+                    "table_name": "descriptor_index",
+                    "uuid_col": "uid"
+                },
+                "type": "PostgresDescriptorIndex"
+            },
+            "distance_method": "euclidean",
+            "hash2uuid_cache_filepath": "/app/models/lsh/hash2uuids.32bit.pickle",
+            "hash_index": {
+                "SkLearnBallTreeHashIndex": {
+                    "file_cache": "/app/models/lsh/hash_index.balltree.npz",
+                    "leaf_size": 40,
+                    "random_seed": 0
+                },
+                "type": "SkLearnBallTreeHashIndex"
+            },
+            "hash_index_comment": "'hash_index' may also be null to default to a linear index built at query time.",
+            "live_reload": false,
+            "lsh_functor": {
+                "ItqFunctor": {
+                    "bit_length": 32,
+                    "itq_iterations": 50,
+                    "mean_vec_filepath": "/app/models/itq/32bit.mean_vec.npy",
+                    "normalize": 2,
+                    "random_seed": 0,
+                    "rotation_filepath": "/app/models/itq/32bit.rotation.npy"
+                },
+                "type": "ItqFunctor"
+            },
+            "read_only": true,
+            "reload_mon_interval": 0.1,
+            "reload_settle_window": 1.0
+        },
+        "type": "FlannNearestNeighborsIndex"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 12345
+    },
+    "update_descriptor_index": true
+}

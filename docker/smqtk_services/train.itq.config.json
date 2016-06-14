@@ -1,0 +1,27 @@
+{
+    "descriptor_index": {
+        "PostgresDescriptorIndex": {
+            "db_host": "smqtk-postgres",
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": null,
+            "db_user": "postgres",
+            "element_col": "element",
+            "multiquery_batch_size": 1000,
+            "pickle_protocol": -1,
+            "read_only": false,
+            "table_name": "descriptor_index",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorIndex"
+    },
+    "itq_config": {
+        "bit_length": 32,
+        "itq_iterations": 50,
+        "mean_vec_filepath": "/app/models/itq/32bit.mean_vec.npy",
+        "normalize": 2,
+        "random_seed": 0,
+        "rotation_filepath": "/app/models/itq/32bit.rotation.npy"
+    },
+    "uuids_list_filepath": null
+}

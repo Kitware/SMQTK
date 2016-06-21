@@ -151,7 +151,7 @@ def report_progress(log, state, interval):
     or ``interval`` to ``0``.
 
     :param log: Logger logging function to use to send reporting message to.
-    :type log: (str, *args) -> None
+    :type log: (str) -> None
 
     :param state: Reporting state. This should be initialized to a list of 6
         zeros (floats), and then should not be modified externally from this
@@ -178,10 +178,10 @@ def report_progress(log, state, interval):
         state[2] = state[1] - state[0]
         # TODO: Could possibly to something with ncurses
         #       - to maintain a single line.
-        log("Loops per second %f (avg %f) (%d this interval / %d total)",
-            state[2] / state[5],
-            state[1] / (state[4] - state[6]),
-            state[2], state[1])
+        log("Loops per second %f (avg %f) (%d this interval / %d total)"
+            % (state[2] / state[5],
+               state[1] / (state[4] - state[6]),
+               state[2], state[1]))
         state[3] = state[4]
         state[0] = state[1]
 

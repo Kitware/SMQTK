@@ -180,10 +180,12 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession()
+        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors,
+                                      self.rel_index_config,
+                                      sid)
         with self.controller:
             with iqrs:
-                self.controller.add_session(iqrs, sid)
+                self.controller.add_session(iqrs)
                 self.session_classifiers[sid] = None
                 self.session_classifier_dirty[sid] = True
 

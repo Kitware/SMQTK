@@ -14,6 +14,7 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 
 from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.parallel import parallel_map
 
 try:
     import caffe
@@ -424,19 +425,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        p = multiprocessing.Pool(procs)
-        img_arrays = p.map(
-            _process_load_img_array,
-            zip(
-                [data_elements[uid] for uid in uuids4proc],
-                itertools.repeat(self.transformer, uid_num),
-                itertools.repeat(self.data_layer, uid_num),
-                itertools.repeat(self.load_truncated_images, uid_num),
-                itertools.repeat(self.pixel_rescale, uid_num),
-            )
+        img_arrays = list(
+            parallel_map(_process_load_img_array,
+                         (data_elements[uid] for uid in uuids4proc),
+                         itertools.repeat(self.transformer, uid_num),
+                         itertools.repeat(self.data_layer, uid_num),
+                         itertools.repeat(self.load_truncated_images, uid_num),
+                         itertools.repeat(self.pixel_rescale, uid_num),
+                         use_multiprocessing=True)
         )
-        p.close()
-        p.join()
 
         self._log.debug("Loading image bytes into network layer '%s'",
                         self.data_layer)
@@ -455,9 +452,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                 descr_elements[uid].set_vector(v)
 
 
-def _process_load_img_array((data_element, transformer,
-                             data_layer, load_truncated_images,
-                             pixel_rescale)):
+def _process_load_img_array(data_element, transformer,
+                            data_layer, load_truncated_images,
+                            pixel_rescale):
     """
     Helper function for multiprocessing image data loading
 
@@ -479,7 +476,16 @@ def _process_load_img_array((data_element, transformer,
     if img.mode != "RGB":
         img = img.convert("RGB")
     # Caffe natively uses float types (32-bit)
-    img_a = numpy.asarray(img, numpy.float32)
+    try:
+        # This can fail if the image is truncated and we're not allowing the
+        # loading of those images
+        img_a = numpy.asarray(img, numpy.float32)
+    except:
+        logging.getLogger(__name__).error(
+            "Failed array-ifying data element. Image may be truncated: %s",
+            data_element
+        )
+        raise
     assert img_a.ndim == 3, \
         "Loaded invalid RGB image with shape %s" \
         % img_a.shape

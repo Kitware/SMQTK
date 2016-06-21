@@ -233,7 +233,8 @@ class ItqFunctor (LshFunctor):
                 report_progress(self._log.debug, rs, dbg_report_interval)
             descriptors = descriptors_l
         self._log.info("Creating matrix of descriptors for fitting")
-        x = elements_to_matrix(descriptors, report_interval=dbg_report_interval)
+        x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,
+                               use_multiprocessing=True)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 
         self._log.debug("Info normalizing descriptors by factor: %s",

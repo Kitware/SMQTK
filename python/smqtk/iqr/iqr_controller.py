@@ -20,7 +20,8 @@ class IqrController (SmqtkObject):
 
     """
 
-    def __init__(self, expire_enabled=False, expire_check=30):
+    def __init__(self, expire_enabled=False, expire_check=30,
+                 expire_callback=None):
         """
         Initialize the controller.
 
@@ -35,8 +36,20 @@ class IqrController (SmqtkObject):
         :param expire_check: Interval, in seconds, that we check for session
             expiration.
         :type expire_check: float
-        """
 
+        :param expire_callback: Optional callable that should take one
+            positional parameter, the session that is expiring, and is called
+            when the session expires and just before it is removed from this
+            controller.
+
+            The provided function, when called, will be within this controller's
+            lock.
+
+            If expiration is NOT enabled, or if a session is not given a
+            timeout, this callback function is not used.
+        :type expire_callback: (collections.Hashable) -> None
+
+        """
         # Map of uuid to the search state
         #: :type: dict[collections.Hashable, IqrSession]
         self._iqr_sessions = {}
@@ -56,6 +69,7 @@ class IqrController (SmqtkObject):
         # prevents calling _handle_session_expiration when not enabled
         self._expire_thread_stop_event.set()
         self._expire_thread = None
+        self._expire_callback = expire_callback
 
         # If enabled, start expiration monitor thread
         if self._expire_enabled:
@@ -87,6 +101,9 @@ class IqrController (SmqtkObject):
                         self._log.debug("-> Expiring session '%s' "
                                         "(last-access: %s, timeout: %s, "
                                         "now: %s)", sid, la, to, now)
+                        if hasattr(self._expire_callback, '__call__'):
+                            self._log.debug("   - Executing callback")
+                            self._expire_callback(self._iqr_sessions[sid])
                         self.remove_session(sid)
 
         self._log.debug("End of expiration handle function")

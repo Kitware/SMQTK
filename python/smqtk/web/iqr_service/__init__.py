@@ -71,7 +71,15 @@ class IqrService (SmqtkWebApp):
 
         merge_dict(c, {
             "iqr_service": {
-                "positive_seed_neighbors": 500,
+
+                "session_control": {
+                    "positive_seed_neighbors": 500,
+                    "session_expiration": {
+                        "enabled": True,
+                        "check_interval_seconds": 30,
+                        "session_timeout": 3600,
+                    }
+                },
 
                 "plugin_notes": {
                     "relevancy_index_config":
@@ -103,6 +111,7 @@ class IqrService (SmqtkWebApp):
                         "for the variety of classifiers that can potentially "
                         "be created via this utility.",
                 },
+
                 "plugins": {
                     "relevancy_index_config": c_rel_index,
                     "descriptor_index": plugin.make_config(
@@ -114,17 +123,18 @@ class IqrService (SmqtkWebApp):
                         plugin.make_config(get_classifier_impls()),
                     "classification_factory":
                         ClassificationElementFactory.get_default_config(),
-                }
+                },
+
             }
         })
         return c
 
     def __init__(self, json_config):
         super(IqrService, self).__init__(json_config)
+        sc_config = json_config['iqr_service']['session_control']
 
         # Initialize from config
-        self.positive_seed_neighbors = \
-            json_config['iqr_service']['positive_seed_neighbors']
+        self.positive_seed_neighbors = sc_config['positive_seed_neighbors']
         self.classifier_config = \
             json_config['iqr_service']['plugins']['classifier_config']
         self.classification_factory = \
@@ -146,7 +156,6 @@ class IqrService (SmqtkWebApp):
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
 
-        self.controller = iqr_controller.IqrController()
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
         #: :type: dict[collections.Hashable, smqtk.algorithms.SupervisedClassifier | None]
@@ -157,7 +166,22 @@ class IqrService (SmqtkWebApp):
         #: :type: dict[collections.Hashable, bool]
         self.session_classifier_dirty = {}
 
-        # TODO: Timer for removing a session if it hasn't been used in a while
+        def session_expire_callback(session):
+            """
+            :type session: smqtk.iqr.IqrSession
+            """
+            with session:
+                self._log.debug("Removing session %s classifier", session.uuid)
+                del self.session_classifiers[session.uuid]
+                del self.session_classifier_dirty[session.uuid]
+
+        self.controller = iqr_controller.IqrController(
+            sc_config['session_expiration']['enabled'],
+            sc_config['session_expiration']['check_interval_seconds'],
+            session_expire_callback
+        )
+        self.session_timeout = \
+            sc_config['session_expiration']['session_timeout']
 
     # PUT
     def init_session(self):
@@ -180,10 +204,12 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession()
+        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors,
+                                      self.rel_index_config,
+                                      sid)
         with self.controller:
             with iqrs:
-                self.controller.add_session(iqrs, sid)
+                self.controller.add_session(iqrs, self.session_timeout)
                 self.session_classifiers[sid] = None
                 self.session_classifier_dirty[sid] = True
 

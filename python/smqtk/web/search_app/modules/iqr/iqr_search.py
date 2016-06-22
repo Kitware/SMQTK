@@ -726,7 +726,7 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
                 iqr_sess = IqrSession(self._pos_seed_neighbors,
                                       self._rel_index_config,
                                       sid)
-                self._iqr_controller.add_session(iqr_sess, sid)
+                self._iqr_controller.add_session(iqr_sess)
                 self._iqr_work_dirs[iqr_sess.uuid] = \
                     osp.join(self.work_dir, sid)
                 safe_create_dir(self._iqr_work_dirs[iqr_sess.uuid])

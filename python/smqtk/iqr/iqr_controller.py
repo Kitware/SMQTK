@@ -59,14 +59,8 @@ class IqrController (SmqtkObject):
 
         # If enabled, start expiration monitor thread
         if self._expire_enabled:
-            self._log.debug("Starting session expiration monitor thread")
-            self._expire_thread = threading.Thread(
-                target=self._handle_session_expiration
-            )
-            self._expire_thread.daemon = True
-            self._expire_thread_stop_event.clear()  # revert L:57
-            self._expire_thread.start()
-            atexit.register(self._stop_expiration_monitor)
+            atexit.register(self.stop_expiration_monitor)
+            self.start_expiration_monitor()
 
     def __enter__(self):
         self._map_rlock.acquire()
@@ -97,12 +91,39 @@ class IqrController (SmqtkObject):
 
         self._log.debug("End of expiration handle function")
 
-    def _stop_expiration_monitor(self):
-        if self._expire_thread:
-            self._log.debug("Stopping session expiration monitor thread")
-            self._expire_thread_stop_event.set()
-            self._expire_thread.join()
-            self._log.debug("Stopping session expiration monitor thread -- Done")
+    def start_expiration_monitor(self):
+        """
+        Initialize unique thread to check for session expiration if the feature
+        is enabled. This does nothing if the feature is not enabled.
+
+        We stop the previous thread if one was started.
+
+        """
+        with self._map_rlock:
+            self.stop_expiration_monitor()
+
+            if self._expire_enabled:
+                self._log.debug("Starting session expiration monitor thread")
+                self._expire_thread = threading.Thread(
+                    target=self._handle_session_expiration
+                )
+                self._expire_thread.daemon = True
+                self._expire_thread_stop_event.clear()
+                self._expire_thread.start()
+
+    def stop_expiration_monitor(self):
+        """
+        Stop the session expiration monitoring thread if one has been started.
+        Otherwise this method does nothing.
+        """
+        with self._map_rlock:
+            if self._expire_thread:
+                self._log.debug("Stopping session expiration monitor thread")
+                self._expire_thread_stop_event.set()
+                self._expire_thread.join()
+                self._expire_thread = None
+                self._log.debug("Stopping session expiration monitor thread "
+                                "-- Done")
 
     def session_uuids(self):
         """
@@ -183,7 +204,7 @@ class IqrController (SmqtkObject):
         """
         with self._map_rlock:
             if session_uuid in self._iqr_session_timeout:
-                self._iqr_session_last_access = time.time()
+                self._iqr_session_last_access[session_uuid] = time.time()
             return self._iqr_sessions[session_uuid]
 
     def remove_session(self, session_uuid):

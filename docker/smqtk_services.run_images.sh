@@ -82,7 +82,7 @@ unset q trigger
 # Create new tables in DB, pulling init scripts from SMQTK container
 echo "Creating required tables"
 docker exec -i ${DOCKER_POSTGRES} psql postgres postgres 1>/dev/null <<-EOSQL
-    $(docker run --rm --entrypoint bash smqtk-services \
+    $(docker run --rm --entrypoint bash kitware/smqtk \
         -c "cat \
             /smqtk/install/etc/smqtk/postgres/descriptor_element/example_table_init.sql \
             /smqtk/install/etc/smqtk/postgres/descriptor_index/example_table_init.sql")
@@ -99,7 +99,7 @@ docker run -d --name ${DOCKER_SMQTK} \
     -v $PWD/smqtk_logs:/logs \
     -p 12345:12345 \
     -p 12346:12346 \
-    smqtk-services -b
+    kitware/smqtk -b
 
 # Tail the expected logs
 tail -f smqtk_logs/compute_models.log smqtk_logs/smqtk.nnss.log smqtk_logs/smqtk.iqr.log

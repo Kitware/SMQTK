@@ -243,7 +243,7 @@ class IqrService (SmqtkWebApp):
             return make_response_json("session id '%s' not found" % sid,
                                       sid=sid), 404
 
-    # PUT
+    # DELETE
     def clean_session(self):
         """
         Clean resources associated with the session of the given UUID.

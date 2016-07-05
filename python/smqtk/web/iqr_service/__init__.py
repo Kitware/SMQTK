@@ -438,8 +438,8 @@ class IqrService (SmqtkWebApp):
 
             return make_response_json("Steps completed: %s" % msg, sid=sid), 201
 
-        except KeyError:
-            return make_response_json("session id '%s' not found" % sid,
+        except KeyError, e:
+            return make_response_json("session id %s not found" % e,
                                       sid=sid), 404
 
     # GET

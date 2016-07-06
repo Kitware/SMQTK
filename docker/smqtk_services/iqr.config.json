@@ -111,7 +111,7 @@
                     "descr_cache_filepath": null,
                     "multiprocess_fetch": true
                 },
-                "type": "FlannNearestNeighborsIndex"
+                "type": "LibSvmHikRelevancyIndex"
             }
         },
         "positive_seed_neighbors": 500

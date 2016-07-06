@@ -1,6 +1,5 @@
 import logging
-import multiprocessing
-import multiprocessing.pool
+import threading
 import uuid
 
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
@@ -105,7 +104,7 @@ class IqrSession (SmqtkObject):
 
         """
         self.uuid = session_uid or str(uuid.uuid1()).replace('-', '')
-        self.lock = multiprocessing.RLock()
+        self.lock = threading.RLock()
 
         self.pos_seed_neighbors = int(pos_seed_neighbors)
 

@@ -417,6 +417,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type descr_elements: dict[collections.Hashable,
                                    smqtk.representation.DescriptorElement]
 
+        :param procs: The number of asynchronous processes to run for loading
+            images. This may be None to just use all available cores.
+        :type procs: None | int
+
         """
         self._log.debug("Updating network data layer shape (%d images)",
                         len(uuids4proc))
@@ -433,7 +437,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                          itertools.repeat(self.load_truncated_images, uid_num),
                          itertools.repeat(self.pixel_rescale, uid_num),
                          use_multiprocessing=True,
-                         ordered=True)
+                         ordered=True,
+                         cores=procs)
         )
 
         self._log.debug("Loading image bytes into network layer '%s'",

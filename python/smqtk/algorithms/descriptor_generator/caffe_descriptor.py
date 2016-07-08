@@ -432,7 +432,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                          itertools.repeat(self.data_layer, uid_num),
                          itertools.repeat(self.load_truncated_images, uid_num),
                          itertools.repeat(self.pixel_rescale, uid_num),
-                         use_multiprocessing=True)
+                         use_multiprocessing=True,
+                         ordered=True)
         )
 
         self._log.debug("Loading image bytes into network layer '%s'",

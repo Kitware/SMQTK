@@ -100,6 +100,3 @@ docker run -d --name ${DOCKER_SMQTK} \
     -p 12345:12345 \
     -p 12346:12346 \
     kitware/smqtk -b
-
-# Tail the expected logs
-tail -f smqtk_logs/compute_models.log smqtk_logs/smqtk.nnss.log smqtk_logs/smqtk.iqr.log

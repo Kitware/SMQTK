@@ -1,6 +1,6 @@
 import numpy
 import os.path as osp
-import threading
+import StringIO
 
 from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
@@ -16,22 +16,25 @@ class DescriptorMemoryElement (DescriptorElement):
     effectively immutable.
     """
 
-    # In-memory cache of descriptor vectors
-    MEMORY_CACHE = {}
-    MEMORY_CACHE_LOCK = threading.RLock()
-
     @classmethod
     def is_usable(cls):
         return True
 
+    def __init__(self, type_str, uuid):
+        super(DescriptorMemoryElement, self).__init__(type_str, uuid)
+        self.__v = None
+
     def __getstate__(self):
-        return self.type(), self.uuid(), self.vector(),
+        # save vector as binary string
+        b = StringIO.StringIO()
+        numpy.save(b, self.vector())
+        return self.type(), self.uuid(), b.getvalue(),
 
     def __setstate__(self, state):
         self._type_label = state[0]
         self._uuid = state[1]
-        with self.MEMORY_CACHE_LOCK:
-            self.MEMORY_CACHE[self._get_cache_index()] = state[2]
+        b = StringIO.StringIO(state[2])
+        self.__v = numpy.load(b)
 
     def _get_cache_index(self):
         """
@@ -53,26 +56,23 @@ class DescriptorMemoryElement (DescriptorElement):
             stored.
         :rtype: bool
         """
-        with self.MEMORY_CACHE_LOCK:
-            return self._get_cache_index() in self.MEMORY_CACHE
+        return self.__v is not None
 
     def vector(self):
         """
         Implementation Note
         -------------------
-        A copy of the internally stored vector is returned in order to mimic
-        immutability.
+        A copy of the internally stored vector is returned.
 
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
         :rtype: numpy.core.multiarray.ndarray or None
 
         """
-        i = self._get_cache_index()
-        with self.MEMORY_CACHE_LOCK:
-            if i in self.MEMORY_CACHE:
-                return numpy.copy(self.MEMORY_CACHE[i])
-            return None
+        # Copy if storing an array, otherwise return the None value
+        if self.__v is not None:
+            return numpy.copy(self.__v)
+        return None
 
     def set_vector(self, new_vec):
         """
@@ -93,12 +93,11 @@ class DescriptorMemoryElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray | None
 
         """
-        idx = self._get_cache_index()
-        with self.MEMORY_CACHE_LOCK:
-            if new_vec is None and idx in self.MEMORY_CACHE:
-                del self.MEMORY_CACHE[self._get_cache_index()]
-            else:
-                self.MEMORY_CACHE[idx] = numpy.copy(new_vec)
+        # Copy a non-None value given, otherwise stay None
+        if new_vec is not None:
+            self.__v = numpy.copy(new_vec)
+        else:
+            self.__v = None
 
 
 class DescriptorFileElement (DescriptorElement):

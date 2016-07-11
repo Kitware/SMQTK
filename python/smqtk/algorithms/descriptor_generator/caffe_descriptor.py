@@ -59,8 +59,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type network_model_filepath: str
 
         :param image_mean_filepath: Path to the image mean ``.binaryproto``
-            file.
-        :type image_mean_filepath: str
+            file, a ``.npy`` file, or a file-like object that could otherwise be
+            passed to ``numpy.load``
+        :type image_mean_filepath: str | file | StringIO.StringIO
 
         :param return_layer: The label of the layer we take data from to compose
             output descriptor vector.
@@ -108,7 +109,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self.network_prototxt_filepath = str(network_prototxt_filepath)
         self.network_model_filepath = str(network_model_filepath)
-        self.image_mean_filepath = str(image_mean_filepath)
+        self.image_mean_filepath = image_mean_filepath
 
         self.return_layer = str(return_layer)
         self.batch_size = int(batch_size)

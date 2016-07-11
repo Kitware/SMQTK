@@ -206,6 +206,9 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
             self.name = ''
 
         self.ordered = ordered
+        if self.ordered:
+            self._log.debug("Maintaining result iteration order based on input "
+                            "order")
         self.heart_beat = heart_beat
         self.is_multiprocessing = is_multiprocessing
 

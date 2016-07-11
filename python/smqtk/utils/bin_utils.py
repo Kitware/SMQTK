@@ -163,9 +163,9 @@ def report_progress(log, state, interval):
     :type interval: float
 
     """
-    # State format:
-    #   [lc, c, dc, lt, t, dt, st]
-    #   [ 0, 1,  2,  3, 4,  5,  6]
+    # State format (c=count, t=time:
+    #   [last_c, c, delta_c, last_t, t, delta_t, starting_t]
+    #   [  0,    1,    2,       3,   4,    5,         6    ]
 
     # Starting time
     if not state[6]:

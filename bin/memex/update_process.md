@@ -7,19 +7,19 @@ This results in a log and a test file listing newly added files.
 
 ## Computing Descriptors/Hash Codes
 Follow the incremental update example at:
- 
+
     http://smqtk.readthedocs.org/en/latest/examples/nnss_incremental_update/incremental_example.html
-    
+
 These steps are encapsulated in the ``run.compute_many_descriptors.sh`` and ``run.compute_hash_codes.sh`` scripts.
-    
+
 ## Full-stack
 Now, the full update process is encapsulated in the ``run.update.sh`` script.
 
 ### 3-way gun classifier
 Model files:
 
-    - classifier.svm.weapons_3_class_alexnet.labels
-    - classifier.svm.weapons_3_class_alexnet.model
+    - `classifier.svm.weapons_3_class_alexnet.labels`
+    - `classifier.svm.weapons_3_class_alexnet.model`
 
 Use the ``run.compute_classifications.sh`` script, which wraps a call to the ``compute_classifications.py`` script but with more tightly defined I/O paths.
 See the configuration file ``config.jpl_weapons_v3.compute_classifications.json``.

@@ -15,6 +15,8 @@ class TestParallelMap (unittest.TestCase):
         # Random characters in range [a, z]
         cls.test_string = [chr(random.randint(97, 122)) for _ in xrange(n)]
         cls.test_func = ord
+        # Since this parallel function is intended to perform similar to the
+        # built-in map function.
         cls.expected = map(cls.test_func, cls.test_string)
 
     def test_simple_ordered_threaded(self):

@@ -20,10 +20,6 @@ if LibSvmClassifier.is_usable():
 
     class TestLibSvmClassifier (unittest.TestCase):
 
-        def tearDown(self):
-            # Clear MemoryElement content
-            DescriptorMemoryElement.MEMORY_CACHE = {}
-
         def test_no_save_model_pickle(self):
             # Test model preservation across pickling even without model cache
             # file paths set.

@@ -27,10 +27,6 @@ def random_descriptor():
 
 class TestMemoryDescriptorIndex (unittest.TestCase):
 
-    def tearDown(self):
-        # clear memory descriptor cache
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-
     def test_is_usable(self):
         ntools.assert_equal(MemoryDescriptorIndex.is_usable(), True)
 

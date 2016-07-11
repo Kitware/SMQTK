@@ -23,9 +23,6 @@ class TestLshIndex (unittest.TestCase):
 
     RANDOM_SEED = 0
 
-    def tearDown(self):
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-
     def test_configuration(self):
         c = LSHNearestNeighborIndex.get_default_config()
 
@@ -115,8 +112,6 @@ class TestLshIndex (unittest.TestCase):
         for j in xrange(1, len(dists)):
             ntools.assert_greater(dists[j], dists[j-1])
 
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-
     def test_random_euclidean__itq__None(self):
         ftor, fit = self._make_ftor_itq()
         self._random_euclidean(ftor, None, fit)
@@ -174,8 +169,6 @@ class TestLshIndex (unittest.TestCase):
         r, dists = index.nn(q, dim)
         ntools.assert_equal(r[0], q)
         ntools.assert_equal(dists[0], 0.)
-
-        DescriptorMemoryElement.MEMORY_CACHE = {}
 
     def test_known_unit__euclidean__itq__None(self):
         ftor, fit = self._make_ftor_itq()

@@ -12,16 +12,6 @@ __author__ = "paul.tunison@kitware.com"
 
 class TestDescriptorMemoryElement (unittest.TestCase):
 
-    def setUp(self):
-        # There should be nothing in the cache
-        assert not DescriptorMemoryElement.MEMORY_CACHE, \
-            "There were things in the memory element cache! %s" \
-            % DescriptorMemoryElement.MEMORY_CACHE
-
-    def tearDown(self):
-        # Reset MemoryElement cache
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-
     def test_configuration(self):
         default_config = DescriptorMemoryElement.get_default_config()
         ntools.assert_equal(default_config, {})
@@ -37,9 +27,6 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         ntools.assert_equal(inst1, inst2)
 
     def test_pickle_dump_load(self):
-        # Wipe current cache
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-
         # Make a couple descriptors
         v1 = numpy.array([1, 2, 3])
         d1 = DescriptorMemoryElement('test', 0)
@@ -49,16 +36,8 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         d2 = DescriptorMemoryElement('test', 1)
         d2.set_vector(v2)
 
-        ntools.assert_in(('test', 0), DescriptorMemoryElement.MEMORY_CACHE)
-        ntools.assert_in(('test', 1), DescriptorMemoryElement.MEMORY_CACHE)
-
         d1_s = cPickle.dumps(d1)
         d2_s = cPickle.dumps(d2)
-
-        # Wipe cache again
-        DescriptorMemoryElement.MEMORY_CACHE = {}
-        ntools.assert_not_in(('test', 0), DescriptorMemoryElement.MEMORY_CACHE)
-        ntools.assert_not_in(('test', 1), DescriptorMemoryElement.MEMORY_CACHE)
 
         # Attempt reconstitution
         d1_r = cPickle.loads(d1_s)
@@ -66,10 +45,6 @@ class TestDescriptorMemoryElement (unittest.TestCase):
 
         numpy.testing.assert_array_equal(v1, d1_r.vector())
         numpy.testing.assert_array_equal(v2, d2_r.vector())
-
-        # Cache should now have those entries back in it
-        ntools.assert_in(('test', 0), DescriptorMemoryElement.MEMORY_CACHE)
-        ntools.assert_in(('test', 1), DescriptorMemoryElement.MEMORY_CACHE)
 
     def test_input_immutability(self):
         # make sure that data stored is not susceptible to shifts in the

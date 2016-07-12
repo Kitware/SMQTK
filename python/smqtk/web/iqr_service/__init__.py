@@ -75,7 +75,7 @@ class IqrService (SmqtkWebApp):
                 "session_control": {
                     "positive_seed_neighbors": 500,
                     "session_expiration": {
-                        "enabled": True,
+                        "enabled": False,
                         "check_interval_seconds": 30,
                         "session_timeout": 3600,
                     }

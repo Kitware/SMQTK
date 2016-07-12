@@ -95,7 +95,7 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         batch_i = 0
 
         for dfe in iter_capture_elements():
-            # elements captured in iter_capture_elements
+            # elements captured ``dfe_deque`` in iter_capture_elements
 
             if len(dfe_deque) == batch_size:
                 batch_i += 1

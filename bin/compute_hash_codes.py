@@ -138,6 +138,8 @@ def main():
         get_lsh_functor_impls()
     )
 
+    # Iterate either over what's in the file given, or everything in the
+    # configured index.
     def iter_uuids():
         if uuid_list_filepath:
             log.info("Using UUIDs list file")
@@ -149,7 +151,7 @@ def main():
             for k in descriptor_index.iterkeys():
                 yield k
 
-    # load map if it exists, else start with empty dictionary
+    # load hash2uuids map if it exists, else start with empty dictionary
     if hash2uuids_input_filepath and os.path.isfile(hash2uuids_input_filepath):
         log.info("Loading hash2uuids mapping")
         with open(hash2uuids_input_filepath) as f:

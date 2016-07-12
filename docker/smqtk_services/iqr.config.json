@@ -114,7 +114,14 @@
                 "type": "LibSvmHikRelevancyIndex"
             }
         },
-        "positive_seed_neighbors": 500
+        "session_control": {
+            "positive_seed_neighbors": 500,
+            "session_expiration": {
+                "check_interval_seconds": 30,
+                "enabled": true,
+                "session_timeout": 3600
+            }
+        }
     },
     "server": {
         "host": "0.0.0.0",

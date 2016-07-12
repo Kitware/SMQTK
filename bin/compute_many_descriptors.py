@@ -51,6 +51,11 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
         one single batch transaction at a time.
     :type batch_size:
 
+    :param check_image: Enable checking image loading from file before queueing
+        that file for processing. If the check fails, the file is skipped
+        instead of a halting exception being raised.
+    :type check_image: bool
+
     """
     log = logging.getLogger(__name__)
 
@@ -132,14 +137,14 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
 def extend_parser(parser):
     parser.add_argument('-b', '--batch-size',
-                        type=int, default=256, metavar='INT',
+                        type=int, default=0, metavar='INT',
                         help="Number of files to batch together into a single "
                              "compute async call. This defines the "
                              "granularity of the checkpoint file in regards "
                              "to computation completed. If given 0, we do not "
                              "batch and will perform a single "
                              "``compute_async`` call on the configured "
-                             "generator. Default batch size is 256.")
+                             "generator. Default batch size is 0.")
     parser.add_argument('--check-image',
                         default=False, action='store_true',
                         help="If se should check image pixel loading before "

@@ -129,6 +129,8 @@ def main():
     with open(output_filepath, 'w') as f:
         cPickle.dump(d_classes, f, -1)
 
+    log.info("Done")
+
 
 if __name__ == '__main__':
     main()

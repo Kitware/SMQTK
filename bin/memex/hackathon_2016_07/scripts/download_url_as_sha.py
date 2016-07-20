@@ -3,16 +3,13 @@ import os
 import requests
 import sys
 
-# input is like:
-# http://someimageurl docid1 docid2.. docidn
-
-# Download someimageurl to a location based on its sha1 hash
+# Downloads an imageurl to a location based on its sha1 hash
 # Then print out the mapping of the URL to the sha
 
 NUM_RETRIES = 5
 
 if __name__ == '__main__':
-    url, doc_ids = sys.argv[1], sys.argv[1:]
+    url = sys.argv[1]
 
     DATA_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                             '../data')

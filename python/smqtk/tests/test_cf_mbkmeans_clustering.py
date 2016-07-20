@@ -5,6 +5,10 @@ import numpy
 from sklearn.cluster import MiniBatchKMeans
 
 from smqtk.compute_functions import mb_kmeans_build_apply
+from smqtk.representation.descriptor_index.memory import \
+    MemoryDescriptorIndex
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 
 
 class TestMBKMClustering (unittest.TestCase):
@@ -13,11 +17,6 @@ class TestMBKMClustering (unittest.TestCase):
     def test_clustering_equal_descriptors(self):
         # Test that clusters of descriptor of size  n-features are correctly
         # clustered together.
-        from smqtk.representation.descriptor_index.memory import \
-            MemoryDescriptorIndex
-        from smqtk.representation.descriptor_element.local_elements import \
-            DescriptorMemoryElement
-
         print "Creating dummy descriptors"
         n_features = 8
         n_descriptors = 20
@@ -62,3 +61,10 @@ class TestMBKMClustering (unittest.TestCase):
                                                  "match other vectors "
                                                  "(%s != %s)"
                                                  % (c, v, v2))
+
+    def test_empty_index(self):
+        # what happens when function given an empty descriptor index
+        index = MemoryDescriptorIndex()
+        mbkm = MiniBatchKMeans()
+        d = mb_kmeans_build_apply(index, mbkm, 0)
+        nose.tools.assert_false(d)

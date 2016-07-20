@@ -247,6 +247,9 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     Build the MiniBatchKMeans centroids based on the descriptors in the given
     index, then predicting descriptor clusters with the final result model.
 
+    If the given index is empty, no fitting or clustering occurs and an empty
+    dictionary is returned.
+
     :param index: Index of descriptors
     :type index: smqtk.representation.DescriptorIndex
 

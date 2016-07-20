@@ -24,8 +24,10 @@ if __name__ == '__main__':
     config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                'es_config.json')
     if not os.path.isfile(config_file):
+        print 'Configuration file not found.'
         sys.exit(1)
     elif len(sys.argv) < 2:
+        print 'Usage: get_es_child_documents.py ad_cdr_id...'
         sys.exit(1)
     else:
         with open(config_file, 'rb') as infile:

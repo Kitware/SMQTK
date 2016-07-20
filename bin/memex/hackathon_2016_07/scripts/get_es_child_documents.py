@@ -15,6 +15,12 @@ def search(obj_parents_l, es):
         .scan()
 
 if __name__ == '__main__':
+    """
+    Returns the Elasticsearch documents whose parents are in sys.argv.
+
+    This is useful for retrieving image documents given a series of
+    ad document ids.
+    """
     config_file = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                'es_config.json')
     if not os.path.isfile(config_file):

@@ -51,10 +51,11 @@ def extend_parser(p):
 def main():
     description = """
     Script for generating clusters from descriptors in a given index using the
-    mini-batch KMeans implementation from Scikit-learn.
+    mini-batch KMeans implementation from Scikit-learn
+    (http://scikit-learn.org/stable/modules/generated/sklearn.cluster.MiniBatchKMeans.html).
 
     By the nature of Scikit-learn's MiniBatchKMeans implementation, euclidean
-    distance is used.
+    distance is used to measure distance between descriptors.
     """
     args, config = utility_main_helper(default_config, description,
                                        extend_parser)

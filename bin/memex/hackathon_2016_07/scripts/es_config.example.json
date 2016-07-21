@@ -1,0 +1,5 @@
+{
+    "url": "https://my-elasticsearch-server.org:1234",
+    "user": "myesuser",
+    "password": "hunter2"
+}

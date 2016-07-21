@@ -8,6 +8,8 @@ for these functions instead of scripts in ``<source>/bin/scripts``.
 import collections
 import logging
 
+import numpy
+
 from smqtk.utils import (
     bin_utils,
     bit_utils,
@@ -238,3 +240,90 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
     report_progress(log.debug, report_state, 0.0)
 
     return hash2uuids
+
+
+def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
+    """
+    Build the MiniBatchKMeans centroids based on the descriptors in the given
+    index, then predicting descriptor clusters with the final result model.
+
+    If the given index is empty, no fitting or clustering occurs and an empty
+    dictionary is returned.
+
+    :param index: Index of descriptors
+    :type index: smqtk.representation.DescriptorIndex
+
+    :param mbkm: Scikit-Learn MiniBatchKMeans instead to train and then use for
+        prediction
+    :type mbkm: sklearn.cluster.MiniBatchKMeans
+
+    :param initial_fit_size: Number of descriptors to run an initial fit with.
+        This brings the advantage of choosing a best initialization point from
+        multiple.
+    :type initial_fit_size: int
+
+    :return: Dictionary of the cluster label (integer) to the set of descriptor
+        UUIDs belonging to that cluster.
+    :rtype: dict[int, set[collections.Hashable]]
+
+    """
+    log = logging.getLogger(__name__)
+
+    ifit_completed = False
+    d_deque = collections.deque()
+    d_fitted = 0
+
+    log.info("Getting index keys (shuffled)")
+    index_keys = sorted(index.iterkeys())
+    numpy.random.seed(mbkm.random_state)
+    numpy.random.shuffle(index_keys)
+
+    # d_vector_iter = parallel_map(lambda d: d.vector(), index,
+    d_vector_iter = parallel.parallel_map(lambda k: index[k].vector(),
+                                          index_keys,
+                                          name="vector-collector",
+                                          use_multiprocessing=False)
+
+    for i, v in enumerate(d_vector_iter):
+        d_deque.append(v)
+
+        if initial_fit_size and not ifit_completed:
+            if len(d_deque) == initial_fit_size:
+                log.info("Initial fit using %d descriptors", len(d_deque))
+                mbkm.fit(d_deque)
+                d_fitted += len(d_deque)
+                d_deque.clear()
+                ifit_completed = True
+        elif len(d_deque) == mbkm.batch_size:
+            log.info("Partial fit with batch size %d", len(d_deque))
+            mbkm.partial_fit(d_deque)
+            d_fitted += len(d_deque)
+            d_deque.clear()
+
+    # Final fit with any remaining descriptors
+    if d_deque:
+        log.info("Final partial fit of size %d", len(d_deque))
+        mbkm.partial_fit(d_deque)
+        d_fitted += len(d_deque)
+        d_deque.clear()
+
+    log.info("Computing descriptor classes with final KMeans model")
+    mbkm.verbose = False
+    d_classes = collections.defaultdict(set)
+    d_uv_iter = parallel.parallel_map(lambda d: (d.uuid(), d.vector()),
+                                      index,
+                                      use_multiprocessing=False,
+                                      name="uv-collector")
+    d_uc_iter = parallel.parallel_map(
+        lambda (u, v): (u, mbkm.predict(v[numpy.newaxis, :])[0]),
+        d_uv_iter,
+        use_multiprocessing=False,
+        name="uc-collector")
+    rps = [0] * 7
+    for uuid, c in d_uc_iter:
+        d_classes[c].add(uuid)
+        bin_utils.report_progress(log.debug, rps, 1.)
+    rps[1] -= 1
+    bin_utils.report_progress(log.debug, rps, 0)
+
+    return d_classes

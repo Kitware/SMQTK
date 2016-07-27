@@ -311,7 +311,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             # Give the dummy data to the KWCNN data object
             self.data.set_data_list(temp_arrays)
             # Test with dummy data, which will compile and load the model
-            self.network.test()  # Throw away output
+            self._log.debug("Building and compiling KWCNN model...")
+            self.network.test(quiet=True)  # Throw away output
+            self._log.debug("done")
 
     def get_config(self):
         """

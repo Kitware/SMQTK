@@ -584,7 +584,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     """
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
     img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
-    mode = "LA" if network_is_greyscale else "BGR"
+    mode = "LA" if network_is_greyscale else "RGB"
     if img.mode != mode:
         img = img.convert(mode)
     # KWCNN natively uses uint8 or float32 types
@@ -594,7 +594,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     try:
         # This can fail if the image is truncated and we're not allowing the
         # loading of those images
-        img_a = numpy.asarray(img, numpy.float32)
+        img_a = numpy.array(img, dtype=numpy.float32)
         img_a = img_a.reshape(input_shape)
     except:
         logging.getLogger(__name__).error(
@@ -602,7 +602,10 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
             data_element
         )
         raise
-    assert img_a.ndim == 1, \
+    # Convert to BGR
+    if not network_is_greyscale:
+        img_a = img_a[:, :, ::-1]
+    assert img_a.ndim == 1 if network_is_greyscale else img_a.ndim == 3, \
         "Loaded invalid greyscale image with shape %s" \
         % img_a.shape
     if pixel_rescale:

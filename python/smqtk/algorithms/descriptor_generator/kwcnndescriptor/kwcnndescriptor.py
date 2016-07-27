@@ -101,6 +101,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
         self.use_gpu = bool(use_gpu)
         self.gpu_device_id = int(gpu_device_id)
+        self.gpu_device_tag = 'gpu%d' % (self.gpu_device_id, )
 
         self.network_is_greyscale = bool(network_is_greyscale)
         self.load_truncated_images = bool(load_truncated_images)
@@ -143,7 +144,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             if self.use_gpu:
                 self._log.debug("Using GPU")
                 assert kwcnn.tpl._lasagne.USING_GPU
-                assert kwcnn.tpl._lasagne.USING_DEVICE == self.gpu_device_id
+                assert kwcnn.tpl._lasagne.USING_DEVICE == self.gpu_device_tag
             else:
                 self._log.debug("using CPU")
                 assert not kwcnn.tpl._lasagne.USING_GPU
@@ -158,7 +159,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             self._log.error("\t\t Using CPU       : %s" % args)
             args = (self.use_gpu, )
             self._log.error("\t\t Using GPU       : %s" % args)
-            args = (self.gpu_device_id, )
+            args = (self.gpu_device_tag, )
             self._log.error("\t\t Using GPU Device: %s" % args)
 
             self._log.error("Theano configuration:")

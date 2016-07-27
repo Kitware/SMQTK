@@ -176,7 +176,34 @@ class PostgresDescriptorElement (DescriptorElement):
         :rtype: bool
 
         """
-        return self.vector() is not None
+        # Very similar to vector query, but replacing vector binary return with
+        # a true/null return. Save a little bit of time compared to testing
+        # vector return.
+        # OLD: return self.vector() is not None
+
+        q = self.SELECT_TMPL.format(**{
+            'binary_col': 'true',
+            'table_name': self.table_name,
+            'type_col': self.type_col,
+            'uuid_col': self.uuid_col,
+        })
+
+        conn = self.get_psql_connection()
+        cur = conn.cursor()
+
+        try:
+            cur.execute(q, {"type_val": self.type(),
+                            "uuid_val": str(self.uuid())})
+            r = cur.fetchone()
+            # For server cleaning (e.g. pgbouncer)
+            conn.commit()
+            return bool(r)
+        except:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
 
     def vector(self):
         """

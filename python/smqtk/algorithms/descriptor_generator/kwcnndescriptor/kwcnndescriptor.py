@@ -11,9 +11,8 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 
-from smqtk.algorithms.descriptor_generator import \
-    DescriptorGenerator, \
-    DFLT_DESCRIPTOR_FACTORY
+from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
+                                                   DFLT_DESCRIPTOR_FACTORY)
 
 from smqtk.utils.bin_utils import report_progress
 from smqtk.utils.parallel import parallel_map
@@ -108,12 +107,12 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale
 
-        assert self.batch_size > 0, \
-            "Batch size must be greater than 0 (got %d)" \
-            % self.batch_size
-        assert self.gpu_device_id >= 0, \
-            "GPU Device ID must be greater than 0 (got %d)" \
-            % self. gpu_device_id
+        args = (self.batch_size, )
+        message = "Batch size must be greater than 0 (got %d)" % args
+        assert self.batch_size > 0, message
+        args = (self.gpu_device_id, )
+        message = "GPU Device ID must be greater than 0 (got %d)" % args
+        assert self.gpu_device_id >= 0, message
 
         # Network setup variables
         self.data = None
@@ -477,15 +476,16 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                         len(data_elements) - len(uuid4proc))
 
         if uuid4proc:
+            b_s = self.batch_size
             self._log.debug("Converting deque to tuple for segmentation")
             uuid4proc = tuple(uuid4proc)
 
             # Split UUIDs into groups equal to our batch size, and an option
             # tail group that is less than our batch size.
-            tail_size = len(uuid4proc) % self.batch_size
-            batch_groups = (len(uuid4proc) - tail_size) // self.batch_size
+            tail_size = len(uuid4proc) % b_s
+            batch_groups = (len(uuid4proc) - tail_size) // b_s
             self._log.debug("Processing %d batches of size %d", batch_groups,
-                            self.batch_size)
+                            b_s)
             if tail_size:
                 self._log.debug("Processing tail group of size %d", tail_size)
 
@@ -493,8 +493,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 for g in xrange(batch_groups):
                     self._log.debug("Starting batch: %d of %d",
                                     g + 1, batch_groups)
-                    batch_uuids = \
-                        uuid4proc[g * self.batch_size:(g + 1) * self.batch_size]
+                    batch_uuids = uuid4proc[g * b_s:(g + 1) * b_s]
                     self._process_batch(batch_uuids, data_elements,
                                         descr_elements, procs)
 
@@ -605,9 +604,8 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     # Convert to BGR
     if not network_is_greyscale:
         img_a = img_a[:, :, ::-1]
-    assert img_a.ndim == 1 if network_is_greyscale else img_a.ndim == 3, \
-        "Loaded invalid greyscale image with shape %s" \
-        % img_a.shape
+    message = "Loaded invalid greyscale image with shape %s" % (img_a.shape, )
+    assert img_a.ndim == 3 and img_a.shape[2] == 1, message
     if pixel_rescale:
         pmin, pmax = min(pixel_rescale), max(pixel_rescale)
         r = pmax - pmin

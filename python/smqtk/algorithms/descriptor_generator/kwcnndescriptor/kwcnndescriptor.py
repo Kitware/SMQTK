@@ -185,19 +185,20 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 super(OLCD_FCN_Model, model).__init__(*args, **kwargs)
                 model.bottleneck = kwargs.get("bottleneck", 512)
 
-            def _expected_input_shape(model):
+            def _input_shape(model):
                 return (64, 64, 1)
 
             def architecture(model, batch_size, in_width, in_height,
                              in_channels, out_classes):
                 """FCNN architecture."""
+                input_height, input_width, input_channels = model._input_shape()
                 _nonlinearity = kwcnn.tpl._lasagne.nonlinearities.LeakyRectify(
                     leakiness=(1. / 10.)
                 )
 
                 layer_list = [
                     kwcnn.tpl._lasagne.layers.InputLayer(
-                        shape=(None, 1, 64, 64)
+                        shape=(None, input_channels, input_height, input_width)
                     )
                 ]
 
@@ -283,12 +284,12 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
         # Pre-initialize network during network setup
         if pre_initialize_network:
-            # Get the expected input shape for the KWCNN model
-            exp_input_shape = self.model._expected_input_shape()
-            exp_height, exp_width, exp_channels = exp_input_shape
+            # Get the input shape for the KWCNN model
+            self.input_shape = self.model._input_shape()
+            input_height, input_width, input_channels = self.input_shape
             # Create a temporary numpy array of empty data of correct shape
-            input_shape = (16, exp_height, exp_width, exp_channels, )
-            temp_arrays = numpy.zeros(input_shape, dtype=numpy.float32)
+            temp_shape = (16, input_height, input_width, input_channels, )
+            temp_arrays = numpy.zeros(temp_shape, dtype=numpy.float32)
             # Give the dummy data to the KWCNN data object
             self.data.set_data_list(temp_arrays)
             # Test with dummy data, which will compile and load the model
@@ -520,6 +521,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             parallel_map(_process_load_img_array,
                          (data_elements[uid] for uid in uuids4proc),
                          itertools.repeat(self.network_is_greyscale, uid_num),
+                         itertools.repeat(self.input_shape, uid_num),
                          itertools.repeat(self.load_truncated_images, uid_num),
                          itertools.repeat(self.pixel_rescale, uid_num),
                          use_multiprocessing=True,
@@ -544,7 +546,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 descr_elements[uid].set_vector(v)
 
 
-def _process_load_img_array(data_element, network_is_greyscale,
+def _process_load_img_array(data_element, network_is_greyscale, input_shape,
                             load_truncated_images, pixel_rescale):
     """
     Helper function for multiprocessing image data loading.
@@ -567,10 +569,14 @@ def _process_load_img_array(data_element, network_is_greyscale,
     if img.mode != mode:
         img = img.convert(mode)
     # KWCNN natively uses uint8 or float32 types
+    input_shape_ = input_shape[:2]
+    if img.shape != input_shape_:
+        img = img.resize(input_shape_, PIL.Image.LANCZOS)
     try:
         # This can fail if the image is truncated and we're not allowing the
         # loading of those images
         img_a = numpy.asarray(img, numpy.float32)
+        img_a = img_a.reshape(input_shape)
     except:
         logging.getLogger(__name__).error(
             "Failed array-ifying data element. Image may be truncated: %s",

@@ -97,7 +97,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
         else:
             log.debug("Skipping file (invalid content) type for "
                       "descriptor generator (fp='%s', ct=%s)",
-                      fp, ct)
+                      str(fp), ct)
             return None
 
     def iter_valid_elements():
@@ -126,9 +126,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
                 fp, descr.uuid()
             ))
             report_progress(log.debug, rps, 1.)
-        # Final report
-        rps[1] -= 1
-        report_progress(log.debug, rps, 0.)
     finally:
         cf.close()
 

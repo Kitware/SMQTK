@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# Script for building and saving the model for the ``SkLearnBallTreeHashIndex``
+# ``HashIndex`` implementation.
+#
 
 import argparse, logging, cPickle, os, sys
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import SkLearnBallTreeHashIndex

@@ -231,6 +231,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
             execution. False by default.
         :type yield_result_rows: bool
 
+        :return: Iterator over result rows if ``yield_result_rows`` is True,
+            otherwise None.
+        :rtype: __generator | None
+
         """
         conn = self._get_psql_connection()
         try:
@@ -262,6 +266,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :param yield_result_rows: Optionally yield rows from each batch
             execution. False by default.
         :type yield_result_rows: bool
+
+        :return: Iterator over result rows if ``yield_result_rows`` is True,
+            otherwise None.
+        :rtype: __generator | None
 
         """
         self._log.debug("starting multi operation (batching: %s)",

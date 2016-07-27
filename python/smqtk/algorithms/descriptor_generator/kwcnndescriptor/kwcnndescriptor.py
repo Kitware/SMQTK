@@ -552,7 +552,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.data.set_data_list(img_arrays)
 
         self._log.debug("Performing forward inference using KWCNN Network")
-        test_results = self.network.test()
+        test_results = self.network.test(quiet=True)
         descriptor_list = test_results['probability_list']
 
         self._log.debug("transform network output into descriptors")
@@ -584,7 +584,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     """
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
     img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
-    mode = "LA" if network_is_greyscale else "RGB"
+    mode = "L" if network_is_greyscale else "RGB"
     if img.mode != mode:
         img = img.convert(mode)
     # KWCNN natively uses uint8 or float32 types

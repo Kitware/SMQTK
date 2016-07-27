@@ -166,7 +166,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
             # Check the $THEANO_FLAGS environment variable for configuration
             self._log.error("\t $THEANO_FLAGS environment variable")
-            theano_flags = os.environ["THEANO_FLAGS"].strip()
+            theano_flags = os.environ.get("THEANO_FLAGS", "").strip()
             if len(theano_flags) > 0:
                 theano_flag_list = theano_flags.split(",")
                 for theano_flag in theano_flag_list:

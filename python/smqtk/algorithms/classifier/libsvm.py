@@ -275,6 +275,7 @@ class LibSvmClassifier (SupervisedClassifier):
             # requires a sequence, so making the iterable ``g`` a tuple
             g = class_examples[l]
             if not isinstance(g, collections.Sequence):
+                self._log.debug('   (expanding iterable into sequence)')
                 g = tuple(g)
 
             train_group_sizes.append(float(len(g)))
@@ -309,6 +310,7 @@ class LibSvmClassifier (SupervisedClassifier):
         svm_params = svmutil.svm_parameter(self._gen_param_string(params))
         self._log.debug("Creating SVM problem")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
+        del train_vectors
         self._log.debug("Training SVM model")
         self.svm_model = svmutil.svm_train(svm_problem, svm_params)
         self._log.debug("Training SVM model -- Done")

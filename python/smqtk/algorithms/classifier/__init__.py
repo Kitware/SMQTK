@@ -201,7 +201,9 @@ class SupervisedClassifier (Classifier):
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
         :param kwds: Keyword assignment of labels to iterables of
-            DescriptorElement training examples.
+            DescriptorElement training examples. Keyword provided iterables
+            are used in place of class iterables provided in ``class_examples``
+            when there are conflicting keys.
         :type kwds: dict[str,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 

@@ -588,9 +588,9 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     if img.mode != mode:
         img = img.convert(mode)
     # KWCNN natively uses uint8 or float32 types
-    input_shape_ = input_shape[:2]
-    if img.shape != input_shape_:
-        img = img.resize(input_shape_, PIL.Image.LANCZOS)
+    input_size = input_shape[:2]
+    if img.size != input_size:
+        img = img.resize(input_size, PIL.Image.LANCZOS)
     try:
         # This can fail if the image is truncated and we're not allowing the
         # loading of those images

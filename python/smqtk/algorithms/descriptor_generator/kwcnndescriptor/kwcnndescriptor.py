@@ -148,11 +148,29 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 self._log.debug("using CPU")
                 assert not kwcnn.tpl._lasagne.USING_GPU
         except AssertionError:
-            self._log.error("Theano misconfigured for specified device")
+            self._log.error("Theano misconfigured for specified device!")
             url = "http://deeplearning.net/software/theano/library/config.html#environment-variables"  # NOQA
             self._log.error("Review Theano documentation here: %s" % (url, ))
 
-            self._log.error("Theano configurations:")
+            self._log.error("Requested configuration:")
+            # Check the configuration requested by the SMQTK configuration
+            args = (not self.use_gpu, )
+            self._log.error("\t\t Using CPU       : %s" % args)
+            args = (self.use_gpu, )
+            self._log.error("\t\t Using GPU       : %s" % args)
+            args = (self.gpu_device_id, )
+            self._log.error("\t\t Using GPU Device: %s" % args)
+
+            self._log.error("Theano configuration:")
+            # Check the configuration reported by imported Theano
+            self._log.error("\t Imported theano module configuration")
+            args = (not kwcnn.tpl._lasagne.USING_GPU, )
+            self._log.error("\t\t Using CPU       : %s" % args)
+            args = (kwcnn.tpl._lasagne.USING_GPU, )
+            self._log.error("\t\t Using GPU       : %s" % args)
+            args = (kwcnn.tpl._lasagne.USING_DEVICE, )
+            self._log.error("\t\t Using GPU Device: %s" % args)
+
             # Check the $HOME/.theanorc file for configuration
             self._log.error("\t $HOME/.theanorc configuration file")
             theanorc_filepath = os.path.join("~", ".theanorc")

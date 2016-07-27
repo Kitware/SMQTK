@@ -309,7 +309,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             temp_shape = (16, input_height, input_width, input_channels, )
             temp_arrays = numpy.zeros(temp_shape, dtype=numpy.float32)
             # Give the dummy data to the KWCNN data object
-            self.data.set_data_list(temp_arrays)
+            self.data.set_data_list(temp_arrays, quiet=True)
             # Test with dummy data, which will compile and load the model
             self._log.debug("Building and compiling KWCNN model...")
             self.network.test(quiet=True)  # Throw away output
@@ -550,7 +550,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         )
 
         self._log.debug("Loading image numpy array into KWCNN Data object")
-        self.data.set_data_list(img_arrays)
+        self.data.set_data_list(img_arrays, quiet=True)
 
         self._log.debug("Performing forward inference using KWCNN Network")
         test_results = self.network.test(quiet=True)

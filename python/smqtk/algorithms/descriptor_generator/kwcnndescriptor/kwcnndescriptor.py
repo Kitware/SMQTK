@@ -32,8 +32,12 @@ __all__ = [
 ]
 
 
-DEFAULT_MODEL_FILEPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.npy'
+DEFAULT_GREYSCALE_MODEL_FILEPATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.greyscale.npy'
+)
+
+DEFAULT_COLOR_MODEL_FILEPATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.color.npy'
 )
 
 
@@ -48,8 +52,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             cls.logger().debug("KWCNN python module cannot be imported")
         return valid
 
-    def __init__(self, network_model_filepath=DEFAULT_MODEL_FILEPATH,
-                 batch_size=1, use_gpu=False, gpu_device_id=0,
+    def __init__(self, network_model_filepath=None,
+                 batch_size=32, use_gpu=False, gpu_device_id=0,
                  network_is_greyscale=True, load_truncated_images=False,
                  pixel_rescale=None, input_scale=None,
                  pre_initialize_network=True):
@@ -95,7 +99,6 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         """
         super(KWCNNDescriptorGenerator, self).__init__()
 
-        self.network_model_filepath = str(network_model_filepath)
         self.batch_size = int(batch_size)
 
         self.use_gpu = bool(use_gpu)
@@ -106,6 +109,13 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.load_truncated_images = bool(load_truncated_images)
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale
+
+        if network_model_filepath is None:
+            if self.network_is_greyscale:
+                network_model_filepath = DEFAULT_GREYSCALE_MODEL_FILEPATH
+            else:
+                network_model_filepath = DEFAULT_COLOR_MODEL_FILEPATH
+        self.network_model_filepath = str(network_model_filepath)
 
         args = (self.batch_size, )
         message = "Batch size must be greater than 0 (got %d)" % args
@@ -195,16 +205,23 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             raise RuntimeError("Theano misconfigured for specified device")
 
         # Define model definition
-        class OLCD_FCN_Model(kwcnn.core.KWCNN_Auto_Model):  # NOQA
+        class OLCD_AutoEncoder_Model(kwcnn.core.KWCNN_Auto_Model):  # NOQA
             """FCNN Model."""
 
             def __init__(model, *args, **kwargs):
                 """FCNN init."""
-                super(OLCD_FCN_Model, model).__init__(*args, **kwargs)
-                model.bottleneck = kwargs.get("bottleneck", 512)
+                super(OLCD_AutoEncoder_Model, model).__init__(*args, **kwargs)
+                model.greyscale = kwargs.get(
+                    "greyscale",
+                    False
+                )
+                model.bottleneck = kwargs.get(
+                    "bottleneck",
+                    512 if model.greyscale else 64
+                )
 
             def _input_shape(model):
-                return (64, 64, 1)
+                return (64, 64, 1) if model.greyscale else (64, 64, 3)
 
             def architecture(model, batch_size, in_width, in_height,
                              in_channels, out_classes):
@@ -295,7 +312,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.data = kwcnn.core.KWCNN_Data()
 
         self._log.debug("Initializing KWCNN Model")
-        self.model = OLCD_FCN_Model(self.network_model_filepath)
+        self.model = OLCD_AutoEncoder_Model(self.network_model_filepath,
+                                            greyscale=self.network_is_greyscale)
 
         self._log.debug("Initializing KWCNN Network")
         self.network = kwcnn.core.KWCNN_Network(self.model, self.data)
@@ -607,7 +625,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
     if not network_is_greyscale:
         img_a = img_a[:, :, ::-1]
     message = "Loaded invalid greyscale image with shape %s" % (img_a.shape, )
-    assert img_a.ndim == 3 and img_a.shape[2] == 1, message
+    assert img_a.ndim == 3 and img_a.shape == input_shape, message
     if pixel_rescale:
         pmin, pmax = min(pixel_rescale), max(pixel_rescale)
         r = pmax - pmin

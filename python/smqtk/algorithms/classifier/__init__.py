@@ -85,8 +85,7 @@ class Classifier (SmqtkAlgorithm):
         :param procs: Explicit number of cores/thread/processes to use.
         :type procs: None | int
 
-        :param use_multiprocessing: Use ``multiprocessing.pool.Pool`` instead of
-            ``multiprocessing.pool.ThreadPool``.
+        :param use_multiprocessing: Use multiprocessing instead of threading.
         :type use_multiprocessing: bool
 
         :param ri: Progress reporting interval in seconds. Set to a value > 0 to

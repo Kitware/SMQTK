@@ -430,17 +430,19 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        img_arrays = list(
-            parallel_map(_process_load_img_array,
-                         (data_elements[uid] for uid in uuids4proc),
-                         itertools.repeat(self.transformer, uid_num),
-                         itertools.repeat(self.data_layer, uid_num),
-                         itertools.repeat(self.load_truncated_images, uid_num),
-                         itertools.repeat(self.pixel_rescale, uid_num),
-                         use_multiprocessing=True,
-                         ordered=True,
-                         cores=procs)
+        p = multiprocessing.Pool(procs)
+        img_arrays = p.map(
+            _process_load_img_array,
+            zip(
+                (data_elements[uid] for uid in uuids4proc),
+                itertools.repeat(self.transformer, uid_num),
+                itertools.repeat(self.data_layer, uid_num),
+                itertools.repeat(self.load_truncated_images, uid_num),
+                itertools.repeat(self.pixel_rescale, uid_num),
+            )
         )
+        p.close()
+        p.join()
 
         self._log.debug("Loading image bytes into network layer '%s'",
                         self.data_layer)
@@ -459,9 +461,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                 descr_elements[uid].set_vector(v)
 
 
-def _process_load_img_array(data_element, transformer,
-                            data_layer, load_truncated_images,
-                            pixel_rescale):
+def _process_load_img_array((data_element, transformer,
+                             data_layer, load_truncated_images,
+                             pixel_rescale)):
     """
     Helper function for multiprocessing image data loading
 

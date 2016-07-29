@@ -219,6 +219,10 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                     "bottleneck",
                     512 if model.greyscale else 64
                 )
+                if model.greyscale:
+                    self._log.info("KWCNNDescriptorGenerator using greyscale")
+                else:
+                    self._log.info("KWCNNDescriptorGenerator using color")
 
             def _input_shape(model):
                 return (64, 64, 1) if model.greyscale else (64, 64, 3)

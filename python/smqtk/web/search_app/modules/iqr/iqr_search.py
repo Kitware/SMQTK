@@ -187,6 +187,7 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
         # make sure URL prefix starts with a slash
         if not url_prefix.startswith('/'):
             url_prefix = '/' + url_prefix
+        url_prefix = url_prefix.rstrip('/')
 
         super(IqrSearch, self).__init__(
             name, import_name=__name__,

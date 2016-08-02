@@ -10,6 +10,7 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
+import cPickle
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
@@ -207,6 +208,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 super(OLCD_AutoEncoder_Model, model).__init__(*args, **kwargs)
                 model.greyscale = kwargs.get("greyscale", False)
                 model.bottleneck = kwargs.get("bottleneck", 64)
+                model.trimmed = kwargs.get("trimmed", False)
 
             def _input_shape(model):
                 return (64, 64, 1) if model.greyscale else (64, 64, 3)
@@ -285,6 +287,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                     shape=([0], -1),
                 )
 
+                if model.trimmed:
+                    return l_reshape0
+
                 l_bottleneck = kwcnn.tpl._lasagne.layers.DenseLayer(
                     l_reshape0,
                     num_units=model.bottleneck,
@@ -299,9 +304,30 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Initializing KWCNN Data")
         self.data = kwcnn.core.KWCNN_Data()
 
+        # Create trimmed model, if it does not exist
         self._log.debug("Initializing KWCNN Model")
+
+        USE_TRIMMED_NETWORK = True
+
+        if USE_TRIMMED_NETWORK:
+            trimmed_filepath = self.network_model_filepath
+            trimmed_filepath = trimmed_filepath.replace('.npy', '.trimmed.npy')
+            if not os.path.exists(trimmed_filepath):
+                with open(self.network_model_filepath, 'rb') as model_file:
+                    model_dict = cPickle.load(model_file)
+                key_list = ['best_weights', 'best_fit_weights']
+                for key in key_list:
+                    layer_list = model_dict[key]
+                    model_dict[key] = layer_list[:-2]
+                with open(trimmed_filepath, 'wb') as model_file:
+                    cPickle.dump(model_dict, model_file,
+                                 protocol=cPickle.HIGHEST_PROTOCOL)
+                self.network_model_filepath = trimmed_filepath
+
+        # Load model
         self.model = OLCD_AutoEncoder_Model(self.network_model_filepath,
-                                            greyscale=self.network_is_greyscale)
+                                            greyscale=self.network_is_greyscale,
+                                            trimmed=USE_TRIMMED_NETWORK)
 
         self._log.debug("Initializing KWCNN Network")
         self.network = kwcnn.core.KWCNN_Network(self.model, self.data)

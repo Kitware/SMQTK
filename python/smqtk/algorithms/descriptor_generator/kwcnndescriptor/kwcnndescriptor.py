@@ -322,7 +322,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 with open(trimmed_filepath, 'wb') as model_file:
                     cPickle.dump(model_dict, model_file,
                                  protocol=cPickle.HIGHEST_PROTOCOL)
-                self.network_model_filepath = trimmed_filepath
+            self.network_model_filepath = trimmed_filepath
 
         # Load model
         self.model = OLCD_AutoEncoder_Model(self.network_model_filepath,

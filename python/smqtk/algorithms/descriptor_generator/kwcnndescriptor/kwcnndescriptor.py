@@ -32,12 +32,8 @@ __all__ = [
 ]
 
 
-DEFAULT_GREYSCALE_MODEL_FILEPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.greyscale.npy'
-)
-
-DEFAULT_COLOR_MODEL_FILEPATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.color.npy'
+DEFAULT_MODEL_FILEPATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'kwcnnmodel.npy'
 )
 
 
@@ -54,7 +50,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
     def __init__(self, network_model_filepath=None,
                  batch_size=32, use_gpu=False, gpu_device_id=0,
-                 network_is_greyscale=True, load_truncated_images=False,
+                 network_is_greyscale=False, load_truncated_images=False,
                  pixel_rescale=None, input_scale=None,
                  pre_initialize_network=True):
         """
@@ -106,15 +102,13 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.gpu_device_tag = 'gpu%d' % (self.gpu_device_id, )
 
         self.network_is_greyscale = bool(network_is_greyscale)
+        assert self.network_is_greyscale is False, 'Only color model supported'
         self.load_truncated_images = bool(load_truncated_images)
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale
 
         if network_model_filepath is None:
-            if self.network_is_greyscale:
-                network_model_filepath = DEFAULT_GREYSCALE_MODEL_FILEPATH
-            else:
-                network_model_filepath = DEFAULT_COLOR_MODEL_FILEPATH
+            network_model_filepath = DEFAULT_MODEL_FILEPATH
         self.network_model_filepath = str(network_model_filepath)
 
         args = (self.batch_size, )
@@ -211,18 +205,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             def __init__(model, *args, **kwargs):
                 """FCNN init."""
                 super(OLCD_AutoEncoder_Model, model).__init__(*args, **kwargs)
-                model.greyscale = kwargs.get(
-                    "greyscale",
-                    False
-                )
-                model.bottleneck = kwargs.get(
-                    "bottleneck",
-                    512 if model.greyscale else 64
-                )
-                if model.greyscale:
-                    self._log.info("KWCNNDescriptorGenerator using greyscale")
-                else:
-                    self._log.info("KWCNNDescriptorGenerator using color")
+                model.greyscale = kwargs.get("greyscale", False)
+                model.bottleneck = kwargs.get("bottleneck", 64)
 
             def _input_shape(model):
                 return (64, 64, 1) if model.greyscale else (64, 64, 3)

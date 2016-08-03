@@ -113,10 +113,13 @@ class MemoryDescriptorIndex (DescriptorIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        added_something = False
         for d in descriptors:
             # using no-cache so we don't trigger multiple file writes
             self.add_descriptor(d, no_cache=True)
-        self.cache_table()
+            added_something = True
+        if added_something:
+            self.cache_table()
 
     def get_descriptor(self, uuid):
         """

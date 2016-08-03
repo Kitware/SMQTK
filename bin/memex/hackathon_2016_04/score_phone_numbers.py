@@ -27,10 +27,8 @@ PHONE_SHA1_JSON = "eval.map.phone2shas.json"
 DESCRIPTOR_INDEX_FILE_CACHE = "eval.images.descriptors.alexnet_fc7.index"
 
 CLASSIFIER_TRAINING_CONFIG_JSON = 'ad-images.final.cmv.train.json'
-# CLASSIFIER_TRAINING_CONFIG_JSON = 'ad-images.fold_test.config.cmv.train.json'
 
 PHONE2SCORE_OUTPUT_FILEPATH = "eval.results.full_model.phone2score.csv"
-# PHONE2SCORE_OUTPUT_FILEPATH = "eval.results.train_model.phone2score.csv"
 
 # Optional for ROC generation, using PHONE2SCORE_OUTPUT_FILEPATH as input, and
 # outputting plots
@@ -38,9 +36,6 @@ PHONE2TRUTH = 'eval.source.phone2truth.json'
 PLOT_CM_OUTPUT = 'eval.results.full_model.plot.cm.png'
 PLOT_ROC_OUTPUT = 'eval.results.full_model.plot.roc.png'
 PLOT_PR_OUTPUT = 'eval.results.full_model.plot.pr.png'
-# PLOT_CM_OUTPUT = 'eval.results.train_model.plot.cm.png'
-# PLOT_ROC_OUTPUT = 'eval.results.train_model.plot.roc.png'
-# PLOT_PR_OUTPUT = 'eval.results.train_model.plot.pr.png'
 
 
 ###############################################################################

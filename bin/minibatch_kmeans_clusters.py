@@ -24,6 +24,8 @@ def default_config():
         # Number of descriptors to run an initial fit with. This brings the
         # advantage of choosing a best initialization point from multiple.
         "initial_fit_size": 0,
+        # Path to save generated KMeans centroids
+        "centroids_output_filepath_npy": "centroids.npy"
     }
 
     # Change/Remove some KMeans params for more appropriate defaults
@@ -74,6 +76,9 @@ def main():
     initial_fit_size = int(config['initial_fit_size'])
 
     d_classes = mb_kmeans_build_apply(index, mbkm, initial_fit_size)
+
+    log.info("Saving KMeans centroids to: %s", config['centroids_output_filepath_npy'])
+    numpy.save(config['centroids_output_filepath_npy'], mbkm.cluster_centers_)
 
     log.info("Saving result classification map to: %s", output_filepath)
     safe_create_dir(os.path.dirname(output_filepath))

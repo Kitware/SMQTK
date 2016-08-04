@@ -348,6 +348,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # Reduce procs down to the number of elements to process if its smaller
         if len(data_elements) < (procs or multiprocessing.cpu_count()):
             procs = len(data_elements)
+        if procs == 0:
+            raise ValueError("No data elements provided")
 
         # For thread safely, only use .append() and .popleft() (queue)
         uuid4proc = deque()

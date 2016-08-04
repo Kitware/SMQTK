@@ -56,7 +56,7 @@ class FileClassificationElement (ClassificationElement):
         # Saving components
         self.subdir_split = subdir_split
         if subdir_split and int(subdir_split) > 0:
-            subdir_split = int(subdir_split)
+            self.subdir_split = subdir_split = int(subdir_split)
             # Using all but the last split segment. This is so we don't create
             # a whole bunch of directories with a single element in them.
             save_dir = osp.join(self.save_dir,

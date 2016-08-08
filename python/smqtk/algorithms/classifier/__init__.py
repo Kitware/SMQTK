@@ -2,6 +2,9 @@ import abc
 import os
 
 from smqtk.algorithms import SmqtkAlgorithm
+from smqtk.representation import ClassificationElementFactory
+from smqtk.representation.classification_element.memory import \
+    MemoryClassificationElement
 from smqtk.utils import (
     bin_utils,
     merge_dict,
@@ -18,13 +21,18 @@ __all__ = [
 ]
 
 
+DFLT_CLASSIFIER_FACTORY = ClassificationElementFactory(
+    MemoryClassificationElement, {}
+)
+
+
 class Classifier (SmqtkAlgorithm):
     """
     Interface for algorithms that classify input descriptors into discrete
     labels and/or label confidences.
     """
 
-    def classify(self, d, factory, overwrite=False):
+    def classify(self, d, factory=DFLT_CLASSIFIER_FACTORY, overwrite=False):
         """
         Classify the input descriptor against one or more discrete labels,
         outputting a ClassificationElement containing the classification
@@ -64,8 +72,9 @@ class Classifier (SmqtkAlgorithm):
 
         return c_elem
 
-    def classify_async(self, d_iter, factory, overwrite=False, procs=None,
-                       use_multiprocessing=False, ri=None):
+    def classify_async(self, d_iter, factory=DFLT_CLASSIFIER_FACTORY,
+                       overwrite=False, procs=None, use_multiprocessing=False,
+                       ri=None):
         """
         Asynchronously classify the DescriptorElements in the given iterable.
 

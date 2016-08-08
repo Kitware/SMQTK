@@ -112,12 +112,10 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             network_model_filepath = DEFAULT_MODEL_FILEPATH
         self.network_model_filepath = str(network_model_filepath)
 
-        args = (self.batch_size, )
-        message = "Batch size must be greater than 0 (got %d)" % args
-        assert self.batch_size > 0, message
-        args = (self.gpu_device_id, )
-        message = "GPU Device ID must be greater than 0 (got %d)" % args
-        assert self.gpu_device_id >= 0, message
+        assert self.batch_size > 0, \
+            "Batch size must be greater than 0 (got %d)" % self.batch_size
+        assert self.gpu_device_id >= 0, \
+            "GPU Device ID must be greater than 0 (got %d)" % self.gpu_device_id
 
         # Network setup variables
         self.data = None
@@ -142,15 +140,16 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             assert kwcnn is not None
         except AssertionError:
             self._log.error("KWCNN python module not imported")
-        # Check Theano
+            raise
+
+        # Check Theano CPU/GPU state vs. configured
         try:
-            assert kwcnn is not None
             if self.use_gpu:
                 self._log.debug("Using GPU")
                 assert kwcnn.tpl._lasagne.USING_GPU
                 assert kwcnn.tpl._lasagne.USING_DEVICE == self.gpu_device_tag
             else:
-                self._log.debug("using CPU")
+                self._log.debug("Using CPU")
                 assert not kwcnn.tpl._lasagne.USING_GPU
         except AssertionError:
             self._log.error("Theano misconfigured for specified device!")
@@ -159,22 +158,16 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
             self._log.error("Requested configuration:")
             # Check the configuration requested by the SMQTK configuration
-            args = (not self.use_gpu, )
-            self._log.error("\t\t Using CPU       : %s" % args)
-            args = (self.use_gpu, )
-            self._log.error("\t\t Using GPU       : %s" % args)
-            args = (self.gpu_device_tag, )
-            self._log.error("\t\t Using GPU Device: %s" % args)
+            self._log.error("\t\t Using CPU       : %s", not self.use_gpu)
+            self._log.error("\t\t Using GPU       : %s", self.use_gpu)
+            self._log.error("\t\t Using GPU Device: %s", self.gpu_device_tag)
 
             self._log.error("Theano configuration:")
             # Check the configuration reported by imported Theano
             self._log.error("\t Imported theano module configuration")
-            args = (not kwcnn.tpl._lasagne.USING_GPU, )
-            self._log.error("\t\t Using CPU       : %s" % args)
-            args = (kwcnn.tpl._lasagne.USING_GPU, )
-            self._log.error("\t\t Using GPU       : %s" % args)
-            args = (kwcnn.tpl._lasagne.USING_DEVICE, )
-            self._log.error("\t\t Using GPU Device: %s" % args)
+            self._log.error("\t\t Using CPU       : %s", not kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU       : %s", kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU Device: %s", kwcnn.tpl._lasagne.USING_DEVICE)
 
             # Check the $HOME/.theanorc file for configuration
             self._log.error("\t $HOME/.theanorc configuration file")

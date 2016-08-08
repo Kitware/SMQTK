@@ -49,7 +49,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             cls.logger().debug("KWCNN python module cannot be imported")
         return valid
 
-    def __init__(self, network_model_filepath=None,
+    def __init__(self, network_model_filepath=DEFAULT_MODEL_FILEPATH,
                  batch_size=32, use_gpu=False, gpu_device_id=0,
                  network_is_greyscale=False, load_truncated_images=False,
                  pixel_rescale=None, input_scale=None,
@@ -108,8 +108,6 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale
 
-        if network_model_filepath is None:
-            network_model_filepath = DEFAULT_MODEL_FILEPATH
         self.network_model_filepath = str(network_model_filepath)
 
         assert self.batch_size > 0, \

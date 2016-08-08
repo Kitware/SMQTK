@@ -54,8 +54,9 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         at a time. This is useful when it is desired for this function to yield
         results before all descriptors have been computed, yet still take
         advantage of any batch asynchronous computation optimizations a
-        particular DescriptorGenerator implementation may have. If this is
-        None, this function blocks until all descriptors have been generated.
+        particular DescriptorGenerator implementation may have. If this is 0 or
+        None (false-evaluating), this function blocks until all descriptors have
+        been generated.
     :type batch_size: None | int | long
 
     :param overwrite: If descriptors from a particular generator already exist
@@ -270,7 +271,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     log = logging.getLogger(__name__)
 
     ifit_completed = False
-    d_deque = collections.deque()
+    k_deque = collections.deque()
     d_fitted = 0
 
     log.info("Getting index keys (shuffled)")
@@ -278,34 +279,56 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     numpy.random.seed(mbkm.random_state)
     numpy.random.shuffle(index_keys)
 
-    # d_vector_iter = parallel_map(lambda d: d.vector(), index,
-    d_vector_iter = parallel.parallel_map(lambda k: index[k].vector(),
-                                          index_keys,
-                                          name="vector-collector",
-                                          use_multiprocessing=False)
+    def parallel_iter_vectors(descriptors):
+        """ Get the vectors for the descriptors given.
+        Not caring about order returned.
+        """
+        return parallel.parallel_map(lambda d: d.vector(), descriptors,
+                                     use_multiprocessing=False)
 
-    for i, v in enumerate(d_vector_iter):
-        d_deque.append(v)
+    def get_vectors(k_iter):
+        """ Get numpy array of descriptor vectors (2D array returned) """
+        return numpy.array(list(
+            parallel_iter_vectors(index.get_many_descriptors(k_iter))
+        ))
+
+    log.info("Collecting iteratively fitting model")
+    rps = [0] * 7
+    for i, k in enumerate(index_keys):
+        k_deque.append(k)
+        bin_utils.report_progress(log.debug, rps, 1.)
 
         if initial_fit_size and not ifit_completed:
-            if len(d_deque) == initial_fit_size:
-                log.info("Initial fit using %d descriptors", len(d_deque))
-                mbkm.fit(d_deque)
-                d_fitted += len(d_deque)
-                d_deque.clear()
+            if len(k_deque) == initial_fit_size:
+                log.info("Initial fit using %d descriptors", len(k_deque))
+                log.info("- collecting vectors")
+                vectors = get_vectors(k_deque)
+                log.info("- fitting model")
+                mbkm.fit(vectors)
+                log.info("- cleaning")
+                d_fitted += len(vectors)
+                k_deque.clear()
                 ifit_completed = True
-        elif len(d_deque) == mbkm.batch_size:
-            log.info("Partial fit with batch size %d", len(d_deque))
-            mbkm.partial_fit(d_deque)
-            d_fitted += len(d_deque)
-            d_deque.clear()
+        elif len(k_deque) == mbkm.batch_size:
+            log.info("Partial fit with batch size %d", len(k_deque))
+            log.info("- collecting vectors")
+            vectors = get_vectors(k_deque)
+            log.info("- fitting model")
+            mbkm.partial_fit(vectors)
+            log.info("- cleaning")
+            d_fitted += len(k_deque)
+            k_deque.clear()
 
     # Final fit with any remaining descriptors
-    if d_deque:
-        log.info("Final partial fit of size %d", len(d_deque))
-        mbkm.partial_fit(d_deque)
-        d_fitted += len(d_deque)
-        d_deque.clear()
+    if k_deque:
+       log.info("Final partial fit of size %d", len(k_deque))
+       log.info('- collecting vectors')
+       vectors = get_vectors(k_deque)
+       log.info('- fitting model')
+       mbkm.partial_fit(vectors)
+       log.info('- cleaning')
+       d_fitted += len(k_deque)
+       k_deque.clear()
 
     log.info("Computing descriptor classes with final KMeans model")
     mbkm.verbose = False
@@ -314,6 +337,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
                                       index,
                                       use_multiprocessing=False,
                                       name="uv-collector")
+    # TODO: Batch predict call inputs to something larger than one at a time.
     d_uc_iter = parallel.parallel_map(
         lambda (u, v): (u, mbkm.predict(v[numpy.newaxis, :])[0]),
         d_uv_iter,

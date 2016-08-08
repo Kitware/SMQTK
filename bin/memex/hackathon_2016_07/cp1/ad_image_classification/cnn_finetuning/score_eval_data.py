@@ -12,15 +12,21 @@ from smqtk.representation.classification_element.memory import MemoryClassificat
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 
 
-EVAL_DATASET = "/home/purg/dev/memex/hackathons/2016_07/cp1/eval.dataset.pickle"
+# in-memory data-set file cache
+EVAL_DATASET = "eval.dataset.pickle"
 
 CAFFE_DEPLOY = "CHANGE_ME"
 CAFFE_MODEL = "CHANGE_ME"
 CAFFE_IMG_MEAN = "CHANGE_ME"
-CAFFE_LABELS = "/home/purg/dev/memex/hackathons/2016_07/cp1/cnn_finetune_exp/labels.txt"
+# new-line separated file of index labels.
+# Line index should correspont to caffe train/test truth labels.
+CAFFE_LABELS = "labels.txt"
 
-EVAL_CLUSTERS_ADS_IMAGES_CSV = "/home/purg/dev/memex/hackathons/2016_07/cp1/eval.CP1_clusters_ads_images.csv"
-EVAL_MISSING_CLUSTERS = "/home/purg/dev/memex/hackathons/2016_07/cp1/eval.cluster_scores.missing_clusters.jl"
+# CSV file detailing [cluster_id, ad_id, image_sha1] relationships.
+EVAL_CLUSTERS_ADS_IMAGES_CSV = "eval.CP1_clusters_ads_images.csv"
+# json-lines file of clusters missing from the above file. Should be at least
+# composed of: {"cluster_id": <str>, ... }
+EVAL_MISSING_CLUSTERS = "eval.cluster_scores.missing_clusters.jl"
 
 OUTPUT_DESCR_PROB_INDEX = "cp1_img_prob_descriptors.pickle"
 OUTPUT_MAX_JL = "cp1_scores_max.jl"

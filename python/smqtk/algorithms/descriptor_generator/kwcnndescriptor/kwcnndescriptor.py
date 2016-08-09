@@ -103,7 +103,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.gpu_device_tag = 'gpu%d' % (self.gpu_device_id, )
 
         self.network_is_greyscale = bool(network_is_greyscale)
-        assert self.network_is_greyscale is False, 'Only color model supported'
+        # assert self.network_is_greyscale is False, 'Only color model supported'  # NOQA
         self.load_truncated_images = bool(load_truncated_images)
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale

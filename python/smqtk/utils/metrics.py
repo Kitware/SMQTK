@@ -7,7 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-from math import log, ceil
+from math import log, ceil, acos, pi
 import numpy as np
 
 
@@ -130,11 +130,11 @@ def cosine_similarity(i, j):
     return np.dot(i, j) / (np.sqrt(i.dot(i)) * np.sqrt(j.dot(j)))
 
 
-def cosine_distance(i, j):
+def cosine_distance(i, j, pos_vectors=True):
     """
-    Inverse of cosine similarity
+    Cosine similarity converted into angular distance.
 
-    See: ``cosine_similarity``, http://en.wikipedia.org/wiki/Cosine_similarity
+    See: https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity
 
     :param i: Vector i
     :type i: numpy.core.multiarray.ndarray
@@ -142,11 +142,16 @@ def cosine_distance(i, j):
     :param j: Vector j
     :type j: numpy.core.multiarray.ndarray
 
-    :return: Float similarity.
+    :param pos_vectors: If we expect vector elements to always be positive.
+        Default value is True (common case).
+    :type pos_vectors: bool
+
+    :return: Float distance between [0, 1] range.
     :rtype: float
 
     """
-    return 1.0 - cosine_similarity(i, j)
+    sim = max(-1, min(cosine_similarity(i, j), 1))
+    return (1 + pos_vectors) * acos(sim) / pi
 
 
 def hamming_distance(i, j):
@@ -169,38 +174,3 @@ def hamming_distance(i, j):
     """
     # TODO: Find something better than this?
     return bin(i ^ j).count('1')
-
-
-def popcount(v):
-    """
-    Pure python popcount algorithm adapted implementation at:
-    see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-
-    This is limited to 32-bit integer representation.
-
-    """
-    # TODO: C implementation of this
-    #       since this version, being in python, isn't faster than above bin
-    #       use
-    if not v:
-        return 0
-
-    # T is the number of bits used to represent v to the nearest power of 2
-    tp = max(8, int(2**ceil(log(v.bit_length()) / log(2))))
-    t = 2**tp-1
-    b = tp // 8
-
-    # bit-length constrained
-    h55 = t//3
-    h33 = t//15*3
-    h0f = t//255*15
-    h01 = t//255
-
-    # noinspection PyAugmentAssignment
-    v = v - ((v >> 1) & h55)
-    v = (v & h33) + ((v >> 2) & h33)
-    v = (v + (v >> 4)) & h0f
-    # Need the extra ``& t`` after the multiplication in order to simulate bit
-    # truncation as if v were only a tp-bit integer
-    # Magic 8 represents bits ina byte
-    return ((v * h01) & t) >> ((b-1) * 8)

@@ -4,7 +4,7 @@ import unittest
 import nose.tools as ntools
 import numpy as np
 
-from smqtk.utils import distance_functions as df
+from smqtk.utils import metrics as df
 
 
 __author__ = "paul.tunison@kitware.com"

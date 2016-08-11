@@ -8,7 +8,7 @@ from smqtk.utils.bit_utils import (
     bit_vector_to_int_large,
     int_to_bit_vector_large,
 )
-from smqtk.utils.distance_functions import hamming_distance
+from smqtk.utils.metrics import hamming_distance
 
 
 __author__ = "paul.tunison@kitware.com"

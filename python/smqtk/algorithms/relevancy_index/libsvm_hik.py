@@ -8,7 +8,7 @@ from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (
     compute_distance_matrix
 )
-from smqtk.utils.distance_functions import histogram_intersection_distance
+from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
 
 try:

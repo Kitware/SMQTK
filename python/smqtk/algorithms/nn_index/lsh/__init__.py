@@ -17,7 +17,7 @@ from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import distance_functions
+from smqtk.utils import metrics
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils import merge_dict
@@ -263,12 +263,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         Return appropriate distance function given a string label
         """
         if distance_method == "euclidean":
-            return distance_functions.euclidean_distance
+            return metrics.euclidean_distance
         elif distance_method == "cosine":
             # Inverse of cosine similarity function return
-            return distance_functions.cosine_distance
+            return metrics.cosine_distance
         elif distance_method == 'hik':
-            return distance_functions.histogram_intersection_distance_fast
+            return metrics.histogram_intersection_distance_fast
         else:
             # TODO: Support scipy/scikit-learn distance methods
             raise ValueError("Invalid distance method label. Must be one of "

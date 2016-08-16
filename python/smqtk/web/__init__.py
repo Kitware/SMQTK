@@ -3,7 +3,6 @@ SMQTK Web Applications
 """
 
 import inspect
-import logging
 import os
 
 import flask

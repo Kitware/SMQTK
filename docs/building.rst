@@ -24,7 +24,7 @@ In order to run provided SMQTKSearchApp web application, the following are addit
 Installing Python dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-There are two files that list required python packages:
+There are two files that list core required python packages:
 
 * :file:`requirements.conda.txt`
 * :file:`requirements.pip.txt`

@@ -38,7 +38,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
     @classmethod
     def is_usable(cls):
-        pyflann.flannlib
+        # if underlying library is not found, the import above will error
         return pyflann is not None
 
     def __init__(self, index_filepath=None, parameters_filepath=None,

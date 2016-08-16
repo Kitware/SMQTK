@@ -1,4 +1,3 @@
 flask-basicauth
 imageio
 nose-exclude
-solrpy

@@ -15,3 +15,6 @@ scikit-image
 
 # FLANN bindings if not using repo-build FLANN+bindings
 pyflann
+
+# Solr plugin dependency
+solrpy

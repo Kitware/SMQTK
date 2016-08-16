@@ -4,6 +4,7 @@ import multiprocessing.pool
 import os
 import subprocess
 import tempfile
+import warnings
 
 import jinja2
 
@@ -101,6 +102,9 @@ class CaffeDefaultImageNet (DescriptorGenerator):
         :type cnn_exe: None | str
 
         """
+        warnings.warn("This class is deprecated in favor of the more generally "
+                      "applicable `CaffeDescriptorGenerator` implementation",
+                      DeprecationWarning)
         super(CaffeDefaultImageNet, self).__init__()
 
         self.blvc_reference_caffenet_model_fp = blvc_reference_caffenet_model

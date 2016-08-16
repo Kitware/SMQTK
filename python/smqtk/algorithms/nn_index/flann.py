@@ -9,6 +9,8 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
 
+
+# Requires FLANN bindings
 try:
     import pyflann
 except ImportError:
@@ -36,9 +38,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
     @classmethod
     def is_usable(cls):
-        # Assuming that if the pyflann module is available, then it's going to
-        # work. This assumption will probably be invalidated in the future...
-        # TODO: check that underlying library is found/valid?
+        pyflann.flannlib
         return pyflann is not None
 
     def __init__(self, index_filepath=None, parameters_filepath=None,

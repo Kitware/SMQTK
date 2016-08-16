@@ -26,6 +26,13 @@ from smqtk.utils.video_utils import get_metadata_info
 from . import utils
 
 
+# Requires FLANN bindings
+try:
+    import pyflann
+except ImportError:
+    pyflann = None
+
+
 # noinspection PyPep8Naming
 class ColorDescriptor_Base (DescriptorGenerator):
     """
@@ -64,39 +71,45 @@ class ColorDescriptor_Base (DescriptorGenerator):
             # Base assumption that it is available, now lets prove its false.
             ColorDescriptor_Base._is_usable_cache = True
 
-            # Check for colorDescriptor executable on the path
-            log_file = open(tempfile.mkstemp()[1], 'w')
-            try:
-                # This should try to print out the CLI options return with code
-                # 1.
-                subprocess.call([cls.EXE, '--version'],
-                                stdout=log_file, stderr=log_file)
-                # it is known that colorDescriptor has a return code of 1 no
-                # matter if it exited "successfully" or not, which is not
-                # helpful, I know.
-            except OSError:
-                log.warn("Could not locate colorDescriptor executable. Make "
-                         "sure that its on the PATH! See "
-                         "smqtk/descriptor_generator/colordescriptor/"
-                         "INSTALL.md for help.")
-                # If there was anything written to the log file, output it.
-                log_file.flush()
-                if log_file.tell():
-                    with open(log_file.name) as f:
-                        log.warn("STDOUT and STDERR output from attempted "
-                                 "colorDescriptor call:\n%s", f.read())
+            if pyflann is None:
+                # missing FLANN bindings dependency
+                log.debug("could not import FLANN bindings (pyflann)")
                 ColorDescriptor_Base._is_usable_cache = False
-            finally:
-                log_file.close()
-                os.remove(log_file.name)
+            else:
+                # Check for colorDescriptor executable on the path
+                log_file = open(tempfile.mkstemp()[1], 'w')
+                try:
+                    # This should try to print out the CLI options return with
+                    # code 1.
+                    subprocess.call([cls.EXE, '--version'],
+                                    stdout=log_file, stderr=log_file)
+                    # it is known that colorDescriptor has a return code of 1 no
+                    # matter if it exited "successfully" or not, which is not
+                    # helpful, I know.
+                except OSError:
+                    log.debug("Could not locate colorDescriptor executable. "
+                              "Make sure that its on the PATH! See "
+                              "smqtk/descriptor_generator/colordescriptor/"
+                              "INSTALL.md for help.")
+                    # If there was anything written to the log file, output it.
+                    log_file.flush()
+                    if log_file.tell():
+                        with open(log_file.name) as f:
+                            log.debug("STDOUT and STDERR output from attempted "
+                                      "colorDescriptor call:\n%s", f.read())
+                    ColorDescriptor_Base._is_usable_cache = False
+                finally:
+                    log_file.close()
+                    os.remove(log_file.name)
 
-            # Checking if DescriptorIO is importable
-            if not utils.has_colordescriptor_module():
-                log.warn("Could not import DescriptorIO. Make sure that the "
-                         "colorDescriptor package is on the PYTHONPATH! See "
-                         "smqtk/descriptor_generator/colordescriptor/"
-                         "INSTALL.md for help.")
-                ColorDescriptor_Base._is_usable_cache = False
+                # Checking if DescriptorIO is importable
+                if not utils.has_colordescriptor_module():
+                    log.debug("Could not import DescriptorIO. Make sure that "
+                              "the colorDescriptor package is on the "
+                              "PYTHONPATH! See "
+                              "smqtk/descriptor_generator/colordescriptor/"
+                              "INSTALL.md for help.")
+                    ColorDescriptor_Base._is_usable_cache = False
 
         return ColorDescriptor_Base._is_usable_cache
 

@@ -3,7 +3,7 @@ certifi
 elasticsearch_dsl<2.0.0  # for use with 1.x versions of source elasticsearch instance
 #elasticsearch_dsl>=2.0.0  # For use with 2.x versions of source elasticsearch instance
 
-# Development ease
+# CLI Development ease
 ipython
 
 # PostgreSQL
@@ -12,3 +12,6 @@ psycopg2
 # Caffe
 protobuf
 scikit-image
+
+# FLANN bindings if not using repo-build FLANN+bindings
+pyflann

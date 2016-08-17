@@ -151,7 +151,7 @@ def cosine_distance(i, j, pos_vectors=True):
 
     """
     sim = max(-1, min(cosine_similarity(i, j), 1))
-    return (1 + pos_vectors) * acos(sim) / pi
+    return (1 + bool(pos_vectors)) * acos(sim) / pi
 
 
 def hamming_distance(i, j):

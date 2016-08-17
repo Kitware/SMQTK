@@ -264,6 +264,8 @@ class ItqFunctor (LshFunctor):
 
         # # Harry translation -- Uses singular values / vectors, not eigen
         # # - singular vectors are the rows of pc
+        # # - I think there is an additional error of not taking the transpose
+        # #   of ``pc`` when computing ``top_pairs``.
         # pc, l, _ = numpy.linalg.svd(c)
         # top_pairs = sorted(zip(l, pc),
         #                    key=lambda p: p[0],

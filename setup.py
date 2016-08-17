@@ -1,15 +1,79 @@
 #!/usr/bin/env python
 from distutils.core import setup
-import os.path as osp
+import os
+import re
 import setuptools
 
 
-# Replace with CMake configuration
-PYTHON_SRC = osp.abspath(osp.join(osp.dirname(__file__), 'python'))
+PYTHON_SRC = 'python'
+PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
 
 
-# TODO: Get long description from the README.md file in project source dir
-long_description = "WIP"
+with open('README.md') as f:
+    long_description = f.read()
+
+
+def find_package_datafiles(package_dir):
+    """ Return a list of non-python files in package source tree
+
+    File paths are relative to the top of the package directory provided.
+    """
+    # TODO: Add exclusion list/glob/regex parameter if necessary.
+    non_python = set()
+    for dirpath, _, fnames in os.walk(package_dir):
+        non_python.update([os.path.relpath(os.path.join(dirpath, fp),
+                                           package_dir)
+                           for fp in fnames
+                           # Things that are NOT python files
+                           if PYTHON_FILE_RE.match(fp) is None])
+    return list(non_python)
+
+
+def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
+    """
+    List files and their parent directories in the format required for the
+    ``setup`` function ``data_files`` parameter:
+
+        ...
+        data_files=[
+            ('dir', 'root-relative-file-path'),
+            ...
+        ],
+        ...
+
+    This function is intended to effectively install a directory located in the
+    source root as is (e.g. the ``etc`` directory).
+
+    :param dirpath: Base directory to start with. The directory paths returned
+        start with this directory.
+    :param exclude_dirs: sequence if directory paths (starting from ``dirpath``)
+        that should not be included. For example, we don't want the `bin/memex'
+        directory to be installed, when gathering data files for `bin`, we call
+        this function like:
+
+            list_directory_files('bin', ['bin/memex'])
+    :param exclude_files: File names to ignore in directories traversed.
+
+    """
+    exclude_dirs = set(ed.strip(' /') for ed in exclude_dirs)
+    exclude_files = set(ef.strip() for ef in exclude_files)
+    file_paths = []
+    for dirpath, dnames, fnames in os.walk(dirpath):
+        # Filter out directories to be excluded
+        for dn in dnames:
+            if os.path.join(dirpath, dn) in exclude_dirs:
+                print "skipping:", os.path.join(dirpath, dn)
+                del dnames[dnames.index(dn)]
+        # filter out excluded files
+        fnames = set(fnames).difference(exclude_files)
+        # collect directory to file paths reference
+        file_paths.append(
+            (dirpath, [os.path.join(dirpath, fn) for fn in fnames])
+        )
+    return file_paths
+
+
+################################################################################
 
 
 setup(
@@ -27,20 +91,29 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Unix',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Image Recognition'
     ],
 
-    # '' refers to base working directory?
     package_dir={'': PYTHON_SRC},
     packages=setuptools.find_packages(PYTHON_SRC),
-    # package_data={
-    #     'smqtk': [
-    #         # list of non-python files relative to package root
-    #     ]
-    # },
+    package_data={
+        'smqtk': find_package_datafiles(os.path.join(PYTHON_SRC, 'smqtk'))
+    },
+
+    # Using this for its actual purpose AS WELL AS how we're installing
+    # bin-scripts, which is probably frowned on. This is a first pass until
+    # scripts are restructures to use the "correct" entry_points parameter.
+    data_files=(
+        list_directory_files('bin',
+                             exclude_dirs=['bin/memex'],
+                             exclude_files=['CMakeLists.txt', 'README.txt']) +
+        list_directory_files('etc')
+    ),
 
     install_requires=[
         'flask',

@@ -15,6 +15,7 @@ set(SMQTK_VERSION ${SMQTK_VERSION_MAJOR}.${SMQTK_VERSION_MINOR}.${SMQTK_VERSION_
 # Determine where to install python things in our install tree
 #
 find_package(PythonInterp REQUIRED)
+
 execute_process(
   COMMAND "${PYTHON_EXECUTABLE}" -c "import distutils.sysconfig; print distutils.sysconfig.get_python_lib(prefix='')"
   RESULT_VARIABLE proc_success
@@ -25,7 +26,7 @@ if(NOT ${proc_success} EQUAL 0)
   message(FATAL_ERROR "Request for python site-packages location failed with error code: ${proc_success}")
 else()
   string(STRIP "${python_site_packages}" python_site_packages)
-  message(STATUS "Python site-packages to install into: ${python_site_packages}")
+  message(STATUS "Python site-packages sub-path: ${python_site_packages}")
 endif()
 
 
@@ -40,11 +41,9 @@ add_subdirectory( TPL )
 
 
 ###
-# SMQTK Library
+# compiled components
 #
 add_subdirectory( src )
-add_subdirectory( python )
-add_subdirectory( bin )
 
 
 ###
@@ -64,47 +63,32 @@ configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
 ###
 # System Installation
 #
-
-install(DIRECTORY DESTINATION var/data)
-
-if(UNIX)
-  # Due to super-user privileges being required to run things like groupadd,
-  # these commands will only be executed when we have such permissions (like
-  # installing to the system via sudo, etc.)
-  install(CODE
-          "execute_process(COMMAND groupadd -r SMQTK
-                           COMMAND chown -R :SMQTK var
-                           COMMAND chmod -R 2775 var
-                           WORKING_DIRECTORY \"${CMAKE_INSTALL_PREFIX}\")"
-          )
-endif()
-
 install(DIRECTORY   docs/
         DESTINATION share/doc/SMQTK
         )
 
-install(DIRECTORY   etc/
-        DESTINATION etc
-        )
-
 install(FILES requirements.conda.txt
-        DESTINATION .
-        )
-install(FILES requirements.pip.txt
-        DESTINATION .
+              requirements.pip.txt
+        DESTINATION share/smqtk
         )
 
+# Should only be required for users installing to a non-standard location
 install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
         DESTINATION .
         RENAME setup_smqtk.sh
         )
 
+install(
+  CODE "execute_process( COMMAND ${PYTHON_EXECUTABLE} -m pip install --prefix=${CMAKE_INSTALL_PREFIX} .
+                         WORKING_DIRECTORY ${SMQTK_SOURCE_DIR} )"
+  )
+
+
 ###
 # CPack stuff
 #
 
-# TODO: Define package dependencies here
-#       - just non-python? or include system python deps here, too?
+# TODO: Define python+system package dependencies here
 set(SMQTK_DEPS "")
 
 if(EXISTS /etc/redhat-release)

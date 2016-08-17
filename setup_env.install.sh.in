@@ -1,14 +1,9 @@
-#!/bin/sh
-
+#!/usr/bin/env bash
 #
 # Setup the run environment (install environment)
 #
 
 # Assuming bash environment
-export SMQTK_INSTALL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
+SMQTK_INSTALL="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="${SMQTK_INSTALL}/bin:${PATH}"
 export PYTHONPATH="${SMQTK_INSTALL}/@python_site_packages@:${PYTHONPATH}"
-export LD_LIBRARY_PATH="${SMQTK_INSTALL}/lib:${LD_LIBRARY_PATH}"
-
-export SMQTK_SYSTEM_SETUP=1

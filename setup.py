@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from distutils.core import setup
+import distutils.core
 import os
 import re
 import setuptools
@@ -76,7 +76,7 @@ def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
 ################################################################################
 
 
-setup(
+distutils.core.setup(
     name='smqtk',
     version='0.6.2',  # Configure with CMake
     description='Python toolkit for pluggable algorithms and data structures '

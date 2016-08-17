@@ -1,6 +1,7 @@
 coverage
 flask
 flask-login
+jinja2
 mock
 matplotlib
 nose

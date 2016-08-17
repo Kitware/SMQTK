@@ -31,14 +31,6 @@ class DummyRI (RelevancyIndex):
 
 class TestSimilarityIndexAbstract (unittest.TestCase):
 
-    def test_get_impls(self):
-        ntools.assert_equal(
-            set(get_relevancy_index_impls().keys()),
-            {
-                'LibSvmHikRelevancyIndex',
-            }
-        )
-
     def test_count(self):
         index = DummyRI()
         ntools.assert_equal(index.count(), 0)

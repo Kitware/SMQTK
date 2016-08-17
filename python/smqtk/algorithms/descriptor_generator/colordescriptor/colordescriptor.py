@@ -14,8 +14,6 @@ import tempfile
 import numpy
 import sklearn.cluster
 
-import pyflann
-
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import file_utils, SimpleTimer, video_utils

@@ -13,8 +13,9 @@ __author__ = "paul.tunison@kitware.com"
 
 class ItqFunctor (LshFunctor):
     """
-    Nearest neighbor implementation using Iterative Quantization (ITQ), a method
-    to convert a descriptor (e.g. 4000-dim vector) to few bits (e.g. 64 bits).
+    LSH hash code functor implementation using Iterative Quantization (ITQ), a
+    method to convert a descriptor (e.g. 4000-dim vector) to a fewer number of
+    bits (e.g. 64 bits).
 
     The method first appeared in
     ```

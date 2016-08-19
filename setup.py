@@ -9,6 +9,10 @@ PYTHON_SRC = 'python'
 PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
 
 
+with open("VERSION") as f:
+    version = f.read().strip()
+
+
 with open('README.md') as f:
     long_description = f.read()
 
@@ -78,7 +82,7 @@ def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
 
 distutils.core.setup(
     name='smqtk',
-    version='0.6.2',  # Configure with CMake
+    version=version,  # Configure with CMake
     description='Python toolkit for pluggable algorithms and data structures '
                 'for multimedia-based machine learning',
     long_description=long_description,
@@ -97,6 +101,12 @@ distutils.core.setup(
         'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Image Recognition'
+    ],
+    platforms=[
+        'Linux',
+        'Max OS-X',
+        'Unix',
+        # 'Windows',  # Not tested yet
     ],
 
     package_dir={'': PYTHON_SRC},

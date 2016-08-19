@@ -3,12 +3,20 @@ cmake_minimum_required(VERSION 2.8)
 
 
 ###
-# Versioning
+# Versioning -- parsed from central file
 #
-set(SMQTK_VERSION_MAJOR 0)
-set(SMQTK_VERSION_MINOR 6)
-set(SMQTK_VERSION_PATCH 2)
-set(SMQTK_VERSION ${SMQTK_VERSION_MAJOR}.${SMQTK_VERSION_MINOR}.${SMQTK_VERSION_PATCH})
+# Expected format: <major>.<minor>.<patch>
+#
+file(READ "${SMQTK_SOURCE_DIR}/VERSION" SMQTK_VERSION)
+string( STRIP "${SMQTK_VERSION}" SMQTK_VERSION )
+string( REGEX MATCHALL "([0-9]+)(.([0-9]+))?(.([0-9]+))?" SMQTK_VERSION_MATCH "${SMQTK_VERSION}" )
+message( STATUS "SMQTK_VERSION : ${SMQTK_VERSION}" )
+message( STATUS "        Major : ${CMAKE_MATCH_1}" )  # Major part
+message( STATUS "        Minor : ${CMAKE_MATCH_3}" )  # minor
+message( STATUS "        Patch : ${CMAKE_MATCH_5}" )  # patch
+set(SMQTK_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(SMQTK_VERSION_MINOR ${CMAKE_MATCH_3})
+set(SMQTK_VERSION_PATCH ${CMAKE_MATCH_5})
 
 
 ###

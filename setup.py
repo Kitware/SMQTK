@@ -134,6 +134,14 @@ setuptools.setup(
     ],
     extras_require={
         # Various optional dependencies for plugins
+        'docs': [
+            'livereload',
+            'mock',
+            'sphinx',
+            'sphinx-argparse',
+            'sphinx-prompt',
+            'sphinx_rtd_theme',
+        ],
         'caffe': [
             'protobuf',
             'scikit-image',

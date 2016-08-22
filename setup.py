@@ -1,12 +1,15 @@
 #!/usr/bin/env python
-import distutils.core
 import os
 import re
-import setuptools
+# import setuptools
+import setuptools.command.sdist
 
 
 PYTHON_SRC = 'python'
 PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
+
+
+setuptools.command.sdist.READMES += ('README.md',)
 
 
 with open("VERSION") as f:
@@ -80,7 +83,7 @@ def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
 ################################################################################
 
 
-distutils.core.setup(
+setuptools.setup(
     name='smqtk',
     version=version,  # Configure with CMake
     description='Python toolkit for pluggable algorithms and data structures '
@@ -125,6 +128,11 @@ distutils.core.setup(
         list_directory_files('etc')
     ),
 
+    # use_scm_version=True,
+    setup_requires=[
+        'setuptools',
+        # 'setuptools_scm',
+    ],
     install_requires=[
         'flask',
         'flask-basicauth',
@@ -137,22 +145,17 @@ distutils.core.setup(
         'pymongo',
         'requests',
         'scikit-learn',
-        'scipy'
+        'scipy',
+        'six',
     ],
-    extra_require={
-        'test': [
-            'coverage',
-            'mock',
-            'nose',
-            'nose-exclude'
-        ],
+    extras_require={
         # Various optional dependencies for plugins
         'caffe': [
             'protobuf',
             'scikit-image',
         ],
         'flann': [
-            'pyflann',
+            'pyflann>=1.8.4',
         ],
         'postgres': [
             'psycopg2',
@@ -161,12 +164,19 @@ distutils.core.setup(
             'solrpy',
         ],
     },
+    tests_require=[
+        'coverage',
+        'mock',
+        'nose',
+        'nose-exclude'
+    ],
 
-    # ``scripts=[...]``: list of filepaths to install as scripts. This ends up
-    #   not working because what is installed is a thin shell that contains the
-    #   absolute path provided here, which will not work on other people's
-    #   systems.
     # See entry_points/console_scripts as the preferred method for publishing
     #   executable scripts. Might have redesign how scripts are done if that is
     #   to be used...
+    entry_points={
+        'console_scripts': [
+            'summarizePlugins = smqtk.bin.summarizePlugins:main'
+        ]
+    }
 )

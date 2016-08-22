@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Script to try importing available plugins.
 Plugins that have issues will have a change to emmit warnings or errors here.
@@ -165,7 +164,3 @@ def main():
             json.dump(defaults, f, indent=4, sort_keys=True)
         log.info("Wrote default configuration dictionaries to: %s",
                  collect_defaults)
-
-
-if __name__ == "__main__":
-    main()

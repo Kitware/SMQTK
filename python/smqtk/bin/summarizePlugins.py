@@ -164,3 +164,7 @@ def main():
             json.dump(defaults, f, indent=4, sort_keys=True)
         log.info("Wrote default configuration dictionaries to: %s",
                  collect_defaults)
+
+
+if __name__ == "__main__":
+    main()

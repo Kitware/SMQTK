@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 See Scikit-Learn PR and ROC curve explanations and examples:
 - http://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html

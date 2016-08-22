@@ -118,20 +118,9 @@ setuptools.setup(
         'smqtk': find_package_datafiles(os.path.join(PYTHON_SRC, 'smqtk'))
     },
 
-    # Using this for its actual purpose AS WELL AS how we're installing
-    # bin-scripts, which is probably frowned on. This is a first pass until
-    # scripts are restructures to use the "correct" entry_points parameter.
-    data_files=(
-        list_directory_files('bin',
-                             exclude_dirs=['bin/memex'],
-                             exclude_files=['CMakeLists.txt', 'README.txt']) +
-        list_directory_files('etc')
-    ),
-
     # use_scm_version=True,
     setup_requires=[
         'setuptools',
-        # 'setuptools_scm',
     ],
     install_requires=[
         'flask',
@@ -146,7 +135,6 @@ setuptools.setup(
         'requests',
         'scikit-learn',
         'scipy',
-        'six',
     ],
     extras_require={
         # Various optional dependencies for plugins
@@ -176,7 +164,33 @@ setuptools.setup(
     #   to be used...
     entry_points={
         'console_scripts': [
-            'summarizePlugins = smqtk.bin.summarizePlugins:main'
+            'classifier_kfold_validation = \
+                smqtk.bin.classifier_kfold_validation\
+                :classifier_kfold_validation',
+            'classifier_model_validation = \
+                smqtk.bin.classifier_model_validation:main',
+            'classifyFiles = smqtk.bin.classifyFiles:main ',
+            'compute_classifications = smqtk.bin.compute_classifications:main',
+            'compute_hash_codes = smqtk.bin.compute_hash_codes:main',
+            'compute_many_descriptors = \
+                smqtk.bin.compute_many_descriptors:main',
+            'computeDescriptor = smqtk.bin.computeDescriptor:main',
+            'createFileIngest = smqtk.bin.createFileIngest:main',
+            'descriptors_to_svmtrain = \
+                smqtk.bin.descriptors_to_svmtrainfile:main',
+            'generate_image_transform = \
+                smqtk.bin.generate_image_transform:main',
+            'iqr_app_model_generation = \
+                smqtk.bin.iqr_app_model_generation:main',
+            'iqrTrainClassifier = smqtk.bin.iqrTrainClassifier:main',
+            'make_balltree = smqtk.bin.make_balltree:main',
+            'minibatch_kmeans_clusters = \
+                smqtk.bin.minibatch_kmeans_clusters:main',
+            'removeOldFiles = smqtk.bin.removeOldFiles:main',
+            'proxyManagerServer = smqtk.bin.proxyManagerServer:main',
+            'runApplication = smqtk.bin.runApplication:main',
+            'summarizePlugins = smqtk.bin.summarizePlugins:main',
+            'train_itq = smqtk.bin.train_itq:main',
         ]
     }
 )

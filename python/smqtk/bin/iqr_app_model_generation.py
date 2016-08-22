@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Summary
 =======
@@ -26,7 +25,7 @@ __author__ = 'paul.tunison@kitware.com'
 
 
 def cli_parser():
-    description = "Train or generate models for the SMQTK IQR Application"
+    description = "Train and generate models for the SMQTK IQR Application"
 
     parser = argparse.ArgumentParser(description=description)
 
@@ -173,6 +172,7 @@ def main():
         pass
 
     rel_index.build_index(data2descriptor.itervalues())
+
 
 if __name__ == "__main__":
     main()

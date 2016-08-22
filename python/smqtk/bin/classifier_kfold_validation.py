@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 K-Fold cross validate a supervised classifier, producing PR and/or ROC curve
 image output.

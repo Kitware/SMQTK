@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Train a supervised classifier based on an IQR session state dump.
 

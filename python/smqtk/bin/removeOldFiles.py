@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 Monitor files under a given directory, removing them from dist after an expiry
 period.

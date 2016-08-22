@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Create an ingest of files in a specified directory.
 """

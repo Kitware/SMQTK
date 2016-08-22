@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Based on an input, trained classifier configuration, classify a number of media
 files, whose descriptor is computed by the configured descriptor generator.

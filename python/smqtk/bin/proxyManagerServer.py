@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 LICENCE
 -------
@@ -23,7 +21,7 @@ import logging
 import os.path as osp
 
 from smqtk.utils import bin_utils
-from smqtk.utils import ProxyManager
+from smqtk.utils.proxy_manager import ProxyManager
 
 
 def default_config():

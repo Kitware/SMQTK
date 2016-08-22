@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Compute many descriptors from a set of file paths loaded from file.
 """
@@ -172,7 +171,7 @@ def extend_parser(parser):
 
 def main():
     description = """
-    Descriptor computation helper utility. Checks dat content type with respect
+    Descriptor computation helper utility. Checks data content type with respect
     to the configured descriptor generator to skip content that does not match
     the accepted types. Optionally, we can additionally filter out image content
     whose image bytes we cannot load via ``PIL.Image.open``.

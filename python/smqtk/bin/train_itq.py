@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Script for training ITQ LSH functor model from input descriptors.
 """

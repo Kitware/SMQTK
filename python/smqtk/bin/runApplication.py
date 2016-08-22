@@ -1,15 +1,12 @@
-#!/usr/bin/env python
-
 import argparse
 import json
 import logging
 import os
 
-from flask.ext.basicauth import BasicAuth
+from flask_basicauth import BasicAuth
 
 from smqtk.utils import bin_utils
 from smqtk.utils import merge_dict
-from smqtk.utils.jsmin import jsmin
 import smqtk.web
 
 

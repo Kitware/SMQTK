@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Compute a descriptor vector for a given file given a configuration that
 specifies what descriptor generator to use, and where to store generated

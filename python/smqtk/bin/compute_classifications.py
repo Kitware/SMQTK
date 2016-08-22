@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Classify many DescriptorElements from a DescriptorIndex based on an input
 set of element UUIDs, producing ClassificationElements for each via the

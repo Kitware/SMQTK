@@ -1,4 +1,4 @@
-livereload
-sphinx-argparse
-sphinx-prompt
-mock
+livereload==2.4.1
+sphinx-argparse==0.1.15
+sphinx-prompt==1.0.0
+mock==2.0.0

@@ -1,15 +1,11 @@
 #!/usr/bin/env python
 import os
 import re
-# import setuptools
-import setuptools.command.sdist
+import setuptools
 
 
 PYTHON_SRC = 'python'
 PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
-
-
-setuptools.command.sdist.READMES += ('README.md',)
 
 
 with open("VERSION") as f:

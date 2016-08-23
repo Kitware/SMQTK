@@ -24,6 +24,11 @@ errors.log
 # Coverage report
 .coverage
 
+# Setuptools/Distutils produced files/dirs
+/build
+/dist
+/python/smqtk.egg-info
+
 #
 # TPL
 #

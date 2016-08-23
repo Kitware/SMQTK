@@ -9,6 +9,16 @@ __author__ = 'paul.tunison@kitware.com'
 
 
 class MemoryDescriptorIndex (DescriptorIndex):
+    """
+    In-memory descriptor index with file caching.
+
+    Stored descriptor elements are all held in memory in a uuid-to-element
+    dictionary (hash table).
+
+    If the path to a file cache is provided, it is loaded at construction if it
+    exists. When elements are added to the index, the in-memory table is dumped
+    to the cache.
+    """
 
     @classmethod
     def is_usable(cls):

@@ -13,8 +13,9 @@ __author__ = "paul.tunison@kitware.com"
 
 class ItqFunctor (LshFunctor):
     """
-    Nearest neighbor implementation using Iterative Quantization (ITQ), a method
-    to convert a descriptor (e.g. 4000-dim vector) to few bits (e.g. 64 bits).
+    LSH hash code functor implementation using Iterative Quantization (ITQ), a
+    method to convert a descriptor (e.g. 4000-dim vector) to a fewer number of
+    bits (e.g. 64 bits).
 
     The method first appeared in
     ```
@@ -264,6 +265,8 @@ class ItqFunctor (LshFunctor):
 
         # # Harry translation -- Uses singular values / vectors, not eigen
         # # - singular vectors are the rows of pc
+        # # - I think there is an additional error of not taking the transpose
+        # #   of ``pc`` when computing ``top_pairs``.
         # pc, l, _ = numpy.linalg.svd(c)
         # top_pairs = sorted(zip(l, pc),
         #                    key=lambda p: p[0],

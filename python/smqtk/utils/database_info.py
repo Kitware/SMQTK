@@ -7,8 +7,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-import pymongo
-
 
 class DatabaseInfo (object):
     """
@@ -60,14 +58,6 @@ class DatabaseInfo (object):
 
         """
         return DatabaseInfo(self.host, self.port, self.name)
-
-    def get_db_connection(self):
-        """
-        :return: A Mongo Database connection instance to the configured
-            host/port/database. NOT to a configured collection.
-        :rtype: pymongo.database.Database
-        """
-        return pymongo.MongoClient(self.host, self.port)[self.name]
 
     def __repr__(self):
         """

@@ -1,14 +1,27 @@
-# Elastic search interaction
-certifi
-elasticsearch_dsl<2.0.0  # for use with 1.x versions of source elasticsearch instance
-#elasticsearch_dsl>=2.0.0  # For use with 2.x versions of source elasticsearch instance
+# This is an implicit value, here for clarity
+--index-url https://pypi.python.org/simple/
 
-# Development ease
-ipython
+# Elastic search interaction
+certifi==2016.8.8
+
+elasticsearch==1.9.0      # For use with 1.x versions of source elasticsearch instance
+elasticsearch_dsl==0.0.11 #
+
+#elasticsearch==2.4.0     # For use with 2.x versions of source elasticsearch instance
+#elasticsearch_dsl==2.1.0 #
+
+# CLI Development ease
+ipython==5.1.0
 
 # PostgreSQL
-psycopg2
+psycopg2==2.6.2
 
 # Caffe
-protobuf
-scikit-image
+protobuf==3.0.0
+scikit-image==0.12.3
+
+# FLANN bindings if not using repo-build FLANN+bindings
+pyflann==1.8.4
+
+# Solr plugin dependency
+solrpy==0.9.7

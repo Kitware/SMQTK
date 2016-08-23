@@ -1,13 +1,11 @@
-#!/bin/sh
-
+#!/usr/bin/env bash
 #
 # SMQTK system setup script (build version)
 #
-export SMQTK_SOURCE="@SMQTK_SOURCE_DIR@"
-export SMQTK_INSTALL="@SMQTK_BINARY_DIR@"
+SMQTK_SOURCE="@SMQTK_SOURCE_DIR@"
+SMQTK_BINARY="@SMQTK_BINARY_DIR@"
+SMQTK_TPL="@TPL_LOCAL_INSTALL@"
+SMQTK_TPL_PYTHON="@TPL_PYTHON_SP@"
 
-export PATH="@SMQTK_SOURCE_DIR@/bin:@SMQTK_BINARY_DIR@/src/frame_extractor/:@SMQTK_BINARY_DIR@/src/cnn_feature_extractor/:@TPL_LOCAL_INSTALL@/bin:$PATH"
-export PYTHONPATH="@SMQTK_SOURCE_DIR@/python:@SMQTK_BINARY_DIR@/python:@TPL_PYTHON_SP@:$PYTHONPATH"
-export LD_LIBRARY_PATH=@TPL_LOCAL_INSTALL@/lib:$LD_LIBRARY_PATH
-
-export SMQTK_SYSTEM_SETUP=1
+export PATH="${SMQTK_SOURCE}/bin:${SMQTK_BINARY}/src/frame_extractor/:${SMQTK_BINARY}/src/cnn_feature_extractor/:${SMQTK_TPL}/bin:${PATH}"
+export PYTHONPATH="${SMQTK_SOURCE}/python:${SMQTK_TPL_PYTHON}:$PYTHONPATH"

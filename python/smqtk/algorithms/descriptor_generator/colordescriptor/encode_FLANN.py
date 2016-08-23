@@ -2,7 +2,7 @@
 LICENCE
 -------
 Copyright 2013 by Kitware, Inc. All Rights Reserved. Please refer to
-KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
+LICENSE for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
@@ -17,7 +17,14 @@ import os
 import os.path as osp
 import numpy as np
 import csv
-import pyflann
+
+
+# These functions should only be called by colordescriptor.py module, which is
+# only available if pyflann is available by the following check
+try:
+    import pyflann
+except ImportError:
+    pyflann = None
 
 
 def flann_load_codebook(filename, is_rowwise=True):

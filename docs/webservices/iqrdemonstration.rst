@@ -39,7 +39,7 @@ of images.   The `Leeds Butterfly Dataset`_ will serve quite nicely. Download an
 SQMTK comes witha script that computes the descriptors on all of the images in your archive, and bulids up the models needed by the Nearest Neighbors and Relevancy indices:
 
 .. argparse::
-   :ref: iqr_app_model_generation.cli_parser
+   :ref: smqtk.bin.iqr_app_model_generation.cli_parser
    :prog: iqr_app_model_generation
 
 The CONFIG argument specifies a JSON file that provides a configuration block for each of the SMQTK algorithms (DescriptorGenerator, NearestNeighborsIndex etcc) required to generate the
@@ -140,7 +140,7 @@ Using and IQR Trained Classifier
 Before you can use your IQR session as a classifier, you must first train the classifier.  You can do this with the ``iqrTrainClassifier`` command:
 
 .. argparse::
-   :ref: iqrTrainClassifier.get_cli_parser
+   :ref: smqtk.bin.iqrTrainClassifier.get_cli_parser
    :prog: iqrTrainClassifier
 
 As with other commands from SMQTK the config file is a set of configuration blocks stored in a JSON file.  An example ships in the SMQTK repository:
@@ -157,7 +157,7 @@ In this case the only block required, specifies the classifier that will be used
 Once you have trained the classifier, you can use the ``classifyFiles`` command to actually classify a set of files.
 
 .. argparse::
-   :ref: classifyFiles.get_cli_parser
+   :ref: smqtk.bin.classifyFiles.get_cli_parser
    :prog: classifyFiles
 
 Again, we need to provide a config block based configuration file for the command.  As with ``iqrTrainClassifier``, there is a sample configuration file in the repository:

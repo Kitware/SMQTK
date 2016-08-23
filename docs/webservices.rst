@@ -1,10 +1,13 @@
 .. _webapplabel:
+
 Web Service and Demonstration Applications
 ==========================================
 
 Included in SMQTK are a few web-based service and demonstration applications, providing a view into the functionality provided by SMQTK algorithms and utilities.
 
+
 .. _run_application:
+
 runApplication
 --------------
 
@@ -14,6 +17,7 @@ Web services should be runnable via the ``bin/runApplication.py`` script.
 .. argparse::
    :ref: smqtk.bin.runApplication.cli_parser
    :prog: runApplication
+
 
 SmqtkWebApp
 -----------

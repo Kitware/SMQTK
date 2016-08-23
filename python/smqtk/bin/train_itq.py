@@ -1,6 +1,16 @@
 """
-Script for training ITQ LSH functor model from input descriptors.
+Tool for training the ITQ functor algorithm's model on descriptors in an
+index.
+
+By default, we use all descriptors in the configured index
+(``uuids_list_filepath`` is not given a value).
+
+The ``uuids_list_filepath`` configuration property is optional and should
+be used to specify a sub-set of descriptors in the configured index to
+train on. This only works if the stored descriptors' UUID is a type of
+string.
 """
+
 import logging
 import os.path
 
@@ -10,7 +20,6 @@ from smqtk.representation import (
 )
 from smqtk.utils import (
     bin_utils,
-    parallel,
     plugin,
 )
 
@@ -26,20 +35,13 @@ def default_config():
     }
 
 
+def cli_parser():
+    return bin_utils.basic_cli_parser(__doc__)
+
+
 def main():
-    description = """
-    Tool for training the ITQ functor algorithm's model on descriptors in an
-    index.
-
-    By default, we use all descriptors in the configured index
-    (``uuids_list_filepath`` is not given a value).
-
-    The ``uuids_list_filepath`` configuration property is optional and should
-    be used to specify a sub-set of descriptors in the configured index to
-    train on. This only works if the stored descriptors' UUID is a type of
-    string.
-    """
-    args, config = bin_utils.utility_main_helper(default_config, description)
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']

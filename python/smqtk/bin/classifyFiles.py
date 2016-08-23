@@ -4,7 +4,6 @@ files, whose descriptor is computed by the configured descriptor generator.
 Input files that classify as the given label are then output to standard out.
 Thus, this script acts like a filter.
 """
-import argparse
 import glob
 import json
 import logging
@@ -18,40 +17,36 @@ from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 
 from smqtk.utils import plugin
-from smqtk.utils.bin_utils import initialize_logging
-from smqtk.utils.bin_utils import output_config
+from smqtk.utils.bin_utils import (
+    initialize_logging,
+    output_config,
+    basic_cli_parser,
+)
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
 def get_cli_parser():
-    parser = argparse.ArgumentParser()
+    parser = basic_cli_parser(__doc__)
 
-    parser.add_argument('-c', '--config',
-                        help='Path to the configuration file to use (JSON).')
-    parser.add_argument('-g', '--generate-config',
-                        default=False,
-                        help='Optional file path to output a generated '
-                             'configuration file to. If a configuration file '
-                             'was provided, its contents will be included in '
-                             'the generated output.')
-    parser.add_argument('--overwrite',
-                        action='store_true', default=False,
-                        help='When generating a configuration file, overwrite '
-                             'an existing file.')
-    parser.add_argument('-d', '--debug',
-                        action='store_true', default=False,
-                        help='Output debug messages')
+    g_classifier = parser.add_argument_group("Classification")
+    g_classifier.add_argument('--overwrite',
+                              action='store_true', default=False,
+                              help='When generating a configuration file, '
+                                   'overwrite an existing file.')
+    g_classifier.add_argument('-l', '--label',
+                              type=str, default=None,
+                              help='The class to filter by. This is based on '
+                                   'the classifier configuration/model used. '
+                                   'If this is not provided, we will list the '
+                                   'available labels in the provided '
+                                   'classifier configuration.')
 
-    parser.add_argument('-l', '--label',
-                        type=str, default=None,
-                        help='The class to filter by. This is based on the '
-                             'classifier configuration/model used. If this is '
-                             'not provided, we will list the available labels '
-                             'in the provided classifier configuration.')
+    # Positional
     parser.add_argument("file_globs",
                         nargs='*',
+                        metavar='GLOB',
                         help='Series of shell globs specifying the files to '
                              'classify.')
 
@@ -79,7 +74,7 @@ def main():
     config_path = args.config
     generate_config = args.generate_config
     config_overwrite = args.overwrite
-    is_debug = args.debug
+    is_debug = args.verbose
 
     label = args.label
     file_globs = args.file_globs

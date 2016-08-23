@@ -1,11 +1,9 @@
 """
-Compute a descriptor vector for a given file given a configuration that
-specifies what descriptor generator to use, and where to store generated
-DescriptorElements.
+Compute a descriptor vector for a given data file, outputting the generated
+feature vector to standard out, or to an output file if one was specified (in
+numpy format).
 """
 
-import argparse
-import json
 import logging
 import os
 
@@ -25,10 +23,7 @@ def default_config():
 
 
 def cli_parser():
-    description = "Compute a descriptor vector for a given data file, " \
-                  "outputting the generated feature vector to standard out, " \
-                  "or to an output file if one was specified (in numpy format)."
-    parser = argparse.ArgumentParser(description=description)
+    parser = bin_utils.basic_cli_parser(__doc__)
 
     parser.add_argument('--overwrite',
                         action='store_true', default=False,
@@ -42,22 +37,6 @@ def cli_parser():
                              'vector is printed to standard out. '
                              'Output is saved in numpy binary format '
                              '(.npy suffix recommended).')
-    parser.add_argument('-v', '--verbose',
-                        action='store_true', default=False,
-                        help='Print additional debugging messages. All '
-                             'logging goes to standard error.')
-
-    group_configuration = parser.add_argument_group("Configuration")
-    group_configuration.add_argument('-c', '--config',
-                                     default=None,
-                                     help='Path to the JSON configuration '
-                                          'file.')
-    group_configuration.add_argument('--output-config',
-                                     default=None,
-                                     help='Optional path to output default '
-                                          'JSON configuration to. '
-                                          'This output file should be modified '
-                                          'and used for this executable.')
 
     parser.add_argument("input_file",
                         nargs="?",
@@ -69,34 +48,11 @@ def cli_parser():
 def main():
     parser = cli_parser()
     args = parser.parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
+    log = logging.getLogger(__name__)
 
     output_filepath = args.output_filepath
     overwrite = args.overwrite
-    verbose = args.verbose
-
-    llevel = logging.DEBUG if verbose else logging.INFO
-    bin_utils.initialize_logging(logging.getLogger(), llevel)
-    log = logging.getLogger("main")
-
-    # Merge loaded config with default
-    config_loaded = False
-    config = default_config()
-    if args.config:
-        if os.path.isfile(args.config):
-            with open(args.config, 'r') as f:
-                config.update(json.load(f))
-            config_loaded = True
-        elif not os.path.isfile(args.config):
-            log.error("Configuration file path not valid.")
-            exit(1)
-
-    bin_utils.output_config(args.output_config, config, log, True)
-
-    # Configuration must have been loaded at this point since we can't normally
-    # trust the default.
-    if not config_loaded:
-        log.error("No configuration provided")
-        exit(1)
 
     if not args.input_file:
         log.error("Failed to provide an input file path")

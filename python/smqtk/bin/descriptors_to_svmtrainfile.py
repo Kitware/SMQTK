@@ -1,3 +1,26 @@
+"""
+Utility script to transform a set of descriptors, specified by UUID, with
+matching class labels, to a test file usable by libSVM utilities for
+train/test experiments.
+
+The input CSV file is assumed to be of the format:
+
+    uuid,label
+    ...
+
+This is the same as the format requested for other scripts like
+``classifier_model_validation.py``.
+
+This is very useful for searching for -c and -g parameter values for a
+training sample of data using the ``tools/grid.py`` script, found in the
+libSVM source tree. For example:
+
+    <smqtk_source>/TPL/libsvm-3.1-custom/tools/grid.py \
+        -log2c -5,15,2 -log2c 3,-15,-2 -v 5 -out libsvm.grid.out \
+        -png libsvm.grid.png -t 0 -w1 3.46713615023 -w2 12.2613240418 \
+        output_of_this_script.txt
+"""
+
 import csv
 import itertools
 import logging
@@ -20,7 +43,9 @@ def default_config():
     }
 
 
-def extend_parser(parser):
+def cli_parser():
+    parser = bin_utils.basic_cli_parser(__doc__)
+
     g_io = parser.add_argument_group("IO Options")
     g_io.add_argument('-f', metavar='PATH',
                       help='Path to the csv file mapping descriptor UUIDs to '
@@ -35,30 +60,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Utility script to transform a set of descriptors, specified by UUID, with
-    matching class labels, to a test file usable by libSVM utilities for
-    train/test experiments.
-
-    The input CSV file is assumed to be of the format:
-
-        uuid,label
-        ...
-
-    This is the same as the format requested for other scripts like
-    ``classifier_model_validation.py``.
-
-    This is very useful for searching for -c and -g parameter values for a
-    training sample of data using the ``tools/grid.py`` script, found in the
-    libSVM source tree. For example:
-
-        <smqtk_source>/TPL/libsvm-3.1-custom/tools/grid.py \\
-            -log2c -5,15,2 -log2c 3,-15,-2 -v 5 -out libsvm.grid.out \\
-            -png libsvm.grid.png -t 0 -w1 3.46713615023 -w2 12.2613240418 \\
-            output_of_this_script.txt
-    """
-    args, config = bin_utils.utility_main_helper(default_config, description,
-                                                 extend_parser)
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #: :type: smqtk.representation.DescriptorIndex

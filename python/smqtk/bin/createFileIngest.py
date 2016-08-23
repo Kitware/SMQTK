@@ -1,8 +1,8 @@
 """
-Create an ingest of files in a specified directory.
+Add a set of local system files to a data set via explicit paths or shell-style
+glob strings.
 """
 
-import argparse
 import glob
 import json
 import logging
@@ -20,54 +20,16 @@ def default_config():
 
 
 def cli_parser():
-    description = "Add a set of local system files to a data set via " \
-                  "explicit paths or shell-style glob strings."
-
-    parser = argparse.ArgumentParser(description=description)
-
-    parser.add_argument('-v', '--verbose', action='store_true', default=False,
-                        help='Add debug messaged to output logging.')
-
-    group_configuration = parser.add_argument_group("Configuration")
-    group_configuration.add_argument('-c', '--config',
-                                     help="Path to the JSON configuration file")
-    group_configuration.add_argument('--output-config',
-                                     help="Optional path to output a default "
-                                          "JSON configuration file to. "
-                                          "This output file should be modified "
-                                          "and used for this executable.")
-
+    parser = bin_utils.basic_cli_parser(__doc__)
     parser.add_argument("input_files", metavar='GLOB', nargs='*')
-
     return parser
 
 
 def main():
     parser = cli_parser()
     args = parser.parse_args()
-
-    bin_utils.initialize_logging(logging.getLogger(),
-                                 logging.INFO - (10 * args.verbose))
-    log = logging.getLogger("main")
-
-    # Merge loaded config with default
-    config_loaded = False
-    config = default_config()
-    if args.config:
-        if osp.isfile(args.config):
-            with open(args.config, 'r') as f:
-                config.update(json.load(f))
-            config_loaded = True
-        elif not osp.isfile(args.config):
-            log.error("Configuration file path not valid.")
-            exit(1)
-
-    # output configuration dictionary when asked for.
-    bin_utils.output_config(args.output_config, config, log, True)
-
-    if not config_loaded:
-        log.error("No configuration provided")
-        exit(1)
+    config = bin_utils.utility_main_helper(default_config, args)
+    log = logging.getLogger(__name__)
 
     log.debug("Script arguments:\n%s" % args)
 

@@ -1,3 +1,9 @@
+"""
+Utility for transforming an input image in various standardized ways, saving
+out those transformed images with standard namings. Transformations used are
+configurable via a configuration file (JSON).
+"""
+
 import logging
 import os
 
@@ -195,10 +201,9 @@ def default_config():
     }
 
 
-def extend_parser(parser):
-    """
-    :type parser: argparse.ArgumentParser
-    """
+def cli_parser():
+    parser = smqtk.utils.bin_utils.basic_cli_parser(__doc__)
+
     g_io = parser.add_argument_group("Input/Output")
     g_io.add_argument("-i", "--image",
                       help="Image to produce transformations for.")
@@ -215,14 +220,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Utility for transforming an input image in various standardized ways, saving
-    out those transformed images with standard namings. Transformations used are
-    configurable via a configuration file (JSON).
-    """
-    args, config = smqtk.utils.bin_utils.utility_main_helper(default_config,
-                                                             description,
-                                                             extend_parser)
+    args = cli_parser().parse_args()
+    config = smqtk.utils.bin_utils.utility_main_helper(default_config, args)
     input_image_path = args.image
     output_dir = args.output
 

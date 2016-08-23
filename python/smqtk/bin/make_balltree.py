@@ -1,25 +1,34 @@
 """
 Script for building and saving the model for the ``SkLearnBallTreeHashIndex``
-``HashIndex`` implementation.
+implementation of ``HashIndex``.
 """
 
-import argparse, logging, cPickle, os, sys
+import logging, cPickle, os
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import SkLearnBallTreeHashIndex
-from smqtk.utils.bin_utils import initialize_logging, report_progress
+from smqtk.utils.bin_utils import (
+    initialize_logging,
+    report_progress,
+    basic_cli_parser,
+)
 from smqtk.utils.bit_utils import int_to_bit_vector_large
 
 
-def main():
-    initialize_logging(logging.getLogger(), logging.DEBUG)
-    log = logging.getLogger(__name__)
-
-    parser = argparse.ArgumentParser()
+def cli_parser():
+    parser = basic_cli_parser(__doc__)
     parser.add_argument("hash2uuids_fp", type=str)
     parser.add_argument("bit_len", type=int)
     parser.add_argument("leaf_size", type=int)
     parser.add_argument("rand_seed", type=int)
     parser.add_argument("balltree_model_fp", type=str)
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = cli_parser().parse_args()
+
+    initialize_logging(logging.getLogger('smqtk'), logging.DEBUG)
+    initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
+    log = logging.getLogger(__name__)
 
     hash2uuids_fp = os.path.abspath(args.hash2uuids_fp)
     bit_len = args.bit_len

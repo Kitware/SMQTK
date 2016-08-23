@@ -1,6 +1,10 @@
 """
-Compute many descriptors from a set of file paths loaded from file.
+Descriptor computation helper utility. Checks data content type with respect
+to the configured descriptor generator to skip content that does not match
+the accepted types. Optionally, we can additionally filter out image content
+whose image bytes we cannot load via ``PIL.Image.open``.
 """
+
 import io
 import logging
 import os
@@ -14,7 +18,11 @@ from smqtk.representation import (
     get_descriptor_index_impls,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import utility_main_helper, report_progress
+from smqtk.utils.bin_utils import (
+    utility_main_helper,
+    report_progress,
+    basic_cli_parser,
+)
 from smqtk.utils import plugin, parallel
 
 
@@ -131,7 +139,9 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     log.info("Done")
 
 
-def extend_parser(parser):
+def cli_parser():
+    parser = basic_cli_parser(__doc__)
+
     parser.add_argument('-b', '--batch-size',
                         type=int, default=0, metavar='INT',
                         help="Number of files to batch together into a single "
@@ -170,15 +180,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Descriptor computation helper utility. Checks data content type with respect
-    to the configured descriptor generator to skip content that does not match
-    the accepted types. Optionally, we can additionally filter out image content
-    whose image bytes we cannot load via ``PIL.Image.open``.
-    """
-
-    args, config = utility_main_helper(default_config, description,
-                                       extend_parser)
+    args = cli_parser().parse_args()
+    config = utility_main_helper(default_config, args)
     l = logging.getLogger(__name__)
 
     completed_files_fp = args.completed_files

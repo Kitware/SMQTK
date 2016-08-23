@@ -1,76 +1,10 @@
 """
-K-Fold cross validate a supervised classifier, producing PR and/or ROC curve
-image output.
-"""
-import csv
-import logging
-import os
+Helper utility for cross validating a supervised classifier configuration.
+The classifier used should NOT be configured to save its model since this
+process requires us to train the classifier multiple times.
 
-import matplotlib.pyplot as plt
-import numpy
-import sklearn.cross_validation
-import sklearn.metrics
-
-from smqtk.algorithms import get_classifier_impls
-from smqtk.algorithms.classifier import SupervisedClassifier
-from smqtk.representation import (
-    ClassificationElementFactory,
-    get_descriptor_index_impls,
-)
-from smqtk.utils import (
-    bin_utils,
-    file_utils,
-    parallel,
-    plugin,
-)
-
-
-__author__ = "paul.tunison@kitware.com"
-
-
-def get_supervised_classifier_impls():
-    return get_classifier_impls(sub_interface=SupervisedClassifier)
-
-
-def default_config():
-    return {
-        "plugins": {
-            "supervised_classifier":
-                plugin.make_config(get_supervised_classifier_impls()),
-            "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
-            "classification_factory":
-                ClassificationElementFactory.get_default_config(),
-        },
-        "cross_validation": {
-            "truth_labels": None,
-            "num_folds": 6,
-            "random_seed": None,
-            "classification_use_multiprocessing": True,
-        },
-        "pr_curves": {
-            "enabled": True,
-            "show": False,
-            "output_directory": None,
-            "file_prefix": None,
-        },
-        "roc_curves": {
-            "enabled": True,
-            "show": False,
-            "output_directory": None,
-            "file_prefix": None,
-        },
-    }
-
-
-def classifier_kfold_validation():
-    description = """
-    Helper utility for cross validating a supervised classifier configuration.
-    The classifier used should NOT be configured to save its model since this
-    process requires us to train the classifier multiple times.
-
-    Configuration
-    -------------
+Configuration
+-------------
     - plugins
         - supervised_classifier
             Supervised Classifier implementation configuration to use. This
@@ -128,8 +62,75 @@ def classifier_kfold_validation():
 
         - file_prefix
             String prefix to prepend to standard plot file names.
-    """
-    args, config = bin_utils.utility_main_helper(default_config, description)
+"""
+
+import csv
+import logging
+import os
+
+import matplotlib.pyplot as plt
+import numpy
+import sklearn.cross_validation
+import sklearn.metrics
+
+from smqtk.algorithms import get_classifier_impls
+from smqtk.algorithms.classifier import SupervisedClassifier
+from smqtk.representation import (
+    ClassificationElementFactory,
+    get_descriptor_index_impls,
+)
+from smqtk.utils import (
+    bin_utils,
+    file_utils,
+    plugin,
+)
+
+
+__author__ = "paul.tunison@kitware.com"
+
+
+def get_supervised_classifier_impls():
+    return get_classifier_impls(sub_interface=SupervisedClassifier)
+
+
+def default_config():
+    return {
+        "plugins": {
+            "supervised_classifier":
+                plugin.make_config(get_supervised_classifier_impls()),
+            "descriptor_index":
+                plugin.make_config(get_descriptor_index_impls()),
+            "classification_factory":
+                ClassificationElementFactory.get_default_config(),
+        },
+        "cross_validation": {
+            "truth_labels": None,
+            "num_folds": 6,
+            "random_seed": None,
+            "classification_use_multiprocessing": True,
+        },
+        "pr_curves": {
+            "enabled": True,
+            "show": False,
+            "output_directory": None,
+            "file_prefix": None,
+        },
+        "roc_curves": {
+            "enabled": True,
+            "show": False,
+            "output_directory": None,
+            "file_prefix": None,
+        },
+    }
+
+
+def cli_parser():
+    return bin_utils.basic_cli_parser(__doc__)
+
+
+def classifier_kfold_validation():
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #

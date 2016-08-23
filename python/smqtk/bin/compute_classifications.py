@@ -1,8 +1,19 @@
 """
-Classify many DescriptorElements from a DescriptorIndex based on an input
-set of element UUIDs, producing ClassificationElements for each via the
-configured factory, outputting a CSV file of classification results.
+Script for asynchronously computing classifications for DescriptorElements
+in a DescriptorIndex specified via a list of UUIDs. Results are output to a
+CSV file in the format:
+
+    uuid, label1_confidence, label2_confidence, ...
+
+CSV columns labels are output to the given CSV header file path. Label
+columns will be in the order as reported by the classifier implementations
+``get_labels`` method.
+
+Due to using an input file-list of UUIDs, we require that the UUIDs of
+indexed descriptors be strings, or equality comparable to the UUIDs' string
+representation.
 """
+
 import csv
 import logging
 import os
@@ -48,11 +59,9 @@ def default_config():
     }
 
 
-def extend_parser(parser):
-    """
-    :type parser: argparse.ArgumentParser
-    :rtype: argparse.ArgumentParser
-    """
+def cli_parser():
+    parser = bin_utils.basic_cli_parser(__doc__)
+
     g_io = parser.add_argument_group("Input Output Files")
     g_io.add_argument('--uuids-list', metavar='PATH',
                       help='Path to the input file listing UUIDs to process.')
@@ -64,27 +73,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Script for asynchronously computing classifications for DescriptorElements
-    in a DescriptorIndex specified via a list of UUIDs. Results are output to a
-    CSV file in the format:
-
-        uuid, label1_confidence, label2_confidence, ...
-
-    CSV columns labels are output to the given CSV header file path. Label
-    columns will be in the order as reported by the classifier implementations
-    ``get_labels`` method.
-
-    Due to using an input file-list of UUIDs, we require that the UUIDs of
-    indexed descriptors be strings, or equality comparable to the UUIDs' string
-    representation.
-    """
-
-    args, config = bin_utils.utility_main_helper(
-        default_config,
-        description,
-        extend_parser,
-    )
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     # - parallel_map UUIDs to load from the configured index

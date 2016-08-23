@@ -1,3 +1,16 @@
+"""
+Compute LSH hash codes based on the provided functor on specific
+descriptors from the configured index given a file-list of UUIDs.
+
+When using an input file-list of UUIDs, we require that the UUIDs of
+indexed descriptors be strings, or equality comparable to the UUIDs' string
+representation.
+
+This script can be used to live update the ``hash2uuid_cache_filepath``
+model file for the ``LSHNearestNeighborIndex`` algorithm as output
+dictionary format is the same as used by that implementation.
+"""
+
 import cPickle
 import logging
 import os
@@ -61,10 +74,9 @@ def default_config():
     }
 
 
-def extend_parser(parser):
-    """
-    :type parser: argparse.ArgumentParser
-    """
+def cli_parser():
+    parser = bin_utils.basic_cli_parser(__doc__)
+
     g_io = parser.add_argument_group("I/O")
     g_io.add_argument("--uuids-list",
                       default=None, metavar="PATH",
@@ -89,20 +101,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Compute LSH hash codes based on the provided functor on specific
-    descriptors from the configured index given a file-list of UUIDs.
-
-    When using an input file-list of UUIDs, we require that the UUIDs of
-    indexed descriptors be strings, or equality comparable to the UUIDs' string
-    representation.
-
-    This script can be used to live update the ``hash2uuid_cache_filepath``
-    model file for the ``LSHNearestNeighborIndex`` algorithm as output
-    dictionary format is the same as used by that implementation.
-    """
-    args, config = bin_utils.utility_main_helper(default_config, description,
-                                                 extend_parser)
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #

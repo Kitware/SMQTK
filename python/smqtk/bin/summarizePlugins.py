@@ -1,9 +1,6 @@
 """
-Script to try importing available plugins.
-Plugins that have issues will have a change to emmit warnings or errors here.
-
-:author: paul.tunison@kitware.com
-
+Print out information about what plugins are currently usable and the
+documentation headers for each implementation.
 """
 import argparse
 import json
@@ -18,20 +15,15 @@ import smqtk.utils.plugin
 
 
 def cli():
-    description = "Print out information about what plugins are currently " \
-                  "usable and the documentation headers for each " \
-                  "implementation."
-    parser = argparse.ArgumentParser(description=description)
-
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-v", "--verbose",
                         default=False, action="store_true",
-                        help="Output debugging options as well.")
+                        help="Output additional debug logging.")
     parser.add_argument("--defaults",
                         default=False, type=str,
                         help="Optionally generate default configuration blocks "
                              "for each plugin structure and output as JSON to "
                              "the specified path.")
-
     return parser
 
 

@@ -1,18 +1,17 @@
-import argparse
-import json
+"""
+Runs conforming SMQTK Web Applications.
+"""
+
 import logging
-import os
 
 from flask_basicauth import BasicAuth
 
 from smqtk.utils import bin_utils
-from smqtk.utils import merge_dict
 import smqtk.web
 
 
 def cli_parser():
-    description = "Runs conforming SMQTK Web Applications."
-    parser = argparse.ArgumentParser(description=description)
+    parser = bin_utils.basic_cli_parser(__doc__)
 
     # Application options
     group_application = parser.add_argument_group("Application Selection")
@@ -22,21 +21,6 @@ def cli_parser():
                                         "for running")
     group_application.add_argument('-a', '--application', default=None,
                                    help="Label of the web application to run.")
-
-    # Configuration options
-    group_configuration = parser.add_argument_group("Configuration")
-    group_configuration.add_argument('-c', '--config', default=None,
-                                     help='Path to application JSON '
-                                          'configuration file.')
-    group_configuration.add_argument('-g', '--generate-config',
-                                     default=None,
-                                     help='Optionally generate a default '
-                                          'configuration file at the '
-                                          'specified path. If a configuration '
-                                          'file was provided, we update the '
-                                          'default configuration with the '
-                                          'contents of the given '
-                                          'configuration.')
 
     # Server options
     group_server = parser.add_argument_group("Server options")
@@ -65,10 +49,10 @@ def cli_parser():
     group_other = parser.add_argument_group("Other options")
     group_other.add_argument('--debug-server',
                              action='store_true', default=False,
-                             help='Turn on server debugging messages')
+                             help='Turn on server debugging messages ONLY')
     group_other.add_argument('--debug-smqtk',
                              action='store_true', default=False,
-                             help='Turn on SMQTK debugging messages')
+                             help='Turn on SMQTK debugging messages ONLY')
 
     return parser
 
@@ -77,14 +61,16 @@ def main():
     parser = cli_parser()
     args = parser.parse_args()
 
-    debug_smqtk = args.debug_smqtk
-    debug_server = args.debug_server
+    debug_smqtk = args.debug_smqtk or args.verbose
+    debug_server = args.debug_server or args.verbose
 
+    bin_utils.initialize_logging(logging.getLogger("__main__"),
+                                 logging.INFO - (10 * debug_smqtk))
     bin_utils.initialize_logging(logging.getLogger("smqtk"),
                                  logging.INFO - (10*debug_smqtk))
     bin_utils.initialize_logging(logging.getLogger("werkzeug"),
                                  logging.WARN - (20*debug_server))
-    log = logging.getLogger("smqtk.main")
+    log = logging.getLogger(__name__)
 
     web_applications = smqtk.web.get_web_applications()
 
@@ -108,26 +94,8 @@ def main():
 
     app_class = web_applications[application_name]
 
-    # Merge loaded config with default
-    config_loaded = False
-    config = app_class.get_default_config()
-    if args.config:
-        if os.path.isfile(args.config):
-            with open(args.config, 'r') as f:
-                merge_dict(config, json.load(f))
-            config_loaded = True
-        elif not os.path.isfile(args.config):
-            log.error("Configuration file path not valid.")
-            exit(1)
-
-    # Output config and exit if requested
-    bin_utils.output_config(args.generate_config, config, log, True)
-
-    # Configuration must have been loaded at this point since we can't normally
-    # trust the default.
-    if not config_loaded:
-        log.error("No configuration provided")
-        exit(1)
+    bin_utils.utility_main_helper(app_class.get_default_config, args,
+                                  skip_logging_init=True)
 
     host = args.host
     port = args.port and int(args.port)

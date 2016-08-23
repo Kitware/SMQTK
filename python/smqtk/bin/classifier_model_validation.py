@@ -1,8 +1,42 @@
 """
+Utility for validating a given classifier implementation's model against
+some labeled testing data, outputting PR and ROC curve plots with
+area-under-curve score values.
+
+This utility can optionally be used train a supervised classifier model if
+the given classifier model configuration does not exist and a second CSV
+file listing labeled training data is provided. Training will be attempted
+if ``train`` is set to true. If training is performed, we exit after
+training completes. A ``SupervisedClassifier`` sub-classing implementation
+must be configured
+
+We expect the test and train CSV files in the column format:
+
+    ...
+    <UUID>,<label>
+    ...
+
+The UUID is of the descriptor to which the label applies. The label may be
+any arbitrary string value, but all labels must be consistent in
+application.
+
+Some metrics presented assume the highest confidence class as the single
+predicted class for an element:
+
+    - confusion matrix
+
+The output UUID confusion matrix is a JSON dictionary where the top-level
+keys are the true labels, and the inner dictionary is the mapping of
+predicted labels to the UUIDs of the classifications/descriptors that
+yielded the prediction. Again, this is based on the maximum probability
+label for a classification result (T=0.5).
+
 See Scikit-Learn PR and ROC curve explanations and examples:
-- http://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html
-- http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+    - http://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html
+    - http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+
 """
+
 import collections
 import csv
 import json
@@ -58,41 +92,13 @@ def default_config():
     }
 
 
+def cli_parser():
+    return bin_utils.basic_cli_parser(__doc__)
+
+
 def main():
-    description = """
-    Utility for validating a given classifier implementation's model against
-    some labeled testing data, outputting PR and ROC curve plots with
-    area-under-curve score values.
-
-    This utility can optionally be used train a supervised classifier model if
-    the given classifier model configuration does not exist and a second CSV
-    file listing labeled training data is provided. Training will be attempted
-    if ``train`` is set to true. If training is performed, we exit after
-    training completes. A ``SupervisedClassifier`` sub-classing implementation
-    must be configured
-
-    We expect the test and train CSV files in the column format:
-
-        ...
-        <UUID>,<label>
-        ...
-
-    The UUID is of the descriptor to which the label applies. The label may be
-    any arbitrary string value, but all labels must be consistent in
-    application.
-
-    Some metrics presented assume the highest confidence class as the single
-    predicted class for an element:
-
-        - confusion matrix
-
-    The output UUID confusion matrix is a JSON dictionary where the top-level
-    keys are the true labels, and the inner dictionary is the mapping of
-    predicted labels to the UUIDs of the classifications/descriptors that
-    yielded the prediction. Again, this is based on the maximum probability
-    label for a classification result (T=0.5).
-    """
-    args, config = bin_utils.utility_main_helper(default_config, description)
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #

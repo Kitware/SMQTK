@@ -1,7 +1,28 @@
 #!/usr/bin/env python
 """
+Utility for fetching remotely stored image data from the CDR ElasticSearch
+instance.
 
-ES Compatibility: 1.x
+Files will be transferred into the configured directory with the format::
+
+    <output_dir>/<index>/<_type>/<id>.<type_extension>
+
+Configuration Notes:
+
+    image_types
+        This is a list of image MIMETYPE suffixes to include when querying
+        the ElasticSearch instance. If all types should be considered, this
+        should be set to an empty list.
+
+    stored_http_auth
+        This is only used for stored-data URLs and only if both a username
+        and password is given.
+
+    elastic_search
+        batch_size
+            The number of query hits to fetch at a time from the instance.
+
+ES Compatibility: 1.x, 2.x
 
 """
 
@@ -10,7 +31,6 @@ import logging
 import mimetypes
 import os
 import re
-import time
 
 import certifi
 import elasticsearch
@@ -22,6 +42,8 @@ import requests
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import (
+    basic_cli_parser,
+    doc_as_description,
     report_progress,
     utility_main_helper,
 )
@@ -334,11 +356,12 @@ def default_config():
     }
 
 
-def extend_parser(parser):
+def cli_parser():
     """
-    :type parser: argparse.ArgumentParser
     :rtype: argparse.ArgumentParser
     """
+    parser = basic_cli_parser(doc_as_description(__doc__))
+
     parser.add_argument('-s', '--report-size',
                         action='store_true', default=False,
                         help="Report the number of elements that would be "
@@ -372,32 +395,8 @@ def extend_parser(parser):
 
 
 def main():
-    description = """
-    Utility for fetching remotely stored image data from the CDR ElasticSearch
-    instance.
-
-    Files will be transferred into the configured directory with the format::
-
-        <output_dir>/<index>/<_type>/<id>.<type_extension>
-
-    Configuration Notes:
-
-        image_types
-            This is a list of image MIMETYPE suffixes to include when querying
-            the ElasticSearch instance. If all types should be considered, this
-            should be set to an empty list.
-
-        stored_http_auth
-            This is only used for stored-data URLs and only if both a username
-            and password is given.
-
-        elastic_search
-            batch_size
-                The number of query hits to fetch at a time from the instance.
-
-    """
-    args, config = utility_main_helper(default_config, description,
-                                       extend_parser)
+    args = cli_parser().parse_args()
+    config = utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     report_size = args.report_size

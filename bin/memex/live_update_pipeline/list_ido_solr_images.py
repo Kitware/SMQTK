@@ -40,11 +40,13 @@ def default_config():
     }
 
 
-def extend_parser(parser):
+def cli_parser():
     """
     :type parser: argparse.ArgumentParser
     :rtype: argparse.ArgumentParser
     """
+    parser = bin_utils.basic_cli_parser(bin_utils.doc_as_description(__doc__))
+
     parser.add_argument('--after-time', metavar='TIMESTAMP',
                         help='Optional timestamp to constrain that we look '
                              'for entries added after the given time stamp. '
@@ -80,8 +82,8 @@ def main():
             - `mainType` is the first component of the MIMETYPE
             - `indexedAt` timestamp
     """
-    args, config = bin_utils.utility_main_helper(default_config, description,
-                                                 extend_parser)
+    args = cli_parser().parse_args()
+    config = bin_utils.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     paths_file = args.paths_file

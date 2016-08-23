@@ -1,3 +1,12 @@
+"""
+Script for generating clusters from descriptors in a given index using the
+mini-batch KMeans implementation from Scikit-learn
+(http://scikit-learn.org/stable/modules/generated/sklearn.cluster.MiniBatchKMeans.html).
+
+By the nature of Scikit-learn's MiniBatchKMeans implementation, euclidean
+distance is used to measure distance between descriptors.
+"""
+
 import cPickle
 import logging
 import os
@@ -8,7 +17,7 @@ from sklearn.cluster import MiniBatchKMeans
 from smqtk.compute_functions import mb_kmeans_build_apply
 from smqtk.representation.descriptor_index import get_descriptor_index_impls
 from smqtk.utils import Configurable
-from smqtk.utils.bin_utils import utility_main_helper
+from smqtk.utils.bin_utils import utility_main_helper, basic_cli_parser
 from smqtk.utils.file_utils import safe_create_dir
 from smqtk.utils.plugin import make_config, from_plugin_config
 
@@ -35,11 +44,9 @@ def default_config():
     return c
 
 
-def extend_parser(p):
-    """
-    :type p: argparse.ArgumentParser
-    :rtype: argparse.ArgumentParser
-    """
+def cli_parser():
+    p = basic_cli_parser(__doc__)
+
     g_output = p.add_argument_group("output")
     g_output.add_argument('-o', '--output-map',
                           metavar="PATH",
@@ -50,16 +57,8 @@ def extend_parser(p):
 
 
 def main():
-    description = """
-    Script for generating clusters from descriptors in a given index using the
-    mini-batch KMeans implementation from Scikit-learn
-    (http://scikit-learn.org/stable/modules/generated/sklearn.cluster.MiniBatchKMeans.html).
-
-    By the nature of Scikit-learn's MiniBatchKMeans implementation, euclidean
-    distance is used to measure distance between descriptors.
-    """
-    args, config = utility_main_helper(default_config, description,
-                                       extend_parser)
+    args = cli_parser().parse_args()
+    config = utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     output_filepath = args.output_map

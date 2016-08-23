@@ -21,22 +21,34 @@ from mock import Mock as MagicMock
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../python'))
-sys.path.insert(0, os.path.abspath('../bin'))
+# sys.path.insert(0, os.path.abspath('../bin'))
 
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
             return Mock()
 
-MOCK_MODULES = [ 'numpy',
+MOCK_MODULES = [
+    'imageio',
+    'matplotlib',
+    'matplotlib.pyplot',
+    'numpy',
     'numpy.core',
     'numpy.core.multiarray',
     'numpy.matrixlib',
     'numpy.matrixlib.defmatrix',
     'PIL',
     'PIL.Image',
-    'imageio',
-    'pymongo' ]
+    'PIL.ImageEnhance',
+    'pymongo',
+    'scipy',
+    'scipy.stats',
+    'sklearn',
+    'sklearn.cluster',
+    'sklearn.cross_validation',
+    'sklearn.metrics',
+    'sklearn.neighbors',
+]
 
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

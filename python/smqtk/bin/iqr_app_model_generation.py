@@ -1,15 +1,5 @@
 """
-Summary
-=======
-Script intended to provide an example on how to train or generate models for
-data structures and algorithm types required for the IQR demo web application's
-function.
-
-After successfully completing the execution of this script, the implementation
-configurations used here will now reference valid models. When running the IQR
-demo application, its configuration should mirror the configurations used here
-in order to function properly.
-
+Train and generate models for the SMQTK IQR Application.
 """
 import glob
 import json
@@ -25,9 +15,7 @@ __author__ = 'paul.tunison@kitware.com'
 
 
 def cli_parser():
-    description = "Train and generate models for the SMQTK IQR Application"
-
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument("-c", "--config",
                         required=True,

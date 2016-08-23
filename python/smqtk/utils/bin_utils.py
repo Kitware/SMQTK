@@ -226,67 +226,63 @@ def basic_cli_parser(description=None):
     return parser
 
 
-def utility_main_helper(default_config, parser_description=None,
-                        parser_extension=lambda p: p,
-                        additional_logging_domains=()):
+def utility_main_helper(default_config, args, additional_logging_domains=(),
+                        skip_logging_init=False, default_config_valid=False):
     """
     Helper function for utilities standardizing logging initialization, CLI
     parsing and configuration loading/generation.
 
-    Specific utilities should use this as their main function. This
+    Specific utilities should use this in their main function. This
     encapsulates the following standard actions:
 
-        - generating ``argparse`` parser (see ``basic_cli_parser``) and parsing
-          CLI arguments.
-        - handling configuration merger onto the default
+        - using ``argparse`` parser results to drive logging initialization
+          (can be skipped if initialized externally)
+        - handling loaded configuration merger onto the default
         - handling configuration generation based on given default and possibly
           specified input config.
-
-    This takes a hook function ``parser_extension``, which is a function that
-    takes the ``ArgumentParser`` instance to allow for adding additional
-    arguments and groups.
 
     :param default_config: Function returning default configuration (JSON)
         dictionary for the utility. This should take no arguments.
     :type default_config: () -> dict
 
-    :param parser_description: Optional description to give to the generated
-        argument parser.
-    :type parser_description: str
-
-    :param parser_extension: Function to extend argparse parser.
-    :type parser_extension: (argparse.ArgumentParser) -> argparse.ArgumentParser
+    :param args: Parsed arguments from argparse.ArgumentParser instance as
+        returned from ``parser.parse_args()``.
+    :type args: argparse.Namespace
 
     :param additional_logging_domains: We initialize logging on the base
         ``smqtk`` and ``__main__`` namespace. Any additional namespaces under
         which logging should be reported should be added here as an iterable.
     :type additional_logging_domains: collections.Iterable[str]
 
-    :return: Parsed arguments structure and loaded configuration dictionary.
-    :rtype: (argparse.Namespace, dict)
+    :param skip_logging_init: Skip initialize logging in this function because
+        it is done elsewhere externally.
+    :type skip_logging_init: bool
+
+    :param default_config_valid: Whether the default config returned from the
+        generator is a valid config to continue execution with or not.
+    :type default_config_valid: bool
+
+    :return: Loaded configuration dictionary.
+    :rtype: dict
 
     """
-    parser = parser_extension(
-        basic_cli_parser(description=parser_description)
-    )
-    args = parser.parse_args()
-
     config_filepath = args.config
     config_generate = args.generate_config
     verbose = args.verbose
 
-    llevel = logging.INFO
-    if verbose:
-        llevel = logging.DEBUG
-    initialize_logging(logging.getLogger('smqtk'), llevel)
-    initialize_logging(logging.getLogger('__main__'), llevel)
-    for d in additional_logging_domains:
-        initialize_logging(logging.getLogger(d), llevel)
+    if not skip_logging_init:
+        llevel = logging.INFO
+        if verbose:
+            llevel = logging.DEBUG
+        initialize_logging(logging.getLogger('smqtk'), llevel)
+        initialize_logging(logging.getLogger('__main__'), llevel)
+        for d in additional_logging_domains:
+            initialize_logging(logging.getLogger(d), llevel)
 
     config, config_loaded = load_config(config_filepath, default_config())
     output_config(config_generate, config, overwrite=True)
 
-    if not config_loaded:
+    if not (config_loaded or default_config_valid):
         raise RuntimeError("No configuration loaded (not trusting default).")
 
-    return args, config
+    return config

@@ -8,6 +8,9 @@ PYTHON_SRC = 'python'
 PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
 
 
+# TODO: Auto-append dev version based on how forward from latest release
+#       Basically a simpler version of what setuptools_scm does but without
+#       the added cruft and bringing the ENTIRE git repo in with the dist
 with open("VERSION") as f:
     version = f.read().strip()
 
@@ -81,7 +84,7 @@ def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
 
 setuptools.setup(
     name='smqtk',
-    version=version,  # Configure with CMake
+    version=version,
     description='Python toolkit for pluggable algorithms and data structures '
                 'for multimedia-based machine learning',
     long_description=long_description,
@@ -114,7 +117,6 @@ setuptools.setup(
         'smqtk': find_package_datafiles(os.path.join(PYTHON_SRC, 'smqtk'))
     },
 
-    # use_scm_version=True,
     setup_requires=[
         'setuptools',
     ],

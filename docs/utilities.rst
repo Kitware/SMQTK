@@ -13,32 +13,32 @@ See doc-string comments on sub-module classes and functions in [``smqtk.utils``]
 Utility Scripts
 ^^^^^^^^^^^^^^^
 
-Located in the [``bin``](/bin) directory are various scripts intended to provide quick access or generic entry points to common SMQTK functionality.
-These scripts generally require configuration via a JSON text file.
+Located in the [``smqtk.bin``](/python/smqtk/bin) module are various scripts intended to provide quick access or generic entry points to common SMQTK functionality.
+These scripts generally require configuration via a JSON text file and executable entry points are installed via the ``setup.py``.
 By rule of thumb, scripts that require a configuration also provide an option for outputting a default or example configuration file.
 
-Currently available utility scripts:
+Currently available utility scripts in alphabetical order:
 
 computeDescriptor
 +++++++++++++++++
 
 .. argparse::
-   :ref: computeDescriptor.cli_parser
+   :ref: smqtk.bin.computeDescriptor.cli_parser
    :prog: computeDescriptor
 
 createFileIngest
 ++++++++++++++++
 
 .. argparse::
-   :ref: createFileIngest.cli_parser
+   :ref: smqtk.bin.createFileIngest.cli_parser
    :prog: createFileIngest
 
 removeOldFiles
 ++++++++++++++
 
 .. argparse::
-   :ref: removeOldFiles.cli_parser
+   :ref: smqtk.bin.removeOldFiles.cli_parser
    :prog: removeOldFiles
 
-* [``runApplication.py``](/bin/runApplication.py)
+* [``runApplication.py``](/python/smqtk/bin/runApplication.py)
     * Generic entry point for running SMQTK web applications defined in [``smqtk.web``](/python/smqtk/web).

@@ -6,12 +6,14 @@
 Social Media Query ToolKit
 ==========================
 
-Contents:
+`GitHub <https://github.com/Kitware/SMQTK>`_
+
+Python toolkit for pluggable algorithms and data structures for multimedia-based machine learning.
 
 .. toctree::
    :maxdepth: 2
 
-   building
+   installation
    architecture
    examples/overview
 

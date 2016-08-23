@@ -12,7 +12,7 @@ This script can be used to run any conforming (derived from `SmqtkWebApp`) SMQTK
 Web services should be runnable via the ``bin/runApplication.py`` script.
 
 .. argparse::
-   :ref: runApplication.cli_parser
+   :ref: smqtk.bin.runApplication.cli_parser
    :prog: runApplication
 
 SmqtkWebApp

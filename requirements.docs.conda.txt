@@ -1,5 +1,2 @@
-# This is an implicit value, here for clarity
---index-url https://pypi.python.org/simple/
-
 sphinx==1.4.1
 sphinx_rtd_theme==0.1.9

@@ -1,3 +1,6 @@
+# This is an implicit value, here for clarity
+--index-url https://pypi.python.org/simple/
+
 # Elastic search interaction
 certifi==2016.8.8
 
@@ -15,7 +18,7 @@ psycopg2==2.6.2
 
 # Caffe
 protobuf==3.0.0
-scikit-image
+scikit-image==0.12.3
 
 # FLANN bindings if not using repo-build FLANN+bindings
 pyflann==1.8.4

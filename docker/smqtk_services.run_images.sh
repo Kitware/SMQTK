@@ -4,6 +4,9 @@ set -e
 # "Big-red-button" script to start up a SMQTK Nearest-Neighbors service around
 # a directory of images.
 #
+# Usage:
+#   smqtk_services.run_images.sh -i IMAGE_DIR_PATH [-n DOCKER_NETWORK]
+#
 
 PREFIX=smqtk
 DOCKER_POSTGRES="${PREFIX}-postgres"
@@ -90,6 +93,9 @@ EOSQL
 
 #
 # Build models and start services
+#
+# Given the "-b" argument, which tells the container to build models using
+# default configuration.
 #
 echo "Starting SMQTK Services docker"
 mkdir -p smqtk_logs

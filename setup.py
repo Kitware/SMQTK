@@ -11,6 +11,8 @@ PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
 # TODO: Auto-append dev version based on how forward from latest release
 #       Basically a simpler version of what setuptools_scm does but without
 #       the added cruft and bringing the ENTIRE git repo in with the dist
+#       See: https://github.com/pypa/setuptools_scm/blob/master/setuptools_scm/version.py
+#       Would need to know number of commits ahead from last version tag.
 with open("VERSION") as f:
     version = f.read().strip()
 

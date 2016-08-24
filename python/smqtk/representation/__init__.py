@@ -1,6 +1,17 @@
 from smqtk.utils import Configurable, SmqtkObject
 
 
+__all__ = [
+    'SmqtkRepresentation',
+    'ClassificationElement', 'get_classification_element_impls',
+    'DataElement', 'get_data_element_impls',
+    'DataSet', 'get_data_set_impls',
+    'DescriptorElement', 'get_descriptor_element_impls',
+    'DescriptorIndex', 'get_descriptor_index_impls',
+    'ClassificationElementFactory', 'DescriptorElementFactory',
+]
+
+
 class SmqtkRepresentation (SmqtkObject, Configurable):
     """
     Interface for data representation interfaces and implementations.

@@ -2,7 +2,15 @@ from smqtk.utils import SmqtkObject
 from smqtk.utils import Configurable, plugin
 
 
-__author__ = "paul.tunison@kitware.com"
+__all__ = [
+    'SmqtkAlgorithm',
+    'Classifier', 'SupervisedClassifier', 'get_classifier_impls',
+    'DescriptorGenerator', 'get_descriptor_generator_impls',
+    'NearestNeighborsIndex', 'get_nn_index_impls',
+    'HashIndex', 'get_hash_index_impls',
+    'LshFunctor', 'get_lsh_functor_impls',
+    'RelevancyIndex', 'get_relevancy_index_impls',
+]
 
 
 class SmqtkAlgorithm (SmqtkObject, Configurable, plugin.Pluggable):

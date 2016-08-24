@@ -35,7 +35,7 @@ before_install:
 # "Install" of SMQTK + immediate deps
 install:
   # install python dependencies to environment
-  - pip install -qr requirements.txt
+  - pip install -r requirements.txt
 
   # Build components of SMQTK
   - mkdir _build

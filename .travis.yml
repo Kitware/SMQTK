@@ -22,7 +22,7 @@ before_install:
   - export PATH=${LOCAL_ROOT}/bin:$PATH
   - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
   - mkdir ${LOCAL_ROOT}
-  # Setup local conda python
+  # Setup local conda python environment
   - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -31,13 +31,11 @@ before_install:
   - conda update -q --all
   # Useful for debugging any issues with conda
   - conda info -a
-  - conda create -q -n smqtk-$TRAVIS_PYTHON_VERSION python=$TRAVIS_PYTHON_VERSION
-  - source activate smqtk-$TRAVIS_PYTHON_VERSION
 
 # "Install" of SMQTK + immediate deps
 install:
-  - conda install -q --file requirements.conda.txt
-  - pip install -qr requirements.pip.txt
+  # install python dependencies to environment
+  - pip install -qr requirements.txt
 
   # Build components of SMQTK
   - mkdir _build
@@ -46,8 +44,7 @@ install:
   - popd
 
   # Environment var export
-  - export PATH=$PWD/_build/TPL/install/bin:$PATH
-  - export PYTHONPATH=$PWD/_build/python:$PWD/_build/TPL/install/lib/python2.7/site-packages:$PYTHONPATH
+  - source _build/setup_env.build.sh
 
 # Run tests here
 script:

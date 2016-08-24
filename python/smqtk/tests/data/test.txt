@@ -1,0 +1,1 @@
+python/smqtk/tests/data/Lenna.png

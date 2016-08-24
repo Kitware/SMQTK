@@ -65,7 +65,7 @@ Quick Start
     cd /where/things/should/go/
     git clone https://github.com/Kitware/SMQTK.git source
     # Install python dependencies to environment
-    pip install -r source/requirements.conda.txt -r source/requirements.pip.txt
+    pip install -r source/requirements.txt
     # SMQTK build
     mkdir build
     pushd build
@@ -110,55 +110,25 @@ To clone the repository locally:
 
 Installing Python dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-After deciding and activating what environment to install python packages to (system or a virtual), the python dependencies should be installed based on the :file:`requirements.*.txt` files found in the root of the source tree.
+After deciding and activating what environment to install python packages into (system or a virtual), the python dependencies should be installed based on the :file:`requirements.*.txt` files found in the root of the source tree.
 These files detail different dependencies, and their exact versions tested, for different components of SMQTK.
 
-These two files list the core required python packages (we'll explain why there are two files below):
+The the core required python packages are detailed in: :file:`requirements.txt`.
 
-* :file:`requirements.conda.txt`
-* :file:`requirements.pip.txt`
+In addition, if you wish to be able to build the Sphinx_ based documentation for the project: :file:`requirements.docs.txt`.
+These are separated because not everyone wishes or needs to build the documentation.
 
-In addition, if you wish to be able to build the Sphinx_ based documentation for the project there are two additional dependency files:
+Other optional dependencies and what plugins they correspond to are found in: :file:`requirements.optional.txt`
 
-* :file:`requirements.docs.conda.txt`
-* :file:`requirements.docs.pip.txt`
+Note that if :command:`conda` [#conda]_ is being used, not all packages listed in our requirements files may be found in :command:`conda`'s repository.
 
-Other optional dependencies and what plugins they correspond to are found in:
-
-* :file:`requirements.optional.txt`
-
-Required packages have been split up this way because :command:`conda` [#conda]_ does not provide all packages that :command:`pip` can.
-Further, not everyone wishes or needs to build the documentation.
-Optional dependencies are obviously optional and are separated from core dependencies for that reason.
-
-
-.. _installation-fromSource-InstallingPythonDeps-CondaAndPip:
-
-Installing with Conda and Pip
-"""""""""""""""""""""""""""""
-
-The three-step python dependency installation using both conda and pip, including separate environment creation, will look like the following:
+Installation of python dependencies via pip will look like the following:
 
 .. prompt:: bash
 
-    conda create -n <env_name> --file requirements.conda.txt [--file requirements.docs.conda.txt]
-    . activate <env_name>
-    pip install -r requirements.pip.txt [-r requirements.docs.pip.txt] [-r requirements.optional.txt]
+    pip install -r requirements.txt [-r requirements.docs.txt]
 
-
-Where the ``[ ... ]`` parts are optional, showing the use of multiple requirements files at once.
-
-
-Installing with just Pip
-""""""""""""""""""""""""
-
-Installation of python dependencies via pip only will look like the following:
-
-.. prompt:: bash
-
-    pip install -r requirements.conda.txt -r requirements.pip.txt [-r requirements.docs.conda.txt -r requirements.docs.pip.txt]
-
-Where the :file:`requirements.docs.*.txt` arguments are only needed if you intend to build the SMQTK documentation.
+Where the :file:`requirements.docs.txt` argument is only needed if you intend to build the SMQTK documentation.
 
 
 Building NumPy and SciPy

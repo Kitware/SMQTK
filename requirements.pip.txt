@@ -1,6 +1,0 @@
-# This is an implicit value, here for clarity
---index-url https://pypi.python.org/simple/
-
-flask-basicauth==0.2.0
-imageio==1.5
-nose-exclude==0.4.1

@@ -1,7 +1,7 @@
-import datetime
 import requests
 
 from smqtk.representation import DataElement
+from smqtk.utils.girder import GirderTokenManager
 from smqtk.utils.url import url_join
 
 
@@ -26,28 +26,31 @@ class GirderDataElement (DataElement):
         # Requests module is a basic requirement
         return True
 
-    def __init__(self, file_id, api_key=None,
-                 girder_rest_root='http://localhost:8080/api/v1'):
+    def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
+                 api_key=None):
         """
         Initialize data element to point to a specific file hosted in Girder
 
         An authorization token will be generated if an API key is provided at
         construction.  A new token will be requested if it has expired.
 
-        :param file_id:
-        :type file_id:
-        :param api_key:
+        :param file_id: ID of the file in Girder
+        :type file_id: str
+
+        :param api_root: Girder API root URL
+        :type api_root: str
+
+        :param api_key: Optional API key to request token with. Otherwise an
         :type api_key:
-        :param girder_rest_root:
-        :type girder_rest_root:
+
         """
         # TODO: Template sub-URLs for customizing model/download endpoints used?
         #       e.g. 'file/{file_id:s}' and '
         super(GirderDataElement, self).__init__()
 
         self.file_id = file_id
-        self.api_key = api_key
-        self.girder_rest_root = girder_rest_root
+        self.api_root = api_root
+        self.token_manager = GirderTokenManager(api_root, api_key)
 
         self.token = None
         self.token_expiration = None
@@ -56,70 +59,22 @@ class GirderDataElement (DataElement):
         # calls.
         self._content_type = None
 
-    def _request_token(self):
-        """
-        Request an authentication token given an API key.
-
-        Assumes ``'self.api_key`` is defined and a valid API key value.
-
-        :raises AssertionError: Expiration timestamp did not have a UTC timezone
-            specifier attacked to the end.
-
-        :return: token string and expiration timestamp
-        :rtype: str, datetime.datetime
-        """
-        self._log.debug("Requesting new authorization token.")
-        r = requests.post(
-            url_join(self.girder_rest_root, 'api_key/token'),
-            data={'key': self.api_key}
-        )
-        _handle_error(r)
-        token = r.json()['authToken']['token']
-        expires = r.json()['authToken']['expires']
-        return token, _parse_expiration_timestamp(expires)
-
-    def _check_token_expiration(self):
-        """
-        Check if our current auth token has expired or if we don't have one yet.
-        If so, request a new one. Only does anything if we have an api_key set.
-
-        Assumes ``'self.api_key`` is defined and a valid API key value.
-
-        :raises AssertionError: Expiration timestamp did not have a UTC timezone
-            specifier attacked to the end.
-        """
-        if (self.token is None
-                or self.token_expiration <= datetime.datetime.now()):
-            self._log.debug("No or expired token")
-            self.token, self.token_expiration = self._request_token()
-
-    def _get_token_header(self):
-        """
-        :return: The token authorization header if we have an api_key set.
-            Otherwise returns None.
-        :rtype: None | dict
-        """
-        if self.api_key:
-            self._check_token_expiration()
-            return {'Girder-Token': self.token}
-        return None
-
     def get_config(self):
         return {
             'file_id': self.file_id,
-            'api_key': self.api_key,
-            'girder_rest_root': self.girder_rest_root,
+            'api_root': self.api_root,
+            'api_key': self.token_manager._api_key,
         }
 
     def content_type(self):
         # Check if token has expired, if so get new one
         # Get file model, which has mimetype info
         if self._content_type is None:
-            self._log.debug("Getting content type for file %s", self.file_id)
-            token_header = self._get_token_header()
-            r = requests.get(url_join(self.girder_rest_root, 'file', self.file_id),
+            self._log.debug("Getting content type for file ID %s", self.file_id)
+            token_header = self.token_manager.get_requests_header()
+            r = requests.get(url_join(self.api_root, 'file', self.file_id),
                              headers=token_header)
-            _handle_error(r)
+            r.raise_for_status()
             self._content_type = r.json()['mimeType']
         return self._content_type
 
@@ -133,50 +88,16 @@ class GirderDataElement (DataElement):
         """
         # Check if token has expired, if so get new one
         # Download file bytes from girder
-        self._log.debug("Getting bytes for file %s", self.file_id)
-        token_header = self._get_token_header()
-        r = requests.get(url_join(self.girder_rest_root, 'file', self.file_id,
+        self._log.debug("Getting bytes for file ID %s", self.file_id)
+        token_header = self.token_manager.get_requests_header()
+        r = requests.get(url_join(self.api_root, 'file', self.file_id,
                                   'download'),
                          params={'contentDisposition': 'inline'},
                          headers=token_header)
-        _handle_error(r)
+        r.raise_for_status()
         content = r.content
         expected_length = int(r.headers['Content-Length'])
         assert len(content) == expected_length, \
             "Content received no the expected length: %d != %d (expected)" \
             % (len(content), expected_length)
         return content
-
-
-def _parse_expiration_timestamp(ts):
-    """
-    Parse datetime instance from the given expiration timestamp string.
-    Currently ignores timezone, but asserts that its '+00:00' (UTC).
-
-    :raises AssertionError: Timestamp did not have a UTC timezone specifier
-        attacked to the end.
-
-    :param ts: Token expiration timestamp string.
-    :type ts: unicode
-    :return: Datetime instance parsed from timestamp.
-    :rtype: datetime.datetime
-    """
-    # example:
-    #   2017-02-25T14:59:48.333777+00:00
-    # Ignoring timezone at the end for now and asserting that its always
-    # '+00:00' (UTC)
-    ts, tz = ts[:-6], ts[-6:]
-    assert tz == "+00:00", "Expiration UTC timezone assumption broken, " \
-                           "received: '%s'" % tz
-    dt = datetime.datetime.strptime(ts, "%Y-%m-%dT%H:%M:%S.%f")
-    return dt
-
-
-def _handle_error(r):
-    """
-    Handle if received an invalid response.
-
-    :param r: Requests response
-    :type r: requests.Response
-    """
-    r.raise_for_status()

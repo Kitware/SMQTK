@@ -9,7 +9,7 @@ Algorithms
 
   Descriptor Generators
 
-    * Added plugin for KWCNN
+    * Added KWCNN DescriptorGenerator plugin
 
 Representation
 
@@ -17,6 +17,18 @@ Representation
 
     * Added plugin for Girder-hosted data elements
 
+Scripts
+
+  * Added script to add GirderDataElements to a data set
+
 Utilities
 
-  * Started a module containing URL-base utility functions.
+  * Started a module containing URL-base utility functions
+
+
+Fixes
+-----
+
+Scripts
+
+  * Fixed IQR web app url prefix check

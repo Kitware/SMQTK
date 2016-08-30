@@ -184,6 +184,7 @@ setuptools.setup(
                 smqtk.bin.compute_many_descriptors:main',
             'computeDescriptor = smqtk.bin.computeDescriptor:main',
             'createFileIngest = smqtk.bin.createFileIngest:main',
+            'createGirderIngest = smqtk.bin.createGirderIngest:main',
             'descriptors_to_svmtrain = \
                 smqtk.bin.descriptors_to_svmtrainfile:main',
             'generate_image_transform = \

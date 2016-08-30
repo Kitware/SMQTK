@@ -94,8 +94,8 @@ def main():
 
     app_class = web_applications[application_name]
 
-    bin_utils.utility_main_helper(app_class.get_default_config, args,
-                                  skip_logging_init=True)
+    config = bin_utils.utility_main_helper(app_class.get_default_config, args,
+                                           skip_logging_init=True)
 
     host = args.host
     port = args.port and int(args.port)

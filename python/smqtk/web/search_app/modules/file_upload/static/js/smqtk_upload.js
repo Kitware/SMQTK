@@ -104,7 +104,7 @@ function FlowUploadZone(container, upload_url) {
         ondragend:   "jQuery(this).removeClass('flow-dragover');",
         ondrop:      "jQuery(this).removeClass('flow-dragover');"
     });
-    this.flow_drop.text("To see the search, drag & drop files here or");
+    this.flow_drop.text("To see the search, drag & drop files here or ");
 
     this.flow_browse = $("<a/>");
     this.flow_browse.addClass('flow-browse');
@@ -123,7 +123,7 @@ function FlowUploadZone(container, upload_url) {
     ////noinspection JSCheckFunctionSignatures
     //flow.assignBrowse($(".flow-browse-folder")[0], false, false);
     //noinspection JSCheckFunctionSignatures
-    flow.assignBrowse(this.flow_browse[0], true, false);
+    flow.assignBrowse(this.flow_browse[0], false, false);
 
     // Error message forwarding
     flow.on("error", function(message, file) {

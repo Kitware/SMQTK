@@ -33,7 +33,43 @@ girder.views.exiqrFolderWidget = girder.View.extend({
             // has a "configuration", but it may not be valid.  IQR site should
             // do validation?
             var iqr_config = this.folderModel.get('meta')['smqtk_iqr'];
-            window.open("http://localhost:5050/?config="+JSON.stringify(iqr_config));
+            iqr_config.girder_origin = window.location.origin + window.location.pathname;
+
+            var iqr_root = iqr_config['smqtk_iqr_root'];
+            // window.open(iqr_root + "/?config=" + JSON.stringify(iqr_config));
+
+            // Initialize a new
+            $.ajax({
+                url: iqr_root+"/",
+                method: "POST",
+                data: {
+                    prefix: this.folderModel.id,
+                    config: JSON.stringify(iqr_config)
+                },
+                dataType: 'json',
+                success: function (data, textStatus, jqXHR) {
+                    girder.events.trigger('g:alert', {
+                        text: "Opening IQR interface... " +
+                            "(" + JSON.stringify(data['url']) + ")",
+                        type: 'info',
+                        icon: 'info'
+                    });
+                    window.open(data['url'])
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    girder.events.trigger('g:alert', {
+                        text: 'Error initializing IQR state for current folder: '
+                            + errorThrown + " :: " + textStatus,
+                        type: 'warning',
+                        icon: 'info'
+                    });
+                }
+            });
+            girder.events.trigger('g:alert', {
+                text: 'Initializing IQR state for this folder...',
+                type: 'info',
+                icon: 'info'
+            });
         }
     }
 

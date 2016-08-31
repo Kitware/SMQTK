@@ -48,7 +48,6 @@ class LoginMod (SmqtkObject, flask.Blueprint):
                 'login.html',
                 next=flask.request.args.get('next', '/'),
                 username=flask.request.args.get('username', ''),
-                **parent_app.nav_bar_content()
             )
 
         @self.route('/login.passwd', methods=['post'])
@@ -89,9 +88,9 @@ class LoginMod (SmqtkObject, flask.Blueprint):
             """
             if 'user' in flask.session:
                 del flask.session['user']
-                return flask.redirect("/home")
             else:
                 flask.flash("No user currently logged in!", "error")
+            return flask.redirect("/")
 
     #
     # Utility methods

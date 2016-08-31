@@ -117,7 +117,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
             # self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
             return flask.render_template("index.html",
-                                         nav_content=[])
+                                         instance_keys=self.instances.keys())
 
         @self.route('/', methods=['POST'])
         @cross_origin(origins='*', vary_header=True)

@@ -13,8 +13,13 @@ girder.views.exiqrFolderWidget = girder.View.extend({
     render: function () {
         var folder_meta = this.folderModel.get('meta');
 
-        if( folder_meta['smqtk_iqr'] !== undefined )
+        // Must have both metadata fields to be considered an IQR-able folder
+        if( folder_meta['smqtk_iqr'] !== undefined &&
+            folder_meta['smqtk_iqr_root'] !== undefined )
         {
+            // TODO: Check if IQR root URL is accessible (try GET on root)
+            // TODO: Check if IQR instance for this folder already exists
+
             this.$el.html(girder.templates.exiqr_folderView());
         }
         else
@@ -32,13 +37,11 @@ girder.views.exiqrFolderWidget = girder.View.extend({
             // configuration.  Should only get to this point the parent folder
             // has a "configuration", but it may not be valid.  IQR site should
             // do validation?
-            var iqr_config = this.folderModel.get('meta')['smqtk_iqr'];
-            iqr_config.girder_origin = window.location.origin + window.location.pathname;
+            var folder_meta = this.folderModel.get('meta'),
+                iqr_config = folder_meta['smqtk_iqr'],
+                iqr_root = folder_meta['smqtk_iqr_root'];
 
-            var iqr_root = iqr_config['smqtk_iqr_root'];
-            // window.open(iqr_root + "/?config=" + JSON.stringify(iqr_config));
-
-            // Initialize a new
+            // Call to initialize IQR config + open in new window
             $.ajax({
                 url: iqr_root+"/",
                 method: "POST",
@@ -58,8 +61,9 @@ girder.views.exiqrFolderWidget = girder.View.extend({
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     girder.events.trigger('g:alert', {
-                        text: 'Error initializing IQR state for current folder: '
-                            + errorThrown + " :: " + textStatus,
+                        text: 'Error initializing IQR state for current folder'
+                            + " :: " + errorThrown
+                            + " :: " + textStatus,
                         type: 'warning',
                         icon: 'info'
                     });

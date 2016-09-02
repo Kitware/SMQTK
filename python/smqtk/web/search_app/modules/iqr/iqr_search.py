@@ -14,15 +14,13 @@ import flask
 import PIL.Image
 
 from smqtk.algorithms.descriptor_generator import \
-    get_descriptor_generator_impls
+    get_descriptor_generator_impls, DFLT_DESCRIPTOR_FACTORY
 from smqtk.algorithms.nn_index import get_nn_index_impls
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.iqr import IqrController, IqrSession
 from smqtk.iqr.iqr_session import DFLT_REL_INDEX_CONFIG
 from smqtk.representation import get_data_set_impls, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
 from smqtk.utils import Configurable
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
@@ -37,11 +35,8 @@ __author__ = 'paul.tunison@kitware.com'
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DFLT_MEMORY_DESCR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement,
-                                                     {})
 
-
-class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
+class IqrSearch (SmqtkObject, flask.Flask, Configurable):
     """
     IQR Search Tab blueprint
 
@@ -129,8 +124,8 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
 
     def __init__(self, parent_app, name, data_set, descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,
-                 descriptor_factory=DFLT_MEMORY_DESCR_FACTORY,
-                 url_prefix=None, pos_seed_neighbors=500):
+                 descriptor_factory=DFLT_DESCRIPTOR_FACTORY,
+                 pos_seed_neighbors=500):
         """
         Initialize a generic IQR Search module with a single descriptor and
         indexer.
@@ -139,7 +134,7 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
         :type name: str
 
         :param parent_app: Parent containing flask app instance
-        :type parent_app: smqtk.web.search_app.app.search_app
+        :type parent_app: smqtk.web.search_app.IqrSearchDispatcher
 
         :param data_set: DataSet instance that references indexed data.
         :type data_set: SMQTK.representation.DataSet
@@ -184,16 +179,10 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
         :raises ValueError: Invalid Descriptor or indexer type
 
         """
-        # make sure URL prefix starts with a slash
-        if not url_prefix.startswith('/'):
-            url_prefix = '/' + url_prefix
-        url_prefix = url_prefix.rstrip('/')
-
         super(IqrSearch, self).__init__(
-            name, import_name=__name__,
+            import_name=__name__,
             static_folder=os.path.join(SCRIPT_DIR, "static"),
             template_folder=os.path.join(SCRIPT_DIR, "templates"),
-            url_prefix=url_prefix
         )
 
         self._parent_app = parent_app
@@ -225,6 +214,7 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
                                         self.upload_work_dir,
                                         url_prefix='/uploader')
         self.register_blueprint(self.mod_upload)
+        self.register_blueprint(parent_app.module_login)
 
         # IQR Session control and resources
         # TODO: Move session management to database/remote?
@@ -257,12 +247,16 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
         @self.route("/")
         @self._parent_app.module_login.login_required
         def index():
+            # TODO: Add login handling if passed girder credentials/api_key/token?
+
+            # Stripping left '/' from blueprint modules in order to make sure
+            # the paths are relative to our base.
             r = {
                 "module_name": self.name,
-                "uploader_url": self.mod_upload.url_prefix,
-                "uploader_post_url": self.mod_upload.upload_post_url(),
+                "uploader_url": self.mod_upload.url_prefix.lstrip('/'),
+                "uploader_post_url": self.mod_upload.upload_post_url().lstrip('/'),
             }
-            r.update(parent_app.nav_bar_content())
+            self._log.debug("Uploader URL: %s", r['uploader_url'])
             # noinspection PyUnresolvedReferences
             return flask.render_template("iqr_search_index.html", **r)
 
@@ -288,6 +282,7 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
 
                     # UUIDs of example positive descriptors
                     "ex_pos": tuple(self._iqr_example_pos_descr[iqrs.uuid]),
+                    "ex_neg": (),  # No user negative examples supported yet
 
                     "initialized": iqrs.working_index.count() > 0,
                     "index_size": iqrs.working_index.count(),
@@ -689,22 +684,6 @@ class IqrSearch (SmqtkObject, flask.Blueprint, Configurable):
             'rel_index_config': self._rel_index_config,
             'descriptor_factory': self._descr_elem_factory.get_config(),
         }
-
-    def register_blueprint(self, blueprint, **options):
-        """ Add sub-blueprint to a blueprint.
-        :param blueprint: Nested blueprint instance to register.
-        """
-        # Defer registration of blueprint until after this blueprint has been
-        # registered. Needed to do this because of a bad thing that happens
-        # that I don't remember any more.
-        def deferred(state):
-            if blueprint.url_prefix:
-                blueprint.url_prefix = self.url_prefix + blueprint.url_prefix
-            else:
-                blueprint.url_prefix = self.url_prefix
-            state.app.register_blueprint(blueprint, **options)
-
-        self.record(deferred)
 
     @property
     def work_dir(self):

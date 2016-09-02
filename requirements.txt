@@ -5,6 +5,7 @@ coverage==4.2
 flask==0.11.1
 flask-basicauth==0.2.0
 flask-login==0.3.2
+Flask-Cors==3.0.0
 imageio==1.5
 jinja2==2.8
 mock==2.0.0

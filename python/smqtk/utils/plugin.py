@@ -323,6 +323,7 @@ def from_plugin_config(config, plugin_map, *args):
 
     :raises KeyError: There was no ``type`` field to inspect, or there was no
         parameter specification for the specified ``type``.
+    :raises ValueError: Type field did not specify any implementation key.
     :raises TypeError: Insufficient/incorrect initialization parameters were
         specified for the specified ``type``'s constructor.
 
@@ -341,6 +342,10 @@ def from_plugin_config(config, plugin_map, *args):
 
     """
     t = config['type']
+    if t is None:
+        options = set(config.keys()) - {'type'}
+        raise ValueError("No implementation type specified. Options: %s"
+                         % options)
     cls = plugin_map[t]
     # noinspection PyUnresolvedReferences
     return cls.from_config(config[t], *args)

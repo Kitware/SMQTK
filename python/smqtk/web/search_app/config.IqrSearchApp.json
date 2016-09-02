@@ -4,10 +4,9 @@
         "BASIC_AUTH_USERNAME": "demo",
         "SECRET_KEY": "MySuperUltraSecret"
     },
-    "iqr_tabs": [
-        {
+    "iqr_tabs": {
+        "csift": {
             "name": "CSIFT",
-            "url_prefix": "/csift",
             "working_directory": "workdir",
             "data_set": {
                 "DataMemorySet": {
@@ -20,8 +19,8 @@
                 "type": "DataFileSet"
             },
             "descriptor_factory": {
-                 "DescriptorMemoryElement": {},
-                 "type": "DescriptorMemoryElement"
+                "DescriptorMemoryElement": {},
+                "type": "DescriptorMemoryElement"
             },
             "descr_generator": {
                 "ColorDescriptor_Image_csift": {
@@ -82,7 +81,7 @@
                 "type": "LibSvmHikRelevancyIndex"
             }
         }
-    ],
+    },
     "mongo": {
         "database": "smqtk",
         "server": "127.0.0.1:27017"

@@ -2,5 +2,5 @@
 ---
 name: SQMTK External IQR
 description: Link to external SMQTK IQR service from folder of data items,
-  passing folder specified configuration options for the session.
+  passing folder metadata specified configuration options for the session.
 version: "0.1"

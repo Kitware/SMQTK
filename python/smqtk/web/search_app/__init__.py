@@ -25,9 +25,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class IqrSearchDispatcher (SmqtkWebApp):
     """
-    Application that dispatches new IQR application instances per path. We can
-    be seeded with a set amount of instances with the ``iqr_tabs`` configuration
-    list. New instances can be dynamically added via a POST to the url root
+    Application that dispatches to IQR application instances per sub-path.  We
+    can be seeded with a set amount of instances with the ``iqr_tabs``
+    configuration section, which consists of a prefix key (what would be used in
+    the URL) to the configuration for that instance.  A ``__default__`` is
+    provided upon configuration generation to act as a template.  The
+    ``__default__`` value is ignored at runtime.
+
+    New IQR instances can be dynamically added via a POST to the url root
     (``/``).
     """
 

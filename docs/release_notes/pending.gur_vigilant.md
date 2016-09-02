@@ -34,7 +34,8 @@ Web
 
   * Added directory for Girder plugins and added an initial one that, given
     a folder with the correct metadata attached, can initialize an IQR
-    instance based on that configuration, and then link to IQR web interface.
+    instance based on that configuration, and then link to IQR web interface
+    (uses existing/updated IqrSearch webapp).
 
 
 Fixes

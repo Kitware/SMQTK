@@ -46,7 +46,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         """Return a boolean for if the descriptor generator is usable."""
         valid = kwcnn is not None
         if not valid:
-            cls.logger().debug("KWCNN python module cannot be imported")
+            cls.get_logger().debug("KWCNN python module cannot be imported")
         return valid
 
     def __init__(self, network_model_filepath=DEFAULT_MODEL_FILEPATH,

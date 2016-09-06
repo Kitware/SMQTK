@@ -48,7 +48,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
 
     @classmethod
     def is_usable(cls):
-        log = cls.logger()
+        log = cls.get_logger()
 
         if not hasattr(CaffeDefaultImageNet, "_is_usable_cache"):
             CaffeDefaultImageNet._is_usable_cache = True
@@ -330,7 +330,7 @@ class CaffeDefaultImageNet (DescriptorGenerator):
             self._log.debug("CNN call args: %s", call_args)
 
             pipe = subprocess.PIPE
-            if self.logger().isEnabledFor(logging.DEBUG):
+            if self.get_logger().isEnabledFor(logging.DEBUG):
                 # have process push output to console
                 pipe = None
             proc_cnn = subprocess.Popen(call_args, stdout=pipe, stderr=pipe)

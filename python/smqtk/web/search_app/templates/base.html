@@ -165,11 +165,13 @@
 
         <footer>
             {#- DEBUG #}
+            {%- if debug %}
             <div class="container-fluid">
                 <hr>
                 <h2>Session contents</h2>
                 <h4>{{ session }}</h4>
             </div>
+            {%- endif %}
 
             <hr>
             <center>

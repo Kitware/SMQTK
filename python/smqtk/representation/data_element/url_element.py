@@ -24,7 +24,7 @@ class DataUrlElement (DataElement):
             _ = r.content
             return True
         except Exception, ex:
-            cls.logger().warning(
+            cls.get_logger().warning(
                 "DataUrlElement not usable, cannot connect to "
                 "http://github.com"
             )

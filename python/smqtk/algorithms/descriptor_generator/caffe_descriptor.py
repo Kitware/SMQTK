@@ -37,7 +37,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
     def is_usable(cls):
         valid = caffe is not None
         if not valid:
-            cls.logger().debug("Caffe python module cannot be imported")
+            cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
     def __init__(self, network_prototxt_filepath, network_model_filepath,

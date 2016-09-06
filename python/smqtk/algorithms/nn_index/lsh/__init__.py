@@ -129,7 +129,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 plugin.from_plugin_config(merged['hash_index'],
                                           get_hash_index_impls())
         else:
-            cls.logger().debug("No HashIndex impl given. Passing ``None``.")
+            cls.get_logger().debug("No HashIndex impl given. Passing ``None``.")
             merged['hash_index'] = None
 
         # remove possible comment added by default generator
@@ -407,10 +407,10 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                     t = time.time()
                     if t - l >= 1.0:
                         n = len(hash2uuid)
-                        cls.logger().debug("yielding %f hashes per second "
+                        cls.get_logger().debug("yielding %f hashes per second "
                                            "(%d of %d total)",
-                                           n / (t - s), n,
-                                           descriptor_index.count())
+                                               n / (t - s), n,
+                                               descriptor_index.count())
                         l = t
 
                 hash2uuid[h_int].add(d.uuid())
@@ -419,7 +419,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # Scan through above function to fill in hash2uuid mapping
             list(iter_add_hashes())
         else:
-            cls.logger().debug("Building hash index from unique hash codes")
+            cls.get_logger().debug("Building hash index from unique hash codes")
             hash_index.build_index(iter_add_hashes())
 
         return hash2uuid

@@ -47,17 +47,20 @@ girder.views.exiqrFolderWidget = girder.View.extend({
                 method: "POST",
                 data: {
                     prefix: this.folderModel.id,
-                    config: JSON.stringify(iqr_config)
+                    config: JSON.stringify(iqr_config),
+
+                    girder_token: girder.currentToken,
+                    girder_origin: window.location.origin,
+                    girder_apiRoot: girder.apiRoot
                 },
                 dataType: 'json',
                 success: function (data, textStatus, jqXHR) {
-                    girder.events.trigger('g:alert', {
-                        text: "Opening IQR interface... " +
-                            "(" + JSON.stringify(data['url']) + ")",
-                        type: 'info',
-                        icon: 'info'
-                    });
-                    window.open(data['url'])
+
+                    window.open(data['url']
+                        + "?girder_token="+girder.currentToken
+                        + "&girder_origin="+window.location.origin
+                        + "&girder_apiRoot="+girder.apiRoot
+                    );
                 },
                 error: function (jqXHR, textStatus, errorThrown) {
                     girder.events.trigger('g:alert', {

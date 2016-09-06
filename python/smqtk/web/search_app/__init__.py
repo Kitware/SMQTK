@@ -122,15 +122,19 @@ class IqrSearchDispatcher (SmqtkWebApp):
             # self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
             return flask.render_template("index.html",
-                                         instance_keys=self.instances.keys())
+                                         instance_keys=self.instances.keys(),
+                                         debug=self.debug)
 
         @self.route('/', methods=['POST'])
         @cross_origin(origins='*', vary_header=True)
+        @self.module_login.login_required
         def add_instance():
             """
-            Initialize new IQR instance given an ID for that instance, the
-            configuration for it, and the girder
+            Initialize new IQR instance given an ID for that instance, and the
+            configuration for it.
             """
+            # TODO: Something where only user that created instance can access
+            #       it?
             prefix = flask.request.form['prefix']
             config = json.loads(flask.request.form['config'])
 
@@ -173,6 +177,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
 
                 a = IqrSearch.from_config(config, self)
                 a.config.update(self.config)
+                a.secret_key = self.secret_key
                 a.session_interface = self.session_interface
                 a.jinja_env.add_extension('jinja2.ext.do')
 

@@ -223,7 +223,7 @@ class ItqFunctor (LshFunctor):
             raise RuntimeError("Model components have already been loaded.")
 
         dbg_report_interval = None
-        if self.logger().getEffectiveLevel() <= logging.DEBUG:
+        if self.get_logger().getEffectiveLevel() <= logging.DEBUG:
             dbg_report_interval = 1.0  # seconds
         if not hasattr(descriptors, "__len__"):
             self._log.info("Creating sequence from iterable")

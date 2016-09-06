@@ -23,7 +23,8 @@ Scripts
 
 Utilities
 
-  * Started a module containing URL-base utility functions
+  * Started a module containing URL-base utility functions, initially adding a
+    url-join function similar in capability to ``os.path.join``.
 
 Web
 
@@ -37,6 +38,13 @@ Web
     instance based on that configuration, and then link to IQR web interface
     (uses existing/updated IqrSearch webapp).
 
+  * Added ability to automatically login via a valid Girder token and parent
+    Girder URL for token/user verification. This primarilly allows restricted
+    external IQR instance creation and automatic login from Girder redirects.
+
+  * Mongo session information block at bottom IQR app page now only shows up
+    when running server in debug mode.
+
 
 Fixes
 -----
@@ -44,6 +52,11 @@ Fixes
 Scripts
 
   * Fixed IQR web app url prefix check
+
+Utilities
+
+  * ``SmqtkObject`` logger class accessor name changed to not conflict with
+    ``flask.Flask`` logger instance attribute.
 
 Web
 

@@ -51,7 +51,7 @@ class PostgresDescriptorElement (DescriptorElement):
     @classmethod
     def is_usable(cls):
         if psycopg2 is None:
-            cls.logger().warning("Not usable. Requires psycopg2 module")
+            cls.get_logger().warning("Not usable. Requires psycopg2 module")
             return False
         return True
 

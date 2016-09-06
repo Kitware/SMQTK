@@ -20,7 +20,7 @@ class SmqtkObject (object):
     """
 
     @classmethod
-    def logger(cls):
+    def get_logger(cls):
         """
         :return: logging object for this class
         :rtype: logging.Logger
@@ -33,7 +33,7 @@ class SmqtkObject (object):
         :return: logging object for this class as a property
         :rtype: logging.Logger
         """
-        return self.logger()
+        return self.get_logger()
 
 
 def ncr(n, r):

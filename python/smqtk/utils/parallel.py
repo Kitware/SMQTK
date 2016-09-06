@@ -231,7 +231,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
     def _log(self):
         # Changing naming of logger returned from default
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def __repr__(self):
@@ -411,7 +411,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
     def _log(self):
         # Changing naming of logger returned from default
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def stop(self):
@@ -502,7 +502,7 @@ class _Worker (SmqtkObject):
     @property
     def _log(self):
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def _make_event(self):

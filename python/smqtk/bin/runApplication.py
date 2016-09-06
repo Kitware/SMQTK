@@ -111,6 +111,7 @@ def main():
         BasicAuth(app)
     app.config['DEBUG'] = debug_server
 
+    log.info("Starting application")
     app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
 

@@ -1,5 +1,5 @@
 """
-IQR Search blueprint module
+IQR Search sub-application module
 """
 
 import json

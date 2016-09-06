@@ -58,6 +58,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
     """
 
+    # TODO: User access white/black-list? See ``search_app/__init__.py``:L135
+
     @classmethod
     def get_default_config(cls):
         d = super(IqrSearch, cls).get_default_config()
@@ -247,8 +249,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self.route("/")
         @self._parent_app.module_login.login_required
         def index():
-            # TODO: Add login handling if passed girder credentials/api_key/token?
-
             # Stripping left '/' from blueprint modules in order to make sure
             # the paths are relative to our base.
             r = {

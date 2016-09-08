@@ -118,6 +118,7 @@ setuptools.setup(
     package_data={
         'smqtk': find_package_datafiles(os.path.join(PYTHON_SRC, 'smqtk'))
     },
+    data_files=list_directory_files('etc'),
 
     setup_requires=[
         'setuptools',

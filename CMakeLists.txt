@@ -75,11 +75,6 @@ install(DIRECTORY   docs/
         DESTINATION share/doc/SMQTK
         )
 
-install(FILES requirements.conda.txt
-              requirements.pip.txt
-        DESTINATION share/smqtk
-        )
-
 # Should only be required for users installing to a non-standard location
 install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
         DESTINATION .

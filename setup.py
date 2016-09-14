@@ -127,6 +127,7 @@ setuptools.setup(
         'flask',
         'flask-basicauth',
         'flask-login',
+        'Flask-Cors',
         'imageio',
         'jinja2',
         'matplotlib',

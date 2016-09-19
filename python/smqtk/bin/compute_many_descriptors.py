@@ -4,7 +4,8 @@ to the configured descriptor generator to skip content that does not match
 the accepted types. Optionally, we can additionally filter out image content
 whose image bytes we cannot load via ``PIL.Image.open``.
 """
-
+import collections
+import csv
 import io
 import logging
 import os
@@ -15,6 +16,7 @@ from smqtk.algorithms import get_descriptor_generator_impls
 from smqtk.compute_functions import compute_many_descriptors
 from smqtk.representation import (
     DescriptorElementFactory,
+    get_data_set_impls,
     get_descriptor_index_impls,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -32,7 +34,9 @@ def default_config():
             plugin.make_config(get_descriptor_generator_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "descriptor_index":
-            plugin.make_config(get_descriptor_index_impls())
+            plugin.make_config(get_descriptor_index_impls()),
+        "optional_data_set":
+            plugin.make_config(get_data_set_impls())
     }
 
 
@@ -76,6 +80,15 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     descriptor_index = plugin.from_plugin_config(c['descriptor_index'],
                                                  get_descriptor_index_impls())
 
+    data_set = None
+    if c['optional_data_set']['type'] is None:
+        log.info("Not saving loaded data elements to data set")
+    else:
+        log.info("Initializing data set to append to")
+        #: :type: smqtk.representation.DataSet
+        data_set = plugin.from_plugin_config(c['optional_data_set'],
+                                             get_data_set_impls())
+
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
     #: :type: smqtk.algorithms.DescriptorGenerator
@@ -108,6 +121,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
             return None
 
     def iter_valid_elements():
+        data_elements = collections.deque()
         valid_files_filter = parallel.parallel_map(is_valid_element,
                                                    file_paths,
                                                    name="check-file-type",
@@ -115,6 +129,19 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
         for dfe in valid_files_filter:
             if dfe is not None:
                 yield dfe
+                if data_set is not None:
+                    data_elements.append(dfe)
+                    if batch_size and len(data_elements) == batch_size:
+                        log.debug("Adding data element batch to set (size: %d)",
+                                  len(data_elements))
+                        data_set.add_data(*data_elements)
+                        data_elements.clear()
+        # elements only collected if we have a data-set configured, so add any
+        # still in the deque to the set
+        if data_elements:
+            log.debug("Adding data elements to set (size: %d",
+                      len(data_elements))
+            data_set.add_data(*data_elements)
 
     log.info("Computing descriptors")
     m = compute_many_descriptors(iter_valid_elements(),
@@ -126,14 +153,14 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
     # Recording computed file paths and associated file UUIDs (SHA1)
     cf = open(checkpoint_filepath, 'w')
+    cf_writer = csv.writer(cf)
     try:
         rps = [0] * 7
         for fp, descr in m:
-            cf.write("{:s},{:s}\n".format(
-                fp, descr.uuid()
-            ))
+            cf_writer.writerow([fp, descr.uuid()])
             report_progress(log.debug, rps, 1.)
     finally:
+        del cf_writer
         cf.close()
 
     log.info("Done")

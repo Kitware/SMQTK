@@ -5,6 +5,7 @@ the accepted types. Optionally, we can additionally filter out image content
 whose image bytes we cannot load via ``PIL.Image.open``.
 """
 import collections
+import csv
 import io
 import logging
 import os
@@ -152,14 +153,14 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
     # Recording computed file paths and associated file UUIDs (SHA1)
     cf = open(checkpoint_filepath, 'w')
+    cf_writer = csv.writer(cf)
     try:
         rps = [0] * 7
         for fp, descr in m:
-            cf.write("{:s},{:s}\n".format(
-                fp, descr.uuid()
-            ))
+            cf_writer.writerow([fp, descr.uuid()])
             report_progress(log.debug, rps, 1.)
     finally:
+        del cf_writer
         cf.close()
 
     log.info("Done")

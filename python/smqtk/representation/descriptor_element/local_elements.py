@@ -134,13 +134,15 @@ class DescriptorFileElement (DescriptorElement):
             directory.
         :type save_dir: str | unicode
 
-        :param subdir_split: If a positive integer, this will cause us to store
-            the vector file in a subdirectory under the ``save_dir`` that was
-            specified. The integer value specifies the number of splits that we
-            will make in the stringification of this descriptor's UUID. If there
-            happen to be dashes in this stringification, we will remove them
-            (as would happen if given an uuid.UUID instance as the uuid
-            element).
+        :param subdir_split: If a positive integer and greater than 1, this will
+            cause us to store the vector file in a subdirectory under the
+            ``save_dir`` based on our ``uuid``. The integer value specifies the
+            number of splits that we will make in the stringification of this
+            descriptor's UUID. The last split component is left off when
+            determining the save directory (thus the >1 above).
+
+            Dashes are stripped from this string (as would happen if given an
+            uuid.UUID instance as the uuid element).
         :type subdir_split: None | int
 
         """
@@ -150,10 +152,10 @@ class DescriptorFileElement (DescriptorElement):
 
         # Saving components
         self._subdir_split = subdir_split
-        if subdir_split and int(subdir_split) > 0:
+        if subdir_split and int(subdir_split) > 1:
             save_dir = osp.join(self._save_dir,
                                 *partition_string(str(uuid).replace('-', ''),
-                                                  int(subdir_split))
+                                                  int(subdir_split))[:-1]
                                 )
         else:
             save_dir = self._save_dir

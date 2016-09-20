@@ -50,7 +50,8 @@ class Classifier (SmqtkAlgorithm):
         :param d: Input descriptor to classify
         :type d: smqtk.representation.DescriptorElement
 
-        :param factory: Classification element factory
+        :param factory: Classification element factory. The default factory
+            yields MemoryClassificationElement instances.
         :type factory: smqtk.representation.ClassificationElementFactory
 
         :param overwrite: Recompute classification of the input descriptor and
@@ -83,7 +84,8 @@ class Classifier (SmqtkAlgorithm):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param factory: Classifier element factory to use for element
-            generation.
+            generation. The default factory yields MemoryClassificationElement
+            instances.
         :type factory: smqtk.representation.ClassificationElementFactory
 
         :param overwrite: Recompute classification of the input descriptor and

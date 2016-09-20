@@ -37,15 +37,15 @@ class TestDescriptorFileElement (unittest.TestCase):
     def test_vec_filepath_generation(self):
         d = DescriptorFileElement('test', 'abcd', '/base', 4)
         ntools.assert_equal(d._vec_filepath,
-                            '/base/a/b/c/d/test.abcd.vector.npy')
+                            '/base/a/b/c/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 2)
         ntools.assert_equal(d._vec_filepath,
-                            '/base/ab/cd/test.abcd.vector.npy')
+                            '/base/ab/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 1)
         ntools.assert_equal(d._vec_filepath,
-                            '/base/abcd/test.abcd.vector.npy')
+                            '/base/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 0)
         ntools.assert_equal(d._vec_filepath,
@@ -62,12 +62,12 @@ class TestDescriptorFileElement (unittest.TestCase):
     def test_vector_set(self, mock_scd, mock_save):
         d = DescriptorFileElement('test', 1234, '/base', 4)
         ntools.assert_equal(d._vec_filepath,
-                            '/base/1/2/3/4/test.1234.vector.npy')
+                            '/base/1/2/3/test.1234.vector.npy')
 
         v = numpy.zeros(16)
         d.set_vector(v)
-        mock_scd.assert_called_with('/base/1/2/3/4')
-        mock_save.assert_called_with('/base/1/2/3/4/test.1234.vector.npy', v)
+        mock_scd.assert_called_with('/base/1/2/3')
+        mock_save.assert_called_with('/base/1/2/3/test.1234.vector.npy', v)
 
     @mock.patch('smqtk.representation.descriptor_element.local_elements'
                 '.numpy.load')

@@ -79,6 +79,8 @@ from smqtk.representation import (
     ClassificationElementFactory,
     get_descriptor_index_impls,
 )
+from smqtk.representation.classification_element.memory import \
+    MemoryClassificationElement
 from smqtk.utils import (
     bin_utils,
     file_utils,
@@ -100,8 +102,6 @@ def default_config():
                 plugin.make_config(get_supervised_classifier_impls()),
             "descriptor_index":
                 plugin.make_config(get_descriptor_index_impls()),
-            "classification_factory":
-                ClassificationElementFactory.get_default_config(),
         },
         "cross_validation": {
             "truth_labels": None,
@@ -158,8 +158,12 @@ def classifier_kfold_validation():
     log.info("Loading classifier configuration")
     #: :type: dict
     classifier_config = config['plugins']['supervised_classifier']
-    classification_factory = ClassificationElementFactory.from_config(
-        config['plugins']['classification_factory']
+
+    # Always use in-memory ClassificationElement since we are retraining the
+    # classifier and don't want possible element caching
+    #: :type: ClassificationElementFactory
+    classification_factory = ClassificationElementFactory(
+        MemoryClassificationElement, {}
     )
 
     log.info("Loading truth data")

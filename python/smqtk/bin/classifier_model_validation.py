@@ -218,7 +218,6 @@ def main():
             log.info("Saving UUID Confusion Matrix: %s", output_uuid_cm)
             json.dump(uuid_cm, f, indent=2, separators=(',', ': '))
 
-
     #
     # Create PR/ROC curves via scikit learn tools
     #
@@ -340,6 +339,7 @@ def format_plt(title, x_label, y_label):
 
 
 def select_color_marker(i):
+    """ Return index-based marker/color format for plotting """
     colors = ['b', 'g', 'r', 'c', 'y', 'k']
     style = ['-', '--', '-.', ':']
     ci = i % len(colors)
@@ -348,7 +348,8 @@ def select_color_marker(i):
 
 
 def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
-               label2classifications, plot_ci, plot_ci_alpha):
+               label2classifications, plot_ci, plot_ci_alpha,
+               plot_ci_make_poly):
     """
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays of the curve plot.
@@ -361,6 +362,11 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     :type label2classifications:
         dict[str, set[smqtk.representation.ClassificationElement]]
 
+    :param plot_ci_make_poly: Function that takes x, y, and their upper and
+        lower confidence interval estimations, and returns a plt.Polygon
+        correctly for the curve we're trying to draw.
+    :type plot_ci_make_poly: (x, x_l, x_u, y, y_l, y_u, **poly_args) -> plt.Polygon
+
     """
     # Create curves for each label and then for overall.
 
@@ -368,69 +374,41 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     for s in label2classifications.values():
         all_classifications.update(s)
 
-    # collection of all binary truth-probability pairs
-    # This is equivalent of the y_test.ravel() and y_score.ravel() seen in
-    #   sklearn examples.
-    g_truth = []
-    g_proba = []
-
     plt.clf()
-    plt.figure(figsize=(15, 12))
-    line_i = 0
-    for l in label2classifications:
+    plt.figure(figsize=(15, 12), dpi=72)
+    for i, l in enumerate(sorted(label2classifications)):
         # record binary truth relation with respect to label `l`
         l_truth = []
         l_proba = []
+        # Get classification probability and truth label for all tested elements
         for c in all_classifications:
             l_truth.append(int(c in label2classifications[l]))
             l_proba.append(c[l])
-        assert len(l_truth) == len(l_proba) == len(all_classifications)
+        assert len(l_truth) == len(l_proba) == len(all_classifications), \
+            "Somehow didn't wind up with truth/proba values for all " \
+            "classification elements"
         x, y, t = skl_curve_func(numpy.array(l_truth), numpy.array(l_proba))
         auc = sklearn.metrics.auc(x, y)
-        m = select_color_marker(line_i)
+        m = select_color_marker(i)
         plt.plot(x, y, m, label="%s (auc=%f)" % (l, auc))
 
         if plot_ci:
             # Confidence interval calculation using Wilson's score interval
             x_u, x_l = curve_wilson_ci(x, len(l_proba))
             y_u, y_l = curve_wilson_ci(y, len(l_proba))
-            ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
-                                  facecolor=m[0], edgecolor=m[0],
-                                  alpha=plot_ci_alpha)
+
+            # For each xy point, combine CI upper/lower bounds based on curve
+            # being drawn. I.e. zip(x_l, y_l) for PR curve, but zip(x_u, y_l)
+            # for ROC curve.
+            ci_poly = plot_ci_make_poly(x, x_l, x_u, y, y_l, y_u,
+                                        facecolor=m[0], edgecolor=m[0],
+                                        alpha=plot_ci_alpha)
             plt.gca().add_patch(ci_poly)
 
-        format_plt(title + ' - ' + l + ' vs. Rest', xlabel, ylabel)
-        fp_segs = output_filepath.split('.')
-        fp = '.'.join(fp_segs[:-1] + [l] + [fp_segs[-1]])
-        log.info("Saving: %s", fp)
-        plt.savefig(fp)
-        plt.clf()
-
-        g_truth.extend(l_truth)
-        g_proba.extend(l_proba)
-
-        line_i += 1
-
-    # Micro-average curve and area
-    x, y, t = skl_curve_func(numpy.array(g_truth), numpy.array(g_proba))
-    auc = sklearn.metrics.auc(x, y)
-    m = select_color_marker(line_i)
-    plt.plot(x, y, m, label="Micro-average (auc=%f)" % auc)
-
-    if plot_ci:
-        # Confidence interval generation
-        x_u, x_l = curve_wilson_ci(x, len(g_proba))
-        y_u, y_l = curve_wilson_ci(y, len(g_proba))
-        ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
-                              facecolor=m[0], edgecolor=m[0],
-                              alpha=plot_ci_alpha)
-        plt.gca().add_patch(ci_poly)
-
-    format_plt(title + ' - Micro-average', xlabel, ylabel)
-    fp_segs = output_filepath.split('.')
-    fp = '.'.join(fp_segs[:-1] + ['all_classes'] + [fp_segs[-1]])
-    log.info("Saving: %s", fp)
-    plt.savefig(fp)
+    format_plt(title + ' - Class vs. Rest', xlabel, ylabel)
+    log.info("Saving: %s", output_filepath)
+    plt.savefig(output_filepath)
+    plt.clf()
 
 
 def make_pr_curves(label2classifications, output_filepath, plot_ci,
@@ -440,9 +418,21 @@ def make_pr_curves(label2classifications, output_filepath, plot_ci,
                                                          pos_label=1)
         return r, p, t
 
+    def make_ci_poly(x, x_l, x_u, y, y_l, y_u, **poly_kwds):
+        x_l = numpy.min([x, x_l], 0)
+        x_u = numpy.max([x, x_u], 0)
+        y_l = numpy.min([y, y_l], 0)
+        y_u = numpy.max([y, y_u], 0)
+        # Add points to flush ends with plot border
+        poly_points = (
+            [(x[0], y_l[0])] + zip(x_l, y_l) + [(x[-1], y_l[-1])] +
+            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) + [(x[0], y_u[0])]
+        )
+        return plt.Polygon(poly_points, **poly_kwds)
+
     log = logging.getLogger(__name__)
     make_curve(log, skl_pr_curve, "PR", "Recall", "Precision", output_filepath,
-               label2classifications, plot_ci, plot_ci_alpha)
+               label2classifications, plot_ci, plot_ci_alpha, make_ci_poly)
 
 
 def make_roc_curves(label2classifications, output_filepath, plot_ci,
@@ -451,10 +441,21 @@ def make_roc_curves(label2classifications, output_filepath, plot_ci,
         fpr, tpr, t = sklearn.metrics.roc_curve(truth, proba, pos_label=1)
         return fpr, tpr, t
 
+    def make_ci_poly(x, x_l, x_u, y, y_l, y_u, **poly_kwds):
+        x_l = numpy.min([x, x_l], 0)
+        x_u = numpy.max([x, x_u], 0)
+        y_l = numpy.min([y, y_l], 0)
+        y_u = numpy.max([y, y_u], 0)
+        poly_points = (
+            [(x[0], y_u[0])] + zip(x_l, y_u) + [(x[-1], y_u[-1])] +
+            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) + [(x[0], y_l[0])]
+        )
+        return plt.Polygon(poly_points, **poly_kwds)
+
     log = logging.getLogger(__name__)
     make_curve(log, skl_roc_curve, "ROC", "False Positive Rate",
                "True Positive Rate", output_filepath, label2classifications,
-               plot_ci, plot_ci_alpha)
+               plot_ci, plot_ci_alpha, make_ci_poly)
 
 
 def curve_wilson_ci(p, n, confidence=0.95):
@@ -476,7 +477,8 @@ def curve_wilson_ci(p, n, confidence=0.95):
     :rtype: (numpy.ndarray[float], numpy.ndarray[float])
 
     """
-    z = scipy.stats.norm.ppf(1-(1-float(confidence))/2)
+    quantile = 1.-(0.5*(1.-confidence))
+    z = scipy.stats.norm.ppf(quantile)  # ~1.96 when confidence==0.95
     n = float(n)
     u = (1/(1+(z*z/n))) * \
         (p + (z*z)/(2*n) + z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))

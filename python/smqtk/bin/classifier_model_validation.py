@@ -313,7 +313,7 @@ def plot_cm(conf_mat, labels, output_path):
     fig = plt.figure()
     #: :type: matplotlib.axes._axes.Axes
     ax = fig.add_subplot(111)
-    cax = ax.matshow(cm_f)
+    cax = ax.matshow(cm_f, vmin=0.0, vmax=1.0)
     fig.colorbar(cax)
 
     # Annotate cells with count values
@@ -400,6 +400,8 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
             # For each xy point, combine CI upper/lower bounds based on curve
             # being drawn. I.e. zip(x_l, y_l) for PR curve, but zip(x_u, y_l)
             # for ROC curve.
+            # TODO: Generate concave hull (alpha shape)
+            #       This would be curve direction independent.
             ci_poly = plot_ci_make_poly(x, x_l, x_u, y, y_l, y_u,
                                         facecolor=m[0], edgecolor=m[0],
                                         alpha=plot_ci_alpha)

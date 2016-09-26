@@ -18,6 +18,7 @@ __all__ = [
     "Classifier",
     "SupervisedClassifier",
     "get_classifier_impls",
+    "DFLT_CLASSIFIER_FACTORY"
 ]
 
 

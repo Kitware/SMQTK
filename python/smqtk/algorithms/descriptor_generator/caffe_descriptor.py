@@ -14,7 +14,7 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 
 from smqtk.utils.bin_utils import report_progress
-from smqtk.utils.parallel import parallel_map
+
 
 try:
     import caffe
@@ -32,6 +32,10 @@ __all__ = [
 
 
 class CaffeDescriptorGenerator (DescriptorGenerator):
+    """
+    Compute images against a Caffe model, extracting a layer as the content
+    descriptor.
+    """
 
     @classmethod
     def is_usable(cls):

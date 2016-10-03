@@ -124,7 +124,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         return cls(parent_app, **merged)
 
-    def __init__(self, parent_app, name, data_set, descr_generator, nn_index,
+    def __init__(self, parent_app, data_set, descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,
                  descriptor_factory=DFLT_DESCRIPTOR_FACTORY,
                  pos_seed_neighbors=500):

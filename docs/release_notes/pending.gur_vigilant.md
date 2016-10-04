@@ -26,6 +26,8 @@ Utilities
   * Started a module containing URL-base utility functions, initially adding a
     url-join function similar in capability to ``os.path.join``.
 
+  * Added fixed tile cropping to image transform tool.
+
 Web
 
   * Updated/Rearchitected IqrSearchApp (now IqrSearchDispatcher) to be able to

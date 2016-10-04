@@ -92,6 +92,9 @@ def iterate_query(q, batch_size):
         iterable of elements to yield.
     :type q: (int, int) -> __generator
 
+    :param batch_size: Number of elements to get from a single query.
+    :type batch_size: int | None
+
     :return: Elements yielded by nested function
     :rtype: __generator
 

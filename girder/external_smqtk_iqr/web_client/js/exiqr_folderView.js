@@ -4,6 +4,11 @@ girder.views.exiqrFolderWidget = girder.View.extend({
 
     initialize: function (settings) {
         this.folderModel = settings.folderModel;
+        // Expected metadata keys
+        this.md_keys = ['smqtk_iqr', 'smqtk_iqr_root'];
+        // If this plugin's relevant metadata fields should be visible or not
+        this.md_show_state = false;
+
         this.folderModel.on('change:meta', function () {
             this.render();
         }, this);
@@ -19,9 +24,17 @@ girder.views.exiqrFolderWidget = girder.View.extend({
             _.has(folder_meta, 'smqtk_iqr_root') )
         {
             // TODO: Check if IQR root URL is accessible (try GET on root)
-            // TODO: Check if IQR instance for this folder already exists
 
             this.$el.html(girder.templates.exiqr_folderView());
+
+            // Show/hide relevant metadata rows based on `md_show_state`
+            var md_row_elems = $('.g-widget-metadata-row').filter(_.bind(function (i, e) {
+                return _.contains(this.md_keys, $(e).attr('g-key'));
+            }, this));
+            for( var i=0; i<md_row_elems.length; i++ )
+            {
+                $(md_row_elems[i]).css('display', this.md_show_state ? '' : 'none');
+            }
         }
         else
         {
@@ -33,6 +46,12 @@ girder.views.exiqrFolderWidget = girder.View.extend({
     },
 
     events: {
+        "click .g-exiqr-md-toggle-btn": function (event) {
+              this.md_show_state = !this.md_show_state;
+                  console.log("exIQR md show state: "+this.md_show_state);
+                      this.render();
+        },
+
         "click .g-exiqrFolderView-header a.g-exiqr-link": function (event) {
             // Open SMQTK IQR-lite in a new window/tab with the nested
             // configuration.  Should only get to this point the parent folder

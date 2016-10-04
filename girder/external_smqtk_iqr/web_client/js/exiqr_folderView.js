@@ -14,7 +14,8 @@ girder.views.exiqrFolderWidget = girder.View.extend({
         var folder_meta = this.folderModel.get('meta');
 
         // Must have both metadata fields to be considered an IQR-able folder
-        if( _.has(folder_meta, 'smqtk_iqr') &&
+        if( folder_meta !== undefined &&
+            _.has(folder_meta, 'smqtk_iqr') &&
             _.has(folder_meta, 'smqtk_iqr_root') )
         {
             // TODO: Check if IQR root URL is accessible (try GET on root)

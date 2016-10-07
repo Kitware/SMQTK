@@ -1,4 +1,10 @@
 # Ubuntu 14.04.5 LTS (Trusty)
+#
+# IMPORTANT: If this container is to be run on a machine with Pascal
+# architecture GPUs, then this container needs to be run and Caffe needs to be
+# reconfigured/rebuilt so it can correctly pick up that its building on a
+# machine with a Pascal GPU.
+#
 FROM nvidia/cuda:8.0
 MAINTAINER paul.tunison@kitware.com
 

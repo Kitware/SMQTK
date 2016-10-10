@@ -6,7 +6,7 @@ ENV TERM=xterm
 RUN rm /bin/sh \
  && ln -s /bin/bash /bin/sh \
  && apt-get -y update \
- && apt-get -y install git cmake curl vim less
+ && apt-get -y install git cmake curl vim less parallel
 
 
 # System Space #################################################################
@@ -112,17 +112,10 @@ RUN mkdir smqtk/build \
 RUN sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
-RUN mkdir -p smqtk/data/{images,models,config,logs,db.psql,db.mongo}
+RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 
+ADD entrypoint.sh /home/smqtk/
+ADD default_confs/* /home/smqtk/data/config/
+ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
 
 # TODO: Create default config files for smqtk/data/config
-# TODO: Create/Add entrypoint script that:
-#       - init/starts PostgreSQL db in `smqtk/data/db.psql`
-#       - finds files in `smqtk/data/images`
-#       - Optionally tiles images found into new directory
-#       - Runs compute_many_descriptors/train_itq/compute_hash_codes/make_balltree
-#         using configs in `smqtk/data/configs`
-#         - Could defer to a second added script, see `bin/build_iqr_models.sh`
-#       - init/starts `mongod` in `smqtk/data/db.mongo`
-#       - Starts `runApplication -a IqrSearchDispatcher` using config in
-#         `smqtk/data/configs`

@@ -115,7 +115,7 @@ RUN sudo apt-get -y install postgresql-server-dev-9.4 \
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 
 ADD entrypoint.sh /home/smqtk/
-ADD default_confs/* /home/smqtk/data/config/
+ADD default_confs/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
 
 # TODO: Create default config files for smqtk/data/config

@@ -93,6 +93,13 @@ RUN mkdir caffe/build \
  && make -j12
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
+# - Get basic model files
+RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download \
+        -o caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel \
+ && curl https://data.kitware.com/api/v1/item/57e2f3fd8d777f10f26e532b/download \
+        -o caffe/source/models/bvlc_alexnet/deploy.prototxt \
+ && curl https://data.kitware.com/api/v1/item/57dae0a88d777f10f26a2a81/download \
+        -o caffe/source/data/ilsvrc12/imagenet_mean.binaryproto
 
 
 # SMQTK local installation

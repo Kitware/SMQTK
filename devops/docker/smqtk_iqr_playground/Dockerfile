@@ -123,5 +123,6 @@ RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 
 ADD entrypoint.sh /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
+ADD default_confs/cpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
 EXPOSE 5000

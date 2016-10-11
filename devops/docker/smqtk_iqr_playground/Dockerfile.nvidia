@@ -128,7 +128,7 @@ RUN sudo apt-get -y install postgresql-server-dev-9.4 \
 # Expected volume mount directories
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 
-ADD entrypoint.sh /home/smqtk/
+ADD entrypoint.sh descr_comp_test.py /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
 ADD default_confs/gpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]

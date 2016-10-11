@@ -12,6 +12,7 @@
 # directories, they will have to be chown'd here, thus they're permissions will
 # change on the host system.
 #
+trap "echo TRAPed signal" HUP INT QUIT KILL TERM
 set -e
 
 function usage() {
@@ -122,7 +123,7 @@ trigger="DatabaseNowResponsive"
 while [ -z "$q" ]
 do
   set +e
-  q="$(psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_NAME} -c "\echo ${trigger}" 2>/dev/null | grep "${trigger}")"
+  q="$(psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -c "\echo ${trigger}" 2>/dev/null | grep "${trigger}")"
   set -e
 done
 echo "Waiting for a responsive database... Done"
@@ -134,11 +135,11 @@ psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_
 
 if [ -n "${BUILD_MODELS}" ]
 then
-    LOG_GIT="${LOGS}/generate_image_transform.log"
-    LOG_CMD="${LOGS}/compute_many_descriptors.log"
-    LOG_ITQ="${LOGS}/train_itq.log"
-    LOG_CHC="${LOGS}/compute_hash_codes.log"
-    LOG_MBT="${LOGS}/make_balltree.log"
+    LOG_GIT="${LOG_DIR}/generate_image_transform.log"
+    LOG_CMD="${LOG_DIR}/compute_many_descriptors.log"
+    LOG_ITQ="${LOG_DIR}/train_itq.log"
+    LOG_CHC="${LOG_DIR}/compute_hash_codes.log"
+    LOG_MBT="${LOG_DIR}/make_balltree.log"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
@@ -167,11 +168,11 @@ then
         -v -b ${DESCRIPTOR_BATCH_SIZE} --check-image \
         -c "${CONFIG_DIR}/${SMQTK_CMD_CONFIG}" \
         -f "${IMAGE_DIR_FILELIST}" -p "${DESCRIPTOR_PROCESSED_CSV}" \
-        &> "${LOGS}/compute_many_descriptors.log"
+        &> "${LOG_DIR}/compute_many_descriptors.log"
 
     # Train ITQ models
     train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
-        &> "${LOGS}/train_itq.log"
+        &> "${LOG_DIR}/train_itq.log"
 
     # Compute hash codes for descriptors
     compute_hash_codes \
@@ -194,7 +195,7 @@ SMQTK_IQR_PID="smqtk_iqr.pid"
 runApplication \
     -a IqrSearchDispatcher \
     -vtc "${CONFIG_DIR}/${SMQTK_IQR_CONFIG}" \
-    &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log"
+    &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log" &
 echo "$!" >"${SMQTK_IQR_PID}"
 echo "Starting SMQTK IqrSearchDispatcher... Done"
 
@@ -214,11 +215,14 @@ wait \
 #
 echo "Stopping PostgreSQL"
 kill $(cat "${POSTGRES_PID}")
+rm "${POSTGRES_PID}"
 
 echo "Stopping MongoDB"
 kill $(cat "${MONGOD_PID}")
+rm "${MONGOD_PID}"
 
 echo "Stopping SMQTK IqrSearchDispatcher"
 kill $(cat "${SMQTK_IQR_PID}")
+rm "${SMQTK_IQR_PID}"
 
 echo "exited $0"

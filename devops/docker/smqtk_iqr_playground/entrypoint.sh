@@ -95,6 +95,7 @@ done
 NEW_PSQL_DB=0
 if [ -z "$(ls "${PSQL_DATA_DIR}" 2>/dev/null)" ]
 then
+    echo "Initializing PostgreSQL database"
     NEW_PSQL_DB=1
     pg_ctl -D "${PSQL_DATA_DIR}" init
     # Add socket to shared memory space
@@ -102,15 +103,30 @@ then
 fi
 
 # Start and background postgres and mongo
+echo "Starting PSQL database server..."
 POSTGRES_PID="db.psql.pid"
 postgres -D ${WORKING_DIR}/${PSQL_DATA_DIR} &>"${LOG_DIR}/db.psql.log" &
 echo "$!" >"${POSTGRES_PID}"
+echo "Starting PSQL database server... Done"
 
+echo "Starting MongoDB server..."
 MONGOD_PID="db.mongo.pid"
 mongod --dbpath ${WORKING_DIR}/${MONGO_DATA_DIR} &>"${LOG_DIR}/db.mongo.log" &
 echo "$!" >"${MONGOD_PID}"
+echo "Starting MongoDB server... Done"
 
 # If a new database, add descriptors table to database
+echo "Waiting for a responsive database..."
+q=""
+trigger="DatabaseNowResponsive"
+while [ -z "$q" ]
+do
+  set +e
+  q="$(psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_NAME} -c "\echo ${trigger}" 2>/dev/null | grep "${trigger}")"
+  set -e
+done
+echo "Waiting for a responsive database... Done"
+unset q trigger
 psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_INIT}"
 
 ################################################################################
@@ -173,12 +189,14 @@ fi
 
 ################################################################################
 
+echo "Starting SMQTK IqrSearchDispatcher..."
 SMQTK_IQR_PID="smqtk_iqr.pid"
 runApplication \
     -a IqrSearchDispatcher \
     -vtc "${CONFIG_DIR}/${SMQTK_IQR_CONFIG}" \
     &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log"
 echo "$!" >"${SMQTK_IQR_PID}"
+echo "Starting SMQTK IqrSearchDispatcher... Done"
 
 
 #

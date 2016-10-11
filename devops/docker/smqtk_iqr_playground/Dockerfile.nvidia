@@ -100,6 +100,13 @@ RUN mkdir caffe/build \
  && make -j12
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
+# - Get basic model files
+RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download \
+        -o caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel \
+ && curl https://data.kitware.com/api/v1/item/57e2f3fd8d777f10f26e532b/download \
+        -o caffe/source/models/bvlc_alexnet/deploy.prototxt \
+ && curl https://data.kitware.com/api/v1/item/57dae0a88d777f10f26a2a81/download \
+        -o caffe/source/data/ilsvrc12/imagenet_mean.binaryproto
 
 
 # SMQTK local installation
@@ -119,17 +126,9 @@ RUN mkdir smqtk/build \
 RUN sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
-RUN mkdir -p smqtk/data/{images,models,config,logs,db.psql,db.mongo}
+RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 
-
-# TODO: Create default config files for smqtk/data/config
-# TODO: Create/Add entrypoint script that:
-#       - init/starts PostgreSQL db in `smqtk/data/db.psql`
-#       - finds files in `smqtk/data/images`
-#       - Optionally tiles images found into new directory
-#       - Runs compute_many_descriptors/train_itq/compute_hash_codes/make_balltree
-#         using configs in `smqtk/data/configs`
-#         - Could defer to a second added script, see `bin/build_iqr_models.sh`
-#       - init/starts `mongod` in `smqtk/data/db.mongo`
-#       - Starts `runApplication -a IqrSearchDispatcher` using config in
-#         `smqtk/data/configs`
+ADD entrypoint.sh /home/smqtk/
+ADD default_confs/* /home/smqtk/data/configs/
+ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
+EXPOSE 5000

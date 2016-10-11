@@ -147,24 +147,24 @@ then
 
     # Compute descriptors
     compute_many_descriptors \
-        -v -b ${SMQTK_CMD_BATCH_SIZE} --check-image -c "${SMQTK_CMD_CONFIG}" \
-        -f "${IMAGE_DIR_FILELIST}" -p "${SMQTK_CMD_PROCESSED_CSV}" \
+        -v -b ${DESCRIPTOR_BATCH_SIZE} --check-image \
+        -c "${CONFIG_DIR}/${SMQTK_CMD_CONFIG}" \
+        -f "${IMAGE_DIR_FILELIST}" -p "${DESCRIPTOR_PROCESSED_CSV}" \
         &> "${LOGS}/compute_many_descriptors.log"
 
     # Train ITQ models
-    train_itq -vc "${SMQTK_ITQ_TRAIN_CONFIG}" \
+    train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
         &> "${LOGS}/train_itq.log"
 
     # Compute hash codes for descriptors
     compute_hash_codes \
-        -vc "${SMQTK_HCODE_CONFIG}" \
-        --output-hash2uuids "${SMQTK_HCODE_PICKLE}" \
-
+        -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
+        --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
 
     # Compute balltree hash index
-    make_balltree "${SMQTK_HCODE_PICKLE}" ${SMQTK_ITQ_BIT_SIZE} \
-        ${SMQTK_HCODE_BTREE_LEAFSIZE} ${SMQTK_HCODE_BTREE_RAND} \
-        ${SMQTK_HCODE_BTREE_OUTPUT}
+    make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
+        ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
+        "${MODEL_DIR}/${BALLTREE_MODEL}"
 
     # Stop log tail
     kill $(cat "${TAIL_PID}")

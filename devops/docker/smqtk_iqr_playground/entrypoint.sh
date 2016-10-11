@@ -46,6 +46,7 @@ do
     case ${key} in
         -h|--help)
         usage
+        exit 1
         ;;
         -b|--build)
         BUILD_MODELS=1
@@ -110,7 +111,7 @@ mongod --dbpath ${WORKING_DIR}/${MONGO_DATA_DIR} &>"${LOG_DIR}/db.mongo.log" &
 echo "$!" >"${MONGOD_PID}"
 
 # If a new database, add descriptors table to database
-psql -h /dev/shm ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_INIT}"
+psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_INIT}"
 
 ################################################################################
 # Run build if requested

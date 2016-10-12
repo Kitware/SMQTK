@@ -13,7 +13,7 @@ ENV TERM=xterm
 RUN rm /bin/sh \
  && ln -s /bin/bash /bin/sh \
  && apt-get -y update \
- && apt-get -y install git cmake curl vim less
+ && apt-get -y install git cmake curl vim less parallel
 
 
 # System Space #################################################################
@@ -87,6 +87,9 @@ RUN mkdir caffe/build \
     -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/liblapack_atlas.so \
     -DCMAKE_BUILD_TYPE:STRING=Release \
     -DCPU_ONLY:BOOL=OFF \
+    -DCUDA_ARCH_NAME:STRING=Manual \
+    -DCUDA_ARCH_BIN:STRING="30 32 35 37 50 52 53 60 61 62" \
+    -DCUDA_ARCH_PTX:STRING="" \
     -DPYTHON_EXECUTABLE:PATH=${HOME}/miniconda/bin/python2.7 \
     -DPYTHON_INCLUDE_DIR:PATH=${HOME}/miniconda/include/python2.7 \
     -DPYTHON_INCLUDE_DIR2:PATH=${HOME}/miniconda/include/python2.7 \

@@ -88,8 +88,10 @@ pushd "${WORKING_DIR}"
 # Own psql/mongo/log directories for read/write
 for DIR in {${PSQL_DATA_DIR},${MONGO_DATA_DIR}}
 do
-    echo "Owning dir: $DIR"
+    echo "Claiming dir: $DIR"
     sudo chown -R smqtk: "${DIR}"
+    # Database dirs needs limited permissions for security
+    sudo chmod 700 "${DIR}"
 done
 
 # Create PSQL database if no exists
@@ -147,14 +149,15 @@ then
 
     if [ -n "${TILE_IMAGES}" ]
     then
+        echo "Generating tiles for images ($(wc -l "${IMAGE_DIR_FILELIST}" | cut -d' ' -f1) images)"
         IMG_TILES_DIR="image_tiles"
-        mkdir "${IMG_TILES_DIR}"
+        mkdir -p "${IMG_TILES_DIR}"
         cat "${IMAGE_DIR_FILELIST}" | parallel "
-            generate_image_transform -vc "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" \
+            generate_image_transform -c "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" \
                 -i \"{}\" -o \"${IMG_TILES_DIR}\"
         "
         # Use these tiles for new imagelist
-        mv "${IMAGE_DIR_FILELIST}" >"${IMAGE_DIR_FILELIST}.ORIG"
+        mv "${IMAGE_DIR_FILELIST}" "${IMAGE_DIR_FILELIST}.ORIG"
         find "${IMG_TILES_DIR}" -type f >"${IMAGE_DIR_FILELIST}"
     fi
 

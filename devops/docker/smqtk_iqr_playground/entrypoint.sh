@@ -152,10 +152,16 @@ then
         echo "Generating tiles for images ($(wc -l "${IMAGE_DIR_FILELIST}" | cut -d' ' -f1) images)"
         IMG_TILES_DIR="image_tiles"
         mkdir -p "${IMG_TILES_DIR}"
-        cat "${IMAGE_DIR_FILELIST}" | parallel "
-            generate_image_transform -c "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" \
-                -i \"{}\" -o \"${IMG_TILES_DIR}\"
-        "
+        if [ -n "$(which parallel 2>/dev/null)" ]
+        then
+            cat "${IMAGE_DIR_FILELIST}" | parallel "
+                generate_image_transform -c \"${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}\" \
+                    -i \"{}\" -o \"${IMG_TILES_DIR}\"
+            "
+        else
+            cat "${IMAGE_DIR_FILELIST}" | \
+                xargs -I '{}' generate_image_transform -c "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" -i '{}' -o "${IMG_TILES_DIR}"
+        fi
         # Use these tiles for new imagelist
         mv "${IMAGE_DIR_FILELIST}" "${IMAGE_DIR_FILELIST}.ORIG"
         find "${IMG_TILES_DIR}" -type f >"${IMAGE_DIR_FILELIST}"

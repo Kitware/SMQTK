@@ -42,7 +42,7 @@
                     "type_col": "type_str",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "PostgresDescriptorElement"
             },
             "nn_index": {
                 "LSHNearestNeighborIndex": {

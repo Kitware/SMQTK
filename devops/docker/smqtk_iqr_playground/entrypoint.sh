@@ -190,7 +190,7 @@ then
             -v -b ${DESCRIPTOR_BATCH_SIZE} --check-image \
             -c "${CONFIG_DIR}/${SMQTK_CMD_CONFIG}" \
             -f "${IMAGE_DIR_FILELIST}" -p "${DESCRIPTOR_PROCESSED_CSV}" \
-            &> "${LOG_DIR}/compute_many_descriptors.log"
+            &> "${LOG_CMD}"
         touch "${STP_CMD}"
     fi
 
@@ -198,7 +198,7 @@ then
     if [ ! -e "${STP_ITQ}" ]
     then
         train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
-            &> "${LOG_DIR}/train_itq.log"
+            &> "${LOG_ITQ}"
         touch "${STP_ITQ}"
     fi
 
@@ -208,6 +208,7 @@ then
         compute_hash_codes \
             -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
             --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
+            &> "${LOG_CHC}"
         touch "${STP_CHC}"
     fi
 
@@ -216,7 +217,8 @@ then
     then
         make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
             ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
-            "${MODEL_DIR}/${BALLTREE_MODEL}"
+            "${MODEL_DIR}/${BALLTREE_MODEL}" \
+            &> "${LOG_MBT}"
         touch "${STP_MBT}"
     fi
 

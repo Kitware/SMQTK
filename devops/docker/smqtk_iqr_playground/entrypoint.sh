@@ -137,17 +137,27 @@ psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_
 
 if [ -n "${BUILD_MODELS}" ]
 then
+    STP_IMF="${LOG_DIR}/image_filelist_find.stamp"
     LOG_GIT="${LOG_DIR}/generate_image_transform.log"
+    STP_GIT="${LOG_DIR}/generate_image_transform.stamp"
     LOG_CMD="${LOG_DIR}/compute_many_descriptors.log"
+    STP_CMD="${LOG_DIR}/compute_many_descriptors.stamp"
     LOG_ITQ="${LOG_DIR}/train_itq.log"
+    STP_ITQ="${LOG_DIR}/train_itq.stamp"
     LOG_CHC="${LOG_DIR}/compute_hash_codes.log"
+    STP_CHC="${LOG_DIR}/compute_hash_codes.stamp"
     LOG_MBT="${LOG_DIR}/make_balltree.log"
+    STP_MBT="${LOG_DIR}/make_balltree.stamp"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
-    find "${IMAGE_DIR}/" -type f >"${IMAGE_DIR_FILELIST}"
+    if [ ! -e "${STP_IMF}" ]
+    then
+        find "${IMAGE_DIR}/" -type f >"${IMAGE_DIR_FILELIST}"
+        touch "${STP_IMF}"
+    fi
 
-    if [ -n "${TILE_IMAGES}" ]
+    if [ -n "${TILE_IMAGES}" -a ! -e "${STP_GIT}" ]
     then
         echo "Generating tiles for images ($(wc -l "${IMAGE_DIR_FILELIST}" | cut -d' ' -f1) images)"
         IMG_TILES_DIR="image_tiles"
@@ -165,6 +175,7 @@ then
         # Use these tiles for new imagelist
         mv "${IMAGE_DIR_FILELIST}" "${IMAGE_DIR_FILELIST}.ORIG"
         find "${IMG_TILES_DIR}" -type f >"${IMAGE_DIR_FILELIST}"
+        touch "${STP_GIT}"
     fi
 
     # Tail build logs until they are done
@@ -173,25 +184,41 @@ then
     echo "$!" >"${TAIL_PID}"
 
     # Compute descriptors
-    compute_many_descriptors \
-        -v -b ${DESCRIPTOR_BATCH_SIZE} --check-image \
-        -c "${CONFIG_DIR}/${SMQTK_CMD_CONFIG}" \
-        -f "${IMAGE_DIR_FILELIST}" -p "${DESCRIPTOR_PROCESSED_CSV}" \
-        &> "${LOG_DIR}/compute_many_descriptors.log"
+    if [ ! -e "${STP_CMD}" ]
+    then
+        compute_many_descriptors \
+            -v -b ${DESCRIPTOR_BATCH_SIZE} --check-image \
+            -c "${CONFIG_DIR}/${SMQTK_CMD_CONFIG}" \
+            -f "${IMAGE_DIR_FILELIST}" -p "${DESCRIPTOR_PROCESSED_CSV}" \
+            &> "${LOG_DIR}/compute_many_descriptors.log"
+        touch "${STP_CMD}"
+    fi
 
     # Train ITQ models
-    train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
-        &> "${LOG_DIR}/train_itq.log"
+    if [ ! -e "${STP_ITQ}" ]
+    then
+        train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
+            &> "${LOG_DIR}/train_itq.log"
+        touch "${STP_ITQ}"
+    fi
 
     # Compute hash codes for descriptors
-    compute_hash_codes \
-        -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
-        --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
+    if [ ! -e "${STP_CHC}" ]
+    then
+        compute_hash_codes \
+            -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
+            --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
+        touch "${STP_CHC}"
+    fi
 
     # Compute balltree hash index
-    make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
-        ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
-        "${MODEL_DIR}/${BALLTREE_MODEL}"
+    if [ ! -e "${STP_MBT}" ]
+    then
+        make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
+            ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
+            "${MODEL_DIR}/${BALLTREE_MODEL}"
+        touch "${STP_MBT}"
+    fi
 
     # Stop log tail
     kill $(cat "${TAIL_PID}")

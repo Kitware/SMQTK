@@ -9,19 +9,24 @@
 #
 set -e
 
-CONTAINER_NAME="smqtk_iqr_gpu"
+CONTAINER_NAME="smqtk_iqr"
+IQR_PORT_PUBLISH=5000
+
+IQR_CONTAINER=kitware/smqtk/iqr_playground_nvidia
+IQR_CONTAINER_VERSION=0.3
 
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then
   IMAGE_DIR="$1"
   shift
-  nvidia-docker run -d -p 5000:5000 -v "${IMAGE_DIR}":/home/smqtk/data/images --name "${CONTAINER_NAME}" kitware/smqtk/iqr_playground_nvidia:pascal_patched -b "$@"
+  nvidia-docker run -d -p ${IQR_PORT_PUBLISH}:5000 -v "${IMAGE_DIR}":/home/smqtk/data/images --name "${CONTAINER_NAME}" \
+    ${IQR_CONTAINER}:${IQR_CONTAINER_VERSION} -b "$@"
 fi
 
 watch -n1 "
 nvidia-smi
 echo
-docker exec ${CONTAINER_NAME} bash -c 'echo \"Image tiles generated: \$(ls data/image_tiles | wc -l)\"'
+docker exec ${CONTAINER_NAME} bash -c '[ -d data/image_tiles ] && echo \"Image tiles generated: \$(ls data/image_tiles | wc -l)\"'
 echo
 docker exec ${CONTAINER_NAME} tail data/logs/compute_many_descriptors.log data/logs/train_itq.log data/logs/compute_hash_codes.log data/logs/runApp.IqrSearchDispatcher.log
 "

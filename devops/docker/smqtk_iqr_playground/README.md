@@ -66,6 +66,30 @@ nothing to process/ingest. The ``-b`` option must also be given in order to
 trigger model building.
 
 
+Runner Script
+^^^^^^^^^^^^^
+
+Included here is the bash script ``run_container.sh``. This is intended to be a
+simple way of running the container as is (i.e. with default configurations) on
+a directory that [recursively] contains imagery to index and perform IQR over.
+
+This script may be called by:
+
+    $ run_container.sh /abs/path/to/image/dir [-t]
+
+The above will run the container as a daemon, mounting the image directory and
+publishes the port 5000, resulting in a running container named ``smqtk_iqr``.
+The script then shows updating information about ongoing processnig in the
+container.
+
+The container and version used are defined by variables at the top of the
+script, as well as what host port to publish to.
+
+When all the logs settle, mainly the ``runApp.IqrSearchDispatcher.log``,
+showing that the server has started, will the web application be functional
+and interactive.
+
+
 Saving Generated Data
 ^^^^^^^^^^^^^^^^^^^^^
 

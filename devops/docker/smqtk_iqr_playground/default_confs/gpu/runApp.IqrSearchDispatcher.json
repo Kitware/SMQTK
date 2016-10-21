@@ -1,0 +1,102 @@
+{
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "iqr_tabs": {
+        "Data-set Iqr": {
+            "data_set": {
+                "DataMemorySet": {
+                    "file_cache": "models/image_elements.dms_cache",
+                    "pickle_protocol": -1
+                },
+                "type": "DataMemorySet"
+            },
+            "descr_generator": {
+                "CaffeDescriptorGenerator": {
+                    "batch_size": 100,
+                    "data_layer": "data",
+                    "gpu_device_id": 0,
+                    "image_mean_filepath": "/home/smqtk/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+                    "input_scale": null,
+                    "load_truncated_images": true,
+                    "network_is_bgr": true,
+                    "network_model_filepath": "/home/smqtk/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                    "network_prototxt_filepath": "/home/smqtk/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+                    "pixel_rescale": null,
+                    "return_layer": "fc7",
+                    "use_gpu": true
+                },
+                "type": "CaffeDescriptorGenerator"
+            },
+            "descriptor_factory": {
+                "PostgresDescriptorElement": {
+                    "binary_col": "vector",
+                    "db_host": "/dev/shm",
+                    "db_name": "postgres",
+                    "db_pass": null,
+                    "db_port": 5432,
+                    "db_user": "smqtk",
+                    "table_name": "descriptors_alexnet_fc7",
+                    "type_col": "type_str",
+                    "uuid_col": "uid"
+                },
+                "type": "PostgresDescriptorElement"
+            },
+            "nn_index": {
+                "LSHNearestNeighborIndex": {
+                    "descriptor_index": {
+                        "MemoryDescriptorIndex": {
+                            "file_cache": "models/descriptors.alexnet_fc7.mdi_cache",
+                            "pickle_protocol": -1
+                        },
+                        "type": "MemoryDescriptorIndex"
+                    },
+                    "distance_method": "cosine",
+                    "hash2uuid_cache_filepath": "models/LSH.hash2uuids.pickle",
+                    "hash_index": {
+                        "SkLearnBallTreeHashIndex": {
+                            "file_cache": "models/balltree_hash_index.npz",
+                            "leaf_size": 40,
+                            "random_seed": 0
+                        },
+                        "type": "SkLearnBallTreeHashIndex"
+                    },
+                    "live_reload": false,
+                    "lsh_functor": {
+                        "ItqFunctor": {
+                            "bit_length": 256,
+                            "itq_iterations": 100,
+                            "mean_vec_filepath": "models/itq.model.b256_i100_r0.mean_vec.npy",
+                            "normalize": null,
+                            "random_seed": 0,
+                            "rotation_filepath": "models/itq.model.b256_i100_r0.rotation.npy"
+                        },
+                        "type": "ItqFunctor"
+                    },
+                    "read_only": false,
+                    "reload_mon_interval": 0.1,
+                    "reload_settle_window": 1.0
+                },
+                "type": "LSHNearestNeighborIndex"
+            },
+            "pos_seed_neighbors": 500,
+            "rel_index_config": {
+                "LibSvmHikRelevancyIndex": {
+                    "descr_cache_filepath": null
+                },
+                "type": "LibSvmHikRelevancyIndex"
+            },
+            "working_directory": "data/iqr_app_work"
+        }
+    },
+    "mongo": {
+        "database": "smqtk",
+        "server": "127.0.0.1:27017"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5000
+    }
+}

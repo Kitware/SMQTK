@@ -1,0 +1,7 @@
+[ ] Build using containing including cuDNN with cuda 8.0 base
+
+[ ] Resolve why Ctrl-C'ing the container does not correctly pass into shutdown
+    clean-up.
+
+[ ] Optionalize in entrypoint.sh the running of the IQR server. If not running
+    IQR, it should ``exec bash`` or similar.

@@ -11,6 +11,11 @@ Algorithms
 
     * Added KWCNN DescriptorGenerator plugin
 
+Devops
+
+  * Added IQR / playground docker container setup. Includes NVIDIA GPU capable
+    docker file.
+
 Representation
 
   Data Elements

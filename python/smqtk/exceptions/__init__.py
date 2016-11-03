@@ -1,5 +1,3 @@
-__author__ = "paul.tunison@kitware.com"
-
 
 class NoClassificationError (Exception):
     """

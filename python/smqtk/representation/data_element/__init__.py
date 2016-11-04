@@ -135,7 +135,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
             if ext in {'.jpe', '.jfif'}:
                 ext = '.jpg'
             fd, fp = tempfile.mkstemp(
-                suffix=ext,
+                suffix=ext or '',
                 dir=d
             )
             os.close(fd)

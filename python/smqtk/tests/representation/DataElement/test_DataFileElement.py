@@ -47,51 +47,22 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_false(mock_DataElement_wt.called)
         ntools.assert_equal(fp, expected_filepath)
 
-    @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
-    @mock.patch('fcntl.fcntl')  # global
-    @mock.patch('os.close')  # global
-    @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
-    def test_writeTempOverride_diffDir(self, mock_open, mock_os_open,
-                                       mock_os_close, mock_fcntl, mock_scd,
-                                       mock_isfile):
+    @mock.patch('smqtk.representation.data_element.DataElement.write_temp')
+    def test_writeTempOverride_diffDir(self, mock_DataElement_wt):
+        """
+        Test that adding ``temp_dir`` parameter triggers call to parent class
+        """
         source_filepath = '/path/to/file.png'
         target_dir = '/some/other/dir'
 
         d = DataFileElement(source_filepath)
-        fp = d.write_temp(temp_dir=target_dir)
 
-        # Custom side-effect for os.path.isfile for simulated files
-        simulate = True
-        def osp_isfile_side_effect(path):
-            if simulate and path == fp:
-                return True
-            else:
-                return False
-        mock_isfile.side_effect = osp_isfile_side_effect
-
-        ntools.assert_not_equal(fp, source_filepath)
-        ntools.assert_equal(os.path.dirname(fp), target_dir)
-
-        # subsequent call to write temp should not invoke creation of a new file
-        fp2 = d.write_temp()
-        ntools.assert_equal(fp2, source_filepath)
-
-        # request in same dir should return same path as first request with that
-        # directory
-        fp3 = d.write_temp(target_dir)
-        ntools.assert_equal(fp, fp3)
-
-        # request different target dir
-        target2 = '/even/different/path'
-        fp4 = d.write_temp(target2)
-        ntools.assert_equal(os.path.dirname(fp4), target2)
-        ntools.assert_not_equal(fp, fp4)
-        ntools.assert_equal(len(d._temp_filepath_stack), 2)
-
-        # Restore normal os.path.isfile functionality
-        simulate = False
+        # Should call parent class write_temp since target is not the same dir
+        # that the source file is in.
+        mock_DataElement_wt.return_value = 'expected'
+        v = d.write_temp(temp_dir=target_dir)
+        ntools.assert_equal(v, 'expected')
+        mock_DataElement_wt.assert_called_with(target_dir)
 
     def test_cleanTemp(self):
         # a write temp and clean temp should not affect original file

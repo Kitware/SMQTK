@@ -71,12 +71,35 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     def __repr__(self):
         return self.__class__.__name__
 
+    def _write_temp(self, d):
+        """
+        Actually write our bytes to a new temp file
+        Always creates new file.
+
+        :param d: directory to write temp file in or None to use system default.
+        :returns: path to file written
+
+        """
+        if d:
+            file_utils.safe_create_dir(d)
+        ext = MIMETYPES.guess_extension(self.content_type())
+        # Exceptions because mimetypes is apparently REALLY OLD
+        if ext in {'.jpe', '.jfif'}:
+            ext = '.jpg'
+        fd, fp = tempfile.mkstemp(
+            suffix=ext or '',
+            dir=d
+        )
+        os.close(fd)
+        with open(fp, 'wb') as f:
+            f.write(self.get_bytes())
+        return fp
+
     def _clear_no_exist(self):
         """
-        Clear paths in temp list that don't exist on the system until we
-        encounter one that does.
+        Clear paths in temp stack that don't exist on the system.
         """
-        no_exist_paths = deque()
+        no_exist_paths = deque()  # tmp list of paths to remove
         for fp in self._temp_filepath_stack:
             if not osp.isfile(fp):
                 no_exist_paths.append(fp)
@@ -126,25 +149,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         # of the entries' base directory is the provided temp_dir (when one is
         # provided).
 
-        def write_temp(d):
-            """ Returns path to file written. Always creates new file. """
-            if d:
-                file_utils.safe_create_dir(d)
-            ext = MIMETYPES.guess_extension(self.content_type())
-            # Exceptions because mimetypes is apparently REALLY OLD
-            if ext in {'.jpe', '.jfif'}:
-                ext = '.jpg'
-            fd, fp = tempfile.mkstemp(
-                suffix=ext or '',
-                dir=d
-            )
-            os.close(fd)
-            with open(fp, 'wb') as f:
-                f.write(self.get_bytes())
-            return fp
-
-        # Clear out paths, from the back, that don't exist.
-        # Stops when it finds something that exists.
+        # Clear out paths that don't exist.
         self._clear_no_exist()
 
         if temp_dir:
@@ -154,11 +159,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
                 if osp.dirname(tf) == abs_temp_dir:
                     return tf
             # nothing in stack with given base directory, create new temp file
-            self._temp_filepath_stack.append(write_temp(temp_dir))
+            self._temp_filepath_stack.append(self._write_temp(temp_dir))
 
         elif not self._temp_filepath_stack:
             # write new temp file to platform specific temp directory
-            self._temp_filepath_stack.append(write_temp(None))
+            self._temp_filepath_stack.append(self._write_temp(None))
 
         # return last written temp file.
         return self._temp_filepath_stack[-1]

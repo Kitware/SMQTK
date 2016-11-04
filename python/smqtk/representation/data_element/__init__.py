@@ -1,17 +1,16 @@
 import abc
 from collections import deque
 import hashlib
+import logging
 import mimetypes
 import os
 import os.path as osp
 import tempfile
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
 from smqtk.utils import plugin
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -27,6 +26,27 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     UUIDs must maintain unique-ness when transformed into a string.
 
     """
+
+    @classmethod
+    def from_uri(cls, uri):
+        """
+        Construct a new instance based on the given URI.
+
+        This function may not be implemented for all DataElement types.
+
+        :param uri: URI string to resolve into an element instance
+        :type uri: str
+
+        :raises NotImplementedError: This element type does not implement URI
+            resolution.
+        :raises smqtk.exceptions.InvalidUriError: This element type could not
+            resolve the provided URI string.
+
+        :return: New element instance of our type.
+        :rtype: DataElement
+
+        """
+        raise NotImplementedError()
 
     def __init__(self):
         super(DataElement, self).__init__()
@@ -227,3 +247,50 @@ def get_data_element_impls(reload_modules=False):
     helper_var = "DATA_ELEMENT_CLASS"
     return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
                               DataElement, reload_modules=reload_modules)
+
+
+def from_uri(uri, impl_generator=get_data_element_impls):
+    """
+    Create a data element instance from available plugin implementations.
+
+    The first implementation that can resolve the URI is what is returned. If no
+    implementations can resolve the URL, an ``InvalidUriError`` is raised.
+
+    :param uri: URI to try to resolve into a DataElement instance.
+    :type uri: str
+
+    :param impl_generator: Function that returns a dictionary mapping
+        implementation type names to the class type. By default this refers to
+        the standard ``get_data_element_impls`` function, however this can be
+        changed to refer to a custom set of classes if desired.
+    :type impl_generator: () -> dict[str, type]
+
+    :raises smqtk.exceptions.InvalidUriError: No data element implementations
+        could resolve the given URI.
+
+    :return: New data element instance providing access to the data pointed to
+        by the input URI.
+    :rtype: DataElement
+
+    """
+    log = logging.getLogger(__name__)
+    log.debug("Trying to parse URI: '%s'", uri)
+
+    #: :type: __generator[DataElement]
+    de_type_iter = impl_generator().itervalues()
+    inst = None
+    for de_type in de_type_iter:
+        try:
+            inst = de_type.from_uri(uri)
+        except NotImplementedError:
+            pass
+        except InvalidUriError, ex:
+            log.debug("Implementation '%s' failed to parse URI: %s",
+                      de_type_iter.__name__, ex.reason)
+        if inst is not None:
+            break
+    if inst is None:
+        # TODO: Assume final fallback of FileElement?
+        #       Since any string could be a file?
+        raise InvalidUriError(uri, "No available implementation to handle URI.")
+    return inst

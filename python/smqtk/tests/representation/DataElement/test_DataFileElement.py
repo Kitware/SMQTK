@@ -1,10 +1,10 @@
-__author__ = "paul.tunison@kitware.com"
-
 import mock
 import nose.tools as ntools
 import os
 import unittest
 
+from smqtk.exceptions import InvalidUriError
+from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
 
@@ -129,3 +129,88 @@ class TestDataFileElement (unittest.TestCase):
 
         inst2 = DataFileElement.from_config(inst1.get_config())
         ntools.assert_equal(inst1, inst2)
+
+    def test_repr(self):
+        e = DataFileElement('foo')
+        ntools.assert_equal(repr(e), "DataFileElement{filepath: foo}")
+
+    def test_from_uri_invalid_uri_empty(self):
+        # Given empty string
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            ''
+        )
+
+    def test_from_uri_invalid_uri_malformed_rel_directory(self):
+        # URI malformed: relative path trailing slash (directory)
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            "some/rel/path/dir/"
+        )
+
+    def test_from_uri_invalid_uri_malformed_abs_directory(self):
+        # URI malformed: absolute path trailing slash (directory)
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            "/abs/path/dir/"
+        )
+
+    def test_from_uri_invalid_uri_malformed_bad_header(self):
+        # URI malformed: file:// malformed
+
+        # Missing colon
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            "file///some/file/somewhere.txt"
+        )
+
+        # file misspelled
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            "fle:///some/file/somewhere.txt"
+        )
+
+    def test_from_uri_invalid_uri_malformed_header_rel_path(self):
+        # URL malformed: file:// not given ABS path
+        ntools.assert_raises(
+            InvalidUriError,
+            DataFileElement.from_uri,
+            "file://some/rel/path.txt"
+        )
+
+    # noinspection PyUnresolvedReferences
+    def test_from_uri(self):
+        # will be absolute path
+        test_file_path = os.path.join(TEST_DATA_DIR, "test_file.dat")
+        print "Test file path:", test_file_path
+
+        e = DataFileElement.from_uri(test_file_path)
+        ntools.assert_is_instance(e, DataFileElement)
+        ntools.assert_equal(e._filepath, test_file_path)
+        ntools.assert_equal(e.get_bytes(), '')
+
+        e = DataFileElement.from_uri('file://' + test_file_path)
+        ntools.assert_is_instance(e, DataFileElement)
+        ntools.assert_equal(e._filepath, test_file_path)
+        ntools.assert_equal(e.get_bytes(), '')
+
+    # noinspection PyUnresolvedReferences
+    def test_from_uri_plugin_level(self):
+        # will be absolute path
+        test_file_path = os.path.join(TEST_DATA_DIR, "test_file.dat")
+        print "Test file path:", test_file_path
+
+        e = from_uri(test_file_path)
+        ntools.assert_is_instance(e, DataFileElement)
+        ntools.assert_equal(e._filepath, test_file_path)
+        ntools.assert_equal(e.get_bytes(), '')
+
+        e = from_uri('file://' + test_file_path)
+        ntools.assert_is_instance(e, DataFileElement)
+        ntools.assert_equal(e._filepath, test_file_path)
+        ntools.assert_equal(e.get_bytes(), '')

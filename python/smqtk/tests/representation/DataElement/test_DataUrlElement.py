@@ -1,8 +1,10 @@
+import mock
 import nose.tools as ntools
 import os
 import requests
 import unittest
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR
 
@@ -30,8 +32,29 @@ if internet_available:
 
         """
 
+        @mock.patch('requests.get')
+        def test_is_usable(self, m_req_get):
+            # mocked function returns a Mock object that has mocked attribute
+            # ``content``.
+            ntools.assert_true(DataUrlElement.is_usable())
+
+        @mock.patch('requests.get')
+        def test_is_not_usable(self, m_req_get):
+            # Pretend the get function returns a Connection error, which would
+            # happen if URL resolution wasn't occurring.
+            def r(*args, **kwds):
+                raise requests.ConnectionError()
+            m_req_get.side_effect = r
+            ntools.assert_false(DataUrlElement.is_usable())
+
         def test_new(self):
             e = DataUrlElement(EXAMPLE_URL)
+            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
+
+        def test_new_add_missing_scheme(self):
+            # Construct without scheme header, should add http://
+            e = DataUrlElement(EXAMPLE_URL[8:])
+            ntools.assert_equal(e._url, 'http://' + EXAMPLE_URL[8:])
             ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
 
         def test_content_type(self):
@@ -50,3 +73,22 @@ if internet_available:
 
             inst2 = DataUrlElement.from_config(inst1.get_config())
             ntools.assert_equal(inst1, inst2)
+
+        def test_from_uri(self):
+            e = DataUrlElement.from_uri(EXAMPLE_URL)
+            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
+            ntools.assert_equal(e.content_type(), 'image/png')
+
+        def test_from_uri_no_scheme(self):
+            ntools.assert_raises(
+                InvalidUriError,
+                DataUrlElement.from_uri,
+                'www.kitware.com'
+            )
+
+        def test_from_uri_invalid_scheme(self):
+            ntools.assert_raises(
+                InvalidUriError,
+                DataUrlElement.from_uri,
+                'ftp://www.kitware.com'
+            )

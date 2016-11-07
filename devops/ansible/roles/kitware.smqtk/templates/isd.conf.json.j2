@@ -1,0 +1,17 @@
+{
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "{{ smqtk_app_secret_key }}"
+    },
+    "iqr_tabs": {
+    },
+    "mongo": {
+        "database": "smqtk",
+        "server": "127.0.0.1:{{ mongodb_conf_port }}"
+    },
+    "server": {
+        "host": "{{ smqtk_iqr_host }}",
+        "port": {{ smqtk_iqr_port }}
+    }
+}

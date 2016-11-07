@@ -1,0 +1,77 @@
+# Caffe source build and install
+---
+
+- name: Ensure source directory exists
+  file:
+    path: "{{ caffe_path }}"
+    state: directory
+    group: "{{ ansible_user_id }}"
+    owner: "{{ ansible_user_id }}"
+    mode: 0755
+  become: yes
+  become_user: root
+
+- name: Checkout Caffe source
+  git:
+    repo: "{{ caffe_repo }}"
+    dest: "{{ caffe_path }}"
+    version: "{{ caffe_version }}"
+    accept_hostkey: yes
+
+- name: Ensure build directory
+  file:
+    path: "{{ caffe_path }}/build"
+    state: directory
+    mode: 0755
+
+# Notes:
+# - PYTHON_INCLUDE_DIR set to use system only because virtualenv directories
+#   don't carry the headers. Except if we use conda, then those headers should
+#   be used becasue they python there is probably a different version than the
+#   system version.
+- name: CMake configure
+  command: >
+      cmake
+        -DCMAKE_BUILD_TYPE:STRING=Release
+        -DCMAKE_INSTALL_PREFIX:PATH={{ caffe_install_prefix }}
+        -DCPU_ONLY:BOOL=ON
+        -DAtlas_BLAS_LIBRARY:PATH=/usr/lib/libatlas.so
+        -DAtlas_CBLAS_LIBRARY:PATH=/usr/lib/libcblas.so
+        -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/liblapack_atlas.so
+        -DPYTHON_EXECUTABLE:PATH={{ caffe_virtualenv|default('/usr') }}/bin/python2.7
+        -DUSE_CUDNN:BOOL=OFF
+        -DUSE_LMDB:BOOL=OFF
+        -DUSE_LEVELDB:BOOL=OFF
+        -DUSE_OPENCV:BOOL=OFF
+        {{ caffe_path }}
+  args:
+    chdir: "{{ caffe_path }}/build"
+    creates: "{{ caffe_path }}/build/CMakeCache.txt"
+
+- name: CMake build
+  command: make -j4
+  args:
+    chdir: "{{ caffe_path }}/build"
+    creates: "{{ caffe_path }}/build/lib/libcaffe.so"
+
+- name: CMake install into prefix
+  command: make install
+  args:
+    chdir: "{{ caffe_path }}/build"
+    creates: "{{ caffe_install_prefix }}/lib/libcaffe.so"
+
+- name: Install python bindings -- System
+  when: caffe_virtualenv is not defined
+  become: yes
+  become_user: root
+  file:
+    src: "{{ caffe_install_prefix }}/python/caffe"
+    dest: "/usr/local/lib/python2.7/dist-packages/caffe"
+    state: link
+
+- name: Install python bindings -- Virtualenv
+  when: caffe_virtualenv is defined
+  file:
+    src: "{{ caffe_install_prefix }}/python/caffe"
+    dest: "{{ caffe_virtualenv }}/lib/python2.7/site-packages/caffe"
+    state: link

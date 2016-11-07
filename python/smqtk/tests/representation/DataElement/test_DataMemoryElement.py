@@ -91,11 +91,11 @@ class TestDataMemoryElement (unittest.TestCase):
         )
 
     def test_from_uri_empty_string(self):
-        ntools.assert_raises(
-            InvalidUriError,
-            DataMemoryElement.from_uri,
-            ''
-        )
+        # Should return an element with no byte data
+        e = DataMemoryElement.from_uri('')
+        ntools.assert_is_instance(e, DataMemoryElement)
+        # no base64 data, which should decode to no bytes
+        ntools.assert_equal(e.get_bytes(), '')
 
     def test_from_uri_random_string(self):
         rs = random_string(32)

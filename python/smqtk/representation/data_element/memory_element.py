@@ -42,6 +42,7 @@ class DataMemoryElement (DataElement):
         This method accepts URIs in two formats:
             - ``base64://<data>``
             - ``data:<mimetype>;base64,<data>``
+            - Empty string (no data)
 
         Filling in ``<data>`` with the actual byte string, and ``<mimetype>``
         with the actual MIMETYPE of the bytes.
@@ -62,6 +63,9 @@ class DataMemoryElement (DataElement):
         """
         if uri is None:
             raise InvalidUriError(uri, 'None value given')
+
+        if len(uri) == 0:
+            return DataMemoryElement('', None)
 
         data_b64_m = cls.DATA_B64_RE.match(uri)
         if data_b64_m is not None:

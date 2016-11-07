@@ -290,7 +290,7 @@ def from_uri(uri, impl_generator=get_data_element_impls):
             pass
         except InvalidUriError, ex:
             log.debug("Implementation '%s' failed to parse URI: %s",
-                      de_type_iter.__name__, ex.reason)
+                      de_type.__name__, ex.reason)
         if inst is not None:
             break
     if inst is None:

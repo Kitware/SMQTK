@@ -68,11 +68,17 @@ class GirderDataElement (DataElement):
         # calls.
         self._content_type = None
 
+    def __repr__(self):
+        return super(GirderDataElement, self).__repr__() + \
+            "{id: %s, api_root: %s, api_key: %s}" % (
+                self.file_id, self.api_root, self.token_manager.api_key
+            )
+
     def get_config(self):
         return {
             'file_id': self.file_id,
             'api_root': self.api_root,
-            'api_key': self.token_manager._api_key,
+            'api_key': self.token_manager.api_key,
         }
 
     def content_type(self):

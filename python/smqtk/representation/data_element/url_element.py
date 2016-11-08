@@ -61,6 +61,9 @@ class DataUrlElement (DataElement):
         # Check that the URL is valid, i.e. actually points to something
         requests.get(self._url).raise_for_status()
 
+    def __repr__(self):
+        return super(DataUrlElement, self).__repr__() + "{url: %s}" % self._url
+
     def get_config(self):
         return {
             "url_address": self._url

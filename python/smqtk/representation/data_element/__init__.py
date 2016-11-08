@@ -231,6 +231,29 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :rtype: bytes
         """
 
+    @abc.abstractmethod
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+
+    @abc.abstractmethod
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+
 
 def get_data_element_impls(reload_modules=False):
     """

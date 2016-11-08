@@ -2,7 +2,7 @@ import mimetypes
 import re
 import requests
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 
 
@@ -91,6 +91,30 @@ class DataUrlElement (DataElement):
         else:
             raise RuntimeError("Request response not OK. Status code returned: "
                                "%d", r.status_code)
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        # Web addresses cannot be written to
+        return False
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        raise ReadOnlyError("URL address targets cannot be written to.")
 
 
 DATA_ELEMENT_CLASS = DataUrlElement

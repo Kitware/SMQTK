@@ -2,8 +2,9 @@ import mimetypes
 import os.path as osp
 import re
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
+from smqtk.utils.file_utils import safe_create_dir
 
 try:
     import magic
@@ -82,7 +83,7 @@ class DataFileElement (DataElement):
 
         return DataFileElement(path)
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, readonly=False):
         """
         Create a new FileElement.
 
@@ -90,12 +91,16 @@ class DataFileElement (DataElement):
             interpreted as relative to the current working directory.
         :type filepath: str
 
+        :param readonly: If this element should allow writing or not.
+        :type readonly: bool
+
         """
         super(DataFileElement, self).__init__()
 
         # Just expand a user-home `~` if present, keep relative if that's what
         # was given.
         self._filepath = osp.expanduser(filepath)
+        self._readonly = bool(readonly)
 
         self._content_type = None
         if magic and osp.isfile(filepath):
@@ -119,7 +124,8 @@ class DataFileElement (DataElement):
 
     def get_config(self):
         return {
-            "filepath": self._filepath
+            "filepath": self._filepath,
+            "readonly": self._readonly,
         }
 
     def content_type(self):
@@ -136,6 +142,35 @@ class DataFileElement (DataElement):
         :rtype: bytes
         """
         return open(self._filepath, 'rb').read()
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        return not self._readonly
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        if not self._readonly:
+            # Make sure containing directory exists
+            safe_create_dir(osp.dirname(self._filepath))
+            with open(self._filepath) as f:
+                f.write(b)
+        else:
+            raise ReadOnlyError("This file element is read only.")
 
     def write_temp(self, temp_dir=None):
         """

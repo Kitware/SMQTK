@@ -1,8 +1,7 @@
 import base64
-import hashlib
 import re
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 
 try:
@@ -106,7 +105,7 @@ class DataMemoryElement (DataElement):
         return DataMemoryElement(base64.urlsafe_b64decode(b64_str), content_type)
 
     # noinspection PyShadowingBuiltins
-    def __init__(self, bytes, content_type=None):
+    def __init__(self, bytes, content_type=None, readonly=False):
         """
         Create a new DataMemoryElement from a byte string and optional content
         type.
@@ -119,16 +118,21 @@ class DataMemoryElement (DataElement):
             type will be introspected from the byte content.
         :type content_type: None | str
 
+        :param readonly: If this element should allow writing or not.
+        :type readonly: bool
+
         """
         super(DataMemoryElement, self).__init__()
 
         self._bytes = bytes
         self._content_type = content_type
+        self._readonly = bool(readonly)
 
     def get_config(self):
         return {
             "bytes": self._bytes,
             'content_type': self._content_type,
+            "readonly": self._readonly,
         }
 
     def content_type(self):
@@ -149,6 +153,32 @@ class DataMemoryElement (DataElement):
         :rtype: bytes
         """
         return self._bytes
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        return not self._readonly
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        if not self._readonly:
+            self._bytes = b
+        else:
+            raise ReadOnlyError("This memory element cannot be written to.")
 
 
 DATA_ELEMENT_CLASS = DataMemoryElement

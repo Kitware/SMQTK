@@ -1,7 +1,5 @@
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DataElement
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 # attempt to import required modules
@@ -78,6 +76,30 @@ class HBaseDataElement (DataElement):
         table = self._new_hbase_table_connection()
         r = table.row(self.element_key, columns=[self.binary_column])
         return r[self.binary_column]
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        # No write support (yet) for HBase elements
+        return False
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        raise ReadOnlyError("HBase elements cannot write data.")
 
 
 DATA_ELEMENT_CLASS = HBaseDataElement

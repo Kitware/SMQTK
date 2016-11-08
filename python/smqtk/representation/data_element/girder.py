@@ -1,5 +1,6 @@
 import requests
 
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DataElement
 from smqtk.utils.girder import GirderTokenManager
 from smqtk.utils.url import url_join
@@ -25,6 +26,14 @@ class GirderDataElement (DataElement):
         """
         # Requests module is a basic requirement
         return True
+
+    # TODO: from_uri
+    #       - adapt http format for username/password specification
+    #           (i.e. girder://<user>:<pass>@<url...>
+    #       - maybe optionally allow API key in place of user/pass spec
+    #           (i.e. girder://<api_key>@<url...>
+    #       - <url> in above I guess would be the api/v1/... URL, including any
+    #           parameters needed
 
     def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
                  api_key=None):
@@ -101,3 +110,28 @@ class GirderDataElement (DataElement):
             "Content received no the expected length: %d != %d (expected)" \
             % (len(content), expected_length)
         return content
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        # Current do not support writing to girder elements
+        # TODO: Implement using PUT file/{id} endpoint if the file exists
+        return False
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        raise ReadOnlyError("Cannot write to Girder data elements.")

@@ -32,7 +32,8 @@ class TestDataMemoryElement (unittest.TestCase):
     def test_configuration(self):
         default_config = DataMemoryElement.get_default_config()
         ntools.assert_equal(default_config,
-                            {'bytes': None, 'content_type': None})
+                            {'bytes': None, 'content_type': None,
+                             'readonly': False})
 
         default_config['bytes'] = 'Hello World.'
         default_config['content_type'] = 'text/plain'

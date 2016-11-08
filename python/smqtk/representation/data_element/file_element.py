@@ -120,7 +120,7 @@ class DataFileElement (DataElement):
 
     def __repr__(self):
         return super(DataFileElement, self).__repr__() + \
-            "{filepath: %s}" % self._filepath
+            "{filepath: %s, readonly: %s}" % (self._filepath, self._readonly)
 
     def get_config(self):
         return {

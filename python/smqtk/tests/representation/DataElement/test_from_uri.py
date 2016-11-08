@@ -20,6 +20,12 @@ class UnresolvableElement (smqtk.representation.data_element.DataElement):
     def get_bytes(self):
         return bytes()
 
+    def set_bytes(self, b):
+        pass
+
+    def writable(self):
+        pass
+
 
 class ResolvableElement (smqtk.representation.data_element.DataElement):
 
@@ -44,6 +50,12 @@ class ResolvableElement (smqtk.representation.data_element.DataElement):
 
     def get_bytes(self):
         return bytes()
+
+    def set_bytes(self, b):
+        pass
+
+    def writable(self):
+        pass
 
 
 class TestDataElementHighLevelFromUri (unittest.TestCase):

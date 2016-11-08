@@ -45,6 +45,12 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
         # Aligned with the checksum strings in test class setUp method
         return EXPECTED_BYTES
 
+    def set_bytes(self, b):
+        raise NotImplementedError()
+
+    def writable(self):
+        raise NotImplementedError()
+
 
 class TestDataElementAbstract (unittest.TestCase):
 

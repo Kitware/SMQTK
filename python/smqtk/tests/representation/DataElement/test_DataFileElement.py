@@ -92,7 +92,7 @@ class TestDataFileElement (unittest.TestCase):
         fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
         default_config = DataFileElement.get_default_config()
         ntools.assert_equal(default_config,
-                            {'filepath': None})
+                            {'filepath': None, 'readonly': False})
 
         default_config['filepath'] = fp
         inst1 = DataFileElement.from_config(default_config)
@@ -103,7 +103,12 @@ class TestDataFileElement (unittest.TestCase):
 
     def test_repr(self):
         e = DataFileElement('foo')
-        ntools.assert_equal(repr(e), "DataFileElement{filepath: foo}")
+        ntools.assert_equal(repr(e),
+                            "DataFileElement{filepath: foo, readonly: False}")
+
+        e = DataFileElement('bar', readonly=True)
+        ntools.assert_equal(repr(e),
+                            "DataFileElement{filepath: bar, readonly: True}")
 
     def test_from_uri_invalid_uri_empty(self):
         # Given empty string

@@ -10,6 +10,7 @@ import numpy
 import numpy.linalg
 
 from smqtk.algorithms import SupervisedClassifier
+from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element import elements_to_matrix
 
 try:
@@ -48,7 +49,7 @@ class LibSvmClassifier (SupervisedClassifier):
         return None not in {svm, svmutil}
 
     # noinspection PyDefaultArgument
-    def __init__(self, svm_model_fp=None, svm_label_map_fp=None,
+    def __init__(self, svm_model_uri=None, svm_label_map_uri=None,
                  train_params={
                      '-s': 0,  # C-SVC, assumed default if not provided
                      '-t': 0,  # linear kernel
@@ -67,12 +68,12 @@ class LibSvmClassifier (SupervisedClassifier):
         (default), no model is loaded nor output via training, thus any model
         trained will only exist in memory during the lifetime of this instance.
 
-        :param svm_model_fp: Path to the libSVM model file.
-        :type svm_model_fp: None | str
+        :param svm_model_uri: Path to the libSVM model file.
+        :type svm_model_uri: None | str
 
-        :param svm_label_map_fp: Path to the pickle file containing this model's
+        :param svm_label_map_uri: Path to the pickle file containing this model's
             output labels.
-        :type svm_label_map_fp: None | str
+        :type svm_label_map_uri: None | str
 
         :param train_params: SVM parameters used for training. See libSVM
             documentation for parameter flags and values.
@@ -88,8 +89,15 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         super(LibSvmClassifier, self).__init__()
 
-        self.svm_model_fp = svm_model_fp
-        self.svm_label_map_fp = svm_label_map_fp
+        self.svm_model_uri = svm_model_uri
+        self.svm_label_map_uri = svm_label_map_uri
+
+        # Elements will be None if input URI is None
+        self.svm_model_elem = \
+            svm_model_uri and from_uri(svm_model_uri)
+        self.svm_label_map_elem = \
+            svm_label_map_uri and from_uri(svm_label_map_uri)
+
         self.train_params = train_params
         self.normalize = normalize
         # Validate normalization parameter by trying it on a random vector
@@ -108,8 +116,8 @@ class LibSvmClassifier (SupervisedClassifier):
     def __getstate__(self):
         # If we don't have a model, or if we have one but its not being saved
         # to files.
-        if not self.has_model() or (self.svm_model_fp is not None and
-                                    self.svm_label_map_fp is not None):
+        if not self.has_model() or (self.svm_model_uri is not None and
+                                    self.svm_label_map_uri is not None):
             return self.get_config()
         else:
             self._log.debug("Saving model to temp file for pickling")
@@ -130,10 +138,15 @@ class LibSvmClassifier (SupervisedClassifier):
                 os.remove(fp)
 
     def __setstate__(self, state):
-        self.svm_model_fp = state['svm_model_fp']
-        self.svm_label_map_fp = state['svm_label_map_fp']
+        self.svm_model_uri = state['svm_model_uri']
+        self.svm_label_map_uri = state['svm_model_uri']
         self.train_params = state['train_params']
         self.normalize = state['normalize']
+
+        self.svm_model_elem = \
+            self.svm_model_uri and from_uri(self.svm_model_uri)
+        self.svm_label_map_elem = \
+            self.svm_label_map_uri and from_uri(self.svm_label_map_uri)
 
         # C libraries/pointers don't survive across processes.
         if '__LOCAL__' in state:
@@ -143,7 +156,7 @@ class LibSvmClassifier (SupervisedClassifier):
 
                 self.svm_label_map = state['__LOCAL_LABELS__']
 
-                # write model binary to file, then load via libSVM
+                # write model to file, then load via libSVM
                 with open(fp, 'wb') as model_f:
                     model_f.write(state['__LOCAL_MODEL__'])
 
@@ -159,11 +172,18 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         Reload SVM model from configured file path.
         """
-        if self.svm_model_fp and os.path.isfile(self.svm_model_fp):
-            self.svm_model = svmutil.svm_load_model(self.svm_model_fp)
-        if self.svm_label_map_fp and os.path.isfile(self.svm_label_map_fp):
-            with open(self.svm_label_map_fp, 'rb') as f:
-                self.svm_label_map = cPickle.load(f)
+        if self.svm_model_elem is not None:
+            svm_model_tmp_fp = self.svm_model_elem.write_temp()
+            # if there is anything to read from
+            if os.path.getsize(svm_model_tmp_fp) > 0:
+                self.svm_model = svmutil.svm_load_model(svm_model_tmp_fp)
+            self.svm_model_elem.clean_temp()
+
+        if self.svm_label_map_elem is not None:
+            svm_lm_tmp_fp = self.svm_label_map_elem.write_temp()
+            if os.path.getsize(svm_lm_tmp_fp) > 0:
+                self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
+            self.svm_label_map_elem.clean_temp()
 
     @staticmethod
     def _gen_param_string(params):
@@ -205,8 +225,8 @@ class LibSvmClassifier (SupervisedClassifier):
 
         """
         return {
-            "svm_model_fp": self.svm_model_fp,
-            "svm_label_map_fp": self.svm_label_map_fp,
+            "svm_model_uri": self.svm_model_uri,
+            "svm_label_map_uri": self.svm_label_map_uri,
             "train_params": self.train_params,
             "normalize": self.normalize,
         }
@@ -315,14 +335,25 @@ class LibSvmClassifier (SupervisedClassifier):
         self.svm_model = svmutil.svm_train(svm_problem, svm_params)
         self._log.debug("Training SVM model -- Done")
 
-        if self.svm_label_map_fp:
-            self._log.debug("saving file -- labels -- %s",
-                            self.svm_label_map_fp)
-            with open(self.svm_label_map_fp, 'wb') as f:
-                cPickle.dump(self.svm_label_map, f, -1)
-        if self.svm_model_fp:
-            self._log.debug("saving file -- model -- %s", self.svm_model_fp)
-            svmutil.svm_save_model(self.svm_model_fp, self.svm_model)
+        if self.svm_label_map_elem and self.svm_label_map_elem.writable():
+            self._log.debug("saving labels to element (%s)",
+                            self.svm_label_map_elem)
+            self.svm_label_map_elem.set_bytes(
+                cPickle.dumps(self.svm_label_map, -1)
+            )
+        if self.svm_model_elem and self.svm_model_elem.writable():
+            self._log.debug("saving model to element (%s)", self.svm_model_elem)
+            # LibSvm I/O only works with filepaths, thus the need for an
+            # intermediate temporary file.
+            fd, fp = tempfile.mkstemp()
+            try:
+                svmutil.svm_save_model(fp, self.svm_model)
+                self.svm_model_elem.set_bytes(
+                    os.read(fd, os.path.getsize(fp))
+                )
+            finally:
+                os.close(fd)
+                os.remove(fp)
 
     def get_labels(self):
         """

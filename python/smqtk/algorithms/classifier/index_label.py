@@ -1,7 +1,5 @@
 from smqtk.algorithms import Classifier
-
-
-__author__ = "paul.tunison@kitware.com"
+from smqtk.representation.data_element import from_uri
 
 
 class IndexLabelClassifier (Classifier):
@@ -14,16 +12,17 @@ class IndexLabelClassifier (Classifier):
     def is_usable(cls):
         return True
 
-    def __init__(self, index_to_label_filepath):
+    def __init__(self, index_to_label_uri):
         super(IndexLabelClassifier, self).__init__()
 
         # load label vector
-        self.index_to_label_filepath = index_to_label_filepath
-        self.label_vector = [l.strip() for l in open(index_to_label_filepath)]
+        self.index_to_label_uri = index_to_label_uri
+        self.label_vector = [l.strip() for l in
+                             from_uri(index_to_label_uri).to_buffered_reader()]
 
     def get_config(self):
         return {
-            "index_to_label_filepath": self.index_to_label_filepath,
+            "index_to_label_uri": self.index_to_label_uri,
         }
 
     def get_labels(self):

@@ -1,6 +1,7 @@
 import abc
 from collections import deque
 import hashlib
+import io
 import logging
 import mimetypes
 import os
@@ -130,6 +131,10 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         to the written file, whose extension is guessed based on this data's
         content type.
 
+        It is not guaranteed that the returned file path does not point to the
+        original data, i.e. writing to the returned filepath may modify the
+        original data.
+
         NOTE:
             The file path returned should not be explicitly removed by the user.
             Instead, the ``clean_temp()`` method should be called on this
@@ -195,6 +200,17 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
         """
         return self.sha1()
+
+    def to_buffered_reader(self):
+        """
+        Wrap this elements bytes in a ``io.BufferedReader`` instance for use as
+        file-like object for reading
+
+        :return: New BufferedReader instance
+        :rtype: io.BufferedReader
+
+        """
+        return io.BufferedReader(io.BytesIO(self.get_bytes()))
 
     ###
     # Abstract methods

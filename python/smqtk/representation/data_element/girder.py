@@ -93,6 +93,37 @@ class GirderDataElement (DataElement):
             self._content_type = r.json()['mimeType']
         return self._content_type
 
+    def get_file_model(self):
+        """
+        Get the file model json from the server.
+
+        Returns None if the file does not exist on the server.
+
+        :return: file model model as a dictionary
+        :rtype: dict | None
+
+        """
+        r = requests.get(url_join(self.api_root, 'file', self.file_id),
+                         headers=self.token_manager.get_requests_header())
+        if r.status_code == 400:
+            return None
+        # Exception for any other status
+        r.raise_for_status()
+        return r.json()
+
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        This plugin checks that
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+        m = self.get_file_model()
+        return m is not None and m['size'] > 0
+
     def get_bytes(self):
         """
         :return: Get the byte stream for this data element.

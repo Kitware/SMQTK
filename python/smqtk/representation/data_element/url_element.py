@@ -77,6 +77,16 @@ class DataUrlElement (DataElement):
         """
         return requests.get(self._url).headers['content-type']
 
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+        return len(self.get_bytes()) > 0
+
     def get_bytes(self):
         """
         :return: Get the byte stream for this data element.

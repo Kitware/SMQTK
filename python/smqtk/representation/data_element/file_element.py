@@ -136,6 +136,18 @@ class DataFileElement (DataElement):
         """
         return self._content_type
 
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        This plugin checks if the file on disk is greater than 0 in size.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+        return osp.getsize(self._filepath) > 0
+
     def get_bytes(self):
         """
         :return: Get the byte stream for this data element.

@@ -80,6 +80,17 @@ class HBaseDataElement (DataElement):
         return happybase.Connection(self.hbase_address, timeout=self.timeout)\
             .table(self.hbase_table)
 
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+        # naive impl for now
+        return len(self.get_bytes()) > 0
+
     def get_bytes(self):
         table = self._new_hbase_table_connection()
         r = table.row(self.element_key, columns=[self.binary_column])

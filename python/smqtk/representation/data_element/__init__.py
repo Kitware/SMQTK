@@ -72,7 +72,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     def __repr__(self):
         return self.__class__.__name__
 
-    def _write_temp(self, d):
+    def _write_new_temp(self, d):
         """
         Actually write our bytes to a new temp file
         Always creates new file.
@@ -164,11 +164,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
                 if osp.dirname(tf) == abs_temp_dir:
                     return tf
             # nothing in stack with given base directory, create new temp file
-            self._temp_filepath_stack.append(self._write_temp(temp_dir))
+            self._temp_filepath_stack.append(self._write_new_temp(temp_dir))
 
         elif not self._temp_filepath_stack:
             # write new temp file to platform specific temp directory
-            self._temp_filepath_stack.append(self._write_temp(None))
+            self._temp_filepath_stack.append(self._write_new_temp(None))
 
         # return last written temp file.
         return self._temp_filepath_stack[-1]
@@ -222,6 +222,20 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :return: Standard type/subtype string for this data element, or None if
             the content type is unknown.
         :rtype: str or None
+        """
+
+    @abc.abstractmethod
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        The intend of this method is to quickly check if there is any data
+        behind this element, ideally without having to read all/any of the
+        underlying data.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
         """
 
     @abc.abstractmethod

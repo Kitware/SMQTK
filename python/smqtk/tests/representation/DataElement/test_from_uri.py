@@ -17,6 +17,9 @@ class UnresolvableElement (smqtk.representation.data_element.DataElement):
     def content_type(self):
         return None
 
+    def is_empty(self):
+        pass
+
     def get_bytes(self):
         return bytes()
 
@@ -47,6 +50,9 @@ class ResolvableElement (smqtk.representation.data_element.DataElement):
 
     def content_type(self):
         return None
+
+    def is_empty(self):
+        pass
 
     def get_bytes(self):
         return bytes()

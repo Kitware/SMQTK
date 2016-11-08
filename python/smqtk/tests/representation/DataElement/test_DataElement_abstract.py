@@ -41,6 +41,9 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
     def content_type(self):
         return EXPECTED_CONTENT_TYPE
 
+    def is_empty(self):
+        pass
+
     def get_bytes(self):
         # Aligned with the checksum strings in test class setUp method
         return EXPECTED_BYTES

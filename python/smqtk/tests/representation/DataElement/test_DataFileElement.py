@@ -3,7 +3,7 @@ import nose.tools as ntools
 import os
 import unittest
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
@@ -190,3 +190,49 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_is_instance(e, DataFileElement)
         ntools.assert_equal(e._filepath, test_file_path)
         ntools.assert_equal(e.get_bytes(), '')
+
+    def test_is_empty_file_not_exists(self):
+        e = DataFileElement('/no/exists')
+        ntools.assert_true(e.is_empty())
+
+    def test_is_empty_file_zero_data(self):
+        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
+        ntools.assert_true(e.is_empty())
+
+    def test_is_empty_file_has_data(self):
+        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'Lenna.png'))
+        ntools.assert_false(e.is_empty())
+
+    def test_writable_readonly_false(self):
+        e = DataFileElement('foo')
+        ntools.assert_true(e.writable())
+
+        e = DataFileElement('foo', False)
+        ntools.assert_true(e.writable())
+
+        e = DataFileElement('foo', readonly=False)
+        ntools.assert_true(e.writable())
+
+    def test_writable_readonly_true(self):
+        e = DataFileElement('foo', True)
+        ntools.assert_false(e.writable())
+
+        e = DataFileElement('foo', readonly=True)
+        ntools.assert_false(e.writable())
+
+    @mock.patch('__builtin__.open')
+    @mock.patch('smqtk.representation.data_element.file_element.safe_create_dir')
+    def test_set_bytes_writable(self, m_scd, m_open):
+        e = DataFileElement('foo')
+        e.set_bytes('test string')
+        m_scd.assert_called()
+        m_open.assert_called_with('foo', 'wb')
+        m_open().__enter__().write.assert_called_with('test string')
+
+    def test_set_bytes_readonly(self):
+        e = DataFileElement('foo', readonly=True)
+        ntools.assert_raises(
+            ReadOnlyError,
+            e.set_bytes,
+            'some bytes'
+        )

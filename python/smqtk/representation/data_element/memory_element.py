@@ -155,7 +155,7 @@ class DataMemoryElement (DataElement):
         :rtype: bool
 
         """
-        return len(self._bytes) > 0
+        return not bool(self._bytes)
 
     def get_bytes(self):
         """

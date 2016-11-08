@@ -1,11 +1,14 @@
 import cPickle
 import logging
 import multiprocessing
+import os
 import os.path as osp
+import tempfile
 
 import numpy
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
 
@@ -41,8 +44,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         # if underlying library is not found, the import above will error
         return pyflann is not None
 
-    def __init__(self, index_filepath=None, parameters_filepath=None,
-                 descriptor_cache_filepath=None,
+    def __init__(self, index_uri=None, parameters_uri=None,
+                 descriptor_cache_uri=None,
                  # Parameters for building an index
                  autotune=False, target_precision=0.95, sample_fraction=0.1,
                  distance_method='hik', random_seed=None):
@@ -64,26 +67,26 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         See the MATLAB section for detailed descriptions (python section will
         just point you to the MATLAB section).
 
-        :param index_filepath: Optional file location to load/store FLANN index
+        :param index_uri: Optional URI to where to load/store FLANN index
             when initialized and/or built.
 
             If not configured, no model files are written to or loaded from
             disk.
-        :type index_filepath: None | str
+        :type index_uri: None | str
 
-        :param parameters_filepath: Optional file location to load/save FLANN
+        :param parameters_uri: Optional file location to load/save FLANN
             index parameters determined at build time.
 
             If not configured, no model files are written to or loaded from
             disk.
-        :type parameters_filepath: None | str
+        :type parameters_uri: None | str
 
-        :param descriptor_cache_filepath: Optional file location to load/store
+        :param descriptor_cache_uri: Optional file location to load/store
             DescriptorElements in this index.
 
             If not configured, no model files are written to or loaded from
             disk.
-        :type descriptor_cache_filepath: None | str
+        :type descriptor_cache_uri: None | str
 
         :param autotune: Whether or not to perform parameter auto-tuning when
             building the index. If this is False, then the `target_precision`
@@ -113,12 +116,17 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         """
         super(FlannNearestNeighborsIndex, self).__init__()
 
-        def normpath(p):
-            return (p and osp.abspath(osp.expanduser(p))) or p
-        self._index_filepath = normpath(index_filepath)
-        self._index_param_filepath = normpath(parameters_filepath)
-        self._descr_cache_filepath = normpath(descriptor_cache_filepath)
-        # Now they're either None or an absolute path
+        self._index_uri = index_uri
+        self._index_param_uri = parameters_uri
+        self._descr_cache_uri = descriptor_cache_uri
+
+        # Elements will be None if input URI is None
+        self._index_elem = \
+            self._index_uri and from_uri(self._index_uri)
+        self._index_param_elem = \
+            self._index_param_uri and from_uri(self._index_param_uri)
+        self._descr_cache_elem = \
+            self._descr_cache_uri and from_uri(self._descr_cache_uri)
 
         # parameters for building an index
         self._build_autotune = autotune
@@ -151,15 +159,15 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         self._pid = None
 
         # Load the index/parameters if one exists
-        if self._has_model_files():
-            self._log.info("Found existing model files. Loading.")
+        if self._has_model_data():
+            self._log.info("Found existing model data. Loading.")
             self._load_flann_model()
 
     def get_config(self):
         return {
-            "index_filepath": self._index_filepath,
-            "parameters_filepath": self._index_param_filepath,
-            "descriptor_cache_filepath": self._descr_cache_filepath,
+            "index_uri": self._index_uri,
+            "parameters_uri": self._index_param_uri,
+            "descriptor_cache_uri": self._descr_cache_uri,
             "autotune": self._build_autotune,
             "target_precision": self._build_target_precision,
             "sample_fraction": self._build_sample_frac,
@@ -167,26 +175,24 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             "random_seed": self._rand_seed,
         }
 
-    def _has_model_files(self):
+    def _has_model_data(self):
         """
-        check if configured model files are configured and exist
+        check if configured model files are configured and not empty
         """
-        return (self._index_filepath and osp.isfile(self._index_filepath) and
-                self._index_param_filepath and osp.isfile(self._index_param_filepath) and
-                self._descr_cache_filepath and osp.isfile(self._descr_cache_filepath))
+        return (self._index_elem and not self._index_elem.is_empty() and
+                self._index_param_elem and not self._index_param_elem.is_empty() and
+                self._descr_cache_elem and not self._descr_cache_elem.is_empty())
 
     def _load_flann_model(self):
-        if not self._descr_cache and self._descr_cache_filepath:
+        if not self._descr_cache and not self._descr_cache_elem.is_empty():
             # Load descriptor cache
             # - is copied on fork, so only need to load here.
             self._log.debug("Loading cached descriptors")
-            with open(self._descr_cache_filepath, 'rb') as f:
-                self._descr_cache = cPickle.load(f)
+            self._descr_cache = cPickle.loads(self._descr_cache_elem.get_bytes())
 
         # Params pickle include the build params + our local state params
-        if self._index_param_filepath:
-            with open(self._index_param_filepath) as f:
-                state = cPickle.load(f)
+        if self._index_param_elem and not self._index_param_elem.is_empty():
+            state = cPickle.loads(self._index_param_elem.get_bytes())
             self._build_autotune = state['b_autotune']
             self._build_target_precision = state['b_target_precision']
             self._build_sample_frac = state['b_sample_frac']
@@ -194,14 +200,16 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             self._flann_build_params = state['flann_build_params']
 
         # Load the binary index
-        if self._index_filepath:
+        if self._index_elem and not self._index_elem.is_empty():
             # make numpy matrix of descriptor vectors for FLANN
             pts_array = [d.vector() for d in self._descr_cache]
             pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
             pyflann.set_distance_type(self._distance_method)
             self._flann = pyflann.FLANN()
-            self._flann.load_index(self._index_filepath, pts_array)
-            del pts_array
+            tmp_fp = self._index_elem.write_temp()
+            self._flann.load_index(tmp_fp, pts_array)
+            self._index_elem.clean_temp()
+            del pts_array, tmp_fp
 
         # Set current PID to the current
         self._pid = multiprocessing.current_process().pid
@@ -215,7 +223,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         this does nothing.
         """
         if bool(self._flann) \
-                and self._has_model_files() \
+                and self._has_model_data() \
                 and self._pid != multiprocessing.current_process().pid:
             self._load_flann_model()
 
@@ -255,13 +263,12 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         self._descr_cache = list(descriptors)
         if not self._descr_cache:
             raise ValueError("No data provided in given iterable.")
-        # Cache descriptors if we have a path
-        if self._descr_cache_filepath:
-            self._log.debug("Caching descriptors: %s",
-                            self._descr_cache_filepath)
-            safe_create_dir(osp.dirname(self._descr_cache_filepath))
-            with open(self._descr_cache_filepath, 'wb') as f:
-                cPickle.dump(self._descr_cache, f, -1)
+        # Cache descriptors if we have an element
+        if self._descr_cache_elem and self._descr_cache_elem.writable():
+            self._log.debug("Caching descriptors: %s", self._descr_cache_elem)
+            self._descr_cache_elem.set_bytes(
+                cPickle.dumps(self._descr_cache, -1)
+            )
 
         params = {
             "target_precision": self._build_target_precision,
@@ -284,15 +291,19 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         self._flann_build_params = self._flann.build_index(pts_array, **params)
         del pts_array
 
-        self._log.debug("Caching index and state: %s, %s",
-                        self._index_filepath, self._index_param_filepath)
-        if self._index_filepath:
-            self._log.debug("Caching index: %s", self._index_filepath)
-            safe_create_dir(osp.dirname(self._index_filepath))
-            self._flann.save_index(self._index_filepath)
-        if self._index_param_filepath:
-            self._log.debug("Caching index params: %s",
-                            self._index_param_filepath)
+        if self._index_elem and self._index_elem.writable():
+            self._log.debug("Caching index: %s", self._index_elem)
+            # FLANN wants to write to a file, so make a temp file, then read it
+            # in, putting bytes into element.
+            fd, fp = tempfile.mkstemp()
+            try:
+                self._flann.save_index(fp)
+                self._index_elem.set_bytes(os.read(fd, os.path.getsize(fp)))
+            finally:
+                os.close(fd)
+                os.remove(fp)
+        if self._index_param_elem:
+            self._log.debug("Caching index params: %s", self._index_param_elem)
             state = {
                 'b_autotune': self._build_autotune,
                 'b_target_precision': self._build_target_precision,
@@ -300,9 +311,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                 'distance_method': self._distance_method,
                 'flann_build_params': self._flann_build_params,
             }
-            safe_create_dir(osp.dirname(self._index_param_filepath))
-            with open(self._index_param_filepath, 'w') as f:
-                cPickle.dump(state, f, -1)
+            self._index_param_elem.set_bytes(cPickle.dumps(state, -1))
 
         self._pid = multiprocessing.current_process().pid
 

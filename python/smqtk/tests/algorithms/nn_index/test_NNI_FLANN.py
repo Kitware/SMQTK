@@ -1,3 +1,4 @@
+import mock
 import os
 import random
 import unittest
@@ -5,12 +6,11 @@ import unittest
 import nose.tools as ntools
 import numpy
 
+from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
-
-__author__ = "paul.tunison@kitware.com"
 
 
 # Don't bother running tests of the class is not usable
@@ -30,6 +30,26 @@ if FlannNearestNeighborsIndex.is_usable():
         def test_impl_findable(self):
             ntools.assert_in(FlannNearestNeighborsIndex.__name__,
                              get_nn_index_impls())
+
+        def test_has_model_data_no_uris(self):
+            f = FlannNearestNeighborsIndex()
+            ntools.assert_false(f._has_model_data())
+
+        def test_has_model_data_empty_elements(self):
+            f = FlannNearestNeighborsIndex('', '', '')
+            ntools.assert_false(f._has_model_data())
+
+        @mock.patch("smqtk.algorithms.nn_index.flann"
+                    ".FlannNearestNeighborsIndex._load_flann_model")
+        def test_has_model_data_valid_uris(self, m_flann_lfm):
+            # Mocking flann data loading that occurs in constructor when given
+            # non-empty URI targets
+            f = FlannNearestNeighborsIndex(
+                'base64://bW9kZWxEYXRh',  # 'modelData'
+                'base64://cGFyYW1EYXRh',  # 'paramData'
+                'base64://ZGVzY3JEYXRh',  # 'descrData'
+            )
+            ntools.assert_true(f._has_model_data())
 
         def test_known_descriptors_euclidean_unit(self):
             dim = 5
@@ -119,17 +139,17 @@ if FlannNearestNeighborsIndex.is_usable():
 
             # Make configuration based on default
             c = FlannNearestNeighborsIndex.get_default_config()
-            c['index_filepath'] = index_filepath
-            c['parameters_filepath'] = para_filepath
-            c['descriptor_cache_filepath'] = descr_cache_fp
+            c['index_uri'] = index_filepath
+            c['parameters_uri'] = para_filepath
+            c['descriptor_cache_uri'] = descr_cache_fp
             c['distance_method'] = 'hik'
             c['random_seed'] = 42
 
             # Build based on configuration
             index = FlannNearestNeighborsIndex.from_config(c)
-            ntools.assert_equal(index._index_filepath, index_filepath)
-            ntools.assert_equal(index._index_param_filepath, para_filepath)
-            ntools.assert_equal(index._descr_cache_filepath, descr_cache_fp)
+            ntools.assert_equal(index._index_uri, index_filepath)
+            ntools.assert_equal(index._index_param_uri, para_filepath)
+            ntools.assert_equal(index._descr_cache_uri, descr_cache_fp)
 
             c2 = index.get_config()
             ntools.assert_equal(c, c2)

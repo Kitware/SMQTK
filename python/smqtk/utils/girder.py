@@ -34,6 +34,22 @@ class GirderTokenManager (SmqtkObject):
         self._token = None
         self._expiration = None
 
+    @property
+    def api_root(self):
+        return self._api_root
+
+    @property
+    def api_key(self):
+        return self._api_key
+
+    @property
+    def token(self):
+        return self._token
+
+    @property
+    def expiration(self):
+        return self._expiration
+
     @staticmethod
     def _parse_expiration_timestamp(ts):
         """

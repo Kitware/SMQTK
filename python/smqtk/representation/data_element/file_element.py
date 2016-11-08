@@ -56,6 +56,11 @@ class DataFileElement (DataElement):
         the leading slash. This means it will look like there are 3 slashes
         after the "file:", for example: "file:///home/me/somefile.txt".
 
+        If this is given a URI with what looks like another URI header (e.g.
+        "base64://..."), we thrown an InvalidUriError. This ends up being due to
+        the `//` component, which we treat as an invalid path, not because of
+        any special parsing.
+
         :param uri: URI string to resolve into an element instance
         :type uri: str
 
@@ -146,7 +151,7 @@ class DataFileElement (DataElement):
         :rtype: bool
 
         """
-        return osp.getsize(self._filepath) > 0
+        return osp.exists(self._filepath) and osp.getsize(self._filepath) > 0
 
     def get_bytes(self):
         """

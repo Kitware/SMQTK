@@ -172,17 +172,14 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         Reload SVM model from configured file path.
         """
-        if self.svm_model_elem is not None:
+        if self.svm_model_elem is not self.svm_model_elem.is_empty():
             svm_model_tmp_fp = self.svm_model_elem.write_temp()
-            # if there is anything to read from
-            if os.path.getsize(svm_model_tmp_fp) > 0:
-                self.svm_model = svmutil.svm_load_model(svm_model_tmp_fp)
+            self.svm_model = svmutil.svm_load_model(svm_model_tmp_fp)
             self.svm_model_elem.clean_temp()
 
-        if self.svm_label_map_elem is not None:
+        if self.svm_label_map_elem is not self.svm_label_map_elem.is_empty():
             svm_lm_tmp_fp = self.svm_label_map_elem.write_temp()
-            if os.path.getsize(svm_lm_tmp_fp) > 0:
-                self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
+            self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
             self.svm_label_map_elem.clean_temp()
 
     @staticmethod

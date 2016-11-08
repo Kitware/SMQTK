@@ -151,7 +151,8 @@ class DataFileElement (DataElement):
         :rtype: bool
 
         """
-        return osp.exists(self._filepath) and osp.getsize(self._filepath) > 0
+        return not osp.exists(self._filepath) or \
+            osp.getsize(self._filepath) == 0
 
     def get_bytes(self):
         """
@@ -184,7 +185,7 @@ class DataFileElement (DataElement):
         if not self._readonly:
             # Make sure containing directory exists
             safe_create_dir(osp.dirname(self._filepath))
-            with open(self._filepath) as f:
+            with open(self._filepath, 'wb') as f:
                 f.write(b)
         else:
             raise ReadOnlyError("This file element is read only.")

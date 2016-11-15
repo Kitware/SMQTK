@@ -7,5 +7,16 @@ SMQTK_BINARY="@SMQTK_BINARY_DIR@"
 SMQTK_TPL="@TPL_LOCAL_INSTALL@"
 SMQTK_TPL_PYTHON="@TPL_PYTHON_SP@"
 
-export PATH="${SMQTK_SOURCE}/bin:${SMQTK_BINARY}/src/frame_extractor/:${SMQTK_BINARY}/src/cnn_feature_extractor/:${SMQTK_TPL}/bin:${PATH}"
-export PYTHONPATH="${SMQTK_SOURCE}/python:${SMQTK_TPL_PYTHON}:$PYTHONPATH"
+export PATH="${SMQTK_SOURCE}/bin:${SMQTK_BINARY}/src/frame_extractor/:${SMQTK_BINARY}/src/cnn_feature_extractor/:${PATH}"
+
+# Only add third party libraries if the directory exists, they might
+# not if users disabled building SVM/Flann during install.
+if [ -d "${SMQTK_TPL}" ]; then
+    export PATH="${SMQTK_TPL}/bin:${PATH}"
+fi
+
+export PYTHONPATH="${SMQTK_SOURCE}/python:$PYTHONPATH"
+
+if [ -d "${SMQTK_TPL_PYTHON}" ]; then
+    export PYTHONPATH="${SMQTK_TPL_PYTHON}:$PYTHONPATH"
+fi

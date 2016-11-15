@@ -10,7 +10,7 @@ import itertools
 import logging
 
 from smqtk.representation import DescriptorIndex
-from smqtk.utils.errors import ReadOnlyError
+from smqtk.exceptions import ReadOnlyError
 
 try:
     import psycopg2

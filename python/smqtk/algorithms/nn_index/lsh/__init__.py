@@ -15,13 +15,13 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils import merge_dict
-from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import FileModificationMonitor
 
 

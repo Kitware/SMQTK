@@ -1,17 +1,16 @@
 import abc
 from collections import deque
 import hashlib
+import logging
 import mimetypes
 import os
 import os.path as osp
 import tempfile
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
 from smqtk.utils import plugin
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -27,6 +26,27 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     UUIDs must maintain unique-ness when transformed into a string.
 
     """
+
+    @classmethod
+    def from_uri(cls, uri):
+        """
+        Construct a new instance based on the given URI.
+
+        This function may not be implemented for all DataElement types.
+
+        :param uri: URI string to resolve into an element instance
+        :type uri: str
+
+        :raises NotImplementedError: This element type does not implement URI
+            resolution.
+        :raises smqtk.exceptions.InvalidUriError: This element type could not
+            resolve the provided URI string.
+
+        :return: New element instance of our type.
+        :rtype: DataElement
+
+        """
+        raise NotImplementedError()
 
     def __init__(self):
         super(DataElement, self).__init__()
@@ -49,15 +69,37 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         return not (self == other)
 
     def __repr__(self):
-        return "%s{uuid: %s, content_type: '%s'}" \
-               % (self.__class__.__name__, self.uuid(), self.content_type())
+        return self.__class__.__name__
+
+    def _write_temp(self, d):
+        """
+        Actually write our bytes to a new temp file
+        Always creates new file.
+
+        :param d: directory to write temp file in or None to use system default.
+        :returns: path to file written
+
+        """
+        if d:
+            file_utils.safe_create_dir(d)
+        ext = MIMETYPES.guess_extension(self.content_type())
+        # Exceptions because mimetypes is apparently REALLY OLD
+        if ext in {'.jpe', '.jfif'}:
+            ext = '.jpg'
+        fd, fp = tempfile.mkstemp(
+            suffix=ext or '',
+            dir=d
+        )
+        os.close(fd)
+        with open(fp, 'wb') as f:
+            f.write(self.get_bytes())
+        return fp
 
     def _clear_no_exist(self):
         """
-        Clear paths in temp list that don't exist on the system until we
-        encounter one that does.
+        Clear paths in temp stack that don't exist on the system.
         """
-        no_exist_paths = deque()
+        no_exist_paths = deque()  # tmp list of paths to remove
         for fp in self._temp_filepath_stack:
             if not osp.isfile(fp):
                 no_exist_paths.append(fp)
@@ -107,25 +149,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         # of the entries' base directory is the provided temp_dir (when one is
         # provided).
 
-        def write_temp(d):
-            """ Returns path to file written. Always creates new file. """
-            if d:
-                file_utils.safe_create_dir(d)
-            ext = MIMETYPES.guess_extension(self.content_type())
-            # Exceptions because mimetypes is apparently REALLY OLD
-            if ext in {'.jpe', '.jfif'}:
-                ext = '.jpg'
-            fd, fp = tempfile.mkstemp(
-                suffix=ext,
-                dir=d
-            )
-            os.close(fd)
-            with open(fp, 'wb') as f:
-                f.write(self.get_bytes())
-            return fp
-
-        # Clear out paths, from the back, that don't exist.
-        # Stops when it finds something that exists.
+        # Clear out paths that don't exist.
         self._clear_no_exist()
 
         if temp_dir:
@@ -135,11 +159,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
                 if osp.dirname(tf) == abs_temp_dir:
                     return tf
             # nothing in stack with given base directory, create new temp file
-            self._temp_filepath_stack.append(write_temp(temp_dir))
+            self._temp_filepath_stack.append(self._write_temp(temp_dir))
 
         elif not self._temp_filepath_stack:
             # write new temp file to platform specific temp directory
-            self._temp_filepath_stack.append(write_temp(None))
+            self._temp_filepath_stack.append(self._write_temp(None))
 
         # return last written temp file.
         return self._temp_filepath_stack[-1]
@@ -227,3 +251,50 @@ def get_data_element_impls(reload_modules=False):
     helper_var = "DATA_ELEMENT_CLASS"
     return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
                               DataElement, reload_modules=reload_modules)
+
+
+def from_uri(uri, impl_generator=get_data_element_impls):
+    """
+    Create a data element instance from available plugin implementations.
+
+    The first implementation that can resolve the URI is what is returned. If no
+    implementations can resolve the URL, an ``InvalidUriError`` is raised.
+
+    :param uri: URI to try to resolve into a DataElement instance.
+    :type uri: str
+
+    :param impl_generator: Function that returns a dictionary mapping
+        implementation type names to the class type. By default this refers to
+        the standard ``get_data_element_impls`` function, however this can be
+        changed to refer to a custom set of classes if desired.
+    :type impl_generator: () -> dict[str, type]
+
+    :raises smqtk.exceptions.InvalidUriError: No data element implementations
+        could resolve the given URI.
+
+    :return: New data element instance providing access to the data pointed to
+        by the input URI.
+    :rtype: DataElement
+
+    """
+    log = logging.getLogger(__name__)
+    log.debug("Trying to parse URI: '%s'", uri)
+
+    #: :type: __generator[DataElement]
+    de_type_iter = impl_generator().itervalues()
+    inst = None
+    for de_type in de_type_iter:
+        try:
+            inst = de_type.from_uri(uri)
+        except NotImplementedError:
+            pass
+        except InvalidUriError, ex:
+            log.debug("Implementation '%s' failed to parse URI: %s",
+                      de_type.__name__, ex.reason)
+        if inst is not None:
+            break
+    if inst is None:
+        # TODO: Assume final fallback of FileElement?
+        #       Since any string could be a file?
+        raise InvalidUriError(uri, "No available implementation to handle URI.")
+    return inst

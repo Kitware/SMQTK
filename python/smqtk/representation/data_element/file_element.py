@@ -1,8 +1,18 @@
-
 import mimetypes
 import os.path as osp
+import re
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation import DataElement
+
+try:
+    import magic
+    # We know there are multiple modules named magic. Make sure the function we
+    # expect is there.
+    # noinspection PyStatementEffect
+    magic.detect_from_filename
+except (ImportError, AttributeError):
+    magic = None
 
 try:
     from tika import detector as tika_detector
@@ -10,10 +20,9 @@ except ImportError:
     tika_detector = None
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
-# Fix global MIMETYPE map
+# Fix global MIMETYPE map.
+# Default map maps "image/jpeg" with some rarely used extensions before the
+# common ones. We remove them here so we don't encounter them.
 if '.jfif' in mimetypes.types_map:
     del mimetypes.types_map['.jfif']
 if '.jpe' in mimetypes.types_map:
@@ -25,10 +34,53 @@ class DataFileElement (DataElement):
     File-based data element
     """
 
+    # Regex for file paths optionally including the file:// and / prefix.
+    # Allows any character between slashes currently.
+    FILE_URI_RE = re.compile("^(?:file://)?(/?[^/]+(?:/[^/]+)*)$")
+
     @classmethod
     def is_usable(cls):
         # No dependencies
         return True
+
+    @classmethod
+    def from_uri(cls, uri):
+        """
+        Construct a new instance based on the given URI.
+
+        File elements can resolve any URI that looks like an absolute or
+        relative path, or if the URI explicitly has the "file://" header.
+
+        When the "file://" header is used, we expect an absolute path, including
+        the leading slash. This means it will look like there are 3 slashes
+        after the "file:", for example: "file:///home/me/somefile.txt".
+
+        :param uri: URI string to resolve into an element instance
+        :type uri: str
+
+        :raises smqtk.exceptions.InvalidUriError: This element type could not
+            resolve the provided URI string.
+
+        :return: New element instance of our type.
+        :rtype: DataElement
+
+        """
+        path_match = cls.FILE_URI_RE.match(uri)
+
+        # if did not match RE, then not a valid path to a file (i.e. had a
+        # trailing slash, file:// prefix malformed, etc.)
+        if path_match is None:
+            raise InvalidUriError(uri, "Malformed URI")
+
+        path = path_match.group(1)
+
+        # When given the file:// prefix, the encoded path must be absolute
+        # Stealing the notion based on how Google Chrome handles file:// URIs
+        if uri.startswith("file://") and not osp.isabs(path):
+            raise InvalidUriError(uri, "Found file:// prefix, but path was not "
+                                       "absolute")
+
+        return DataFileElement(path)
 
     def __init__(self, filepath):
         """
@@ -41,11 +93,15 @@ class DataFileElement (DataElement):
         """
         super(DataFileElement, self).__init__()
 
-        # Just expand a user-home `~` if present, keep relative if given.
+        # Just expand a user-home `~` if present, keep relative if that's what
+        # was given.
         self._filepath = osp.expanduser(filepath)
 
         self._content_type = None
-        if tika_detector:
+        if magic and osp.isfile(filepath):
+            d = magic.detect_from_filename(filepath)
+            self._content_type = d.mime_type
+        elif tika_detector:
             try:
                 self._content_type = tika_detector.from_file(filepath)
             except IOError, ex:
@@ -58,8 +114,8 @@ class DataFileElement (DataElement):
             self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):
-        return super(DataFileElement, self).__repr__()[:-1] + \
-            ", filepath: %s}" % self._filepath
+        return super(DataFileElement, self).__repr__() + \
+            "{filepath: %s}" % self._filepath
 
     def get_config(self):
         return {
@@ -106,6 +162,7 @@ class DataFileElement (DataElement):
         """
         if temp_dir:
             abs_temp_dir = osp.abspath(osp.expanduser(temp_dir))
+            # Checking that the dir given isn't where the filepath lives
             if abs_temp_dir != osp.dirname(self._filepath):
                 return super(DataFileElement, self).write_temp(temp_dir)
         return self._filepath

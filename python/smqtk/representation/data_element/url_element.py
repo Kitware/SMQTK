@@ -1,10 +1,9 @@
 import mimetypes
+import re
 import requests
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation import DataElement
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 MIMETYPES = mimetypes.MimeTypes()
@@ -15,6 +14,9 @@ class DataUrlElement (DataElement):
     Representation of data loadable via a web URL address.
     """
 
+    # Enforce presence of demarcating schema
+    URI_RE = re.compile('^https?://.+$')
+
     @classmethod
     def is_usable(cls):
         # have to be able to connect to the internet
@@ -23,12 +25,21 @@ class DataUrlElement (DataElement):
             r = requests.get('http://github.com')
             _ = r.content
             return True
-        except Exception, ex:
+        except requests.ConnectionError:
             cls.get_logger().warning(
                 "DataUrlElement not usable, cannot connect to "
                 "http://github.com"
             )
             return False
+
+    @classmethod
+    def from_uri(cls, uri):
+        m = cls.URI_RE.match(uri)
+        if m is not None:
+            # simply pass on URI as URL address
+            return DataUrlElement(uri)
+
+        raise InvalidUriError(uri, "Invalid web URI")
 
     def __init__(self, url_address):
         """

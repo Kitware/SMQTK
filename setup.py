@@ -152,6 +152,9 @@ setuptools.setup(
             'protobuf',
             'scikit-image',
         ],
+        'magic': [
+            'file-magic',
+        ],
         'flann': [
             'pyflann>=1.8.4',
         ],

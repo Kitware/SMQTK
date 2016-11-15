@@ -18,9 +18,10 @@ __author__ = "paul.tunison@kitware.com"
 # because this has a stable mimetype conversion
 EXPECTED_CONTENT_TYPE = "image/png"
 EXPECTED_BYTES = "hello world"
-EXPECTED_UUID = 1234567890
 EXPECTED_MD5 = hashlib.md5(EXPECTED_BYTES).hexdigest()
 EXPECTED_SHA1 = hashlib.sha1(EXPECTED_BYTES).hexdigest()
+# UUID is currently set to be equivalent to SHA1 value by default
+EXPECTED_UUID = EXPECTED_SHA1
 
 
 # Caches the temp directory before we start mocking things out that would
@@ -44,25 +45,17 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
         # Aligned with the checksum strings in test class setUp method
         return EXPECTED_BYTES
 
-    def uuid(self):
-        return EXPECTED_UUID
-
 
 class TestDataElementAbstract (unittest.TestCase):
 
     def test_md5(self):
         de = DummyDataElement()
-
         ntools.assert_is_none(de._md5_cache)
-
         md5 = de.md5()
-        sha1 = de.sha1()
 
         ntools.assert_is_not_none(de._md5_cache)
         ntools.assert_equal(de._md5_cache, EXPECTED_MD5)
         ntools.assert_equal(md5, EXPECTED_MD5)
-        ntools.assert_equal(de._sha1_cache, EXPECTED_SHA1)
-        ntools.assert_equal(sha1, EXPECTED_SHA1)
 
         # When called a second time, should use cache instead of recomputing
         with mock.patch("smqtk.representation.data_element.hashlib") as mock_hashlib:
@@ -70,6 +63,17 @@ class TestDataElementAbstract (unittest.TestCase):
             ntools.assert_false(mock_hashlib.md5.called)
             ntools.assert_equal(md5, EXPECTED_MD5)
 
+    def test_sha1(self):
+        de = DummyDataElement()
+        ntools.assert_is_none(de._sha1_cache)
+        sha1 = de.sha1()
+
+        ntools.assert_is_not_none(de._sha1_cache)
+        ntools.assert_equal(de._sha1_cache, EXPECTED_SHA1)
+        ntools.assert_equal(sha1, EXPECTED_SHA1)
+
+        # When called a second time, should use cache instead of recomputing
+        with mock.patch("smqtk.representation.data_element.hashlib") as mock_hashlib:
             sha1 = de.sha1()
             ntools.assert_false(mock_hashlib.sha1.called)
             ntools.assert_equal(sha1, EXPECTED_SHA1)
@@ -80,6 +84,10 @@ class TestDataElementAbstract (unittest.TestCase):
         del de
 
         ntools.assert_true(m_clean_temp.called)
+
+    def test_uuid(self):
+        de = DummyDataElement()
+        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
 
     def test_hashing(self):
         # Hash should be that of the UUID of the element

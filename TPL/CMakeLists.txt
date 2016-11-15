@@ -72,7 +72,9 @@ endif()
 # Install rules for TPL-installed material
 #
 # trailing slash means "Everything under this directory"
-install(DIRECTORY "${TPL_LOCAL_INSTALL}/"
-        DESTINATION .
-        USE_SOURCE_PERMISSIONS
-        )
+if (SMQTK_BUILD_LIBSVM OR SMQTK_BUILD_FLANN)
+  install(DIRECTORY "${TPL_LOCAL_INSTALL}/"
+          DESTINATION .
+          USE_SOURCE_PERMISSIONS
+          )
+endif()

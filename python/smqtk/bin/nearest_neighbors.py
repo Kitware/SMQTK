@@ -28,7 +28,7 @@ def get_cli_parser():
     parser.add_argument('-n', '--num',
                         default=10, metavar='INT', type=int,
                         help='Number of maximum nearest neighbors to return '
-                        'for each UUID (excluding itself)')
+                             'for each UUID.')
     return parser
 
 
@@ -74,13 +74,13 @@ def main():
                 descriptor = nearest_neighbor_index.descriptor_index \
                                                    .get_descriptor(line.strip())
                 print(descriptor.uuid())
-                for neighbor in nearest_neighbors(descriptor, args.num + 1):
+                for neighbor in nearest_neighbors(descriptor, args.num):
                     print('%s,%f' % neighbor)
     else:
         for (uuid, descriptor) in nearest_neighbor_index.descriptor_index\
                                                         .iteritems():
             print(uuid)
-            for neighbor in nearest_neighbors(descriptor, args.num + 1):
+            for neighbor in nearest_neighbors(descriptor, args.num):
                 print('%s,%f' % neighbor)
 
 

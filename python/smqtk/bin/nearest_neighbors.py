@@ -28,7 +28,9 @@ def get_cli_parser():
     parser.add_argument('-n', '--num',
                         default=10, metavar='INT', type=int,
                         help='Number of maximum nearest neighbors to return '
-                             'for each UUID.')
+                             'for each UUID, defaults to retrieving 10 nearest '
+                             'neighbors. Set to 0 to retrieve all nearest '
+                             'neighbors.')
     return parser
 
 
@@ -56,6 +58,9 @@ def main():
                                                        get_nn_index_impls())
 
     def nearest_neighbors(descriptor, n):
+        if n == 0:
+            n = len(nearest_neighbor_index)
+
         uuids, descriptors = nearest_neighbor_index.nn(descriptor, n)
         # Strip first result (itself) and create list of (uuid, distance)
         return zip([x.uuid() for x in uuids[1:]], descriptors[1:])
@@ -63,9 +68,8 @@ def main():
     if args.uuid_list is not None and not os.path.exists(args.uuid_list):
         log.error('Invalid file list path: %s', args.uuid_list)
         exit(103)
-    elif args.num <= 0:
-        # todo - support getting all nearest neighbors with num == 0?
-        log.error('Number of nearest neighbors must be > 0')
+    elif args.num < 0:
+        log.error('Number of nearest neighbors must be >= 0')
         exit(105)
 
     if args.uuid_list is not None:

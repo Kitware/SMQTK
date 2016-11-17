@@ -1,6 +1,8 @@
 # Add and build TPL elements
 include(ExternalProject)
 
+option(SMQTK_BUILD_LIBSVM "Enable building of libSVM." ON)
+option(SMQTK_BUILD_FLANN "Enable building of FLANN." ON)
 
 # Variables defined by parent module:
 #   TPL_BUILD_PREFIX  - Where build files will go
@@ -11,22 +13,24 @@ include(ExternalProject)
 ###
 # libSVM
 #
-set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.1-custom")
-ExternalProject_Add(libSVM
-  PREFIX            "${TPL_BUILD_PREFIX}"
-  SOURCE_DIR        "${libSVM_DIR}"
-  CONFIGURE_COMMAND ""
-  BUILD_IN_SOURCE   1
-  BUILD_COMMAND     $(MAKE) lib
-  INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
-  INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
-          COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
-          COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
-          COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
-          COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
-          COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
-          COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
-  )
+if (SMQTK_BUILD_LIBSVM)
+  set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.1-custom")
+  ExternalProject_Add(libSVM
+    PREFIX            "${TPL_BUILD_PREFIX}"
+    SOURCE_DIR        "${libSVM_DIR}"
+    CONFIGURE_COMMAND ""
+    BUILD_IN_SOURCE   1
+    BUILD_COMMAND     $(MAKE) lib
+    INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
+    INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
+            COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
+            COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
+            COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
+            COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
+            COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
+            COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
+    )
+endif()
 
 
 ###
@@ -40,33 +44,37 @@ ExternalProject_Add(libSVM
 # their raw form are sufficiently able to locate the local install's flann
 # library, and thus are sufficiently functional.
 #
-set(FLANN_DIR "${CMAKE_CURRENT_LIST_DIR}/flann-1.8.4")
-ExternalProject_Add(flann
-  PREFIX            "${TPL_BUILD_PREFIX}"
-  SOURCE_DIR        "${FLANN_DIR}"
-  BUILD_IN_SOURCE   1
-  CMAKE_GENERATOR   ${gen}
-  CMAKE_ARGS
-    -DBUILD_MATLAB_BINDINGS:BOOL=OFF
-    -DBUILD_CUDA_LIB:BOOL=OFF
-    -DBUILD_PYTHON_BINDINGS:BOOL=OFF
-    #-DLATEX_OUTPUT_PATH:PATH=${CMAKE_CURRENT_LIST_DIR}/flann-1.8.4
-    -DLATEX_OUTPUT_PATH:PATH=build
-    "-DCMAKE_INSTALL_PREFIX:PATH=${TPL_LOCAL_INSTALL}"
-  )
+if (SMQTK_BUILD_FLANN)
+  set(FLANN_DIR "${CMAKE_CURRENT_LIST_DIR}/flann-1.8.4")
+  ExternalProject_Add(flann
+    PREFIX            "${TPL_BUILD_PREFIX}"
+    SOURCE_DIR        "${FLANN_DIR}"
+    BUILD_IN_SOURCE   1
+    CMAKE_GENERATOR   ${gen}
+    CMAKE_ARGS
+      -DBUILD_MATLAB_BINDINGS:BOOL=OFF
+      -DBUILD_CUDA_LIB:BOOL=OFF
+      -DBUILD_PYTHON_BINDINGS:BOOL=OFF
+      #-DLATEX_OUTPUT_PATH:PATH=${CMAKE_CURRENT_LIST_DIR}/flann-1.8.4
+      -DLATEX_OUTPUT_PATH:PATH=build
+      "-DCMAKE_INSTALL_PREFIX:PATH=${TPL_LOCAL_INSTALL}"
+    )
 
-ExternalProject_Add_Step(flann install_python
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
-  COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FLANN_DIR}/src/python/pyflann" "${TPL_PYTHON_SP}/pyflann"
-  DEPENDEES install
-  )
+  ExternalProject_Add_Step(flann install_python
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FLANN_DIR}/src/python/pyflann" "${TPL_PYTHON_SP}/pyflann"
+    DEPENDEES install
+    )
+endif()
 
 
 ###
 # Install rules for TPL-installed material
 #
 # trailing slash means "Everything under this directory"
-install(DIRECTORY "${TPL_LOCAL_INSTALL}/"
-        DESTINATION .
-        USE_SOURCE_PERMISSIONS
-        )
+if (SMQTK_BUILD_LIBSVM OR SMQTK_BUILD_FLANN)
+  install(DIRECTORY "${TPL_LOCAL_INSTALL}/"
+          DESTINATION .
+          USE_SOURCE_PERMISSIONS
+          )
+endif()

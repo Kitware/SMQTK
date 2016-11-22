@@ -105,7 +105,7 @@ RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download 
 # SMQTK local installation
 # - python requirements retreived when pip installing smqtk instead of from
 #   ``requirements.txt`` file.
-ENV SMQTK_VERSION="gur/vigilant/docker-playground-iqr" \
+ENV SMQTK_VERSION="gur/vigilant/master" \
     SMQTK_URL="https://kwgitlab.kitware.com/computer-vision/SMQTK.git"
 RUN git clone -b ${SMQTK_VERSION} ${SMQTK_URL} smqtk/source
 RUN mkdir smqtk/build \

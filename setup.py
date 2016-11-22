@@ -205,6 +205,7 @@ setuptools.setup(
             'runApplication = smqtk.bin.runApplication:main',
             'summarizePlugins = smqtk.bin.summarizePlugins:main',
             'train_itq = smqtk.bin.train_itq:main',
+            'smqtk-nearest-neighbors = smqtk.bin.nearest_neighbors:main'
         ]
     }
 )

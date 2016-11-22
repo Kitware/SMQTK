@@ -24,7 +24,6 @@ then
 fi
 
 watch -n1 "
-nvidia-smi
 echo
 docker exec ${CONTAINER_NAME} bash -c '[ -d data/image_tiles ] && echo \"Image tiles generated: \$(ls data/image_tiles | wc -l)\"'
 echo

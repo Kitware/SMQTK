@@ -3,6 +3,7 @@ SMQTK IQR Playground and Turn-key container
 
 We provide the docker container image:
 
+    ``kitware/smqtk/iqr_playground_cpu:0.3``
     ``kitware/smqtk/iqr_playground_nvidia:0.3``
 
 This is a self-contained SMQTK playground environment that can also act as an
@@ -40,6 +41,10 @@ One way to use this contianer is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
+    docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu:0.3 -b [-t]
+
+    OR
+
     nvidia-docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia:0.3 -b [-t]
 
 The use of ``nvidia-docker`` is required to use the GPU computation
@@ -57,9 +62,8 @@ The entrypoint in this container can take a number of options:
         Build model files for images mounted to /home/smqtk/data/images
 
     -t | --tile
-        Transform images found in the images directory according to
-        the provided generate_image_transform configuration JSON
-        file.
+        Transform input images found in the images directory according to
+        the provided generate_image_transform configuration JSON file.
 
 When starting a new container, imagery must be mounted otherwise there will be
 nothing to process/ingest. The ``-b`` option must also be given in order to
@@ -69,17 +73,19 @@ trigger model building.
 Runner Script
 ^^^^^^^^^^^^^
 
-Included here is the bash script ``run_container.sh``. This is intended to be a
-simple way of running the container as is (i.e. with default configurations) on
-a directory that [recursively] contains imagery to index and perform IQR over.
+Included here is the bash script ``run_container.*.sh``. This is intended to
+be a simple way of running the container as is (i.e. with default
+configurations) on a directory that [recursively] contains imagery to index
+and perform IQR over.
 
-This script may be called by:
+This scripts may be called like as follows:
 
-    $ run_container.sh /abs/path/to/image/dir [-t]
+    $ run_container.cpu.sh /abs/path/to/image/dir [-t]
 
-The above will run the container as a daemon, mounting the image directory and
-publishes the port 5000, resulting in a running container named ``smqtk_iqr``.
-The script then shows updating information about ongoing processnig in the
+The above will run the container (CPU version in this case) as a daemon,
+mounting the image directory and publishes the port 5000, resulting in a
+running container named ``smqtk_iqr_cpu``.
+The script then shows updating information about ongoing processing in the
 container.
 
 The container and version used are defined by variables at the top of the

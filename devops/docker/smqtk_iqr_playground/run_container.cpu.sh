@@ -19,7 +19,7 @@ if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then
   IMAGE_DIR="$1"
   shift
-  docker run -d -p ${IQR_PORT_PUBLISH}:4999 -v "${IMAGE_DIR}":/home/smqtk/data/images --name "${CONTAINER_NAME}" \
+  docker run -d -p ${IQR_PORT_PUBLISH}:5000 -v "${IMAGE_DIR}":/home/smqtk/data/images --name "${CONTAINER_NAME}" \
     ${IQR_CONTAINER}:${IQR_CONTAINER_VERSION} -b "$@"
 fi
 

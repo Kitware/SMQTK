@@ -5,6 +5,12 @@ import os.path as osp
 from smqtk.representation import DataElement
 
 try:
+    # Attempt import of file-magic module
+    import magic
+except ImportError:
+    magic = None
+
+try:
     from tika import detector as tika_detector
 except ImportError:
     tika_detector = None
@@ -45,7 +51,10 @@ class DataFileElement (DataElement):
         self._filepath = osp.expanduser(filepath)
 
         self._content_type = None
-        if tika_detector:
+        if magic:
+            r = magic.detect_from_filename(filepath)
+            self._content_type = r.mime_type
+        elif tika_detector:
             try:
                 self._content_type = tika_detector.from_file(filepath)
             except IOError, ex:

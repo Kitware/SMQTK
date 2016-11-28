@@ -154,6 +154,9 @@ setuptools.setup(
         'flann': [
             'pyflann>=1.8.4',
         ],
+        'libmagic', [
+            'file-magic',
+        ],
         'postgres': [
             'psycopg2',
         ],

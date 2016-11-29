@@ -1,0 +1,119 @@
+{
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "iqr_service": {
+        "plugin_notes": {
+            "classification_factory": "Selection of the backend in which classifications are stored. The in-memory version is recommended because normal caching mechanisms will not account for the variety of classifiers that can potentially be created via this utility.",
+            "classifier_config": "The configuration to use for training and using classifiers for the /classifier endpoint. When configuring a classifier for use, don't fill out model persistence values as many classifiers may be created and thrown away during this service's operation.",
+            "descriptor_index": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
+            "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
+            "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
+        },
+        "plugins": {
+            "classification_factory": {
+                "MemoryClassificationElement": {},
+                "type": "MemoryClassificationElement"
+            },
+            "classifier_config": {
+                "LibSvmClassifier": {
+                    "normalize": 2,
+                    "svm_label_map_fp": null,
+                    "svm_model_fp": null,
+                    "train_params": {
+                        "-b": 1,
+                        "-c": 2,
+                        "-s": 0,
+                        "-t": 0
+                    }
+                },
+                "type": "LibSvmClassifier"
+            },
+            "descriptor_index": {
+                "PostgresDescriptorIndex": {
+                    "db_host": "/dev/shm",
+                    "db_name": "postgres",
+                    "db_pass": null,
+                    "db_port": 5432,
+                    "db_user": "smqtk",
+                    "element_col": "element",
+                    "multiquery_batch_size": 1000,
+                    "pickle_protocol": -1,
+                    "read_only": true,
+                    "table_name": "descriptor_index_alexnet_fc7",
+                    "uuid_col": "uid"
+                },
+                "type": "PostgresDescriptorIndex"
+            },
+            "neighbor_index": {
+                "LSHNearestNeighborIndex": {
+                    "descriptor_index": {
+                        "PostgresDescriptorIndex": {
+                            "db_host": "/dev/shm",
+                            "db_name": "postgres",
+                            "db_pass": null,
+                            "db_port": 5432,
+                            "db_user": "smqtk",
+                            "element_col": "element",
+                            "multiquery_batch_size": 1000,
+                            "pickle_protocol": -1,
+                            "read_only": true,
+                            "table_name": "descriptor_index_alexnet_fc7",
+                            "uuid_col": "uid"
+                        },
+                        "type": "PostgresDescriptorIndex"
+                    },
+                    "distance_method": "cosine",
+                    "hash2uuid_cache_filepath": "models/LSH.hash2uuids.pickle",
+                    "hash_index": {
+                        "SkLearnBallTreeHashIndex": {
+                            "file_cache": "models/balltree_hash_index.npz",
+                            "leaf_size": 40,
+                            "random_seed": 0
+                        },
+                        "type": "SkLearnBallTreeHashIndex"
+                    },
+                    "live_reload": false,
+                    "lsh_functor": {
+                        "ItqFunctor": {
+                            "bit_length": 256,
+                            "itq_iterations": 100,
+                            "mean_vec_filepath": "models/itq.model.b256_i100_r0.mean_vec.npy",
+                            "normalize": null,
+                            "random_seed": 0,
+                            "rotation_filepath": "models/itq.model.b256_i100_r0.rotation.npy"
+                        },
+                        "type": "ItqFunctor"
+                    },
+                    "read_only": true,
+                    "reload_mon_interval": 0.1,
+                    "reload_settle_window": 1.0
+                },
+                "type": "LSHNearestNeighborIndex"
+            },
+            "relevancy_index_config": {
+                "LibSvmHikRelevancyIndex": {
+                    "autoneg_select_ratio": 1,
+                    "cores": null,
+                    "descr_cache_filepath": null,
+                    "multiprocess_fetch": false
+                },
+                "type": "LibSvmHikRelevancyIndex"
+            }
+        },
+        "session_control": {
+            "positive_seed_neighbors": 500,
+            "session_expiration": {
+                "check_interval_seconds": 30,
+                "enabled": true,
+                "session_timeout": 86400
+            }
+        }
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5001
+    }
+}

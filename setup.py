@@ -154,7 +154,7 @@ setuptools.setup(
         'flann': [
             'pyflann>=1.8.4',
         ],
-        'libmagic', [
+        'libmagic': [
             'file-magic',
         ],
         'postgres': [

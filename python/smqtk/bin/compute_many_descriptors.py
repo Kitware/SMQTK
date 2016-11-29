@@ -6,6 +6,7 @@ whose image bytes we cannot load via ``PIL.Image.open``.
 """
 import collections
 import csv
+import functools
 import io
 import logging
 import os
@@ -25,6 +26,7 @@ from smqtk.utils.bin_utils import (
     report_progress,
     basic_cli_parser,
 )
+from smqtk.utils.image_utils import is_valid_element
 from smqtk.utils import plugin, parallel
 
 
@@ -95,34 +97,13 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls())
 
-    def test_image_load(dfe):
-        try:
-            PIL.Image.open(io.BytesIO(dfe.get_bytes()))
-            return True
-        except IOError, ex:
-            # noinspection PyProtectedMember
-            log.warn("Failed to convert '%s' bytes into an image "
-                     "(error: %s). Skipping",
-                     dfe._filepath, str(ex))
-            return False
-
-    def is_valid_element(fp):
-        dfe = DataFileElement(fp)
-        ct = dfe.content_type()
-        if ct in generator.valid_content_types():
-            if not check_image or test_image_load(dfe):
-                return dfe
-            else:
-                return None
-        else:
-            log.debug("Skipping file (invalid content) type for "
-                      "descriptor generator (fp='%s', ct=%s)",
-                      str(fp), ct)
-            return None
 
     def iter_valid_elements():
         data_elements = collections.deque()
-        valid_files_filter = parallel.parallel_map(is_valid_element,
+        valid_element_func = functools.partial(is_valid_element,
+                                               valid_content_types=generator.valid_content_types(),
+                                               check_image=check_image)
+        valid_files_filter = parallel.parallel_map(valid_element_func,
                                                    file_paths,
                                                    name="check-file-type",
                                                    use_multiprocessing=True)

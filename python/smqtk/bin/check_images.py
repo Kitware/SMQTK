@@ -12,7 +12,7 @@ from smqtk.utils.bin_utils import (
     basic_cli_parser,
     initialize_logging,
 )
-
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.image_utils import is_valid_element
 from smqtk.utils import parallel
 
@@ -51,16 +51,16 @@ def main():
         log.error('Invalid file list path: %s', args.file_list)
         exit(103)
 
-    with open(args.file_list) as infile:
-        valid_element_func = functools.partial(is_valid_element,
-                                               check_image=True)
-        valid_images = parallel.parallel_map(valid_element_func,
-                                             itertools.imap(str.strip, infile),
-                                             name='check-file-type',
-                                             use_multiprocessing=True)
+    def check_image(image_path):
+        dfe = DataFileElement(image_path)
+        return (is_valid_element(dfe, check_image=True), dfe)
 
-        for dfe in valid_images:
-            if dfe is not None:
+    with open(args.file_list) as infile:
+        for (is_valid, dfe) in parallel.parallel_map(check_image,
+                                                  itertools.imap(str.strip, infile),
+                                                  name='check-image-validity',
+                                                  use_multiprocessing=True):
+            if is_valid:
                 print('%s,%s' % (dfe._filepath, dfe.uuid()))
 
 

@@ -2,15 +2,16 @@ import io
 import logging
 import PIL.Image
 
-from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.file_element import (DataElement,
+                                                            DataFileElement)
 
 
-def is_loadable_image(dfe):
+def is_loadable_image(data_element):
     """
     Determine if an image is able to be loaded by PIL.
 
-    :param dfe: A data file element to check
-    :type dfe: DataFileElement
+    :param data_element: A data element to check
+    :type data_element: DataElement
 
     :return: Whether or not the image is loadable
     :rtype: bool
@@ -19,21 +20,21 @@ def is_loadable_image(dfe):
     log = logging.getLogger(__name__)
 
     try:
-        PIL.Image.open(io.BytesIO(dfe.get_bytes()))
+        PIL.Image.open(io.BytesIO(data_element.get_bytes()))
         return True
     except IOError, ex:
         # noinspection PyProtectedMember
         log.warn("Failed to convert '%s' bytes into an image "
-                 "(error: %s). Skipping", dfe._filepath, str(ex))
+                 "(error: %s). Skipping", data_element, str(ex))
         return False
 
 
-def is_valid_element(fp, valid_content_types=None, check_image=False):
+def is_valid_element(data_element, valid_content_types=None, check_image=False):
     """
-    Determines if a given filepath is a valid data file element.
+    Determines if a given data element is valid.
 
-    :param fp: File path to element
-    :type fp: str
+    :param data_element: Data element
+    :type data_element: str
 
     :param valid_content_types: List of valid content types, or None to skip
         content type checking.
@@ -43,22 +44,20 @@ def is_valid_element(fp, valid_content_types=None, check_image=False):
         often catches issues that content type can't, such as corrupt images.
     :type check_image: bool
 
-    :return: The data file element in the event of a valid element, or None if
-        it's invalid.
-    :rtype: DataFileElement | None
+    :return: Whether or not the data element is valid
+    :rtype: bool
 
     """
     log = logging.getLogger(__name__)
-    dfe = DataFileElement(fp)
 
     if (valid_content_types is not None and
-        dfe.content_type() not in valid_content_types):
+        data_element.content_type() not in valid_content_types):
         log.debug("Skipping file (invalid content) type for "
-                  "descriptor generator (fp='%s', ct=%s)",
-                  str(fp), dfe.content_type())
-        return None
+                  "descriptor generator (data_element='%s', ct=%s)",
+                  data_element, data_element.content_type())
+        return False
 
-    if check_image and not is_loadable_image(dfe):
-        return None
+    if check_image and not is_loadable_image(data_element):
+        return False
 
-    return dfe
+    return isinstance(data_element, DataElement)

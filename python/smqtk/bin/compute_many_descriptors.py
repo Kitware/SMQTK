@@ -99,16 +99,23 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
 
     def iter_valid_elements():
+        def is_valid(file_path):
+            dfe = DataFileElement(file_path)
+
+            if is_valid_element(dfe,
+                                valid_content_types=generator.valid_content_types(),
+                                check_image=check_image):
+                return dfe
+            else:
+                return False
+
         data_elements = collections.deque()
-        valid_element_func = functools.partial(is_valid_element,
-                                               valid_content_types=generator.valid_content_types(),
-                                               check_image=check_image)
-        valid_files_filter = parallel.parallel_map(valid_element_func,
+        valid_files_filter = parallel.parallel_map(is_valid,
                                                    file_paths,
                                                    name="check-file-type",
                                                    use_multiprocessing=True)
         for dfe in valid_files_filter:
-            if dfe is not None:
+            if dfe:
                 yield dfe
                 if data_set is not None:
                     data_elements.append(dfe)

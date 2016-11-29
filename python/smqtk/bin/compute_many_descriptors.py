@@ -6,12 +6,8 @@ whose image bytes we cannot load via ``PIL.Image.open``.
 """
 import collections
 import csv
-import functools
-import io
 import logging
 import os
-
-import PIL.Image
 
 from smqtk.algorithms import get_descriptor_generator_impls
 from smqtk.compute_functions import compute_many_descriptors
@@ -96,7 +92,6 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     #: :type: smqtk.algorithms.DescriptorGenerator
     generator = plugin.from_plugin_config(c['descriptor_generator'],
                                           get_descriptor_generator_impls())
-
 
     def iter_valid_elements():
         def is_valid(file_path):

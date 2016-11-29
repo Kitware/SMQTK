@@ -2,8 +2,7 @@ import io
 import logging
 import PIL.Image
 
-from smqtk.representation.data_element.file_element import (DataElement,
-                                                            DataFileElement)
+from smqtk.representation.data_element.file_element import DataElement
 
 
 def is_loadable_image(data_element):
@@ -24,8 +23,8 @@ def is_loadable_image(data_element):
         return True
     except IOError, ex:
         # noinspection PyProtectedMember
-        log.warn("Failed to convert '%s' bytes into an image "
-                 "(error: %s). Skipping", data_element, str(ex))
+        log.debug("Failed to convert '%s' bytes into an image "
+                  "(error: %s). Skipping", data_element, str(ex))
         return False
 
 

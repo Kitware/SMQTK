@@ -125,4 +125,4 @@ ADD entrypoint.sh descr_comp_test.py /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
 ADD default_confs/cpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
-EXPOSE 5000
+EXPOSE 5000 5001 5002

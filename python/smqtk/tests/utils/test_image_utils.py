@@ -32,10 +32,6 @@ class TestIsLoadableImage(unittest.TestCase):
         assert is_loadable_image(self.non_image) == False
 
 
-    def test_unloadable_image_logs_warning(self):
-        pass
-
-
     def test_loadable_image_returns_true(self):
         assert is_loadable_image(self.good_image) == True
 
@@ -54,7 +50,6 @@ class TestIsValidElement(unittest.TestCase):
 
 
     def test_invalid_content_type(self):
-        # test it logs to debug
         assert is_valid_element(self.good_image, valid_content_types=[]) == False
 
     def test_valid_content_type(self):

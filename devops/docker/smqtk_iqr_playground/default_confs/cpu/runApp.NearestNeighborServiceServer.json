@@ -15,7 +15,7 @@
     },
     "descriptor_generator": {
         "CaffeDescriptorGenerator": {
-            "batch_size": 1,
+            "batch_size": 100,
             "data_layer": "data",
             "gpu_device_id": 0,
             "image_mean_filepath": "/home/smqtk/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",

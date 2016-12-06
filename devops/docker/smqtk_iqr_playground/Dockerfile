@@ -116,7 +116,8 @@ RUN mkdir smqtk/build \
     ${HOME}/smqtk/source \
  && make install -j12
 # - added optional plugin requirements
-RUN sudo apt-get -y install postgresql-server-dev-9.4 \
+RUN sudo apt-get -y update \
+ && sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
@@ -125,4 +126,4 @@ ADD entrypoint.sh descr_comp_test.py /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
 ADD default_confs/cpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
-EXPOSE 5000
+EXPOSE 5000 5001 5002

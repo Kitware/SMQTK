@@ -108,7 +108,7 @@ RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download 
 # SMQTK local installation
 # - python requirements retreived when pip installing smqtk instead of from
 #   ``requirements.txt`` file.
-ENV SMQTK_VERSION="gur/vigilant/docker-playground-iqr" \
+ENV SMQTK_VERSION="gur/vigilant/master" \
     SMQTK_URL="https://kwgitlab.kitware.com/computer-vision/SMQTK.git"
 RUN git clone -b ${SMQTK_VERSION} ${SMQTK_URL} smqtk/source
 RUN mkdir smqtk/build \
@@ -119,7 +119,8 @@ RUN mkdir smqtk/build \
     ${HOME}/smqtk/source \
  && make install -j12
 # - added optional plugin requirements
-RUN sudo apt-get -y install postgresql-server-dev-9.4 \
+RUN sudo apt-get -y update \
+ && sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
@@ -128,4 +129,4 @@ ADD entrypoint.sh descr_comp_test.py /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
 ADD default_confs/gpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
-EXPOSE 5000
+EXPOSE 5000 5001 5002

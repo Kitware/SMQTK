@@ -1,16 +1,18 @@
 SMQTK IQR Playground and Turn-key container
 ===========================================
 
-We provide the docker container image:
+We provide the docker container images:
 
-    ``kitware/smqtk/iqr_playground_cpu:0.3``
-    ``kitware/smqtk/iqr_playground_nvidia:0.3``
+    ``kitware/smqtk/iqr_playground_cpu``
+    ``kitware/smqtk/iqr_playground_nvidia``
 
 This is a self-contained SMQTK playground environment that can also act as an
 image-to-application turn-key application container. As an application, this
 container can compute fresh models on mounted imagery using a default
 configuration setup, using a custom configuration setup, or to run the IQR
-web-app with completely custom models, database and configuration.
+web-app with completely custom models, database and configuration. The option
+is also available to run the Nearest-Neighbor and IQR RESTful services instead
+of the IQR GUI web-app.
 
 
 Quick Information
@@ -35,17 +37,17 @@ Container internal data directories for volume mounting:
     /home/smqtk/data/models/    -- common directory for model files
 
 
-Running on New Imagery
-----------------------
+Running IQR on New Imagery
+--------------------------
 One way to use this contianer is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
-    docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu:0.3 -b [-t]
+    docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu -b [-t]
 
     OR
 
-    nvidia-docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia:0.3 -b [-t]
+    nvidia-docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
 
 The use of ``nvidia-docker`` is required to use the GPU computation
 capabilities (default options, can be changed and described later).
@@ -65,9 +67,24 @@ The entrypoint in this container can take a number of options:
         Transform input images found in the images directory according to
         the provided generate_image_transform configuration JSON file.
 
+    --rest
+        Runs NearestNeighbor and IQR REST (gui-less) services **instead of**
+        the IQR web-app.
+
 When starting a new container, imagery must be mounted otherwise there will be
 nothing to process/ingest. The ``-b`` option must also be given in order to
 trigger model building.
+
+
+RESTful services
+^^^^^^^^^^^^^^^^
+
+To start the container in RESTful mode, simply add the ``--rest`` flag when
+running the ``[nvidia-]docker run ...`` command. This flag **only** changes
+what is run after models are (optionally) built.
+
+Instead of running on port 5000, the NearestNeighbor and IQR service are
+exposed on ports 5001 and 5002, respectively.
 
 
 Runner Script
@@ -88,6 +105,9 @@ running container named ``smqtk_iqr_cpu``.
 The script then shows updating information about ongoing processing in the
 container.
 
+The ``--rest`` option can also be passed here to instead run the RESTful
+services instead of the IQR GUI application.
+
 The container and version used are defined by variables at the top of the
 script, as well as what host port to publish to.
 
@@ -99,16 +119,36 @@ and interactive.
 Saving Generated Data
 ^^^^^^^^^^^^^^^^^^^^^
 
-Generated model data will be saved by default to the
-``/home/smqtk/data/models/`` directory default.
-If the ``-t`` option was provided, tiles will be saved to the
-``/home/smqtk/data/image_tiles/`` directory by default.
+If models or other generated data from this container is to be saved in a more
+perminent manner, the container should be started with more volume mounts than
+just the input image directory in order for content to be saved to the host
+filesystem instead of just within the container's filesystem.
+
+Directories used in the container's filesystem:
+
+- ``/home/smqtk/data/logs``
+  - Default directory where log files are saved for commands processed.
+
+- ``/home/smqtk/data/models``
+  - Generated model files are saved here by default. Stamp files recording
+    successful completion are saved in the log output directory.
+
+- ``/home/smqtk/data/db.psql``
+  - Directory where PostgreSQL database is generated if not mounted by the
+    user.
+
+- ``/home/smqtk/data/db.mongo``
+  - Directory where MongoDB database is generated if not mounted by the user.
+
+- ``/home/smqtk/data/image_tiles``
+  - Directory where image tiles are save if the ``-t`` or ``--tile``
+    options are provided.
 
 
 Using Custom Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-While the default configuration files are fine for producing a usable IQR
-instance, configurations may be extracted, modified and mounted to
+While the default configuration files are fine for producing a generally usable
+IQR instance, configurations may be extracted, modified and mounted to
 ``/home/smqtk/data/configs/``.
 
 Extracting and modifying the default configuration files from the container is
@@ -116,7 +156,7 @@ probably the simplest way of customizing things. The following is a bash
 snippet that will copy a ``configs`` directory containing the container's
 default configs:
 
-    $ docker run -dt --entrypoint bash --name ${CNAME} kitware/smqtk/iqr_playground_nvidia:0.3
+    $ docker run -dt --entrypoint bash --name ${CNAME} kitware/smqtk/iqr_playground_cpu
     $ docker cp ${CNAME}:/home/smqtk/data/configs/ ${OUTPUT_DIR}
     $ docker stop ${CNAME}
     $ docker rm ${CNAME}
@@ -124,7 +164,7 @@ default configs:
 To use the custom configuration files, simply mount the containing directory to
 ``/home/smqtk/data/configs`` when running the container.
 
-**Note**: *When mounting directory of configuration files, it must container all
+**Note:** *When mounting directory of configuration files, it must containe all
 configuration files that were extracted as this is the only place configuration
 files are located in the container. If the entrypoint configuration was
 modified, then files may be named other than their default names. Only the
@@ -132,36 +172,36 @@ modified, then files may be named other than their default names. Only the
 
 Configuration files and what they are used for:
 
-    entrypoint.conf
-        Defines container entrypoint script variables, like directories to use
-        within ``/home/smqtk/data/``, the names of configuration files for the
-        different tools used, and command line parameters for tools that take
-        them.
+- ``entrypoint.conf``
+  - Defines container entrypoint script variables, like directories to use
+    within ``/home/smqtk/data/``, the names of configuration files for the
+    different tools used, and command line parameters for tools that take
+    them.
 
-    psql_table_init.sql
-        Internal PostgreSQL database table initialization for image descriptor
-        storage. If descriptors are to be stored in a different way, this file
-        may be empty.
+- ``psql_table_init.sql``
+  - Internal PostgreSQL database table initialization for image descriptor
+    storage. If descriptors are to be stored in a different way, this file
+    may be empty.
 
-    generate_image_transform.tiles.json
-        Configuration file for optional image tile generation. Importantly,
-        this controls the size/shape of the extracted tiles.
+- ``generate_image_transform.tiles.json``
+  - Configuration file for optional image tile generation. Importantly,
+    this controls the size/shape of the extracted tiles.
 
-    compute_many_descriptors.json
-        Configuration file for utility that computed image content descriptors.
+- ``compute_many_descriptors.json``
+  - Configuration file for utility that computed image content descriptors.
 
-    train_itq.json
-        Configuration file for utility that trains ITQ locality-sensitive hash
-        functor models.
+- ``train_itq.json``
+  - Configuration file for utility that trains ITQ locality-sensitive hash
+    functor models.
 
-    compute_hash_codes.json
-        Configuration file for utility that computed LSH codes for indexed
-        imagery.
+- ``compute_hash_codes.json``
+  - Configuration file for utility that computed LSH codes for indexed
+    imagery.
 
-    runApp.IqrSearchDispatcher.json
-        Configuration file for SMQTK IQR search web application. It is wise
-        to change the ``SECRET_KEY`` option in here if the application is to
-        be publically faced.
+- ``runApp.IqrSearchDispatcher.json``
+  - Configuration file for SMQTK IQR search web application. It is wise
+    to change the ``SECRET_KEY`` option in here if the application is to
+    be publically faced.
 
 
 Troubleshooting

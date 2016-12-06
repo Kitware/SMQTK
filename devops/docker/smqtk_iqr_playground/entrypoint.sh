@@ -12,14 +12,13 @@
 # directories, they will have to be chown'd here, thus they're permissions will
 # change on the host system.
 #
-trap "echo TRAPed signal" HUP INT QUIT KILL TERM
 set -e
 
 function usage() {
     echo "
-Usage: $0 [-b|--build [-t|--tile]]
+Usage: $0 [-b|--build [-t|--tile]] [--rest]
 
-Run SMQTK IQR GUI application over some images.
+Run SMQTK IQR GUI application or REST services over some images.
 Optionally, build required models for new imagery based on default or mounted
 configs.
 
@@ -33,6 +32,10 @@ Options:
   -t | --tile       Transform images found in the images directory according to
                     the provided ``generate_image_transform`` configuration JSON
                     file.
+
+  --rest            Launch REST-ful web-services for content-based
+                    NearestNeighbor search and IQR instead of the IQR GUI
+                    web-app. (ports: NN=5001, IQR=5002)
 "
 }
 
@@ -54,6 +57,9 @@ do
         ;;
         -t|--tile)
         TILE_IMAGES=1
+        ;;
+        --rest)
+        REST_SERVICES=1
         ;;
         *)  # Anything else (wildcard)
         echo "Received unknown parameter: \"$key\""
@@ -85,7 +91,7 @@ pushd "${WORKING_DIR}"
 ################################################################################
 # Start base services
 
-# Own psql/mongo/log directories for read/write
+# Own psql/mongo directories for read/write with special permissions
 for DIR in {${PSQL_DATA_DIR},${MONGO_DATA_DIR}}
 do
     echo "Claiming dir: $DIR"
@@ -93,6 +99,8 @@ do
     # Database dirs needs limited permissions for security
     sudo chmod 700 "${DIR}"
 done
+sudo chown -R smqtk: "${LOG_DIR}"
+sudo chmod +w "${LOG_DIR}"
 
 # Create PSQL database if no exists
 NEW_PSQL_DB=0
@@ -130,6 +138,7 @@ do
 done
 echo "Waiting for a responsive database... Done"
 unset q trigger
+echo "Creating (IF NOT EXISTS) required PostgreSQL tables..."
 psql -h "${PSQL_HOST}" ${PSQL_NAME} ${PSQL_USER} -f "${CONFIG_DIR}/${PSQL_TABLE_INIT}"
 
 ################################################################################
@@ -148,6 +157,10 @@ then
     STP_CHC="${LOG_DIR}/compute_hash_codes.stamp"
     LOG_MBT="${LOG_DIR}/make_balltree.log"
     STP_MBT="${LOG_DIR}/make_balltree.stamp"
+
+    echo "Owning model dir for writing"
+    sudo chown -R smqtk: "${MODEL_DIR}"
+    sudo chmod -R +rw "${MODEL_DIR}"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
@@ -228,39 +241,126 @@ fi
 
 ################################################################################
 
-echo "Starting SMQTK IqrSearchDispatcher..."
-SMQTK_IQR_PID="smqtk_iqr.pid"
-runApplication \
-    -a IqrSearchDispatcher \
-    -vtc "${CONFIG_DIR}/${SMQTK_IQR_CONFIG}" \
-    &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log" &
-echo "$!" >"${SMQTK_IQR_PID}"
-echo "Starting SMQTK IqrSearchDispatcher... Done"
+#
+# Depending on what is run, define hook functions:
+#
+#   ``smqtk_pid_wait``    -- wait on processes run
+#   ``smqtk_cleanup``     -- Send ``$1`` to run processes
+#   ``smqtk_pid_cleanup`` -- Remove any save PID files
+#
+if [ -n "${REST_SERVICES}" ]
+then
+
+  SMQTK_REST_NNSS_PID="smqtk_rest_nnss.pid"
+  runApplication \
+    -a NearestNeighborServiceServer \
+    -vtc "${CONFIG_DIR}/${SMQTK_REST_NNSS_CONFIG}" \
+    &>"${LOG_DIR}/runApp.NearestNeighborServiceServer.log" &
+  echo "$!" >"${SMQTK_REST_NNSS_PID}"
+
+  SMQTK_REST_IQR_PID="smqtk_rest_iqr.pid"
+  runApplication \
+    -a IqrService \
+    -vtc "${CONFIG_DIR}/${SMQTK_REST_IQR_CONFIG}" \
+    &>"${LOG_DIR}/runApp.IqrService.log" &
+  echo "$!" >"${SMQTK_REST_IQR_PID}"
+
+  # Define hook functions
+  function smqtk_pid_wait() {
+    echo "Waiting for NN/IQR Service shutdown..."
+    wait $(cat "$SMQTK_REST_NNSS_PID" "$SMQTK_REST_IQR_PID")
+    echo "Waiting for NN/IQR Service shutdown... -- Done"
+  }
+  function smqtk_cleanup() {
+    echo "Stopping IQR REST Service"
+    kill -${signal} $(cat "${SMQTK_REST_IQR_PID}")
+    echo "Stopping NN REST Service"
+    kill -${signal} $(cat "${SMQTK_REST_NNSS_PID}")
+  }
+  function smqtk_pid_cleanup() {
+    echo "Cleaning NN/IQR PID files"
+    rm "${SMQTK_REST_NNSS_PID}" "${SMQTK_REST_IQR_PID}"
+  }
+
+else
+
+  echo "Starting SMQTK IqrSearchDispatcher..."
+  SMQTK_IQR_PID="smqtk_iqr.pid"
+  runApplication \
+      -a IqrSearchDispatcher \
+      -vtc "${CONFIG_DIR}/${SMQTK_IQR_CONFIG}" \
+      &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log" &
+  echo "$!" >"${SMQTK_IQR_PID}"
+  echo "Starting SMQTK IqrSearchDispatcher... Done"
+
+  # Define hook functions
+  function smqtk_pid_wait() {
+    echo "Waiting for IQR App shutdown..."
+    wait $(cat "${SMQTK_IQR_PID}")
+    echo "Waiting for IQR App shutdown... -- Done"
+  }
+  function smqtk_cleanup() {
+    echo "Stopping IQR GUI app"
+    kill -${signal} $(cat "${SMQTK_IQR_PID}")
+  }
+  function smqtk_pid_cleanup() {
+    echo "Cleaning IQR App PID file"
+    rm "${SMQTK_IQR_PID}"
+  }
+
+fi
+
+
+
+#
+# Setup cleanup logic
+#
+
+#
+# Wait on known processes
+#
+function process_pid_wait() {
+  wait $(cat "${POSTGRES_PID}" "${MONGOD_PID}")
+  smqtk_pid_wait
+}
+
+#
+# Main cleanup function that stops running processes and cleans up after them
+#
+function process_cleanup() {
+  signal="$1"
+
+  # Because the input signal may have been propagated to sub-processes by the
+  # OS and they may have terminated already.
+  set +e
+
+  smqtk_cleanup ${signal}
+
+  echo "Stopping MongoDB"
+  kill -${signal} $(cat "${MONGOD_PID}")
+
+  echo "Stopping PostgreSQL"
+  kill -${signal} $(cat "${POSTGRES_PID}")
+
+  set -e
+
+  echo "Waiting on process completion..."
+  process_pid_wait
+
+  echo "Removing PID files..."
+  rm "${POSTGRES_PID}" "${MONGOD_PID}"
+  smqtk_pid_cleanup
+}
+
+echo "Setting up cleanup trap"
+trap "echo 'Terminating processes'; process_cleanup SIGTERM;" HUP INT TERM
+trap "echo 'Killing processes';     process_cleanup SIGKILL;" QUIT KILL
 
 
 #
 # Termination Wait
 #
 echo "Ctrl-C to exit or run 'docker stop <container>'"
-wait \
-    $(cat "${POSTGRES_PID}") \
-    $(cat "${MONGOD_PID}") \
-    $(cat "${SMQTK_IQR_PID}")
+process_pid_wait
 
-
-#
-# Clean-up
-#
-echo "Stopping PostgreSQL"
-kill $(cat "${POSTGRES_PID}")
-rm "${POSTGRES_PID}"
-
-echo "Stopping MongoDB"
-kill $(cat "${MONGOD_PID}")
-rm "${MONGOD_PID}"
-
-echo "Stopping SMQTK IqrSearchDispatcher"
-kill $(cat "${SMQTK_IQR_PID}")
-rm "${SMQTK_IQR_PID}"
-
-echo "exited $0"
+echo "exiting $0"

@@ -47,11 +47,20 @@
             "nn_index": {
                 "LSHNearestNeighborIndex": {
                     "descriptor_index": {
-                        "MemoryDescriptorIndex": {
-                            "file_cache": "models/descriptors.alexnet_fc7.mdi_cache",
-                            "pickle_protocol": -1
+                        "PostgresDescriptorIndex": {
+                            "db_host": "/dev/shm",
+                            "db_name": "postgres",
+                            "db_pass": null,
+                            "db_port": 5432,
+                            "db_user": "smqtk",
+                            "element_col": "element",
+                            "multiquery_batch_size": 1000,
+                            "pickle_protocol": -1,
+                            "read_only": true,
+                            "table_name": "descriptor_index_alexnet_fc7",
+                            "uuid_col": "uid"
                         },
-                        "type": "MemoryDescriptorIndex"
+                        "type": "PostgresDescriptorIndex"
                     },
                     "distance_method": "cosine",
                     "hash2uuid_cache_filepath": "models/LSH.hash2uuids.pickle",
@@ -75,7 +84,7 @@
                         },
                         "type": "ItqFunctor"
                     },
-                    "read_only": false,
+                    "read_only": true,
                     "reload_mon_interval": 0.1,
                     "reload_settle_window": 1.0
                 },

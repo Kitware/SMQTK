@@ -16,9 +16,9 @@ set -e
 
 function usage() {
     echo "
-Usage: $0 [-b|--build [-t|--tile]]
+Usage: $0 [-b|--build [-t|--tile]] [--rest]
 
-Run SMQTK IQR GUI application over some images.
+Run SMQTK IQR GUI application or REST services over some images.
 Optionally, build required models for new imagery based on default or mounted
 configs.
 
@@ -33,9 +33,9 @@ Options:
                     the provided ``generate_image_transform`` configuration JSON
                     file.
 
-  --rest            Launch REST-ful web-services for NearestNeighbor search and
-                    IQR instead of the IQR GUI web-app. (ports: NN=5000,
-                    IQR=5001)
+  --rest            Launch REST-ful web-services for content-based
+                    NearestNeighbor search and IQR instead of the IQR GUI
+                    web-app. (ports: NN=5001, IQR=5002)
 "
 }
 
@@ -91,7 +91,7 @@ pushd "${WORKING_DIR}"
 ################################################################################
 # Start base services
 
-# Own psql/mongo/log directories for read/write
+# Own psql/mongo directories for read/write with special permissions
 for DIR in {${PSQL_DATA_DIR},${MONGO_DATA_DIR}}
 do
     echo "Claiming dir: $DIR"
@@ -99,6 +99,8 @@ do
     # Database dirs needs limited permissions for security
     sudo chmod 700 "${DIR}"
 done
+sudo chown -R smqtk: "${LOG_DIR}"
+sudo chmod +w "${LOG_DIR}"
 
 # Create PSQL database if no exists
 NEW_PSQL_DB=0
@@ -155,6 +157,10 @@ then
     STP_CHC="${LOG_DIR}/compute_hash_codes.stamp"
     LOG_MBT="${LOG_DIR}/make_balltree.log"
     STP_MBT="${LOG_DIR}/make_balltree.stamp"
+
+    echo "Owning model dir for writing"
+    sudo chown -R smqtk: "${MODEL_DIR}"
+    sudo chmod -R +rw "${MODEL_DIR}"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
@@ -261,7 +267,9 @@ then
 
   # Define hook functions
   function smqtk_pid_wait() {
+    echo "Waiting for NN/IQR Service shutdown..."
     wait $(cat "$SMQTK_REST_NNSS_PID" "$SMQTK_REST_IQR_PID")
+    echo "Waiting for NN/IQR Service shutdown... -- Done"
   }
   function smqtk_cleanup() {
     echo "Stopping IQR REST Service"
@@ -270,6 +278,7 @@ then
     kill -${signal} $(cat "${SMQTK_REST_NNSS_PID}")
   }
   function smqtk_pid_cleanup() {
+    echo "Cleaning NN/IQR PID files"
     rm "${SMQTK_REST_NNSS_PID}" "${SMQTK_REST_IQR_PID}"
   }
 
@@ -286,13 +295,16 @@ else
 
   # Define hook functions
   function smqtk_pid_wait() {
+    echo "Waiting for IQR App shutdown..."
     wait $(cat "${SMQTK_IQR_PID}")
+    echo "Waiting for IQR App shutdown... -- Done"
   }
   function smqtk_cleanup() {
     echo "Stopping IQR GUI app"
     kill -${signal} $(cat "${SMQTK_IQR_PID}")
   }
   function smqtk_pid_cleanup() {
+    echo "Cleaning IQR App PID file"
     rm "${SMQTK_IQR_PID}"
   }
 
@@ -341,8 +353,8 @@ function process_cleanup() {
 }
 
 echo "Setting up cleanup trap"
-trap "echo 'Terminating up processes'; process_cleanup SIGTERM;" HUP INT TERM
-trap "echo 'Killing processes';        process_cleanup SIGKILL;" QUIT KILL
+trap "echo 'Terminating processes'; process_cleanup SIGTERM;" HUP INT TERM
+trap "echo 'Killing processes';     process_cleanup SIGKILL;" QUIT KILL
 
 
 #

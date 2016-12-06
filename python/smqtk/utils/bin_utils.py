@@ -186,17 +186,21 @@ def report_progress(log, state, interval):
         state[0] = state[1]
 
 
-def basic_cli_parser(description=None):
+def basic_cli_parser(description=None, configuration_group=True):
     """
     Generate an ``argparse.ArgumentParser`` with the given description and the
     basic options for verbosity and configuration/generation paths.
 
     The returned parser instance has an option for extra verbosity
     (-v/--verbose) and a group for configuration specification (-c/--config and
-    configuration generation (-g/--generate-config).
+    configuration generation (-g/--generate-config) if enabled (true by default).
 
     :param description: Optional description string for the parser.
     :type description: str
+
+    :param configuration_group: Whether or not to include the configuration
+        options.
+    :type configuration_group: bool
 
     :return: Argument parser instance with basic options.
     :rtype: argparse.ArgumentParser
@@ -211,17 +215,18 @@ def basic_cli_parser(description=None):
                         default=False, action='store_true',
                         help='Output additional debug logging.')
 
-    g_config = parser.add_argument_group('Configuration')
-    g_config.add_argument('-c', '--config',
-                          metavar="PATH",
-                          help='Path to the JSON configuration file.')
-    g_config.add_argument('-g', '--generate-config',
-                          metavar="PATH",
-                          help='Optionally generate a default configuration '
-                               'file at the specified path. If a '
-                               'configuration file was provided, we update '
-                               'the default configuration with the contents '
-                               'of the given configuration.')
+    if configuration_group:
+        g_config = parser.add_argument_group('Configuration')
+        g_config.add_argument('-c', '--config',
+                              metavar="PATH",
+                              help='Path to the JSON configuration file.')
+        g_config.add_argument('-g', '--generate-config',
+                              metavar="PATH",
+                              help='Optionally generate a default configuration '
+                                   'file at the specified path. If a '
+                                   'configuration file was provided, we update '
+                                   'the default configuration with the contents '
+                                   'of the given configuration.')
 
     return parser
 

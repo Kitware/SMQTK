@@ -119,7 +119,8 @@ RUN mkdir smqtk/build \
     ${HOME}/smqtk/source \
  && make install -j12
 # - added optional plugin requirements
-RUN sudo apt-get -y install postgresql-server-dev-9.4 \
+RUN sudo apt-get -y update \
+ && sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}

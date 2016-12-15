@@ -101,5 +101,5 @@
         "host": "0.0.0.0",
         "port": 5001
     },
-    "update_descriptor_index": false
+    "update_descriptor_index": true
 }

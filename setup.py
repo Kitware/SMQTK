@@ -137,6 +137,7 @@ setuptools.setup(
         'requests',
         'scikit-learn',
         'scipy',
+        'six',
     ],
     extras_require={
         # Various optional dependencies for plugins

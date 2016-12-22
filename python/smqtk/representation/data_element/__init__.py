@@ -125,6 +125,8 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
             self._sha1_cache = hashlib.sha1(self.get_bytes()).hexdigest()
         return self._sha1_cache
 
+    # TODO(paul.tunison): Add sha512 function
+
     def write_temp(self, temp_dir=None):
         """
         Write this data's bytes to a temporary file on disk, returning the path

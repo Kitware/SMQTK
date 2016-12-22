@@ -2,32 +2,14 @@ import mimetypes
 import os.path as osp
 import re
 
+import six
+
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 from smqtk.utils.file_utils import safe_create_dir
 
-try:
-    import magic
-    # We know there are multiple modules named magic. Make sure the function we
-    # expect is there.
-    # noinspection PyStatementEffect
-    magic.detect_from_filename
-except (ImportError, AttributeError):
-    magic = None
 
-try:
-    from tika import detector as tika_detector
-except ImportError:
-    tika_detector = None
-
-
-# Fix global MIMETYPE map.
-# Default map maps "image/jpeg" with some rarely used extensions before the
-# common ones. We remove them here so we don't encounter them.
-if '.jfif' in mimetypes.types_map:
-    del mimetypes.types_map['.jfif']
-if '.jpe' in mimetypes.types_map:
-    del mimetypes.types_map['.jpe']
+STR_NONE_TYPES = six.string_types + (type(None),)
 
 
 class DataFileElement (DataElement):
@@ -88,9 +70,11 @@ class DataFileElement (DataElement):
 
         return DataFileElement(path)
 
-    def __init__(self, filepath, readonly=False):
+    def __init__(self, filepath, readonly=False, explicit_mimetype=None):
         """
         Create a new FileElement.
+
+        File the given ``filepath`` refers to may not exist yet.
 
         :param filepath: Path to the file to wrap.  If relative, it is
             interpreted as relative to the current working directory.
@@ -99,39 +83,44 @@ class DataFileElement (DataElement):
         :param readonly: If this element should allow writing or not.
         :type readonly: bool
 
+        :param explicit_mimetype: Specific mimetype string to use for this
+            element. If this is None (default), we try to infer mimetype from
+            ``filepath`` extension using the python ``mimetype`` module.
+        :type explicit_mimetype: None | str
+
         """
         super(DataFileElement, self).__init__()
+
+        assert isinstance(filepath, six.string_types), \
+            "File path must be a string."
+        assert isinstance(explicit_mimetype, STR_NONE_TYPES), \
+            "Explicit mimetype must either be a string or None."
 
         # Just expand a user-home `~` if present, keep relative if that's what
         # was given.
         self._filepath = osp.expanduser(filepath)
         self._readonly = bool(readonly)
+        self._explicit_mimetype = explicit_mimetype
 
-        self._content_type = None
-        if magic and osp.isfile(filepath):
-            d = magic.detect_from_filename(filepath)
-            self._content_type = d.mime_type
-        elif tika_detector:
-            try:
-                self._content_type = tika_detector.from_file(filepath)
-            except IOError, ex:
-                self._log.warn("Failed tika.detector.from_file content type "
-                               "detection (error: %s), falling back to file "
-                               "extension",
-                               str(ex))
-        # If no tika detector or it failed for some reason
+        self._content_type = explicit_mimetype
         if not self._content_type:
             self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):
         return super(DataFileElement, self).__repr__() + \
-            "{filepath: %s, readonly: %s}" % (self._filepath, self._readonly)
+            "{filepath: %s, readonly: %s, explicit_mimetype: %s}" \
+            % (self._filepath, self._readonly, self._explicit_mimetype)
 
     def get_config(self):
         return {
             "filepath": self._filepath,
             "readonly": self._readonly,
+            "explicit_mimetype": self._explicit_mimetype,
         }
+
+    #
+    # Implemented abstract methods
+    #
 
     def content_type(self):
         """

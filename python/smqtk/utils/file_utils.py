@@ -171,6 +171,50 @@ def iter_csv_file(filepath):
             yield numpy.array(l, dtype=float)
 
 
+def file_mimetype_filemagic(filepath):
+    """
+    Determine file mimetype using the file-magic module.
+
+    The file the given path refers to exist.
+
+    :raises IOError: ``filepath`` did not refer to an existing file.
+
+    :param filepath: Path to the (existing) file to determine the mimetype of.
+    :type filepath: str
+
+    :return: MIMETYPE string identifier.
+    :rtype: str
+
+    """
+    import magic
+    if os.path.isfile(filepath):
+        d = magic.detect_from_filename(filepath)
+        return d.mime_type
+    elif os.path.isdir(filepath):
+        raise IOError(21, "Is a directory: '%s'" % filepath)
+    else:
+        raise IOError(2, "No such file or directory: '%s'" % filepath)
+
+
+def file_mimetype_tika(filepath):
+    """
+    Determine file mimetype using ``tika`` module.
+
+    The file the given path refers to exist.
+
+    :raises IOError: ``filepath`` did not refer to an existing file.
+
+    :param filepath: Path to the (existing) file to determine the mimetype of.
+    :type filepath: str
+
+    :return: MIMETYPE string identifier.
+    :rtype: str
+
+    """
+    import tika.detector
+    return tika.detector.from_file(filepath)
+
+
 class FileModificationMonitor (SmqtkObject, threading.Thread):
 
     STATE_WAITING = 0   # Waiting for file to be modified

@@ -175,7 +175,7 @@ def file_mimetype_filemagic(filepath):
     """
     Determine file mimetype using the file-magic module.
 
-    The file the given path refers to exist.
+    The file the given path refers to must exist.
 
     :raises IOError: ``filepath`` did not refer to an existing file.
 
@@ -200,7 +200,8 @@ def file_mimetype_tika(filepath):
     """
     Determine file mimetype using ``tika`` module.
 
-    The file the given path refers to exist.
+    The file the given path refers to must exist. This function may fail under
+    multiprocessing situations.
 
     :raises IOError: ``filepath`` did not refer to an existing file.
 

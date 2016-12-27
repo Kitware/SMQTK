@@ -216,7 +216,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 classes = [classes]
             else:
                 raise RuntimeError("[%s] Helper variable set to an invalid "
-                                   "value: %s", module_path, classes)
+                                   "value: %s" % (module_path, classes))
         else:
             # Scan module valid attributes for classes that descend from the
             # given base-class.

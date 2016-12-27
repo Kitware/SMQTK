@@ -89,7 +89,7 @@ class HBaseDataElement (DataElement):
 
         """
         # naive impl for now
-        return len(self.get_bytes()) > 0
+        return len(self.get_bytes()) == 0
 
     def get_bytes(self):
         table = self._new_hbase_table_connection()

@@ -1,3 +1,8 @@
+"""
+Tests for high level ``from_uri`` function, separate from the
+``DataElement.from_uri`` class method.
+"""
+
 import nose.tools
 import unittest
 

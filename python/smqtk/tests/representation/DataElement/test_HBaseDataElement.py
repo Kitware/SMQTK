@@ -35,8 +35,16 @@ class TestHBaseDataElement(TestCase):
         HBaseDataElement.is_usable = mock.MagicMock(return_value=True)
 
     def test_config(self):
-        cfg = self.DUMMY_CFG
+        cfg = HBaseDataElement.get_default_config()
+        nose.tools.assert_equal(cfg, {
+            'element_key': None,
+            'binary_column': None,
+            'hbase_address': None,
+            'hbase_table': None,
+            'timeout': 10000,
+        })
 
+        cfg = self.DUMMY_CFG
         e = HBaseDataElement.from_config(cfg)
 
         nose.tools.assert_equal(e.element_key, cfg['element_key'])

@@ -118,7 +118,7 @@ def exclusive_touch(file_path):
         fd = os.open(file_path, os.O_CREAT | os.O_EXCL)
         os.close(fd)
         return True
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == 17:  # File exists, could not touch.
             return False
         else:

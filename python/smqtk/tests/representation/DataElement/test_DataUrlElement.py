@@ -4,7 +4,7 @@ import os
 import requests
 import unittest
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR
 
@@ -27,9 +27,8 @@ if internet_available:
 
     class TestDataUrlElement (unittest.TestCase):
         """
-
-        :NOTE: These tests require a connection to the internet in order to pass.
-
+        :NOTE: These tests require a connection to the internet in order to
+        pass.
         """
 
         @mock.patch('requests.get')
@@ -49,13 +48,11 @@ if internet_available:
 
         def test_new(self):
             e = DataUrlElement(EXAMPLE_URL)
-            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
 
         def test_new_add_missing_scheme(self):
             # Construct without scheme header, should add http://
             e = DataUrlElement(EXAMPLE_URL[8:])
             ntools.assert_equal(e._url, 'http://' + EXAMPLE_URL[8:])
-            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
 
         def test_content_type(self):
             e = DataUrlElement(EXAMPLE_URL)
@@ -69,15 +66,13 @@ if internet_available:
             inst1 = DataUrlElement.from_config(default_config)
             ntools.assert_equal(default_config, inst1.get_config())
             ntools.assert_equal(inst1._url, EXAMPLE_URL)
-            ntools.assert_equal(inst1.get_bytes(), open(EXAMPLE_PTH).read())
 
             inst2 = DataUrlElement.from_config(inst1.get_config())
-            ntools.assert_equal(inst1, inst2)
+            ntools.assert_equal(inst1._url, inst2._url)
 
         def test_from_uri(self):
             e = DataUrlElement.from_uri(EXAMPLE_URL)
-            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
-            ntools.assert_equal(e.content_type(), 'image/png')
+            ntools.assert_equal(e._url, EXAMPLE_URL)
 
         def test_from_uri_no_scheme(self):
             ntools.assert_raises(
@@ -91,4 +86,51 @@ if internet_available:
                 InvalidUriError,
                 DataUrlElement.from_uri,
                 'ftp://www.kitware.com'
+            )
+
+        @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+        def test_is_empty_zero_bytes(self, m_requests_get):
+            e = DataUrlElement('some-address')
+            # simulate no content bytes returned
+            e.get_bytes = mock.MagicMock(return_value='')
+            ntools.assert_true(e.is_empty())
+
+        @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+        def test_is_empty_nonzero_bytes(self, m_requests_get):
+            e = DataUrlElement('some-address')
+            # simulate some content bytes returned
+            e.get_bytes = mock.MagicMock(return_value='some bytes returned')
+            ntools.assert_false(e.is_empty())
+
+        def test_get_bytes(self):
+            e = DataUrlElement(EXAMPLE_URL)
+            ntools.assert_equal(e.get_bytes(), open(EXAMPLE_PTH).read())
+            ntools.assert_equal(e.content_type(), 'image/png')
+
+        @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+        def test_get_bytes_404_return_code(self, m_requests_get):
+            e = DataUrlElement('some-address')
+
+            sim_rc = 500
+            simulated_r = requests.Response()
+            simulated_r.status_code = sim_rc
+            m_requests_get.return_value = simulated_r
+
+            ntools.assert_raises_regexp(
+                requests.HTTPError,
+                '%d' % sim_rc,
+                e.get_bytes
+            )
+
+        @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+        def test_writable_readonly(self, m_requests_get):
+            e = DataUrlElement('')
+            ntools.assert_false(e.writable())
+
+        @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+        def test_set_bytes_readonly(self, m_requests_get):
+            e = DataUrlElement('')
+            ntools.assert_raises(
+                ReadOnlyError,
+                e.set_bytes, 'some-bytes'
             )

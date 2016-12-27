@@ -85,7 +85,7 @@ class DataUrlElement (DataElement):
         :rtype: bool
 
         """
-        return len(self.get_bytes()) > 0
+        return len(self.get_bytes()) == 0
 
     def get_bytes(self):
         """
@@ -99,11 +99,7 @@ class DataUrlElement (DataElement):
         # Fetch content from URL, return bytes
         r = requests.get(self._url)
         r.raise_for_status()
-        if r.ok:
-            return r.content
-        else:
-            raise RuntimeError("Request response not OK. Status code returned: "
-                               "%d", r.status_code)
+        return r.content
 
     def writable(self):
         """

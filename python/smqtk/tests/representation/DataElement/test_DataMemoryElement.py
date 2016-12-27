@@ -2,7 +2,7 @@ import nose.tools as ntools
 import random
 import unittest
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 import smqtk.representation.data_element.memory_element
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 
@@ -10,10 +10,6 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 def random_string(length):
     # 32-127 is legible characters
     return ''.join(chr(random.randint(32, 127)) for _ in xrange(length))
-
-
-magic_imporable = \
-    smqtk.representation.data_element.memory_element.magic is not None
 
 
 class TestDataMemoryElement (unittest.TestCase):
@@ -44,13 +40,6 @@ class TestDataMemoryElement (unittest.TestCase):
 
         inst2 = DataMemoryElement.from_config(inst1.get_config())
         ntools.assert_equal(inst1, inst2)
-
-    @unittest.skipIf(not magic_imporable, "optional magic module not present")
-    def test_content_type_lazy_resolve(self):
-        if magic_imporable:
-            e = DataMemoryElement(self.EXPECTED_BYTES)
-            ntools.assert_is_none(e._content_type)
-            ntools.assert_equal(e.content_type(), self.EXPECTED_CT)
 
     #
     # from_base64 tests
@@ -141,7 +130,8 @@ class TestDataMemoryElement (unittest.TestCase):
         e = DataMemoryElement.from_uri(self.VALID_B64_URI)
         ntools.assert_is_instance(e, DataMemoryElement)
         ntools.assert_equal(e.get_bytes(), self.EXPECTED_BYTES)
-        ntools.assert_equal(e.content_type(), self.EXPECTED_CT)
+        # No content type info in base64 format
+        ntools.assert_equal(e.content_type(), None)
 
     def test_from_uri_data_format_empty_data(self):
         e = DataMemoryElement.from_uri('data:text/plain;base64,')
@@ -162,3 +152,42 @@ class TestDataMemoryElement (unittest.TestCase):
         ntools.assert_is_instance(e, DataMemoryElement)
         ntools.assert_equal(e.get_bytes(), self.EXPECTED_BYTES)
         ntools.assert_equal(e.content_type(), self.EXPECTED_CT)
+
+    #
+    # Content tests
+    #
+    def test_is_empty_zero_bytes(self):
+        e = DataMemoryElement('')
+        ntools.assert_true(e.is_empty())
+
+    def test_is_empty_nonzero_bytes(self):
+        e = DataMemoryElement('some bytes')
+        ntools.assert_false(e.is_empty())
+
+    def test_writable_when_readonly(self):
+        e = DataMemoryElement('', readonly=True)
+        ntools.assert_false(e.writable())
+
+    def test_writable_when_not_readonly(self):
+        e = DataMemoryElement('', readonly=False)
+        ntools.assert_true(e.writable())
+
+    def test_set_bytes(self):
+        bytes_a = 'test bytes first set'
+        bytes_b = 'the second set of bytes'
+        e = DataMemoryElement(bytes_a)
+        ntools.assert_equal(e.get_bytes(), bytes_a)
+        e.set_bytes(bytes_b)
+        ntools.assert_equal(e.get_bytes(), bytes_b)
+
+    def test_set_bytes_when_readonly(self):
+        bytes_a = 'test bytes first set'
+        bytes_b = 'the second set of bytes'
+        e = DataMemoryElement(bytes_a, readonly=True)
+        ntools.assert_equal(e.get_bytes(), bytes_a)
+        ntools.assert_raises(
+            ReadOnlyError,
+            e.set_bytes,
+            bytes_b
+        )
+        ntools.assert_equal(e.get_bytes(), bytes_a)

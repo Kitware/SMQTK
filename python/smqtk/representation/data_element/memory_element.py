@@ -4,14 +4,6 @@ import re
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 
-try:
-    import magic
-    # We know there are multiple modules named magic. Make sure the function we
-    # expect is there.
-    assert magic.detect_from_content is not None
-except (ImportError, AttributeError, AssertionError):
-    magic = None
-
 
 class DataMemoryElement (DataElement):
     """
@@ -20,9 +12,9 @@ class DataMemoryElement (DataElement):
 
     # Base64 RE including URL-safe character replacements
     B64_PATTERN = '[a-zA-Z0-9+/_-]*={0,2}'
-    DATA_B64_RE = re.compile('^base64://(?P<base64>{})$'.format(B64_PATTERN))
-    DATA_URI_RE = re.compile("^data:(?P<ct>[\w/]+);base64,(?P<base64>{})$"
-                             .format(B64_PATTERN))
+    URI_B64_RE = re.compile('^base64://(?P<base64>{})$'.format(B64_PATTERN))
+    URI_DATA_B64_RE = re.compile("^data:(?P<ct>[\w/]+);base64,(?P<base64>{})$"
+                                 .format(B64_PATTERN))
 
     @classmethod
     def is_usable(cls):
@@ -46,10 +38,6 @@ class DataMemoryElement (DataElement):
         Filling in ``<data>`` with the actual byte string, and ``<mimetype>``
         with the actual MIMETYPE of the bytes.
 
-        This function uses the ``file-magic`` python module, which is an
-        interface to libmagic, to detect content MIMETYPE. If this module is not
-        present, we will set the content type to None.
-
         :param uri: URI string to resolve into an element instance
         :type uri: str
 
@@ -66,14 +54,14 @@ class DataMemoryElement (DataElement):
         if len(uri) == 0:
             return DataMemoryElement('', None)
 
-        data_b64_m = cls.DATA_B64_RE.match(uri)
+        data_b64_m = cls.URI_B64_RE.match(uri)
         if data_b64_m is not None:
             m_d = data_b64_m.groupdict()
             return DataMemoryElement.from_base64(m_d['base64'], None)
 
-        data_uri_m = cls.DATA_URI_RE.match(uri)
-        if data_uri_m is not None:
-            m_d = data_uri_m.groupdict()
+        data_b64_m = cls.URI_DATA_B64_RE.match(uri)
+        if data_b64_m is not None:
+            m_d = data_b64_m.groupdict()
             return DataMemoryElement.from_base64(
                 m_d['base64'], m_d['ct']
             )
@@ -110,12 +98,10 @@ class DataMemoryElement (DataElement):
         Create a new DataMemoryElement from a byte string and optional content
         type.
 
-        :param bytes: Bytes to contains
+        :param bytes: Bytes to contain.
         :type bytes: bytes | str
 
-        :param content_type: Optional content type of the bytes given. If the
-            ``file-magic`` module is installed and None is provided, a content
-            type will be introspected from the byte content.
+        :param content_type: Content type of the bytes given.
         :type content_type: None | str
 
         :param readonly: If this element should allow writing or not.
@@ -141,10 +127,6 @@ class DataMemoryElement (DataElement):
             the content type is unknown.
         :rtype: str or None
         """
-        # Lazy resolve content type if magic was importable
-        if magic and self._content_type is None:
-            self._content_type = magic.detect_from_content(self._bytes)\
-                                      .mime_type
         return self._content_type
 
     def is_empty(self):
@@ -175,8 +157,7 @@ class DataMemoryElement (DataElement):
         """
         Set bytes to this data element in the form of a string.
 
-        Not all implementations may support setting bytes (writing). See the
-        ``writable`` method.
+        Previous content type value is maintained.
 
         :param b: bytes to set.
         :type b: str

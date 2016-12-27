@@ -93,8 +93,10 @@ class LibSvmClassifier (SupervisedClassifier):
         self.svm_label_map_uri = svm_label_map_uri
 
         # Elements will be None if input URI is None
+        #: :type: None | smqtk.representation.DataElement
         self.svm_model_elem = \
             svm_model_uri and from_uri(svm_model_uri)
+        #: :type: None | smqtk.representation.DataElement
         self.svm_label_map_elem = \
             svm_label_map_uri and from_uri(svm_label_map_uri)
 
@@ -172,12 +174,12 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         Reload SVM model from configured file path.
         """
-        if self.svm_model_elem is not self.svm_model_elem.is_empty():
+        if self.svm_model_elem and not self.svm_model_elem.is_empty():
             svm_model_tmp_fp = self.svm_model_elem.write_temp()
             self.svm_model = svmutil.svm_load_model(svm_model_tmp_fp)
             self.svm_model_elem.clean_temp()
 
-        if self.svm_label_map_elem is not self.svm_label_map_elem.is_empty():
+        if self.svm_label_map_elem and not self.svm_label_map_elem.is_empty():
             svm_lm_tmp_fp = self.svm_label_map_elem.write_temp()
             self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
             self.svm_label_map_elem.clean_temp()

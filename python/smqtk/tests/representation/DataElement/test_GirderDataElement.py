@@ -19,7 +19,7 @@ except requests.ConnectionError:
     internet_available = False
 
 
-def gen_test_response(content, status_code=200):
+def gen_response(content, status_code=200):
     resp = requests.Response()
     resp._content = content
     resp.status_code = status_code
@@ -214,7 +214,7 @@ class TestGirderDataElement (unittest.TestCase):
     @mock.patch('smqtk.representation.data_element.girder.requests.get')
     def test_get_bytes(self, m_requests_get, m_gtm):
         expected_content = 'Some byte content.'
-        expected_response = gen_test_response(expected_content)
+        expected_response = gen_response(expected_content)
 
         # Mock out requests call
         m_requests_get.return_value = expected_response
@@ -230,8 +230,8 @@ class TestGirderDataElement (unittest.TestCase):
     def test_get_bytes_bad_response(self, m_requests_get, m_gtm):
         expected_content = 'Some byte content.'
         expected_statCode = 501
-        expected_response = gen_test_response(expected_content,
-                                              expected_statCode)
+        expected_response = gen_response(expected_content,
+                                         expected_statCode)
 
         # Mock out requests call
         m_requests_get.return_value = expected_response

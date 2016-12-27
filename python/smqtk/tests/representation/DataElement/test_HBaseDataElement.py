@@ -17,7 +17,7 @@ class TestHBaseDataElement(TestCase):
         'timeout': 12345,
     }
 
-    def make_test_element(self, content):
+    def make_element(self, content):
         e = HBaseDataElement(**self.DUMMY_CFG)
         # Pretend that the implementation is actually available and mock out
         # dependency functionality.
@@ -59,27 +59,27 @@ class TestHBaseDataElement(TestCase):
 
     def test_get_bytes(self):
         expected_bytes = 'foo bar test string'
-        e = self.make_test_element(expected_bytes)
+        e = self.make_element(expected_bytes)
         nose.tools.assert_equal(e.get_bytes(), expected_bytes)
 
     def test_is_empty_zero_bytes(self):
         # Simulate empty bytes
-        e = self.make_test_element('')
+        e = self.make_element('')
         nose.tools.assert_true(e.is_empty())
 
     def test_is_empty_nonzero_bytes(self):
         # Simulate non-empty bytes
-        e = self.make_test_element('some bytes')
+        e = self.make_element('some bytes')
         nose.tools.assert_false(e.is_empty())
 
     def test_writable(self):
         # Read-only element
-        e = self.make_test_element('')
+        e = self.make_element('')
         nose.tools.assert_false(e.writable())
 
     def test_set_bytes(self):
         # Read-only element
-        e = self.make_test_element('')
+        e = self.make_element('')
         nose.tools.assert_raises(
             smqtk.exceptions.ReadOnlyError,
             e.set_bytes, 'some bytes'

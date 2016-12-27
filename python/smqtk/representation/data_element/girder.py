@@ -122,15 +122,19 @@ class GirderDataElement (DataElement):
 
         """
         m = self.get_file_model()
-        return m is not None and m['size'] > 0
+        return m is None or m['size'] == 0
 
     def get_bytes(self):
         """
+        Get the bytes of the file stored in girder.
+
         :return: Get the byte stream for this data element.
         :rtype: bytes
 
         :raises AssertionError: Content received not the expected length in
             bytes (header field vs. content length).
+        :raises requests.HTTPError: If the ID does not refer to a file in
+            Girder.
         """
         # Check if token has expired, if so get new one
         # Download file bytes from girder

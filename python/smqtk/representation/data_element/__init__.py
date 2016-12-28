@@ -205,8 +205,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
     def to_buffered_reader(self):
         """
-        Wrap this elements bytes in a ``io.BufferedReader`` instance for use as
-        file-like object for reading
+        Wrap this element's bytes in a ``io.BufferedReader`` instance for use as
+        file-like object for reading.
+
+        As we use the ``get_bytes`` function, this element's bytes must safely
+        fit in memory for this method to be usable.
 
         :return: New BufferedReader instance
         :rtype: io.BufferedReader

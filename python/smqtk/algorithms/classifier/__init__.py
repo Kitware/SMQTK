@@ -13,7 +13,6 @@ from smqtk.utils import (
 )
 
 
-__author__ = 'paul.tunison@kitware.com, jacob.becker@kitware.com'
 __all__ = [
     "Classifier",
     "SupervisedClassifier",
@@ -67,6 +66,9 @@ class Classifier (SmqtkAlgorithm):
         :rtype: smqtk.representation.ClassificationElement
 
         """
+        if not d.has_vector():
+            raise RuntimeError("Given DescriptorElement does not contain a "
+                               "vector to classify.")
         c_elem = factory.new_classification(self.name, d.uuid())
         if overwrite or not c_elem.has_classifications():
             c = self._classify(d)
@@ -160,14 +162,16 @@ class Classifier (SmqtkAlgorithm):
     def _classify(self, d):
         """
         Internal method that defines the generation of the classification map
-        for a given DescriptorElement. This returns a dictionary mapping
-        integer labels to a floating point value.
+        for a given DescriptorElement.
+
+        For the purposes of this method, assume that the descriptor provided has
+        a stored vector.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement
 
         :raises RuntimeError: Could not perform classification for some reason
-            (see message).
+            (see logged message).
 
         :return: Dictionary mapping trained labels to classification confidence
             values

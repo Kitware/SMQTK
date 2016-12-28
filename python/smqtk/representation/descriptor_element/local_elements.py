@@ -90,7 +90,7 @@ class DescriptorMemoryElement (DescriptorElement):
         immutability.
 
         :param new_vec: New vector to contain.
-        :type new_vec: numpy.core.multiarray.ndarray | None
+        :type new_vec: numpy.core.multiarray.ndarray | tuple | list | None
 
         """
         # Copy a non-None value given, otherwise stay None

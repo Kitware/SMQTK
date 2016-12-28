@@ -8,8 +8,12 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import copy
+import functools
 import logging
 import operator as op
+
+# noinspection PyUnresolvedReferences
+from six.moves import range
 
 
 class SmqtkObject (object):
@@ -58,8 +62,8 @@ def ncr(n, r):
     r = min(r, n - r)
     if r == 0:
         return 1
-    numer = reduce(op.mul, xrange(n, n - r, -1))
-    denom = reduce(op.mul, xrange(1, r + 1))
+    numer = functools.reduce(op.mul, range(n, n - r, -1))
+    denom = functools.reduce(op.mul, range(1, r + 1))
     return numer // denom
 
 

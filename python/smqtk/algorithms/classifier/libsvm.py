@@ -21,9 +21,6 @@ except ImportError:
     svmutil = None
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class LibSvmClassifier (SupervisedClassifier):
     """
     Classifier that uses libSVM for support-vector machine functionality.

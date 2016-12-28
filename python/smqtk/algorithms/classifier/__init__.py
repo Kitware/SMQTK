@@ -244,8 +244,11 @@ class SupervisedClassifier (Classifier):
         if not merged:
             raise ValueError("No class examples were provided.")
         elif len(merged) < 2:
-            raise ValueError("Need 2 or more classes for training. Given %d",
-                             len(merged))
+            raise ValueError("Need 2 or more classes for training. Given %d."
+                             % len(merged))
+
+        # TODO(paul.tunison): Check that the same values/descriptors are not
+        #   assigned to multiple labels?
 
         return merged
 

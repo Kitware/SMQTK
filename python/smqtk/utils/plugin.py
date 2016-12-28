@@ -27,6 +27,15 @@ import os
 import re
 import sys
 
+import six
+
+try:
+    # noinspection PyStatementEffect
+    reload
+except NameError:
+    # noinspection PyUnresolvedReferences
+    reload = importlib.reload
+
 
 # Template for checking validity of sub-module files
 VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
@@ -183,7 +192,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
         # in the directory is not importable, the user should know.
         try:
             module = importlib.import_module(module_path)
-        except Exception, ex:
+        except Exception as ex:
             if warn:
                 log.warn("[%s] Failed to import module due to exception: "
                          "(%s) %s",
@@ -206,7 +215,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                           module_path)
                 classes = []
             elif (isinstance(classes, collections.Iterable) and
-                  not isinstance(classes, basestring)):
+                  not isinstance(classes, six.string_types)):
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",
                           module_path, len(classes))
@@ -283,7 +292,7 @@ def make_config(plugin_map):
 
     """
     d = {"type": None}
-    for label, cls in plugin_map.iteritems():
+    for label, cls in six.iteritems(plugin_map):
         # noinspection PyUnresolvedReferences
         d[label] = cls.get_default_config()
     return d

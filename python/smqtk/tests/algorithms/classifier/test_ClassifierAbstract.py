@@ -3,7 +3,8 @@ import unittest
 
 import nose.tools
 
-from smqtk.algorithms.classifier import Classifier
+from smqtk.algorithms.classifier import Classifier, SupervisedClassifier, \
+    get_classifier_impls
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 
@@ -51,10 +52,8 @@ class TestClassifierAbstractClass (unittest.TestCase):
     @mock.patch('smqtk.algorithms.classifier.MemoryClassificationElement'
                 '.has_classifications')
     def test_classify_no_overwrite(self, m_ce_hc):
-        """
-        Testing logic when classifier element for descriptor already has
-        stored results and we are NOT overwriting.
-        """
+        # Testing logic when classifier element for descriptor already has
+        # stored results and we are NOT overwriting.
         m_ce_hc.return_value = True
 
         c = DummyClassifier()
@@ -70,10 +69,8 @@ class TestClassifierAbstractClass (unittest.TestCase):
     @mock.patch('smqtk.algorithms.classifier.MemoryClassificationElement'
                 '.has_classifications')
     def test_classify_with_overwrite(self, m_ce_hc):
-        """
-        Testing logic when classification element for descriptor already has
-        stored results but we call WITH overwrite on.
-        """
+        # Testing logic when classification element for descriptor already has
+        # stored results but we call WITH overwrite on.
         m_ce_hc.return_value = True
 
         c = DummyClassifier()
@@ -87,6 +84,9 @@ class TestClassifierAbstractClass (unittest.TestCase):
         c._classify.assert_called_once_with(d)
 
     def test_classify_async(self):
+        # Check that async classify calls classify on all input elements
+        # correctly
+
         # make some descriptor elements
         d_elems = []
         for i in range(20):
@@ -105,3 +105,26 @@ class TestClassifierAbstractClass (unittest.TestCase):
             # Check for expected classification
             nose.tools.assert_equal(m[d].get_classification(),
                                     {d.uuid(): d.vector().tolist()})
+
+
+class TestGetClassifierImpls (unittest.TestCase):
+    # IndexLabelClassifier should always be available (no dependencies)
+
+    def test_get_classifier_impls_subclass_interface_classifier(self):
+        # Simple test that primarily makes sure the function doesn't fall down.
+        m = get_classifier_impls()
+        nose.tools.assert_is_instance(m, dict)
+        nose.tools.assert_in("IndexLabelClassifier", m)
+
+        # Should act the same as calling with no sub-interface
+        m2 = get_classifier_impls(sub_interface=Classifier)
+        nose.tools.assert_is_instance(m, dict)
+        nose.tools.assert_in("IndexLabelClassifier", m)
+        nose.tools.assert_equal(m, m2)
+
+    def test_get_classifier_impls_subclass_interface_supervised(self):
+        # should not return when sub_interface is set to the
+        # SupervisedClassifier base-class.
+        m = get_classifier_impls(sub_interface=SupervisedClassifier)
+        nose.tools.assert_is_instance(m, dict)
+        nose.tools.assert_not_in("IndexLabelClassifier", m)

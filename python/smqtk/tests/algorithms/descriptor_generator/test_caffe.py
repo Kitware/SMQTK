@@ -8,6 +8,7 @@ import mock
 import nose.tools
 import numpy
 
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
     caffe, CaffeDescriptorGenerator, _process_load_img_array
 from smqtk.representation.data_element import from_uri
@@ -40,6 +41,10 @@ if CaffeDescriptorGenerator.is_usable():
             'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
         www_uri_image_mean_proto = \
             'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
+
+        def test_impl_findable(self):
+            nose.tools.assert_in(CaffeDescriptorGenerator.__name__,
+                                 get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')

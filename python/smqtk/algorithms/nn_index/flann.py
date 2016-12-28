@@ -2,7 +2,6 @@ import cPickle
 import logging
 import multiprocessing
 import os
-import os.path as osp
 import tempfile
 
 import numpy
@@ -10,17 +9,12 @@ import numpy
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils.file_utils import safe_create_dir
-
 
 # Requires FLANN bindings
 try:
     import pyflann
 except ImportError:
     pyflann = None
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class FlannNearestNeighborsIndex (NearestNeighborsIndex):
@@ -302,7 +296,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             finally:
                 os.close(fd)
                 os.remove(fp)
-        if self._index_param_elem:
+        if self._index_param_elem and self._index_param_elem.writable():
             self._log.debug("Caching index params: %s", self._index_param_elem)
             state = {
                 'b_autotune': self._build_autotune,

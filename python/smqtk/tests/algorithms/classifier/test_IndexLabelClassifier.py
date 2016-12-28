@@ -3,6 +3,7 @@ import unittest
 
 import nose.tools
 
+from smqtk.algorithms.classifier import get_classifier_impls
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -25,6 +26,10 @@ class TestIndexLabelClassifier (unittest.TestCase):
     def test_is_usable(self):
         # Should always be available
         nose.tools.assert_true(IndexLabelClassifier.is_usable())
+
+    def test_impl_findable(self):
+        nose.tools.assert_in(IndexLabelClassifier.__name__,
+                             get_classifier_impls())
 
     def test_new(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)

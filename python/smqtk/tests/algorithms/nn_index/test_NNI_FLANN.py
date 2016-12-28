@@ -1,16 +1,14 @@
 import mock
-import os
 import random
 import unittest
 
 import nose.tools as ntools
 import numpy
 
-from smqtk.representation.data_element import from_uri
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 
 
 # Don't bother running tests of the class is not usable
@@ -28,6 +26,8 @@ if FlannNearestNeighborsIndex.is_usable():
                                               random_seed=self.RAND_SEED)
 
         def test_impl_findable(self):
+            # Already here because the implementation is reporting itself as
+            # usable.
             ntools.assert_in(FlannNearestNeighborsIndex.__name__,
                              get_nn_index_impls())
 
@@ -38,6 +38,18 @@ if FlannNearestNeighborsIndex.is_usable():
         def test_has_model_data_empty_elements(self):
             f = FlannNearestNeighborsIndex('', '', '')
             ntools.assert_false(f._has_model_data())
+
+        def test_load_flann_model_empty_data_elements(self):
+            # Construct index with valid, but empty, data URIs instances
+            empty_data = 'base64://'
+            f = FlannNearestNeighborsIndex(empty_data, empty_data, empty_data)
+            # Load method should do nothing but set PID since given data was
+            # empty.
+            f._load_flann_model()
+            ntools.assert_is_none(f._descr_cache)
+            ntools.assert_is_none(f._flann)
+            ntools.assert_is_none(f._flann_build_params)
+            ntools.assert_is_not_none(f._pid)
 
         @mock.patch("smqtk.algorithms.nn_index.flann"
                     ".FlannNearestNeighborsIndex._load_flann_model")
@@ -59,7 +71,7 @@ if FlannNearestNeighborsIndex.is_usable():
             #
             index = self._make_inst('euclidean')
             test_descriptors = []
-            for i in xrange(dim):
+            for i in range(dim):
                 v = numpy.zeros(dim, float)
                 v[i] = 1.
                 d = DescriptorMemoryElement('unit', i)
@@ -67,7 +79,8 @@ if FlannNearestNeighborsIndex.is_usable():
                 test_descriptors.append(d)
             index.build_index(test_descriptors)
             # query descriptor -- zero vector
-            # -> all modeled descriptors should be equally distance (unit corners)
+            # -> all modeled descriptors should be equally distance (unit
+            #    corners)
             q = DescriptorMemoryElement('query', 0)
             q.set_vector(numpy.zeros(dim, float))
             r, dists = index.nn(q, dim)
@@ -81,7 +94,7 @@ if FlannNearestNeighborsIndex.is_usable():
             # make vectors to return in a known euclidean distance order
             i = 10
             test_descriptors = []
-            for j in xrange(i):
+            for j in range(i):
                 d = DescriptorMemoryElement('ordered', j)
                 d.set_vector(numpy.array([j, j*2], float))
                 test_descriptors.append(d)
@@ -89,7 +102,8 @@ if FlannNearestNeighborsIndex.is_usable():
             index.build_index(test_descriptors)
 
             # Since descriptors were build in increasing distance from (0,0),
-            # returned descriptors for a query of [0,0] should be in index order.
+            # returned descriptors for a query of [0,0] should be in index
+            # order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(numpy.array([0, 0], float))
             r, dists = index.nn(q, i)
@@ -105,7 +119,7 @@ if FlannNearestNeighborsIndex.is_usable():
             #
             index = self._make_inst('hik')
             test_descriptors = []
-            for i in xrange(dim):
+            for i in range(dim):
                 v = numpy.zeros(dim, float)
                 v[i] = 1.
                 d = DescriptorMemoryElement('unit', i)
@@ -113,8 +127,8 @@ if FlannNearestNeighborsIndex.is_usable():
                 test_descriptors.append(d)
             index.build_index(test_descriptors)
             # query with zero vector
-            # -> all modeled descriptors have no intersection, dists should be 1.0,
-            #    or maximum distance by histogram intersection
+            # -> all modeled descriptors have no intersection, dists should be
+            #    1.0, or maximum distance by histogram intersection.
             q = DescriptorMemoryElement('query', 0)
             q.set_vector(numpy.zeros(dim, float))
             r, dists = index.nn(q, dim)
@@ -153,3 +167,36 @@ if FlannNearestNeighborsIndex.is_usable():
 
             c2 = index.get_config()
             ntools.assert_equal(c, c2)
+
+        def test_build_index_no_descriptors(self):
+            f = FlannNearestNeighborsIndex()
+            ntools.assert_raises(
+                ValueError,
+                f.build_index, []
+            )
+
+        def test_build_index(self):
+            # Empty memory data elements for storage
+            empty_data = 'base64://'
+            f = FlannNearestNeighborsIndex(empty_data, empty_data, empty_data)
+            # Internal elements should initialize have zero-length byte values
+            ntools.assert_equal(len(f._index_elem.get_bytes()), 0)
+            ntools.assert_equal(len(f._index_param_elem.get_bytes()), 0)
+            ntools.assert_equal(len(f._descr_cache_elem.get_bytes()), 0)
+
+            # Make unit vectors, one for each feature
+            dim = 8
+            test_descriptors = []
+            for i in range(dim):
+                v = numpy.zeros(dim, float)
+                v[i] = 1.
+                d = DescriptorMemoryElement('unit', i)
+                d.set_vector(v)
+                test_descriptors.append(d)
+
+            f.build_index(test_descriptors)
+
+            # Internal elements should not have non-zero byte values.
+            ntools.assert_greater(len(f._index_elem.get_bytes()), 0)
+            ntools.assert_greater(len(f._index_param_elem.get_bytes()), 0)
+            ntools.assert_greater(len(f._descr_cache_elem.get_bytes()), 0)

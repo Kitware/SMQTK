@@ -1,5 +1,6 @@
 import inspect
 import os
+import pickle
 import unittest
 
 import PIL.Image
@@ -18,62 +19,27 @@ if CaffeDescriptorGenerator.is_usable():
 
     class TestCaffeDesctriptorGenerator (unittest.TestCase):
 
-        @classmethod
-        def setUpClass(cls):
-            cls.lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
-            cls.lenna_alexnet_fc7_descr_fp = \
-                os.path.join(TEST_DATA_DIR, 'Lenna.alexnet_fc7_output.npy')
+        lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
+        lenna_alexnet_fc7_descr_fp = \
+            os.path.join(TEST_DATA_DIR, 'Lenna.alexnet_fc7_output.npy')
 
-            cls.dummy_net_topo_fp = \
-                os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
-            cls.dummy_caffe_model_fp = \
-                os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
-            cls.dummy_img_mean_fp = \
-                os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
+        # Dummy Caffe configuration files + weights
+        # - weights is actually an empty file (0 bytes), which caffe treats
+        #   as random/zero values (not sure exactly what's happening, but
+        #   always results in a zero-vector).
+        dummy_net_topo_fp = \
+            os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
+        dummy_caffe_model_fp = \
+            os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
+        dummy_img_mean_fp = \
+            os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
 
-            cls.www_uri_alexnet_prototxt = \
-                'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c/download'
-            cls.www_uri_alexnet_caffemodel = \
-                'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
-            cls.www_uri_image_mean_proto = \
-                'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
-
-        def test_dummy_model(self):
-            """
-            Caffe dummy network interaction test Lenna image)
-
-            Construct network with an empty model just to see that our
-            interaction with the Caffe API is successful. We expect a
-            zero-valued descriptor vector.
-            """
-
-
-            g = CaffeDescriptorGenerator(self.dummy_net_topo_fp,
-                                         self.dummy_caffe_model_fp,
-                                         self.dummy_img_mean_fp,
-                                         return_layer='fc', use_gpu=False)
-            d = g.compute_descriptor(from_uri(self.lenna_image_fp))
-            nose.tools.assert_almost_equal(d.vector().sum(), 0., 12)
-
-        @unittest.skipUnless(DataUrlElement.is_usable(),
-                             "URL resolution not functional")
-        def test_from_url_lenna_description(self):
-            """
-            Caffe AlexNet interaction test (Lenna image)
-
-            This is a long test since it has to download data for remote URIs
-            """
-            d = CaffeDescriptorGenerator(
-                self.www_uri_alexnet_prototxt,
-                self.www_uri_alexnet_caffemodel,
-                self.www_uri_image_mean_proto,
-                return_layer='fc7',
-                use_gpu=False,
-            )
-            lenna_elem = from_uri(self.lenna_image_fp)
-            expected_descr = numpy.load(self.lenna_alexnet_fc7_descr_fp)
-            descr = d.compute_descriptor(lenna_elem).vector()
-            numpy.testing.assert_allclose(descr, expected_descr)
+        www_uri_alexnet_prototxt = \
+            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c/download'
+        www_uri_alexnet_caffemodel = \
+            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
+        www_uri_image_mean_proto = \
+            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
@@ -105,6 +71,39 @@ if CaffeDescriptorGenerator.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
+        def test_pickle_save_restore(self, m_cdg_setupNetwork):
+            # Mocking set_network so we don't have to worry about actually
+            # initializing any caffe things for this test.
+            expected_params = {
+                'network_prototxt_uri': 'some_prototxt_uri',
+                'network_model_uri': 'some_caffemodel_uri',
+                'image_mean_uri': 'some_imagemean_uri',
+                'return_layer': 'layer name',
+                'batch_size': 777,
+                'use_gpu': False,
+                'gpu_device_id': 8,
+                'network_is_bgr': False,
+                'data_layer': 'data-other',
+                'load_truncated_images': True,
+                'pixel_rescale': (.2, .8),
+                'input_scale': 1.5,
+            }
+            g = CaffeDescriptorGenerator(**expected_params)
+            # Initialization sets up the network on construction.
+            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 1)
+
+            g_pickled = pickle.dumps(g, -1)
+            g2 = pickle.loads(g_pickled)
+            # Network should be setup for second class class just like in
+            # initial construction.
+            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 2)
+
+            nose.tools.assert_is_instance(g2, CaffeDescriptorGenerator)
+            nose.tools.assert_equal(g.get_config(),
+                                    g2.get_config())
+
+        @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
+                    '.CaffeDescriptorGenerator._setup_network')
         def test_invalid_datatype(self, m_cdg_setupNetwork):
             # dummy network setup
             g = CaffeDescriptorGenerator(None, None, None)
@@ -128,3 +127,59 @@ if CaffeDescriptorGenerator.is_usable():
                 lenna_elem, test_transformer, test_data_layer, None, None
             ))
             numpy.testing.assert_allclose(a, a_expected)
+
+        @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
+                    '.CaffeDescriptorGenerator._setup_network')
+        def test_no_internal_compute_descriptor(self, m_cdg_setupNetwork):
+            # This implementation's descriptor computation logic sits in async
+            # method override due to caffe's natural multi-element computation
+            # interface. Thus, ``_compute_descriptor`` should not be
+            # implemented.
+
+            # dummy network setup because _setup_network is mocked out
+            g = CaffeDescriptorGenerator(0, 0, 0)
+            nose.tools.assert_raises(
+                NotImplementedError,
+                g._compute_descriptor, None
+            )
+
+        def test_compute_descriptor_dummy_model(self):
+            # Caffe dummy network interaction test Lenna image)
+
+            # Construct network with an empty model just to see that our
+            # interaction with the Caffe API is successful. We expect a
+            # zero-valued descriptor vector.
+            g = CaffeDescriptorGenerator(self.dummy_net_topo_fp,
+                                         self.dummy_caffe_model_fp,
+                                         self.dummy_img_mean_fp,
+                                         return_layer='fc', use_gpu=False)
+            d = g.compute_descriptor(from_uri(self.lenna_image_fp))
+            nose.tools.assert_almost_equal(d.vector().sum(), 0., 12)
+
+        @unittest.skipUnless(DataUrlElement.is_usable(),
+                             "URL resolution not functional")
+        def test_compute_descriptor_from_url_lenna_description(self):
+            # Caffe AlexNet interaction test (Lenna image)
+            # This is a long test since it has to download data for remote URIs
+            d = CaffeDescriptorGenerator(
+                self.www_uri_alexnet_prototxt,
+                self.www_uri_alexnet_caffemodel,
+                self.www_uri_image_mean_proto,
+                return_layer='fc7',
+                use_gpu=False,
+            )
+            lenna_elem = from_uri(self.lenna_image_fp)
+            expected_descr = numpy.load(self.lenna_alexnet_fc7_descr_fp)
+            descr = d.compute_descriptor(lenna_elem).vector()
+            numpy.testing.assert_allclose(descr, expected_descr)
+
+        def test_compute_descriptor_async_no_data(self):
+            # Should get a ValueError when given no descriptors to async method
+            g = CaffeDescriptorGenerator(self.dummy_net_topo_fp,
+                                         self.dummy_caffe_model_fp,
+                                         self.dummy_img_mean_fp,
+                                         return_layer='fc', use_gpu=False)
+            nose.tools.assert_raises(
+                ValueError,
+                g.compute_descriptor_async, []
+            )

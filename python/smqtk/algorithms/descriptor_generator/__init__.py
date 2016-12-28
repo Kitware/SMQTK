@@ -1,20 +1,13 @@
 import abc
-import logging
-import multiprocessing.pool
 import numpy
 import os
-import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.utils import SimpleTimer
 import smqtk.utils.parallel
 from smqtk.utils.plugin import get_plugins
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 DFLT_DESCRIPTOR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})

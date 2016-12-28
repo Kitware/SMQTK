@@ -8,6 +8,7 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
+import six
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
@@ -15,10 +16,16 @@ from smqtk.algorithms.descriptor_generator import \
 from smqtk.representation.data_element import from_uri
 from smqtk.utils.bin_utils import report_progress
 
+try:
+    xrange
+except NameError:
+    # noinspection PyShadowingBuiltins
+    xrange = range
+
 
 try:
     import caffe
-except ImportError, ex:
+except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import caffe module: %s",
                                         str(ex))
     caffe = None
@@ -144,6 +151,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         return self.get_config()
 
     def __setstate__(self, state):
+        # This works because configuration parameters exactly match up with
+        # instance attributes.
         self.__dict__.update(state)
         self._setup_network()
 
@@ -191,6 +200,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         except IOError:
             self._log.debug("Image mean file not a numpy array, assuming "
                             "URI to protobuf binary.")
+            # noinspection PyUnresolvedReferences
             blob = caffe.proto.caffe_pb2.BlobProto()
             blob.ParseFromString(image_mean_bytes)
             a = numpy.array(caffe.io.blobproto_to_array(blob))
@@ -375,7 +385,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         p = multiprocessing.pool.ThreadPool(procs)
         try:
-            p.map(check_get_uuid, descr_elements.itervalues())
+            p.map(check_get_uuid, six.itervalues(descr_elements))
         finally:
             p.close()
             p.join()

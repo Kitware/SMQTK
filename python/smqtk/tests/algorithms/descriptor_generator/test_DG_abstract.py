@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import unittest
 
 import mock
@@ -10,14 +8,14 @@ from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 import smqtk.representation
 
-__author__ = "paul.tunison@kitware.com"
 
+class TestGetDescriptorGeneratorImpls (unittest.TestCase):
 
-def test_get_descriptors():
-    m = get_descriptor_generator_impls()
-    # Currently no types that are guaranteed available
-    ntools.assert_is_instance(m, dict, "Should return a dictionary of class "
-                                       "label-to-types")
+    def test_get_descriptors(self):
+        m = get_descriptor_generator_impls()
+        # Currently no types that are guaranteed available
+        ntools.assert_is_instance(m, dict, "Should return a dictionary of "
+                                           "class label-to-types")
 
 
 class DummyDescriptorGenerator (DescriptorGenerator):

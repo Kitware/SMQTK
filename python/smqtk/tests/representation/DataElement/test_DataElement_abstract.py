@@ -9,10 +9,8 @@ import os.path as osp
 import tempfile
 import unittest
 
+import smqtk.exceptions
 import smqtk.representation.data_element
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 # because this has a stable mimetype conversion
@@ -20,6 +18,7 @@ EXPECTED_CONTENT_TYPE = "image/png"
 EXPECTED_BYTES = "hello world"
 EXPECTED_MD5 = hashlib.md5(EXPECTED_BYTES).hexdigest()
 EXPECTED_SHA1 = hashlib.sha1(EXPECTED_BYTES).hexdigest()
+EXPECTED_SHA512 = hashlib.sha512(EXPECTED_BYTES).hexdigest()
 # UUID is currently set to be equivalent to SHA1 value by default
 EXPECTED_UUID = EXPECTED_SHA1
 
@@ -31,6 +30,10 @@ tempfile.gettempdir()
 
 class DummyDataElement (smqtk.representation.data_element.DataElement):
 
+    TEST_WRITABLE = True
+    TEST_BYTES = EXPECTED_BYTES
+    TEST_CONTENT_TYPE = EXPECTED_CONTENT_TYPE
+
     @classmethod
     def is_usable(cls):
         return True
@@ -39,53 +42,34 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
         return {}
 
     def content_type(self):
-        return EXPECTED_CONTENT_TYPE
+        return self.TEST_CONTENT_TYPE
 
     def is_empty(self):
         pass
 
     def get_bytes(self):
-        # Aligned with the checksum strings in test class setUp method
-        return EXPECTED_BYTES
+        return self.TEST_BYTES
 
     def set_bytes(self, b):
-        raise NotImplementedError()
+        super(DummyDataElement, self).set_bytes(b)
+        self.TEST_BYTES = b
 
     def writable(self):
-        raise NotImplementedError()
+        return self.TEST_WRITABLE
 
 
 class TestDataElementAbstract (unittest.TestCase):
 
-    def test_md5(self):
+    def test_from_uri_default(self):
+        ntools.assert_raises(
+            NotImplementedError,
+            DummyDataElement.from_uri, 'some uri'
+        )
+
+    def test_not_hashable(self):
+        # Hash should be that of the UUID of the element
         de = DummyDataElement()
-        ntools.assert_is_none(de._md5_cache)
-        md5 = de.md5()
-
-        ntools.assert_is_not_none(de._md5_cache)
-        ntools.assert_equal(de._md5_cache, EXPECTED_MD5)
-        ntools.assert_equal(md5, EXPECTED_MD5)
-
-        # When called a second time, should use cache instead of recomputing
-        with mock.patch("smqtk.representation.data_element.hashlib") as mock_hashlib:
-            md5 = de.md5()
-            ntools.assert_false(mock_hashlib.md5.called)
-            ntools.assert_equal(md5, EXPECTED_MD5)
-
-    def test_sha1(self):
-        de = DummyDataElement()
-        ntools.assert_is_none(de._sha1_cache)
-        sha1 = de.sha1()
-
-        ntools.assert_is_not_none(de._sha1_cache)
-        ntools.assert_equal(de._sha1_cache, EXPECTED_SHA1)
-        ntools.assert_equal(sha1, EXPECTED_SHA1)
-
-        # When called a second time, should use cache instead of recomputing
-        with mock.patch("smqtk.representation.data_element.hashlib") as mock_hashlib:
-            sha1 = de.sha1()
-            ntools.assert_false(mock_hashlib.sha1.called)
-            ntools.assert_equal(sha1, EXPECTED_SHA1)
+        ntools.assert_raises(TypeError, hash, de)
 
     def test_del(self):
         de = DummyDataElement()
@@ -94,14 +78,33 @@ class TestDataElementAbstract (unittest.TestCase):
 
         ntools.assert_true(m_clean_temp.called)
 
-    def test_uuid(self):
-        de = DummyDataElement()
-        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+    def test_equality(self):
+        # equal when binary content is the same
+        e1 = DummyDataElement()
+        e2 = DummyDataElement()
 
-    def test_hashing(self):
-        # Hash should be that of the UUID of the element
+        test_content_1 = 'some similar content'
+        e1.TEST_BYTES = e2.TEST_BYTES = test_content_1
+        ntools.assert_equal(e1, e2)
+
+        test_content_2 = 'some other bytes'
+        e2.TEST_BYTES = test_content_2
+        ntools.assert_not_equal(e1, e2)
+
+    def test_md5(self):
         de = DummyDataElement()
-        ntools.assert_equal(hash(de), hash(EXPECTED_UUID))
+        md5 = de.md5()
+        ntools.assert_equal(md5, EXPECTED_MD5)
+
+    def test_sha1(self):
+        de = DummyDataElement()
+        sha1 = de.sha1()
+        ntools.assert_equal(sha1, EXPECTED_SHA1)
+
+    def test_sha512(self):
+        de = DummyDataElement()
+        sha1 = de.sha512()
+        ntools.assert_equal(sha1, EXPECTED_SHA512)
 
     # Cases:
     #   - no existing temps, no specific dir
@@ -290,3 +293,50 @@ class TestDataElementAbstract (unittest.TestCase):
 
         mock_os.path.isfile.assert_called_once_with(expected_path)
         mock_os.remove.assert_called_once_with(expected_path)
+
+    def test_uuid(self):
+        de = DummyDataElement()
+        de.TEST_BYTES = EXPECTED_BYTES
+        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+
+    def test_to_buffered_reader(self):
+        # Check that we get expected file-like returns.
+        de = DummyDataElement()
+        de.TEST_BYTES = EXPECTED_BYTES
+        br = de.to_buffered_reader()
+        ntools.assert_equal(br.readlines(), ['hello world'])
+
+        de.TEST_BYTES = 'some content\nwith new \nlines'
+        br = de.to_buffered_reader()
+        ntools.assert_equal(br.readlines(),
+                            ['some content\n', 'with new \n', 'lines'])
+
+    def test_set_bytes_not_writable(self):
+        de = DummyDataElement()
+        # trigger UUID cache at least once
+        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+
+        de.TEST_WRITABLE = False
+        ntools.assert_raises(
+            smqtk.exceptions.ReadOnlyError,
+            de.set_bytes, 'test bytes'
+        )
+
+        # Caches shouldn't have been invalidated due to error
+        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+
+    def test_set_bytes_checksum_cache_invalidation(self):
+        de = DummyDataElement()
+        # trigger UUID cache at least once
+        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+
+        new_expected_bytes = 'some new byte content'
+        new_expected_uuid = hashlib.sha1(new_expected_bytes).hexdigest()
+
+        de.TEST_WRITABLE = True
+        de.set_bytes(new_expected_bytes)
+
+        # Caches should have been invalidated, so UUID return should now reflect
+        # new byte content.
+        ntools.assert_not_equal(de.uuid(), EXPECTED_UUID)
+        ntools.assert_equal(de.uuid(), new_expected_uuid)

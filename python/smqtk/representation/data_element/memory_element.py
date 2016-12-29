@@ -114,6 +114,11 @@ class DataMemoryElement (DataElement):
         self._content_type = content_type
         self._readonly = bool(readonly)
 
+    def __repr__(self):
+        return super(DataMemoryElement, self).__repr__() + \
+               "{len(bytes): %d, content_type: %s, readonly: %s}" \
+               % (len(self._bytes), self._content_type, self._readonly)
+
     def get_config(self):
         return {
             "bytes": self._bytes,

@@ -57,7 +57,7 @@ class HBaseDataElement (DataElement):
     def __repr__(self):
         return super(HBaseDataElement, self).__repr__() + \
             "{key: %s, bin_col: %s, hbase_addr: %s, hbase_table: %s, " \
-            "timeout=%d}" % (
+            "timeout: %d}" % (
                 self.element_key, self.binary_column, self.hbase_address,
                 self.hbase_table, self.timeout
             )

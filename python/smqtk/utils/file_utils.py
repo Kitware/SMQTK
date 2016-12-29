@@ -10,9 +10,6 @@ import time
 from smqtk.utils import SmqtkObject
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 def safe_create_dir(d):
     """
     Recursively create the given directory, ignoring the already-exists
@@ -29,12 +26,62 @@ def safe_create_dir(d):
     d = os.path.abspath(os.path.expanduser(d))
     try:
         os.makedirs(d)
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == errno.EEXIST and os.path.exists(d):
             pass
         else:
             raise
     return d
+
+
+def safe_file_write(path, b, tmp_dir=None):
+    """
+    Safely write to a file in such a way that the target file is never
+    incompletely written to due to error or multiple agents attempting to
+    writes.
+
+    We leverage that most OSs have an atomic move/rename operation by first
+    writing bytes to a separate temporary file first, then renaming the
+    temporary file to the final destination path when write is complete.
+    Temporary files are written to the same directory as the target file unless
+     otherwise specified.
+
+    :param path: Path to the file to write to.
+    :type path: str
+
+    :param b: Byte iterable to write to file.
+    :type b: str | bytes
+
+    :param tmp_dir: Optional custom directory to write the intermediate
+        temporary file to. This directory must already exist.
+    :type tmp_dir: None | str
+
+    """
+    file_dir = os.path.dirname(path)
+    file_name = os.path.basename(path)
+    file_base, file_ext = os.path.splitext(file_name)
+
+    # Make sure containing directory exists
+    safe_create_dir(file_dir)
+
+    # Write to a temporary file first, then OS move the temp file to the final
+    # destination. This is due to, on most OSs, a file raname/move being atomic.
+    # TODO(paul.tunison): Do something else on windows since moves there are not
+    #   guaranteed atomic.
+    tmp_dir = file_dir if tmp_dir is None else tmp_dir
+    fd, fp = tempfile.mkstemp(suffix=file_ext, prefix=file_base + '.',
+                              dir=tmp_dir)
+    try:
+        c = os.write(fd, b)
+        if c != len(b):
+            raise RuntimeError("Failed to write all bytes to file.")
+    except:
+        # Remove temporary file if something bad happens.
+        os.remove(fp)
+        raise
+    finally:
+        os.close(fd)
+    os.rename(fp, path)
 
 
 def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
@@ -217,6 +264,10 @@ def file_mimetype_tika(filepath):
 
 
 class FileModificationMonitor (SmqtkObject, threading.Thread):
+    """
+    Utility object for triggering a callback function when an observed file
+    changes based on file modification times observed
+    """
 
     STATE_WAITING = 0   # Waiting for file to be modified
     STATE_WATCHING = 1  # Waiting for file to settle

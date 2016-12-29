@@ -6,7 +6,7 @@ import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file_utils import safe_file_write
 
 
 STR_NONE_TYPES = six.string_types + (type(None),)
@@ -172,10 +172,7 @@ class DataFileElement (DataElement):
 
         """
         if not self._readonly:
-            # Make sure containing directory exists
-            safe_create_dir(osp.dirname(self._filepath))
-            with open(self._filepath, 'wb') as f:
-                f.write(b)
+            safe_file_write(self._filepath, b)
         else:
             raise ReadOnlyError("This file element is read only.")
 

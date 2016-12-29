@@ -235,14 +235,17 @@ class TestDataFileElement (unittest.TestCase):
         e = DataFileElement('foo', readonly=True)
         ntools.assert_false(e.writable())
 
-    @mock.patch('__builtin__.open')
-    @mock.patch('smqtk.representation.data_element.file_element.safe_create_dir')
-    def test_set_bytes_writable(self, m_scd, m_open):
-        e = DataFileElement('foo')
-        e.set_bytes('test string')
-        m_scd.assert_called()
-        m_open.assert_called_with('foo', 'wb')
-        m_open().__enter__().write.assert_called_with('test string')
+    @mock.patch('smqtk.representation.data_element.file_element.safe_file_write')
+    def test_set_bytes_writable(self, m_sfw):
+        # Using a relative filepath
+        test_path = 'foo'
+        test_bytes = 'test string of bytes'
+
+        e = DataFileElement(test_path)
+        e.set_bytes(test_bytes)
+
+        # File write function should be called
+        m_sfw.assert_called_once_with(test_path, test_bytes)
 
     def test_set_bytes_readonly(self):
         e = DataFileElement('foo', readonly=True)

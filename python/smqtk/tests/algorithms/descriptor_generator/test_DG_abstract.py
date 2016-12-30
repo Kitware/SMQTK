@@ -167,6 +167,9 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         m_d1 = mock.Mock(name='data-1',
                          spec=smqtk.representation.DataElement)()
 
+        m_d0.uuid.return_value = 'uuid-0'
+        m_d1.uuid.return_value = 'uuid-1'
+
         m_factory = \
             mock.Mock(spec=smqtk.representation.DescriptorElementFactory)()
 
@@ -187,10 +190,10 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
                                                overwrite=False, use_mp=False)
 
         ntools.assert_equal(len(m), 2)
-        ntools.assert_in(m_d0, m)
-        ntools.assert_in(m_d1, m)
-        ntools.assert_equal(m[m_d0], 1)
-        ntools.assert_equal(m[m_d1], 2)
+        ntools.assert_in(m_d0.uuid(), m)
+        ntools.assert_in(m_d1.uuid(), m)
+        ntools.assert_equal(m[m_d0.uuid()], 1)
+        ntools.assert_equal(m[m_d1.uuid()], 2)
 
         ntools.assert_true(generator.compute_descriptor.called)
         ntools.assert_equal(generator.compute_descriptor.call_count, 2)

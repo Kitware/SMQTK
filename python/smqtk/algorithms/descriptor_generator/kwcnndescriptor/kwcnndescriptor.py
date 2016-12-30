@@ -10,7 +10,9 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
-import cPickle
+import six
+# noinspection PyUnresolvedReferences
+from six.moves import range
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
@@ -19,8 +21,13 @@ from smqtk.utils.bin_utils import report_progress
 from smqtk.utils.parallel import parallel_map
 
 try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
     import kwcnn
-except ImportError, ex:
+except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import KWCNN module: %s",
                                         str(ex))
     kwcnn = None
@@ -305,14 +312,14 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             trimmed_filepath = trimmed_filepath.replace('.npy', '.trimmed.npy')
             if not os.path.exists(trimmed_filepath):
                 with open(self.network_model_filepath, 'rb') as model_file:
-                    model_dict = cPickle.load(model_file)
+                    model_dict = pickle.load(model_file)
                 key_list = ['best_weights', 'best_fit_weights']
                 for key in key_list:
                     layer_list = model_dict[key]
                     model_dict[key] = layer_list[:-2]
                 with open(trimmed_filepath, 'wb') as model_file:
-                    cPickle.dump(model_dict, model_file,
-                                 protocol=cPickle.HIGHEST_PROTOCOL)
+                    pickle.dump(model_dict, model_file,
+                                protocol=pickle.HIGHEST_PROTOCOL)
             self.network_model_filepath = trimmed_filepath
 
         # Load model
@@ -386,9 +393,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
                            overwrite=False):
         """
-        Given some kind of data, return a descriptor vector.
-
-        This abstract super method should be invoked for common error checking.
+        Given some data, return a descriptor element containing a descriptor
+        vector.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
         :raises ValueError: Given data element content was not of a valid type
@@ -398,8 +404,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         :type data: smqtk.representation.DataElement
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. In-Memory descriptor factory by
-            default.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -417,7 +423,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         """
         m = self.compute_descriptor_async([data], descr_factory, overwrite,
                                           procs=1)
-        return m[data]
+        return m[data.uuid()]
 
     def compute_descriptor_async(self, data_iter,
                                  descr_factory=DFLT_DESCRIPTOR_FACTORY,
@@ -431,8 +437,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         :type data_iter: collections.Iterable[smqtk.representation.DataElement]
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instances. In-Memory descriptor factory by
-            default.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -446,53 +452,57 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         :param procs: Optional specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
-        :type procs: int
+        :type procs: int | None
 
         :raises ValueError: An input DataElement was of a content type that we
             cannot handle.
 
-        :return: Mapping of input DataElement instances to the computed
-            descriptor element.
-            DescriptorElement UUID's are congruent with the UUID of the data
-            element it is the descriptor of.
-        :rtype: dict[smqtk.representation.DataElement,
+        :return: Mapping of input DataElement UUIDs to the computed descriptor
+            element for that data. DescriptorElement UUID's are congruent with
+            the UUID of the data element it is the descriptor of.
+        :rtype: dict[collections.Hashable,
                      smqtk.representation.DescriptorElement]
 
         """
         # Create DescriptorElement instances for each data elem.
         #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]  # NOQA
+        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         descr_elements = {}
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
         prog_rep_state = [0] * 7
-        for d in data_iter:
-            ct = d.content_type()
+        for data in data_iter:
+            ct = data.content_type()
             if ct not in self.valid_content_types():
-                raise ValueError("Cannot compute descriptor of content type "
-                                 "'%s', (DE: %s" % (ct, d))
-            data_elements[d.uuid()] = d
-            descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name,
-                                                                    d.uuid())
+                self._log.error("Cannot compute descriptor from content type "
+                                "'%s' data: %s)" % (ct, data))
+                raise ValueError("Cannot compute descriptor from content type "
+                                 "'%s' data: %s)" % (ct, data))
+            data_elements[data.uuid()] = data
+            descr_elements[data.uuid()] = \
+                descr_factory.new_descriptor(self.name, data.uuid())
             report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
         if len(data_elements) < (procs or multiprocessing.cpu_count()):
             procs = len(data_elements)
+        if procs == 0:
+            raise ValueError("No data elements provided")
 
         # For thread safely, only use .append() and .popleft() (queue)
         uuid4proc = deque()
 
-        def check_get_uuid(d):
-            if overwrite or not d.has_vector():
+        def check_get_uuid(descriptor_elem):
+            if overwrite or not descriptor_elem.has_vector():
                 # noinspection PyUnresolvedReferences
-                uuid4proc.append(d.uuid())
+                uuid4proc.append(descriptor_elem.uuid())
 
+        # Using thread-pool due to in-line function + updating local deque
         p = multiprocessing.pool.ThreadPool(procs)
         try:
-            p.map(check_get_uuid, descr_elements.itervalues())
+            p.map(check_get_uuid, six.itervalues(descr_elements))
         finally:
             p.close()
             p.join()
@@ -501,24 +511,24 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                         len(data_elements) - len(uuid4proc))
 
         if uuid4proc:
-            b_s = self.batch_size
             self._log.debug("Converting deque to tuple for segmentation")
             uuid4proc = tuple(uuid4proc)
 
             # Split UUIDs into groups equal to our batch size, and an option
             # tail group that is less than our batch size.
-            tail_size = len(uuid4proc) % b_s
-            batch_groups = (len(uuid4proc) - tail_size) // b_s
+            tail_size = len(uuid4proc) % self.batch_size
+            batch_groups = (len(uuid4proc) - tail_size) // self.batch_size
             self._log.debug("Processing %d batches of size %d", batch_groups,
-                            b_s)
+                            self.batch_size)
             if tail_size:
                 self._log.debug("Processing tail group of size %d", tail_size)
 
             if batch_groups:
-                for g in xrange(batch_groups):
+                for g in range(batch_groups):
                     self._log.debug("Starting batch: %d of %d",
                                     g + 1, batch_groups)
-                    batch_uuids = uuid4proc[g * b_s:(g + 1) * b_s]
+                    batch_uuids = \
+                        uuid4proc[g * self.batch_size:(g + 1) * self.batch_size]
                     self._process_batch(batch_uuids, data_elements,
                                         descr_elements, procs)
 
@@ -530,7 +540,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                                     procs)
 
         self._log.debug("forming output dict")
-        return dict((data_elements[k], descr_elements[k])
+        return dict((data_elements[k].uuid(), descr_elements[k])
                     for k in data_elements)
 
     def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
@@ -560,17 +570,19 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         """
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        img_arrays = list(
-            parallel_map(_process_load_img_array,
-                         (data_elements[uid] for uid in uuids4proc),
-                         itertools.repeat(self.network_is_greyscale, uid_num),
-                         itertools.repeat(self.input_shape, uid_num),
-                         itertools.repeat(self.load_truncated_images, uid_num),
-                         itertools.repeat(self.pixel_rescale, uid_num),
-                         use_multiprocessing=True,
-                         ordered=True,
-                         cores=procs)
+        p = multiprocessing.Pool(procs)
+        img_arrays = p.map(
+            _process_load_img_array,
+            zip(
+                (data_elements[uid] for uid in uuids4proc),
+                itertools.repeat(self.network_is_greyscale, uid_num),
+                itertools.repeat(self.input_shape, uid_num),
+                itertools.repeat(self.load_truncated_images, uid_num),
+                itertools.repeat(self.pixel_rescale, uid_num),
+            )
         )
+        p.close()
+        p.join()
 
         self._log.debug("Loading image numpy array into KWCNN Data object")
         self.data.set_data_list(img_arrays, quiet=True)
@@ -580,8 +592,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         descriptor_list = test_results['probability_list']
 
         self._log.debug("transform network output into descriptors")
-        zipped = zip(uuids4proc, descriptor_list)
-        for uid, v in zipped:
+        for uid, v in zip(uuids4proc, descriptor_list):
             if v.ndim > 1:
                 # In case kwcnn generates multidimensional array (rows, 1, 1)
                 descr_elements[uid].set_vector(numpy.ravel(v))

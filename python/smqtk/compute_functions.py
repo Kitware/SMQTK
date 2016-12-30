@@ -9,15 +9,13 @@ import collections
 import logging
 
 import numpy
+import six
 
 from smqtk.utils import (
     bin_utils,
     bit_utils,
     parallel,
 )
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 def compute_many_descriptors(file_elements, descr_generator, descr_factory,
@@ -113,12 +111,12 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
                           "input)", unique, total)
 
                 log.debug("-- adding to index")
-                descr_index.add_many_descriptors(m.itervalues())
+                descr_index.add_many_descriptors(six.itervalues(m))
 
                 log.debug("-- yielding generated descriptor elements")
                 for e in dfe_deque:
                     # noinspection PyProtectedMember
-                    yield e._filepath, m[e]
+                    yield e._filepath, m[e.uuid()]
 
                 dfe_deque.clear()
 
@@ -135,12 +133,12 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
                       "input)", unique, total)
 
             log.debug("-- adding to index")
-            descr_index.add_many_descriptors(m.itervalues())
+            descr_index.add_many_descriptors(six.itervalues(m))
 
             log.debug("-- yielding generated descriptor elements")
             for dfe in dfe_deque:
                 # noinspection PyProtectedMember
-                yield dfe._filepath, m[dfe]
+                yield dfe._filepath, m[dfe.uuid()]
 
     else:
         log.debug("Using single async call")
@@ -153,12 +151,12 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         )
 
         log.debug("Adding to index")
-        descr_index.add_many_descriptors(m.itervalues())
+        descr_index.add_many_descriptors(six.itervalues(m))
 
         log.debug("yielding generated elements")
         for dfe in dfe_deque:
             # noinspection PyProtectedMember
-            yield dfe._filepath, m[dfe]
+            yield dfe._filepath, m[dfe.uuid()]
 
 
 def compute_hash_codes(uuids, index, functor, hash2uuids=None,

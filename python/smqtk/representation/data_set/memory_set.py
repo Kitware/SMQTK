@@ -1,12 +1,13 @@
-import cPickle
 import multiprocessing
 import os
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from smqtk.representation import DataElement, DataSet
 from smqtk.utils import SimpleTimer
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class DataMemorySet (DataSet):
@@ -61,7 +62,7 @@ class DataMemorySet (DataSet):
         if file_cache and os.path.isfile(file_cache):
             with open(file_cache) as f:
                 #: :type: dict[collections.Hashable, DataElement]
-                self._element_map = cPickle.load(f)
+                self._element_map = pickle.load(f)
 
         self.pickle_protocol = pickle_protocol
 
@@ -85,7 +86,7 @@ class DataMemorySet (DataSet):
             with self._element_map_lock:
                 with SimpleTimer("Caching memory data-set table", self._log.debug):
                     with open(self.file_cache, 'wb') as f:
-                        cPickle.dump(self._element_map, f,
+                        pickle.dump(self._element_map, f,
                                      self.pickle_protocol)
 
     def get_config(self):

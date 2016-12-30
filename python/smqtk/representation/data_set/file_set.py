@@ -1,14 +1,15 @@
-import cPickle
 import os
 import os.path as osp
 import re
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from smqtk.representation import DataElement, DataSet
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class DataFileSet (DataSet):
@@ -114,7 +115,7 @@ class DataFileSet (DataSet):
         for fp in self._iter_file_tree():
             # deserialize and yield
             with open(fp) as f:
-                yield cPickle.load(f)
+                yield pickle.load(f)
 
     def get_config(self):
         return {
@@ -172,7 +173,7 @@ class DataFileSet (DataSet):
             fp = self._fp_for_uuid(uuid)
             file_utils.safe_create_dir(osp.dirname(fp))
             with open(fp, 'wb') as f:
-                cPickle.dump(e, f, self.pickle_protocol)
+                pickle.dump(e, f, self.pickle_protocol)
             self._log.debug("Wrote out element %s", e)
 
     def get_data(self, uuid):
@@ -194,7 +195,7 @@ class DataFileSet (DataSet):
             raise KeyError(uuid)
         else:
             with open(fp, 'rb') as f:
-                return cPickle.load(f)
+                return pickle.load(f)
 
 
 DATA_SET_CLASS = DataFileSet

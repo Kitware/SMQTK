@@ -15,6 +15,10 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
     ``DataElement`` instances of arbitrary implementation type, keyed on
     ``DataElement`` UUID values.
 
+    This should only be used with DataElements whose byte content is expected
+    not to change. If they do, then UUID keys may no longer represent the
+    elements associated with them.
+
     """
 
     def __len__(self):

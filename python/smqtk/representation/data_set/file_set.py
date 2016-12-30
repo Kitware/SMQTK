@@ -17,8 +17,13 @@ class DataFileSet (DataSet):
     File-based data set
 
     File sets are initialized with a root directory, under which it finds and
-    serialized DataElement instances. DataElement implementations are required
+    serializes DataElement instances. DataElement implementations are required
     to be picklable, so this is a valid assumption.
+
+    Serializations are saved/loaded with respect to a ``uuid_chunk`` property,
+    which defines how files are split into subdirectories based on their UUID.
+    This is helpful when a lot of files are being stored as too many files in a
+    single directory generally slows down filesystem access to that directory.
 
     """
     # TODO: Use file-based locking mechanism to make thread/process safe
@@ -48,14 +53,26 @@ class DataFileSet (DataSet):
         """
         Initialize a new or existing file set from a root directory.
 
+        If ``uuid_chunk`` is set to None or 1 we look for and save file
+        caches in a flat manner under the root directory given. If greater than
+        1, we split ``DataElement`` UUIDs into that many segments and use all
+        but the last segment to define what sub-directory to place the
+        serialization under the given ``root_directory``. For example, if
+        ``uuid_chunk`` is 3 and a file's UUID is "abcdef", we store the
+        element's serialization under the directory "<root_directory>/ab/cd/".
+        We don't use the last segment in order to allow multiple files, but not
+        all of them, to exist in leaf directories as opposed to there being a
+        separate directory for each file, which is excessive.
+
         :param root_directory: Directory that this file set is based in. For
             relative path resolution, see the ``work_relative`` parameter
             description.
         :type root_directory: str
 
         :param uuid_chunk: Number of segments to split data element UUID
-            into when saving element serializations.
-        :type uuid_chunk: int
+            into when saving element serializations. This should be None or a
+            positive integer.
+        :type uuid_chunk: None | int
 
         :param pickle_protocol: Pickling protocol to use. We will use -1 by
             default (latest version, probably binary).
@@ -63,8 +80,11 @@ class DataFileSet (DataSet):
 
         """
         super(DataFileSet, self).__init__()
+        if not (uuid_chunk is None or uuid_chunk > 0):
+            raise ValueError('Uuid chunk must either be None or a positive '
+                             'integer.')
 
-        self._root_dir = os.path.abspath(os.path.expanduser(root_directory))
+        self._root_dir = os.path.expanduser(root_directory)
         self._uuid_chunk = uuid_chunk
         self.pickle_protocol = pickle_protocol
 
@@ -74,19 +94,24 @@ class DataFileSet (DataSet):
     def _iter_file_tree(self):
         """
         Iterate over our file tree, yielding the file paths of serialized
-            elements found.
+        elements found in the expected sub-directories.
         """
-        for fp in file_utils.iter_directory_files(self._root_dir):
+        # Select how far we need to descent into root based on chunk level.
+        recurse = (self._uuid_chunk and self._uuid_chunk - 1) or None
+
+        for fp in file_utils.iter_directory_files(self._root_dir, recurse):
             m = self.SERIAL_FILE_RE.match(osp.basename(fp))
             if m:
-                # if the path doesn't have the configured split chunking value,
-                # it doesn't belong to this data set
-                seg = osp.dirname(osp.relpath(fp, self._root_dir)).split(os.sep)
-                if not self._uuid_chunk or len(seg) == self._uuid_chunk:
+                # Where file is under root to see if it is a file we care about
+                # according to our ``uuid_chunk`` value.
+                # - ``seg`` includes file name, so it will at least be of length
+                #   1, so its unmodified length should equal ``uuid_chunk``.
+                # - Exceptions: len(seg) == 1 and uuid_chunk in {None, 0, 1}
+                seg = osp.relpath(fp, self._root_dir).split(os.sep)
+                if self._uuid_chunk in {None, 1} and len(seg) == 1:
                     yield fp
-
-    def _uuid_from_fp(self, fp):
-        return osp.dirname(osp.relpath(fp, self._root_dir)).replace(os.sep, '')
+                elif len(seg) == self._uuid_chunk:
+                    yield fp
 
     def _containing_dir(self, uuid):
         """
@@ -96,8 +121,13 @@ class DataFileSet (DataSet):
             # No sub-directory storage configured
             return self._root_dir
 
-        return osp.join(self._root_dir,
-                        *partition_string(uuid, self._uuid_chunk))
+        str_uuid = str(uuid)
+        # TODO(paul.tunison): Modify uuid string if to short for set UUID chunk.
+        #     e.g. if uuid is the integer 1 and chunk size is 10, we should
+        #     convert strigified result to be at least length 10?
+        #     Do this in _fp_for_uuid method?
+        leading_parts = partition_string(str_uuid, self._uuid_chunk)[:-1]
+        return osp.join(self._root_dir, *leading_parts)
 
     def _fp_for_uuid(self, uuid):
         """
@@ -168,7 +198,8 @@ class DataFileSet (DataSet):
 
         """
         for e in elems:
-            assert isinstance(e, DataElement)
+            assert isinstance(e, DataElement), \
+                "Not given a DataElement for addition: '%s'" % e
             uuid = str(e.uuid())
             fp = self._fp_for_uuid(uuid)
             file_utils.safe_create_dir(osp.dirname(fp))
@@ -190,7 +221,7 @@ class DataFileSet (DataSet):
         :rtype: smqtk.representation.DataElement
 
         """
-        fp = self._fp_for_uuid(str(uuid))
+        fp = self._fp_for_uuid(uuid)
         if not osp.isfile(fp):
             raise KeyError(uuid)
         else:

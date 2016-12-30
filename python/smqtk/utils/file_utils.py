@@ -44,7 +44,10 @@ def safe_file_write(path, b, tmp_dir=None):
     writing bytes to a separate temporary file first, then renaming the
     temporary file to the final destination path when write is complete.
     Temporary files are written to the same directory as the target file unless
-     otherwise specified.
+    otherwise specified.
+
+    **NOTE:** *Windows does not have an atomic file rename and this function
+    currently does not do anything special to ensure atomic rename on Windows.*
 
     :param path: Path to the file to write to.
     :type path: str
@@ -65,7 +68,7 @@ def safe_file_write(path, b, tmp_dir=None):
     safe_create_dir(file_dir)
 
     # Write to a temporary file first, then OS move the temp file to the final
-    # destination. This is due to, on most OSs, a file raname/move being atomic.
+    # destination. This is due to, on most OSs, a file rename/move being atomic.
     # TODO(paul.tunison): Do something else on windows since moves there are not
     #   guaranteed atomic.
     tmp_dir = file_dir if tmp_dir is None else tmp_dir
@@ -101,7 +104,7 @@ def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
 
 def iter_directory_files(d, recurse=True):
     """
-    Iterates through files in the directory structure at the given directory.
+    Iterates through files in the structure under the given directory.
 
     :param d: base directory path
     :type d: str
@@ -121,8 +124,6 @@ def iter_directory_files(d, recurse=True):
     for dirpath, dirnames, filenames in os.walk(d):
         for fname in filenames:
             yield os.path.join(dirpath, fname)
-        if not recurse:
-            break
         if not recurse:
             break
         elif recurse is not True and dirpath != d:

@@ -8,6 +8,7 @@ except ImportError:
 
 from smqtk.representation import DataElement, DataSet
 from smqtk.utils import SimpleTimer
+from smqtk.utils.file_utils import safe_file_write
 
 
 class DataMemorySet (DataSet):
@@ -85,9 +86,9 @@ class DataMemorySet (DataSet):
         if self.file_cache:
             with self._element_map_lock:
                 with SimpleTimer("Caching memory data-set table", self._log.debug):
-                    with open(self.file_cache, 'wb') as f:
-                        pickle.dump(self._element_map, f,
-                                     self.pickle_protocol)
+                    safe_file_write(self.file_cache,
+                                    pickle.dumps(self._element_map,
+                                                 self.pickle_protocol))
 
     def get_config(self):
         """
@@ -143,7 +144,9 @@ class DataMemorySet (DataSet):
         """
         with self._element_map_lock:
             for e in elems:
-                assert isinstance(e, DataElement), "Expected DataElement instance, got '%s' instance instead" % type(e)
+                assert isinstance(e, DataElement), \
+                    "Expected DataElement instance, got '%s' instance instead" \
+                    % type(e)
                 self._element_map[e.uuid()] = e
             self.cache()
 

@@ -30,7 +30,8 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     method if that implementation reflects a data source that guarantees
     immutability.
 
-    UUIDs should maintain unique-ness when transformed into a string.
+    UUIDs should be cast-able to a string and maintain unique-ness after
+    conversion.
 
     """
 

@@ -73,6 +73,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     def __ne__(self, other):
         return not (self == other)
 
+    @abc.abstractmethod
     def __repr__(self):
         return self.__class__.__name__
 

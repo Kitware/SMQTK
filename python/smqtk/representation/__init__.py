@@ -1,3 +1,5 @@
+
+
 from smqtk.utils import Configurable, SmqtkObject
 
 
@@ -20,7 +22,10 @@ class SmqtkRepresentation (SmqtkObject, Configurable):
     serializing and de-serializing SMQTK data representation instances.
 
     """
-    # TODO: Add serialization abstract method signatures here
+    # TODO(paul.tunison): Add serialization abstract method signatures here.
+    # - Could start with just requiring implementing sub-classes to
+    #   ``__getstate__`` and ``__setstate__`` methods required for pickle
+    #   interface.
 
 
 from .classification_element import ClassificationElement, get_classification_element_impls

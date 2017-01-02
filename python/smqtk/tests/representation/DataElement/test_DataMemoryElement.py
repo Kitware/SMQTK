@@ -164,6 +164,19 @@ class TestDataMemoryElement (unittest.TestCase):
         e = DataMemoryElement('some bytes')
         ntools.assert_false(e.is_empty())
 
+    def test_get_bytes_none_bytes(self):
+        e = DataMemoryElement()
+        ntools.assert_equal(e.get_bytes(), '')
+
+    def test_get_bytes_empty_bytes(self):
+        e = DataMemoryElement('')
+        ntools.assert_equal(e.get_bytes(), '')
+
+    def test_get_bytes_some_bytes(self):
+        expected_bytes = 'some bytes'
+        e = DataMemoryElement(expected_bytes)
+        ntools.assert_equal(e.get_bytes(), expected_bytes)
+
     def test_writable_when_readonly(self):
         e = DataMemoryElement('', readonly=True)
         ntools.assert_false(e.writable())

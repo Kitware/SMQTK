@@ -38,6 +38,9 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
     def is_usable(cls):
         return True
 
+    def __repr__(self):
+        return super(DummyDataElement, self).__repr__()
+
     def get_config(self):
         return {}
 

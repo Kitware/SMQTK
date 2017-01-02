@@ -93,13 +93,13 @@ class DataMemoryElement (DataElement):
         return DataMemoryElement(base64.urlsafe_b64decode(b64_str), content_type)
 
     # noinspection PyShadowingBuiltins
-    def __init__(self, bytes, content_type=None, readonly=False):
+    def __init__(self, bytes=None, content_type=None, readonly=False):
         """
         Create a new DataMemoryElement from a byte string and optional content
         type.
 
-        :param bytes: Bytes to contain.
-        :type bytes: bytes | str
+        :param bytes: Bytes to contain. May be None to represent no bytes.
+        :type bytes: None | bytes | str
 
         :param content_type: Content type of the bytes given.
         :type content_type: None | str
@@ -149,7 +149,7 @@ class DataMemoryElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return self._bytes
+        return self._bytes or ''
 
     def writable(self):
         """

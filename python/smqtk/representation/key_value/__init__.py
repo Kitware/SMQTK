@@ -125,13 +125,14 @@ def get_key_value_store_impls(reload_modules=False):
     We search for implementation classes in:
         - modules next to this file this function is defined in (ones that begin
           with an alphanumeric character),
-        - python modules listed in the environment variable ``DATA_ELEMENT_PATH``
+        - python modules listed in the environment variable
+          ``KEY_VALUE_STORE_PATH``
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
-    ``DATA_ELEMENT_CLASS``, which can either be a single class object or
+    ``KEY_VALUE_STORE_CLASS``, which can either be a single class object or
     an iterable of class objects, to be specifically exported. If the variable
     is set to None, we skip that module and do not import anything. If the
     variable is not present, we look at attributes defined in that module for
@@ -141,7 +142,7 @@ def get_key_value_store_impls(reload_modules=False):
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``DataElement``
+    :return: Map of discovered class object of type ``KeyValueStore``
         whose keys are the string names of the classes.
     :rtype: dict[str, type]
 

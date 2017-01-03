@@ -11,6 +11,7 @@ from smqtk.representation.key_value.memory import MemoryKeyValueStore
 class DummyKVStore (KeyValueStore):
 
     TEST_READ_ONLY = True
+    TEST_COUNT = 0
 
     # base-class requirements
 
@@ -25,6 +26,9 @@ class DummyKVStore (KeyValueStore):
 
     def __repr__(self):
         return super(DummyKVStore, self).__repr__()
+
+    def count(self):
+        return self.TEST_COUNT
 
     def keys(self):
         pass
@@ -83,6 +87,15 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
             ValueError,
             s.add, {1, 2}, 'some value'
         )
+
+    def test_len(self):
+        s = DummyKVStore()
+
+        s.TEST_COUNT = 0
+        assert len(s) == 0
+
+        s.TEST_COUNT = 23456
+        assert len(s) == 23456
 
 
 def test_kvstore_impl_getter():

@@ -24,6 +24,9 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     # Mutable storage container is not hashable.
     __hash__ = None
 
+    def __len__(self):
+        return self.count()
+
     @abc.abstractmethod
     def __repr__(self):
         """
@@ -39,6 +42,13 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         """
         return '<' + self.__class__.__name__ + " %s>"
+
+    @abc.abstractmethod
+    def count(self):
+        """
+        :return: The number of key-value relationships in this store.
+        :rtype: int | long
+        """
 
     @abc.abstractmethod
     def keys(self):

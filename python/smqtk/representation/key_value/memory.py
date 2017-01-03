@@ -106,6 +106,9 @@ class MemoryKeyValueStore (KeyValueStore):
         return super(MemoryKeyValueStore, self).__repr__() \
             % ("cache_element: %s" % repr(self._cache_element))
 
+    def count(self):
+        return len(self._table)
+
     def get_config(self):
         # Recursively get config from data element if we have one.
         if hasattr(self._cache_element, 'get_config'):

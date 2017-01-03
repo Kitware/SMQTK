@@ -103,6 +103,17 @@ class TestMemoryKeyValueStore (unittest.TestCase):
                         "None, readonly: False}>"
         nose.tools.assert_equal(repr(s), expected_repr)
 
+    def test_count(self):
+        s = MemoryKeyValueStore()
+        assert s.count() == 0
+        s._table = {
+            0: 0,
+            1: 1,
+            'a': True,
+            None: False
+        }
+        assert s.count() == 4
+
     def test_get_config_no_cache_elem(self):
         s = MemoryKeyValueStore()
         s._cache_element = None

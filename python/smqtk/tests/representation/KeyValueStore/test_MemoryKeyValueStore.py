@@ -233,6 +233,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             s.get(0, 1),
             1,
         )
+        assert s.get(0, ()) == ()
 
     def test_get_invalid_key_with_default_None(self):
         s = MemoryKeyValueStore()

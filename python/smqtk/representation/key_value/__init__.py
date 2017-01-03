@@ -4,8 +4,6 @@ Data abstraction interface for general key-value storage.
 import abc
 import collections
 
-import six
-
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.plugin import Pluggable

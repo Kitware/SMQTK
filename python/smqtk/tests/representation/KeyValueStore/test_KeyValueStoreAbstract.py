@@ -3,7 +3,9 @@ import unittest
 import nose.tools
 
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
+from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE, \
+    get_key_value_store_impls
+from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 
 class DummyKVStore (KeyValueStore):
@@ -81,3 +83,12 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
             ValueError,
             s.add, {1, 2}, 'some value'
         )
+
+
+def test_kvstore_impl_getter():
+    # At least the in-memory implementation should always be available, so make
+    # sure at least that is returned from the getter.
+    d = get_key_value_store_impls()
+    nose.tools.assert_is_instance(d, dict)
+    nose.tools.assert_in('MemoryKeyValueStore', d)
+    nose.tools.assert_equal(d['MemoryKeyValueStore'], MemoryKeyValueStore)

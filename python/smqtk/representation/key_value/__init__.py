@@ -2,6 +2,7 @@
 Data abstraction interface for general key-value storage.
 """
 import abc
+import collections
 
 import six
 
@@ -15,10 +16,10 @@ NO_DEFAULT_VALUE = type("KeyValueStoreNoDefaultValueType", (object,), {})()
 
 class KeyValueStore (SmqtkRepresentation, Pluggable):
     """
-    Interface for general string key, python object storage.
+    Interface for general key/value storage.
 
-    Objects are serialized via the ``pickle`` module, thus input objects must be
-    picklable.
+    Implementations may impose restrictions on what types keys or values may be
+    due to backend used.
     """
 
     # Mutable storage container is not hashable.
@@ -41,10 +42,30 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         return '<' + self.__class__.__name__ + " %s>"
 
     @abc.abstractmethod
+    def keys(self):
+        """
+        :return: Iterator over keys in this store
+        :rtype: __generator[collections.Hashable]
+        """
+
+    @abc.abstractmethod
     def is_read_only(self):
         """
         :return: True if this instance is read-only and False if it is not.
         :rtype: bool
+        """
+
+    @abc.abstractmethod
+    def has(self, key):
+        """
+        Check if this store has a value for the given key.
+
+        :param key: Key to check for a value for.
+        :type key: collections.Hashable
+
+        :return: If this store has a value for the given key.
+        :rtype: bool
+
         """
 
     @abc.abstractmethod
@@ -54,10 +75,10 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         *NOTE:* **Implementing sub-classes should call this super-method.**
 
-        :param key: String key for the value.
-        :type key: str
+        :param key: Key for the value. Must be hashable.
+        :type key: collections.Hashable
 
-        :param value: Python object to store. This must be picklable.
+        :param value: Python object to store.
         :type value: object
 
         :raises ReadOnlyError: If this instance is marked as read-only.
@@ -66,34 +87,21 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         :rtype: KeyValueStore
 
         """
-        if not isinstance(key, six.string_types):
-            raise ValueError("Key is not a string type.")
+        if not isinstance(key, collections.Hashable):
+            raise ValueError("Key is not a hashable type.")
         if self.is_read_only():
             raise ReadOnlyError("Cannot add to read-only instance %s." % self)
 
     @abc.abstractmethod
-    def has(self, key):
-        """
-        Check if this store has a value for the given key.
-
-        :param key: String key to check for a value for.
-        :type key: str
-
-        :return: If this store has a value for the given key.
-        :rtype: bool
-
-        """
-
-    @abc.abstractmethod
     def get(self, key, default=NO_DEFAULT_VALUE):
         """
-        Get the value for the given string key.
+        Get the value for the given key.
 
         *NOTE:* **Implementing sub-classes are responsible for raising a
         ``KeyError`` where appropriate.**
 
-        :param key: String key to get the value of.
-        :type key: str
+        :param key: Key to get the value of.
+        :type key: collections.Hashable
 
         :param default: Optional default value if the given key is not present
             in this store. This may be any value except for the

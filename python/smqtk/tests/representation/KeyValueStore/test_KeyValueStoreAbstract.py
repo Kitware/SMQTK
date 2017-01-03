@@ -24,6 +24,9 @@ class DummyKVStore (KeyValueStore):
     def __repr__(self):
         return super(DummyKVStore, self).__repr__()
 
+    def keys(self):
+        pass
+
     def is_read_only(self):
         return self.TEST_READ_ONLY
 
@@ -59,21 +62,22 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s = DummyKVStore()
         s.TEST_READ_ONLY = False
         s.add('k', 'v')
-
-    def test_add_not_string(self):
-        s = DummyKVStore()
         # Integer
-        nose.tools.assert_raises(
-            ValueError,
-            s.add, 0, 'some value'
-        )
+        s.add(0, 'some value')
         # type
-        nose.tools.assert_raises(
-            ValueError,
-            s.add, object, 'some value'
-        )
+        s.add(object, 'some value')
         # some object instance
+        s.add(object(), 'some value')
+
+    def test_add_not_hashable(self):
+        s = DummyKVStore()
+        # list
         nose.tools.assert_raises(
             ValueError,
-            s.add, object(), 'some value'
+            s.add, [1, 2], 'some value'
+        )
+        # set
+        nose.tools.assert_raises(
+            ValueError,
+            s.add, {1, 2}, 'some value'
         )

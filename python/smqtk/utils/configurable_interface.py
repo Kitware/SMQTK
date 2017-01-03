@@ -59,7 +59,7 @@ class Configurable (object):
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
 
-        This method should not be called via super unless and instance of the
+        This method should not be called via super unless an instance of the
         class is desired.
 
         :param config_dict: JSON compliant dictionary encapsulating

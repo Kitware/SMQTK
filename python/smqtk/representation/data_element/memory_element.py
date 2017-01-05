@@ -69,8 +69,8 @@ class DataMemoryElement (DataElement):
 
         data_b64_m = cls.DATA_B64_RE.match(uri)
         if data_b64_m is not None:
-            b = base64.decodestring(data_b64_m.groupdict()['base64'])
-            return DataMemoryElement(b)
+            m_d = data_b64_m.groupdict()
+            return DataMemoryElement.from_base64(m_d['base64'], None)
 
         data_uri_m = cls.DATA_URI_RE.match(uri)
         if data_uri_m is not None:

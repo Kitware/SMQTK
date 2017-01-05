@@ -147,9 +147,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 _, descriptor = self.generate_descriptor_for_uri(uri)
                 message = "Descriptor generated"
                 descriptor = map(float, descriptor.vector())
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "Input value issue: %s" % str(ex)
-            except RuntimeError, ex:
+            except RuntimeError as ex:
                 message = "Descriptor extraction failure: %s" % str(ex)
 
             return flask.jsonify(
@@ -217,9 +217,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             try:
                 _, descriptor = self.generate_descriptor_for_uri(uri)
                 message = "descriptor computed"
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "Input data issue: %s" % str(ex)
-            except RuntimeError, ex:
+            except RuntimeError as ex:
                 message = "Descriptor generation failure: %s" % str(ex)
 
             # Base pagination slicing based on provided start and end indices,
@@ -231,7 +231,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 try:
                     neighbors, dists = \
                         self.nn_index.nn(descriptor, n)
-                except ValueError, ex:
+                except ValueError as ex:
                     message = "Descriptor or index related issue: %s" % str(ex)
 
             # TODO: Return the optional descriptor vectors for the neighbors
@@ -286,7 +286,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             self._log.debug("Given URL")
             try:
                 de = DataUrlElement(uri)
-            except requests.HTTPError, ex:
+            except requests.HTTPError as ex:
                 raise ValueError("Failed to initialize URL element due to "
                                  "HTTPError: %s" % str(ex))
 

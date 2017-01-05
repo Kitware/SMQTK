@@ -144,7 +144,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             """
             descriptor = None
             try:
-                _, descriptor = self.generate_descriptor_for_uri(uri)
+                descriptor = self.generate_descriptor_for_uri(uri)
                 message = "Descriptor generated"
                 descriptor = map(float, descriptor.vector())
             except ValueError as ex:
@@ -215,7 +215,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             """
             descriptor = None
             try:
-                _, descriptor = self.generate_descriptor_for_uri(uri)
+                descriptor = self.generate_descriptor_for_uri(uri)
                 message = "descriptor computed"
             except ValueError as ex:
                 message = "Input data issue: %s" % str(ex)
@@ -301,20 +301,23 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         :type uri: str
 
         :return: DescriptorElement instance of the generate descriptor.
-        :rtype: (smqtk.representation.DataElement,
-                 smqtk.representation.DescriptorElement)
+        :rtype: smqtk.representation.DescriptorElement
 
         """
-        de = self.resolve_data_element(uri)
-        descriptor = self.descriptor_generator_inst.compute_descriptor(
-            de, self.descr_elem_factory
-        )
-        if self.update_index:
-            self._log.info("Updating index with new descriptor")
-            self.descr_index.add_descriptor(descriptor)
-        if not descriptor.has_vector():
-            raise RuntimeError("No descriptor content")
-        return de, descriptor
+        # Short-cut if we are given data/descriptor UUID via URI
+        if uri[:7] == 'uuid://':
+            descriptor = self.descr_index[uri[7:]]
+        else:
+            de = self.resolve_data_element(uri)
+            descriptor = self.descriptor_generator_inst.compute_descriptor(
+                de, self.descr_elem_factory
+            )
+            if self.update_index:
+                self._log.info("Updating index with new descriptor")
+                self.descr_index.add_descriptor(descriptor)
+            if not descriptor.has_vector():
+                raise RuntimeError("No descriptor content")
+        return descriptor
 
 
 APPLICATION_CLASS = NearestNeighborServiceServer

@@ -125,6 +125,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             Compute the descriptor for a URI specified data element using the
             configured descriptor generator.
 
+            See ``compute_nearest_neighbors`` method docstring for URI
+            specifications accepted.
+
             If the a descriptor index was configured and update was turned on,
             we add the computed descriptor to the index.
 
@@ -164,23 +167,22 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         @self.route("/nn/n=<int:n>/<int:start_i>:<int:end_i>/<path:uri>")
         def compute_nearest_neighbors(uri, n=10, start_i=None, end_i=None):
             """
-            Data modes for upload/use::
+            Data modes for upload/use:
 
                 - local filepath
                 - base64
                 - http/s URL
+                - existing data/descriptor UUID
 
             The following sub-sections detail how different URI's can be used.
 
             Local Filepath
             --------------
-
             The URI string must be prefixed with ``file://``, followed by the
             full path to the data file to describe.
 
             Base 64 data
             ------------
-
             The URI string must be prefixed with "base64://", followed by the
             base64 encoded string. This mode also requires an additional
             ``?content_type=`` to provide data content type information. This
@@ -188,10 +190,16 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             HTTP/S address
             --------------
-
             This is the default mode when the URI prefix is none of the above.
             This uses the requests module to locally download a data file
             for processing.
+
+            Existing Data/Descriptor by UUID
+            --------------------------------
+            When given a uri prefixed with "uuid://", we interpret the remainder
+            of the uri as the UUID of a descriptor already present in the
+            configured descriptor index. If the given UUID is not present in the
+            index, a KeyError is raised.
 
             JSON Return format
             ------------------

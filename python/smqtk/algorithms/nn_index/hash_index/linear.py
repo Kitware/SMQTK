@@ -11,9 +11,6 @@ from smqtk.utils.bit_utils import (
 from smqtk.utils.metrics import hamming_distance
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class LinearHashIndex (HashIndex):
     """
     Basic linear index using heap sort (aka brute force).

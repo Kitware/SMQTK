@@ -11,9 +11,6 @@ except ImportError:
     DistanceMetric = None
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class SkLearnBallTreeHashIndex (HashIndex):
     """
     Hash index using the ball tree implementation in scikit-learn.

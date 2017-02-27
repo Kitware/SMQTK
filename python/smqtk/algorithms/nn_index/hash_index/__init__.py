@@ -5,9 +5,6 @@ from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.utils.plugin import get_plugins
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class HashIndex (NearestNeighborsIndex):
     """
     Specialized ``NearestNeighborsIndex`` for indexing hash codes

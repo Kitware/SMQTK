@@ -3,13 +3,12 @@ import random
 import unittest
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
-import smqtk.representation.data_element.memory_element
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 
 
 def random_string(length):
     # 32-127 is legible characters
-    return ''.join(chr(random.randint(32, 127)) for _ in xrange(length))
+    return ''.join(chr(random.randint(32, 127)) for _ in range(length))
 
 
 class TestDataMemoryElement (unittest.TestCase):
@@ -176,6 +175,11 @@ class TestDataMemoryElement (unittest.TestCase):
         expected_bytes = 'some bytes'
         e = DataMemoryElement(expected_bytes)
         ntools.assert_equal(e.get_bytes(), expected_bytes)
+
+    def test_writable_default(self):
+        v = 'foo'
+        e = DataMemoryElement(v)
+        ntools.assert_true(e.writable())
 
     def test_writable_when_readonly(self):
         e = DataMemoryElement('', readonly=True)

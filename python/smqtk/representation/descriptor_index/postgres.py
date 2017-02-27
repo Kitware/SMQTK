@@ -5,22 +5,23 @@ References:
         answer from "a_horse_with_no_name"
 
 """
-import cPickle
 import itertools
 import logging
+
+try:
+    import cPickle as picle
+except ImportError:
+    import pickle
 
 from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError
 
 try:
     import psycopg2
-except ImportError, ex:
+except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 def norm_psql_cmd_string(s):
@@ -397,7 +398,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         v = {
             'uuid_val': str(descriptor.uuid()),
             'element_val': psycopg2.Binary(
-                cPickle.dumps(descriptor, self.pickle_protocol)
+                pickle.dumps(descriptor, self.pickle_protocol)
             )
         }
 
@@ -435,7 +436,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 yield {
                     'uuid_val': str(d.uuid()),
                     'element_val': psycopg2.Binary(
-                        cPickle.dumps(d, self.pickle_protocol)
+                        pickle.dumps(d, self.pickle_protocol)
                     )
                 }
 
@@ -476,7 +477,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    % (uuid, c.rowcount))
 
         r = list(self._single_execute(eh, True))
-        return cPickle.loads(str(r[0][0]))
+        return pickle.loads(str(r[0][0]))
 
     def get_many_descriptors(self, uuids):
         """
@@ -523,7 +524,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         g = self._batch_execute(iterelems(), exec_hook, True)
         i = 0
         for r, expected_uuid in itertools.izip(g, uuid_order):
-            d = cPickle.loads(str(r[0]))
+            d = pickle.loads(str(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)
             yield d
@@ -616,8 +617,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 table_name=self.table_name
             ))
 
-        for r in self._single_execute(execute, True):
-            d = cPickle.loads(str(r[0]))
+        #: :type: __generator
+        execution_results = self._single_execute(execute, True)
+        for r in execution_results:
+            d = pickle.loads(str(r[0]))
             yield d
 
     def iteritems(self):

@@ -19,18 +19,9 @@ class DataUrlElement (DataElement):
 
     @classmethod
     def is_usable(cls):
-        # have to be able to connect to the internet
-        try:
-            # using github because that's where this repo has been hosted.
-            r = requests.get('http://github.com')
-            _ = r.content
-            return True
-        except requests.ConnectionError:
-            cls.get_logger().warning(
-                "DataUrlElement not usable, cannot connect to "
-                "http://github.com"
-            )
-            return False
+        # URLs are not necessarily on the public internet. Local networking
+        # should always be available.
+        return True
 
     @classmethod
     def from_uri(cls, uri):
@@ -43,6 +34,12 @@ class DataUrlElement (DataElement):
 
     def __init__(self, url_address):
         """
+        Create a new URL element for a URL address.
+
+        The given address may not resolve to anything.
+
+        :raises requests.exceptions.ConnectionError: Failed to connect with the
+            given hostname.
         :raises requests.exceptions.HTTPError: URL address provided does not
             resolve into a valid GET request.
 

@@ -1,3 +1,5 @@
+import collections
+import mock
 import unittest
 
 import nose.tools
@@ -96,6 +98,36 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
 
         s.TEST_COUNT = 23456
         assert len(s) == 23456
+
+    # noinspection PyUnresolvedReferences
+    def test_value_iterator(self):
+        expected_keys_values = {1, 5, 2345, 'foo'}
+
+        s = DummyKVStore()
+        s.keys = mock.MagicMock(return_value=expected_keys_values)
+        s.get = mock.MagicMock(side_effect=lambda v: v)
+
+        # Make sure keys now returns expected list.
+        nose.tools.assert_equal(s.keys(), expected_keys_values)
+
+        # Get initial iterator. ``keys`` should have only been called once so
+        # far, and ``get`` method should not have been called yet.
+        # called yet.
+        v_iter = s.values()
+        nose.tools.assert_is_instance(v_iter, collections.Iterable)
+        nose.tools.assert_equal(s.keys.call_count, 1)
+        nose.tools.assert_equal(s.get.call_count, 0)
+
+        actual_values_list = set(v_iter)
+        nose.tools.assert_equal(actual_values_list, expected_keys_values)
+        # Keys should have been called one more time, and get should have been
+        # called an equal number of times as there are keys.
+        nose.tools.assert_equal(s.keys.call_count, 2)
+        nose.tools.assert_equal(s.get.call_count, len(expected_keys_values))
+        s.get.assert_any_call(1)
+        s.get.assert_any_call(5)
+        s.get.assert_any_call(2345)
+        s.get.assert_any_call('foo')
 
 
 def test_kvstore_impl_getter():

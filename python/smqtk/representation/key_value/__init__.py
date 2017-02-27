@@ -53,9 +53,18 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     @abc.abstractmethod
     def keys(self):
         """
-        :return: Iterator over keys in this store
+        :return: Iterator over keys in this store.
         :rtype: __generator[collections.Hashable]
         """
+
+    def values(self):
+        """
+        :return: Iterator over values in this store. Values are not guarenteed
+            to be in any particular order.
+        :rtype: __generator[object]
+        """
+        for k in self.keys():
+            yield self.get(k)
 
     @abc.abstractmethod
     def is_read_only(self):

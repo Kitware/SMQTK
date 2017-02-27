@@ -10,10 +10,13 @@ from smqtk.tests import TEST_DATA_DIR
 from smqtk.exceptions import ReadOnlyError
 
 
+DATA_KITWARE_URL = 'https://data.kitware.com'
+
+
 # Check to see if we have an internet connection.
 internet_available = True
 try:
-    r = requests.get('https://data.kitware.com')
+    r = requests.get(DATA_KITWARE_URL)
     _ = r.content
 except requests.ConnectionError:
     internet_available = False
@@ -30,11 +33,12 @@ def gen_response(content, status_code=200):
 class TestGirderDataElement (unittest.TestCase):
     """
     Tests for the GirderDataElement plugin implementation
+
     """
 
     LOCAL_APIROOT = "http://localhost:8080/api/v1"
     EXAMPLE_ITEM_ID = '5820bbeb8d777f10f26efc2f'
-    EXAMPLE_GIRDER_API_ROOT = "https://data.kitware.com/api/v1"
+    EXAMPLE_GIRDER_API_ROOT = "%s/api/v1" % DATA_KITWARE_URL
     EXAMPLE_PTH = os.path.join(TEST_DATA_DIR, 'Lenna.png')
     EXAMPLE_SHA512 = 'ca2be093f4f25d2168a0afebe013237efce02197bcd8a87f41f' \
                      'f9177824222a1ddae1f6b4f5caf11d68f2959d13f399ea55bd6' \
@@ -48,6 +52,20 @@ class TestGirderDataElement (unittest.TestCase):
         nose.tools.assert_is_none(e.token)
         nose.tools.assert_is_none(e.token_expiration)
         nose.tools.assert_is_none(e._content_type)
+
+    def test_repr(self):
+        expected_file_id = 'some_file id'
+        expected_api_root = 'https://some.server/api/v1'
+        expected_api_key = 'someKeyHere'
+
+        e = GirderDataElement(expected_file_id, expected_api_root,
+                              expected_api_key)
+        actual_repr = repr(e)
+
+        expected_repr = "GirderDataElement{id: some_file id, " \
+                        "api_root: https://some.server/api/v1, " \
+                        "api_key: someKeyHere}"
+        nose.tools.assert_equal(actual_repr, expected_repr)
 
     def test_configuration_default(self):
         default_config = GirderDataElement.get_default_config()

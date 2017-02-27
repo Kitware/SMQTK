@@ -20,11 +20,11 @@ class GirderDataElement (DataElement):
     @classmethod
     def is_usable(cls):
         """
-        Usable if we were able to import girder_client
-        :return:
-        :rtype:
+        :return: If this element type is usable
+        :rtype: bool
         """
         # Requests module is a basic requirement
+        # URLs are not necessarily on the public internet.
         return True
 
     # TODO: from_uri
@@ -115,9 +115,11 @@ class GirderDataElement (DataElement):
         """
         Check if this element contains no bytes.
 
-        This plugin checks that
+        This plugin checks that we can get a file model return from girder and
+        that the size of the file queried is non-zero.
 
-        :return: If this element contains 0 bytes.
+        :return: If there is a model for our item or if our item contains 0
+            bytes.
         :rtype: bool
 
         """

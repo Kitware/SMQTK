@@ -1,0 +1,20 @@
+---
+- name: Install config file
+  template:
+    src: "isd.conf.json.j2"
+    dest: "{{ smqtk_app_config_path }}"
+    backup: yes
+
+- name: Install service (upstart)
+  template:
+    src: "upstart.smqtk_iqr_app.conf.j2"
+    dest: "/etc/init/smqtk_iqr_app.conf"
+  become: yes
+  become_user: root
+
+- name: (Re)Start service
+  service:
+    name: smqtk_iqr_app
+    state: restarted
+  become: yes
+  become_user: root

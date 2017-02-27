@@ -1,0 +1,20 @@
+description "SMQTK IQR webapp server"
+
+start on startup
+stop on shutdown
+
+# Automatically Respawn:
+respawn
+respawn limit 20 5
+
+setuid "{{ ansible_user_id }}"
+setgid "{{ ansible_user_id }}"
+
+script
+    cd "{{ smqtk_path }}"
+{% if smqtk_virtualenv is defined %}
+    . "{{ smqtk_virtualenv }}/bin/activate" && runApplication -a IqrSearchDispatcher -vtc {{ smqtk_app_config_path }} 2>&1
+{% else %}
+    exec runApplication -a IqrSearchDispatcher -vtc {{ smqtk_app_config_path }} 2>&1
+{% endif %}
+end script

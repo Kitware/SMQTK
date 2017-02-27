@@ -1,0 +1,12 @@
+# Install python dependencies
+---
+- name: Install python deps
+  pip:
+    name: "{{ item }}"
+    state: present
+    virtualenv: "{{ caffe_virtualenv|default(omit) }}"
+  with_items:
+    # Minimal deps required to start processing Caffe networks
+    - numpy
+    - scikit-image
+    - protobuf

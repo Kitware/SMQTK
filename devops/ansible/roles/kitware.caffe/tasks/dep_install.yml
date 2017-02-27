@@ -1,0 +1,33 @@
+# Install system/python dependencies
+---
+# I don't think these are actually required?
+# Possibly include with variables?
+#- libopencv-dev
+#- liblmdb-dev
+#- libleveldb-dev
+- name: Install system dependencies
+  apt:
+    name: "{{item}}"
+    state: present
+  with_items:
+    - git
+    - cmake
+    - libatlas-base-dev
+    - libatlas-dev
+    - libboost1.55-all-dev
+    - libprotobuf-dev
+    - protobuf-compiler
+    - libgoogle-glog-dev
+    - libgflags-dev
+    - libhdf5-dev
+    - libsnappy-dev
+  become: yes
+  become_user: root
+
+- include: dep_python.yml
+  when: caffe_virtualenv is not defined
+  become: yes
+  become_user: root
+
+- include: dep_python.yml
+  when: caffe_virtualenv is defined

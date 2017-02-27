@@ -34,11 +34,12 @@ class HashIndex (NearestNeighborsIndex):
     @abc.abstractmethod
     def nn(self, h, n=1):
         """
-        Return the nearest `N` neighbors to the given hash code.
+        Return the nearest `N` neighbor hash codes as bit-vectors to the given
+        hash code bit-vector.
 
         Distances are in the range [0,1] and are the percent different each
         neighbor hash is from the query, based on the number of bits contained
-        in the query.
+        in the query (normalized hamming distance).
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.

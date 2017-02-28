@@ -129,6 +129,20 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.get.assert_any_call(2345)
         s.get.assert_any_call('foo')
 
+    # noinspection PyUnresolvedReferences
+    def test_contains(self):
+        # Test that python ``has`` keyword and __contains__ method calls the
+        # ``has`` method correctly.
+        s = DummyKVStore()
+
+        s.has = mock.MagicMock(return_value=True)
+        nose.tools.assert_true('some item' in s)
+        s.has.assert_called_once_with('some item')
+
+        s.has = mock.MagicMock(return_value=False)
+        nose.tools.assert_false('other item' in s)
+        s.has.assert_called_once_with('other item')
+
 
 def test_kvstore_impl_getter():
     # At least the in-memory implementation should always be available, so make

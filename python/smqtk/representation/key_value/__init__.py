@@ -29,6 +29,9 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     def __len__(self):
         return self.count()
 
+    def __contains__(self, item):
+        return self.has(item)
+
     @abc.abstractmethod
     def __repr__(self):
         """

@@ -206,3 +206,11 @@ class MemoryKeyValueStore (KeyValueStore):
                 return self._table[key]
             else:
                 return self._table.get(key, default)
+
+    def clear(self):
+        """
+        Clear this key-value store.
+        """
+        super(MemoryKeyValueStore, self).clear()
+        with self._table_lock:
+            self._table.clear()

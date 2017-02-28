@@ -48,6 +48,9 @@ class DummyKVStore (KeyValueStore):
     def get(self, key, default=NO_DEFAULT_VALUE):
         pass
 
+    def clear(self):
+        super(DummyKVStore, self).clear()
+
 
 class TestKeyValueStoreAbstract (unittest.TestCase):
 
@@ -142,6 +145,20 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.has = mock.MagicMock(return_value=False)
         nose.tools.assert_false('other item' in s)
         s.has.assert_called_once_with('other item')
+
+    def test_clear_base(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = False
+        s.clear()
+
+    def test_clear_readonly(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = True
+        nose.tools.assert_raises_regexp(
+            ReadOnlyError,
+            "Cannot clear a read-only DummyKVStore instance.",
+            s.clear
+        )
 
 
 def test_kvstore_impl_getter():

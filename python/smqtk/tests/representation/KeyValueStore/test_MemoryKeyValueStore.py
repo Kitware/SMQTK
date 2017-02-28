@@ -1,6 +1,7 @@
 import pickle
 import unittest
 
+import mock
 import nose.tools
 
 from smqtk.exceptions import ReadOnlyError
@@ -257,3 +258,24 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         assert s.get('a') == 'b'
         assert s.get(0) == 1
+
+    def test_clear(self):
+        table_before_clear = dict(a=1, b=2, c=3)
+
+        s = MemoryKeyValueStore()
+        s._table = table_before_clear
+        s.clear()
+        nose.tools.assert_equal(s._table, {})
+
+    def test_clear_readonly(self):
+        table_before_clear = dict(a=1, b=2, c=3)
+
+        s = MemoryKeyValueStore()
+        s._table = table_before_clear
+        s.is_read_only = mock.MagicMock(return_value=True)
+
+        nose.tools.assert_raises(
+            ReadOnlyError,
+            s.clear
+        )
+        nose.tools.assert_equal(s._table, table_before_clear)

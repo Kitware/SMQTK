@@ -97,7 +97,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         Add a key-value pair to this store.
 
         *NOTE:* **Implementing sub-classes should call this super-method. This
-        super method should not be considered critical for thread safety.**
+        super method should not be considered a critical section for thread
+        safety.**
 
         :param key: Key for the value. Must be hashable.
         :type key: collections.Hashable
@@ -139,6 +140,22 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         :rtype: object
 
         """
+
+    @abc.abstractmethod
+    def clear(self):
+        """
+        Clear this key-value store.
+
+        *NOTE:* **Implementing sub-classes should call this super-method. This
+        super method should not be considered a critical section for thread
+        safety.**
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
+
+        """
+        if self.is_read_only():
+            raise ReadOnlyError("Cannot clear a read-only %s instance."
+                                % self.__class__.__name__)
 
 
 def get_key_value_store_impls(reload_modules=False):

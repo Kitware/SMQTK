@@ -19,6 +19,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
     Implementations may impose restrictions on what types keys or values may be
     due to backend used.
+
+    Data access and manipulation should be thread-safe.
     """
 
     # Mutable storage container is not hashable.
@@ -91,7 +93,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         """
         Add a key-value pair to this store.
 
-        *NOTE:* **Implementing sub-classes should call this super-method.**
+        *NOTE:* **Implementing sub-classes should call this super-method. This
+        super method should not be considered critical for thread safety.**
 
         :param key: Key for the value. Must be hashable.
         :type key: collections.Hashable

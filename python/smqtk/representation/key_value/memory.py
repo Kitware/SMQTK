@@ -1,3 +1,5 @@
+import threading
+
 import six
 
 from smqtk.representation.data_element import get_data_element_impls
@@ -12,8 +14,8 @@ except ImportError:
 
 class MemoryKeyValueStore (KeyValueStore):
     """
-    In-memory implementation of KeyValueStore interface with optional caching
-    from/to a ``DataElement`` instance.
+    Thread-safe in-memory implementation of KeyValueStore interface with
+    optional caching from/to a ``DataElement`` instance.
 
     Any keys and values compatible with a standard python dictionary are
     compatible with this implementation.
@@ -82,7 +84,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
     def __init__(self, cache_element=None):
         """
-        Create new in-memory key-value store with optional cache.
+        Create new in-memory key-value store with optional cache data element.
 
         This element is read-only when using a DataElement instance for a cache
         and that element is not writable.
@@ -94,6 +96,7 @@ class MemoryKeyValueStore (KeyValueStore):
         super(MemoryKeyValueStore, self).__init__()
         self._cache_element = cache_element
         self._table = {}
+        self._table_lock = threading.RLock()
 
         # Only try to load from cache if the cache has any bytes to try to
         # deserialize.
@@ -107,7 +110,8 @@ class MemoryKeyValueStore (KeyValueStore):
             % ("cache_element: %s" % repr(self._cache_element))
 
     def count(self):
-        return len(self._table)
+        with self._table_lock:
+            return len(self._table)
 
     def get_config(self):
         # Recursively get config from data element if we have one.
@@ -121,7 +125,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
     def keys(self):
         """
-        :return: Iterator over keys in this store
+        :return: Iterator over keys in this store.
         :rtype: __generator[collections.Hashable]
         """
         return six.iterkeys(self._table)
@@ -169,13 +173,14 @@ class MemoryKeyValueStore (KeyValueStore):
 
         """
         super(MemoryKeyValueStore, self).add(key, value)
-        self._table[key] = value
+        with self._table_lock:
+            self._table[key] = value
 
-        # TODO(paul.tunison): Some other serialization than Pickle. Dangerous!!!
-        #   - pickle loading allows arbitrary code execution on host.
-        if self._cache_element:
-            self._cache_element.set_bytes(pickle.dumps(self._table,
-                                                       self.PICKLE_PROTOCOL))
+            # TODO(paul.tunison): Some other serialization than Pickle.
+            #   - pickle loading allows arbitrary code execution on host.
+            if self._cache_element:
+                self._cache_element.set_bytes(
+                    pickle.dumps(self._table, self.PICKLE_PROTOCOL))
 
     def get(self, key, default=NO_DEFAULT_VALUE):
         """
@@ -196,7 +201,8 @@ class MemoryKeyValueStore (KeyValueStore):
         :rtype: object
 
         """
-        if default is NO_DEFAULT_VALUE:
-            return self._table[key]
-        else:
-            return self._table.get(key, default)
+        with self._table_lock:
+            if default is NO_DEFAULT_VALUE:
+                return self._table[key]
+            else:
+                return self._table.get(key, default)

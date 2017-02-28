@@ -7,12 +7,15 @@ from smqtk.utils.plugin import get_plugins
 
 class HashIndex (NearestNeighborsIndex):
     """
-    Specialized ``NearestNeighborsIndex`` for indexing hash codes
-    bit-vectors) in memory (numpy arrays) using hamming distance.
+    Specialized ``NearestNeighborsIndex`` for indexing unique hash codes
+    bit-vectors) in memory (numpy arrays) using the hamming distance metric.
 
     Implementations of this interface cannot be used in place of something
     requiring a ``NearestNeighborsIndex`` implementation due to the speciality
     of this interface.
+
+    Only unique bit vectors should be indexed. The ``nn`` method should not
+    return the same bit vector more than once for any query.
     """
 
     @abc.abstractmethod
@@ -21,7 +24,8 @@ class HashIndex (NearestNeighborsIndex):
         Build the index with the give hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        it. If an exception is raised, the current index, if there is one, will
+        not be modified.
 
         :raises ValueError: No data available in the given iterable.
 

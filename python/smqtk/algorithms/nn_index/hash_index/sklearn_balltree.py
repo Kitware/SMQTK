@@ -99,7 +99,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         Build the index with the give hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        it. If an exception is raised, the current index, if there is one, will
+        not be modified.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -111,14 +112,17 @@ class SkLearnBallTreeHashIndex (HashIndex):
         self._log.debug("Building ball tree")
         if self.random_seed is not None:
             numpy.random.seed(self.random_seed)
-        # BallTree can't take iterables, so catching input in a list first
-        hash_list = list(hashes)
-        if not hash_list:
+        # BallTree can't take iterables, so catching input in a set of tuples
+        # first in order to cull out duplicates (BT will index duplicate values
+        # happily).
+        hash_tuple_set = set(map(lambda v: tuple(v), hashes))
+        if not hash_tuple_set:
             raise ValueError("No hashes given.")
-
+        # Convert tuples back into numpy arrays for BallTree constructor.
+        hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
         # If distance metric ever changes, need to update save/load model
         # functions.
-        self.bt = BallTree(hash_list, self.leaf_size, metric='hamming')
+        self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')
         self.save_model()
 
     def nn(self, h, n=1):

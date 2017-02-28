@@ -14,6 +14,7 @@ from smqtk.utils.metrics import hamming_distance
 class LinearHashIndex (HashIndex):
     """
     Basic linear index using heap sort (aka brute force).
+    Hash codes are stored as large integer values.
     """
 
     @classmethod
@@ -22,7 +23,7 @@ class LinearHashIndex (HashIndex):
 
     def __init__(self, file_cache=None):
         """
-        Initialize linear, brute-force hash index
+        Initialize linear, brute-force hash index.
 
         :param file_cache: Optional path to a file to cache our index to.
         :type file_cache: str
@@ -30,7 +31,7 @@ class LinearHashIndex (HashIndex):
         """
         super(LinearHashIndex, self).__init__()
         self.file_cache = file_cache
-        self.index = numpy.array([], bool)
+        self.index = set()
         self.load_cache()
 
     def get_config(self):
@@ -43,14 +44,14 @@ class LinearHashIndex (HashIndex):
         Load from file cache if we have one
         """
         if self.file_cache and os.path.isfile(self.file_cache):
-            self.index = numpy.load(self.file_cache)
+            self.index = set(numpy.load(self.file_cache))
 
     def save_cache(self):
         """
         save to file cache if configures
         """
         if self.file_cache:
-            numpy.save(self.file_cache, self.index)
+            numpy.save(self.file_cache, tuple(self.index))
 
     def count(self):
         return len(self.index)
@@ -60,7 +61,8 @@ class LinearHashIndex (HashIndex):
         Build the index with the give hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        it. If an exception is raised, the current index, if there is one, will
+        not be modified.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -69,8 +71,8 @@ class LinearHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        new_index = numpy.array(map(bit_vector_to_int_large, hashes))
-        if not new_index.size:
+        new_index = set(map(bit_vector_to_int_large, hashes))
+        if not len(new_index):
             raise ValueError("No hashes given to index.")
         self.index = new_index
         self.save_cache()

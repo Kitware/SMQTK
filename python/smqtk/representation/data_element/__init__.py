@@ -231,6 +231,13 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         """
         return io.BufferedReader(io.BytesIO(self.get_bytes()))
 
+    def is_read_only(self):
+        """
+        :return: If this element can only be read from.
+        :rtype: bool
+        """
+        return not self.writable()
+
     ###
     # Abstract methods
     #

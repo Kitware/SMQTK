@@ -314,6 +314,13 @@ class TestDataElementAbstract (unittest.TestCase):
         ntools.assert_equal(br.readlines(),
                             ['some content\n', 'with new \n', 'lines'])
 
+    def test_is_read_only(self):
+        de = DummyDataElement()
+        de.TEST_WRITABLE = True
+        ntools.assert_false(de.is_read_only())
+        de.TEST_WRITABLE = False
+        ntools.assert_true(de.is_read_only())
+
     def test_set_bytes_not_writable(self):
         de = DummyDataElement()
         # trigger UUID cache at least once

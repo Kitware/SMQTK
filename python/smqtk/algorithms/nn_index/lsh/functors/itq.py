@@ -1,3 +1,8 @@
+"""
+References/Resources:
+- https://github.com/willard-yuan/hashing-baseline-for-image-retrieval
+- http://dl.acm.org/citation.cfm?id=2191779
+"""
 import logging
 import os.path
 
@@ -6,9 +11,6 @@ import numpy
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.bin_utils import report_progress
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class ItqFunctor (LshFunctor):
@@ -104,6 +106,8 @@ class ItqFunctor (LshFunctor):
         Class standard array normalization. Normalized along max dimension (a=0
         for a 1D array, a=1 for a 2D array, etc.).
 
+        If ``self.normalize`` is None, ``v`` is returned without modification.
+
         :param v: Vector to normalize
         :type v: numpy.ndarray
 
@@ -157,22 +161,23 @@ class ItqFunctor (LshFunctor):
         ``self`` is used only for logging. Otherwise this has no side effects
         on this instance.
 
-        :param v: 2D numpy array, n*c PCA embedded data, n is the number of
-            data elements and c is the code length.
+        :param v: 2D numpy array, [n, c] shape PCA embedded data, ``n`` is the
+            number of data elements and ``c`` is the code length.
         :type v: numpy.core.multiarray.ndarray
 
         :param n_iter: max number of iterations, 50 is usually enough
         :type n_iter: int
 
         :return: [b, r]
-           b: 2D numpy array, n*c binary matrix,
-           r: 2D numpy array, the c*c rotation matrix found by ITQ
+           b: 2D numpy array, [n, c] shape binary matrix,
+           r: 2D numpy array, the [c, c] shape rotation matrix found by ITQ
         :rtype: numpy.core.multiarray.ndarray[bool],
             numpy.core.multiarray.ndarray[float]
 
         """
-        # initialize with an orthogonal random rotation
+        # Pull num bits from PCA-projected descriptors
         bit = v.shape[1]
+        # initialize with an orthogonal random rotation
         if self.random_seed is not None:
             numpy.random.seed(self.random_seed)
         r = numpy.random.randn(bit, bit)
@@ -233,6 +238,12 @@ class ItqFunctor (LshFunctor):
                 descriptors_l.append(d)
                 report_progress(self._log.debug, rs, dbg_report_interval)
             descriptors = descriptors_l
+        if len(descriptors[0].vector()) < self.bit_length:
+            raise ValueError("Input descriptors have fewer features than "
+                             "requested bit encoding. Hash codes will be "
+                             "smaller than requested due to PCA decomposition "
+                             "result being bound by number of features.")
+
         self._log.info("Creating matrix of descriptors for fitting")
         x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,
                                use_multiprocessing=use_multiprocessing)
@@ -247,40 +258,42 @@ class ItqFunctor (LshFunctor):
         x -= self.mean_vec
 
         self._log.info("Computing PCA transformation")
-        # numpy and matlab observation format is flipped, thus the added
-        # transpose.
         self._log.debug("-- computing covariance")
+        # ``cov`` wants each row to be a feature and each column an observation
+        # of those features. Thus, each column should be a descriptor vector,
+        # thus we need the transpose here.
         c = numpy.cov(x.transpose())
 
-        # Direct translation from UNC matlab code
-        # - eigen vectors are the columns of ``pc``
-        self._log.debug('-- computing linalg.eig')
-        l, pc = numpy.linalg.eig(c)
-        # ordered by greatest eigenvalue magnitude, keeping top ``bit_len``
-        self._log.debug('-- computing top pairs')
-        top_pairs = sorted(zip(l, pc.transpose()),
-                           key=lambda p: p[0],
-                           reverse=1
-                           )[:self.bit_length]
+        if True:
+            # Direct translation from UNC matlab code
+            # - eigen vectors are the columns of ``pc``
+            self._log.debug('-- computing linalg.eig')
+            l, pc = numpy.linalg.eig(c)
+            self._log.debug('-- ordering eigen vectors by descending eigen '
+                            'value')
+        else:
+            # Harry translation -- Uses singular values / vectors, not eigen
+            # - singular vectors are the columns of pc
+            self._log.debug('-- computing linalg.svd')
+            pc, l, _ = numpy.linalg.svd(c)
+            self._log.debug('-- ordering singular vectors by descending '
+                            'singular value')
 
-        # # Harry translation -- Uses singular values / vectors, not eigen
-        # # - singular vectors are the rows of pc
-        # # - I think there is an additional error of not taking the transpose
-        # #   of ``pc`` when computing ``top_pairs``.
-        # pc, l, _ = numpy.linalg.svd(c)
-        # top_pairs = sorted(zip(l, pc),
-        #                    key=lambda p: p[0],
-        #                    reverse=1
-        #                    )[:self.bit_length]
+        # Same ordering method for both eig/svd sources.
+        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda p: p[0],
+                              reverse=1)
 
-        # Eigen-vectors of top ``bit_len`` magnitude eigenvalues
         self._log.debug("-- top vector extraction")
-        pc_top = numpy.array([p[1] for p in top_pairs]).transpose()
-        self._log.debug("-- transform centered data by PC matrix")
-        xx = numpy.dot(x, pc_top)
+        # Only keep the top ``bit_length`` vectors after ordering by descending
+        # value magnitude.
+        # - Transposing vectors back to column-vectors.
+        pc_top = numpy.array([p[1] for p in l_pc_ordered[:self.bit_length]])\
+            .transpose()
+        self._log.debug("-- project centered data by PC matrix")
+        v = numpy.dot(x, pc_top)
 
         self._log.info("Performing ITQ to find optimal rotation")
-        c, self.rotation = self._find_itq_rotation(xx, self.itq_iterations)
+        c, self.rotation = self._find_itq_rotation(v, self.itq_iterations)
         # De-adjust rotation with PC vector
         self.rotation = numpy.dot(pc_top, self.rotation)
 

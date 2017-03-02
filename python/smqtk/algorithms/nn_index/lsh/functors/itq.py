@@ -1,16 +1,26 @@
 """
 References/Resources:
-- https://github.com/willard-yuan/hashing-baseline-for-image-retrieval
-- http://dl.acm.org/citation.cfm?id=2191779
+- UNC paper: http://www.cs.unc.edu/~lazebnik/publications/cvpr11_small_code.pdf
+- ACM reference: http://dl.acm.org/citation.cfm?id=2191779
+- GitHub with matlab implementation:
+  https://github.com/willard-yuan/hashing-baseline-for-image-retrieval
 """
+from copy import deepcopy
 import logging
-import os.path
 
 import numpy
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
+from smqtk.representation import get_data_element_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.utils import merge_dict, plugin
 from smqtk.utils.bin_utils import report_progress
+
+try:
+    # noinspection PyCompatibility
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 
 class ItqFunctor (LshFunctor):
@@ -37,7 +47,62 @@ class ItqFunctor (LshFunctor):
     def is_usable(cls):
         return True
 
-    def __init__(self, mean_vec_filepath=None, rotation_filepath=None,
+    @classmethod
+    def get_default_config(cls):
+        default = super(ItqFunctor, cls).get_default_config()
+
+        # Cache element parameters need to be split out into sub-configurations
+        data_element_default_config = \
+            plugin.make_config(get_data_element_impls())
+        default['mean_vec_cache'] = data_element_default_config
+        # Need to deepcopy source to prevent modifications on one sub-config
+        # from reflecting in the other.
+        default['rotation_cache'] = deepcopy(data_element_default_config)
+
+        return default
+
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        """
+        Instantiate a new instance of this class given the JSON-compliant
+        configuration dictionary encapsulating initialization arguments.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: ItqFunctor
+
+        """
+        if merge_default:
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
+
+        data_element_impls = get_data_element_impls()
+        # Mean vector cache element.
+        if config_dict['mean_vec_cache'] and \
+                config_dict['mean_vec_cache']['type']:
+            mean_vec_elem = plugin.from_plugin_config(
+                config_dict['mean_vec_cache'], data_element_impls)
+            config_dict['mean_vec_cache'] = mean_vec_elem
+        else:
+            config_dict['mean_vec_cache'] = None
+        # Rotation matrix cache element.
+        if config_dict['rotation_cache'] and \
+                config_dict['rotation_cache']['type']:
+            rotation_elem = plugin.from_plugin_config(
+                config_dict['rotation_cache'], data_element_impls)
+            config_dict['rotation_cache'] = rotation_elem
+        else:
+            config_dict['rotation_cache'] = None
+
+        return super(ItqFunctor, cls).from_config(config_dict, False)
+
+    def __init__(self, mean_vec_cache=None, rotation_cache=None,
                  bit_length=8, itq_iterations=50, normalize=None,
                  random_seed=None):
         """
@@ -51,17 +116,15 @@ class ItqFunctor (LshFunctor):
         lead to not being able to use the same configuration for fitting and
         application, as the file name's as given will not be found.
 
-        :param mean_vec_filepath: Optional file location to load/store the mean
+        :param mean_vec_cache: Optional data element to load/store the mean
             vector when initialized and/or built. When None, this will only be
-            stored in memory. This will use numpy to save/load, so this should
-            have a ``.npy`` suffix, or one will be added at save time.
-        :type mean_vec_filepath: str
+            stored in memory.
+        :type mean_vec_cache: smqtk.representation.DataElement
 
-        :param rotation_filepath: Optional file location to load/store the
-            rotation matrix when initialize and/or built. When None, this will
-            only be stored in memory. This will use numpy to save/load, so this
-            should have a ``.npy`` suffix, or one will be added at save time.
-        :type rotation_filepath: str
+        :param rotation_cache: Optional data element to load/store the rotation
+            matrix when initialize and/or built. When None, this will only be
+            stored in memory.
+        :type rotation_cache: smqtk.representation.DataElement
 
         :param bit_length: Number of bits used to represent descriptors (hash
             code). This must be greater than 0. If given an existing
@@ -69,7 +132,7 @@ class ItqFunctor (LshFunctor):
 
         :param itq_iterations: Number of iterations for the ITQ algorithm to
             perform. This must be greater than 0.
-        :type itq_iterations: int
+        :tyepe itq_iterations: int
 
         :param normalize: Normalize input vectors when fitting and generation
             hash vectors using ``numpy.linalg.norm``. This may either
@@ -84,8 +147,8 @@ class ItqFunctor (LshFunctor):
         """
         super(ItqFunctor, self).__init__()
 
-        self.mean_vec_filepath = mean_vec_filepath
-        self.rotation_filepath = rotation_filepath
+        self.mean_vec_cache_elem = mean_vec_cache
+        self.rotation_cache_elem = rotation_cache
         self.bit_length = bit_length
         self.itq_iterations = itq_iterations
         self.normalize = normalize
@@ -126,30 +189,48 @@ class ItqFunctor (LshFunctor):
         return v
 
     def get_config(self):
-        return {
-            "mean_vec_filepath": self.mean_vec_filepath,
-            "rotation_filepath": self.rotation_filepath,
+        # If no cache elements (set to None), return default plugin configs.
+        c = merge_dict(self.get_default_config(), {
             "bit_length": self.bit_length,
             "itq_iterations": self.itq_iterations,
+            "normalize": self.normalize,
             "random_seed": self.random_seed,
-        }
+        })
+        if self.mean_vec_cache_elem:
+            c['mean_vec_cache'] = \
+                plugin.to_plugin_config(self.mean_vec_cache_elem)
+        if self.rotation_cache_elem:
+            c['rotation_cache'] = \
+                plugin.to_plugin_config(self.rotation_cache_elem)
+        return c
 
     def has_model(self):
         return (self.mean_vec is not None) and (self.rotation is not None)
 
     def load_model(self):
-        if (self.mean_vec_filepath and
-                os.path.isfile(self.mean_vec_filepath) and
-                self.rotation_filepath and
-                os.path.isfile(self.rotation_filepath)):
-            self.mean_vec = numpy.load(self.mean_vec_filepath)
-            self.rotation = numpy.load(self.rotation_filepath)
+        if (self.mean_vec_cache_elem
+                and not self.mean_vec_cache_elem.is_empty()
+                and self.rotation_cache_elem
+                and not self.rotation_cache_elem.is_empty()):
+            self.mean_vec = \
+                numpy.load(StringIO(self.mean_vec_cache_elem.get_bytes()))
+            self.rotation = \
+                numpy.load(StringIO(self.rotation_cache_elem.get_bytes()))
 
     def save_model(self):
-        if (self.mean_vec_filepath and self.rotation_filepath and
+        # Check that we have cache elements set, they are writable and that we
+        # have something to save to them.
+        if (self.mean_vec_cache_elem and self.rotation_cache_elem and
+                self.mean_vec_cache_elem.writable() and
+                self.rotation_cache_elem.writable() and
                 self.mean_vec is not None and self.rotation is not None):
-            numpy.save(self.mean_vec_filepath, self.mean_vec)
-            numpy.save(self.rotation_filepath, self.rotation)
+            b = StringIO()
+            numpy.save(b, self.mean_vec)
+            self.mean_vec_cache_elem.set_bytes(b.getvalue())
+
+            b = StringIO()
+            numpy.save(b, self.rotation)
+            self.rotation_cache_elem.set_bytes(b.getvalue())
 
     def _find_itq_rotation(self, v, n_iter):
         """
@@ -211,7 +292,7 @@ class ItqFunctor (LshFunctor):
 
     def fit(self, descriptors, use_multiprocessing=True):
         """
-        Fit the ITQ model given the input set of descriptors
+        Fit the ITQ model given the input set of descriptors.
 
         :param descriptors: Iterable of ``DescriptorElement`` vectors to fit
             the model to.

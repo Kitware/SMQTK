@@ -1,13 +1,15 @@
 import numpy
 import os.path as osp
-import StringIO
 
 from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
-
-__author__ = "paul.tunison@kitware.com"
+try:
+    # noinspection PyCompatibility
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -26,14 +28,14 @@ class DescriptorMemoryElement (DescriptorElement):
 
     def __getstate__(self):
         # save vector as binary string
-        b = StringIO.StringIO()
+        b = StringIO()
         numpy.save(b, self.vector())
         return self.type(), self.uuid(), b.getvalue(),
 
     def __setstate__(self, state):
         self._type_label = state[0]
         self._uuid = state[1]
-        b = StringIO.StringIO(state[2])
+        b = StringIO(state[2])
         self.__v = numpy.load(b)
 
     def _get_cache_index(self):

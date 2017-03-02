@@ -67,7 +67,7 @@ RUN mkdir -p /smqtk/build \
  && tar xf SMQTK-${SMQTK_VERSION}.tar.gz \
  && mv /SMQTK-${SMQTK_VERSION} /smqtk/source \
  && rm SMQTK-${SMQTK_VERSION}.tar.gz
-RUN pip install -r /smqtk/source/requirements.txt
+RUN pip install -r /smqtk/source/requirements.txt \
  && cd /smqtk/build \
  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/smqtk/install /smqtk/source \
  && make install -j12 \

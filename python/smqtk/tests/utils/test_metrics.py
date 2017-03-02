@@ -34,7 +34,7 @@ class TestHistogramIntersectionDistance (unittest.TestCase):
         # histogram does not intersect with nothing.
         # REMEMBER we're talking about distance here, not similarity
         for m in self.hi_methods:
-            print "Tests for method:", m
+            print("Tests for method: %s" % m)
             ntools.assert_equal(m(self.v1, self.v1), 1.)
 
             ntools.assert_equal(m(self.v1, self.v2), 1.)
@@ -45,7 +45,7 @@ class TestHistogramIntersectionDistance (unittest.TestCase):
 
     def test_hi_result_normal(self):
         for m in self.hi_methods:
-            print "Tests for method:", m
+            print("Tests for method: %s" % m)
 
             ntools.assert_equal(m(self.v2, self.v3), 1.)
             ntools.assert_equal(m(self.v3, self.v2), 1.)

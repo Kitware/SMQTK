@@ -225,6 +225,7 @@ def file_mimetype_filemagic(filepath):
 
     The file the given path refers to must exist.
 
+    :raises ImportError: ``magic`` python module not available.
     :raises IOError: ``filepath`` did not refer to an existing file.
 
     :param filepath: Path to the (existing) file to determine the mimetype of.
@@ -251,6 +252,7 @@ def file_mimetype_tika(filepath):
     The file the given path refers to must exist. This function may fail under
     multiprocessing situations.
 
+    :raises ImportError: ``tika`` python module not available.
     :raises IOError: ``filepath`` did not refer to an existing file.
 
     :param filepath: Path to the (existing) file to determine the mimetype of.

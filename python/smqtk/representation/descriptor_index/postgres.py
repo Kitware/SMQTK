@@ -9,7 +9,7 @@ import itertools
 import logging
 
 try:
-    import cPickle as picle
+    import cPickle as pickle
 except ImportError:
     import pickle
 

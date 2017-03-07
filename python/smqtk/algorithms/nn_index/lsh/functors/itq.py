@@ -204,7 +204,7 @@ class ItqFunctor (LshFunctor):
 
         return b, r
 
-    def fit(self, descriptors):
+    def fit(self, descriptors, use_multiprocessing=True):
         """
         Fit the ITQ model given the input set of descriptors
 
@@ -235,7 +235,7 @@ class ItqFunctor (LshFunctor):
             descriptors = descriptors_l
         self._log.info("Creating matrix of descriptors for fitting")
         x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,
-                               use_multiprocessing=True)
+                               use_multiprocessing=use_multiprocessing)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 
         self._log.debug("Info normalizing descriptors by factor: %s",

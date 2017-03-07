@@ -54,6 +54,21 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     """
 
+    #
+    # The following are SQL query templates. The string formatting using {}'s
+    # is used to fill in the query before using it in an execute with instance
+    # specific values. The ``%()s`` formatting is special for the execute where-
+    # by psycopg2 will fill in the values appropriately as specified in a second
+    # dictionary argument to ``cursor.execute(query, value_dict)``.
+    #
+    UPSERT_TABLE_TMPL = ' '.join("""
+        CREATE TABLE IF NOT EXISTS {table_name:s} (
+          {uuid_col:s} TEXT NOT NULL,
+          {element_col:s} BYTEA NOT NULL,
+          PRIMARY KEY ({uuid_col:s})
+        );
+    """.split())
+
     SELECT_TMPL = norm_psql_cmd_string("""
         SELECT {col:s}
           FROM {table_name:s}
@@ -110,7 +125,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                  element_col='element',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
                  db_pass=None, multiquery_batch_size=1000, pickle_protocol=-1,
-                 read_only=False):
+                 read_only=False, create_table=True):
         """
         Initialize index instance.
 
@@ -162,6 +177,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
             Modification actions will throw a ReadOnlyError exceptions.
         :type read_only: bool
 
+        :param create_table: If this instance should try to create the storing
+            table before actions are performed against it when not set to be
+            read-only. If the configured user does not have sufficient
+            permissions to create the table and it does not currently exist, an
+            exception will be raised.
+        :type create_table: bool
+
         """
         super(PostgresDescriptorIndex, self).__init__()
 
@@ -178,6 +200,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         self.multiquery_batch_size = multiquery_batch_size
         self.pickle_protocol = pickle_protocol
         self.read_only = bool(read_only)
+        self.create_table = create_table
 
         # Checking parameters where necessary
         if self.multiquery_batch_size is not None:
@@ -204,6 +227,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             "multiquery_batch_size": self.multiquery_batch_size,
             "pickle_protocol": self.pickle_protocol,
             "read_only": self.read_only,
+            "create_table": self.create_table,
         }
 
     def _get_psql_connection(self):
@@ -218,6 +242,21 @@ class PostgresDescriptorIndex (DescriptorIndex):
             host=self.db_host,
             port=self.db_port,
         )
+
+    def _ensure_table(self, cursor):
+        """
+        Execute on psql connector cursor the table create-of-not-exists query.
+
+        :param cursor: Connection active cursor.
+
+        """
+        if not self.read_only and self.create_table:
+            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
+                table_name=self.table_name,
+                uuid_col=self.uuid_col,
+                element_col=self.element_col,
+            ))
+            cursor.execute(q_table_upsert)
 
     def _single_execute(self, execute_hook, yield_result_rows=False):
         """
@@ -241,6 +280,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         try:
             with conn:
                 with conn.cursor() as cur:
+                    self._ensure_table(cur)
                     execute_hook(cur)
                     if yield_result_rows:
                         for r in cur:
@@ -295,6 +335,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
                     with conn:
                         with conn.cursor() as cur:
+                            self._ensure_table(cur)
                             execute_hook(cur, batch)
                             if yield_result_rows:
                                 for r in cur:
@@ -305,6 +346,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 self._log.debug('-- tail batch (size: %d)', len(batch))
                 with conn:
                     with conn.cursor() as cur:
+                        self._ensure_table(cur)
                         execute_hook(cur, batch)
                         if yield_result_rows:
                             for r in cur:
@@ -321,14 +363,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :return: Number of descriptor elements stored in this index.
         :rtype: int | long
         """
-        q = self.SELECT_LIKE_TMPL.format(
-            element_col='count(*)',
+        q = self.SELECT_TMPL.format(
+            col='count(*)',
             table_name=self.table_name,
-            uuid_col=self.uuid_col,
         )
 
         def exec_hook(cur):
-            cur.execute(q, {'uuid_like': '%'})
+            cur.execute(q)
 
         # There's only going to be one row returned with one element in it
         return list(self._single_execute(exec_hook, True))[0][0]

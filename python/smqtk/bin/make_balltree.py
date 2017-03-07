@@ -14,7 +14,7 @@ from smqtk.utils.bit_utils import int_to_bit_vector_large
 
 
 def cli_parser():
-    parser = basic_cli_parser(__doc__)
+    parser = basic_cli_parser(__doc__, configuration_group=False)
     parser.add_argument("hash2uuids_fp", type=str)
     parser.add_argument("bit_len", type=int)
     parser.add_argument("leaf_size", type=int)

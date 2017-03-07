@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import unittest
 
 import mock
@@ -10,14 +8,14 @@ from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 import smqtk.representation
 
-__author__ = "paul.tunison@kitware.com"
 
+class TestGetDescriptorGeneratorImpls (unittest.TestCase):
 
-def test_get_descriptors():
-    m = get_descriptor_generator_impls()
-    # Currently no types that are guaranteed available
-    ntools.assert_is_instance(m, dict, "Should return a dictionary of class "
-                                       "label-to-types")
+    def test_get_descriptors(self):
+        m = get_descriptor_generator_impls()
+        # Currently no types that are guaranteed available
+        ntools.assert_is_instance(m, dict, "Should return a dictionary of "
+                                           "class label-to-types")
 
 
 class DummyDescriptorGenerator (DescriptorGenerator):
@@ -169,6 +167,9 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         m_d1 = mock.Mock(name='data-1',
                          spec=smqtk.representation.DataElement)()
 
+        m_d0.uuid.return_value = 'uuid-0'
+        m_d1.uuid.return_value = 'uuid-1'
+
         m_factory = \
             mock.Mock(spec=smqtk.representation.DescriptorElementFactory)()
 
@@ -189,10 +190,10 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
                                                overwrite=False, use_mp=False)
 
         ntools.assert_equal(len(m), 2)
-        ntools.assert_in(m_d0, m)
-        ntools.assert_in(m_d1, m)
-        ntools.assert_equal(m[m_d0], 1)
-        ntools.assert_equal(m[m_d1], 2)
+        ntools.assert_in(m_d0.uuid(), m)
+        ntools.assert_in(m_d1.uuid(), m)
+        ntools.assert_equal(m[m_d0.uuid()], 1)
+        ntools.assert_equal(m[m_d1.uuid()], 2)
 
         ntools.assert_true(generator.compute_descriptor.called)
         ntools.assert_equal(generator.compute_descriptor.call_count, 2)

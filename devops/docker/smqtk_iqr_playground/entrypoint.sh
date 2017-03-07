@@ -183,7 +183,9 @@ then
             "
         else
             cat "${IMAGE_DIR_FILELIST}" | \
-                xargs -I '{}' generate_image_transform -c "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" -i '{}' -o "${IMG_TILES_DIR}"
+                xargs -I '{}' generate_image_transform \
+                    -c "${CONFIG_DIR}/${SMQTK_GEN_IMG_TILES}" -i '{}' \
+                    -o "${IMG_TILES_DIR}"
         fi
         # Use these tiles for new imagelist
         mv "${IMAGE_DIR_FILELIST}" "${IMAGE_DIR_FILELIST}.ORIG"

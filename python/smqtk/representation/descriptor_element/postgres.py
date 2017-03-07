@@ -3,9 +3,6 @@ import numpy
 from smqtk.representation import DescriptorElement
 
 
-__author__ = 'paul.tunison@kitware.com'
-
-
 # Try to import required modules
 try:
     import psycopg2

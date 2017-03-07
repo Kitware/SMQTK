@@ -1,4 +1,3 @@
-import cPickle
 import os
 import tempfile
 import unittest
@@ -6,12 +5,16 @@ import unittest
 import nose.tools as ntools
 import numpy
 
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.utils import merge_dict
 
-
-__author__ = "paul.tunison@kitware.com"
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 RAND_UUID = 0
@@ -28,123 +31,124 @@ def random_descriptor():
 class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_is_usable(self):
+        # Always usable because no dependencies.
         ntools.assert_equal(MemoryDescriptorIndex.is_usable(), True)
+
+    def test_default_config(self):
+        # Default should be valid for constructing a new instance.
+        c = MemoryDescriptorIndex.get_default_config()
+        ntools.assert_equal(MemoryDescriptorIndex.from_config(c).get_config(),
+                            c)
+
+    def test_from_config_null_cache_elem(self):
+        inst = MemoryDescriptorIndex.from_config({'cache_element': None})
+        ntools.assert_is_none(inst.cache_element)
+        ntools.assert_equal(inst._table, {})
+
+        inst = MemoryDescriptorIndex.from_config({
+            'cache_element': {
+                'type': None
+            }
+        })
+        ntools.assert_is_none(inst.cache_element)
+        ntools.assert_equal(inst._table, {})
+
+    def test_from_config_null_cache_elem_type(self):
+        # An empty cache should not trigger loading on construction.
+        expected_empty_cache = DataMemoryElement()
+        inst = MemoryDescriptorIndex.from_config({
+            'cache_element': {
+                'type': 'DataMemoryElement',
+                'DataMemoryElement': {'bytes': ''}
+            }
+        })
+        ntools.assert_equal(inst.cache_element, expected_empty_cache)
+        ntools.assert_equal(inst._table, {})
+
+    def test_from_config(self):
+        # Configured cache with some picked bytes
+        expected_table = dict(a=1, b=2, c=3)
+        expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
+        inst = MemoryDescriptorIndex.from_config({
+            'cache_element': {
+                'type': 'DataMemoryElement',
+                'DataMemoryElement': {'bytes': expected_cache.get_bytes()}
+            }
+        })
+        ntools.assert_equal(inst.cache_element, expected_cache)
+        ntools.assert_equal(inst._table, expected_table)
 
     def test_init_no_cache(self):
         inst = MemoryDescriptorIndex()
-        ntools.assert_is_none(inst.file_cache, None)
+        ntools.assert_is_none(inst.cache_element, None)
         ntools.assert_equal(inst._table, {})
 
-    def test_init_nonexistant_file_cache(self):
-        fd, tmp_cache = tempfile.mkstemp()
-        os.close(fd)
-        os.remove(tmp_cache)
-
-        inst = MemoryDescriptorIndex(tmp_cache)
-        ntools.assert_equal(inst.file_cache, tmp_cache)
+    def test_init_empty_cache(self):
+        cache_elem = DataMemoryElement()
+        inst = MemoryDescriptorIndex(cache_element=cache_elem)
+        ntools.assert_equal(inst.cache_element, cache_elem)
         ntools.assert_equal(inst._table, {})
-
-    def test_init_empty_file_cache(self):
-        fd, tmp_cache = tempfile.mkstemp()
-        os.close(fd)
-
-        try:
-            ntools.assert_raises(EOFError, MemoryDescriptorIndex, tmp_cache)
-        finally:
-            os.remove(tmp_cache)
 
     def test_init_with_cache(self):
-        fd, tmp_cache = tempfile.mkstemp()
-        os.close(fd)
+        d_list = (random_descriptor(), random_descriptor(),
+                  random_descriptor(), random_descriptor())
+        expected_table = dict((r.uuid(), r) for r in d_list)
+        expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
 
-        try:
-            d_list = (random_descriptor(), random_descriptor(),
-                      random_descriptor(), random_descriptor())
-            test_cache = dict((r.uuid(), r) for r in d_list)
-            with open(tmp_cache, 'w') as f:
-                cPickle.dump(test_cache, f)
-
-            inst = MemoryDescriptorIndex(tmp_cache)
-            ntools.assert_equal(len(inst._table), 4)
-            ntools.assert_equal(inst.file_cache, tmp_cache)
-            ntools.assert_equal(inst._table, test_cache)
-            ntools.assert_equal(set(inst._table.values()), set(d_list))
-        finally:
-            os.remove(tmp_cache)
-
-    def test_table_caching(self):
-        fd, tmp_cache = tempfile.mkstemp()
-        os.close(fd)
-        os.remove(tmp_cache)
-
-        try:
-            i = MemoryDescriptorIndex(tmp_cache)
-            descrs = [random_descriptor() for _ in xrange(3)]
-            expected_cache = dict((r.uuid(), r) for r in descrs)
-
-            # cache should not exist yet
-            ntools.assert_false(os.path.isfile(tmp_cache))
-
-            # Should write file and should be a dictionary of 3
-            # elements
-            i.add_many_descriptors(descrs)
-            ntools.assert_true(os.path.isfile(tmp_cache))
-            with open(tmp_cache) as f:
-                ntools.assert_equal(cPickle.load(f),
-                                    expected_cache)
-
-            # Changing the internal table (remove, add) it should reflect in
-            # cache
-            new_d = random_descriptor()
-            i.add_descriptor(new_d)
-            expected_cache[new_d.uuid()] = new_d
-            with open(tmp_cache) as f:
-                ntools.assert_equal(cPickle.load(f),
-                                    expected_cache)
-
-            rm_d = expected_cache.values()[0]
-            i.remove_descriptor(rm_d.uuid())
-            del expected_cache[rm_d.uuid()]
-            with open(tmp_cache) as f:
-                ntools.assert_equal(cPickle.load(f),
-                                    expected_cache)
-        finally:
-            os.remove(tmp_cache)
-
-    def test_default_config(self):
-        ntools.assert_equal(
-            MemoryDescriptorIndex.get_default_config(),
-            {"file_cache": None, "pickle_protocol": -1}
-        )
+        inst = MemoryDescriptorIndex(expected_cache)
+        ntools.assert_equal(len(inst._table), 4)
+        ntools.assert_equal(inst.cache_element, expected_cache)
+        ntools.assert_equal(inst._table, expected_table)
+        ntools.assert_equal(set(inst._table.values()), set(d_list))
 
     def test_get_config(self):
         ntools.assert_equal(
             MemoryDescriptorIndex().get_config(),
-            {'file_cache': None, "pickle_protocol": -1}
+            MemoryDescriptorIndex.get_default_config()
         )
 
         ntools.assert_equal(
             MemoryDescriptorIndex(None).get_config(),
-            {'file_cache': None, "pickle_protocol": -1}
+            MemoryDescriptorIndex.get_default_config()
         )
 
+        empty_elem = DataMemoryElement()
         ntools.assert_equal(
-            MemoryDescriptorIndex('/some/abs/path').get_config(),
-            {'file_cache': '/some/abs/path', "pickle_protocol": -1}
+            MemoryDescriptorIndex(empty_elem).get_config(),
+            merge_dict(MemoryDescriptorIndex.get_default_config(), {
+                'cache_element': {'type': 'DataMemoryElement'}
+            })
         )
 
+        dict_pickle_bytes = pickle.dumps({1: 1, 2: 2, 3: 3}, -1)
+        cache_elem = DataMemoryElement(bytes=dict_pickle_bytes)
         ntools.assert_equal(
-            MemoryDescriptorIndex('some/rel/path').get_config(),
-            {'file_cache': 'some/rel/path', "pickle_protocol": -1}
+            MemoryDescriptorIndex(cache_elem).get_config(),
+            merge_dict(MemoryDescriptorIndex.get_default_config(), {
+                'cache_element': {
+                    'DataMemoryElement': {
+                        'bytes': dict_pickle_bytes
+                    },
+                    'type': 'DataMemoryElement'
+                }
+            })
         )
 
-    def test_from_config(self):
-        inst = MemoryDescriptorIndex.from_config({'file_cache': None})
-        ntools.assert_is_none(inst.file_cache)
+    def test_cache_table_no_cache(self):
+        inst = MemoryDescriptorIndex()
+        inst._table = {}
+        inst.cache_table()  # should basically do nothing
+        ntools.assert_is_none(inst.cache_element)
 
-        fp = '/doesnt/exist/yet'
-        inst = MemoryDescriptorIndex.from_config({'file_cache': fp})
-        ntools.assert_equal(inst.file_cache, fp)
+    def test_cache_table_empty_table(self):
+        inst = MemoryDescriptorIndex(DataMemoryElement(), -1)
+        inst._table = {}
+        expected_table_pickle_bytes = pickle.dumps(inst._table, -1)
+
+        inst.cache_table()
+        ntools.assert_is_not_none(inst.cache_element)
+        ntools.assert_equal(inst.cache_element.get_bytes(),
+                            expected_table_pickle_bytes)
 
     def test_add_descriptor(self):
         index = MemoryDescriptorIndex()
@@ -189,9 +193,13 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         index.add_descriptor(d1)
         ntools.assert_equal(index.count(), 1)
 
-        d2 = random_descriptor()
-        index.add_descriptor(d2)
-        ntools.assert_equal(index.count(), 2)
+        d2, d3, d4 = random_descriptor(), random_descriptor(), random_descriptor()
+        index.add_many_descriptors([d2, d3, d4])
+        ntools.assert_equal(index.count(), 4)
+
+        d5 = random_descriptor()
+        index.add_descriptor(d5)
+        ntools.assert_equal(index.count(), 5)
 
     def test_get_descriptors(self):
         descrs = [
@@ -219,7 +227,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         i = MemoryDescriptorIndex()
         n = 10
 
-        descrs = [random_descriptor() for _ in xrange(n)]
+        descrs = [random_descriptor() for _ in range(n)]
         i.add_many_descriptors(descrs)
         ntools.assert_equal(len(i), n)
         i.clear()
@@ -228,15 +236,43 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_has(self):
         i = MemoryDescriptorIndex()
-        descrs = [random_descriptor() for _ in xrange(10)]
+        descrs = [random_descriptor() for _ in range(10)]
         i.add_many_descriptors(descrs)
 
         ntools.assert_true(i.has_descriptor(descrs[4].uuid()))
         ntools.assert_false(i.has_descriptor('not_an_int'))
 
+    def test_added_descriptor_table_caching(self):
+        cache_elem = DataMemoryElement(readonly=False)
+        descrs = [random_descriptor() for _ in range(3)]
+        expected_table = dict((r.uuid(), r) for r in descrs)
+
+        i = MemoryDescriptorIndex(cache_elem)
+        ntools.assert_true(cache_elem.is_empty())
+
+        # Should add descriptors to table, caching to writable element.
+        i.add_many_descriptors(descrs)
+        ntools.assert_false(cache_elem.is_empty())
+        ntools.assert_equal(pickle.loads(i.cache_element.get_bytes()),
+                            expected_table)
+
+        # Changing the internal table (remove, add) it should reflect in
+        # cache
+        new_d = random_descriptor()
+        expected_table[new_d.uuid()] = new_d
+        i.add_descriptor(new_d)
+        ntools.assert_equal(pickle.loads(i.cache_element.get_bytes()),
+                            expected_table)
+
+        rm_d = expected_table.values()[0]
+        del expected_table[rm_d.uuid()]
+        i.remove_descriptor(rm_d.uuid())
+        ntools.assert_equal(pickle.loads(i.cache_element.get_bytes()),
+                            expected_table)
+
     def test_remove(self):
         i = MemoryDescriptorIndex()
-        descrs = [random_descriptor() for _ in xrange(100)]
+        descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         ntools.assert_equal(len(i), 100)
         ntools.assert_equal(list(i.iterdescriptors()), descrs)
@@ -256,21 +292,21 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_iterdescrs(self):
         i = MemoryDescriptorIndex()
-        descrs = [random_descriptor() for _ in xrange(100)]
+        descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         ntools.assert_equal(set(i.iterdescriptors()),
                             set(descrs))
 
     def test_iterkeys(self):
         i = MemoryDescriptorIndex()
-        descrs = [random_descriptor() for _ in xrange(100)]
+        descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         ntools.assert_equal(set(i.iterkeys()),
                             set(d.uuid() for d in descrs))
 
     def test_iteritems(self):
         i = MemoryDescriptorIndex()
-        descrs = [random_descriptor() for _ in xrange(100)]
+        descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         ntools.assert_equal(set(i.iteritems()),
                             set((d.uuid(), d) for d in descrs))

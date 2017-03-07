@@ -110,7 +110,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
     out_q = queue_t(int(procs * buffer_factor))
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [worker_t(i, in_q, out_q, **worker_kwds) for i in xrange(procs)]
+    workers = [worker_t(i, in_q, out_q, **worker_kwds) for i in range(procs)]
 
     in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
@@ -233,13 +233,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                     break
         except KeyboardInterrupt:
             pass
-        except Exception, ex:
+        except Exception as ex:
             self._log.error("Feeder thread encountered an exception: %s",
                             str(ex))
             self.q.put(ex)
         finally:
             self._log.debug("Sending in-queue terminal packets")
-            for _ in xrange(self.num_terminal_packets):
+            for _ in range(self.num_terminal_packets):
                 self.q.put(None)
             self._log.debug("Closing in-queue")
 
@@ -277,7 +277,7 @@ class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
             self.out_q.put(None)
         except KeyboardInterrupt:
             pass
-        except Exception, ex:
+        except Exception as ex:
             self._log.error("%s%s encountered an exception: %s",
                             self.__class__.__name__, self.name,
                             str(ex))
@@ -327,7 +327,7 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
             self.q_put(None)
         except KeyboardInterrupt:
             pass
-        except Exception, ex:
+        except Exception as ex:
             self._log.error("%s%s encountered an exception: %s",
                             self.__class__.__name__, self.name,
                             str(ex))

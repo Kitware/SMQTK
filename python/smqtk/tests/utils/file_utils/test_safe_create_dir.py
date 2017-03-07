@@ -1,5 +1,3 @@
-__author__ = "paul.tunison@kitware.com"
-
 import errno
 import mock
 import nose.tools as ntools

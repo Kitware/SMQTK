@@ -151,7 +151,7 @@ def report_progress(log, state, interval):
     or ``interval`` to ``0``.
 
     :param log: Logger logging function to use to send reporting message to.
-    :type log: (str) -> None
+    :type log: (str, *args, **kwargs) -> None
 
     :param state: Reporting state. This should be initialized to a list of 6
         zeros (floats), and then should not be modified externally from this

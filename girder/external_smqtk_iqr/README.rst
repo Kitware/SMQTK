@@ -1,7 +1,11 @@
 SMQTK External IQR Plugin
 #########################
 This plugin adds a small widget to folders in girder if certain metadata fields
-are present for that folder's model.  We expect the fields:
+are present for that folder's model.  If they exist, then a bar with a link
+is generated at the top of the view that initializes the IQR configuration
+with the remote server and opens a new tab/window to that service.
+
+We expect the fields:
 
     smqtk_iqr_root
     smqtk_iqr

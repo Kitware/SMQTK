@@ -1,13 +1,16 @@
 import abc
 from collections import deque
 import hashlib
+import io
 import logging
 import mimetypes
 import os
 import os.path as osp
 import tempfile
 
-from smqtk.exceptions import InvalidUriError
+import six
+
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
 from smqtk.utils import plugin
@@ -18,12 +21,17 @@ MIMETYPES = mimetypes.MimeTypes()
 
 class DataElement (SmqtkRepresentation, plugin.Pluggable):
     """
-    Abstract interface for a byte data.
+    Abstract interface for a byte data container.
 
-    Basic data elements have a UUID, some byte content, a content type, and
-    checksum accessor methods.
+    The primary "value" of a ``DataElement`` is the byte content wrapped. Since
+    this can technically change due to external forces, we cannot guarantee that
+    an element is immutable. Thus ``DataElement`` instances are not considered
+    generally hashable. Specific implementations may define a ``__hash__``
+    method if that implementation reflects a data source that guarantees
+    immutability.
 
-    UUIDs must maintain unique-ness when transformed into a string.
+    UUIDs should be cast-able to a string and maintain unique-ness after
+    conversion.
 
     """
 
@@ -50,13 +58,10 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
     def __init__(self):
         super(DataElement, self).__init__()
-
-        self._md5_cache = None
-        self._sha1_cache = None
         self._temp_filepath_stack = []
 
-    def __hash__(self):
-        return hash(self.uuid())
+    # Because we can't generally guarantee external data immutability.
+    __hash__ = None
 
     def __del__(self):
         self.clean_temp()
@@ -68,10 +73,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
     def __ne__(self, other):
         return not (self == other)
 
+    @abc.abstractmethod
     def __repr__(self):
         return self.__class__.__name__
 
-    def _write_temp(self, d):
+    def _write_new_temp(self, d):
         """
         Actually write our bytes to a new temp file
         Always creates new file.
@@ -108,27 +114,40 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
     def md5(self):
         """
-        :return: MD5 hex string of the data content.
+        Get the MD5 checksum of this element's binary content.
+
+        :return: MD5 hex checksum of the data content.
         :rtype: str
         """
-        if not self._md5_cache:
-            self._md5_cache = hashlib.md5(self.get_bytes()).hexdigest()
-        return self._md5_cache
+        return hashlib.md5(self.get_bytes()).hexdigest()
 
     def sha1(self):
         """
-        :return: SHA1 hex string of the data content.
+        Get the SHA1 checksum of this element's binary content.
+
+        :return: SHA1 hex checksum of the data content.
         :rtype: str
         """
-        if not self._sha1_cache:
-            self._sha1_cache = hashlib.sha1(self.get_bytes()).hexdigest()
-        return self._sha1_cache
+        return hashlib.sha1(self.get_bytes()).hexdigest()
+
+    def sha512(self):
+        """
+        Get the SHA512 checksum of this element's binary content.
+
+        :return: SHA512 hex checksum of the data content.
+        :rtype: str
+        """
+        return hashlib.sha512(self.get_bytes()).hexdigest()
 
     def write_temp(self, temp_dir=None):
         """
         Write this data's bytes to a temporary file on disk, returning the path
         to the written file, whose extension is guessed based on this data's
         content type.
+
+        It is not guaranteed that the returned file path does not point to the
+        original data, i.e. writing to the returned filepath may modify the
+        original data.
 
         NOTE:
             The file path returned should not be explicitly removed by the user.
@@ -159,11 +178,11 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
                 if osp.dirname(tf) == abs_temp_dir:
                     return tf
             # nothing in stack with given base directory, create new temp file
-            self._temp_filepath_stack.append(self._write_temp(temp_dir))
+            self._temp_filepath_stack.append(self._write_new_temp(temp_dir))
 
         elif not self._temp_filepath_stack:
             # write new temp file to platform specific temp directory
-            self._temp_filepath_stack.append(self._write_temp(None))
+            self._temp_filepath_stack.append(self._write_new_temp(None))
 
         # return last written temp file.
         return self._temp_filepath_stack[-1]
@@ -181,12 +200,13 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
 
     def uuid(self):
         """
-        UUID for this data element. This many take different forms from integers
-        to strings to a uuid.UUID instance. This must return a hashable data
-        type.
+        UUID for this data element.
 
-        By default, this ends up being the stringification of the SHA1 hash of
-        this data's bytes. Specific implementations may provide other UUIDs,
+        This many take different forms from integers to strings to a uuid.UUID
+        instance. This must return a hashable data type.
+
+        By default, this ends up being the hex stringification of the SHA1 hash
+        of this data's bytes. Specific implementations may provide other UUIDs,
         however.
 
         :return: UUID value for this data element. This return value should be
@@ -194,7 +214,29 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :rtype: collections.Hashable
 
         """
+        # TODO{paul.tunison): Change to SHA512.
         return self.sha1()
+
+    def to_buffered_reader(self):
+        """
+        Wrap this element's bytes in a ``io.BufferedReader`` instance for use as
+        file-like object for reading.
+
+        As we use the ``get_bytes`` function, this element's bytes must safely
+        fit in memory for this method to be usable.
+
+        :return: New BufferedReader instance
+        :rtype: io.BufferedReader
+
+        """
+        return io.BufferedReader(io.BytesIO(self.get_bytes()))
+
+    def is_read_only(self):
+        """
+        :return: If this element can only be read from.
+        :rtype: bool
+        """
+        return not self.writable()
 
     ###
     # Abstract methods
@@ -209,11 +251,54 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         """
 
     @abc.abstractmethod
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        The intend of this method is to quickly check if there is any data
+        behind this element, ideally without having to read all/any of the
+        underlying data.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+
+    @abc.abstractmethod
     def get_bytes(self):
         """
-        :return: Get the byte stream for this data element.
+        :return: Get the bytes for this data element.
         :rtype: bytes
         """
+
+    @abc.abstractmethod
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+
+    @abc.abstractmethod
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element.
+
+        Not all implementations may support setting bytes (check ``writable``
+        method return).
+
+        This base abstract method should be called by sub-class implementations
+        first. We check for mutability based on ``writable()`` method return and
+        invalidate checksum caches.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        if not self.writable():
+            raise ReadOnlyError("This %s element is read only." % self)
 
 
 def get_data_element_impls(reload_modules=False):
@@ -281,14 +366,14 @@ def from_uri(uri, impl_generator=get_data_element_impls):
     log.debug("Trying to parse URI: '%s'", uri)
 
     #: :type: __generator[DataElement]
-    de_type_iter = impl_generator().itervalues()
+    de_type_iter = six.itervalues(impl_generator())
     inst = None
     for de_type in de_type_iter:
         try:
             inst = de_type.from_uri(uri)
         except NotImplementedError:
             pass
-        except InvalidUriError, ex:
+        except InvalidUriError as ex:
             log.debug("Implementation '%s' failed to parse URI: %s",
                       de_type.__name__, ex.reason)
         if inst is not None:

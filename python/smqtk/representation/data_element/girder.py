@@ -1,5 +1,6 @@
 import requests
 
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DataElement
 from smqtk.utils.girder import GirderTokenManager
 from smqtk.utils.url import url_join
@@ -19,12 +20,20 @@ class GirderDataElement (DataElement):
     @classmethod
     def is_usable(cls):
         """
-        Usable if we were able to import girder_client
-        :return:
-        :rtype:
+        :return: If this element type is usable
+        :rtype: bool
         """
         # Requests module is a basic requirement
+        # URLs are not necessarily on the public internet.
         return True
+
+    # TODO: from_uri
+    #       - adapt http format for username/password specification
+    #           (i.e. girder://<user>:<pass>@<url...>
+    #       - maybe optionally allow API key in place of user/pass spec
+    #           (i.e. girder://<api_key>@<url...>
+    #       - <url> in above I guess would be the api/v1/... URL, including any
+    #           parameters needed
 
     def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
                  api_key=None):
@@ -59,11 +68,17 @@ class GirderDataElement (DataElement):
         # calls.
         self._content_type = None
 
+    def __repr__(self):
+        return super(GirderDataElement, self).__repr__() + \
+            "{id: %s, api_root: %s, api_key: %s}" % (
+                self.file_id, self.api_root, self.token_manager.api_key
+            )
+
     def get_config(self):
         return {
             'file_id': self.file_id,
             'api_root': self.api_root,
-            'api_key': self.token_manager._api_key,
+            'api_key': self.token_manager.api_key,
         }
 
     def content_type(self):
@@ -78,13 +93,50 @@ class GirderDataElement (DataElement):
             self._content_type = r.json()['mimeType']
         return self._content_type
 
+    def get_file_model(self):
+        """
+        Get the file model json from the server.
+
+        Returns None if the file does not exist on the server.
+
+        :return: file model model as a dictionary
+        :rtype: dict | None
+
+        """
+        r = requests.get(url_join(self.api_root, 'file', self.file_id),
+                         headers=self.token_manager.get_requests_header())
+        if r.status_code == 400:
+            return None
+        # Exception for any other status
+        r.raise_for_status()
+        return r.json()
+
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        This plugin checks that we can get a file model return from girder and
+        that the size of the file queried is non-zero.
+
+        :return: If there is a model for our item or if our item contains 0
+            bytes.
+        :rtype: bool
+
+        """
+        m = self.get_file_model()
+        return m is None or m['size'] == 0
+
     def get_bytes(self):
         """
+        Get the bytes of the file stored in girder.
+
         :return: Get the byte stream for this data element.
         :rtype: bytes
 
         :raises AssertionError: Content received not the expected length in
             bytes (header field vs. content length).
+        :raises requests.HTTPError: If the ID does not refer to a file in
+            Girder.
         """
         # Check if token has expired, if so get new one
         # Download file bytes from girder
@@ -101,3 +153,28 @@ class GirderDataElement (DataElement):
             "Content received no the expected length: %d != %d (expected)" \
             % (len(content), expected_length)
         return content
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        # Current do not support writing to girder elements
+        # TODO: Implement using PUT file/{id} endpoint if the file exists
+        return False
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        raise ReadOnlyError("Cannot write to Girder data elements.")

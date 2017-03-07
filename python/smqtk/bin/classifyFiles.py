@@ -4,10 +4,14 @@ files, whose descriptor is computed by the configured descriptor generator.
 Input files that classify as the given label are then output to standard out.
 Thus, this script acts like a filter.
 """
+from __future__ import print_function
+
 import glob
 import json
 import logging
 import os
+
+import six
 
 from smqtk.algorithms import get_classifier_impls
 from smqtk.algorithms import get_descriptor_generator_impls
@@ -22,9 +26,6 @@ from smqtk.utils.bin_utils import (
     output_config,
     basic_cli_parser,
 )
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 def get_cli_parser():
@@ -161,10 +162,10 @@ def classify_files(config, label, file_globs):
 
     log.info("Printing input file paths that classified as the given label.")
     # map of UUID to filepath:
-    uuid2c = dict((c.uuid, c) for c in classification_map.itervalues())
+    uuid2c = dict((c.uuid, c) for c in six.itervalues(classification_map))
     for data in data_elements:
         if uuid2c[data.uuid()].max_label() == label:
-            print uuid2filepath[data.uuid()]
+            print(uuid2filepath[data.uuid()])
 
 
 if __name__ == '__main__':

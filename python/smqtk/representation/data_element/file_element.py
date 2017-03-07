@@ -2,31 +2,14 @@ import mimetypes
 import os.path as osp
 import re
 
-from smqtk.exceptions import InvalidUriError
+import six
+
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
-
-try:
-    import magic
-    # We know there are multiple modules named magic. Make sure the function we
-    # expect is there.
-    # noinspection PyStatementEffect
-    magic.detect_from_filename
-except (ImportError, AttributeError):
-    magic = None
-
-try:
-    from tika import detector as tika_detector
-except ImportError:
-    tika_detector = None
+from smqtk.utils.file_utils import safe_file_write
 
 
-# Fix global MIMETYPE map.
-# Default map maps "image/jpeg" with some rarely used extensions before the
-# common ones. We remove them here so we don't encounter them.
-if '.jfif' in mimetypes.types_map:
-    del mimetypes.types_map['.jfif']
-if '.jpe' in mimetypes.types_map:
-    del mimetypes.types_map['.jpe']
+STR_NONE_TYPES = six.string_types + (type(None),)
 
 
 class DataFileElement (DataElement):
@@ -55,6 +38,11 @@ class DataFileElement (DataElement):
         the leading slash. This means it will look like there are 3 slashes
         after the "file:", for example: "file:///home/me/somefile.txt".
 
+        If this is given a URI with what looks like another URI header (e.g.
+        "base64://..."), we thrown an InvalidUriError. This ends up being due to
+        the `//` component, which we treat as an invalid path, not because of
+        any special parsing.
+
         :param uri: URI string to resolve into an element instance
         :type uri: str
 
@@ -82,45 +70,57 @@ class DataFileElement (DataElement):
 
         return DataFileElement(path)
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, readonly=False, explicit_mimetype=None):
         """
         Create a new FileElement.
+
+        File the given ``filepath`` refers to may not exist yet.
 
         :param filepath: Path to the file to wrap.  If relative, it is
             interpreted as relative to the current working directory.
         :type filepath: str
 
+        :param readonly: If this element should allow writing or not.
+        :type readonly: bool
+
+        :param explicit_mimetype: Specific mimetype string to use for this
+            element. If this is None (default), we try to infer mimetype from
+            ``filepath`` extension using the python ``mimetype`` module.
+        :type explicit_mimetype: None | str
+
         """
         super(DataFileElement, self).__init__()
+
+        assert isinstance(filepath, six.string_types), \
+            "File path must be a string."
+        assert isinstance(explicit_mimetype, STR_NONE_TYPES), \
+            "Explicit mimetype must either be a string or None."
 
         # Just expand a user-home `~` if present, keep relative if that's what
         # was given.
         self._filepath = osp.expanduser(filepath)
+        self._readonly = bool(readonly)
+        self._explicit_mimetype = explicit_mimetype
 
-        self._content_type = None
-        if magic and osp.isfile(filepath):
-            d = magic.detect_from_filename(filepath)
-            self._content_type = d.mime_type
-        elif tika_detector:
-            try:
-                self._content_type = tika_detector.from_file(filepath)
-            except IOError, ex:
-                self._log.warn("Failed tika.detector.from_file content type "
-                               "detection (error: %s), falling back to file "
-                               "extension",
-                               str(ex))
-        # If no tika detector or it failed for some reason
+        self._content_type = explicit_mimetype
         if not self._content_type:
             self._content_type = mimetypes.guess_type(filepath)[0]
 
     def __repr__(self):
         return super(DataFileElement, self).__repr__() + \
-            "{filepath: %s}" % self._filepath
+            "{filepath: %s, readonly: %s, explicit_mimetype: %s}" \
+            % (self._filepath, self._readonly, self._explicit_mimetype)
 
     def get_config(self):
         return {
-            "filepath": self._filepath
+            "filepath": self._filepath,
+            "readonly": self._readonly,
+            "explicit_mimetype": self._explicit_mimetype,
         }
+
+    #
+    # Implemented abstract methods
+    #
 
     def content_type(self):
         """
@@ -130,12 +130,51 @@ class DataFileElement (DataElement):
         """
         return self._content_type
 
+    def is_empty(self):
+        """
+        Check if this element contains no bytes.
+
+        This plugin checks if the file on disk is greater than 0 in size.
+
+        :return: If this element contains 0 bytes.
+        :rtype: bool
+
+        """
+        return not osp.exists(self._filepath) or \
+            osp.getsize(self._filepath) == 0
+
     def get_bytes(self):
         """
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
         return open(self._filepath, 'rb').read()
+
+    def writable(self):
+        """
+        :return: if this instance supports setting bytes.
+        :rtype: bool
+        """
+        return not self._readonly
+
+    def set_bytes(self, b):
+        """
+        Set bytes to this data element in the form of a string.
+
+        Not all implementations may support setting bytes (writing). See the
+        ``writable`` method.
+
+        :param b: bytes to set.
+        :type b: str
+
+        :raises ReadOnlyError: This data element can only be read from / does
+            not support writing.
+
+        """
+        if not self._readonly:
+            safe_file_write(self._filepath, b)
+        else:
+            raise ReadOnlyError("This file element is read only.")
 
     def write_temp(self, temp_dir=None):
         """

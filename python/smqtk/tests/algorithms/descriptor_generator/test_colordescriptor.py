@@ -3,16 +3,18 @@ import unittest
 import mock
 import nose.tools as ntools
 
-from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor import (
-    ColorDescriptor_Image_csift  # arbitrary leaf class
-)
-
-__author__ = "paul.tunison@kitware.com"
+from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor \
+    import ColorDescriptor_Image_csift  # arbitrary leaf class
 
 
 if ColorDescriptor_Image_csift.is_usable():
 
     class TestColorDescriptor (unittest.TestCase):
+
+        def test_impl_findable(self):
+            ntools.assert_in(ColorDescriptor_Image_csift.__name__,
+                             get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator'
                     '.colordescriptor.colordescriptor'

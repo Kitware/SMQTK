@@ -1,9 +1,11 @@
+from __future__ import print_function
+
 import mock
 import nose.tools as ntools
 import os
 import unittest
 
-from smqtk.exceptions import InvalidUriError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
@@ -25,6 +27,11 @@ class TestDataFileElement (unittest.TestCase):
     def test_content_type(self):
         d = DataFileElement('foo.txt')
         ntools.assert_equal(d.content_type(), 'text/plain')
+
+    def test_content_type_explicit_type(self):
+        ex_type = 'image/png'
+        d = DataFileElement('foo.txt', explicit_mimetype=ex_type)
+        ntools.assert_equal(d.content_type(), ex_type)
 
     @mock.patch('smqtk.representation.data_element.DataElement.write_temp')
     def test_writeTempOverride(self, mock_DataElement_wt):
@@ -92,7 +99,8 @@ class TestDataFileElement (unittest.TestCase):
         fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
         default_config = DataFileElement.get_default_config()
         ntools.assert_equal(default_config,
-                            {'filepath': None})
+                            {'filepath': None, 'readonly': False,
+                             'explicit_mimetype': None})
 
         default_config['filepath'] = fp
         inst1 = DataFileElement.from_config(default_config)
@@ -103,7 +111,19 @@ class TestDataFileElement (unittest.TestCase):
 
     def test_repr(self):
         e = DataFileElement('foo')
-        ntools.assert_equal(repr(e), "DataFileElement{filepath: foo}")
+        ntools.assert_equal(repr(e),
+                            "DataFileElement{filepath: foo, readonly: False, "
+                            "explicit_mimetype: None}")
+
+        e = DataFileElement('bar', readonly=True)
+        ntools.assert_equal(repr(e),
+                            "DataFileElement{filepath: bar, readonly: True, "
+                            "explicit_mimetype: None}")
+
+        e = DataFileElement('baz', readonly=True, explicit_mimetype='some/type')
+        ntools.assert_equal(repr(e),
+                            "DataFileElement{filepath: baz, readonly: True, "
+                            "explicit_mimetype: some/type}")
 
     def test_from_uri_invalid_uri_empty(self):
         # Given empty string
@@ -158,7 +178,7 @@ class TestDataFileElement (unittest.TestCase):
     def test_from_uri(self):
         # will be absolute path
         test_file_path = os.path.join(TEST_DATA_DIR, "test_file.dat")
-        print "Test file path:", test_file_path
+        print("Test file path:", test_file_path)
 
         e = DataFileElement.from_uri(test_file_path)
         ntools.assert_is_instance(e, DataFileElement)
@@ -174,7 +194,7 @@ class TestDataFileElement (unittest.TestCase):
     def test_from_uri_plugin_level(self):
         # will be absolute path
         test_file_path = os.path.join(TEST_DATA_DIR, "test_file.dat")
-        print "Test file path:", test_file_path
+        print("Test file path:", test_file_path)
 
         e = from_uri(test_file_path)
         ntools.assert_is_instance(e, DataFileElement)
@@ -185,3 +205,52 @@ class TestDataFileElement (unittest.TestCase):
         ntools.assert_is_instance(e, DataFileElement)
         ntools.assert_equal(e._filepath, test_file_path)
         ntools.assert_equal(e.get_bytes(), '')
+
+    def test_is_empty_file_not_exists(self):
+        e = DataFileElement('/no/exists')
+        ntools.assert_true(e.is_empty())
+
+    def test_is_empty_file_zero_data(self):
+        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
+        ntools.assert_true(e.is_empty())
+
+    def test_is_empty_file_has_data(self):
+        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'Lenna.png'))
+        ntools.assert_false(e.is_empty())
+
+    def test_writable_readonly_false(self):
+        e = DataFileElement('foo')
+        ntools.assert_true(e.writable())
+
+        e = DataFileElement('foo', False)
+        ntools.assert_true(e.writable())
+
+        e = DataFileElement('foo', readonly=False)
+        ntools.assert_true(e.writable())
+
+    def test_writable_readonly_true(self):
+        e = DataFileElement('foo', True)
+        ntools.assert_false(e.writable())
+
+        e = DataFileElement('foo', readonly=True)
+        ntools.assert_false(e.writable())
+
+    @mock.patch('smqtk.representation.data_element.file_element.safe_file_write')
+    def test_set_bytes_writable(self, m_sfw):
+        # Using a relative filepath
+        test_path = 'foo'
+        test_bytes = 'test string of bytes'
+
+        e = DataFileElement(test_path)
+        e.set_bytes(test_bytes)
+
+        # File write function should be called
+        m_sfw.assert_called_once_with(test_path, test_bytes)
+
+    def test_set_bytes_readonly(self):
+        e = DataFileElement('foo', readonly=True)
+        ntools.assert_raises(
+            ReadOnlyError,
+            e.set_bytes,
+            'some bytes'
+        )

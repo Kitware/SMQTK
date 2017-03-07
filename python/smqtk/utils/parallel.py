@@ -14,9 +14,6 @@ import traceback
 from smqtk.utils import SmqtkObject
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 def parallel_map(work_func, *sequences, **kwargs):
     """
     Generalized local parallelization helper for executing embarrassingly
@@ -114,6 +111,10 @@ def parallel_map(work_func, *sequences, **kwargs):
             - type: str
             - default: None
     :type kwargs: dict
+
+    :return: A new parallel results iterator that starts work on the input
+        iterable when iterated.
+    :rtype: ParallelResultsIterator
 
     """
     # kwargs

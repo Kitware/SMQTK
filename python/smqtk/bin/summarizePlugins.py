@@ -2,6 +2,8 @@
 Print out information about what plugins are currently usable and the
 documentation headers for each implementation.
 """
+from __future__ import print_function
+
 import argparse
 import json
 import logging
@@ -57,103 +59,64 @@ def main():
     # List of plugin_info keys in order they were added
     plugin_type_list = []
 
+    def collect_plugins(type_name, impl_getter_fn):
+        log.info("Checking %s plugins", type_name)
+        plugin_type_list.append(type_name)
+        impl_map = impl_getter_fn()
+        plugin_info[plugin_type_list[-1]] = impl_map
+        collect_configs(type_name, impl_map)
+
     #
     # smqtk.representation
     #
-    log.info("Checking DataElement plugins")
-    plugin_type_list.append("DataElement")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.representation.get_data_element_impls()
-    collect_configs('DataElement',
-                    smqtk.representation.get_data_element_impls())
-
-    log.info("Checking DataSet plugins")
-    plugin_type_list.append("DataSet")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.representation.get_data_set_impls()
-    collect_configs('DataSet',
-                    smqtk.representation.get_data_set_impls())
-
-    log.info("Checking DescriptorElement plugins")
-    plugin_type_list.append("DescriptorElement")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.representation.get_descriptor_element_impls()
-    collect_configs('DescriptorElement',
-                    smqtk.representation.get_descriptor_element_impls())
-
-    log.info("Checking DescriptorIndex plugins")
-    plugin_type_list.append("DescriptorIndex")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.representation.get_descriptor_index_impls()
-    collect_configs('DescriptorIndex',
-                    smqtk.representation.get_descriptor_index_impls())
+    collect_plugins('DataElement',
+                    smqtk.representation.get_data_element_impls)
+    collect_plugins('DataSet',
+                    smqtk.representation.get_data_set_impls)
+    collect_plugins('DescriptorElement',
+                    smqtk.representation.get_descriptor_element_impls)
+    collect_plugins('DescriptorIndex',
+                    smqtk.representation.get_descriptor_index_impls)
+    collect_plugins('KeyValueStore',
+                    smqtk.representation.get_key_value_store_impls)
 
     #
     # smqtk.algorithms
     #
-    log.info("Checking Classifier plugins")
-    plugin_type_list.append('Classifier')
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.get_classifier_impls()
-    collect_configs('Classifier',
-                    smqtk.algorithms.get_classifier_impls())
-
-    log.info("Checking DescriptorGenerator plugins")
-    plugin_type_list.append("DescriptorGenerator")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.get_descriptor_generator_impls()
-    collect_configs('DescriptorGenerator',
-                    smqtk.algorithms.get_descriptor_generator_impls())
-
-    log.info("Checking HashIndex plugins")
-    plugin_type_list.append("HashIndex")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.nn_index.hash_index.get_hash_index_impls()
-    collect_configs('HashIndex',
-                    smqtk.algorithms.nn_index.hash_index.get_hash_index_impls())
-
-    log.info("Checking LshFunctor plugins")
-    plugin_type_list.append("LshFunctor")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.nn_index.lsh.functors.get_lsh_functor_impls()
-    collect_configs('LshFunctor',
-                    smqtk.algorithms.nn_index.lsh.functors
-                         .get_lsh_functor_impls())
-
-    log.info("Checking NearestNeighborIndex plugins")
-    plugin_type_list.append("NearestNeighborIndex")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.get_nn_index_impls()
-    collect_configs('NearestNeighborIndex',
-                    smqtk.algorithms.get_nn_index_impls())
-
-    log.info("Checking RelevancyIndex plugins")
-    plugin_type_list.append("RelevancyIndex")
-    plugin_info[plugin_type_list[-1]] = \
-        smqtk.algorithms.get_relevancy_index_impls()
-    collect_configs('RelevancyIndex',
-                    smqtk.algorithms.get_relevancy_index_impls())
+    collect_plugins('Classifier',
+                    smqtk.algorithms.get_classifier_impls)
+    collect_plugins('DescriptorGenerator',
+                    smqtk.algorithms.get_descriptor_generator_impls)
+    collect_plugins('HashIndex',
+                    smqtk.algorithms.get_hash_index_impls)
+    collect_plugins('LshFunctor',
+                    smqtk.algorithms.get_lsh_functor_impls)
+    collect_plugins('NearestNeighborIndex',
+                    smqtk.algorithms.get_nn_index_impls)
+    collect_plugins('RelevancyIndex',
+                    smqtk.algorithms.get_relevancy_index_impls)
 
     #
     # Print-out
     #
-    print
-    print
+    print()
+    print()
     for k in plugin_type_list:
-        print "[Type]", k
-        print '='*(7+len(k))
-        print
+        print("[Type]", k)
+        print('=' * (7 + len(k)))
+        print()
         for l, t in plugin_info[k].items():
-            print ":: "+l
+            print(":: " + l)
             if t.__doc__:
-                print t.__doc__.rstrip()
-                print
-        print
-        print
+                print(t.__doc__.rstrip())
+                print()
+        print()
+        print()
 
     if collect_defaults:
         with open(collect_defaults, 'w') as f:
-            json.dump(defaults, f, indent=4, sort_keys=True)
+            json.dump(defaults, f, indent=4, sort_keys=True,
+                      separators=(',', ': '))
         log.info("Wrote default configuration dictionaries to: %s",
                  collect_defaults)
 

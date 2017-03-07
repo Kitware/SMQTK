@@ -8,17 +8,19 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
+import six
+# noinspection PyUnresolvedReferences
+from six.moves import range
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
-
+from smqtk.representation.data_element import from_uri
 from smqtk.utils.bin_utils import report_progress
-
 
 try:
     import caffe
-except ImportError, ex:
+except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import caffe module: %s",
                                         str(ex))
     caffe = None
@@ -44,8 +46,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
-    def __init__(self, network_prototxt_filepath, network_model_filepath,
-                 image_mean_filepath,
+    def __init__(self, network_prototxt_uri, network_model_uri, image_mean_uri,
                  return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
@@ -54,18 +55,17 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Create a Caffe CNN descriptor generator
 
-        :param network_prototxt_filepath: Path to the text file defining the
+        :param network_prototxt_uri: URI to the text file defining the
             network layout.
-        :type network_prototxt_filepath: str
+        :type network_prototxt_uri: str
 
-        :param network_model_filepath: The path to the trained ``.caffemodel``
+        :param network_model_uri: URI to the trained ``.caffemodel``
             file to use.
-        :type network_model_filepath: str
+        :type network_model_uri: str
 
-        :param image_mean_filepath: Path to the image mean ``.binaryproto``
-            file, a ``.npy`` file, or a file-like object that could otherwise be
-            passed to ``numpy.load``
-        :type image_mean_filepath: str | file | StringIO.StringIO
+        :param image_mean_uri: URI to the image mean ``.binaryproto`` or
+            ``.npy`` file.
+        :type image_mean_uri: str | file | StringIO.StringIO
 
         :param return_layer: The label of the layer we take data from to compose
             output descriptor vector.
@@ -111,9 +111,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
-        self.network_prototxt_filepath = str(network_prototxt_filepath)
-        self.network_model_filepath = str(network_model_filepath)
-        self.image_mean_filepath = image_mean_filepath
+        self.network_prototxt_uri = str(network_prototxt_uri)
+        self.network_model_uri = str(network_model_uri)
+        self.image_mean_uri = image_mean_uri
 
         self.return_layer = str(return_layer)
         self.batch_size = int(batch_size)
@@ -146,6 +146,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         return self.get_config()
 
     def __setstate__(self, state):
+        # This works because configuration parameters exactly match up with
+        # instance attributes.
         self.__dict__.update(state)
         self._setup_network()
 
@@ -164,9 +166,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # Questions:
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
-        self.network = caffe.Net(self.network_prototxt_filepath,
-                                 self.network_model_filepath,
+        network_prototxt_element = from_uri(self.network_prototxt_uri)
+        network_model_element = from_uri(self.network_model_uri)
+        self._log.debug("Loading Caffe network from network/model configs")
+        self.network = caffe.Net(network_prototxt_element.write_temp(),
+                                 network_model_element.write_temp(),
                                  caffe.TEST)
+        network_prototxt_element.clean_temp()
+        network_model_element.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape
         self.net_data_shape = self.network.blobs[self.data_layer].data.shape
         self._log.debug("Network data shape: %s", self.net_data_shape)
@@ -180,22 +187,29 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                         self.transformer.inputs)
 
         self._log.debug("Loading image mean")
+        image_mean_elem = from_uri(self.image_mean_uri)
+        image_mean_bytes = image_mean_elem.get_bytes()
         try:
-            a = numpy.load(self.image_mean_filepath)
+            a = numpy.load(io.BytesIO(image_mean_bytes))
+            self._log.info("Loaded image mean from numpy bytes")
         except IOError:
             self._log.debug("Image mean file not a numpy array, assuming "
-                            "protobuf binary.")
+                            "URI to protobuf binary.")
+            # noinspection PyUnresolvedReferences
             blob = caffe.proto.caffe_pb2.BlobProto()
-            with open(self.image_mean_filepath, 'rb') as f:
-                blob.ParseFromString(f.read())
+            blob.ParseFromString(image_mean_bytes)
             a = numpy.array(caffe.io.blobproto_to_array(blob))
             assert a.shape[0] == 1, \
                 "Input image mean blob protobuf consisted of more than one " \
                 "image. Not sure how to handle this yet."
             a = a.reshape(a.shape[1:])
+            self._log.info("Loaded image mean from protobuf bytes")
         assert a.shape[0] in [1, 3], \
             "Currently asserting that we either get 1 or 3 channel images. " \
             "Got a %d channel image." % a[0]
+        # TODO: Instead of always using pixel mean, try to use image-mean if
+        #       given. Might have to rescale if image/data layer shape is
+        #       different.
         a_mean = a.mean(1).mean(1)
         self._log.debug("Initializing data transformer -- mean")
         self.transformer.set_mean(self.data_layer, a_mean)
@@ -224,9 +238,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         """
         return {
-            "network_prototxt_filepath": self.network_prototxt_filepath,
-            "network_model_filepath": self.network_model_filepath,
-            "image_mean_filepath": self.image_mean_filepath,
+            "network_prototxt_uri": self.network_prototxt_uri,
+            "network_model_uri": self.network_model_uri,
+            "image_mean_uri": self.image_mean_uri,
             "return_layer": self.return_layer,
             "batch_size": self.batch_size,
             "use_gpu": self.use_gpu,
@@ -235,6 +249,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             "data_layer": self.data_layer,
             "load_truncated_images": self.load_truncated_images,
             "pixel_rescale": self.pixel_rescale,
+            "input_scale": self.input_scale,
         }
 
     def valid_content_types(self):
@@ -257,10 +272,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
                            overwrite=False):
         """
-        Given some kind of data, return a descriptor element containing a
-        descriptor vector.
-
-        This abstract super method should be invoked for common error checking.
+        Given some data, return a descriptor element containing a descriptor
+        vector.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
         :raises ValueError: Given data element content was not of a valid type
@@ -270,8 +283,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type data: smqtk.representation.DataElement
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. In-Memory descriptor factory by
-            default.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -289,7 +302,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         m = self.compute_descriptor_async([data], descr_factory, overwrite,
                                           procs=1)
-        return m[data]
+        return m[data.uuid()]
 
     def compute_descriptor_async(self, data_iter,
                                  descr_factory=DFLT_DESCRIPTOR_FACTORY,
@@ -303,8 +316,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :type data_iter: collections.Iterable[smqtk.representation.DataElement]
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instances. In-Memory descriptor factory by
-            default.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -318,16 +331,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :param procs: Optional specification of how many processors to use
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
-        :type procs: int
+        :type procs: int | None
 
         :raises ValueError: An input DataElement was of a content type that we
             cannot handle.
 
-        :return: Mapping of input DataElement instances to the computed
-            descriptor element.
-            DescriptorElement UUID's are congruent with the UUID of the data
-            element it is the descriptor of.
-        :rtype: dict[smqtk.representation.DataElement,
+        :return: Mapping of input DataElement UUIDs to the computed descriptor
+            element for that data. DescriptorElement UUID's are congruent with
+            the UUID of the data element it is the descriptor of.
+        :rtype: dict[collections.Hashable,
                      smqtk.representation.DescriptorElement]
 
         """
@@ -339,13 +351,16 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
         prog_rep_state = [0] * 7
-        for d in data_iter:
-            ct = d.content_type()
+        for data in data_iter:
+            ct = data.content_type()
             if ct not in self.valid_content_types():
-                raise ValueError("Cannot compute descriptor of content type "
-                                 "'%s', (DE: %s" % (ct, d))
-            data_elements[d.uuid()] = d
-            descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
+                self._log.error("Cannot compute descriptor from content type "
+                                "'%s' data: %s)" % (ct, data))
+                raise ValueError("Cannot compute descriptor from content type "
+                                 "'%s' data: %s)" % (ct, data))
+            data_elements[data.uuid()] = data
+            descr_elements[data.uuid()] = \
+                descr_factory.new_descriptor(self.name, data.uuid())
             report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
@@ -358,14 +373,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # For thread safely, only use .append() and .popleft() (queue)
         uuid4proc = deque()
 
-        def check_get_uuid(d):
-            if overwrite or not d.has_vector():
+        def check_get_uuid(descriptor_elem):
+            if overwrite or not descriptor_elem.has_vector():
                 # noinspection PyUnresolvedReferences
-                uuid4proc.append(d.uuid())
+                uuid4proc.append(descriptor_elem.uuid())
 
+        # Using thread-pool due to in-line function + updating local deque
         p = multiprocessing.pool.ThreadPool(procs)
         try:
-            p.map(check_get_uuid, descr_elements.itervalues())
+            p.map(check_get_uuid, six.itervalues(descr_elements))
         finally:
             p.close()
             p.join()
@@ -387,11 +403,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                 self._log.debug("Processing tail group of size %d", tail_size)
 
             if batch_groups:
-                for g in xrange(batch_groups):
+                for g in range(batch_groups):
                     self._log.debug("Starting batch: %d of %d",
                                     g + 1, batch_groups)
                     batch_uuids = \
-                        uuid4proc[g*self.batch_size:(g+1)*self.batch_size]
+                        uuid4proc[g * self.batch_size:(g + 1) * self.batch_size]
                     self._process_batch(batch_uuids, data_elements,
                                         descr_elements, procs)
 
@@ -403,7 +419,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                                     procs)
 
         self._log.debug("forming output dict")
-        return dict((data_elements[k], descr_elements[k])
+        return dict((data_elements[k].uuid(), descr_elements[k])
                     for k in data_elements)
 
     def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
@@ -456,10 +472,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Moving network forward")
         self.network.forward()
+        descriptor_list = self.network.blobs[self.return_layer].data
 
         self._log.debug("extracting return layer '%s' into descriptors",
                         self.return_layer)
-        for uid, v in zip(uuids4proc, self.network.blobs[self.return_layer].data):
+        for uid, v in zip(uuids4proc, descriptor_list):
             if v.ndim > 1:
                 # In case caffe generates multidimensional array (rows, 1, 1)
                 descr_elements[uid].set_vector(numpy.ravel(v))

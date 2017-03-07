@@ -1,3 +1,8 @@
+"""
+Tests for high level ``from_uri`` function, separate from the
+``DataElement.from_uri`` class method.
+"""
+
 import nose.tools
 import unittest
 
@@ -11,14 +16,26 @@ class UnresolvableElement (smqtk.representation.data_element.DataElement):
     def is_usable(cls):
         return True
 
+    def __repr__(self):
+        return super(UnresolvableElement, self).__repr__()
+
     def get_config(self):
         return {}
 
     def content_type(self):
         return None
 
+    def is_empty(self):
+        pass
+
     def get_bytes(self):
         return bytes()
+
+    def set_bytes(self, b):
+        pass
+
+    def writable(self):
+        pass
 
 
 class ResolvableElement (smqtk.representation.data_element.DataElement):
@@ -36,14 +53,26 @@ class ResolvableElement (smqtk.representation.data_element.DataElement):
     def is_usable(cls):
         return True
 
+    def __repr__(self):
+        return super(ResolvableElement, self).__repr__()
+
     def get_config(self):
         return {}
 
     def content_type(self):
         return None
 
+    def is_empty(self):
+        pass
+
     def get_bytes(self):
         return bytes()
+
+    def set_bytes(self, b):
+        pass
+
+    def writable(self):
+        pass
 
 
 class TestDataElementHighLevelFromUri (unittest.TestCase):

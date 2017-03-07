@@ -393,20 +393,20 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                     batch_uuids = \
                         uuid4proc[g*self.batch_size:(g+1)*self.batch_size]
                     self._process_batch(batch_uuids, data_elements,
-                                        descr_elements, procs)
+                                        descr_elements, procs, kwds.get('use_mp', True))
 
             if tail_size:
                 batch_uuids = uuid4proc[-tail_size:]
                 self._log.debug("Starting tail batch (size=%d)",
                                 len(batch_uuids))
                 self._process_batch(batch_uuids, data_elements, descr_elements,
-                                    procs)
+                                    procs, kwds.get('use_mp', True))
 
         self._log.debug("forming output dict")
         return dict((data_elements[k], descr_elements[k])
                     for k in data_elements)
 
-    def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
+    def _process_batch(self, uuids4proc, data_elements, descr_elements, procs, use_mp):
         """
         Run a number of data elements through the network, based on the number
         of UUIDs given, returning the vectors of
@@ -428,6 +428,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             images. This may be None to just use all available cores.
         :type procs: None | int
 
+        :param use_mp: Whether or not to use a multiprocessing pool or a thread pool.
+        :type use_mp: bool
+
         """
         self._log.debug("Updating network data layer shape (%d images)",
                         len(uuids4proc))
@@ -436,7 +439,13 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        p = multiprocessing.Pool(procs)
+        use_mp = kwds.get('use_mp', True)
+
+        if use_mp:
+            p = multiprocessing.Pool(procs)
+        else:
+            p = multiprocessing.pool.ThreadPool(procs)
+
         img_arrays = p.map(
             _process_load_img_array,
             zip(

@@ -60,7 +60,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         super(DataElement, self).__init__()
         self._temp_filepath_stack = []
 
-    # Because we can't generally external data immutability.
+    # Because we can't generally guarantee external data immutability.
     __hash__ = None
 
     def __del__(self):

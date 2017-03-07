@@ -1,7 +1,7 @@
 from urlparse import urlparse
 import requests
 
-from smqtk.exceptions import ReadOnlyError
+from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 from smqtk.utils.girder import GirderTokenManager
 from smqtk.utils.url import url_join
@@ -55,8 +55,8 @@ class GirderDataElement (DataElement):
         URL should end in /file/{id}.
 
         :param uri: A URI of the form
-        girder(s)://<user>:<pass>@<host>:<port>/api/<version>/file/<file_id> or
-        girder://<user>:<pass>@file:<file_id>.
+            girder(s)://<user>:<pass>@<host>:<port>/api/<version>/file/<file_id>
+            or girder://<user>:<pass>@file:<file_id>.
         :type uri: str
 
         :return: Data element created from ``uri``
@@ -65,16 +65,18 @@ class GirderDataElement (DataElement):
         :raises ValueError: An invalid URI was passed.
 
         :raises AssertionError: If the path parsed from a URI of the form (a)
-        does not have '/file/' as its penultimate location before the
-        identifier.
+            does not have '/file/' as its penultimate location before the
+            identifier.
+
         """
         api_root = None
         # urlparse seems to not be phased by the 'girder' protocol instead of
         # http, so no replacing needs to be done.
         parsed_uri = urlparse(uri)
         if not parsed_uri.scheme.startswith('girder'):
-            raise ValueError('Invalid Girder URI. Girder URIs must start with '
-                             'girder:// or girders://')
+            raise InvalidUriError(uri,
+                                  'Invalid Girder URI. Girder URIs must start '
+                                  'with girder:// or girders://')
 
         # For the API root to be valid, the URI must have a netloc
         # and the ``path`` must start with '/api'. This clause deals with
@@ -106,7 +108,8 @@ class GirderDataElement (DataElement):
         # The above are the two currently supported forms of a Girder URI in
         # SMQTK. Anything else will be considered invalid.
         else:
-            raise ValueError(
+            raise InvalidUriError(
+                uri,
                 'Invalid Girder URI. Girder URIs must be of the form: \n'
                 '* girder://<user>:<pass>@<host>:<port>/api/<version>/'
                 'file/<file_id>\n'

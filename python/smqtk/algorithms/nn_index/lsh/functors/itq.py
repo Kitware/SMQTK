@@ -84,21 +84,19 @@ class ItqFunctor (LshFunctor):
 
         data_element_impls = get_data_element_impls()
         # Mean vector cache element.
+        mean_vec_cache = None
         if config_dict['mean_vec_cache'] and \
                 config_dict['mean_vec_cache']['type']:
-            mean_vec_elem = plugin.from_plugin_config(
+            mean_vec_cache = plugin.from_plugin_config(
                 config_dict['mean_vec_cache'], data_element_impls)
-            config_dict['mean_vec_cache'] = mean_vec_elem
-        else:
-            config_dict['mean_vec_cache'] = None
+        config_dict['mean_vec_cache'] = mean_vec_cache
         # Rotation matrix cache element.
+        rotation_cache = None
         if config_dict['rotation_cache'] and \
                 config_dict['rotation_cache']['type']:
-            rotation_elem = plugin.from_plugin_config(
+            rotation_cache = plugin.from_plugin_config(
                 config_dict['rotation_cache'], data_element_impls)
-            config_dict['rotation_cache'] = rotation_elem
-        else:
-            config_dict['rotation_cache'] = None
+        config_dict['rotation_cache'] = rotation_cache
 
         return super(ItqFunctor, cls).from_config(config_dict, False)
 

@@ -39,6 +39,11 @@ class TestGirderDataElement (unittest.TestCase):
     LOCAL_APIROOT = "http://localhost:8080/api/v1"
     EXAMPLE_ITEM_ID = '5820bbeb8d777f10f26efc2f'
     EXAMPLE_GIRDER_API_ROOT = "%s/api/v1" % DATA_KITWARE_URL
+    EXAMPLE_GIRDER_FULL_URI = (
+        EXAMPLE_GIRDER_API_ROOT.replace('https', 'girders')
+        + '/file/%s' % EXAMPLE_ITEM_ID
+    )
+    EXAMPLE_GIRDER_SIMPLE_URI = "girder://file:%s" % EXAMPLE_ITEM_ID
     EXAMPLE_PTH = os.path.join(TEST_DATA_DIR, 'Lenna.png')
     EXAMPLE_SHA512 = 'ca2be093f4f25d2168a0afebe013237efce02197bcd8a87f41f' \
                      'f9177824222a1ddae1f6b4f5caf11d68f2959d13f399ea55bd6' \
@@ -101,6 +106,44 @@ class TestGirderDataElement (unittest.TestCase):
                                 {'file_id': expected_file_id,
                                  'api_root': expected_api_root,
                                  'api_key': expected_api_key})
+
+    def test_from_uri_full_url(self):
+        e = GirderDataElement.from_uri(self.EXAMPLE_GIRDER_FULL_URI)
+        nose.tools.assert_equal(e.api_root, self.EXAMPLE_GIRDER_API_ROOT)
+        nose.tools.assert_equal(e.file_id, self.EXAMPLE_ITEM_ID)
+        nose.tools.assert_equal(e.token_manager.api_key, None)
+
+    def test_from_uri_simple_uri(self):
+        e = GirderDataElement.from_uri(self.EXAMPLE_GIRDER_SIMPLE_URI)
+        nose.tools.assert_equal(e.api_root, self.LOCAL_APIROOT)
+        nose.tools.assert_equal(e.file_id, self.EXAMPLE_ITEM_ID)
+        nose.tools.assert_equal(e.token_manager.api_key, None)
+
+    def test_from_uri_bad_tag(self):
+        # Ensures we catch a bad tag in the URI, i.e., one that is neither
+        # girder nor girders.
+        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+                                 uri='a_bad_tag')
+
+    def test_from_uri_bad_uri(self):
+        # Ensures that we catch a bad URI, i.e., one that is of neither form:
+        # girder(s)://<user>:<pass>@<host>:<port>/api/v1/file/<file_id>
+        # girder://<user>:<pass>@file:<file_id>
+        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+                                 uri='girder://abcd.com')
+
+    def test_from_uri_bad_path(self):
+        # Ensures that we catch a URI that has an appropriate tag and netloc,
+        # but the path does not begin with /api, so it is an invalid girder
+        # API root.
+        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+                                 uri='girder://localhost:8080/bad/path')
+
+    def test_from_uri_no_file_in_path(self):
+        # Ensures that we catch a URI that has the URL, but doesn't have the
+        # /file/<file_id> portion of the URL.
+        nose.tools.assert_raises(AssertionError, GirderDataElement.from_uri,
+                                 uri='girders://localhost:8080/api/v1/nofile/')
 
     @mock.patch('smqtk.representation.data_element.girder.requests')
     @mock.patch('smqtk.representation.data_element.girder.GirderTokenManager')

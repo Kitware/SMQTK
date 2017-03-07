@@ -39,7 +39,14 @@
     },
     "optional_data_set": {
         "DataMemorySet": {
-            "file_cache": "cache.mds",
+            "cache_element": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "cache.mds",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
             "pickle_protocol": -1
         },
         "type": "DataMemorySet"

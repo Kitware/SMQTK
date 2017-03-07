@@ -1,3 +1,8 @@
+import random
+
+# noinspection PyUnresolvedReferences
+from six.moves import range
+
 
 def partition_string(s, segments):
     """
@@ -64,3 +69,37 @@ def partition_string(s, segments):
         i = j
 
     return r
+
+
+DEFAULT_CHAR_SET = \
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+
+def random_characters(n, char_set=DEFAULT_CHAR_SET):
+    """
+    Return ``n`` random characters from the given ``char_set``.
+
+    If ``n`` is a floating point valid, it is cast to an integer (floor).
+    The default ``char_set`` includes a-z, A-Z and 0-9.
+
+    :param n: Number of random characters to return.
+    :type n: int
+
+    :param char_set: Sequence of characters to pull from when constructing
+        random sequence.
+    :type char_set: str | unicode
+
+    :return: New string of random characters of length ``n`` from the given
+        ``char_set``.
+    :rtype: str | unicode
+
+    :raises ValueError: If ``char_set`` given is empty, or ``n`` is negative.
+
+    """
+    n = int(n)
+    if n < 0:
+        raise ValueError("n must be a positive integer.")
+    l = len(char_set)
+    if l == 0:
+        raise ValueError("Empty char_set given.")
+    return ''.join(char_set[random.randint(0, l - 1)] for _ in range(n))

@@ -5,6 +5,7 @@ import unittest
 import nose.tools
 import requests
 
+from smqtk.exceptions import InvalidUriError
 from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.tests import TEST_DATA_DIR
 from smqtk.exceptions import ReadOnlyError
@@ -122,21 +123,21 @@ class TestGirderDataElement (unittest.TestCase):
     def test_from_uri_bad_tag(self):
         # Ensures we catch a bad tag in the URI, i.e., one that is neither
         # girder nor girders.
-        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+        nose.tools.assert_raises(InvalidUriError, GirderDataElement.from_uri,
                                  uri='a_bad_tag')
 
     def test_from_uri_bad_uri(self):
         # Ensures that we catch a bad URI, i.e., one that is of neither form:
         # girder(s)://<user>:<pass>@<host>:<port>/api/v1/file/<file_id>
         # girder://<user>:<pass>@file:<file_id>
-        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+        nose.tools.assert_raises(InvalidUriError, GirderDataElement.from_uri,
                                  uri='girder://abcd.com')
 
     def test_from_uri_bad_path(self):
         # Ensures that we catch a URI that has an appropriate tag and netloc,
         # but the path does not begin with /api, so it is an invalid girder
         # API root.
-        nose.tools.assert_raises(ValueError, GirderDataElement.from_uri,
+        nose.tools.assert_raises(InvalidUriError, GirderDataElement.from_uri,
                                  uri='girder://localhost:8080/bad/path')
 
     def test_from_uri_no_file_in_path(self):

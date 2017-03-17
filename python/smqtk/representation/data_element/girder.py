@@ -1,5 +1,7 @@
+from girder_client import GirderClient, HttpError
 from urlparse import urlparse
 import requests
+import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
@@ -42,22 +44,11 @@ class GirderDataElement (DataElement):
         This allows for quite a bit of flexibility in the types of URIs that
         can be passed. Valid Girder URIs are:
 
-        (a) girder(s)://<user>:<pass>@<host>:<port>/api/v1/file/<file_id>
-        (b) girder://<user>:<pass>@file:<file_id>
-
-        <user> and <pass> are optional in both (a) and (b). <port> is optional
-        in (a).
-
-        If the (b) form of a Girder URI is used, then the ``api_root`` member
-        will be the default of 'http://localhost:8080/api/v1'.
+        (a) girder://token:<token>@<api_url>/file/<file_id>
+        (b) girder://api_key:<api_key>@<api_url>/file/<file_id>
 
         Currently, only GirderDataElements can be built from Files, so the
         URL should end in /file/{id}.
-
-        :param uri: A URI of the form
-            girder(s)://<user>:<pass>@<host>:<port>/api/<version>/file/<file_id>
-            or girder://<user>:<pass>@file:<file_id>.
-        :type uri: str
 
         :return: Data element created from ``uri``
         :rtype: GirderDataElement
@@ -69,62 +60,31 @@ class GirderDataElement (DataElement):
             identifier.
 
         """
-        api_root = None
         # urlparse seems to not be phased by the 'girder' protocol instead of
         # http, so no replacing needs to be done.
         parsed_uri = urlparse(uri)
-        if not parsed_uri.scheme.startswith('girder'):
+        if parsed_uri.scheme != 'girder':
             raise InvalidUriError(uri,
-                                  'Invalid Girder URI. Girder URIs must start '
-                                  'with girder:// or girders://')
+                                  'Invalid Girder URI. Girder URIs must start with girder://')
+        elif not parsed_uri.netloc.startswith('token:') and not parsed_uri.netloc.startswith('api_key:'):
+            raise InvalidUriError(uri,
+                                  'Invalid Girder URI. Girder URIs must have a token or api_key')
 
-        # For the API root to be valid, the URI must have a netloc
-        # and the ``path`` must start with '/api'. This clause deals with
-        # URIs of the form:
-        # girder://<user>:<pass>@<host>:<port>/api/v1/file/<file_id>
-        # The logic is constructed by understanding how urlparse parses a
-        # URI of the above form. <port> is optional
-        if parsed_uri.path.startswith('/api') and parsed_uri.netloc:
-            assert parsed_uri.path.split('/file/')[0] != parsed_uri.path
-            # If you're passing a URI of the form (a), either <girder> or
-            # <girders> are valid tags. We determine the scheme to use in
-            # constructing the api_root here based on that tag.
-            if parsed_uri.scheme == 'girder':
-                api_root = 'http://'
-            elif parsed_uri.scheme == 'girders':
-                api_root = 'https://'
+        if not parsed_uri.netloc:
+            raise InvalidUriError(uri)
 
-            # We rsplit on '/file/' to get the preceding path information
-            # before /file/<file_id>, which is used to construct the api root.
-            api_root += '%s%s' % (parsed_uri.netloc,
-                                  parsed_uri.path.rsplit('/file/')[0])
-            file_id = parsed_uri.path.split('/')[-1]
+        credentials, scheme = parsed_uri.netloc.split('@')
+        cred_type, cred = credentials.split(':')
+        path, file_id = parsed_uri.path.split('/file/')
 
-        # This covers the case of a URI of the form:
-        # girder://<user>:<pass>@file:<file_id>
-        elif parsed_uri.netloc.startswith('file'):
-            file_id = parsed_uri.netloc.split(':')[-1]
+        if cred_type == 'token':
+            return cls(file_id, api_root='%s%s' % (scheme, path), token=cred)
+        elif cred_type == 'api_key':
+            return cls(file_id, api_root='%s%s' % (scheme, path), api_key=cred)
 
-        # The above are the two currently supported forms of a Girder URI in
-        # SMQTK. Anything else will be considered invalid.
-        else:
-            raise InvalidUriError(
-                uri,
-                'Invalid Girder URI. Girder URIs must be of the form: \n'
-                '* girder://<user>:<pass>@<host>:<port>/api/<version>/'
-                'file/<file_id>\n'
-                '* girder://<user>:<pass>@file:<file_id>\n'
-                'Where <user> and <pass> are optional.'
-            )
-
-        if api_root:
-            girder_element = cls(file_id, api_root)
-        else:
-            girder_element = cls(file_id)
-        return girder_element
-
+    # note, this usage of api "root" contradicts girder client's notion of the api root
     def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
-                 api_key=None):
+                 api_key=None, token=None):
         """
         Initialize data element to point to a specific file hosted in Girder
 
@@ -145,15 +105,24 @@ class GirderDataElement (DataElement):
         #       e.g. 'file/{file_id:s}' and '
         super(GirderDataElement, self).__init__()
 
+        # Only one of token/api key must be set
+        assert (api_key != None or token != None)
+        assert (api_key == None or token == None)
+
         self.file_id = file_id
         self.api_root = api_root
-        # TODO: Should token manager become a property so that if ``api_key``
-        # is set after-the-fact the GirderTokenManager is instantiated
-        # properly?
-        self.token_manager = GirderTokenManager(api_root, api_key)
+        self.token = token
+        self.api_key = api_key
 
-        self.token = None
-        self.token_expiration = None
+        # compat with DataFileElement (compute_many_descriptors needs this)
+        self._filepath = self.file_id
+
+        self.gc = GirderClient(apiUrl=api_root)
+
+        if token is not None:
+            self.gc.token = token
+        elif api_key is not None:
+            self.gc.authenticate(apiKey=api_key)
 
         # Cache so we don't have to query server multiple times for multiple
         # calls.
@@ -161,27 +130,27 @@ class GirderDataElement (DataElement):
 
     def __repr__(self):
         return super(GirderDataElement, self).__repr__() + \
-            "{id: %s, api_root: %s, api_key: %s}" % (
-                self.file_id, self.api_root, self.token_manager.api_key
+            "{file_id: %s, api_root: %s, api_key: %s, token: %s}" % (
+                self.file_id, self.api_root, self.api_key or '', self.token or ''
             )
 
     def get_config(self):
         return {
             'file_id': self.file_id,
             'api_root': self.api_root,
-            'api_key': self.token_manager.api_key,
+            'api_key': self.api_key,
+            'token': self.token
         }
 
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
     def content_type(self):
-        # Check if token has expired, if so get new one
-        # Get file model, which has mimetype info
         if self._content_type is None:
             self._log.debug("Getting content type for file ID %s", self.file_id)
-            token_header = self.token_manager.get_requests_header()
-            r = requests.get(url_join(self.api_root, 'file', self.file_id),
-                             headers=token_header)
-            r.raise_for_status()
-            self._content_type = r.json()['mimeType']
+            self._content_type = self.gc.getFile(self.file_id)['mimeType']
+
         return self._content_type
 
     def get_file_model(self):
@@ -194,13 +163,13 @@ class GirderDataElement (DataElement):
         :rtype: dict | None
 
         """
-        r = requests.get(url_join(self.api_root, 'file', self.file_id),
-                         headers=self.token_manager.get_requests_header())
-        if r.status_code == 400:
-            return None
-        # Exception for any other status
-        r.raise_for_status()
-        return r.json()
+        try:
+            return self.gc.getFile(self.file_id)
+        except HttpError as e:
+            if e.status == 400:
+                return None
+            else:
+                raise e
 
     def is_empty(self):
         """
@@ -223,36 +192,19 @@ class GirderDataElement (DataElement):
 
         :return: Get the byte stream for this data element.
         :rtype: bytes
-
-        :raises AssertionError: Content received not the expected length in
-            bytes (header field vs. content length).
-        :raises requests.HTTPError: If the ID does not refer to a file in
-            Girder.
         """
-        # Check if token has expired, if so get new one
         # Download file bytes from girder
+        content = six.BytesIO()
         self._log.debug("Getting bytes for file ID %s", self.file_id)
-        token_header = self.token_manager.get_requests_header()
-        r = requests.get(url_join(self.api_root, 'file', self.file_id,
-                                  'download'),
-                         params={'contentDisposition': 'inline'},
-                         headers=token_header)
-        r.raise_for_status()
-        content = r.content
-        expected_length = int(r.headers['Content-Length'])
-        assert len(content) == expected_length, \
-            "Content received no the expected length: %d != %d (expected)" \
-            % (len(content), expected_length)
-        return content
+        self.gc.downloadFile(self.file_id, content)
+        return content.getvalue()
 
     def writable(self):
         """
         :return: if this instance supports setting bytes.
         :rtype: bool
         """
-        # Current do not support writing to girder elements
-        # TODO: Implement using PUT file/{id} endpoint if the file exists
-        return False
+        return self.get_file_model() is not None
 
     def set_bytes(self, b):
         """
@@ -268,4 +220,4 @@ class GirderDataElement (DataElement):
             not support writing.
 
         """
-        raise ReadOnlyError("Cannot write to Girder data elements.")
+        self.gc.uploadFileContents(self.file_id, six.BytesIO(b), len(b))

@@ -66,21 +66,25 @@ class GirderDataElement (DataElement):
         if parsed_uri.scheme != 'girder':
             raise InvalidUriError(uri,
                                   'Invalid Girder URI. Girder URIs must start with girder://')
-        elif not parsed_uri.netloc.startswith('token:') and not parsed_uri.netloc.startswith('api_key:'):
-            raise InvalidUriError(uri,
-                                  'Invalid Girder URI. Girder URIs must have a token or api_key')
 
         if not parsed_uri.netloc:
             raise InvalidUriError(uri)
 
-        credentials, scheme = parsed_uri.netloc.split('@')
-        cred_type, cred = credentials.split(':')
+        if '@' in parsed_uri.netloc:
+            credentials, scheme = parsed_uri.netloc.split('@')
+            cred_type, cred = credentials.split(':')
+        else:
+            scheme = parsed_uri.netloc
+            cred_type = None
+
         path, file_id = parsed_uri.path.split('/file/')
 
         if cred_type == 'token':
             return cls(file_id, api_root='%s%s' % (scheme, path), token=cred)
         elif cred_type == 'api_key':
             return cls(file_id, api_root='%s%s' % (scheme, path), api_key=cred)
+        elif cred_type == None:
+            return cls(file_id, api_root='%s%s' % (scheme, path))
 
     # note, this usage of api "root" contradicts girder client's notion of the api root
     def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
@@ -104,10 +108,6 @@ class GirderDataElement (DataElement):
         # TODO: Template sub-URLs for customizing model/download endpoints used?
         #       e.g. 'file/{file_id:s}' and '
         super(GirderDataElement, self).__init__()
-
-        # Only one of token/api key must be set
-        assert (api_key != None or token != None)
-        assert (api_key == None or token == None)
 
         self.file_id = file_id
         self.api_root = api_root

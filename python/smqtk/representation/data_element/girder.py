@@ -142,10 +142,6 @@ class GirderDataElement (DataElement):
             'token': self.token
         }
 
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-
     def content_type(self):
         if self._content_type is None:
             self._log.debug("Getting content type for file ID %s", self.file_id)

@@ -455,7 +455,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         self._log.debug("Loading image pixel arrays")
         uid_num = len(uuids4proc)
-        use_mp = kwds.get('use_mp', True)
 
         if use_mp:
             p = multiprocessing.Pool(procs)

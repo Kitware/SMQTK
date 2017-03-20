@@ -1,0 +1,6 @@
+{
+    "name": "SMQTK Girder",
+    "description": "Provides support for Nearest neighbors and IQR services within Girder",
+    "version": "0.0.1",
+    "dependencies": ["worker", "jobs"]
+}

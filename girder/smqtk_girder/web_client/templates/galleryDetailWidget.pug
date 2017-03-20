@@ -1,0 +1,23 @@
+.modal-dialog
+  .modal-content
+    .modal-header
+      button.close(data-dismiss="modal", aria-hidden="true", type="button") &times;
+      h4.modal-title= item.get('name')
+    .modal-body
+      .image-container
+        .scroll-controls
+          if canScroll && hasPrev
+            i.icon-left-open.prev-image(title='Previous image')
+          if canScroll && hasNext
+            i.icon-right-open.next-image(title='Next image')
+
+        a.im-link(href=item.downloadUrl({'contentDisposition': 'inline'}), target="_blank")
+          img.im-image-detail.im-blur(src=item.downloadUrl({'contentDisposition': 'inline'}))
+
+        p #{item.get('meta').smqtk_uuid}
+        if item.has('smqtk_distance')
+          p #{item.get('smqtk_distance')}
+        p.smqtk-nn-search nearest neighbors search
+
+    .modal-footer
+      a.btn.btn-small.btn-default(data-dismiss="modal")

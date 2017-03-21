@@ -1,4 +1,6 @@
 import itertools
+import json
+import os
 
 from smqtk.utils.image_utils import is_valid_element
 from smqtk.utils import parallel
@@ -7,18 +9,29 @@ from smqtk.representation.data_element.girder import GirderDataElement
 
 from girder_client import HttpError
 
-from .settings import (DB_HOST, DB_NAME, DB_USER, DB_PASS)
+settings = None
+
+def getSetting(gc, key=None):
+    global settings
+
+    if settings is None:
+        settings = gc.get('smqtk/settings')
+
+    if key is None:
+        return settings
+    else:
+        return settings.get(key, None)
 
 
-def descriptorIndexFromFolderId(folderId):
+def descriptorIndexFromFolderId(gc, folderId):
     return PostgresDescriptorIndex('descriptor_index_%s' % folderId,
-                                   db_name=DB_NAME,
-                                   db_host=DB_HOST,
-                                   db_user=DB_USER,
-                                   db_pass=DB_PASS)
+                                   db_name=getSetting(gc, 'db_name'),
+                                   db_host=getSetting(gc, 'db_host'),
+                                   db_user=getSetting(gc, 'db_user'),
+                                   db_pass=getSetting(gc, 'db_pass'))
 
 
-def smqtkileIdFromName(gc, smqtkFolder, name):
+def smqtkFileIdFromName(gc, smqtkFolder, name):
     item = list(gc.listItem(smqtkFolder['_id'], name=name))[0]
     return list(gc.listFile(item['_id']))[0]['_id']
 

@@ -11,10 +11,14 @@ from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
 from girder_worker.app import app
 from .utils import (iter_valid_elements, getCreateFolder, createOverwriteItem,
-                    initializeItemWithFile, smqtkFileIdFromName, descriptorIndexFromFolderId)
-from .settings import (DB_HOST, DB_NAME, DB_USER, DB_PASS,
-                       NETWORK_PROTOTXT_FILEPATH, NETWORK_MODEL_FILEPATH, IMAGE_MEAN_FILEPATH,
-                       IMAGE_PROCESS_BATCH_SIZE)
+                    initializeItemWithFile, smqtkFileIdFromName, descriptorIndexFromFolderId,
+                    getSetting)
+
+
+def girderUriFromTask(task, fileId):
+    return 'girder://token:%s@%s/file/%s' % (task.request.jobInfoSpec['headers']['Girder-Token'],
+                                             task.api_url,
+                                             fileId)
 
 
 @app.task(bind=True, queue='compute-descriptors')
@@ -33,18 +37,19 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
         GirderDataElement URIs.
     """
     task.job_manager.updateProgress(message='Computing descriptors', forceFlush=True)
-    generator = CaffeDescriptorGenerator(NETWORK_PROTOTXT_FILEPATH % task.api_url,
-                                         NETWORK_MODEL_FILEPATH % task.api_url,
-                                         IMAGE_MEAN_FILEPATH % task.api_url)
+    generator = CaffeDescriptorGenerator(
+        girderUriFromTask(task, getSetting(task.girder_client, 'network_prototxt_fileid')),
+        girderUriFromTask(task, getSetting(task.girder_client, 'network_model_fileid')),
+        girderUriFromTask(task, getSetting(task.girder_client, 'image_mean_fileid')))
 
     factory = DescriptorElementFactory(PostgresDescriptorElement, {
-        'db_name': DB_NAME,
-        'db_host': DB_HOST,
-        'db_user': DB_USER,
-        'db_pass': DB_PASS,
+        'db_name': getSetting(task.girder_client, 'db_name'),
+        'db_host': getSetting(task.girder_client, 'db_host'),
+        'db_user': getSetting(task.girder_client, 'db_user'),
+        'db_pass': getSetting(task.girder_client, 'db_pass')
     })
 
-    index = descriptorIndexFromFolderId(folderId)
+    index = descriptorIndexFromFolderId(task.girder_client, folderId)
 
     valid_elements = iter_valid_elements(dataElementUris, generator.valid_content_types())
 
@@ -77,7 +82,7 @@ def itq(task, folderId, **kwargs):
         infer the descriptor index.
     """
     task.job_manager.updateProgress(message='Training ITQ', forceFlush=True)
-    index = descriptorIndexFromFolderId(folderId)
+    index = descriptorIndexFromFolderId(task.girder_client, folderId)
 
     if not index.count():
         # TODO SMQTK should account for this?
@@ -108,7 +113,7 @@ def compute_hash_codes(task, folderId, **kwargs):
     """
     task.job_manager.updateProgress(message='Computing Hash Codes', forceFlush=True)
 
-    index = descriptorIndexFromFolderId(folderId)
+    index = descriptorIndexFromFolderId(task.girder_client, folderId)
 
     smqtkFolder = getCreateFolder(task.girder_client, folderId, '.smqtk')
 
@@ -152,14 +157,15 @@ def process_images(task, folderId, dataElementUris, **kwargs):
     # but we run into a weird issue when they're running at the same time, see
     # https://www.postgresql.org/message-id/4B967376.7050300%40opinioni.net
     # To work around it, create the table before mapping the jobs.
-    index = descriptorIndexFromFolderId(folderId)
+    index = descriptorIndexFromFolderId(task.girder_client, folderId)
     conn = index._get_psql_connection()
     with conn:
         with conn.cursor() as cur:
             index._ensure_table(cur)
 
-    batches = [dataElementUris[x:x+IMAGE_PROCESS_BATCH_SIZE]
-               for x in xrange(0, len(dataElementUris), IMAGE_PROCESS_BATCH_SIZE)]
+    batch_size = int(getSetting(task.girder_client, 'process_images_batch_size'))
+    batches = [dataElementUris[x:x+batch_size]
+               for x in xrange(0, len(dataElementUris), batch_size)]
 
     # The grouped task (descriptor_jobs) is calling compute_descriptors in a batched
     # fashion so that it can be distributed across many machines. The next parts of
@@ -174,7 +180,6 @@ def process_images(task, folderId, dataElementUris, **kwargs):
                                            queue='compute-descriptors', immutable=True)
 
     # It's possible all of the descriptors have already been computed for this dir
-    #print len(folderId), len(dataElementUris)
     if descriptor_jobs:
         result = (celery.group(descriptor_jobs) | itq_job | chc_job).apply_async(throw=True)
     else:

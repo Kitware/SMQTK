@@ -196,7 +196,7 @@ class GirderDataElement (DataElement):
         content = six.BytesIO()
         self._log.debug("Getting bytes for file ID %s", self.file_id)
         self.gc.downloadFile(self.file_id, content)
-        return content.getvalue()
+        return bytes(content.getvalue())
 
     def writable(self):
         """

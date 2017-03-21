@@ -157,7 +157,7 @@ class GirderDataElement (DataElement):
         """
         Get the file model json from the server.
 
-        Returns None if the file does not exist on the server.
+        Returns None if the file can't be retrieved from the server.
 
         :return: file model model as a dictionary
         :rtype: dict | None
@@ -165,11 +165,8 @@ class GirderDataElement (DataElement):
         """
         try:
             return self.gc.getFile(self.file_id)
-        except HttpError as e:
-            if e.status == 400:
-                return None
-            else:
-                raise e
+        except HttpError:
+            return None
 
     def is_empty(self):
         """

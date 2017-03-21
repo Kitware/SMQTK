@@ -200,10 +200,23 @@ class GirderDataElement (DataElement):
 
     def writable(self):
         """
+        Determine if a Girder file is able to be written to. Note that this requires
+        inferring the access level by traversing to the parent folder since this is
+        how Girder determines access.
+
         :return: if this instance supports setting bytes.
         :rtype: bool
         """
-        return self.get_file_model() is not None
+        file_model = self.get_file_model()
+
+        if file_model is None:
+            return False
+        else:
+            item_model = self.gc.getItem(file_model['itemId'])
+            folder_model = self.gc.getFolder(item_model['folderId'])
+
+            # See girder.constants.AccessType
+            return folder_model['_accessLevel'] >= 1
 
     def set_bytes(self, b):
         """

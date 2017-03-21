@@ -232,4 +232,13 @@ class GirderDataElement (DataElement):
             not support writing.
 
         """
-        self.gc.uploadFileContents(self.file_id, six.BytesIO(b), len(b))
+        if not self.writable():
+            raise ReadOnlyError('Unauthorized access to write to Girder file %s' % self.file_id)
+
+        try:
+            self.gc.uploadFileContents(self.file_id, six.BytesIO(b), len(b))
+        except HttpError as e:
+            if e.status == 401:
+                raise ReadOnlyError('Unauthorized access to write to Girder file %s' % self.file_id)
+            else:
+                raise e

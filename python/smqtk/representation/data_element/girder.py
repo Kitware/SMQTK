@@ -145,8 +145,8 @@ class GirderDataElement (DataElement):
 
     def content_type(self):
         if self._content_type is None:
-            self._log.debug("Getting content type for file ID %s", self.file_id)
-            file_model = self.get_file_model(self.file_id)
+            self._log.debug("Getting content type for file ID %s" % self.file_id)
+            file_model = self.get_file_model()
 
             if file_model is not None:
                 self._content_type = file_model['mimeType']

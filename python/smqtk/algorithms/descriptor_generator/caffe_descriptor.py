@@ -165,8 +165,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
         self.network = caffe.Net(self.network_prototxt_filepath,
-                                 self.network_model_filepath,
-                                 caffe.TEST)
+                                 caffe.TEST,
+                                 weights=self.network_model_filepath)
         # Assuming the network has a 'data' layer and notion of data shape
         self.net_data_shape = self.network.blobs[self.data_layer].data.shape
         self._log.debug("Network data shape: %s", self.net_data_shape)

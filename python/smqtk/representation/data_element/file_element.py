@@ -51,13 +51,13 @@ class DataFileElement (DataElement):
         self._filepath = osp.expanduser(filepath)
 
         self._content_type = None
-        if magic:
+        if magic and osp.isfile(filepath):
             r = magic.detect_from_filename(filepath)
             self._content_type = r.mime_type
         elif tika_detector:
             try:
                 self._content_type = tika_detector.from_file(filepath)
-            except IOError, ex:
+            except IOError as ex:
                 self._log.warn("Failed tika.detector.from_file content type "
                                "detection (error: %s), falling back to file "
                                "extension",

@@ -13,14 +13,39 @@ Algorithms
 
 Devops
 
-  * Added IQR / playground docker container setup. Includes NVIDIA GPU capable
-    docker file.
+  * Added IQR / playground docker container setup. Includes:
+    - CPU + NVIDIA GPU capable docker file.
+    - Optional input image tiling.
+    - Optional startup of RESTfule NN and IQR services.
+
+  * Added initial Ansible roles for SMQTK and Caffe dependency.
+
+Girder
+
+  * Added initial simple Girder plugin to link to an external IQR webapp
+    instance.
 
 Representation
 
   Data Elements
 
     * Added plugin for Girder-hosted data elements
+
+    * Added ``from_uri`` member function as well as global function to handle
+      instance construction or selection via URI string specification.
+
+    * Postgres data element will now automatically create its configured table
+      if it doesn't exist and authentication and sufficient privileges.
+
+  Descriptor Element
+
+    * Postgres descriptor element will now automatically create its configured
+      table if it doesn't exist and authentication and sufficient privileges.
+
+  Descriptor Index
+
+    * Postgres descriptor index will now automatically create its configured
+      table if it doesn't exist and authentication and sufficient privileges.
 
 Scripts
 
@@ -32,6 +57,9 @@ Utilities
     url-join function similar in capability to ``os.path.join``.
 
   * Added fixed tile cropping to image transform tool.
+
+  * Added utility functions to detect mimetypes of files via ``file-magic`` or
+    ``tika`` optional dependencies.
 
 Web
 
@@ -51,6 +79,10 @@ Web
 
   * Mongo session information block at bottom IQR app page now only shows up
     when running server in debug mode.
+
+  * Added document showing complete use case with IQR RESTful webservice using
+    the IQR docker image with LEEDS Butterfly data. Includes expected results
+    users should be able to replicate.
 
 
 Fixes

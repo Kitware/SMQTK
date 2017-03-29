@@ -170,8 +170,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         network_model_element = from_uri(self.network_model_uri)
         self._log.debug("Loading Caffe network from network/model configs")
         self.network = caffe.Net(network_prototxt_element.write_temp(),
-                                 network_model_element.write_temp(),
-                                 caffe.TEST)
+                                 caffe.TEST,
+                                 weights=network_model_element.write_temp())
         network_prototxt_element.clean_temp()
         network_model_element.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape

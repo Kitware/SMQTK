@@ -259,6 +259,11 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
                     self.found_terminals += 1
                 elif isinstance(packet[0], Exception):
                     self._log.warn('Received exception: %s\n%s', *packet)
+                    # If an exception, index 1 will be the stack trace.
+                    # Logging that here.
+                    self._log.warn("******************************\n"
+                                   + packet[1]
+                                   + "\n******************************")
                     raise packet
                 else:
                     i, result = packet

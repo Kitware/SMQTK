@@ -83,7 +83,10 @@ class GirderDataElement (DataElement):
         else:
             scheme = parsed_uri.netloc
 
-        path, file_id = parsed_uri.path.split('/file/')
+        try:
+            path, file_id = parsed_uri.path.split('/file/')
+        except ValueError:
+            raise InvalidUriError(uri, 'Invalid Girder URI. Girder URIs must contain a /file/<file_id> segment.')
 
         return cls(file_id, '%s%s' % (scheme, path), api_key, token)
 

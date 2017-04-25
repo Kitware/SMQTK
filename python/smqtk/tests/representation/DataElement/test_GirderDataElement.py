@@ -232,6 +232,23 @@ class TestGirderDataElement (unittest.TestCase):
         gde.set_bytes(b'foo')
         m_uploadFileContents.assert_called_once()
 
+    def test_set_bytes_non_writable(self):
+        gde = GirderDataElement('someId')
+        gde.writable = mock.MagicMock(return_value=False)
+        nose.tools.assert_raises(ReadOnlyError, gde.set_bytes, b=None)
+
+    def test_set_bytes_http_errors(self):
+        gde = GirderDataElement('someId')
+        gde.writable = mock.MagicMock(return_value=True)
+
+        # Test access denied throws ReadOnlyError
+        gde.gc.uploadFileContents = mock.MagicMock(side_effect=HttpError(401, '', None, None))
+        nose.tools.assert_raises(ReadOnlyError, gde.set_bytes, b=b'foo')
+
+        # Test any other error (like a 500) re-raises the HttpError
+        gde.gc.uploadFileContents = mock.MagicMock(side_effect=HttpError(500, '', None, None))
+        nose.tools.assert_raises(HttpError, gde.set_bytes, b=b'foo')
+
     @mock.patch('girder_client.GirderClient.downloadFile')
     @mock.patch('six.BytesIO.getvalue')
     def test_get_bytes(self, m_getvalue, m_downloadFile):

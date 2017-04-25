@@ -4,7 +4,6 @@ import unittest
 
 import nose.tools
 import requests
-import six
 
 from girder_client import GirderClient, HttpError
 

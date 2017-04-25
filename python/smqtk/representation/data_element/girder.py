@@ -1,12 +1,9 @@
 from girder_client import GirderClient, HttpError
 from urlparse import urlparse
-import requests
 import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
-from smqtk.utils.girder import GirderTokenManager
-from smqtk.utils.url import url_join
 
 
 __all__ = [

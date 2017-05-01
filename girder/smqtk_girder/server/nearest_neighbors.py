@@ -108,10 +108,10 @@ class NearestNeighbors(Resource):
         neighbors, dists = nn_index.nn(descriptor, limit)
         uuid_dist = dict(zip([x.uuid() for x in neighbors], dists))
 
-        items = list(ModelImporter.model('item').find({
-            'meta.smqtk_uuid': {
-                '$in': [x.uuid() for x in neighbors]
-            }}))
+        smqtkFolder = ModelImporter.model('folder').load(item['folderId'], user=getCurrentUser())
+        items = list(ModelImporter.model('folder').childItems(smqtkFolder, filters={'meta.smqtk_uuid': {
+            '$in': [x.uuid() for x in neighbors]
+        }}))
 
         for item in items:
             item['smqtk_distance'] = uuid_dist[item['meta']['smqtk_uuid']]

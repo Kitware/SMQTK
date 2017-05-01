@@ -17,7 +17,7 @@ from .utils import (iter_valid_elements, getCreateFolder, createOverwriteItem,
 
 def girderUriFromTask(task, fileId):
     return 'girder://token:%s@%s/file/%s' % (task.request.jobInfoSpec['headers']['Girder-Token'],
-                                             task.api_url,
+                                             task.request.apiUrl,
                                              fileId)
 
 
@@ -65,7 +65,7 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
         task.girder_client.addMetadataToItem(
             task.girder_client.get('file/%s' % de.file_id)['itemId'], {
                 'smqtk_uuid': descriptor.uuid()
-            })
+        })
 
 
 @app.task(bind=True, queue='compute-descriptors')
@@ -94,9 +94,9 @@ def itq(task, folderId, **kwargs):
     rotationFile = initializeItemWithFile(task.girder_client,
                                           createOverwriteItem(task.girder_client, smqtkFolder['_id'], 'rotation.npy'))
 
-    functor = ItqFunctor(mean_vec_cache=GirderDataElement(meanVecFile['_id'], api_root=task.api_url,
+    functor = ItqFunctor(mean_vec_cache=GirderDataElement(meanVecFile['_id'], api_root=task.request.apiUrl,
                                                           token=task.request.jobInfoSpec['headers']['Girder-Token']),
-                         rotation_cache=GirderDataElement(rotationFile['_id'], api_root=task.api_url,
+                         rotation_cache=GirderDataElement(rotationFile['_id'], api_root=task.request.apiUrl,
                                                           token=task.request.jobInfoSpec['headers']['Girder-Token']))
 
     functor.fit(index.iterdescriptors(), use_multiprocessing=False)
@@ -122,12 +122,12 @@ def compute_hash_codes(task, folderId, **kwargs):
     hash2uuidsFile = initializeItemWithFile(task.girder_client,
                                             createOverwriteItem(task.girder_client, smqtkFolder['_id'], 'hash2uuids.pickle'))
 
-    functor = ItqFunctor(mean_vec_cache=GirderDataElement(meanVecFileId, api_root=task.api_url,
+    functor = ItqFunctor(mean_vec_cache=GirderDataElement(meanVecFileId, api_root=task.request.apiUrl,
                                                           token=task.request.jobInfoSpec['headers']['Girder-Token']),
-                         rotation_cache=GirderDataElement(rotationFileId, api_root=task.api_url,
+                         rotation_cache=GirderDataElement(rotationFileId, api_root=task.request.apiUrl,
                                                           token=task.request.jobInfoSpec['headers']['Girder-Token']))
 
-    hash2uuids = compute_functions.compute_hash_codes(index.iterkeys(), index, functor)
+    hash2uuids = compute_functions.compute_hash_codes(index.iterkeys(), index, functor, use_mp=False)
 
     data = pickle.dumps(hash2uuids)
     task.girder_client.uploadFileContents(hash2uuidsFile['_id'], six.BytesIO(data), len(data))
@@ -173,10 +173,13 @@ def process_images(task, folderId, dataElementUris, **kwargs):
     # arguments can't be changed. That's because these jobs don't care about the output
     # of the descriptor computation jobs.
     descriptor_jobs = [compute_descriptors.signature((folderId, batch), {},
-                                                     headers={'jobInfoSpec': task.request.jobInfoSpec}) for batch in batches]
-    itq_job = itq.signature((folderId,), {}, headers={'jobInfoSpec': task.request.jobInfoSpec},
+                                                     headers={'jobInfoSpec': task.request.jobInfoSpec,
+                                                              'apiUrl': task.request.apiUrl}) for batch in batches]
+    itq_job = itq.signature((folderId,), {}, headers={'jobInfoSpec': task.request.jobInfoSpec,
+                                                      'apiUrl': task.request.apiUrl},
                             queue='compute-descriptors', immutable=True)
-    chc_job = compute_hash_codes.signature((folderId,), {}, headers={'jobInfoSpec': task.request.jobInfoSpec},
+    chc_job = compute_hash_codes.signature((folderId,), {}, headers={'jobInfoSpec': task.request.jobInfoSpec,
+                                                                     'apiUrl': task.request.apiUrl},
                                            queue='compute-descriptors', immutable=True)
 
     # It's possible all of the descriptors have already been computed for this dir

@@ -9,11 +9,38 @@ from girder import logger
 
 import itertools
 
+SMQTK_SETTING_READ = 'smqtk.setting_read'
+
 
 class SmqtkAPI(Resource):
     def __init__(self):
         self.resourceName = 'smqtk'
+        self.route('GET', ('settings',), self.settings)
         self.route('POST', ('process_images',), self.processImages)
+
+        TokenScope.describeScope(SMQTK_SETTING_READ, 'Read SMQTK settings',
+                                 'Allow clients to look up the SMQTK settings, including private '
+                                 'fields such as database credentials.')
+
+    @access.user(scope=SMQTK_SETTING_READ)
+    @autoDescribeRoute(Description('Retrieve settings related to SMQTK.'))
+    def settings(self, params):
+        """
+        Retrieve the settings related to SMQTK.
+
+        NOTE: This returns *very sensitive* information including database
+        credentials. This endpoint is intended to only be called from remote workers
+        which has been registered with the task queue with their respective credentials.
+
+        The only place tokens with this scope are assigned is within _processImages.
+        """
+        setting_results = list(ModelImporter.model('setting').find({
+            'key': {
+                '$regex': '^smqtk\.'
+            }
+        }))
+
+        return dict([(x['key'].replace('smqtk.', ''), x['value']) for x in setting_results])
 
     @staticmethod
     def _processImages(folder, fileIds):
@@ -26,10 +53,14 @@ class SmqtkAPI(Resource):
         jobModel = ModelImporter.model('job', 'jobs')
 
         # TODO Use a more granular token.
-        # Ideally this would be scoped to only allow job updates and data management of folder
+        # Ideally this would be scoped to only allow:
+        # - Job Updates
+        # - Data management of folder
+        # - Retrieval of SMQTK settings
         token = ModelImporter.model('token').createToken(user=getCurrentUser(),
                                                          days=1,
-                                                         scope=TokenScope.USER_AUTH)
+                                                         scope=(TokenScope.USER_AUTH,
+                                                                SMQTK_SETTING_READ))
 
         dataElementUris = ['girder://token:%s@%s/file/%s' % (token['_id'],
                                                              getWorkerApiUrl(),
@@ -46,9 +77,7 @@ class SmqtkAPI(Resource):
 
         job['token'] = token
 
-
         logger.info('assigning token %s' % token['_id'])
-        #job['kwargs']['jobInfo'] =
 
         jobModel.save(job)
         jobModel.scheduleJob(job)

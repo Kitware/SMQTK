@@ -1,13 +1,9 @@
+from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import Resource, filtermodel, getCurrentToken
+from girder.api.rest import Resource, filtermodel, getCurrentToken, getCurrentUser, getApiUrl
 from girder.utility.model_importer import ModelImporter
-
-from .settings import DB_NAME, DB_HOST, DB_USER, DB_PASS, GIRDER_API_ROOT, JOB_API_KEY
-
-from girder_client import GirderClient, HttpError
-
-from girder.constants import AccessType, TokenScope
+from girder.constants import AccessType
 
 from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
@@ -15,7 +11,12 @@ from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 
-from .utils import getCreateFolder, smqtkFileIdFromName
+from .utils import localSmqtkFileIdFromName
+
+import functools
+
+
+setting = ModelImporter.model('setting')
 
 class NearestNeighbors(Resource):
     def __init__(self):
@@ -40,15 +41,16 @@ class NearestNeighbors(Resource):
         # this assumes the parent directory of the item has been processed. i.e. subdirectories
         # won't work. this should be fixed and this should recursively ascend looking for .smqtk
         # TODO also no error checking whatsoever
+
         return PostgresDescriptorIndex('descriptor_index_%s' % item['folderId'],
-                                       db_name=DB_NAME,
-                                       db_host=DB_HOST,
-                                       db_user=DB_USER,
-                                       db_pass=DB_PASS)
+                                       db_name=setting.get('smqtk.db_name'),
+                                       db_host=setting.get('smqtk.db_host'),
+                                       db_user=setting.get('smqtk.db_user'),
+                                       db_pass=setting.get('smqtk.db_pass'))
 
 
     @staticmethod
-    def nearestNeighborIndex(item, descriptorIndex):
+    def nearestNeighborIndex(item, user, descriptorIndex):
         """
         Get the nearest neighbor index from a given item and descriptor index.
 
@@ -59,21 +61,18 @@ class NearestNeighbors(Resource):
         folder = ModelImporter.model('folder')
 
         _GirderDataElement = functools.partial(GirderDataElement,
-                                               api_root=GIRDER_API_ROOT,
+                                               api_root=getApiUrl(),
                                                token=getCurrentToken()['_id'])
 
-        smqtkFolder = folder.createFolder(folder.load(item['parentId']), '.smqtk',
+        smqtkFolder = folder.createFolder(folder.load(item['folderId'], user=user), '.smqtk',
                                           reuseExisting=True)
 
         try:
-            meanVecFileId = next(folder.childItems(smqtkFolder,
-                                                   filters={'name': 'mean_vec.npy'}))['_id']
-            rotationFileId = next(folder.childItems(smqtkFolder,
-                                                    filters={'name': 'rotation.npy'}))['_id']
-            hash2uuidsFileId = next(folder.childItems(smqtkFolder,
-                                                      filters={'name': 'hash2uuids.pickle'}))['_id']
+            meanVecFileId = localSmqtkFileIdFromName(smqtkFolder, 'mean_vec.npy')
+            rotationFileId = localSmqtkFileIdFromName(smqtkFolder, 'rotation.npy')
+            hash2uuidsFileId = localSmqtkFileIdFromName(smqtkFolder, 'hash2uuids.pickle')
         except Exception:
-            # TODO Log message about these files not existing
+            logger.warn('SMQTK files didn\'t exist for performing NN on %s' % item['_id'])
             return None
 
         # TODO Should these be Girder data elements? Unnecessary HTTP requests.
@@ -87,14 +86,15 @@ class NearestNeighbors(Resource):
 
 
     @access.user
-    @filtermodel('item')
+    @filtermodel('item', addFields=('smqtk_distance',))
     @autoDescribeRoute(Description('Find the nearest neighbors (items) of an item.')
                        .modelParam('itemId', model='item', level=AccessType.READ)
                        .param('limit', 'Number of neighbors to query for.', default=25))
     def nearestNeighbors(self, item, limit, params):
+        #import pudb; pu.db
         limit = int(limit)
         desc_index = self.descriptorIndexFromItem(item)
-        nn_index = self.nearestNeighborIndex(item, desc_index)
+        nn_index = self.nearestNeighborIndex(item, getCurrentUser(), desc_index)
 
         if nn_index is None:
             pass # TODO Raise HTTP error
@@ -108,10 +108,10 @@ class NearestNeighbors(Resource):
         neighbors, dists = nn_index.nn(descriptor, limit)
         uuid_dist = dict(zip([x.uuid() for x in neighbors], dists))
 
-        items = ModelImporter.model('item').find({
+        items = list(ModelImporter.model('item').find({
             'meta.smqtk_uuid': {
                 '$in': [x.uuid() for x in neighbors]
-            }})
+            }}))
 
         for item in items:
             item['smqtk_distance'] = uuid_dist[item['meta']['smqtk_uuid']]

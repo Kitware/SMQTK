@@ -1,17 +1,8 @@
 from girder.utility.model_importer import ModelImporter
 from girder.api.rest import getCurrentUser, filtermodel
 
-import requests
+from girder_client import HttpError
 
-import tempfile
-import os
-
-from smqtk.utils.image_utils import is_valid_element
-from smqtk.utils import parallel
-from smqtk.representation.data_element.file_element import DataFileElement
-
-from urlparse import urlparse
-from girder_client import GirderClient, HttpError
 
 def getCreateFolder(gc, parentFolderId, name):
     try:
@@ -40,6 +31,11 @@ def getCreateSessionsFolder():
 
     return folder.createFolder(privateFolder, 'iqr_sessions', reuseExisting=True)
 
+
+def localSmqtkFileIdFromName(smqtkFolder, name):
+    folder = ModelImporter.model('folder')
+    item = list(folder.childItems(smqtkFolder, filters={'name': name}))[0]
+    return str(list(ModelImporter.model('item').childFiles(item, limit=1))[0]['_id'])
 
 
 def smqtkFileIdFromName(gc, smqtkFolder, name):

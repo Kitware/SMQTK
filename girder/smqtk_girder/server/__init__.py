@@ -2,14 +2,51 @@ from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import filtermodel, getCurrentUser, Resource
 from girder.constants import AccessType, TokenScope, SortDir
+from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
 from girder.plugins.worker.utils import getWorkerApiUrl, jobInfoSpec
 
 from girder import logger
 
+from .constants import PluginSettings
+
 import itertools
 
-SMQTK_SETTING_READ = 'smqtk.setting_read'
+SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
+
+@setting_utilities.validator({
+    PluginSettings.DB_HOST,
+    PluginSettings.DB_NAME,
+    PluginSettings.DB_USER,
+    PluginSettings.DB_PASS,
+    PluginSettings.DB_DESCRIPTORS_TABLE,
+    PluginSettings.IMAGE_BATCH_SIZE,
+    PluginSettings.CAFFE_NETWORK_MODEL,
+    PluginSettings.CAFFE_NETWORK_PROTOTXT,
+    PluginSettings.CAFFE_IMAGE_MEAN
+})
+def validateSettings(doc):
+    pass
+
+@setting_utilities.default(PluginSettings.DB_HOST)
+def defaultDbHost():
+    return 'localhost'
+
+@setting_utilities.default(PluginSettings.DB_NAME)
+def defaultDbName():
+    return 'smqtk'
+
+@setting_utilities.default(PluginSettings.DB_USER)
+def defaultDbUser():
+    return 'smqtk'
+
+@setting_utilities.default(PluginSettings.DB_DESCRIPTORS_TABLE)
+def defaultDbDescriptorsTable():
+    return 'descriptors'
+
+@setting_utilities.default(PluginSettings.IMAGE_BATCH_SIZE)
+def defaultImageBatchSize():
+    return 100
 
 
 class SmqtkAPI(Resource):
@@ -36,11 +73,11 @@ class SmqtkAPI(Resource):
         """
         setting_results = list(ModelImporter.model('setting').find({
             'key': {
-                '$regex': '^smqtk\.'
+                '$regex': '^smqtk_girder\.'
             }
         }))
 
-        return dict([(x['key'].replace('smqtk.', ''), x['value']) for x in setting_results])
+        return dict([(x['key'].replace('smqtk_girder.', ''), x['value']) for x in setting_results])
 
     @staticmethod
     def _processImages(folder, fileIds):

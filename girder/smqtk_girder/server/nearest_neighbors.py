@@ -43,10 +43,10 @@ class NearestNeighbors(Resource):
         # TODO also no error checking whatsoever
 
         return PostgresDescriptorIndex('descriptor_index_%s' % item['folderId'],
-                                       db_name=setting.get('smqtk.db_name'),
-                                       db_host=setting.get('smqtk.db_host'),
-                                       db_user=setting.get('smqtk.db_user'),
-                                       db_pass=setting.get('smqtk.db_pass'))
+                                       db_name=setting.get('smqtk_girder.db_name'),
+                                       db_host=setting.get('smqtk_girder.db_host'),
+                                       db_user=setting.get('smqtk_girder.db_user'),
+                                       db_pass=setting.get('smqtk_girder.db_pass'))
 
 
     @staticmethod
@@ -82,7 +82,7 @@ class NearestNeighbors(Resource):
         hash2uuidsKV = MemoryKeyValueStore(_GirderDataElement(hash2uuidsFileId))
 
         return LSHNearestNeighborIndex(functor, descriptorIndex,
-                                       hash2uuidsKV, read_only=True, live_reload=True)
+                                       hash2uuidsKV, read_only=True)
 
 
     @access.user

@@ -38,9 +38,9 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
     """
     task.job_manager.updateProgress(message='Computing descriptors', forceFlush=True)
     generator = CaffeDescriptorGenerator(
-        girderUriFromTask(task, getSetting(task.girder_client, 'network_prototxt_fileid')),
-        girderUriFromTask(task, getSetting(task.girder_client, 'network_model_fileid')),
-        girderUriFromTask(task, getSetting(task.girder_client, 'image_mean_fileid')))
+        girderUriFromTask(task, getSetting(task.girder_client, 'caffe_network_prototxt')),
+        girderUriFromTask(task, getSetting(task.girder_client, 'caffe_network_model')),
+        girderUriFromTask(task, getSetting(task.girder_client, 'caffe_image_mean')))
 
     factory = DescriptorElementFactory(PostgresDescriptorElement, {
         'db_name': getSetting(task.girder_client, 'db_name'),
@@ -163,7 +163,7 @@ def process_images(task, folderId, dataElementUris, **kwargs):
         with conn.cursor() as cur:
             index._ensure_table(cur)
 
-    batch_size = int(getSetting(task.girder_client, 'process_images_batch_size'))
+    batch_size = int(getSetting(task.girder_client, 'image_batch_size'))
     batches = [dataElementUris[x:x+batch_size]
                for x in xrange(0, len(dataElementUris), batch_size)]
 

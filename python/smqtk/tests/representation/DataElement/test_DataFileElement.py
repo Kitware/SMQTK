@@ -59,6 +59,9 @@ class TestDataFileElement (unittest.TestCase):
         source_filepath = '/path/to/file.png'
         target_dir = '/some/other/dir'
 
+        # If file-magic is available, skip it by getting ``isfile`` to
+        # temporarily return false.
+        mock_isfile.side_effect = lambda *args: False
         d = DataFileElement(source_filepath)
         fp = d.write_temp(temp_dir=target_dir)
 

@@ -89,8 +89,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
         """
         Initialize Scikit-Learn BallTree index for hash codes.
 
-        :param cache_element: Optional path to a file to cache our index to. This
-            must have the `.npz` suffix.
+        :param cache_element: Optional data element to cache our index to.
         :type cache_element: smqtk.representation.DataElement | None
 
         :param leaf_size: Number of points at which to switch to brute-force.
@@ -136,7 +135,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                                  % self.cache_element)
 
             self._log.debug("Saving model: %s", self.cache_element)
-            # Saving BT component matrices in separate files using numpy.save
+            # Saving BT component matrices separately.
             # - Not saving distance function because its always going to be
             #   hamming distance (see ``build_index``).
             s = self.bt.__getstate__()

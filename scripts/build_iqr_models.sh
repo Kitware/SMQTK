@@ -25,14 +25,11 @@ SMQTK_CMD_BATCH_SIZE=1000
 SMQTK_CMD_PROCESSED_CSV="models/cmd.processed.csv"
 
 SMQTK_ITQ_TRAIN_CONFIG="configs/train_itq.json"
-SMQTK_ITQ_BIT_SIZE=256
 
 SMQTK_HCODE_CONFIG="configs/compute_hash_codes.json"
 SMQTK_HCODE_PICKLE="models/lsh.hash2uuids.pickle"
 
-SMQTK_HCODE_BTREE_LEAFSIZE=1000
-SMQTK_HCODE_BTREE_RAND=0
-SMQTK_HCODE_BTREE_OUTPUT="models/hash_index_btree.npz"
+SMQTK_HCODE_BTREE_CONFIG="configs/make_balltree.json"
 
 # DON'T MODIFY BELOW HERE ######################################################
 
@@ -69,7 +66,6 @@ compute_hash_codes \
     2>&1 | tee "${LOG_DIR}/compute_hash_codes.log"
 
 # Compute balltree hash index
-make_balltree "${SMQTK_HCODE_PICKLE}" ${SMQTK_ITQ_BIT_SIZE} \
-    ${SMQTK_HCODE_BTREE_LEAFSIZE} ${SMQTK_HCODE_BTREE_RAND} \
-    ${SMQTK_HCODE_BTREE_OUTPUT} \
+make_balltree \
+    -vc "${SMQTK_HCODE_BTREE_CONFIG}" \
     2>&1 | tee "${LOG_DIR}/make_balltree.log"

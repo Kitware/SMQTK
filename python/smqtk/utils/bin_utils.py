@@ -266,7 +266,7 @@ def basic_cli_parser(description=None, configuration_group=True):
     :type description: str
 
     :param configuration_group: Whether or not to include the configuration
-        options.
+        group options.
     :type configuration_group: bool
 
     :return: Argument parser instance with basic options.

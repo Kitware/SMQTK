@@ -59,14 +59,14 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: __generator[collections.Hashable]
+        :rtype: collections.Iterator[collections.Hashable]
         """
 
     def values(self):
         """
         :return: Iterator over values in this store. Values are not guarenteed
             to be in any particular order.
-        :rtype: __generator[object]
+        :rtype: collections.Iterator[object]
         """
         for k in self.keys():
             yield self.get(k)

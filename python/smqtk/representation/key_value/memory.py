@@ -25,6 +25,7 @@ class MemoryKeyValueStore (KeyValueStore):
     mediums.*
 
     """
+    # TODO: File-based locking using smqtk.utils.exclusive touch or other means.
 
     PICKLE_PROTOCOL = 2
 
@@ -109,6 +110,16 @@ class MemoryKeyValueStore (KeyValueStore):
         return super(MemoryKeyValueStore, self).__repr__() \
             % ("cache_element: %s" % repr(self._cache_element))
 
+    def cache_table(self):
+        """
+        Cache the current table to the currently set cache element.
+
+        If there is no cache element, this method does nothing.
+        """
+        if self._cache_element is not None:
+            self._cache_element.set_bytes(
+                pickle.dumps(self._table, self.PICKLE_PROTOCOL))
+
     def count(self):
         with self._table_lock:
             return len(self._table)
@@ -156,7 +167,7 @@ class MemoryKeyValueStore (KeyValueStore):
         """
         return key in self._table
 
-    def add(self, key, value):
+    def add(self, key, value, cache=True):
         """
         Add a key-value pair to this store.
 
@@ -165,6 +176,11 @@ class MemoryKeyValueStore (KeyValueStore):
 
         :param value: Python object to store.
         :type value: object
+
+        :param cache: Memory-implementation specific parameter. If the
+            successful call to this method should trigger a cache flush to a
+            set cache element.
+        :type cache: bool
 
         :raises ReadOnlyError: If this instance is marked as read-only.
 
@@ -178,9 +194,25 @@ class MemoryKeyValueStore (KeyValueStore):
 
             # TODO(paul.tunison): Some other serialization than Pickle.
             #   - pickle loading allows arbitrary code execution on host.
-            if self._cache_element:
-                self._cache_element.set_bytes(
-                    pickle.dumps(self._table, self.PICKLE_PROTOCOL))
+            if cache:
+                self.cache_table()
+
+    def add_many(self, d):
+        """
+        Add multiple key-value pairs at a time into this store as represented in
+        the provided dictionary `d`.
+
+        :param d: Dictionary of key-value pairs to add to this store.
+        :type d: dict[collections.Hashable, object]
+
+        :return: Self.
+        :rtype: MemoryKeyValueStore
+
+        """
+        with self._table_lock:
+            for k, v in six.iteritems(d):
+                self.add(k, v, False)
+            self.cache_table()
 
     def get(self, key, default=NO_DEFAULT_VALUE):
         """

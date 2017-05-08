@@ -32,14 +32,17 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
     Locality-sensitive hashing based nearest neighbor index
 
     This type of algorithm relies on a hashing algorithm to hash descriptors
-    such that similar descriptors are hashed the same or similarly. This allows
-    simpler distance functions to be performed on hashes in order to find
-    nearby bins which are more likely to hold similar descriptors.
+    such that similar descriptors are hashed the same or similar hash value.
+    This allows simpler distance functions (hamming distance) to be performed on
+    hashes in order to find nearby bins which are more likely to hold similar
+    descriptors.
 
     LSH nearest neighbor algorithms consist of:
         * Index of descriptors to query over
         * A hashing function that transforms a descriptor vector into a
           hash (bit-vector).
+        * Key-Value store of hash values to their set of hashed descriptor
+          UUIDs.
         * Nearest neighbor index for indexing bit-vectors (treated as
           descriptors)
 
@@ -147,8 +150,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
     def __init__(self, lsh_functor, descriptor_index, hash2uuids_kvstore,
                  hash_index=None,
-                 distance_method='cosine', read_only=False, live_reload=False,
-                 reload_mon_interval=0.1, reload_settle_window=1.0):
+                 distance_method='cosine', read_only=False):
         """
         Initialize LSH algorithm with a hashing functor, descriptor index and
         hash nearest-neighbor index.
@@ -205,26 +207,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             be raised from build_index.
         :type read_only: bool
 
-        :param live_reload: Activate live reloading of local model elements
-            from disk. This option does nothing if ``hash2uuid_cache_filepath``
-            is ``None`` (no cached model on disk).
-
-            This only affects this implementations controlled elements and not
-            this implementation's sub-structures.
-        :type live_reload: bool
-
-        :param reload_mon_interval: Frequency in seconds at which we check file
-            modification times. This must be >= 0.
-        :type reload_mon_interval: float
-
-        :param reload_settle_window: File modification window, after which we
-            consider the file done being modified and reload it. This must be
-            >= 0 and should be >= the ``reload_mon_interval``.
-        :type reload_settle_window: float
-
         :raises ValueError: Invalid distance method specified.
-        :raises ValueError: Live reload is on and the associated options were
-            invalid (see ``FileModificationMonitor`` for details)
 
         """
         super(LSHNearestNeighborIndex, self).__init__()
@@ -238,9 +221,6 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.hash2uuids_kvstore = hash2uuids_kvstore
         self.distance_method = distance_method
         self.read_only = read_only
-        self.live_reload = live_reload
-        self.reload_mon_interval = reload_mon_interval
-        self.reload_settle_window = reload_settle_window
 
         self._distance_function = self._get_dist_func(self.distance_method)
 
@@ -273,9 +253,6 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 plugin.to_plugin_config(self.hash2uuids_kvstore),
             "distance_method": self.distance_method,
             "read_only": self.read_only,
-            "live_reload": self.live_reload,
-            "reload_mon_interval": self.reload_mon_interval,
-            "reload_settle_window": self.reload_settle_window,
         }
 
     def count(self):

@@ -17,6 +17,19 @@
             },
             "type": "PostgresDescriptorIndex"
         },
+        "hash2uuid_kvstore": {
+            "MemoryKeyValueStore": {
+                "cache_element": {
+                    "DataFileElement": {
+                        "explicit_mimetype": null,
+                        "filepath": "models/lsh_hash2uuids_kvstore.pickle",
+                        "readonly": false
+                    },
+                    "type": "DataFileElement"
+                }
+            },
+            "type": "MemoryKeyValueStore"
+        },
         "lsh_functor": {
             "ItqFunctor": {
                 "bit_length": 256,
@@ -44,7 +57,6 @@
         }
     },
     "utility": {
-        "pickle_protocol": -1,
         "report_interval": 1.0,
         "use_multiprocessing": false
     }

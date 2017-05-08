@@ -66,7 +66,6 @@ train_itq -vc "${SMQTK_ITQ_TRAIN_CONFIG}" \
 # Compute hash codes for descriptors
 compute_hash_codes \
     -vc "${SMQTK_HCODE_CONFIG}" \
-    --output-hash2uuids "${SMQTK_HCODE_PICKLE}" \
     2>&1 | tee "${LOG_DIR}/compute_hash_codes.log"
 
 # Compute balltree hash index

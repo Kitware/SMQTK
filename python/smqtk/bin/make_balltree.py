@@ -3,14 +3,21 @@ Script for building and saving the model for the ``SkLearnBallTreeHashIndex``
 implementation of ``HashIndex``.
 """
 
-import logging, cPickle, os
-from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import SkLearnBallTreeHashIndex
+import logging, os
+from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
+    SkLearnBallTreeHashIndex
+from smqtk.representation.data_element import from_uri
 from smqtk.utils.bin_utils import (
     initialize_logging,
     report_progress,
     basic_cli_parser,
 )
 from smqtk.utils.bit_utils import int_to_bit_vector_large
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 def cli_parser():
@@ -46,10 +53,9 @@ def main():
     log.debug("rand_seed        : %d", rand_seed)
     log.debug("balltree_model_fp: %s", balltree_model_fp)
 
-
     log.info("Loading hash2uuids table")
     with open(hash2uuids_fp) as f:
-        hash2uuids = cPickle.load(f)
+        hash2uuids = pickle.load(f)
 
     log.info("Computing hash-code vectors")
     hash_vectors = []  #[int_to_bit_vector_large(h, bit_len) for h in hash2uuids]
@@ -59,7 +65,8 @@ def main():
         report_progress(log.debug, rs, 1.)
 
     log.info("Initializing ball tree")
-    btree = SkLearnBallTreeHashIndex(balltree_model_fp, leaf_size, rand_seed)
+    cache_elem = from_uri(balltree_model_fp)
+    btree = SkLearnBallTreeHashIndex(cache_elem, leaf_size, rand_seed)
 
     log.info("Building ball tree")
     btree.build_index(hash_vectors)

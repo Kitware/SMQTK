@@ -158,16 +158,12 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
             yield de, m[de.uuid()]
 
 
-def compute_hash_codes(uuids, index, functor, hash2uuids=None,
-                       report_interval=1.0, use_mp=False):
+def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
+                       ordered=False):
     """
     Given an iterable of DescriptorElement UUIDs, asynchronously access them
     from the given ``index``, asynchronously compute hash codes via ``functor``
-    and  convert to an integer, yielding (DescriptorElement, hash-int) pairs.
-
-    The dictionary input and returned is of the same format used by the
-    ``LSHNearestNeighborIndex`` implementation (mapping pointed to by the
-    ``hash2uuid_cache_filepath`` attribute).
+    and convert to an integer, yielding (UUID, hash-int) pairs.
 
     :param uuids: Sequence of UUIDs to process
     :type uuids: collections.Iterable[collections.Hashable]
@@ -177,11 +173,6 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     :param functor: LSH hash code functor instance
     :type functor: smqtk.algorithms.LshFunctor
-
-    :param hash2uuids: Hash code to UUID set to update, which is also returned
-        from this function. If not provided, we will start a new mapping, which
-        is returned instead.
-    :type hash2uuids: dict[int|long, set[collections.Hashable]]
 
     :param report_interval: Frequency in seconds at which we report speed and
         completion progress via logging. Reporting is disabled when logging
@@ -194,14 +185,14 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
         to dangerously high RAM consumption.
     :type use_mp: bool
 
-    :return: The ``update_map`` provided or, if None was provided, a new
-        mapping.
-    :rtype: dict[int|long, set[collections.Hashable]]
+    :param ordered: If the element-hash value pairs yielded are in the same
+        order as element UUID values input. This function should be slightly
+        faster when ordering is not required.
+    :type ordered: bool
+
+    :return: Generator instance yielding (DescriptorElement, int) value pairs.
 
     """
-    if hash2uuids is None:
-        hash2uuids = {}
-
     # TODO: parallel map fetch elements from index?
     #       -> separately from compute
 
@@ -211,33 +202,26 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     # Setup log and reporting function
     log = logging.getLogger(__name__)
-    report_state = [0] * 7
 
-    # noinspection PyGlobalUndefined
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:
-        def report_progress(*_):
-            return
+        log_func = lambda m: None
         log.debug("Not logging progress")
     else:
         log.debug("Logging progress at %f second intervals", report_interval)
-        report_progress = bin_utils.report_progress
+        log_func = log.debug
 
     log.debug("Starting computation")
+    reporter = bin_utils.ProgressReporter(log_func, report_interval)
+    reporter.start()
     for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
-                                                ordered=False,
+                                                ordered=ordered,
                                                 use_multiprocessing=use_mp):
-        if hash_int not in hash2uuids:
-            hash2uuids[hash_int] = set()
-        hash2uuids[hash_int].add(uuid)
-
+        yield (uuid, hash_int)
         # Progress reporting
-        report_progress(log.debug, report_state, report_interval)
+        reporter.increment_report()
 
     # Final report
-    report_state[1] -= 1
-    report_progress(log.debug, report_state, 0.0)
-
-    return hash2uuids
+    reporter.report()
 
 
 def mb_kmeans_build_apply(index, mbkm, initial_fit_size):

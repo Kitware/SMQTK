@@ -140,7 +140,7 @@ We can conveniently extract these UUIDs with the following commands in script :f
    :linenos:
    :emphasize-lines: 5
 
-With this file, we can now complete the configuretion for our computation script:
+With this file, we can now complete the configuration for our computation script:
 
 .. literalinclude:: 2c.config.compute_hash_codes.json
    :language: json

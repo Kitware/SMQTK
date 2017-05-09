@@ -219,8 +219,8 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         })
 
     def test_add_with_caching(self):
-        s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement()
+        c = DataMemoryElement()
+        s = MemoryKeyValueStore(c)
 
         expected_cache_dict = {'a': 'b', 'foo': None, 0: 89}
 
@@ -228,8 +228,69 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         s.add('foo', None)
         s.add(0, 89)
         nose.tools.assert_equal(
-            pickle.loads(s._cache_element.get_bytes()),
+            pickle.loads(c.get_bytes()),
             expected_cache_dict
+        )
+
+    def test_add_with_caching_no_cache(self):
+        c = DataMemoryElement()
+        s = MemoryKeyValueStore(c)
+
+        expected_cache_dict = {'a': 'b', 'foo': None}
+
+        s.add('a', 'b', False)
+        # No caching means there should be nothign there yet
+        nose.tools.assert_equal(
+            c.get_bytes(),
+            ""
+        )
+
+        s.add('foo', None, True)
+        # With caching, meaning the state should be cached here, which includes
+        # everything added previously, including the a:b pair.
+        nose.tools.assert_equal(
+            pickle.loads(c.get_bytes()),
+            expected_cache_dict
+        )
+
+        s.add(0, 89, False)
+        nose.tools.assert_equal(
+            pickle.loads(c.get_bytes()),
+            expected_cache_dict
+        )
+
+    def test_add_many(self):
+        d = {
+            'a': 'b',
+            'foo': None,
+            0: 89,
+        }
+
+        s = MemoryKeyValueStore()
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, {})
+
+        s.add_many(d)
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, d)
+
+    def test_add_many_with_caching(self):
+        d = {
+            'a': 'b',
+            'foo': None,
+            0: 89,
+        }
+        c = DataMemoryElement()
+
+        s = MemoryKeyValueStore(c)
+        self.assertEqual(s._table, {})
+        self.assertEqual(c.get_bytes(), "")
+
+        s.add_many(d)
+        self.assertEqual(s._table, d)
+        self.assertEqual(
+            pickle.loads(c.get_bytes()),
+            d
         )
 
     def test_get_invalid_key(self):

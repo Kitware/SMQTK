@@ -7,6 +7,7 @@ References:
 """
 import itertools
 import logging
+import multiprocessing
 
 try:
     import cPickle as pickle
@@ -29,6 +30,9 @@ def norm_psql_cmd_string(s):
     :rtype: str
     """
     return ' '.join(s.split())
+
+
+PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
 
 
 # noinspection SqlNoDataSourceInspection
@@ -256,7 +260,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 uuid_col=self.uuid_col,
                 element_col=self.element_col,
             ))
-            cursor.execute(q_table_upsert)
+            with PSQL_TABLE_CREATE_RLOCK:
+                cursor.execute(q_table_upsert)
 
     def _single_execute(self, execute_hook, yield_result_rows=False):
         """

@@ -218,6 +218,21 @@ class TestDataFileElement (unittest.TestCase):
         e = DataFileElement(os.path.join(TEST_DATA_DIR, 'Lenna.png'))
         ntools.assert_false(e.is_empty())
 
+    def test_get_bytes_no_file(self):
+        e = DataFileElement("/not/a/valid/path.txt", readonly=True)
+        # We currently expect, in the case where the filepath doesn't exist, to
+        # get the same bytes as if the file existed and were empty.
+        self.assertEqual(e.get_bytes(), "")
+        # read-only status should have no effect.
+        e = DataFileElement("/not/a/valid/path.txt", readonly=True)
+        self.assertEqual(e.get_bytes(), "")
+
+    def test_get_bytes(self):
+        # Test with a known real file.
+        test_file_path = os.path.join(TEST_DATA_DIR, 'text_file')
+        e = DataFileElement(test_file_path)
+        self.assertEqual(e.get_bytes(), "Some text content.\n")
+
     def test_writable_readonly_false(self):
         e = DataFileElement('foo')
         ntools.assert_true(e.writable())

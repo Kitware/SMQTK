@@ -157,5 +157,7 @@ class SmqtkAPI(Resource):
 
 def load(info):
     from .nearest_neighbors import NearestNeighbors
+    from .iqr import Iqr
     info['apiRoot'].smqtk_nearest_neighbors = NearestNeighbors()
     info['apiRoot'].smqtk = SmqtkAPI()
+    info['apiRoot'].smqtk_iqr = Iqr()

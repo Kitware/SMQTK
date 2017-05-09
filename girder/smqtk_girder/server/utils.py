@@ -1,3 +1,7 @@
+from bson.objectid import ObjectId
+
+from smqtk.representation.data_element.memory_element import DataMemoryElement
+
 from girder.utility.model_importer import ModelImporter
 from girder.api.rest import getCurrentUser, filtermodel
 
@@ -29,7 +33,13 @@ def getCreateSessionsFolder():
                                                  'name': 'Private'
                                              }))[0]
 
-    return folder.createFolder(privateFolder, 'iqr_sessions', reuseExisting=True)
+    return folder.createFolder(privateFolder, '.smqtk_iqr_sessions', reuseExisting=True)
+
+
+def smqtkDataElementFromGirderFileId(fileId):
+    file = ModelImporter.model('file').load(ObjectId(fileId), force=True)
+    with ModelImporter.model('file').open(file) as fh:
+        return DataMemoryElement(bytes=fh.read(file['size']), readonly=True)
 
 
 def localSmqtkFileIdFromName(smqtkFolder, name):

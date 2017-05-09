@@ -198,6 +198,7 @@ class PostgresDescriptorElement (DescriptorElement):
             ))
             with PSQL_TABLE_CREATE_RLOCK:
                 cursor.execute(q_table_upsert)
+                cursor.connection.commit()
 
     def has_vector(self):
         """

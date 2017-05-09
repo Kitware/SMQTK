@@ -262,6 +262,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ))
             with PSQL_TABLE_CREATE_RLOCK:
                 cursor.execute(q_table_upsert)
+                cursor.connection.commit()
 
     def _single_execute(self, execute_hook, yield_result_rows=False):
         """

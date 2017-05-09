@@ -1,3 +1,5 @@
+import multiprocessing
+
 import numpy
 
 from smqtk.representation import DescriptorElement
@@ -8,6 +10,9 @@ try:
     import psycopg2
 except ImportError:
     psycopg2 = None
+
+
+PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
 
 
 # noinspection SqlNoDataSourceInspection
@@ -191,7 +196,8 @@ class PostgresDescriptorElement (DescriptorElement):
                 uuid_col=self.uuid_col,
                 binary_col=self.binary_col,
             ))
-            cursor.execute(q_table_upsert)
+            with PSQL_TABLE_CREATE_RLOCK:
+                cursor.execute(q_table_upsert)
 
     def has_vector(self):
         """

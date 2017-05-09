@@ -1,10 +1,9 @@
+import multiprocessing
+
 import numpy
 
 from smqtk.representation import DescriptorElement
-
-
-__author__ = 'paul.tunison@kitware.com'
-
+from smqtk.utils.postgres import norm_psql_cmd_string
 
 # Try to import required modules
 try:
@@ -13,6 +12,10 @@ except ImportError:
     psycopg2 = None
 
 
+PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
+
+
+# noinspection SqlNoDataSourceInspection
 class PostgresDescriptorElement (DescriptorElement):
     """
     Descriptor element whose vector is stored in a Postgres database.
@@ -27,15 +30,24 @@ class PostgresDescriptorElement (DescriptorElement):
 
     ARRAY_DTYPE = numpy.float64
 
-    SELECT_TMPL = ' '.join("""
+    UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
+        CREATE TABLE IF NOT EXISTS {table_name:s} (
+          {type_col:s} TEXT NOT NULL,
+          {uuid_col:s} TEXT NOT NULL,
+          {binary_col:s} BYTEA NOT NULL,
+          PRIMARY KEY ({type_col:s}, {uuid_col:s})
+        );
+    """)
+
+    SELECT_TMPL = norm_psql_cmd_string("""
         SELECT {binary_col:s}
           FROM {table_name:s}
           WHERE {type_col:s} = %(type_val)s
             AND {uuid_col:s} = %(uuid_val)s
         ;
-    """.split())
+    """)
 
-    UPSERT_TMPL = ' '.join("""
+    UPSERT_TMPL = norm_psql_cmd_string("""
         WITH upsert AS (
           UPDATE {table_name:s}
             SET {binary_col:s} = %(binary_val)s
@@ -46,12 +58,12 @@ class PostgresDescriptorElement (DescriptorElement):
         INSERT INTO {table_name:s} ({type_col:s}, {uuid_col:s}, {binary_col:s})
           SELECT %(type_val)s, %(uuid_val)s, %(binary_val)s
             WHERE NOT EXISTS (SELECT * FROM upsert);
-    """.split())
+    """)
 
     @classmethod
     def is_usable(cls):
         if psycopg2 is None:
-            cls.logger().warning("Not usable. Requires psycopg2 module")
+            cls.get_logger().warning("Not usable. Requires psycopg2 module")
             return False
         return True
 
@@ -59,7 +71,7 @@ class PostgresDescriptorElement (DescriptorElement):
                  table_name='descriptors',
                  uuid_col='uid', type_col='type_str', binary_col='vector',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
-                 db_pass=None):
+                 db_pass=None, create_table=True):
         """
         Initialize new PostgresDescriptorElement attached to some database
         credentials.
@@ -121,6 +133,12 @@ class PostgresDescriptorElement (DescriptorElement):
             None if no password is to be used.
         :type db_pass: str | None
 
+        :param create_table: If this instance should try to create the storing
+            table before actions are performed against it. If the configured
+            user does not have sufficient permissions to create the table and it
+            does not currently exist, an exception will be raised.
+        :type create_table: bool
+
         """
         super(PostgresDescriptorElement, self).__init__(type_str, uuid)
 
@@ -128,6 +146,7 @@ class PostgresDescriptorElement (DescriptorElement):
         self.uuid_col = uuid_col
         self.type_col = type_col
         self.binary_col = binary_col
+        self.create_table = create_table
 
         self.db_name = db_name
         self.db_host = db_host
@@ -141,6 +160,7 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_col": self.uuid_col,
             "type_col": self.type_col,
             "binary_col": self.binary_col,
+            "create_table": self.create_table,
 
             "db_name": self.db_name,
             "db_host": self.db_host,
@@ -149,7 +169,7 @@ class PostgresDescriptorElement (DescriptorElement):
             "db_pass": self.db_pass,
         }
 
-    def get_psql_connection(self):
+    def _get_psql_connection(self):
         """
         :return: A new connection to the configured database
         :rtype: psycopg2._psycopg.connection
@@ -161,6 +181,24 @@ class PostgresDescriptorElement (DescriptorElement):
             host=self.db_host,
             port=self.db_port,
         )
+
+    def _ensure_table(self, cursor):
+        """
+        Execute on psql connector cursor the table create-of-not-exists query.
+
+        :param cursor: Connection active cursor.
+
+        """
+        if self.create_table:
+            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
+                table_name=self.table_name,
+                type_col=self.type_col,
+                uuid_col=self.uuid_col,
+                binary_col=self.binary_col,
+            ))
+            with PSQL_TABLE_CREATE_RLOCK:
+                cursor.execute(q_table_upsert)
+                cursor.connection.commit()
 
     def has_vector(self):
         """
@@ -181,19 +219,25 @@ class PostgresDescriptorElement (DescriptorElement):
         # vector return.
         # OLD: return self.vector() is not None
 
-        q = self.SELECT_TMPL.format(**{
+        # Using static value 'true' for binary "column" to reduce data return
+        # volume.
+        q_select = self.SELECT_TMPL.format(**{
             'binary_col': 'true',
             'table_name': self.table_name,
             'type_col': self.type_col,
             'uuid_col': self.uuid_col,
         })
+        q_select_values = {
+            "type_val": self.type(),
+            "uuid_val": str(self.uuid())
+        }
 
-        conn = self.get_psql_connection()
+        conn = self._get_psql_connection()
         cur = conn.cursor()
 
         try:
-            cur.execute(q, {"type_val": self.type(),
-                            "uuid_val": str(self.uuid())})
+            self._ensure_table(cur)
+            cur.execute(q_select, q_select_values)
             r = cur.fetchone()
             # For server cleaning (e.g. pgbouncer)
             conn.commit()
@@ -214,23 +258,24 @@ class PostgresDescriptorElement (DescriptorElement):
         :rtype: numpy.core.multiarray.ndarray or None
 
         """
-        conn = self.get_psql_connection()
+        q_select = self.SELECT_TMPL.format(**{
+            "binary_col": self.binary_col,
+            "table_name": self.table_name,
+            "type_col": self.type_col,
+            "uuid_col": self.uuid_col,
+        })
+        q_select_values = {
+            "type_val": self.type(),
+            "uuid_val": str(self.uuid())
+        }
+
+        conn = self._get_psql_connection()
         cur = conn.cursor()
         try:
-            # fill in query with appropriate field names, then supply values in
-            # execute
-            q = self.SELECT_TMPL.format(**{
-                "binary_col": self.binary_col,
-                "table_name": self.table_name,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
+            self._ensure_table(cur)
+            cur.execute(q_select, q_select_values)
 
-            })
-
-            cur.execute(q, {"type_val": self.type(),
-                            "uuid_val": str(self.uuid())})
             r = cur.fetchone()
-            # For server cleaning (e.g. pgbouncer)
             conn.commit()
 
             if not r:
@@ -274,25 +319,23 @@ class PostgresDescriptorElement (DescriptorElement):
         if new_vec.dtype != self.ARRAY_DTYPE:
             new_vec = new_vec.astype(self.ARRAY_DTYPE)
 
-        conn = self.get_psql_connection()
+        q_upsert = self.UPSERT_TMPL.strip().format(**{
+            "table_name": self.table_name,
+            "binary_col": self.binary_col,
+            "type_col": self.type_col,
+            "uuid_col": self.uuid_col,
+        })
+        q_upsert_values = {
+            "binary_val": psycopg2.Binary(new_vec),
+            "type_val": self.type(),
+            "uuid_val": str(self.uuid()),
+        }
+
+        conn = self._get_psql_connection()
         cur = conn.cursor()
         try:
-            upsert_q = self.UPSERT_TMPL.strip().format(**{
-                "table_name": self.table_name,
-                "binary_col": self.binary_col,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-            })
-            q_values = {
-                "binary_val": psycopg2.Binary(new_vec),
-                "type_val": self.type(),
-                "uuid_val": str(self.uuid()),
-            }
-            # Strip out duplicate white-space
-            upsert_q = " ".join(upsert_q.split())
-
-            cur.execute(upsert_q, q_values)
-            cur.close()
+            self._ensure_table(cur)
+            cur.execute(q_upsert, q_upsert_values)
             conn.commit()
         except:
             conn.rollback()

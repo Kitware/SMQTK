@@ -6,14 +6,15 @@ from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on
     ``DataElement`` UUID values.
+
+    This should only be used with DataElements whose byte content is expected
+    not to change. If they do, then UUID keys may no longer represent the
+    elements associated with them.
 
     """
 
@@ -47,7 +48,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: Generator over the DataElements contained in this set in no
             particular order.
         """
-        return
 
     @abc.abstractmethod
     def count(self):
@@ -55,7 +55,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: The number of data elements in this set.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def uuids(self):
@@ -63,7 +62,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: A new set of uuids represented in this data set.
         :rtype: set
         """
-        return
 
     @abc.abstractmethod
     def has_uuid(self, uuid):
@@ -72,24 +70,26 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
 
         :param uuid: Unique ID to test for inclusion. This should match the
             type that the set implementation expects or cares about.
+        :type uuid: collections.Hashable
 
         :return: True if the given uuid matches an element in this set, or
             False if it does not.
         :rtype: bool
 
         """
-        return
 
     @abc.abstractmethod
     def add_data(self, *elems):
         """
         Add the given data element(s) instance to this data set.
 
+        *NOTE: Implementing methods should check that input elements are in
+        fact DataElement instances.*
+
         :param elems: Data element(s) to add
-        :type elems: list[smqtk.representation.DataElement]
+        :type elems: smqtk.representation.DataElement
 
         """
-        return
 
     @abc.abstractmethod
     def get_data(self, uuid):
@@ -101,12 +101,12 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
             this data set.
 
         :param uuid: The uuid of the element to retrieve.
+        :type uuid: collections.Hashable
 
         :return: The data element instance for the given uuid.
         :rtype: smqtk.representation.DataElement
 
         """
-        return
 
 
 def get_data_set_impls(reload_modules=False):

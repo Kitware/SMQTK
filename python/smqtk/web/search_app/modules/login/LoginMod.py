@@ -4,7 +4,10 @@ import functools
 import json
 import os.path
 
+import requests
+
 from smqtk.utils import SmqtkObject
+from smqtk.utils.url import url_join
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +51,6 @@ class LoginMod (SmqtkObject, flask.Blueprint):
                 'login.html',
                 next=flask.request.args.get('next', '/'),
                 username=flask.request.args.get('username', ''),
-                **parent_app.nav_bar_content()
             )
 
         @self.route('/login.passwd', methods=['post'])
@@ -89,9 +91,9 @@ class LoginMod (SmqtkObject, flask.Blueprint):
             """
             if 'user' in flask.session:
                 del flask.session['user']
-                return flask.redirect("/home")
             else:
                 flask.flash("No user currently logged in!", "error")
+            return flask.redirect("/")
 
     #
     # Utility methods
@@ -120,14 +122,73 @@ class LoginMod (SmqtkObject, flask.Blueprint):
     @staticmethod
     def login_required(f):
         """
-        Decorator for URLs that require login
+        Decorator for URLs that require login.
+
+        Girder aware. Login-required URLs can be passed:
+
+            "girder_token"
+            "girder_origin"
+            "girder_apiRoot"
+
+        argument,  We will check the given token with the origin URL and API
+        root.
 
         :param f: Function to be wrapped.
 
         """
+        log = LoginMod.get_logger()
+
         @functools.wraps(f)
         def deco(*args, **kwds):
-            if not 'user' in flask.session:
+            # Combine to handle both GET arguments and form data
+            c = {}
+            c.update(dict(flask.request.form.iteritems()))
+            c.update(dict(flask.request.args.iteritems()))
+            log.debug("Combined arguments: %s", c)
+
+            if not {'girder_token', 'girder_origin', 'girder_apiRoot'} \
+                    .difference(c.keys()):
+                g_token = c['girder_token']
+                log.debug("G-token: %s", g_token)
+                g_origin = c['girder_origin']
+                log.debug("G-origin: %s", g_origin)
+                g_apiRoot = c['girder_apiRoot']
+                log.debug("G-apiRoot: %s", g_apiRoot)
+
+                g_api_header = {'Girder-Token': g_token}
+
+                # Attempt getting current user using supplied token. If it
+                # succeeds and matches the given user, log them in here.
+
+                # Get user ID from token
+                log.debug('Getting Girder current token info')
+                r = requests.get(url_join(g_origin, g_apiRoot, 'token/current'),
+                                 headers=g_api_header)
+                if r.json() is None:
+                    flask.flash("Invalid Girder token credentials token",
+                                'error')
+                    return flask.redirect(flask.url_for("login.login")
+                                          + "?next=" + flask.request.url)
+                else:
+                    g_userId = r.json()['userId']
+
+                    # Get user label and name from ID
+                    log.debug("Getting user info from ID")
+                    r = requests.get(url_join(g_origin, g_apiRoot, 'user',
+                                              g_userId),
+                                     headers=g_api_header)
+                    user_label = r.json()['login']
+                    user_fullname = ' '.join([r.json()['firstName'],
+                                              r.json()['lastName']])
+
+                    log.debug("Logging user '%s' in", user_fullname)
+                    # Arbitrarily log the user in as a guest
+                    LoginMod._login_user(user_label, {
+                        'fullname': user_fullname,
+                        'roles': ['guest'],
+                    })
+
+            if 'user' not in flask.session:
                 flask.flash("Login required!", 'error')
                 return flask.redirect(flask.url_for("login.login")
                                       + "?next=" + flask.request.url)

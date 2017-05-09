@@ -139,8 +139,8 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     cf_writer = csv.writer(cf)
     try:
         rps = [0] * 7
-        for fp, descr in m:
-            cf_writer.writerow([fp, descr.uuid()])
+        for de, descr in m:
+            cf_writer.writerow([de._filepath, descr.uuid()])
             report_progress(log.debug, rps, 1.)
     finally:
         del cf_writer

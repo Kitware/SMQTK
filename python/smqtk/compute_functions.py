@@ -9,6 +9,7 @@ import collections
 import logging
 
 import numpy
+import six
 
 from smqtk.utils import (
     bin_utils,
@@ -17,24 +18,20 @@ from smqtk.utils import (
 )
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
-def compute_many_descriptors(file_elements, descr_generator, descr_factory,
+def compute_many_descriptors(data_elements, descr_generator, descr_factory,
                              descr_index, batch_size=None, overwrite=False,
                              procs=None, **kwds):
     """
-    Compute descriptors for each data file path, yielding
-    (filepath, DescriptorElement) tuple pairs in the order that they were
+    Compute descriptors for each data element, yielding
+    (DataElement, DescriptorElement) tuple pairs in the order that they were
     input.
 
     *Note:* **This function currently only operated over images due to the
     specific data validity check/filter performed.*
 
-    :param file_elements: Iterable of DataFileElement instances of files to
+    :param data_elements: Iterable of DataElement instances of files to
         work on.
-    :type file_elements: collections.Iterable[smqtk.representation.data_element
-                                              .file_element.DataFileElement]
+    :type data_elements: collections.Iterable[smqtk.representation.DataElement]
 
     :param descr_generator: DescriptorGenerator implementation instance
         to use to generate descriptor vectors.
@@ -72,75 +69,75 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         ``compute_descriptor_async`` function on the descriptor generator.
     :type kwds: dict
 
-    :return: Generator that yields (filepath, DescriptorElement) for each file
-        path given, in the order file paths were provided.
-    :rtype: __generator[(str, smqtk.representation.DescriptorElement)]
+    :return: Generator that yields (DataElement, DescriptorElement) for each data
+        element given, in the order they were provided.
+    :rtype: __generator[(smqtk.representation.DataElement, smqtk.representation.DescriptorElement)]
 
     """
     log = logging.getLogger(__name__)
 
     # Capture of generated elements in order of generation
-    #: :type: deque[smqtk.representation.data_element.file_element.DataFileElement]
-    dfe_deque = collections.deque()
+    #: :type: deque[smqtk.representation.DataElement]
+    de_deque = collections.deque()
 
     # Counts for logging
     total = 0
     unique = 0
 
     def iter_capture_elements():
-        for dfe in file_elements:
-            dfe_deque.append(dfe)
-            yield dfe
+        for de in data_elements:
+            de_deque.append(de)
+            yield de
 
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
 
         batch_i = 0
 
-        for dfe in iter_capture_elements():
-            # elements captured ``dfe_deque`` in iter_capture_elements
+        for de in iter_capture_elements():
+            # elements captured ``de_deque`` in iter_capture_elements
 
-            if len(dfe_deque) == batch_size:
+            if len(de_deque) == batch_size:
                 batch_i += 1
                 log.debug("Computing batch %d", batch_i)
 
-                total += len(dfe_deque)
+                total += len(de_deque)
                 m = descr_generator.compute_descriptor_async(
-                    dfe_deque, descr_factory, overwrite, procs, **kwds
+                    de_deque, descr_factory, overwrite, procs, **kwds
                 )
                 unique += len(m)
                 log.debug("-- Processed %d so far (%d total data elements "
                           "input)", unique, total)
 
                 log.debug("-- adding to index")
-                descr_index.add_many_descriptors(m.itervalues())
+                descr_index.add_many_descriptors(six.itervalues(m))
 
                 log.debug("-- yielding generated descriptor elements")
-                for e in dfe_deque:
+                for e in de_deque:
                     # noinspection PyProtectedMember
-                    yield e._filepath, m[e]
+                    yield e, m[e.uuid()]
 
-                dfe_deque.clear()
+                de_deque.clear()
 
-        if len(dfe_deque):
+        if len(de_deque):
             log.debug("Computing final batch of size %d",
-                      len(dfe_deque))
+                      len(de_deque))
 
-            total += len(dfe_deque)
+            total += len(de_deque)
             m = descr_generator.compute_descriptor_async(
-                dfe_deque, descr_factory, overwrite, procs, **kwds
+                de_deque, descr_factory, overwrite, procs, **kwds
             )
             unique += len(m)
             log.debug("-- Processed %d so far (%d total data elements "
                       "input)", unique, total)
 
             log.debug("-- adding to index")
-            descr_index.add_many_descriptors(m.itervalues())
+            descr_index.add_many_descriptors(six.itervalues(m))
 
             log.debug("-- yielding generated descriptor elements")
-            for dfe in dfe_deque:
+            for de in de_deque:
                 # noinspection PyProtectedMember
-                yield dfe._filepath, m[dfe]
+                yield de, m[de.uuid()]
 
     else:
         log.debug("Using single async call")
@@ -153,24 +150,20 @@ def compute_many_descriptors(file_elements, descr_generator, descr_factory,
         )
 
         log.debug("Adding to index")
-        descr_index.add_many_descriptors(m.itervalues())
+        descr_index.add_many_descriptors(six.itervalues(m))
 
         log.debug("yielding generated elements")
-        for dfe in dfe_deque:
+        for de in de_deque:
             # noinspection PyProtectedMember
-            yield dfe._filepath, m[dfe]
+            yield de, m[de.uuid()]
 
 
-def compute_hash_codes(uuids, index, functor, hash2uuids=None,
-                       report_interval=1.0, use_mp=False):
+def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
+                       ordered=False):
     """
     Given an iterable of DescriptorElement UUIDs, asynchronously access them
     from the given ``index``, asynchronously compute hash codes via ``functor``
-    and  convert to an integer, yielding (DescriptorElement, hash-int) pairs.
-
-    The dictionary input and returned is of the same format used by the
-    ``LSHNearestNeighborIndex`` implementation (mapping pointed to by the
-    ``hash2uuid_cache_filepath`` attribute).
+    and convert to an integer, yielding (UUID, hash-int) pairs.
 
     :param uuids: Sequence of UUIDs to process
     :type uuids: collections.Iterable[collections.Hashable]
@@ -180,11 +173,6 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     :param functor: LSH hash code functor instance
     :type functor: smqtk.algorithms.LshFunctor
-
-    :param hash2uuids: Hash code to UUID set to update, which is also returned
-        from this function. If not provided, we will start a new mapping, which
-        is returned instead.
-    :type hash2uuids: dict[int|long, set[collections.Hashable]]
 
     :param report_interval: Frequency in seconds at which we report speed and
         completion progress via logging. Reporting is disabled when logging
@@ -197,14 +185,14 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
         to dangerously high RAM consumption.
     :type use_mp: bool
 
-    :return: The ``update_map`` provided or, if None was provided, a new
-        mapping.
-    :rtype: dict[int|long, set[collections.Hashable]]
+    :param ordered: If the element-hash value pairs yielded are in the same
+        order as element UUID values input. This function should be slightly
+        faster when ordering is not required.
+    :type ordered: bool
+
+    :return: Generator instance yielding (DescriptorElement, int) value pairs.
 
     """
-    if hash2uuids is None:
-        hash2uuids = {}
-
     # TODO: parallel map fetch elements from index?
     #       -> separately from compute
 
@@ -214,33 +202,26 @@ def compute_hash_codes(uuids, index, functor, hash2uuids=None,
 
     # Setup log and reporting function
     log = logging.getLogger(__name__)
-    report_state = [0] * 7
 
-    # noinspection PyGlobalUndefined
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:
-        def report_progress(*_):
-            return
+        log_func = lambda m: None
         log.debug("Not logging progress")
     else:
         log.debug("Logging progress at %f second intervals", report_interval)
-        report_progress = bin_utils.report_progress
+        log_func = log.debug
 
     log.debug("Starting computation")
+    reporter = bin_utils.ProgressReporter(log_func, report_interval)
+    reporter.start()
     for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
-                                                ordered=False,
+                                                ordered=ordered,
                                                 use_multiprocessing=use_mp):
-        if hash_int not in hash2uuids:
-            hash2uuids[hash_int] = set()
-        hash2uuids[hash_int].add(uuid)
-
+        yield (uuid, hash_int)
         # Progress reporting
-        report_progress(log.debug, report_state, report_interval)
+        reporter.increment_report()
 
     # Final report
-    report_state[1] -= 1
-    report_progress(log.debug, report_state, 0.0)
-
-    return hash2uuids
+    reporter.report()
 
 
 def mb_kmeans_build_apply(index, mbkm, initial_fit_size):

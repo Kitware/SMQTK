@@ -127,15 +127,19 @@ setuptools.setup(
         'flask',
         'flask-basicauth',
         'flask-login',
+        'Flask-Cors',
         'imageio',
         'jinja2',
         'matplotlib',
         'numpy',
-        'pillow',
+        # Pinning Pillow version due to large-image conversion issue in versions
+        # 4.1.0 and up.
+        'pillow==4.0.0',
         'pymongo',
         'requests',
         'scikit-learn',
         'scipy',
+        'six',
     ],
     extras_require={
         # Various optional dependencies for plugins
@@ -150,6 +154,9 @@ setuptools.setup(
         'caffe': [
             'protobuf',
             'scikit-image',
+        ],
+        'magic': [
+            'file-magic',
         ],
         'flann': [
             'pyflann>=1.8.4',
@@ -188,6 +195,7 @@ setuptools.setup(
                 smqtk.bin.compute_many_descriptors:main',
             'computeDescriptor = smqtk.bin.computeDescriptor:main',
             'createFileIngest = smqtk.bin.createFileIngest:main',
+            'createGirderIngest = smqtk.bin.createGirderIngest:main',
             'descriptors_to_svmtrain = \
                 smqtk.bin.descriptors_to_svmtrainfile:main',
             'generate_image_transform = \

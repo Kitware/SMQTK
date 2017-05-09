@@ -1,7 +1,8 @@
 import cPickle
 
+from smqtk.exceptions import  NoClassificationError
 from smqtk.representation import ClassificationElement
-from smqtk.utils.errors import NoClassificationError
+
 
 # Try to import required modules
 try:
@@ -24,6 +25,15 @@ class PostgresClassificationElement (ClassificationElement):
         - classification-binary :: bytea
 
     """
+
+    UPSERT_TABLE_TMPL = ' '.join("""
+        CREATE TABLE IF NOT EXISTS {table_name:s} (
+          {type_col:s} TEXT NOT NULL
+          {uuid_col:s} TEXT NOT NULL,
+          {classification_col:s} BYTEA NOT NULL,
+          PRIMARY KEY ({type_col:s}, {uuid_col:s})
+        );
+    """.split())
 
     # Known psql version compatibility: 9.4
     SELECT_TMPL = ' '.join("""
@@ -52,7 +62,7 @@ class PostgresClassificationElement (ClassificationElement):
     @classmethod
     def is_usable(cls):
         if psycopg2 is None:
-            cls.logger().warning("Not usable. Requires psycopg2 module")
+            cls.get_logger().warning("Not usable. Requires psycopg2 module")
             return False
         return True
 
@@ -61,7 +71,7 @@ class PostgresClassificationElement (ClassificationElement):
                  type_col='type_name', uuid_col='uid',
                  classification_col='classification',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
-                 db_pass=None, pickle_protocol=-1):
+                 db_pass=None, pickle_protocol=-1, create_table=True):
         """
         Initialize new PostgresClassificationElement attached to some database
         credentials.
@@ -127,6 +137,12 @@ class PostgresClassificationElement (ClassificationElement):
             default (latest version, probably binary).
         :type pickle_protocol: int
 
+        :param create_table: If this instance should try to create the storing
+            table before actions are performed against it. If the configured
+            user does not have sufficient permissions to create the table and it
+            does not currently exist, an exception will be raised.
+        :type create_table: bool
+
         """
         super(PostgresClassificationElement, self).__init__(type_name, uuid)
 
@@ -142,6 +158,7 @@ class PostgresClassificationElement (ClassificationElement):
         self.db_pass = db_pass
 
         self.pickle_protocol = pickle_protocol
+        self.create_table = create_table
 
     def get_config(self):
         return {
@@ -157,9 +174,10 @@ class PostgresClassificationElement (ClassificationElement):
             "db_pass": self.db_pass,
 
             "pickle_protocol": self.pickle_protocol,
+            "create_table": self.create_table,
         }
 
-    def get_psql_connection(self):
+    def _get_psql_connection(self):
         """
         :return: A new connection to the configured database
         :rtype: psycopg2._psycopg.connection
@@ -171,6 +189,22 @@ class PostgresClassificationElement (ClassificationElement):
             host=self.db_host,
             port=self.db_port,
         )
+
+    def _ensure_table(self, cursor):
+        """
+        Execute on psql connector cursor the table create-of-not-exists query.
+
+        :param cursor: Connection active cursor.
+
+        """
+        if self.create_table:
+            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
+                table_name=self.table_name,
+                type_col=self.type_col,
+                uuid_col=self.uuid_col,
+                classification_col=self.classification_col,
+            ))
+            cursor.execute(q_table_upsert)
 
     def has_classifications(self):
         """
@@ -198,21 +232,22 @@ class PostgresClassificationElement (ClassificationElement):
         :rtype: dict[collections.Hashable, float]
 
         """
-        conn = self.get_psql_connection()
+        q_select = self.SELECT_TMPL.format(**dict(
+            table_name=self.table_name,
+            type_col=self.type_col,
+            uuid_col=self.uuid_col,
+            classification_col=self.classification_col,
+        ))
+        q_select_values = {
+            "type_val": self.type_name,
+            "uuid_val": str(self.uuid)
+        }
+
+        conn = self._get_psql_connection()
         cur = conn.cursor()
         try:
-            # fill in query with appropriate field names, then supply values in
-            # execute
-            q = self.SELECT_TMPL.format(**{
-                "classification_col": self.classification_col,
-                "table_name": self.table_name,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-
-            })
-
-            cur.execute(q, {"type_val": self.type_name,
-                            "uuid_val": str(self.uuid)})
+            self._ensure_table(cur)
+            cur.execute(q_select, q_select_values)
             r = cur.fetchone()
             # For server cleaning (e.g. pgbouncer)
             conn.commit()
@@ -249,25 +284,24 @@ class PostgresClassificationElement (ClassificationElement):
         m = super(PostgresClassificationElement, self)\
             .set_classification(m, **kwds)
 
-        conn = self.get_psql_connection()
+        q_upsert = self.UPSERT_TMPL.strip().format(**{
+            "table_name": self.table_name,
+            "classification_col": self.classification_col,
+            "type_col": self.type_col,
+            "uuid_col": self.uuid_col,
+        })
+        q_upsert_values = {
+            "classification_val":
+                psycopg2.Binary(cPickle.dumps(m, self.pickle_protocol)),
+            "type_val": self.type_name,
+            "uuid_val": str(self.uuid),
+        }
+
+        conn = self._get_psql_connection()
         cur = conn.cursor()
         try:
-            upsert_q = self.UPSERT_TMPL.strip().format(**{
-                "table_name": self.table_name,
-                "classification_col": self.classification_col,
-                "type_col": self.type_col,
-                "uuid_col": self.uuid_col,
-            })
-            q_values = {
-                "classification_val":
-                    psycopg2.Binary(cPickle.dumps(m, self.pickle_protocol)),
-                "type_val": self.type_name,
-                "uuid_val": str(self.uuid),
-            }
-            # Strip out duplicate white-space
-            upsert_q = " ".join(upsert_q.split())
-
-            cur.execute(upsert_q, q_values)
+            self._ensure_table(cur)
+            cur.execute(q_upsert, q_upsert_values)
             cur.close()
             conn.commit()
         except:

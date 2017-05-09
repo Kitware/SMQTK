@@ -27,11 +27,9 @@ from smqtk.utils import (
 from smqtk.web import SmqtkWebApp
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 def new_uuid():
-    return str(uuid.uuid1(clock_seq=int(time.time() * 1000000))).replace('-', '')
+    return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
+        .replace('-', '')
 
 
 def make_response_json(message, **params):
@@ -158,7 +156,7 @@ class IqrService (SmqtkWebApp):
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.Hashable, smqtk.algorithms.SupervisedClassifier | None]
+        #: :type: dict[collections.Hashable, SupervisedClassifier | None]
         self.session_classifiers = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
@@ -183,7 +181,7 @@ class IqrService (SmqtkWebApp):
         self.session_timeout = \
             sc_config['session_expiration']['session_timeout']
 
-    # PUT
+    # POST
     def init_session(self):
         """
         Initialize a new session in the controller.
@@ -333,7 +331,7 @@ class IqrService (SmqtkWebApp):
             neu_d = set(
                 self.descriptor_index.get_many_descriptors(neu_uuids)
             )
-        except KeyError, ex:
+        except KeyError as ex:
             err_uuid = str(ex)
             self._log.warn(traceback.format_exc())
             return make_response_json(
@@ -411,7 +409,7 @@ class IqrService (SmqtkWebApp):
             neg_descrs = set(
                 self.descriptor_index.get_many_descriptors(neg_uuids)
             )
-        except KeyError, ex:
+        except KeyError as ex:
             err_uuid = str(ex)
             self._log.warn(traceback.format_exc())
             return make_response_json(
@@ -479,7 +477,6 @@ class IqrService (SmqtkWebApp):
                                   % (size, sid),
                                   num_results=size,
                                   sid=sid), 200
-
 
     # GET
     def get_results(self):
@@ -602,7 +599,7 @@ class IqrService (SmqtkWebApp):
         try:
             descriptors = list(self.descriptor_index
                                .get_many_descriptors(uuids))
-        except KeyError, ex:
+        except KeyError as ex:
             err_uuid = str(ex)
             self._log.warn(traceback.format_exc())
             return make_response_json(

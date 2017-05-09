@@ -14,9 +14,6 @@ import traceback
 from smqtk.utils import SmqtkObject
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 def parallel_map(work_func, *sequences, **kwargs):
     """
     Generalized local parallelization helper for executing embarrassingly
@@ -114,6 +111,10 @@ def parallel_map(work_func, *sequences, **kwargs):
             - type: str
             - default: None
     :type kwargs: dict
+
+    :return: A new parallel results iterator that starts work on the input
+        iterable when iterated.
+    :rtype: ParallelResultsIterator
 
     """
     # kwargs
@@ -231,7 +232,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
     def _log(self):
         # Changing naming of logger returned from default
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def __repr__(self):
@@ -411,7 +412,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
     def _log(self):
         # Changing naming of logger returned from default
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def stop(self):
@@ -502,7 +503,7 @@ class _Worker (SmqtkObject):
     @property
     def _log(self):
         return logging.getLogger(
-            self.logger().name + self.name
+            self.get_logger().name + self.name
         )
 
     def _make_event(self):

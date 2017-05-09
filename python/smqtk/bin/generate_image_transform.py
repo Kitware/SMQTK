@@ -2,6 +2,46 @@
 Utility for transforming an input image in various standardized ways, saving
 out those transformed images with standard namings. Transformations used are
 configurable via a configuration file (JSON).
+
+Configuration details:
+{
+    "crop": {
+
+        "center_levels": null | int
+            # If greater than 0, crop out one or more increasing smaller images
+            # from a base image by cutting off increasingly larger portions of
+            # the outside perimeter. Cropped image dimensions determined by the
+            # dimensions of the base image and the number of crops to generate.
+
+        "quadrant_pyramid_levels": null | int
+            # If greater than 0, generate a number of crops based on a number of
+            # quad-tree partitions made based on the given number of levels.
+            # Partitions for all levels less than the level provides are also
+            # made.
+
+        "tile_shape": null | [width, height]
+            # If not null and is a list of two integers, crop out tile windows
+            # from the base image that have the width and height specified.
+            # If the image width or height is not evenly divisible by the tile
+            # width or height, respectively, then the crop out as many tiles as
+            # neatly fit starting from the axis origin. The remaining pixels are
+            # ignored.
+    },
+
+    "brightness_levels": null | int
+        # Generate a number of images with different brightness levels using
+        # linear interpolation to choose levels between 0 (black) and 1
+        # (original image) as well as between 1 and 2.
+        # Results will not include contrast level 0, 1 or 2 images.
+
+    "contrast_levels": null | int
+        # Generate a number of images with different contrast levels using
+        # linear interpolation to choose levels between 0 (black) and 1
+        # (original image) as well as between 1 and 2.
+        # Results will not include contrast level 0, 1 or 2 images.
+
+}
+
 """
 
 import logging
@@ -12,7 +52,7 @@ import PIL.ImageEnhance
 import numpy
 
 import smqtk.utils.bin_utils
-import smqtk.utils.parallel
+import smqtk.utils.file_utils
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -93,6 +133,36 @@ def image_crop_quadrant_pyramid(image, n_levels):
                 )
 
 
+def image_crop_tiles(image, tile_width, tile_height):
+    """
+    Crop out tile windows from the base image that have the width and height
+    specified.
+
+    If the image width or height is not evenly divisible by the tile width or
+    height, respectively, then the crop out as many tiles as neatly fit starting
+    from the axis origin. The remaining pixels are ignored.
+
+    :param image: Image to crop tiles from
+    :type image: PIL.Image.Image
+
+    :param tile_width: Tile crop width in pixels.
+    :type tile_width: int
+    :param tile_height: Tile crop height in pixels.
+    :type tile_height: int
+    :return: Generator yielding tuples containing a cropped image and its
+        row and column position in the original image.
+    :rtype: __generator[(int, int, PIL.Image.Image)]
+    """
+    c_num = image.width // tile_width
+    r_num = image.height // tile_height
+
+    for r in range(r_num):
+        for c in range(c_num):
+            t = image.crop([c*tile_width, r*tile_height,
+                            (c+1)*tile_width, (r+1)*tile_height])
+            yield (r, c, t)
+
+
 def image_brightness_intervals(image, n):
     """
     Generate a number of images with different brightness levels using linear
@@ -137,9 +207,11 @@ def image_contrast_intervals(image, n):
 
 def generate_image_transformations(image_path,
                                    crop_center_n, crop_quadrant_levels,
+                                   crop_tile_shape,
                                    brigntness_intervals,
                                    contrast_intervals,
-                                   output_dir=None):
+                                   output_dir=None,
+                                   output_ext='.png'):
     """
     Transform an input image into different crops or other transforms,
     outputting results to the given output directory without overwriting or
@@ -155,11 +227,17 @@ def generate_image_transformations(image_path,
 
     abs_path = os.path.abspath(image_path)
     output_dir = output_dir or os.path.dirname(abs_path)
-    p_base, p_ext = os.path.splitext(os.path.basename(abs_path))
+    smqtk.utils.file_utils.safe_create_dir(output_dir)
+    p_base = os.path.splitext(os.path.basename(abs_path))[0]
+    p_ext = output_ext
     p_base = os.path.join(output_dir, p_base)
-    image = PIL.Image.open(image_path)
+    image = PIL.Image.open(image_path).convert('RGB')
 
     def save_image(i, suffixes):
+        """
+        Save an image based on source image basename and an iterable of suffix
+        parts that will be separated by periods.
+        """
         fn = '.'.join([p_base] + list(suffixes)) + p_ext
         log.debug("Saving: %s", fn)
         i.save(fn)
@@ -177,6 +255,16 @@ def generate_image_transformations(image_path,
                                                         crop_quadrant_levels):
             save_image(c, [tag, str(l), "q_{:d}_{:d}".format(i, j)])
 
+    if crop_tile_shape and crop_tile_shape[0] > 0 and crop_tile_shape[1] > 0:
+        log.info("Cropping %dx%d pixel tiles from images"
+                 % tuple(crop_tile_shape))
+        tag = "crop_tiles"
+        t_width = crop_tile_shape[0]
+        t_height = crop_tile_shape[1]
+        for r, c, i in image_crop_tiles(image, t_width, t_height):
+            save_image(i, [tag, '%dx%d' % (t_width, t_height), 'r%d' % r,
+                           'c%d' % c])
+
     if brigntness_intervals:
         log.info("Computing brightness variants")
         for b, i in image_brightness_intervals(image, brigntness_intervals):
@@ -192,12 +280,14 @@ def default_config():
     return {
         "crop": {
             # 0 means disabled
-            "center_levels": 3,
+            "center_levels": None,
             # 0 means disabled, 2 meaning 2x2 and 4x4
-            "quadrant_pyramid_levels": 2,
+            "quadrant_pyramid_levels": None,
+            # Tile shape or None for no tiling
+            "tile_shape": None
         },
-        "brightness_levels": 3,
-        "contrast_levels": 3,
+        "brightness_levels": None,
+        "contrast_levels": None,
     }
 
 
@@ -230,12 +320,14 @@ def main():
 
     crop_center_levels = config['crop']['center_levels']
     crop_quad_levels = config['crop']['quadrant_pyramid_levels']
+    crop_tile_shape = config['crop']['tile_shape']
     b_levels = config['brightness_levels']
     c_levels = config['contrast_levels']
 
     generate_image_transformations(
         input_image_path,
         crop_center_levels, crop_quad_levels,
+        crop_tile_shape,
         b_levels, c_levels,
         output_dir
     )

@@ -2,8 +2,14 @@
 Top level flask application
 """
 
-import flask
+import json
 import os.path
+import threading
+
+import flask
+from flask_cors import cross_origin
+from werkzeug.exceptions import NotFound
+from werkzeug.wsgi import peek_path_info, pop_path_info
 
 from smqtk.utils import DatabaseInfo
 from smqtk.utils import merge_dict
@@ -17,7 +23,26 @@ from .modules.iqr import IqrSearch
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class IqrSearchApp (SmqtkWebApp):
+class IqrSearchDispatcher (SmqtkWebApp):
+    """
+    Application that dispatches to IQR application instances per sub-path.  We
+    can be seeded with a set amount of instances with the ``iqr_tabs``
+    configuration section, which consists of a prefix key (what would be used in
+    the URL) to the configuration for that instance.  A ``__default__`` is
+    provided upon configuration generation to act as a template.  The
+    ``__default__`` value is ignored at runtime.
+
+    New IQR instances can be dynamically added via a POST to the url root
+    (``/``).
+    """
+
+    # Prefixes that ignore dispatch to IQR application instances
+    PREFIX_BLACKLIST = {
+        'static',
+        'login',
+        'login.passwd',
+        'logout',
+    }
 
     @classmethod
     def is_usable(cls):
@@ -25,21 +50,21 @@ class IqrSearchApp (SmqtkWebApp):
 
     @classmethod
     def get_default_config(cls):
-        c = super(IqrSearchApp, cls).get_default_config()
+        c = super(IqrSearchDispatcher, cls).get_default_config()
         merge_dict(c, {
             "mongo": {
                 "server": "127.0.0.1:27017",
                 "database": "smqtk",
             },
             # Each entry in this mapping generates a new tab in the GUI
-            "iqr_tabs": [
-                IqrSearch.get_default_config(),
-            ]
+            "iqr_tabs": {
+                "__default__": IqrSearch.get_default_config(),
+            },
         })
         return c
 
     def __init__(self, json_config):
-        super(IqrSearchApp, self).__init__(json_config)
+        super(IqrSearchDispatcher, self).__init__(json_config)
 
         #
         # Database setup using Mongo
@@ -68,79 +93,137 @@ class IqrSearchApp (SmqtkWebApp):
         # Load up required and optional module blueprints
         #
 
-        # Navigable blueprints. This should contain the blueprints that a user
-        # should be able to navigate to. Not all blueprints have navigable
-        # content or should allow user explicit navigation to, thus this
-        # structure.
-        #: :type: list of flask.Blueprint
-        self._navigable_blueprints = []
+        # Mapping of IqrSearch application instances from their ID string
+        #: :type: dict[str, IqrSearch]
+        self.instances = {}
+        self.instances_lock = threading.Lock()
 
         # Login module
         self._log.info("Initializing Login Blueprint")
-
         self.module_login = LoginMod('login', self)
         self.register_blueprint(self.module_login)
 
         # IQR modules
         # - for each entry in 'iqr_tabs', initialize a separate IqrSearch
         #   instance.
-        self._iqr_search_modules = []
-        for iqr_search_config in self.json_config['iqr_tabs']:
-            self._log.info("Initializing IQR tab '%s'",
-                           iqr_search_config['name'])
-            self._log.debug("IQR tab config:\n%s", iqr_search_config)
-            m = IqrSearch.from_config(iqr_search_config, self)
-            self.register_blueprint(m)
-            self.add_navigable_blueprint(m)
-            self._iqr_search_modules.append(m)
+        for prefix, config in self.json_config['iqr_tabs'].iteritems():
+            if prefix == "__default__":
+                # skipping default config sample
+                continue
+            self._log.info("Initializing IQR instance '%s'", prefix)
+            self.init_iqr_app(config, prefix)
 
         #
         # Basic routing
         #
 
-        @self.route('/home')
-        @self.route('/')
-        def smqtk_index():
-            self._log.info("Session: %s", flask.session.items())
+        @self.route('/', methods=['GET'])
+        def index():
+            # self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
-            return flask.render_template("index.html", **self.nav_bar_content())
+            return flask.render_template("index.html",
+                                         instance_keys=self.instances.keys(),
+                                         debug=self.debug)
 
-    def add_navigable_blueprint(self, bp):
+        @self.route('/', methods=['POST'])
+        @cross_origin(origins='*', vary_header=True)
+        @self.module_login.login_required
+        def add_instance():
+            """
+            Initialize new IQR instance given an ID for that instance, and the
+            configuration for it.
+            """
+            # TODO: Something where only user that created instance can access
+            #       it?
+            prefix = flask.request.form['prefix']
+            config = json.loads(flask.request.form['config'])
+
+            # the URL prefix of the new IqrSearch instance
+            new_url = flask.request.host_url + prefix
+            self._log.info("New URL with route: %s", new_url)
+
+            self.init_iqr_app(config, prefix)
+
+            return flask.jsonify({
+                'prefix': prefix,
+                'url': new_url,
+            })
+
+    def init_iqr_app(self, config, prefix):
         """
-        Register a navigable blueprint. This is not the same thing as
-        registering a blueprint with flask, which should happen separately.
+        Initialize IQR sub-application given a configuration for it and a prefix
 
-        :param bp: Blueprint to register as navigable via the navigation bar.
-        :type bp: flask.Blueprint
+        :param config: IqrSearch plugin configuration dictionary
+        :type config: dict
+
+        :param prefix: URL prefix for the instance
+        :type prefix: str
+
+        :return: Application instance.
+        :rtype: IqrSearch
 
         """
-        self._navigable_blueprints.append(bp)
+        with self.instances_lock:
+            if prefix not in self.instances:
+                self._log.info("Initializing IQR instance '%s'", prefix)
+                self._log.debug("IQR tab config:\n%s", config)
+                # Strip any keys that are not expected by IqrSearch
+                # constructor
+                expected_keys = IqrSearch.get_default_config().keys()
+                for k in set(config).difference(expected_keys):
+                    self._log.debug("Removing unexpected key: %s", k)
+                    del config[k]
+                self._log.debug("Base app config: %s", self.config)
 
-    def nav_bar_content(self):
+                a = IqrSearch.from_config(config, self)
+                a.config.update(self.config)
+                a.secret_key = self.secret_key
+                a.session_interface = self.session_interface
+                a.jinja_env.add_extension('jinja2.ext.do')
+
+                self.instances[prefix] = a
+            else:
+                self._log.debug("Existing IQR instance for prefix: '%s'",
+                                prefix)
+                a = self.instances[prefix]
+
+        return a
+
+    def get_application(self, prefix):
         """
-        Formatted dictionary for return during a flask.render_template() call.
-        This content must be included in all flask.render_template calls that
-        are rendering a template that descends from our ``base.html`` template
-        in order to allow proper construction and rendering of navigation bar
-        content.
+        Get the application for the given ``prefix`` or the NotFound exception
+        if an application does not yet exist for the ``prefix``.
 
-        For example, when returning a flask.render_template() call::
+        :param prefix: Prefix name of the IQR application instance
+        :type prefix: str
 
-            ret = {"things": "and stuff"}
-            ret.update(smqtk_search_app.nav_bar_content())
-            return flask.render_template("some_template.tmpl", **ret)
+        :return: Application instance or None if there is no instance for the
+            given ``prefix``.
+        :rtype: IqrSearch | None
 
-        :return: Dictionary of content required for proper display of the
-            navigation bar. Contains keys of module names and values of module
-            URL prefixes.
-        :rtype: {"nav_content": list of (tuple of str)}
         """
-        l = []
-        for nbp in self._navigable_blueprints:
-            l.append((nbp.name, nbp.url_prefix))
-        return {
-            "nav_content": l
-        }
+        with self.instances_lock:
+            return self.instances.get(prefix, None)
+
+    def __call__(self, environ, start_response):
+        path_prefix = peek_path_info(environ)
+        self._log.debug("Base application __call__ path prefix: '%s'",
+                        path_prefix)
+
+        if path_prefix and path_prefix not in self.PREFIX_BLACKLIST:
+            app = self.get_application(path_prefix)
+            if app is not None:
+                pop_path_info(environ)
+            else:
+                self._log.debug("No IQR application registered for prefix: "
+                                "'%s'", path_prefix)
+                app = NotFound()
+        else:
+            self._log.debug("No prefix or prefix in blacklist. "
+                            "Using dispatcher app.")
+            app = self.wsgi_app
+
+        return app(environ, start_response)
 
 
-APPLICATION_CLASS = IqrSearchApp
+APPLICATION_CLASS = IqrSearchDispatcher

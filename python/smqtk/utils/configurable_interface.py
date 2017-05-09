@@ -5,9 +5,6 @@ import types
 from smqtk.utils import merge_dict
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class Configurable (object):
     """
     Interface for objects that should be configurable via a configuration
@@ -59,7 +56,7 @@ class Configurable (object):
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
 
-        This method should not be called via super unless and instance of the
+        This method should not be called via super unless an instance of the
         class is desired.
 
         :param config_dict: JSON compliant dictionary encapsulating
@@ -79,9 +76,7 @@ class Configurable (object):
         # specification, which we cover here. If an implementation needs
         # something more special, they can override this function.
         if merge_default:
-            merged_config = cls.get_default_config()
-            merge_dict(merged_config, config_dict)
-            config_dict = merged_config
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
 
         return cls(**config_dict)
 

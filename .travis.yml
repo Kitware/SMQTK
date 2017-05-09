@@ -8,24 +8,17 @@ addons:
   apt:
     packages:
       # basics
-      - linux-headers-3.13.0-40-generic
+      - linux-headers-generic
       - build-essential
       # For building things
       - cmake
 
 # Environment setup
 before_install:
-  # Added Local Environment Update
-  - export LOCAL_ROOT=${HOME}/.local
-  - export CPATH=${LOCAL_ROOT}/include:${CPATH}
-  - export LDFLAGS="${LDFLAGS} -L${LOCAL_ROOT}/lib"
-  - export PATH=${LOCAL_ROOT}/bin:$PATH
-  - export LD_LIBRARY_PATH=${LOCAL_ROOT}/lib:$LD_LIBRARY_PATH
-  - mkdir ${LOCAL_ROOT}
   # Setup local conda python environment
-  - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
+  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda2.sh
+  - bash miniconda2.sh -b -p $HOME/miniconda2
+  - export PATH="$HOME/miniconda2/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q --all

@@ -1,17 +1,33 @@
-import cPickle
-import multiprocessing
-import os
+import threading
 
-from smqtk.representation import DataElement, DataSet
-from smqtk.utils import SimpleTimer
+from smqtk.exceptions import ReadOnlyError
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
-__author__ = 'paul.tunison@kitware.com'
+try:
+    # noinspection PyCompatibility
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+from smqtk.representation import DataElement, DataSet, get_data_element_impls
+from smqtk.utils import merge_dict, plugin, SimpleTimer
 
 
 class DataMemorySet (DataSet):
     """
     In-memory DataSet implementation.
+
+    This implementation maintains an in-memory mapping of stored DataElement
+    original UUID to the DataElement instance.
+
+    An optional writable DataElement may be provided to which the current set's
+    map state is cached. This cache is updated every time new data elements are
+    added to this set..
+
     """
 
     @classmethod
@@ -28,20 +44,76 @@ class DataMemorySet (DataSet):
         """
         return True
 
-    def __init__(self, file_cache=None, pickle_protocol=-1):
+    @classmethod
+    def get_default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as arguments,
+        turning those argument names into configuration dictionary keys. If any
+        of those arguments have defaults, we will add those values into the
+        configuration dictionary appropriately. The dictionary returned should
+        only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        c = super(DataMemorySet, cls).get_default_config()
+        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        return c
+
+    @classmethod
+    def from_config(cls, c, merge_default=True):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        This method should not be called via super unless an instance of the
+        class is desired.
+
+        :param c: JSON compliant dictionary encapsulating
+            a configuration.
+        :type c: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: DataMemorySet
+
+        """
+        if merge_default:
+            c = merge_dict(cls.get_default_config(), c)
+
+        cache_element = None
+        if c['cache_element'] and c['cache_element']['type']:
+            cache_element = plugin.from_plugin_config(c['cache_element'],
+                                                      get_data_element_impls())
+        c['cache_element'] = cache_element
+
+        return super(DataMemorySet, cls).from_config(c, False)
+
+    def __init__(self, cache_element=None, pickle_protocol=-1):
         """
         Initialize a new in-memory data set instance.
 
-        :param file_cache: Optional path to a file to store/load a cache of this
-            data set's contents into. Cache loading, if the file was found, will
-            occur in this constructor. Cache writing will only occur after
-            adding one or more elements.
+        :param cache_element: Optional data element to store/load a cache of
+            this data set's contents into. Cache loading, if the element has
+            bytes, will occur in this constructor. Cache writing will only occur
+            after adding one or more elements.
 
             This can be optionally turned on after creating/using this data set
-            for a while by setting a valid filepath to the ``file_cache``
-            attribute and calling the ``.cache()`` method. When ``file_cache``
-            is not set, the ``cache()`` method does nothing.
-        :type file_cache: None | str
+            for a while by setting a valid element to the ``cache_element``
+            attribute and calling the ``.cache()`` method. When
+            ``cache_element`` is not set, the ``cache()`` method does nothing.
+        :type cache_element: None | smqtk.representation.DataElement
 
         :param pickle_protocol: Pickling protocol to use. We will use -1 by
             default (latest version, probably binary).
@@ -53,15 +125,14 @@ class DataMemorySet (DataSet):
         # Mapping of UUIDs to DataElement instances
         #: :type: dict[collections.Hashable, DataElement]
         self._element_map = {}
-        self._element_map_lock = multiprocessing.RLock()
+        self._element_map_lock = threading.RLock()
 
         # Optional path to a file that will act as a cache of our internal
         # table
-        self.file_cache = file_cache
-        if file_cache and os.path.isfile(file_cache):
-            with open(file_cache) as f:
-                #: :type: dict[collections.Hashable, DataElement]
-                self._element_map = cPickle.load(f)
+        self.cache_element = cache_element
+        if cache_element and not cache_element.is_empty():
+            #: :type: dict[collections.Hashable, DataElement]
+            self._element_map = pickle.loads(cache_element.get_bytes())
 
         self.pickle_protocol = pickle_protocol
 
@@ -81,12 +152,17 @@ class DataMemorySet (DataSet):
         """
         Cache the current table if a cache has been configured.
         """
-        if self.file_cache:
+        if self.cache_element:
+            if self.cache_element.is_read_only():
+                raise ReadOnlyError("Cache element (%s) is read-only."
+                                    % self.cache_element)
+
             with self._element_map_lock:
-                with SimpleTimer("Caching memory data-set table", self._log.debug):
-                    with open(self.file_cache, 'wb') as f:
-                        cPickle.dump(self._element_map, f,
-                                     self.pickle_protocol)
+                with SimpleTimer("Caching memory data-set table",
+                                 self._log.debug):
+                    self.cache_element.set_bytes(
+                        pickle.dumps(self._element_map, self.pickle_protocol)
+                    )
 
     def get_config(self):
         """
@@ -96,10 +172,15 @@ class DataMemorySet (DataSet):
         :rtype: dict
 
         """
-        return {
-            "file_cache": self.file_cache,
+        c = merge_dict(self.get_default_config(), {
             "pickle_protocol": self.pickle_protocol,
-        }
+        })
+        if self.cache_element:
+            c['cache_element'] = merge_dict(
+                c['cache_element'],
+                plugin.to_plugin_config(self.cache_element)
+            )
+        return c
 
     def count(self):
         """
@@ -141,10 +222,15 @@ class DataMemorySet (DataSet):
 
         """
         with self._element_map_lock:
+            added_elements = False
             for e in elems:
-                assert isinstance(e, DataElement), "Expected DataElement instance, got '%s' instance instead" % type(e)
+                assert isinstance(e, DataElement), \
+                    "Expected DataElement instance, got '%s' instance instead" \
+                    % type(e)
                 self._element_map[e.uuid()] = e
-            self.cache()
+                added_elements = True
+            if added_elements:
+                self.cache()
 
     def get_data(self, uuid):
         """

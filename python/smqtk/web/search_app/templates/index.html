@@ -4,5 +4,16 @@
 {% block body_content %}
 <div class="container-fluid">
     <h1>Welcome to SMQTK</h1>
+    <p>Current IQR instances:</p>
+
+    <ul style="list-style-type:none">
+    {%- if instance_keys|length > 0 %}
+        {%- for prefix in instance_keys %}
+        <li><a href="{{ prefix|escape }}">{{  prefix|escape }}</a></li>
+        {%- endfor %}
+    {%- else %}
+        <li>None</li>
+    {%- endif %}
+    </ul>
 </div>
 {% endblock %}

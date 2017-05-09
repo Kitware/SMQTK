@@ -6,4 +6,11 @@ then
   echo "Removing previous coverage cache file"
   rm ".coverage"
 fi
-nosetests --with-doctest --with-coverage --cover-package=smqtk --exclude-dir-file=nose_exclude_dirs.txt python/smqtk "$@"
+DEFAULT_ROOT="python/smqtk"
+if [ "$#" -gt 0 ]
+then
+  nosetest_args="$@"
+else
+  nosetest_args="${DEFAULT_ROOT}"
+fi
+nosetests -v --with-doctest --with-coverage --cover-package=smqtk --exclude-dir-file=nose_exclude_dirs.txt ${nosetest_args}

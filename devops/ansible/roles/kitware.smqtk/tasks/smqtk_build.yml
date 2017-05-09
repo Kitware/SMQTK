@@ -1,0 +1,37 @@
+# Build and install SMQTK components from checkout
+# Assumes the following varables/facts defined:
+#   - install_prefix
+#     - Root path to install SMQTK into
+#   - python_executable
+#     - Path to the python executable to use for the given install_prefix
+---
+
+- name: Ensure build directory
+  file:
+    state: directory
+    path: "{{ smqtk_path }}/build"
+    mode: 0755
+
+- name: CMake configure SMQTK
+  command: >
+      cmake
+        -DCMAKE_INSTALL_PREFIX:PATH={{install_prefix}}
+        -DPYTHON_EXECUTABLE:STRING={{python_executable}}
+        {{smqtk_path}}
+  args:
+    chdir: "{{ smqtk_path }}/build"
+    creates: "{{ smqtk_path }}/build/CMakeCache.txt"
+
+- name: CMake build SMQTK
+  command: "make -j4"
+  args:
+    chdir: "{{ smqtk_path }}/build"
+    creates: "{{ smqtk_path }}/build/TPL/install/lib"
+
+# This will correctly install into a venv if the python executable is set
+# appropriately.
+- name: CMake install SMQTK
+  command: "make install"
+  args:
+    chdir: "{{ smqtk_path }}/build"
+    creates: "{{ install_prefix }}/setup_smqtk.sh"

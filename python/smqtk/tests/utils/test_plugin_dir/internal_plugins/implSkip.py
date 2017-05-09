@@ -1,7 +1,8 @@
+"""
+Example of a module that implements implementations but states that nothing is
+exported by setting the helper variable to ``None``.
+"""
 from smqtk.tests.utils.test_plugin_get import DummyInterface
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class ImplSkipModule (DummyInterface):

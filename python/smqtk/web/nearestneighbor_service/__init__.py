@@ -125,6 +125,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             Compute the descriptor for a URI specified data element using the
             configured descriptor generator.
 
+            See ``compute_nearest_neighbors`` method docstring for URI
+            specifications accepted.
+
             If the a descriptor index was configured and update was turned on,
             we add the computed descriptor to the index.
 
@@ -144,12 +147,12 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             """
             descriptor = None
             try:
-                _, descriptor = self.generate_descriptor_for_uri(uri)
+                descriptor = self.generate_descriptor_for_uri(uri)
                 message = "Descriptor generated"
                 descriptor = map(float, descriptor.vector())
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "Input value issue: %s" % str(ex)
-            except RuntimeError, ex:
+            except RuntimeError as ex:
                 message = "Descriptor extraction failure: %s" % str(ex)
 
             return flask.jsonify(
@@ -164,23 +167,22 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         @self.route("/nn/n=<int:n>/<int:start_i>:<int:end_i>/<path:uri>")
         def compute_nearest_neighbors(uri, n=10, start_i=None, end_i=None):
             """
-            Data modes for upload/use::
+            Data modes for upload/use:
 
                 - local filepath
                 - base64
                 - http/s URL
+                - existing data/descriptor UUID
 
             The following sub-sections detail how different URI's can be used.
 
             Local Filepath
             --------------
-
             The URI string must be prefixed with ``file://``, followed by the
             full path to the data file to describe.
 
             Base 64 data
             ------------
-
             The URI string must be prefixed with "base64://", followed by the
             base64 encoded string. This mode also requires an additional
             ``?content_type=`` to provide data content type information. This
@@ -188,10 +190,16 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
             HTTP/S address
             --------------
-
             This is the default mode when the URI prefix is none of the above.
             This uses the requests module to locally download a data file
             for processing.
+
+            Existing Data/Descriptor by UUID
+            --------------------------------
+            When given a uri prefixed with "uuid://", we interpret the remainder
+            of the uri as the UUID of a descriptor already present in the
+            configured descriptor index. If the given UUID is not present in the
+            index, a KeyError is raised.
 
             JSON Return format
             ------------------
@@ -215,11 +223,11 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             """
             descriptor = None
             try:
-                _, descriptor = self.generate_descriptor_for_uri(uri)
+                descriptor = self.generate_descriptor_for_uri(uri)
                 message = "descriptor computed"
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "Input data issue: %s" % str(ex)
-            except RuntimeError, ex:
+            except RuntimeError as ex:
                 message = "Descriptor generation failure: %s" % str(ex)
 
             # Base pagination slicing based on provided start and end indices,
@@ -231,7 +239,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 try:
                     neighbors, dists = \
                         self.nn_index.nn(descriptor, n)
-                except ValueError, ex:
+                except ValueError as ex:
                     message = "Descriptor or index related issue: %s" % str(ex)
 
             # TODO: Return the optional descriptor vectors for the neighbors
@@ -286,7 +294,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             self._log.debug("Given URL")
             try:
                 de = DataUrlElement(uri)
-            except requests.HTTPError, ex:
+            except requests.HTTPError as ex:
                 raise ValueError("Failed to initialize URL element due to "
                                  "HTTPError: %s" % str(ex))
 
@@ -301,20 +309,23 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         :type uri: str
 
         :return: DescriptorElement instance of the generate descriptor.
-        :rtype: (smqtk.representation.DataElement,
-                 smqtk.representation.DescriptorElement)
+        :rtype: smqtk.representation.DescriptorElement
 
         """
-        de = self.resolve_data_element(uri)
-        descriptor = self.descriptor_generator_inst.compute_descriptor(
-            de, self.descr_elem_factory
-        )
-        if self.update_index:
-            self._log.info("Updating index with new descriptor")
-            self.descr_index.add_descriptor(descriptor)
-        if not descriptor.has_vector():
-            raise RuntimeError("No descriptor content")
-        return de, descriptor
+        # Short-cut if we are given data/descriptor UUID via URI
+        if uri[:7] == 'uuid://':
+            descriptor = self.descr_index[uri[7:]]
+        else:
+            de = self.resolve_data_element(uri)
+            descriptor = self.descriptor_generator_inst.compute_descriptor(
+                de, self.descr_elem_factory
+            )
+            if self.update_index:
+                self._log.info("Updating index with new descriptor")
+                self.descr_index.add_descriptor(descriptor)
+            if not descriptor.has_vector():
+                raise RuntimeError("No descriptor content")
+        return descriptor
 
 
 APPLICATION_CLASS = NearestNeighborServiceServer

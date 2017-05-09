@@ -13,6 +13,7 @@ from smqtk.utils import plugin
 from smqtk.utils import merge_dict
 
 
+# noinspection PyAbstractClass
 class SmqtkWebApp (SmqtkObject, flask.Flask,
                    smqtk.utils.Configurable, plugin.Pluggable):
     """
@@ -55,6 +56,10 @@ class SmqtkWebApp (SmqtkObject, flask.Flask,
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
+        """
+        Override to just pass the configuration dictionary to constructor
+        """
+        # Repeated from super method due to overriding how constructor is called
         if merge_default:
             merged = cls.get_default_config()
             merge_dict(merged, config_dict)

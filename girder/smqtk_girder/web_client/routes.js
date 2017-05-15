@@ -10,12 +10,12 @@ router.route('plugins/smqtk_girder/config', 'smqtkGirderConfig', function () {
     events.trigger('g:navigateTo', ConfigView);
 });
 
-router.route('gallery/:id', 'gallery', function (id, params) {
-    GalleryView.fetchAndInit(id, params);
+router.route('gallery/:indexId/:id', 'gallery', function (indexId, id, params) {
+    GalleryView.fetchAndInit(indexId, id, params);
 });
 
-router.route('gallery/nearest-neighbors/:id', 'gallery-nearest-neighbors', function (id, params) {
-    GalleryView.fetchAndInitNns(id, params);
+router.route('gallery/nearest-neighbors/:indexId/:id', 'gallery-nearest-neighbors', function (indexId, id, params) {
+    GalleryView.fetchAndInitNns(indexId, id, params);
 });
 
 // this :id is the IQR Session ID

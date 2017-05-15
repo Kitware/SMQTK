@@ -3,7 +3,7 @@ import FolderModel from 'girder/models/FolderModel';
 import GalleryItemView from './GalleryItemView';
 import IqrView from './IqrView';
 import View from 'girder/views/View';
-import { cancelRestRequests } from 'girder/rest';
+import { restRequest, cancelRestRequests } from 'girder/rest';
 import events from 'girder/events';
 import GalleryViewTemplate from '../templates/galleryView.pug';
 import ResultsCollection from '../collections/ResultsCollection';
@@ -50,7 +50,9 @@ var GalleryView = View.extend({
         cancelRestRequests('fetch');
         this.folder = settings.folder;
         this.$el = settings.el;
+        this.indexId = settings.indexId;
 
+        // Accept either a collection, or default to assume we're operating on a folder level
         if (_.isUndefined(settings.collection)) {
             this.collection = new ItemCollection();
             this.collection.pageLimit = 24;
@@ -81,21 +83,24 @@ var GalleryView = View.extend({
     /**
      * Helper function for fetching the folder by id, then render the view.
      */
-    fetchAndInit: function (id, params) {
+    fetchAndInit: function (indexId, id, params) {
         var folder = new FolderModel();
-        folder.set({ _id: id }).on('g:fetched', function () {
+
+        return folder.set({ _id: id }).fetch().then(() => {
             events.trigger('g:navigateTo', GalleryView, _.extend({
-                folder: folder
+                folder: folder,
+                indexId: indexId
             }, params || {}));
-        }, this).fetch();
+        });
     },
 
-    fetchAndInitNns: function (id, params) {
+    fetchAndInitNns: function (indexId, id, params) {
         var collection = new ResultsCollection();
         collection.params = _.extend(collection.params || {}, { itemId: id });
 
         events.trigger('g:navigateTo', GalleryView, _.extend({
-            collection: collection
+            collection: collection,
+            indexId: indexId
         }));
     },
 

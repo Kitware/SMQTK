@@ -3,6 +3,7 @@ import { restRequest } from 'girder/rest';
 import router from 'girder/router';
 import { wrap } from 'girder/utilities/PluginUtils';
 import HierarchyWidgetMenuTemplate from '../templates/hierarchyWidgetMenu.pug';
+import events from 'girder/events';
 
 wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
     this.events = _.extend(this.events, {
@@ -18,7 +19,29 @@ wrap(HierarchyWidget, 'initialize', function (initialize, settings) {
 
         'click .smqtk-view-as-gallery': function (e) {
             if (this.parentModel.resourceName === 'folder') {
-                router.navigate('gallery/' + this.parentModel.id, {trigger: true});
+                // Fetch the .smqtk folder id (effectively the descriptor index id)
+                // This is necessary to store in the URL bar for state since every view
+                // deriving from the gallery (NN and IQR) require a specific descriptor index
+                // for access control.
+                restRequest({
+                    path: 'folder',
+                    type: 'GET',
+                    data: {
+                        parentType: 'folder',
+                        parentId: this.parentModel.id,
+                        name: '.smqtk',
+                        limit: 1
+                    }
+                }).then(resp => {
+                    if (_.size(resp) == 1) {
+                        router.navigate(`gallery/${resp[0]._id}/${this.parentModel.id}`, {trigger: true});
+                    } else {
+                        events.trigger('g:alert', {
+                            text: 'Can\'t view as gallery until images have been processed.',
+                            type: 'warning'
+                        });
+                    }
+                });
             }
         }
     });

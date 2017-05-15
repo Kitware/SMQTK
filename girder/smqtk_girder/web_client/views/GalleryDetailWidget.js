@@ -18,7 +18,7 @@ var GalleryDetailWidget = View.extend({
         },
 
         'click .smqtk-nn-search': function (event) {
-            router.navigate('gallery/nearest-neighbors/' + this.item.id, {trigger: true});
+            router.navigate(`gallery/nearest-neighbors/${this.parentView.parentView.indexId}/${this.item.id}`, {trigger: true});
         }
     },
 

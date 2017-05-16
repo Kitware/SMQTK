@@ -32,6 +32,8 @@ SMQTK_HCODE_PICKLE="models/lsh.hash2uuids.pickle"
 SMQTK_HCODE_BTREE_CONFIG="configs/make_balltree.json"
 
 # DON'T MODIFY BELOW HERE ######################################################
+mkdir -p "${SMQTK_IMAGE_TRANSFORM_OUTPUT_DIR}" \
+         "${LOG_DIR}"
 
 # Create list of image files and followable links.
 IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
@@ -42,12 +44,13 @@ if [ -f "${SMQTK_IMAGE_TRANSFORM_CONFIG}" ]
 then
   for FPATH in $(cat "${IMAGE_DIR_FILELIST}")
   do
+    echo "Progessing: ${FPATH}"
     generate_image_transform -c "${SMQTK_IMAGE_TRANSFORM_CONFIG}" \
       -i "${FPATH}" \
       -o "${SMQTK_IMAGE_TRANSFORM_OUTPUT_DIR}"
   done
   # Rewrite image list for tiles generated.
-  find "${SMQTK_IMAGE_TRANSFORM_OUTPUT_DIR}" -type f >"${IMAGE_DIR_FILELIST}"
+  find "${SMQTK_IMAGE_TRANSFORM_OUTPUT_DIR}" -type f -follow >"${IMAGE_DIR_FILELIST}"
 fi
 
 # Compute descriptors

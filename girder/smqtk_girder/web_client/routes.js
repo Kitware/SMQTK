@@ -19,6 +19,6 @@ router.route('gallery/nearest-neighbors/:indexId/:id', 'gallery-nearest-neighbor
 });
 
 // this :id is the IQR Session ID
-router.route('gallery/iqr/:id', 'gallery-iqr', function (id, params) {
-    GalleryView.fetchAndInitIqr(id, params);
+router.route('gallery/iqr/:indexId/:id', 'gallery-iqr', function (indexId, id, params) {
+    GalleryView.fetchAndInitIqr(indexId, id, params);
 });

@@ -23,14 +23,12 @@ var IqrView = View.extend({
             }
 
             restRequest({
-                path: 'smqtk_iqr/refine',
-                type: 'PUT',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    sid: this.iqrSession.get('meta').sid,
-                    pos_uuids: this.iqrSession.get('meta').pos_uuids,
-                    neg_uuids: this.iqrSession.get('meta').neg_uuids
-                })
+                path: `smqtk_iqr/refine/${this.iqrSession.get('name')}`,
+                type: 'POST',
+                data: {
+                    pos_uuids: JSON.stringify(this.iqrSession.get('meta').pos_uuids),
+                    neg_uuids: JSON.stringify(this.iqrSession.get('meta').neg_uuids)
+                }
             }).done(_.bind(function () {
                 window.onbeforeunload = null;
 
@@ -41,19 +39,19 @@ var IqrView = View.extend({
                     // or it's a seedCollection and we need to supplant our collection with the new iqr one
                     this.collection = new IqrResultsCollection();
                     this.collection.params = this.collection.params || {};
-                    this.collection.params.sid = this.iqrSession.get('meta').sid;
+                    this.collection.params.sid = this.iqrSession.get('name');
 
                     this.collection.on('g:changed', this.render, this).fetch(this.collection.params || {}, true);
                 }
             }, this)).error(console.error);
         }
-
     },
 
     initialize: function (settings) {
         cancelRestRequests('fetch');
         this.$el = settings.el;
         this.seedUrl = settings.seedUrl;
+        this.indexId = settings.indexId;
 
         if (_.has(settings, 'seedCollection') &&
             _.has(settings, 'iqrSession')) {
@@ -62,12 +60,13 @@ var IqrView = View.extend({
 
             this.collection.on('g:changed', this.render, this).fetch(this.collection.params || {});
         } else {
-            this.iqrSession = new IqrSessionModel({ _id: Backbone.history.fragment.split('/')[2] });
+            this.iqrSession = new IqrSessionModel({ _id: Backbone.history.fragment.split('/')[3],
+                                                    smqtkFolder: this.indexId});
 
             this.iqrSession.once('g:fetched', _.bind(function () {
                 this.collection = new IqrResultsCollection();
                 this.collection.params = this.collection.params || {};
-                this.collection.params.sid = this.iqrSession.get('meta').sid;
+                this.collection.params.sid = this.iqrSession.get('name');
 
                 this.collection.on('g:changed', this.render, this).fetch(this.collection.params || {});
             }, this)).fetch();

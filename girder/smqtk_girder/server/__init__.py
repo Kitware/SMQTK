@@ -80,7 +80,7 @@ class SmqtkAPI(Resource):
         return dict([(x['key'].replace('smqtk_girder.', ''), x['value']) for x in setting_results])
 
     @staticmethod
-    def _processImages(folder, fileIds):
+    def _processImages(folder, itemFilePairs):
         """
         Create and schedule a Girder job for processing images.
 
@@ -99,10 +99,10 @@ class SmqtkAPI(Resource):
                                                          scope=(TokenScope.USER_AUTH,
                                                                 SMQTK_SETTING_READ))
 
-        dataElementUris = ['girder://token:%s@%s/file/%s' % (token['_id'],
-                                                             getWorkerApiUrl(),
-                                                             fileId)
-                           for fileId in fileIds]
+        dataElementUris = [(itemId, 'girder://token:%s@%s/file/%s' % (token['_id'],
+                                                                      getWorkerApiUrl(),
+                                                                      fileId))
+                           for (itemId, fileId) in itemFilePairs]
 
         job = jobModel.createJob(title='Processing Images',
                                  type='GPU',
@@ -143,9 +143,9 @@ class SmqtkAPI(Resource):
                                                            limit=1,
                                                            sort=[('created', SortDir.ASCENDING)])
             try:
-                return files[0]['_id']
+                return (str(item['_id']), files[0]['_id'])
             except Exception:
-                return False
+                return (False, False)
 
         # TODO Filter items by supported mime types for SMQTK
         items = itertools.ifilter(lambda item: 'smqtk_uuid' not in item.get('meta', {}),

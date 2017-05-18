@@ -28,20 +28,23 @@ var GalleryView = View.extend({
 
         // @todo check user is logged in
         'click a.smqtk-start-iqr': function (e) {
-            var iqrSession = new IqrSessionModel();
+            var iqrSession = new IqrSessionModel({
+                smqtkFolder: this.indexId
+            });
 
             iqrSession.once('g:saved', _.bind(function () {
                 events.trigger('g:navigateTo', IqrView, {
                     seedCollection: this.collection,
                     seedUrl: Backbone.history.fragment,
-                    iqrSession: iqrSession
+                    iqrSession: iqrSession,
+                    indexId: this.indexId
                 });
 
                 window.onbeforeunload = function () {
                     return false;
                 };
 
-                router.navigate('/gallery/iqr/' + iqrSession.id, { trigger: false });
+                router.navigate(`/gallery/iqr/${this.indexId}/${iqrSession.id}`, { trigger: false });
             }, this)).save();
         }
     },

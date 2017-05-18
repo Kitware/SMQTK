@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import Resource, getCurrentUser, loadmodel, RestException
+from girder.api.rest import Resource, getCurrentUser, filtermodel, loadmodel, RestException
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
@@ -24,8 +24,9 @@ class Iqr(Resource):
 
     def __init__(self):
         self.resourceName = 'smqtk_iqr'
+        self.route('GET', ('session', ':id'), self.getSession)
         self.route('POST', ('session',), self.createSession)
-        self.route('POST', ('refine',), self.refine)
+        self.route('POST', ('refine', ':id'), self.refine)
         self.route('GET', ('results',), self.results)
 
         # Record of trained classifiers for a session. Session classifier
@@ -73,6 +74,13 @@ class Iqr(Resource):
             return LSHNearestNeighborIndex(functor, descriptor_index,
                                            hash2uuidsKV, read_only=True)
 
+    @access.user
+    @filtermodel(model='item')
+    @autoDescribeRoute(
+        Description('Get an IQR session.')
+        .modelParam('id', model='item', level=AccessType.READ))
+    def getSession(self, item, params):
+        return item
 
     @access.user
     @autoDescribeRoute(
@@ -118,9 +126,9 @@ class Iqr(Resource):
     @access.user
     @autoDescribeRoute(
         Description('Refine adjudications of an IQR session.')
-        .modelParam('sid', model='item', level=AccessType.WRITE, paramType='query')
-        .jsonParam('pos_uuids', '', required=True, requireArray=True)
-        .jsonParam('neg_uuids', '', required=False, requireArray=True))
+        .modelParam('id', model='item', level=AccessType.WRITE)
+        .jsonParam('pos_uuids', '', required=True, paramType='body')
+        .jsonParam('neg_uuids', '', required=False, paramType='body'))
     def refine(self, params):
         sid = str(params['item']['_id'])
         pos_uuids = params['pos_uuids']
@@ -175,14 +183,15 @@ class Iqr(Resource):
         return sid
 
     @access.user
+    @filtermodel('item')
     @autoDescribeRoute(
         Description('Retrieve results from an IQR session.')
         .modelParam('sid', model='item', level=AccessType.WRITE, paramType='query')
-        .param('i', '')
-        .param('j', ''))
+        .param('limit', '')
+        .param('offset', ''))
     def results(self, params):
         sid = params['sid']
-        i = int(params.get('i', 0))
+        limit = int(params.get('limit', 0))
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -192,17 +201,23 @@ class Iqr(Resource):
 
         num_results = (iqrs.results and len(iqrs.results)) or 0
 
-        j = int(params.get('j', num_results))
+        offset = int(params.get('offset', num_results))
 
-        r = []
+        uuid_dist = {}
         if iqrs.results:
-            r = iqrs.ordered_results()[i:j]
-            r = [[d.uuid(), v] for d, v in r]
+            results = iqrs.ordered_results()[offset:limit]
+
+            for descriptor, confidence in results:
+                uuid_dist[descriptor.uuid()] = confidence
 
         iqrs.lock.release()
 
-        return {'i': i,
-                'j': j,
-                'total_results': num_results,
-                'results': r,
-                'sid': sid}
+        dataFolder = {'_id': ObjectId(params['item']['meta']['data_folder_id'])}
+        items = list(ModelImporter.model('folder').childItems(dataFolder, filters={'meta.smqtk_uuid': {
+            '$in': uuid_dist.keys()
+        }}))
+
+        for item in items:
+            item['meta']['smqtk_iqr_confidence'] = uuid_dist[item['meta']['smqtk_uuid']]
+
+        return items

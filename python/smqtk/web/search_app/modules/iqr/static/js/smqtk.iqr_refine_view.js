@@ -165,7 +165,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
         url: "iqr_session_info",
         method: "GET",
         success: function (data) {
-            if (data["initialized"]) {
+            if (parseInt(data["wi_count"]) > 0) {
                 // enable buttons
                 self.button_container_refine_top.children().prop("disabled", false);
                 // Fetch ordered results + display

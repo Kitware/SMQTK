@@ -74,9 +74,9 @@ IqrStatusView.prototype.construct_view = function (container) {
 IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
     this.example_pos_data_zone.children().remove();
-    for (var i=0; i < iqr_sess_state["ex_pos"].length; i++) {
-        new DataView(this.example_pos_data_zone, 0, iqr_sess_state["ex_pos"][i],
-                     0, true);
+    for (var i=0; i < iqr_sess_state["uuids_pos_ext"].length; i++) {
+        new DataView(this.example_pos_data_zone, 0,
+                     iqr_sess_state["uuids_pos_ext"][i], 0, true);
     }
 };
 
@@ -90,9 +90,9 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
 IqrStatusView.prototype.update_neg_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
     this.example_neg_data_zone.children().remove();
-    for (var i=0; i < iqr_sess_state["ex_neg"].length; i++) {
-        new DataView(this.example_neg_data_zone, 0, iqr_sess_state["ex_neg"][i],
-                     0, true);
+    for (var i=0; i < iqr_sess_state["uuids_neg_ext"].length; i++) {
+        new DataView(this.example_neg_data_zone, 0,
+                     iqr_sess_state["uuids_neg_ext"][i], 0, true);
     }
 };
 

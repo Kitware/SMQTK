@@ -55,9 +55,19 @@ function DataView(container, rank, uid, probability, is_example) {
     // Header container textual identifiers
     this.header = $('<div/>');
     this.header.css('height', '24px');
-    this.header.text("#" + (this.rank+1) + " | "
-                     //+ "UID: " + this.uid + " | "
-                     + (this.probability*100).toFixed(2) + "%");
+    if (isFinite(this.probability)) {
+        // ``probability`` is a numeric value, so assume a [0,1] percentage and
+        // mult by 100.
+        this.header.text("#" + (this.rank + 1) + " | "
+            //+ "UID: " + this.uid + " | "
+            + (this.probability * 100).toFixed(2) + "%");
+    } else {
+        // ``probability`` is not a numeric value, so assume a value to be
+        // directly printed.
+        this.header.text("#" + (this.rank + 1) + " | "
+            //+ "UID: " + this.uid + " | "
+            + this.probability);
+    }
 
     // adjudication icons / functionality
     this.adjudication_controls = $('<div class="adjudication-box"/>');

@@ -1,8 +1,9 @@
 import copy
-import cPickle
 import os.path as osp
 
 import numpy
+import six
+from six.moves import range
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (
@@ -12,14 +13,16 @@ from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
 
 try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+try:
     import svm
     import svmutil
 except ImportError:
     svm = None
     svmutil = None
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class LibSvmHikRelevancyIndex (RelevancyIndex):
@@ -103,7 +106,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         if self.descr_cache_fp and osp.exists(self.descr_cache_fp):
             with open(self.descr_cache_fp, 'rb') as f:
-                descriptors = cPickle.load(f)
+                descriptors = pickle.load(f)
                 # Temporarily unsetting so we don't cause an extra write inside
                 # build_index.
                 self.descr_cache_fp = None
@@ -157,6 +160,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         def get_vector(d):
             return d, d.vector()
 
+        # noinspection PyTypeChecker
         vector_iter = parallel_map(get_vector, descriptors,
                                    name='vector_iter',
                                    use_multiprocessing=self.multiprocess_fetch,
@@ -165,6 +169,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         for i, (d, v) in enumerate(vector_iter):
             self._descr_cache.append(d)
+            # ``_descr_matrix`` is a list, currently.
+            # noinspection PyUnresolvedReferences
             self._descr_matrix.append(v)
             self._descr2index[tuple(v)] = i
         self._descr_matrix = numpy.array(self._descr_matrix)
@@ -177,7 +183,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         if self.descr_cache_fp:
             with open(self.descr_cache_fp, 'wb') as f:
-                cPickle.dump(self._descr_cache, f, -1)
+                pickle.dump(self._descr_cache, f, -1)
 
     def rank(self, pos, neg):
         """
@@ -233,14 +239,14 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 #   be picked per positive.
                 m_set = {}  # track most distance neighbors
                 m_val = -float('inf')  # track smallest distance of most distant neighbors
-                for i in xrange(d.size):
+                for i in range(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i
                         if len(m_set) > self.autoneg_select_ratio:
                             if m_val in m_set:
                                 del m_set[m_val]
                         m_val = min(m_set)
-                for i in m_set.itervalues():
+                for i in six.itervalues(m_set):
                     neg_autoselect.add(self._descr_cache[i])
             # Remove any positive examples from auto-selected results
             neg_autoselect.difference_update(pos)

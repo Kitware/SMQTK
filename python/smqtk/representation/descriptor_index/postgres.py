@@ -8,6 +8,7 @@ References:
 import itertools
 import logging
 import multiprocessing
+import uuid
 
 try:
     import cPickle as pickle
@@ -247,6 +248,14 @@ class PostgresDescriptorIndex (DescriptorIndex):
             port=self.db_port,
         )
 
+    def _get_unique_cursor_name(self):
+        """
+        :return: New cursor name string with a unique, random UUID embedded.
+        :rtype: str
+        """
+        ruuid = str(uuid.uuid4()).replace('-', '')
+        return "smqtk_postgres_dindex_cursor_%s" % ruuid
+
     def _ensure_table(self, cursor):
         """
         Execute on psql connector cursor the table create-of-not-exists query.
@@ -264,7 +273,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 cursor.execute(q_table_upsert)
                 cursor.connection.commit()
 
-    def _single_execute(self, execute_hook, yield_result_rows=False):
+    def _single_execute(self, execute_hook, yield_result_rows=False,
+                        named=False):
         """
         Perform a single execution in a new connection transaction. Handles
         connection/cursor acquisition and handling.
@@ -277,16 +287,32 @@ class PostgresDescriptorIndex (DescriptorIndex):
             execution. False by default.
         :type yield_result_rows: bool
 
+        :param named: If a named cursor should be created, creating a
+            server-side cursor. This is only compatibly with executions of
+            SELECT or VALUES commands.
+        :type named: bool
+
         :return: Iterator over result rows if ``yield_result_rows`` is True,
             otherwise None.
         :rtype: __generator | None
 
         """
         conn = self._get_psql_connection()
+
+        # Optionally create a named cursor to allow server-side iteration. This
+        # is required in order to not pull the whole table into memory.
+        cursor_name = None
+        if named:
+            cursor_name = self._get_unique_cursor_name()
+
         try:
             with conn:
                 with conn.cursor() as cur:
                     self._ensure_table(cur)
+                with conn.cursor(cursor_name) as cur:
+                    # This only maters if the cursor is a named cursor (server-
+                    # side)
+                    cur.itersize = self.multiquery_batch_size
                     execute_hook(cur)
                     if yield_result_rows:
                         for r in cur:
@@ -296,7 +322,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             conn.close()
 
     def _batch_execute(self, iterable, execute_hook,
-                       yield_result_rows=False):
+                       yield_result_rows=False, named=False):
         """
         Due to this method optionally yielding values, calling this returns a
         generator. This must be iterated over for anything to occur even if
@@ -314,6 +340,11 @@ class PostgresDescriptorIndex (DescriptorIndex):
             execution. False by default.
         :type yield_result_rows: bool
 
+        :param named: If a named cursor should be created, creating a
+            server-side cursor. This is only compatibly with executions of
+            SELECT or VALUES commands.
+        :type named: bool
+
         :return: Iterator over result rows if ``yield_result_rows`` is True,
             otherwise None.
         :rtype: __generator | None
@@ -325,6 +356,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
         # Lazy initialize -- only if there are elements to iterate over
         #: :type: None | psycopg2._psycopg.connection
         conn = None
+
+        # Create a named cursor to allow server-side iteration. This is
+        # required in order to not pull the whole table into memory.
+        cursor_name = None
+        if named:
+            cursor_name = self._get_unique_cursor_name()
+
         try:
             batch = []
             i = 0
@@ -342,6 +380,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
                     with conn:
                         with conn.cursor() as cur:
                             self._ensure_table(cur)
+                        with conn.cursor(cursor_name) as cur:
+                            cur.itersize = self.multiquery_batch_size
                             execute_hook(cur, batch)
                             if yield_result_rows:
                                 for r in cur:
@@ -353,6 +393,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 with conn:
                     with conn.cursor() as cur:
                         self._ensure_table(cur)
+                    with conn.cursor(cursor_name) as cur:
+                        cur.itersize = self.multiquery_batch_size
                         execute_hook(cur, batch)
                         if yield_result_rows:
                             for r in cur:
@@ -369,8 +411,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :return: Number of descriptor elements stored in this index.
         :rtype: int | long
         """
+        # Just count UUID column to limit data read.
         q = self.SELECT_TMPL.format(
-            col='count(*)',
+            col='count(%s)' % self.uuid_col,
             table_name=self.table_name,
         )
 
@@ -593,7 +636,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot clear a read-only index.")
+            raise ReadOnlyError("Cannot remove from a read-only index.")
 
         q = self.DELETE_LIKE_TMPL.format(
             table_name=self.table_name,
@@ -622,7 +665,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot clear a read-only index.")
+            raise ReadOnlyError("Cannot remove from a read-only index.")
 
         q = self.DELETE_MANY_TMPL.format(
             table_name=self.table_name,
@@ -665,7 +708,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ))
 
         #: :type: __generator
-        execution_results = self._single_execute(execute, True)
+        execution_results = self._single_execute(execute, True, named=True)
         for r in execution_results:
             d = pickle.loads(str(r[0]))
             yield d

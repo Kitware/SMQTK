@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 import traceback
@@ -5,6 +6,7 @@ import uuid
 import zipfile
 
 import flask
+import six
 from six.moves import StringIO
 
 # import smqtk.algorithms
@@ -872,7 +874,7 @@ class IqrService (SmqtkWebApp):
         """
         Create a binary package of a session's IQR state.
 
-        This state is composed of the descriptor vectors and their UUIDs that
+        This state is composed of the descriptor vectors, and their UUIDs, that
         were adjudicated positive and negative.
 
         This function returns a JSON response with the bytes.
@@ -916,6 +918,7 @@ class IqrService (SmqtkWebApp):
         iqrs.lock.release()
 
         z_buffer = StringIO()
+        # ZIP_DEFLATED means we're using zlib for compression.
         z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
         z.writestr('iqr_state.json', json.dumps({
             'external_pos': ext_pos_descriptors,
@@ -925,12 +928,73 @@ class IqrService (SmqtkWebApp):
         }))
         z.close()
 
+        # NOTE: May have to return base64 here instead of bytes.
         return z_buffer.getvalue(), 200
 
     # PUT
     # TODO: set_iqr_state <- state zip binary
-    # def set_iqr_state(self):
-    #     sid = flask.request.form.get('sid')
+    def set_iqr_state(self):
+        """
+        Set the IQR session state for a given session ID.
+
+        We expect to be given a the URL-safe base64 encoding of bytes of the
+        zip-file buffer returned from the above ``get_iqr_state`` function.
+
+        """
+        sid = flask.request.form.get('sid', None)
+        state_base64 = flask.request.form.get('state_base64', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided."), 400
+        elif state_base64 is None or len(state_base64) == 0:
+            return make_response_json("No state package base64 provided."), 400
+
+        # TODO: Limit the size of input state object? Is this already handled by
+        #       other security measures?
+
+        state_bytes = base64.urlsafe_b64decode(str(state_base64))
+        z_buffer = StringIO(state_bytes)
+        z = zipfile.ZipFile(z_buffer, 'r', zipfile.ZIP_DEFLATED)
+        # Extract expected json file object
+        with z.open('iqr_state.json') as zf:
+            state = json.load(zf)
+        del z, z_buffer
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        # Reset the session to prepare for new state.
+        iqrs.reset()
+
+        # Create descriptor element instances from input state using our
+        # configured descriptor factory.
+        def load_descriptor(uuid, vec_list):
+            e = self.descriptor_factory.new_descriptor("loadedDescriptor", uuid)
+            if e.has_vector():
+                assert e.vector().tolist() == vec_list, \
+                    "Found existing vector for UUID '%s' but vectors did not" \
+                    "match."
+            else:
+                e.set_vector(vec_list)
+            return e
+
+        # `source` are dictionaries of [uuid, vecList], `target` is session set.
+        for source, target in [(state['external_pos'],
+                                iqrs.external_positive_descriptors),
+                               (state['external_neg'],
+                                iqrs.external_negative_descriptors),
+                               (state['pos'], iqrs.positive_descriptors),
+                               (state['neg'], iqrs.negative_descriptors)]:
+            for uuid, vector_list in six.iteritems(source):
+                e = load_descriptor(uuid, vector_list)
+                target.add(e)
+
+        iqrs.lock.release()
+        return make_response_json("Success", sid=sid), 200
 
     def run(self, host=None, port=None, debug=False, **options):
         # Setup REST API here, register methods
@@ -979,8 +1043,8 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/state',
                           view_func=self.get_iqr_state,
                           methods=['GET'])
-        # self.add_url_rule('/state',
-        #                   view_func=self.set_iqr_state,
-        #                   methods=['PUT'])
+        self.add_url_rule('/state',
+                          view_func=self.set_iqr_state,
+                          methods=['PUT'])
 
         super(IqrService, self).run(host, port, debug, **options)

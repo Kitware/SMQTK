@@ -51,7 +51,7 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
 
     index = descriptorIndexFromFolderId(task.girder_client, folderId)
 
-    valid_elements = iter_valid_elements(dataElementUris, generator.valid_content_types())
+    valid_elements = iter_valid_elements([x[1] for x in dataElementUris], generator.valid_content_types())
 
     descriptors = compute_functions.compute_many_descriptors(valid_elements,
                                                              generator,
@@ -59,13 +59,14 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
                                                              index,
                                                              use_mp=False)
 
+    fileToItemId = dict([(y.split('/')[-1], x) for x, y in dataElementUris])
+
     for de, descriptor in descriptors:
         # TODO Catch errors that could occur here
-        # TODO Batch requests
-        task.girder_client.addMetadataToItem(
-            task.girder_client.get('file/%s' % de.file_id)['itemId'], {
-                'smqtk_uuid': descriptor.uuid()
-        })
+        with task.girder_client.session():
+            task.girder_client.addMetadataToItem(fileToItemId[de.file_id], {
+                    'smqtk_uuid': descriptor.uuid()
+            })
 
 
 @app.task(bind=True, queue='compute-descriptors')

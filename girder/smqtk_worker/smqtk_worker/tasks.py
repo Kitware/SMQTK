@@ -130,7 +130,7 @@ def compute_hash_codes(task, folderId, **kwargs):
 
     hash2uuids = compute_functions.compute_hash_codes(index.iterkeys(), index, functor, use_mp=False)
 
-    data = pickle.dumps(hash2uuids)
+    data = pickle.dumps(dict((y, x) for (x, y) in hash2uuids))
     task.girder_client.uploadFileContents(hash2uuidsFile['_id'], six.BytesIO(data), len(data))
 
 

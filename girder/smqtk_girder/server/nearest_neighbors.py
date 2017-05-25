@@ -91,7 +91,6 @@ class NearestNeighbors(Resource):
                        .modelParam('itemId', model='item', level=AccessType.READ)
                        .param('limit', 'Number of neighbors to query for.', default=25))
     def nearestNeighbors(self, item, limit, params):
-        #import pudb; pu.db
         limit = int(limit)
         desc_index = self.descriptorIndexFromItem(item)
         nn_index = self.nearestNeighborIndex(item, getCurrentUser(), desc_index)

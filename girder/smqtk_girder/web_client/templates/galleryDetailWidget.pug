@@ -14,10 +14,7 @@
         a.im-link(href=item.downloadUrl({'contentDisposition': 'inline'}), target="_blank")
           img.im-image-detail.im-blur(src=item.downloadUrl({'contentDisposition': 'inline'}))
 
-        p #{item.get('meta').smqtk_uuid}
-        if item.has('smqtk_distance')
-          p #{item.get('smqtk_distance')}
-        p.smqtk-nn-search nearest neighbors search
+        a.btn.btn-default.smqtk-nn-search Find nearest neighbors
 
     .modal-footer
-      a.btn.btn-small.btn-default(data-dismiss="modal")
+      a.btn.btn-small.btn-default(data-dismiss="modal") Close

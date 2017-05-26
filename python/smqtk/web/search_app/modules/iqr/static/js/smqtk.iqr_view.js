@@ -35,6 +35,7 @@ function IqrView(container, upload_post_url) {
     this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     this.button_state_save = $('<button class="btn" type="button"/>');
+    this.button_state_load = $('<button class="btn" type="button"/>');
 
     //
     // Setup
@@ -65,7 +66,8 @@ IqrView.prototype.construct_view = function (container) {
     this.control_zone.append(
         this.button_index_initialize,
         this.button_reset_session,
-        this.button_state_save
+        this.button_state_load,  // buttons in this order for "load" to be on
+        this.button_state_save   // the right of save.
     );
 
     this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
@@ -74,8 +76,15 @@ IqrView.prototype.construct_view = function (container) {
 
     this.button_index_initialize.text("Initialize Index");
     this.button_reset_session.text("Reset IQR Session");
-    this.button_state_save.text("Save IQR state");
-    this.button_state_save.addClass('pull-right');
+    this.button_state_save
+        .text("Save IQR state")
+        .addClass('pull-right');
+    this.button_state_load
+        .text("Load IQR state")
+        .addClass('pull-right');
+
+    var state_load_flow = new FlowUploadButton(this.button_state_load,
+                                               this.upload_post_url);
 
     //
     // Control
@@ -113,6 +122,43 @@ IqrView.prototype.construct_view = function (container) {
         });
     });
 
+    state_load_flow.onFileSuccess(function(file) {
+        var fname = file.name;
+        var fid = file.uniqueIdentifier;
+
+        var bar = new ActivityBar(self.ingest_progress_zone,
+                                  "Resetting previous state");
+        bar.on();
+
+        self.reset_session()
+            .then(function () {
+                bar.on("Finished reset. Ingesting new state");
+                $.ajax({
+                    url: 'set_iqr_state',
+                    type: 'PUT',
+                    data: {
+                        fid: fid
+                    },
+                    success: function(data) {
+                        bar.on("Finished ingesting new state.");
+                        bar.stop_active("success");
+                        bar.progress_div.fadeOut("slow", function () {
+                            bar.remove();
+                        });
+                        self.status_inst.update_view();
+                        // Initialize with new state.
+                        self.initialize_index();
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        bar.on("ERROR: "+errorThrown);
+                        bar.stop_active("danger");
+                        alert_error("Error during file upload: "
+                                    + jqXHR.responseText);
+                    }
+                });
+            });
+    });
+
     this.button_index_initialize.click(function () {
         self.initialize_index();
     });
@@ -133,7 +179,7 @@ IqrView.prototype.construct_view = function (container) {
  */
 IqrView.prototype.reset_session = function() {
     var self = this;
-    $.ajax({
+    return $.ajax({
         url: "reset_iqr_session",
         success: function (data) {
             if ( data.success ) {

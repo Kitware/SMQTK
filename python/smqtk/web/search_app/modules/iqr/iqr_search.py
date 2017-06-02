@@ -7,7 +7,9 @@ import os
 import os.path as osp
 import random
 import shutil
+import zipfile
 
+import six
 from six.moves import StringIO
 
 import flask
@@ -16,16 +18,21 @@ import requests
 
 from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import Configurable
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
 from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.mimetype import get_mimetypes
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+MT = get_mimetypes()
 
 
 class IqrSearch (SmqtkObject, flask.Flask, Configurable):
@@ -49,6 +56,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         * DescriptorElement related to a DataElement have the same UUIDs.
 
     """
+
+    ZIP_COMPRESSION_MODE = zipfile.ZIP_DEFLATED
+    ZIP_WRAPPER_FILENAME = 'wrapped_iqr_state.json'
+    ZIP_SERVICE_FILENAME = 'iqr_state.json'
 
     # TODO: User access white/black-list? See ``search_app/__init__.py``:L135
 
@@ -204,14 +215,130 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             sid = self.get_current_iqr_session()
             r_get = self._iqr_service.get('state', sid=sid)
-            z_buffer = StringIO(r_get.content)
 
+            # Load state dictionary from ZIP payload from service
+            state_dict = json.load(
+                zipfile.ZipFile(
+                    StringIO(r_get.content),
+                    'r',
+                    self.ZIP_COMPRESSION_MODE
+                ).open(self.ZIP_SERVICE_FILENAME)
+            )
+
+            # Wrap service state with our UI state: uploaded data elements.
+            # Data elements are stored as a dictionary mapping UUID to MIMETYPE
+            # and data byte string.
+            working_data = {}
+            sid_data_elems = self._iqr_example_data.get(sid, {})
+            for uid, workingElem in six.iteritems(sid_data_elems):
+                working_data[uid] = {
+                    'content_type': workingElem.content_type(),
+                    'bytes_base64':
+                        base64.urlsafe_b64encode(str(workingElem.get_bytes())),
+                }
+
+            new_state_dict = {
+                "state": state_dict,
+                "working_data": working_data,
+            }
+            new_state_json = json.dumps(new_state_dict)
+
+            z_wrapper_buffer = StringIO()
+            z_wrapper = zipfile.ZipFile(z_wrapper_buffer, 'w',
+                                        self.ZIP_COMPRESSION_MODE)
+            z_wrapper.writestr(self.ZIP_WRAPPER_FILENAME, new_state_json)
+            z_wrapper.close()
+
+            z_wrapper_buffer.seek(0)
             return flask.send_file(
-                z_buffer,
+                z_wrapper_buffer,
                 mimetype='application/octet-stream',
                 as_attachment=True,
                 attachment_filename="%s.IqrState" % sid
             )
+
+        @self.route('/set_iqr_state', methods=['PUT'])
+        @self._parent_app.module_login.login_required
+        def set_iqr_session_state():
+            """
+            Set the current state based on the given state file.
+            """
+            sid = self.get_current_iqr_session()
+            fid = flask.request.form.get('fid', None)
+
+            return_obj = {
+                'success': False,
+            }
+
+            #
+            # Load in state zip package, prepare zip package for service
+            #
+
+            if fid is None:
+                return_obj['message'] = 'No file ID provided.'
+
+            self._log.debug("[%s::%s] Getting temporary filepath from "
+                            "uploader module", sid, fid)
+            upload_filepath = self.mod_upload.get_path_for_id(fid)
+            self.mod_upload.clear_completed(fid)
+
+            # Load ZIP package back in, then remove the uploaded file.
+            try:
+                z_wrapper = zipfile.ZipFile(
+                    upload_filepath, compression=self.ZIP_COMPRESSION_MODE
+                )
+                with z_wrapper.open(self.ZIP_WRAPPER_FILENAME) as f:
+                    wrapper_state_dict = json.load(f)
+                z_wrapper.close()
+            finally:
+                os.remove(upload_filepath)
+
+            #
+            # Consume working data UUID/bytes
+            #
+            # Reset this server's resources for an SID
+            self.reset_session_local(sid)
+            # - Dictionary of data UUID (SHA1) to {'content_type': <str>,
+            #   'bytes_base64': <str>} dictionary.
+            #: :type: dict[str, dict]
+            working_data = wrapper_state_dict['working_data']
+            # - Write out base64-decoded files to session-specific work
+            #   directory.
+            # - Update self._iqr_example_data with DataFileElement instances
+            #   referencing the just-written files.
+            for uuid_sha1 in working_data:
+                data_mimetype = working_data[uuid_sha1]['content_type']
+                data_b64 = str(working_data[uuid_sha1]['bytes_base64'])
+                # Output file to working directory on disk.
+                data_filepath = os.path.join(
+                    self._iqr_work_dirs[sid],
+                    '%s%s' % (uuid_sha1, MT.guess_extension(data_mimetype))
+                )
+                with open(data_filepath, 'wb') as f:
+                    f.write(base64.urlsafe_b64decode(data_b64))
+                # Create element reference and store it for the current session.
+                data_elem = DataFileElement(data_filepath, readonly=True)
+                self._iqr_example_data[sid][uuid_sha1] = data_elem
+
+            #
+            # Re-package service state as a ZIP payload.
+            #
+            service_state_dict = wrapper_state_dict['state']
+            service_zip_buffer = StringIO()
+            service_zip = zipfile.ZipFile(service_zip_buffer, 'w',
+                                          self.ZIP_COMPRESSION_MODE)
+            service_zip.writestr(self.ZIP_SERVICE_FILENAME,
+                                 json.dumps(service_state_dict))
+            service_zip.close()
+            service_zip_base64 = \
+                base64.urlsafe_b64encode(service_zip_buffer.getvalue())
+
+            # Update service state
+            self._iqr_service.put('state',
+                                  sid=sid,
+                                  state_base64=service_zip_base64)
+
+            return flask.jsonify(return_obj)
 
         @self.route("/check_current_iqr_session")
         @self._parent_app.module_login.login_required
@@ -235,7 +362,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self._parent_app.module_login.login_required
         def get_ingest_item_image_rep():
             """
-            Return the base64 preview image data link for the data file 
+            Return the base64 preview image data link for the data file
             associated with the give UID (plus some other metadata).
             """
             uid = flask.request.args['uid']
@@ -260,7 +387,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             if not de:
                 info["success"] = False
-                info["message"] = "UUID not part of the active data set!"
+                info["message"] = "UUID '%s' not part of the base or working " \
+                                  "data set!" % uid
             else:
                 # Preview_path should be a path within our statically hosted
                 # area.
@@ -491,16 +619,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             Reset the current IQR session
             """
             sid = self.get_current_iqr_session()
+            # Reset service
             put_r = self._iqr_service.put('session', sid=sid)
             put_r.raise_for_status()
-
-            # Also clear work sub-directory and example data state
-            if os.path.isdir(self._iqr_work_dirs[sid]):
-                shutil.rmtree(self._iqr_work_dirs[sid])
-            safe_create_dir(self._iqr_work_dirs[sid])
-
-            self._iqr_example_data[sid].clear()
-
+            # Reset local server resources
+            self.reset_session_local(sid)
             return flask.jsonify({"success": True})
 
         @self.route("/get_random_uids")
@@ -568,6 +691,29 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             safe_create_dir(self._iqr_work_dirs[sid])
 
         return sid
+
+    def reset_session_local(self, sid):
+        """
+        Reset elements of this server for a given session ID.
+
+        A given ``sid`` must have been created first. This happens in the
+        ``get_current_iqr_session`` method.
+
+        This does not affect the linked IQR service.
+
+        :param sid: Session ID to reset for.
+        :type sid: str
+
+        :raises KeyError: ``sid`` not recognized. Probably not initialized
+            first.
+
+        """
+        # Also clear work sub-directory and example data state
+        if os.path.isdir(self._iqr_work_dirs[sid]):
+            shutil.rmtree(self._iqr_work_dirs[sid])
+        safe_create_dir(self._iqr_work_dirs[sid])
+
+        self._iqr_example_data[sid].clear()
 
 
 class IqrService (object):

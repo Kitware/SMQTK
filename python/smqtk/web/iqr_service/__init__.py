@@ -624,7 +624,15 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs.update_working_index(self.neighbor_index)
+        try:
+            iqrs.update_working_index(self.neighbor_index)
+        except RuntimeError as ex:
+            if "No positive descriptors to query" in str(ex):
+                return make_response_json("Failed to initialize, no positive "
+                                          "descriptors to query",
+                                          sid=sid, success=False), 200
+            else:
+                raise
 
         iqrs.lock.release()
         return make_response_json("Success", sid=sid, success=True), 200
@@ -932,7 +940,6 @@ class IqrService (SmqtkWebApp):
         return z_buffer.getvalue(), 200
 
     # PUT
-    # TODO: set_iqr_state <- state zip binary
     def set_iqr_state(self):
         """
         Set the IQR session state for a given session ID.

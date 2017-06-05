@@ -473,13 +473,13 @@ class IqrService (SmqtkWebApp):
     # GET /adjudicate
     def get_adjudication(self):
         """
-        Get the adjudication state of a descriptor given its UUID.
+        Get the adjudication state of a descriptor given its UID.
 
         Form args:
             sid
                 Session Id.
             uid
-                Query descriptor UUID.
+                Query descriptor UID.
         """
         sid = flask.request.args.get('sid', None)
         uid = flask.request.args.get('uid', None)
@@ -545,8 +545,6 @@ class IqrService (SmqtkWebApp):
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
-        elif pos_uuids is None:
-            return make_response_json("No positive UUIDs given"), 400
 
         pos_uuids = set(json.loads(pos_uuids))
         neg_uuids = set(json.loads(neg_uuids))
@@ -771,8 +769,12 @@ class IqrService (SmqtkWebApp):
             sid
                 UUID of the session to utilize
             uuids
-                List of descriptor UUIDs to classify. Return list of results
-                will be in the same order as this list.
+                List of descriptor UUIDs to classify. These UUIDs must
+                associate to descriptors in the configured descriptor index.
+
+        TODO: Optionally take in a list of JSON objects encoding base64 bytes
+              and content type of raw data to describe and then classify, thus
+              extending classification ability to arbitrary new data.
 
         """
         # Record clean/dirty status after making classifier/refining so we
@@ -780,21 +782,15 @@ class IqrService (SmqtkWebApp):
         sid = flask.request.args.get('sid', None)
         uuids = flask.request.args.get('uuids', None)
 
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
         try:
             uuids = json.loads(uuids)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"
                 % uuids
-            ), 400
-
-        if sid is None:
-            return make_response_json("No session id (sid) provided"), 400
-
-        if not uuids:
-            return make_response_json(
-                "No descriptor UUIDs provided for classification",
-                sid=sid,
             ), 400
 
         with self.controller:
@@ -806,19 +802,21 @@ class IqrService (SmqtkWebApp):
 
         if not iqrs.positive_descriptors:
             return make_response_json(
-                "No positive labels in current session",
+                "No positive labels in current session. Required for a "
+                "supervised classifier.",
                 sid=sid
             ), 400
         if not iqrs.negative_descriptors:
             return make_response_json(
-                "No negative labels in current session",
+                "No negative labels in current session. Required for a "
+                "supervised classifier.",
                 sid=sid
             ), 400
 
         # Get descriptor elements for classification
         try:
             descriptors = list(self.descriptor_index
-                               .get_many_descriptors(uuids))
+                                   .get_many_descriptors(uuids))
         except KeyError as ex:
             err_uuid = str(ex)
             self._log.warn(traceback.format_exc())
@@ -836,7 +834,7 @@ class IqrService (SmqtkWebApp):
         neg_label = "negative"
         if self.session_classifier_dirty[sid] or classifier is None:
             self._log.debug("Training new classifier for current "
-                            "refine state")
+                            "adjudication state...")
 
             #: :type: SupervisedClassifier
             classifier = plugin.from_plugin_config(
@@ -877,7 +875,7 @@ class IqrService (SmqtkWebApp):
 
     # TODO: Save/Export classifier model/state/configuration?
 
-    # GET
+    # GET /state
     def get_iqr_state(self):
         """
         Create a binary package of a session's IQR state.
@@ -939,7 +937,7 @@ class IqrService (SmqtkWebApp):
         # NOTE: May have to return base64 here instead of bytes.
         return z_buffer.getvalue(), 200
 
-    # PUT
+    # PUT /state
     def set_iqr_state(self):
         """
         Set the IQR session state for a given session ID.
@@ -959,6 +957,8 @@ class IqrService (SmqtkWebApp):
         # TODO: Limit the size of input state object? Is this already handled by
         #       other security measures?
 
+        # ``str()`` is required because the b64decode does not handle being
+        # given unicode.
         state_bytes = base64.urlsafe_b64decode(str(state_base64))
         z_buffer = StringIO(state_bytes)
         z = zipfile.ZipFile(z_buffer, 'r', zipfile.ZIP_DEFLATED)

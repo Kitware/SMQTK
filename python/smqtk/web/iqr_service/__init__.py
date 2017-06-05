@@ -93,7 +93,7 @@ class IqrService (SmqtkWebApp):
                         "such a way that instances are created, built and "
                         "destroyed often.",
                     "descriptor_factory":
-                        "When descriptor element factory to use when asked to "
+                        "What descriptor element factory to use when asked to "
                         "compute a descriptor on data.",
                     "descriptor_generator":
                         "Descriptor generation algorithm to use when requested "

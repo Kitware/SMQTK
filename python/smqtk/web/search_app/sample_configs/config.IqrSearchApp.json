@@ -5,81 +5,23 @@
         "SECRET_KEY": "MySuperUltraSecret"
     },
     "iqr_tabs": {
-        "csift": {
-            "name": "CSIFT",
+        "alexnet_fc7": {
             "working_directory": "workdir",
             "data_set": {
                 "DataMemorySet": {
-                    "file_cache": "workdir/csift/MemorySet.cache"
-                },
-                "DataFileSet": {
-                    "root_directory": "workdir/csift/DataFileSetCache",
-                    "uuid_chunk": 10
-                },
-                "type": "DataFileSet"
-            },
-            "descriptor_factory": {
-                "DescriptorMemoryElement": {},
-                "type": "DescriptorMemoryElement"
-            },
-            "descr_generator": {
-                "ColorDescriptor_Image_csift": {
-                    "flann_autotune": false,
-                    "flann_sample_fraction": 0.75,
-                    "flann_target_precision": 0.95,
-                    "kmeans_k": 1024,
-                    "model_directory": "workdir/csift",
-                    "random_seed": 42,
-                    "use_spatial_pyramid": false,
-                    "work_directory": "workdir/csift"
-                },
-                "type": "ColorDescriptor_Image_csift"
-            },
-            "nn_index": {
-                "LSHNearestNeighborIndex": {
-                    "distance_method": "hik",
-                    "hash2uuid_cache_filepath": "workdir/csift/itqnn/hash2uuid.pickle",
-                    "read_only": false,
-                    "descriptor_index": {
-                        "MemoryDescriptorIndex": {
-                            "file_cache": "workdir/csift/itqnn/mem_index.pickle"
+                    "cache_element": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "workdir/alexnet_fc7/data.memorySet.cache",
+                            "readonly": true
                         },
-                        "type": "MemoryDescriptorIndex"
+                        "type": "DataFileElement"
                     },
-                    "lsh_functor": {
-                        "ItqFunctor": {
-                            "bit_length": 8,
-                            "itq_iterations": 50,
-                            "mean_vec_filepath": "workdir/csift/itqnn/mean_vec.npy",
-                            "random_seed": 42,
-                            "rotation_filepath": "workdir/csift/itqnn/rotation.npy"
-                        },
-                        "type": "ItqFunctor"
-                    },
-                    "hash_index": {
-                        "LinearHashIndex": {
-                            "file_cache": "workdir/csift/itqnn/hash_index_cache.npy"
-                        },
-                        "type": "LinearHashIndex"
-                    }
+                    "pickle_protocol": -1
                 },
-                "FlannNearestNeighborsIndex": {
-                    "index_filepath": "workdir/csift/flann/index.flann",
-                    "parameters_filepath": "workdir/csift/flann/index.parameters",
-                    "descriptor_cache_filepath": "workdir/csift/flann/index.cache",
-                    "autotune": false,
-                    "distance_method": "hik",
-                    "random_seed": 42
-                },
-                "type": "FlannNearestNeighborsIndex"
+                "type": "DataMemorySet"
             },
-            "rel_index_config": {
-                "LibSvmHikRelevancyIndex": {
-                    "descr_cache_filepath": null,
-                    "autoneg_select_ratio": 1
-                },
-                "type": "LibSvmHikRelevancyIndex"
-            }
+            "iqr_service_url": "http://localhost:5001",
         }
     },
     "mongo": {
@@ -87,7 +29,7 @@
         "server": "127.0.0.1:27017"
     },
     "server": {
-        "host": "0.0.0.0",
+        "host": "127.0.0.1",
         "port": 5000
     }
 }

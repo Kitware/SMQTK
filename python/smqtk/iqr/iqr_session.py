@@ -2,6 +2,8 @@ import logging
 import threading
 import uuid
 
+import six
+
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import SmqtkObject
@@ -118,6 +120,12 @@ class IqrSession (SmqtkObject):
         #: :type: set[collections.Hashable]
         self._wi_seeds_used = set()
 
+        # Descriptor elements representing data from external sources.
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.external_positive_descriptors = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.external_negative_descriptors = set()
+
         # Descriptor references from our index (above) that have been
         #   adjudicated.
         #: :type: set[smqtk.representation.DescriptorElement]
@@ -158,18 +166,42 @@ class IqrSession (SmqtkObject):
     def ordered_results(self):
         """
         Return a tuple of the current (id, probability) result pairs in
-        order of probability score. If there are no results yet, None is
-        returned.
+        order of descending probability score. If there are no results yet, None
+        is returned.
 
         :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
 
         """
         with self.lock:
             if self.results:
-                return tuple(sorted(self.results.iteritems(),
+                return tuple(sorted(six.iteritems(self.results),
                                     key=lambda p: p[1],
                                     reverse=True))
             return None
+
+    def external_descriptors(self, positive=(), negative=()):
+        """
+        Add positive/negative descriptors from external data.
+
+        These descriptors may not be a part of our working index.
+
+        :param positive: Iterable of descriptors from external sources to
+            consider positive examples.
+        :type positive: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param negative: Iterable of descriptors from external sources to
+            consider negative examples.
+        :type negative: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        positive = set(positive)
+        negative = set(negative)
+        with self.lock:
+            self.external_positive_descriptors.update(positive)
+            self.external_positive_descriptors.difference_update(negative)
+
+            self.external_negative_descriptors.update(negative)
+            self.external_negative_descriptors.difference_update(positive)
 
     def adjudicate(self, new_positives=(), new_negatives=(),
                    un_positives=(), un_negatives=()):
@@ -201,6 +233,11 @@ class IqrSession (SmqtkObject):
         :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        new_positives = set(new_positives)
+        new_negatives = set(new_negatives)
+        un_positives = set(un_positives)
+        un_negatives = set(un_negatives)
+
         with self.lock:
             self.positive_descriptors.update(new_positives)
             self.positive_descriptors.difference_update(un_positives)
@@ -226,7 +263,9 @@ class IqrSession (SmqtkObject):
             session to use as a basis for querying.
 
         """
-        if len(self.positive_descriptors) <= 0:
+        pos_examples = (self.external_positive_descriptors |
+                        self.positive_descriptors)
+        if len(pos_examples) == 0:
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
 
@@ -235,7 +274,7 @@ class IqrSession (SmqtkObject):
         updated = False
 
         # adding to working index
-        for p in self.positive_descriptors:
+        for p in pos_examples:
             if p.uuid() not in self._wi_seeds_used:
                 self._log.info("Querying neighbors to: %s", p)
                 self.working_index.add_many_descriptors(
@@ -267,9 +306,9 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("No relevancy index yet. Must not have "
                                    "initialized session (no working index).")
 
-            # fuse pos/neg adjudications + added positive data descriptors
-            pos = self.positive_descriptors
-            neg = self.negative_descriptors
+            # combine pos/neg adjudications + added external data descriptors
+            pos = self.positive_descriptors | self.external_positive_descriptors
+            neg = self.negative_descriptors | self.external_negative_descriptors
 
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
@@ -303,6 +342,8 @@ class IqrSession (SmqtkObject):
             self._wi_seeds_used.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
+            self.external_positive_descriptors.clear()
+            self.external_negative_descriptors.clear()
 
             self.rel_index = None
             self.results = None

@@ -1,16 +1,13 @@
 import imageio
 import logging
-import mimetypes
 import os
 import shutil
 
 from smqtk.utils import file_utils, video_utils
+from smqtk.utils.mimetype import get_mimetypes
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
-MIMETYPES = mimetypes.MimeTypes()
+MIMETYPES = get_mimetypes()
 
 
 class PreviewCache (object):

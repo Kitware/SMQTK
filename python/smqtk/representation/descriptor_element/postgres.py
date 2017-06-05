@@ -312,12 +312,15 @@ class PostgresDescriptorElement (DescriptorElement):
         :type new_vec: numpy.core.multiarray.ndarray
 
         """
-        if not isinstance(new_vec, numpy.core.multiarray.ndarray):
-            raise ValueError("Input array for setting was not a numpy.ndarray! "
-                             "(given: %s)" % type(new_vec))
+        if not isinstance(new_vec, numpy.ndarray):
+            new_vec = numpy.copy(new_vec)
 
         if new_vec.dtype != self.ARRAY_DTYPE:
-            new_vec = new_vec.astype(self.ARRAY_DTYPE)
+            try:
+                new_vec = new_vec.astype(self.ARRAY_DTYPE)
+            except TypeError:
+                raise ValueError("Could not convert input to a vector of %s."
+                                 % self.ARRAY_DTYPE)
 
         q_upsert = self.UPSERT_TMPL.strip().format(**{
             "table_name": self.table_name,

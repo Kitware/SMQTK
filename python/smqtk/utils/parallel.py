@@ -6,12 +6,21 @@ import multiprocessing
 import multiprocessing.process
 import multiprocessing.queues
 import multiprocessing.synchronize
-import Queue
 import sys
 import threading
 import traceback
 
+from six.moves import range
+
 from smqtk.utils import SmqtkObject
+
+# handle 2.x/3.x Queue import
+try:
+    # noinspection PyUnresolvedReferences
+    import Queue as Queue
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    import queue as Queue
 
 
 def parallel_map(work_func, *sequences, **kwargs):
@@ -60,7 +69,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     :param sequences: Input data to apply to the given ``work_func`` function.
         If more than one sequence is given, the function is called with an
         argument list consisting of the corresponding item of each sequence.
-    :type sequences: collections.Iterable[collections.Iterable]
+    :type sequences: collections.Iterable
 
     :param kwargs: Optionally available keyword arguments are as follows:
 
@@ -441,13 +450,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 if self.stopped():
                     self._log.log(1, "Told to stop prematurely")
                     break
-        except Exception, ex:
+        except Exception as ex:
             self._log.warn("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
         else:
             self._log.log(1, "Sending in-queue terminal packets")
-            for _ in xrange(self.num_terminal_packets):
+            for _ in range(self.num_terminal_packets):
                 self.q_put(_TerminalPacket())
         finally:
             # Explicitly stop any nested parallel maps
@@ -533,7 +542,7 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        except Exception, ex:
+        except Exception as ex:
             self._log.warn("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()

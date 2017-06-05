@@ -183,3 +183,106 @@ function FlowUploadZone(container, upload_url) {
         hook_fileSuccess = func;
     }
 }
+
+
+/**
+ * Create a flow upload button.
+ *
+ * Assumes that a FlowUploadZone exists on the page already (uses its progress
+ * bar area).
+ *
+ * @param button jQuery or DOM button element.
+ * @param upload_url The URL to target for uploads. Take into consideration the
+ *      FileUploadMod blueprint prefix and target function string.
+ *
+ * @constructor
+ */
+function FlowUploadButton(button, upload_url) {
+    //
+    // Attributes
+    //
+    var flow = new Flow({
+        target: upload_url,
+        // 1 for serial debugging, may be higher for production
+        simultaneousUploads: 4
+    });
+
+    // Association from FlowFile ID to FileProgressIndicator for that
+    // object. -- {fid -> fpi}
+    var ffid_fpi_map = {};
+
+    // Hook placeholders for upload stages
+    var hook_fileSuccess = null;
+
+    //
+    // Control
+    //
+    // Notify if Flow is not supported
+    if (!flow.support)
+    {
+        alert_error("Flow is not supported in current browser");
+        return;
+    }
+
+    // Assign the flow file browse upload to the input button element.
+    //noinspection JSCheckFunctionSignatures
+    flow.assignBrowse($(button)[0], false, true);
+
+    // Error message forwarding
+    flow.on("error", function(message, file) {
+        alert_error("[Flow] ERROR: (" + file.name + ") " + message);
+        return true;
+    });
+
+    flow.on("fileAdded", function(file, event){
+        // TODO: add rejection rules via hook functions?
+        ffid_fpi_map[file.uniqueIdentifier] =
+                new FileProgressIndicator($('.flow-progress'), file);
+    });
+
+    flow.on("filesSubmitted", function(array, event) {
+        flow.upload();
+    });
+
+    flow.on("fileProgress", function (file) {
+        // Update file's associated progress indicator element
+        ffid_fpi_map[file.uniqueIdentifier].update();
+    });
+
+    flow.on("fileSuccess", function (file, message) {
+        alert_success("[Flow] Success uploading file '" + file.name + ": "
+                      + message);
+        hook_fileSuccess && hook_fileSuccess(file);
+
+        // Fade out the bar when done.
+        var fpi = ffid_fpi_map[file.uniqueIdentifier];
+        fpi.progress_c.fadeOut('slow', function () {
+            fpi.progress_c.remove();
+        });
+
+        delete ffid_fpi_map[file.uniqueIdentifier];
+    });
+
+    flow.on("fileError", function(file, message) {
+        alert_error("[Flow] Error uploading file '" + file.name + ": "
+                + message);
+        delete ffid_fpi_map[file.uniqueIdentifier];
+    });
+
+    //
+    // Functions
+    //
+
+    /**
+     * Add a hook function for when a file is successfully uploaded
+     *
+     * This is usually set to a function that contains an ajax call that tells
+     * the server that a particular file ID has completed upload and should be
+     * fetched from the uploader module on the python side.
+     *
+     * @param func Function taking one argument that is the FlowFile instance.
+     */
+    this.onFileSuccess = function( func ) {
+        hook_fileSuccess = func;
+    }
+}

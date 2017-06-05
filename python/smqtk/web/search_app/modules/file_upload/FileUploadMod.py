@@ -104,7 +104,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                         self._completed_files[fid] = file_saved_path
                         message = "[%s] Completed upload" % (filename+"::"+fid)
 
-                    except IOError, ex:
+                    except IOError as ex:
                         self._log.debug("[%s] Failed to write combined chunks",
                                        filename+"::"+fid)
                         success = False
@@ -112,7 +112,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                                   "file %s: %s" % (filename, str(ex))
                         raise RuntimeError(message)
 
-                    except NotImplementedError, ex:
+                    except NotImplementedError as ex:
                         success = False
                         message = "Encountered non-implemented code path: %s" \
                                   % str(ex)

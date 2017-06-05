@@ -1,13 +1,18 @@
+import base64
 import json
 import time
 import traceback
 import uuid
+import zipfile
 
 import flask
+import six
+from six.moves import StringIO
 
 # import smqtk.algorithms
 from smqtk.algorithms import (
     get_classifier_impls,
+    get_descriptor_generator_impls,
     get_nn_index_impls,
     get_relevancy_index_impls,
     SupervisedClassifier,
@@ -18,8 +23,10 @@ from smqtk.iqr import (
 )
 from smqtk.representation import (
     ClassificationElementFactory,
+    DescriptorElementFactory,
     get_descriptor_index_impls,
 )
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import (
     merge_dict,
     plugin,
@@ -85,6 +92,12 @@ class IqrService (SmqtkWebApp):
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
                         "destroyed often.",
+                    "descriptor_factory":
+                        "What descriptor element factory to use when asked to "
+                        "compute a descriptor on data.",
+                    "descriptor_generator":
+                        "Descriptor generation algorithm to use when requested "
+                        "to describe data.",
                     "descriptor_index":
                         "This is the index from which given positive and "
                         "negative example descriptors are retrieved from. "
@@ -112,6 +125,11 @@ class IqrService (SmqtkWebApp):
 
                 "plugins": {
                     "relevancy_index_config": c_rel_index,
+                    "descriptor_factory":
+                        DescriptorElementFactory.get_default_config(),
+                    "descriptor_generator": plugin.make_config(
+                        get_descriptor_generator_impls()
+                    ),
                     "descriptor_index": plugin.make_config(
                         get_descriptor_index_impls()
                     ),
@@ -140,11 +158,22 @@ class IqrService (SmqtkWebApp):
                 json_config['iqr_service']['plugins']['classification_factory']
             )
 
+        self.descriptor_factory = DescriptorElementFactory.from_config(
+            json_config['iqr_service']['plugins']['descriptor_factory']
+        )
+
+        #: :type: smqtk.algorithms.DescriptorGenerator
+        self.descriptor_generator = plugin.from_plugin_config(
+            json_config['iqr_service']['plugins']['descriptor_generator'],
+            get_descriptor_generator_impls(),
+        )
+
         #: :type: smqtk.representation.DescriptorIndex
         self.descriptor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['descriptor_index'],
             get_descriptor_index_impls(),
         )
+
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.neighbor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['neighbor_index'],
@@ -181,7 +210,74 @@ class IqrService (SmqtkWebApp):
         self.session_timeout = \
             sc_config['session_expiration']['session_timeout']
 
-    # POST
+    def describe_base64_data(self, b64, content_type):
+        """
+        Compute and return the descriptor element for the given base64 data.
+
+        The given data bytes are not retained.
+
+        :param b64: Base64 data string.
+        :type b64: str
+
+        :param content_type: Data content type.
+        :type content_type: str
+
+        :return: Computed descriptor element.
+        :rtype: smqtk.representation.DescriptorElement
+        """
+        de = DataMemoryElement.from_base64(b64, content_type)
+        return self.descriptor_generator.compute_descriptor(
+            de, self.descriptor_factory
+        )
+
+    # GET /session_ids
+    def get_sessions_ids(self):
+        """
+        Get the list of current, active session IDs.
+        """
+        session_uuids = self.controller.session_uuids()
+        return make_response_json("Current session UUID values",
+                                  session_uuids=session_uuids), 200
+
+    # GET /session
+    def get_session_info(self):
+        """
+        Get a JSON return with session state information.
+
+        Arguments:
+            sid
+                ID of the session.
+        """
+        sid = flask.request.args.get('sid', None)
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        uuids_pos = [d.uuid() for d in iqrs.positive_descriptors]
+        uuids_pos_external = [d.uuid() for d in
+                              iqrs.external_positive_descriptors]
+        uuids_neg = [d.uuid() for d in iqrs.negative_descriptors]
+        uuids_neg_external = [d.uuid() for d in
+                              iqrs.external_negative_descriptors]
+        wi_count = iqrs.working_index.count()
+
+        iqrs.lock.release()
+
+        return make_response_json("Session '%s' info" % sid,
+                                  sid=sid,
+                                  uuids_pos=uuids_pos,
+                                  uuids_neg=uuids_neg,
+                                  uuids_pos_ext=uuids_pos_external,
+                                  uuids_neg_ext=uuids_neg_external,
+                                  wi_count=wi_count), 200
+
+    # POST /session
     def init_session(self):
         """
         Initialize a new session in the controller.
@@ -214,7 +310,7 @@ class IqrService (SmqtkWebApp):
         return make_response_json("Created new session with ID '%s'" % sid,
                                   sid=sid), 201  # CREATED
 
-    # PUT
+    # PUT /session
     def reset_session(self):
         """
         Reset an existing session. This does not remove the session, so actions
@@ -234,7 +330,6 @@ class IqrService (SmqtkWebApp):
             if not self.controller.has_session_uuid(sid):
                 return make_response_json("session id '%s' not found" % sid,
                                           sid=sid), 404
-
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
@@ -246,7 +341,7 @@ class IqrService (SmqtkWebApp):
         return make_response_json("Reset IQR session '%s'" % sid,
                                   sid=sid), 200
 
-    # DELETE
+    # DELETE /session
     def clean_session(self):
         """
         Clean resources associated with the session of the given UUID.
@@ -277,7 +372,148 @@ class IqrService (SmqtkWebApp):
         return make_response_json("Cleaned session resources for '%s'" % sid,
                                   sid=sid), 200
 
-    # PUT
+    # POST /add_external_pos
+    def add_external_positive(self):
+        """
+        Describe the given data and store as a positive example from external
+        data.
+
+        Form args:
+            sid
+                The id of the session to add the generated descriptor to.
+            base64
+                The base64 byes of the data. This should use the standard and
+                URL-safe alphabet as the python ``base64.urlsafe_b64decode``
+                module function would expect.
+            content_type
+                The mimetype of the bytes given.
+
+        A return JSON along with a code 201 means a descriptor was successfully
+        computed and added to the session external positives. The returned JSON
+        includes a reference to the UUID of the descriptor computed under the
+        ``descr_uuid`` key.
+
+        """
+        sid = flask.request.form.get('sid', None)
+        data_base64 = flask.request.form.get('base64', None)
+        data_content_type = flask.request.form.get('content_type', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+        if not data_base64:
+            return make_response_json("No or empty base64 data provided."), 400
+        if not data_content_type:
+            return make_response_json("No data mimetype provided."), 400
+
+        descriptor = self.describe_base64_data(data_base64, data_content_type)
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        iqrs.external_descriptors(positive=[descriptor])
+
+        iqrs.lock.release()
+
+        return make_response_json("Success", descr_uuid=descriptor.uuid()), 201
+
+    # POST /add_external_neg
+    def add_external_negative(self):
+        """
+        Describe the given data and store as a negative example from external
+        data.
+
+        Form args:
+            sid
+                The id of the session to add the generated descriptor to.
+            base64
+                The base64 byes of the data. This should use the standard and
+                URL-safe alphabet as the python ``base64.urlsafe_b64decode``
+                module function would expect.
+            content_type
+                The mimetype of the bytes given.
+
+        A return JSON along with a code 201 means a descriptor was successfully
+        computed and added to the session external negatives. The returned JSON
+        includes a reference to the UUID of the descriptor computed under the
+        ``descr_uuid`` key.
+
+        """
+        sid = flask.request.form.get('sid', None)
+        data_base64 = flask.request.form.get('base64', None)
+        data_content_type = flask.request.form.get('content_type', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+        if not data_base64:
+            return make_response_json("No or empty base64 data provided."), 400
+        if not data_content_type:
+            return make_response_json("No data mimetype provided."), 400
+
+        descriptor = self.describe_base64_data(data_base64,
+                                               data_content_type)
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        iqrs.external_descriptors(negative=[descriptor])
+
+        iqrs.lock.release()
+
+        return make_response_json("Success",
+                                  descr_uuid=descriptor.uuid()), 201
+
+    # GET /adjudicate
+    def get_adjudication(self):
+        """
+        Get the adjudication state of a descriptor given its UID.
+
+        Form args:
+            sid
+                Session Id.
+            uid
+                Query descriptor UID.
+        """
+        sid = flask.request.args.get('sid', None)
+        uid = flask.request.args.get('uid', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+        elif uid is None:
+            return make_response_json("No descriptor uid provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        all_pos = (iqrs.external_positive_descriptors |
+                   iqrs.positive_descriptors)
+        all_neg = (iqrs.external_negative_descriptors |
+                   iqrs.negative_descriptors)
+
+        iqrs.lock.release()
+
+        is_pos = uid in {d.uuid() for d in all_pos}
+        is_neg = uid in {d.uuid() for d in all_neg}
+
+        if is_pos and is_neg:
+            return make_response_json("UID slotted as both positive and "
+                                      "negative?"), 500
+
+        return make_response_json("%s descriptor adjudication" % uid,
+                                  is_pos=is_pos, is_neg=is_neg), 200
+
+    # POST /adjudicate
     def adjudicate(self):
         """
         Incrementally update internal adjudication state given new positives
@@ -285,6 +521,9 @@ class IqrService (SmqtkWebApp):
 
         If the same UUID is present in both positive and negative sets, they
         cancel each other out (remains neutral).
+
+        Descriptor uuids that may be provided must be available in the
+        configured descriptor index.
 
         Form Args:
             sid
@@ -306,8 +545,6 @@ class IqrService (SmqtkWebApp):
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
-        elif pos_uuids is None:
-            return make_response_json("No positive UUIDs given"), 400
 
         pos_uuids = set(json.loads(pos_uuids))
         neg_uuids = set(json.loads(neg_uuids))
@@ -363,35 +600,56 @@ class IqrService (SmqtkWebApp):
             sid=sid,
         ), 200
 
-    # PUT
+    # POST /initialize
+    def initialize(self):
+        """
+        Update the working index based on the currently positive examples and
+        adjudications.
+
+        Form Arguments:
+            sid
+                Id of the session to update.
+        """
+        sid = flask.request.form.get('sid', None)
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid,
+                                          success=False), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            iqrs.update_working_index(self.neighbor_index)
+        except RuntimeError as ex:
+            if "No positive descriptors to query" in str(ex):
+                return make_response_json("Failed to initialize, no positive "
+                                          "descriptors to query",
+                                          sid=sid, success=False), 200
+            else:
+                raise
+
+        iqrs.lock.release()
+        return make_response_json("Success", sid=sid, success=True), 200
+
+    # POST /refine
     def refine(self):
         """
-        Create or update the session's working index as necessary, ranking
-        content by order of relevance.
-
-        Positive and negative UUIDs must be specified as a JSON list. This
-        means that string UUIDs must be quoted.
+        (Re)Create ranking of working index content by order of relevance to
+        examples and adjudications.
 
         Form args:
             sid
-                UUID of the session to use
-            pos_uuids
-                list of positive example descriptor UUIDs
-            neg_uuids
-                list of negative example descriptor UUIDs
+                Id of the session to use.
 
         """
         sid = flask.request.form.get('sid', None)
-        pos_uuids = flask.request.form.get('pos_uuids', None)
-        neg_uuids = flask.request.form.get('neg_uuids', '[]')
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
-        elif pos_uuids is None:
-            return make_response_json("No positive UUIDs given"), 400
-
-        pos_uuids = json.loads(pos_uuids)
-        neg_uuids = json.loads(neg_uuids)
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -400,52 +658,13 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        # Get appropriate descriptor elements from index for
-        # setting new adjudication state.
-        try:
-            pos_descrs = set(
-                self.descriptor_index.get_many_descriptors(pos_uuids)
-            )
-            neg_descrs = set(
-                self.descriptor_index.get_many_descriptors(neg_uuids)
-            )
-        except KeyError as ex:
-            err_uuid = str(ex)
-            self._log.warn(traceback.format_exc())
-            return make_response_json(
-                "Descriptor UUID '%s' cannot be found in the "
-                "configured descriptor index."
-                % err_uuid,
-                sid=sid,
-                uuid=err_uuid,
-            ), 404
-
-        # if a new classifier should be made upon the next
-        # classification request.
-        diff_pos = \
-            pos_descrs.symmetric_difference(
-                iqrs.positive_descriptors)
-        diff_neg = \
-            neg_descrs.symmetric_difference(
-                iqrs.negative_descriptors)
-        if diff_pos or diff_neg:
-            self._log.debug("[%s] session Classifier dirty", sid)
-            self.session_classifier_dirty[sid] = True
-
-        self._log.info("[%s] Setting adjudications", sid)
-        iqrs.positive_descriptors = pos_descrs
-        iqrs.negative_descriptors = neg_descrs
-
-        self._log.info("[%s] Updating working index", sid)
-        iqrs.update_working_index(self.neighbor_index)
-
         self._log.info("[%s] Refining", sid)
         iqrs.refine()
 
         iqrs.lock.release()
         return make_response_json("Refine complete", sid=sid), 201
 
-    # GET
+    # GET /num_results
     def num_results(self):
         """
         Get the total number of results in the ranking.
@@ -478,7 +697,7 @@ class IqrService (SmqtkWebApp):
                                   num_results=size,
                                   sid=sid), 200
 
-    # GET
+    # GET /get_results
     def get_results(self):
         """
         Get the ordered ranking results between two index positions (inclusive,
@@ -528,8 +747,7 @@ class IqrService (SmqtkWebApp):
 
         r = []
         if iqrs.results:
-            r = iqrs.ordered_results()[i:j]
-            r = [[d.uuid(), v] for d, v in r]
+            r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
 
         iqrs.lock.release()
         return make_response_json("Returning result pairs",
@@ -551,8 +769,12 @@ class IqrService (SmqtkWebApp):
             sid
                 UUID of the session to utilize
             uuids
-                List of descriptor UUIDs to classify. Return list of results
-                will be in the same order as this list.
+                List of descriptor UUIDs to classify. These UUIDs must
+                associate to descriptors in the configured descriptor index.
+
+        TODO: Optionally take in a list of JSON objects encoding base64 bytes
+              and content type of raw data to describe and then classify, thus
+              extending classification ability to arbitrary new data.
 
         """
         # Record clean/dirty status after making classifier/refining so we
@@ -560,21 +782,15 @@ class IqrService (SmqtkWebApp):
         sid = flask.request.args.get('sid', None)
         uuids = flask.request.args.get('uuids', None)
 
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
         try:
             uuids = json.loads(uuids)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"
                 % uuids
-            ), 400
-
-        if sid is None:
-            return make_response_json("No session id (sid) provided"), 400
-
-        if not uuids:
-            return make_response_json(
-                "No descriptor UUIDs provided for classification",
-                sid=sid,
             ), 400
 
         with self.controller:
@@ -586,19 +802,21 @@ class IqrService (SmqtkWebApp):
 
         if not iqrs.positive_descriptors:
             return make_response_json(
-                "No positive labels in current session",
+                "No positive labels in current session. Required for a "
+                "supervised classifier.",
                 sid=sid
             ), 400
         if not iqrs.negative_descriptors:
             return make_response_json(
-                "No negative labels in current session",
+                "No negative labels in current session. Required for a "
+                "supervised classifier.",
                 sid=sid
             ), 400
 
         # Get descriptor elements for classification
         try:
             descriptors = list(self.descriptor_index
-                               .get_many_descriptors(uuids))
+                                   .get_many_descriptors(uuids))
         except KeyError as ex:
             err_uuid = str(ex)
             self._log.warn(traceback.format_exc())
@@ -616,7 +834,7 @@ class IqrService (SmqtkWebApp):
         neg_label = "negative"
         if self.session_classifier_dirty[sid] or classifier is None:
             self._log.debug("Training new classifier for current "
-                            "refine state")
+                            "adjudication state...")
 
             #: :type: SupervisedClassifier
             classifier = plugin.from_plugin_config(
@@ -655,8 +873,144 @@ class IqrService (SmqtkWebApp):
             proba=o_proba,
         ), 200
 
+    # TODO: Save/Export classifier model/state/configuration?
+
+    # GET /state
+    def get_iqr_state(self):
+        """
+        Create a binary package of a session's IQR state.
+
+        This state is composed of the descriptor vectors, and their UUIDs, that
+        were adjudicated positive and negative.
+
+        This function returns a JSON response with the bytes.
+
+        URI Arguments:
+            sid
+                Session UUID to get the state of.
+
+        This function returns the bytes of the state object (zipfile of json
+        dump)
+
+        """
+        sid = flask.request.args.get('sid', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided."), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        # Copy positive/negative descriptor vector values for encoding.
+        ext_pos_descriptors = dict(
+            (d.uuid(), d.vector().tolist())
+            for d in iqrs.external_positive_descriptors
+        )
+        ext_neg_descriptors = dict(
+            (d.uuid(), d.vector().tolist())
+            for d in iqrs.external_negative_descriptors
+        )
+        pos_descriptors = dict(
+            (d.uuid(), d.vector().tolist()) for d in iqrs.positive_descriptors
+        )
+        neg_descriptors = dict(
+            (d.uuid(), d.vector().tolist()) for d in iqrs.negative_descriptors
+        )
+
+        iqrs.lock.release()
+
+        z_buffer = StringIO()
+        # ZIP_DEFLATED means we're using zlib for compression.
+        z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
+        z.writestr('iqr_state.json', json.dumps({
+            'external_pos': ext_pos_descriptors,
+            'external_neg': ext_neg_descriptors,
+            'pos': pos_descriptors,
+            'neg': neg_descriptors,
+        }))
+        z.close()
+
+        # NOTE: May have to return base64 here instead of bytes.
+        return z_buffer.getvalue(), 200
+
+    # PUT /state
+    def set_iqr_state(self):
+        """
+        Set the IQR session state for a given session ID.
+
+        We expect to be given a the URL-safe base64 encoding of bytes of the
+        zip-file buffer returned from the above ``get_iqr_state`` function.
+
+        """
+        sid = flask.request.form.get('sid', None)
+        state_base64 = flask.request.form.get('state_base64', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided."), 400
+        elif state_base64 is None or len(state_base64) == 0:
+            return make_response_json("No state package base64 provided."), 400
+
+        # TODO: Limit the size of input state object? Is this already handled by
+        #       other security measures?
+
+        # ``str()`` is required because the b64decode does not handle being
+        # given unicode.
+        state_bytes = base64.urlsafe_b64decode(str(state_base64))
+        z_buffer = StringIO(state_bytes)
+        z = zipfile.ZipFile(z_buffer, 'r', zipfile.ZIP_DEFLATED)
+        # Extract expected json file object
+        with z.open('iqr_state.json') as zf:
+            state = json.load(zf)
+        del z, z_buffer
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        # Reset the session to prepare for new state.
+        iqrs.reset()
+
+        # Create descriptor element instances from input state using our
+        # configured descriptor factory.
+        def load_descriptor(uuid, vec_list):
+            e = self.descriptor_factory.new_descriptor("loadedDescriptor", uuid)
+            if e.has_vector():
+                assert e.vector().tolist() == vec_list, \
+                    "Found existing vector for UUID '%s' but vectors did not" \
+                    "match."
+            else:
+                e.set_vector(vec_list)
+            return e
+
+        # `source` are dictionaries of [uuid, vecList], `target` is session set.
+        for source, target in [(state['external_pos'],
+                                iqrs.external_positive_descriptors),
+                               (state['external_neg'],
+                                iqrs.external_negative_descriptors),
+                               (state['pos'], iqrs.positive_descriptors),
+                               (state['neg'], iqrs.negative_descriptors)]:
+            for uuid, vector_list in six.iteritems(source):
+                e = load_descriptor(uuid, vector_list)
+                target.add(e)
+
+        iqrs.lock.release()
+        return make_response_json("Success", sid=sid), 200
+
     def run(self, host=None, port=None, debug=False, **options):
         # Setup REST API here, register methods
+        self.add_url_rule('/session_ids',
+                          view_func=self.get_sessions_ids,
+                          methods=['GET'])
+        self.add_url_rule('/session',
+                          view_func=self.get_session_info,
+                          methods=['GET'])
         self.add_url_rule('/session',
                           view_func=self.init_session,
                           methods=['POST'])
@@ -666,12 +1020,24 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/session',
                           view_func=self.clean_session,
                           methods=['DELETE'])
+        self.add_url_rule('/add_external_pos',
+                          view_func=self.add_external_positive,
+                          methods=['POST'])
+        self.add_url_rule('/add_external_neg',
+                          view_func=self.add_external_negative,
+                          methods=['POST'])
+        self.add_url_rule('/adjudicate',
+                          view_func=self.get_adjudication,
+                          methods=['GET'])
         self.add_url_rule('/adjudicate',
                           view_func=self.adjudicate,
-                          methods=['PUT'])
+                          methods=['POST'])
+        self.add_url_rule('/initialize',
+                          view_func=self.initialize,
+                          methods=['POST'])
         self.add_url_rule('/refine',
                           view_func=self.refine,
-                          methods=['PUT'])
+                          methods=['POST'])
         self.add_url_rule('/num_results',
                           view_func=self.num_results,
                           methods=['GET'])
@@ -681,5 +1047,11 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['GET'])
+        self.add_url_rule('/state',
+                          view_func=self.get_iqr_state,
+                          methods=['GET'])
+        self.add_url_rule('/state',
+                          view_func=self.set_iqr_state,
+                          methods=['PUT'])
 
         super(IqrService, self).run(host, port, debug, **options)

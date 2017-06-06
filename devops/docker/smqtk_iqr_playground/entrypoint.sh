@@ -189,7 +189,9 @@ then
     fi
 
     # Tail build logs until they are done
+    # - touch log files first to prevent tail warning about files not existing.
     TAIL_PID="build_log_tail.pid"
+    touch "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}"
     tail -F "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}" &
     echo "$!" >"${TAIL_PID}"
 

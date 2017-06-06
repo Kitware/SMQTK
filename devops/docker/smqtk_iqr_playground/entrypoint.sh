@@ -32,10 +32,6 @@ Options:
   -t | --tile       Transform images found in the images directory according to
                     the provided ``generate_image_transform`` configuration JSON
                     file.
-
-  --rest            Launch REST-ful web-services for content-based
-                    NearestNeighbor search and IQR instead of the IQR GUI
-                    web-app. (ports: NN=5001, IQR=5002)
 "
 }
 
@@ -57,9 +53,6 @@ do
         ;;
         -t|--tile)
         TILE_IMAGES=1
-        ;;
-        --rest)
-        REST_SERVICES=1
         ;;
         *)  # Anything else (wildcard)
         echo "Received unknown parameter: \"$key\""
@@ -126,7 +119,7 @@ mongod --dbpath ${WORKING_DIR}/${MONGO_DATA_DIR} &>"${LOG_DIR}/db.mongo.log" &
 echo "$!" >"${MONGOD_PID}"
 echo "Starting MongoDB server... Done"
 
-# If a new database, add descriptors table to database
+# Wait for responsive database, upsert expected tables.
 echo "Waiting for a responsive database..."
 q=""
 trigger="DatabaseNowResponsive"
@@ -170,11 +163,13 @@ then
         touch "${STP_IMF}"
     fi
 
+    # Tile discovered images if requested and hasn't happened yet.
     if [ -n "${TILE_IMAGES}" -a ! -e "${STP_GIT}" ]
     then
         echo "Generating tiles for images ($(wc -l "${IMAGE_DIR_FILELIST}" | cut -d' ' -f1) images)"
         IMG_TILES_DIR="image_tiles"
         mkdir -p "${IMG_TILES_DIR}"
+        # Check if GNU parallel is available.
         if [ -n "$(which parallel 2>/dev/null)" ]
         then
             cat "${IMAGE_DIR_FILELIST}" | parallel "
@@ -194,7 +189,9 @@ then
     fi
 
     # Tail build logs until they are done
+    # - touch log files first to prevent tail warning about files not existing.
     TAIL_PID="build_log_tail.pid"
+    touch "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}"
     tail -F "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}" &
     echo "$!" >"${TAIL_PID}"
 
@@ -222,7 +219,6 @@ then
     then
         compute_hash_codes \
             -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
-            --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
             &> "${LOG_CHC}"
         touch "${STP_CHC}"
     fi
@@ -230,9 +226,7 @@ then
     # Compute balltree hash index
     if [ ! -e "${STP_MBT}" ]
     then
-        make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
-            ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
-            "${MODEL_DIR}/${BALLTREE_MODEL}" \
+        make_balltree -v -c "${CONFIG_DIR}/${SMQTK_MAKE_BALLTREE}" \
             &> "${LOG_MBT}"
         touch "${STP_MBT}"
     fi
@@ -243,74 +237,23 @@ fi
 
 ################################################################################
 
-#
-# Depending on what is run, define hook functions:
-#
-#   ``smqtk_pid_wait``    -- wait on processes run
-#   ``smqtk_cleanup``     -- Send ``$1`` to run processes
-#   ``smqtk_pid_cleanup`` -- Remove any save PID files
-#
-if [ -n "${REST_SERVICES}" ]
-then
+echo "Starting SMQTK IqrService..."
+SMQTK_REST_IQR_PID="smqtk_rest_iqr.pid"
+runApplication \
+-a IqrService \
+-vtc "${CONFIG_DIR}/${SMQTK_REST_IQR_CONFIG}" \
+&>"${LOG_DIR}/runApp.IqrService.log" &
+echo "$!" >"${SMQTK_REST_IQR_PID}"
+echo "Starting SMQTK IqrService... Done"
 
-  SMQTK_REST_NNSS_PID="smqtk_rest_nnss.pid"
-  runApplication \
-    -a NearestNeighborServiceServer \
-    -vtc "${CONFIG_DIR}/${SMQTK_REST_NNSS_CONFIG}" \
-    &>"${LOG_DIR}/runApp.NearestNeighborServiceServer.log" &
-  echo "$!" >"${SMQTK_REST_NNSS_PID}"
-
-  SMQTK_REST_IQR_PID="smqtk_rest_iqr.pid"
-  runApplication \
-    -a IqrService \
-    -vtc "${CONFIG_DIR}/${SMQTK_REST_IQR_CONFIG}" \
-    &>"${LOG_DIR}/runApp.IqrService.log" &
-  echo "$!" >"${SMQTK_REST_IQR_PID}"
-
-  # Define hook functions
-  function smqtk_pid_wait() {
-    echo "Waiting for NN/IQR Service shutdown..."
-    wait $(cat "$SMQTK_REST_NNSS_PID" "$SMQTK_REST_IQR_PID")
-    echo "Waiting for NN/IQR Service shutdown... -- Done"
-  }
-  function smqtk_cleanup() {
-    echo "Stopping IQR REST Service"
-    kill -${signal} $(cat "${SMQTK_REST_IQR_PID}")
-    echo "Stopping NN REST Service"
-    kill -${signal} $(cat "${SMQTK_REST_NNSS_PID}")
-  }
-  function smqtk_pid_cleanup() {
-    echo "Cleaning NN/IQR PID files"
-    rm "${SMQTK_REST_NNSS_PID}" "${SMQTK_REST_IQR_PID}"
-  }
-
-else
-
-  echo "Starting SMQTK IqrSearchDispatcher..."
-  SMQTK_IQR_PID="smqtk_iqr.pid"
-  runApplication \
-      -a IqrSearchDispatcher \
-      -vtc "${CONFIG_DIR}/${SMQTK_IQR_CONFIG}" \
-      &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log" &
-  echo "$!" >"${SMQTK_IQR_PID}"
-  echo "Starting SMQTK IqrSearchDispatcher... Done"
-
-  # Define hook functions
-  function smqtk_pid_wait() {
-    echo "Waiting for IQR App shutdown..."
-    wait $(cat "${SMQTK_IQR_PID}")
-    echo "Waiting for IQR App shutdown... -- Done"
-  }
-  function smqtk_cleanup() {
-    echo "Stopping IQR GUI app"
-    kill -${signal} $(cat "${SMQTK_IQR_PID}")
-  }
-  function smqtk_pid_cleanup() {
-    echo "Cleaning IQR App PID file"
-    rm "${SMQTK_IQR_PID}"
-  }
-
-fi
+echo "Starting SMQTK IqrSearchDispatcher..."
+SMQTK_GUI_IQR_PID="smqtk_iqr.pid"
+runApplication \
+  -a IqrSearchDispatcher \
+  -vtc "${CONFIG_DIR}/${SMQTK_GUI_IQR_CONFIG}" \
+  &>"${LOG_DIR}/runApp.IqrSearchDispatcher.log" &
+echo "$!" >"${SMQTK_GUI_IQR_PID}"
+echo "Starting SMQTK IqrSearchDispatcher... Done"
 
 
 
@@ -322,8 +265,20 @@ fi
 # Wait on known processes
 #
 function process_pid_wait() {
-  wait $(cat "${POSTGRES_PID}" "${MONGOD_PID}")
-  smqtk_pid_wait
+  wait $(cat "${POSTGRES_PID}"       \
+             "${MONGOD_PID}"         \
+             "${SMQTK_REST_IQR_PID}" \
+             "${SMQTK_GUI_IQR_PID}")
+}
+
+#
+# Cleanup PID files
+#
+function process_pid_cleanup() {
+  rm "${POSTGRES_PID}" \
+     "${MONGOD_PID}" \
+     "${SMQTK_REST_IQR_PID}" \
+     "${SMQTK_GUI_IQR_PID}"
 }
 
 #
@@ -336,7 +291,11 @@ function process_cleanup() {
   # OS and they may have terminated already.
   set +e
 
-  smqtk_cleanup ${signal}
+  echo "Stopping IQR REST Service"
+  kill -${signal} $(cat "${SMQTK_GUI_IQR_PID}")
+
+  echo "Stopping IQR GUI app"
+  kill -${signal} $(cat "${SMQTK_REST_IQR_PID}")
 
   echo "Stopping MongoDB"
   kill -${signal} $(cat "${MONGOD_PID}")
@@ -351,13 +310,12 @@ function process_cleanup() {
 
   echo "Removing PID files..."
   rm "${POSTGRES_PID}" "${MONGOD_PID}"
-  smqtk_pid_cleanup
+  process_pid_cleanup
 }
 
 echo "Setting up cleanup trap"
-trap "echo 'Terminating processes'; process_cleanup SIGTERM;" HUP INT TERM
-trap "echo 'Killing processes';     process_cleanup SIGKILL;" QUIT KILL
-
+trap "echo 'Terminating processes';   process_cleanup SIGTERM;" HUP INT TERM
+trap "echo 'Force Killing processes'; process_cleanup SIGKILL;" QUIT KILL
 
 #
 # Termination Wait

@@ -61,12 +61,14 @@ ENV PATH="/caffe/install/bin:${PATH}" \
     PYTHONPATH="/caffe/install/python:${PYTHONPATH}"
 
 # SMQTK
-ENV SMQTK_VERSION "master"
+# - Recorded hash is master as of 2017-06-06.
+ENV SMQTK_GIT_URL="https://github.com/Kitware/SMQTK.git" \
+    SMQTK_VERSION="master" \
+    SMQTK_HASH="902c47eac78b60a898bad7d4728ffe5f992a0a04"
 RUN mkdir -p /smqtk/build \
- && curl -L https://github.com/Kitware/SMQTK/archive/${SMQTK_VERSION}.tar.gz >SMQTK-${SMQTK_VERSION}.tar.gz \
- && tar xf SMQTK-${SMQTK_VERSION}.tar.gz \
- && mv /SMQTK-${SMQTK_VERSION} /smqtk/source \
- && rm SMQTK-${SMQTK_VERSION}.tar.gz
+ && git clone -b ${SMQTK_VERSION} ${SMQTK_GIT_URL} /smqtk/source \
+ && cd /smqtk/source \
+ && git checkout ${SMQTK_HASH}
 RUN pip install -r /smqtk/source/requirements.txt \
  && cd /smqtk/build \
  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/smqtk/install /smqtk/source \

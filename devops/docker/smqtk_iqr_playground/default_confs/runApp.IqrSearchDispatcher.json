@@ -5,14 +5,13 @@
         "SECRET_KEY": "MySuperUltraSecret"
     },
     "iqr_tabs": {
-        "alexnet_fc7": {
-            "working_directory": "workdir",
+        "Data-set Iqr": {
             "data_set": {
                 "DataMemorySet": {
                     "cache_element": {
                         "DataFileElement": {
                             "explicit_mimetype": null,
-                            "filepath": "workdir/alexnet_fc7/data.memorySet.cache",
+                            "filepath": "models/image_elements.dms_cache",
                             "readonly": true
                         },
                         "type": "DataFileElement"
@@ -21,7 +20,8 @@
                 },
                 "type": "DataMemorySet"
             },
-            "iqr_service_url": "http://localhost:5001"
+            "iqr_service_url": "localhost:5001",
+            "working_directory": "data/iqr_app_work"
         }
     },
     "mongo": {
@@ -29,7 +29,7 @@
         "server": "127.0.0.1:27017"
     },
     "server": {
-        "host": "127.0.0.1",
+        "host": "0.0.0.0",
         "port": 5000
     }
 }

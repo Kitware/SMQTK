@@ -94,6 +94,8 @@ RUN mkdir caffe/build \
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
 # - Get basic model files
+#   TODO: Pull MSRA ResNet 50 model stuff (MIT License, freely distributable)
+#
 RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download \
         -o caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel \
  && curl https://data.kitware.com/api/v1/item/57e2f3fd8d777f10f26e532b/download \
@@ -107,8 +109,8 @@ RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download 
 #   ``requirements.txt`` file.
 ENV SMQTK_VERSION="master" \
     SMQTK_URL="https://github.com/Kitware/SMQTK.git"
-RUN git clone -b ${SMQTK_VERSION} ${SMQTK_URL} smqtk/source
-RUN mkdir smqtk/build \
+RUN git clone -b ${SMQTK_VERSION} ${SMQTK_URL} smqtk/source \
+ && mkdir smqtk/build \
  && cd smqtk/build \
  && cmake \
     -DCMAKE_INSTALL_PREFIX:PATH=${HOME}/miniconda \
@@ -120,10 +122,15 @@ RUN sudo apt-get -y update \
  && sudo apt-get -y install postgresql-server-dev-9.4 \
  && pip install psycopg2
 # Expected volume mount directories
-RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
+RUN mkdir -p data/{models,configs,logs,db.psql,db.mongo} \
+ && sudo mkdir /images \
+ && sudo chown smqtk:smqtk /images \
+ && ln -s /images data/images
+
+# TODO: Remove smqtk user from sudoers
 
 ADD entrypoint.sh descr_comp_test.py /home/smqtk/
 ADD default_confs/* /home/smqtk/data/configs/
 ADD default_confs/cpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
-EXPOSE 5000 5001 5002
+EXPOSE 5000 5001

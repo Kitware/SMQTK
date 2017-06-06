@@ -4,6 +4,7 @@
     "crop": {
         "center_levels": null,
         "quadrant_pyramid_levels": null,
-        "tile_shape": [64, 64]
+        "tile_shape": [128, 128],
+        "tile_stride": [32, 32]
     }
 }

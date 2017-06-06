@@ -979,8 +979,10 @@ class IqrService (SmqtkWebApp):
 
         # Create descriptor element instances from input state using our
         # configured descriptor factory.
-        def load_descriptor(uuid, vec_list):
-            e = self.descriptor_factory.new_descriptor("loadedDescriptor", uuid)
+        def load_descriptor(uid, vec_list):
+            # Fixed type string because we don't know what type these
+            # descriptors are when loaded.
+            e = self.descriptor_factory.new_descriptor("loadedDescriptor", uid)
             if e.has_vector():
                 assert e.vector().tolist() == vec_list, \
                     "Found existing vector for UUID '%s' but vectors did not" \
@@ -996,8 +998,8 @@ class IqrService (SmqtkWebApp):
                                 iqrs.external_negative_descriptors),
                                (state['pos'], iqrs.positive_descriptors),
                                (state['neg'], iqrs.negative_descriptors)]:
-            for uuid, vector_list in six.iteritems(source):
-                e = load_descriptor(uuid, vector_list)
+            for uid, vector_list in six.iteritems(source):
+                e = load_descriptor(uid, vector_list)
                 target.add(e)
 
         iqrs.lock.release()

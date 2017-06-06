@@ -722,6 +722,13 @@ class IqrService (object):
     """
 
     def __init__(self, url):
+        """
+        :param url: URL to base requests on.
+        :type url: str
+        """
+        # Append http:// to the head of the URL if neither http(s) are present
+        if not (url.startswith('http://') or url.startswith('https://')):
+            url = 'http://' + url
         self.url = url
 
     def _compose(self, endpoint):

@@ -29,10 +29,11 @@ This is modifiable via a JSON file located in the container:
 
 Container internal data directories for volume mounting:
 
+    /images                     -- directory for automatic image discovery
     /home/smqtk/data/configs/   -- all configuration files
     /home/smqtk/data/db.mongo/  -- MongoDB database data files
     /home/smqtk/data/db.psql/   -- PostgreSQL database data files
-    /home/smqtk/data/images/    -- directory for automatic image discovery
+    /home/smqtk/data/images/    -- symlink to /images
     /home/smqtk/data/logs/      -- all generated log and stamp files
     /home/smqtk/data/models/    -- common directory for model files
 
@@ -43,11 +44,11 @@ One way to use this contianer is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
-    docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu -b [-t]
+    docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu -b [-t]
 
     OR
 
-    nvidia-docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
+    nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
 
 The use of ``nvidia-docker`` is required to use the GPU computation
 capabilities (default options, can be changed and described later).
@@ -61,7 +62,7 @@ The entrypoint in this container can take a number of options:
         Display the usage and options description.
 
     -b | --build
-        Build model files for images mounted to /home/smqtk/data/images
+        Build model files for images mounted to /images
 
     -t | --tile
         Transform input images found in the images directory according to

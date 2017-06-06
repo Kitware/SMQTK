@@ -21,7 +21,7 @@
                 },
                 "type": "DataMemorySet"
             },
-            "iqr_service_url": "http://localhost:5001",
+            "iqr_service_url": "http://localhost:5001"
         }
     },
     "mongo": {

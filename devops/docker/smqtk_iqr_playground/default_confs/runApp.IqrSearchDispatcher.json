@@ -1,0 +1,35 @@
+{
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "iqr_tabs": {
+        "Data-set Iqr": {
+            "data_set": {
+                "DataMemorySet": {
+                    "cache_element": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "models/image_elements.dms_cache",
+                            "readonly": true
+                        },
+                        "type": "DataFileElement"
+                    },
+                    "pickle_protocol": -1
+                },
+                "type": "DataMemorySet"
+            },
+            "iqr_service_url": "localhost:5001",
+            "working_directory": "data/iqr_app_work"
+        }
+    },
+    "mongo": {
+        "database": "smqtk",
+        "server": "127.0.0.1:27017"
+    },
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    }
+}

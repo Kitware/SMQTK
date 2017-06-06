@@ -21,8 +21,8 @@ def get_mimetypes():
     with MT_CACHE_LOCK:
         if MT_CACHE is None:
             MT_CACHE = pymimetypes.MimeTypes()
-            # Remove .jfif
-            MT_CACHE.types_map_inv[1]['image/jpeg'].remove('.jfif')
-            # Remove .jpe
-            MT_CACHE.types_map_inv[1]['image/jpeg'].remove('.jpe')
+            # Remove weird extensions from map for getting extensions-by-type
+            for jpg_ext in ['.jfif', '.jpe']:
+                if jpg_ext in MT_CACHE.types_map_inv[1]['image/jpeg']:
+                    MT_CACHE.types_map_inv[1]['image/jpeg'].remove(jpg_ext)
     return MT_CACHE

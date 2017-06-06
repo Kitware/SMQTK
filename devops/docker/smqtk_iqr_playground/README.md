@@ -7,12 +7,12 @@ We provide the docker container images:
     ``kitware/smqtk/iqr_playground_nvidia``
 
 This is a self-contained SMQTK playground environment that can also act as an
-image-to-application turn-key application container. As an application, this
-container can compute fresh models on mounted imagery using a default
-configuration setup, using a custom configuration setup, or to run the IQR
-web-app with completely custom models, database and configuration. The option
-is also available to run the Nearest-Neighbor and IQR RESTful services instead
-of the IQR GUI web-app.
+image-to-application turn-key container. As an application, this container can
+compute fresh models on mounted imagery using a default configuration setup,
+using a custom configuration setup, or to run the IQR web-app with completely
+custom models, database and configuration. Two ports are available for exposing
+the IQR GUI web-application as well as the underlying IQR RESTful service
+server.
 
 
 Quick Information
@@ -40,7 +40,7 @@ Container internal data directories for volume mounting:
 
 Running IQR on New Imagery
 --------------------------
-One way to use this contianer is to treat it like an command line tool for
+One way to use this container is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
@@ -56,7 +56,7 @@ The ``-v`` option above shows where to mount a directory of images for
 processing. The ``-p`` option above shows the default IQR web-app server port
 that should be exposed.
 
-The entrypoint in this container can take a number of options:
+The entrypoint script in this container can take a number of options:
 
     -h | --help
         Display the usage and options description.
@@ -68,31 +68,24 @@ The entrypoint in this container can take a number of options:
         Transform input images found in the images directory according to
         the provided generate_image_transform configuration JSON file.
 
-    --rest
-        Runs NearestNeighbor and IQR REST (gui-less) services **instead of**
-        the IQR web-app.
-
 When starting a new container, imagery must be mounted otherwise there will be
 nothing to process/ingest. The ``-b`` option must also be given in order to
 trigger model building.
 
 
-RESTful services
-^^^^^^^^^^^^^^^^
+RESTful service
+^^^^^^^^^^^^^^^
 
-To start the container in RESTful mode, simply add the ``--rest`` flag when
-running the ``[nvidia-]docker run ...`` command. This flag **only** changes
-what is run after models are (optionally) built.
-
-Instead of running on port 5000, the NearestNeighbor and IQR service are
-exposed on ports 5001 and 5002, respectively.
+This container runs a RESTful service that provides the meat of the IQR
+functionality. This is running on port 5001 inside the container and can be
+published outside the container if desired.
 
 
 Runner Script
 ^^^^^^^^^^^^^
 
-Included here is the bash script ``run_container.*.sh``. This is intended to
-be a simple way of running the container as is (i.e. with default
+Included here are the bash scripts ``run_container.*.sh``. These are intended to
+be a simple way of running the containers as is (i.e. with default
 configurations) on a directory that [recursively] contains imagery to index
 and perform IQR over.
 
@@ -101,38 +94,37 @@ This scripts may be called like as follows:
     $ run_container.cpu.sh /abs/path/to/image/dir [-t]
 
 The above will run the container (CPU version in this case) as a daemon,
-mounting the image directory and publishes the port 5000, resulting in a
-running container named ``smqtk_iqr_cpu``.
+mounting the image directory and publishes the port 5000 (GUI) and 5001 (REST),
+resulting in a running container named ``smqtk_iqr_cpu``.
 The script then shows updating information about ongoing processing in the
-container.
-
-The ``--rest`` option can also be passed here to instead run the RESTful
-services instead of the IQR GUI application.
+container (literally a ``tail`` of certain log files inside the container).
 
 The container and version used are defined by variables at the top of the
-script, as well as what host port to publish to.
+script, as well as what host port to publish to. By default these scripts try to
+use the ``latest`` version of the docker images and will publish on ports 5000
+and 5001.
 
-When all the logs settle, mainly the ``runApp.IqrSearchDispatcher.log``,
-showing that the server has started, will the web application be functional
-and interactive.
+When all the logs settle, mainly the ``runApp.IqrSearchDispatcher.log`` and the
+``runApp.IqrService.log``, showing that the server has started, will the web
+application be functional and interactive.
 
 
 Saving Generated Data
 ^^^^^^^^^^^^^^^^^^^^^
 
 If models or other generated data from this container is to be saved in a more
-perminent manner, the container should be started with more volume mounts than
+permanent manner, the container should be started with more volume mounts than
 just the input image directory in order for content to be saved to the host
 filesystem instead of just within the container's filesystem.
 
 Directories used in the container's filesystem:
 
 - ``/home/smqtk/data/logs``
-  - Default directory where log files are saved for commands processed.
+  - Default directory where log and stamp files are saved for commands
+    processed. Stamp files mark what processes have finished successfully.
 
 - ``/home/smqtk/data/models``
-  - Generated model files are saved here by default. Stamp files recording
-    successful completion are saved in the log output directory.
+  - Generated model files are saved here by default.
 
 - ``/home/smqtk/data/db.psql``
   - Directory where PostgreSQL database is generated if not mounted by the
@@ -142,7 +134,7 @@ Directories used in the container's filesystem:
   - Directory where MongoDB database is generated if not mounted by the user.
 
 - ``/home/smqtk/data/image_tiles``
-  - Directory where image tiles are save if the ``-t`` or ``--tile``
+  - Directory where image tiles are saved if the ``-t`` or ``--tile``
     options are provided.
 
 
@@ -165,7 +157,7 @@ default configs:
 To use the custom configuration files, simply mount the containing directory to
 ``/home/smqtk/data/configs`` when running the container.
 
-**Note:** *When mounting directory of configuration files, it must containe all
+**Note:** *When mounting directory of configuration files, it must contain all
 configuration files that were extracted as this is the only place configuration
 files are located in the container. If the entrypoint configuration was
 modified, then files may be named other than their default names. Only the
@@ -199,10 +191,19 @@ Configuration files and what they are used for:
   - Configuration file for utility that computed LSH codes for indexed
     imagery.
 
+- ``make_balltree.json``
+  - Configuration for the utility that generates a ball-tree index of LSH hash
+    codes generated in support of the LSH algorithm.
+
 - ``runApp.IqrSearchDispatcher.json``
   - Configuration file for SMQTK IQR search web application. It is wise
     to change the ``SECRET_KEY`` option in here if the application is to
-    be publically faced.
+    be publicly faced.
+
+- ``runApp.IqrService.json``
+  - Configuration file for the SMQTK IQR RESTful service. It is wise
+    to change the ``SECRET_KEY`` option in here if the application is to
+    be publicly faced.
 
 
 Troubleshooting
@@ -212,9 +213,9 @@ Q: My container quickly stopped after I executed the above "docker run..."
 command.
 
     Re-run the ``docker run...`` with an additional volume mount to save out
-    the log files: ``-v /home/smqtk/data/logs:<some-dir>``. A mroe descriptive
-    error message should be present in the log for the failing utility (grep -i
-    for "error").
+    the log files: ``-v <some-local-dir>:/home/smqtk/data/logs``. A more
+    descriptive error message should be present in the log for the failing
+    utility (grep -i for "error" on log files).
 
 TODO: More error situations. If a confusing situation arises, email
 paul.tunison@kitware.com and we can add new Q&As here!

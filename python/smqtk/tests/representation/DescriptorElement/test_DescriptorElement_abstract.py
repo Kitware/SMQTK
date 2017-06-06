@@ -87,11 +87,20 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d1 = DummyDescriptorElement('a', 'u')
         d2 = DummyDescriptorElement('b', 'u')
         d1.vector = d2.vector = mock.Mock(return_value=v)
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
+        ntools.assert_true(d1 == d2)
+        ntools.assert_false(d1 != d2)
 
     def test_hash(self):
-        t = 'a'
-        uuid = 'some uuid'
-        de = DummyDescriptorElement(t, uuid)
-        ntools.assert_equal(hash(de), hash((t, uuid)))
+        # Hash of a descriptor element is solely based on the UUID value of that
+        # element.
+        t1 = 'a'
+        uuid1 = 'some uuid'
+        de1 = DummyDescriptorElement(t1, uuid1)
+
+        t2 = 'b'
+        uuid2 = 'some uuid'
+        de2 = DummyDescriptorElement(t2, uuid2)
+
+        ntools.assert_equal(hash(de1), hash(uuid1))
+        ntools.assert_equal(hash(de2), hash(uuid2))
+        ntools.assert_equal(hash(de1), hash(de2))

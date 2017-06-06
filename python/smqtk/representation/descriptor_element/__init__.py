@@ -46,16 +46,11 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         self._uuid = uuid
 
     def __hash__(self):
-        return hash((self.type(), self.uuid()))
+        return hash(self.uuid())
 
     def __eq__(self, other):
         if isinstance(other, DescriptorElement):
-            b = self.vector() == other.vector()
-            if isinstance(b, numpy.core.multiarray.ndarray):
-                vec_equal = b.all()
-            else:
-                vec_equal = b
-            return vec_equal and (self.type() == other.type())
+            return numpy.array_equal(self.vector(), other.vector())
         return False
 
     def __ne__(self, other):
@@ -157,7 +152,7 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         """
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
-        :rtype: numpy.core.multiarray.ndarray or None
+        :rtype: numpy.ndarray or None
         """
 
     @abc.abstractmethod
@@ -169,7 +164,7 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         overwrite it.
 
         :param new_vec: New vector to contain.
-        :type new_vec: numpy.core.multiarray.ndarray
+        :type new_vec: numpy.ndarray
 
         """
 

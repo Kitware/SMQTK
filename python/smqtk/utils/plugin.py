@@ -330,9 +330,13 @@ def from_plugin_config(config, plugin_map, *args):
     provided ``plugin_getter`` function given the plugin configuration
     dictionary ``config``.
 
-    :raises KeyError: There was no ``type`` field to inspect, or there was no
-        parameter specification for the specified ``type``.
-    :raises ValueError: Type field did not specify any implementation key.
+    :raises ValueError:
+        This may be raised if:
+            - type field set to ``None``
+            - type field did not match any available configuration in the given
+              config.
+            - Type field did not specify any implementation key.
+
     :raises TypeError: Insufficient/incorrect initialization parameters were
         specified for the specified ``type``'s constructor.
 

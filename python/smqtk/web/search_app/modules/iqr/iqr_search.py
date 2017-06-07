@@ -2,6 +2,7 @@
 IQR Search sub-application module
 """
 import base64
+from io import BytesIO
 import json
 import os
 import os.path as osp
@@ -10,7 +11,6 @@ import shutil
 import zipfile
 
 import six
-from six.moves import StringIO
 
 import flask
 import PIL.Image
@@ -58,7 +58,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
     """
 
     ZIP_COMPRESSION_MODE = zipfile.ZIP_DEFLATED
-    ZIP_WRAPPER_FILENAME = 'wrapped_iqr_state.json'
     ZIP_SERVICE_FILENAME = 'iqr_state.json'
 
     # TODO: User access white/black-list? See ``search_app/__init__.py``:L135
@@ -219,7 +218,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             # Load state dictionary from ZIP payload from service
             state_dict = json.load(
                 zipfile.ZipFile(
-                    StringIO(r_get.content),
+                    BytesIO(r_get.content),
                     'r',
                     self.ZIP_COMPRESSION_MODE
                 ).open(self.ZIP_SERVICE_FILENAME)
@@ -237,16 +236,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         base64.urlsafe_b64encode(str(workingElem.get_bytes())),
                 }
 
-            new_state_dict = {
-                "state": state_dict,
-                "working_data": working_data,
-            }
-            new_state_json = json.dumps(new_state_dict)
+            state_dict["working_data"] = working_data
+            state_json = json.dumps(state_dict)
 
-            z_wrapper_buffer = StringIO()
+            z_wrapper_buffer = BytesIO()
             z_wrapper = zipfile.ZipFile(z_wrapper_buffer, 'w',
                                         self.ZIP_COMPRESSION_MODE)
-            z_wrapper.writestr(self.ZIP_WRAPPER_FILENAME, new_state_json)
+            z_wrapper.writestr(self.ZIP_SERVICE_FILENAME, state_json)
             z_wrapper.close()
 
             z_wrapper_buffer.seek(0)
@@ -284,12 +280,12 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             # Load ZIP package back in, then remove the uploaded file.
             try:
-                z_wrapper = zipfile.ZipFile(
+                z = zipfile.ZipFile(
                     upload_filepath, compression=self.ZIP_COMPRESSION_MODE
                 )
-                with z_wrapper.open(self.ZIP_WRAPPER_FILENAME) as f:
-                    wrapper_state_dict = json.load(f)
-                z_wrapper.close()
+                with z.open(self.ZIP_SERVICE_FILENAME) as f:
+                    state_dict = json.load(f)
+                z.close()
             finally:
                 os.remove(upload_filepath)
 
@@ -301,7 +297,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             # - Dictionary of data UUID (SHA1) to {'content_type': <str>,
             #   'bytes_base64': <str>} dictionary.
             #: :type: dict[str, dict]
-            working_data = wrapper_state_dict['working_data']
+            working_data = state_dict['working_data']
+            del state_dict['working_data']
             # - Write out base64-decoded files to session-specific work
             #   directory.
             # - Update self._iqr_example_data with DataFileElement instances
@@ -323,12 +320,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             #
             # Re-package service state as a ZIP payload.
             #
-            service_state_dict = wrapper_state_dict['state']
-            service_zip_buffer = StringIO()
+            service_zip_buffer = BytesIO()
             service_zip = zipfile.ZipFile(service_zip_buffer, 'w',
                                           self.ZIP_COMPRESSION_MODE)
             service_zip.writestr(self.ZIP_SERVICE_FILENAME,
-                                 json.dumps(service_state_dict))
+                                 json.dumps(state_dict))
             service_zip.close()
             service_zip_base64 = \
                 base64.urlsafe_b64encode(service_zip_buffer.getvalue())

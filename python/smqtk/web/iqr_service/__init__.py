@@ -7,7 +7,7 @@ import zipfile
 
 import flask
 import six
-from six.moves import StringIO
+from io import BytesIO
 
 # import smqtk.algorithms
 from smqtk.algorithms import (
@@ -923,7 +923,7 @@ class IqrService (SmqtkWebApp):
 
         iqrs.lock.release()
 
-        z_buffer = StringIO()
+        z_buffer = BytesIO()
         # ZIP_DEFLATED means we're using zlib for compression.
         z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
         z.writestr('iqr_state.json', json.dumps({
@@ -957,10 +957,10 @@ class IqrService (SmqtkWebApp):
         # TODO: Limit the size of input state object? Is this already handled by
         #       other security measures?
 
-        # ``str()`` is required because the b64decode does not handle being
-        # given unicode.
-        state_bytes = base64.urlsafe_b64decode(str(state_base64))
-        z_buffer = StringIO(state_bytes)
+        # Encoding is required because the b64decode does not handle being
+        # given unicode (python2) or str (python3).
+        state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
+        z_buffer = BytesIO(state_bytes)
         z = zipfile.ZipFile(z_buffer, 'r', zipfile.ZIP_DEFLATED)
         # Extract expected json file object
         with z.open('iqr_state.json') as zf:

@@ -1,6 +1,9 @@
+import io
+import json
 import logging
 import threading
 import uuid
+import zipfile
 
 import six
 
@@ -347,3 +350,94 @@ class IqrSession (SmqtkObject):
 
             self.rel_index = None
             self.results = None
+
+    ###########################################################################
+    # I/O Methods
+    STATE_ZIP_COMPRESSION = zipfile.ZIP_DEFLATED
+    STATE_ZIP_FILENAME = "iqr_state.json"
+
+    def get_state_bytes(self):
+        """
+        Get a byte representation of the current descriptor and adjudication
+        state of this session.
+
+        This does not encode current results or the relevancy index's state, but
+        these can be reproduced with this state.
+
+        :return: State representation bytes
+        :rtype: bytes
+
+        """
+        def d_set_to_list(d_set):
+            # Convert set of descriptors to list of tuples:
+            #   [..., (uuid, type, vector), ...]
+            return [(d.uuid(), d.type(), d.vector().tolist()) for d in d_set]
+
+        with self:
+            # Convert session descriptors into basic values.
+            pos_d = d_set_to_list(self.positive_descriptors)
+            neg_d = d_set_to_list(self.negative_descriptors)
+            ext_pos_d = d_set_to_list(self.external_positive_descriptors)
+            ext_neg_d = d_set_to_list(self.external_negative_descriptors)
+
+        z_buffer = io.BytesIO()
+        z = zipfile.ZipFile(z_buffer, 'w', self.STATE_ZIP_COMPRESSION)
+        z.writestr(self.STATE_ZIP_FILENAME, json.dumps({
+            'pos': pos_d,
+            'neg': neg_d,
+            'external_pos': ext_pos_d,
+            'external_neg': ext_neg_d,
+        }))
+        z.close()
+        return z_buffer.getvalue()
+
+    def set_state_bytes(self, b, descriptor_factory):
+        """
+        Set this session's state to the given byte representation, resetting
+        this session in the process.
+
+        Bytes given must have been retrieved via a previous call to
+        ``get_state_bytes`` otherwise this method will fail.
+
+        Since this state may be completely different from the current state,
+        this session is reset before applying the new state. Thus, any current
+        ranking results are thrown away.
+
+        :param b: Bytes to set this session's state to.
+        :type b: bytes
+
+        :param descriptor_factory: Descriptor element factory to use when
+            generating descriptor elements from extracted data.
+        :type descriptor_factory: smqtk.representation.DescriptorElementFactory
+
+        """
+        z_buffer = io.BytesIO(b)
+        z = zipfile.ZipFile(z_buffer, 'r', self.STATE_ZIP_COMPRESSION)
+        # Extract expected json file object
+        state = json.loads(z.read(self.STATE_ZIP_FILENAME))
+        del z, z_buffer
+
+        with self:
+            self.reset()
+
+            def load_descriptor(uid, tstr, vec_list):
+                e = descriptor_factory.new_descriptor(tstr, uid)
+                if e.has_vector():
+                    assert e.vector().tolist() == vec_list, \
+                        "Found existing vector for UUID '%s' but vectors did " \
+                        "not match."
+                else:
+                    e.set_vector(vec_list)
+                return e
+
+            # Read in raw descriptor data from the state, convert to descriptor
+            # element, then store in our descriptor sets.
+            for source, target in [(state['external_pos'],
+                                    self.external_positive_descriptors),
+                                   (state['external_neg'],
+                                    self.external_negative_descriptors),
+                                   (state['pos'], self.positive_descriptors),
+                                   (state['neg'], self.negative_descriptors)]:
+                for uid, tstr, vector_list in source:
+                    e = load_descriptor(uid, tstr, vector_list)
+                    target.add(e)

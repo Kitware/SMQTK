@@ -66,3 +66,77 @@ class TestPluginTools (unittest.TestCase):
         ntools.assert_is_instance(i, TestAlgo1)
         ntools.assert_equal(i.foo, 256)
         ntools.assert_equal(i.bar, 'Some string value')
+
+    def test_from_config_missing_type(self):
+        test_config = {
+            'TestAlgo1': {'foo': 256, 'bar': 'Some string value'},
+            'TestAlgo2': {
+                'child': {'foo': -1, 'bar': 'some other value'},
+                'alpha': 1.0,
+                'beta': 'euclidean',
+            },
+            'notAnImpl': {}
+        }
+        self.assertRaisesRegexp(
+            ValueError,
+            "does not have an implementation type specification",
+            from_plugin_config,
+            test_config, dummy_getter()
+        )
+
+    def test_from_config_none_type(self):
+        test_config = {
+            'type': None,
+            'TestAlgo1': {'foo': 256, 'bar': 'Some string value'},
+            'TestAlgo2': {
+                'child': {'foo': -1, 'bar': 'some other value'},
+                'alpha': 1.0,
+                'beta': 'euclidean',
+            },
+            'notAnImpl': {}
+        }
+        self.assertRaisesRegexp(
+            ValueError,
+            "No implementation type specified",
+            from_plugin_config,
+            test_config,
+            dummy_getter()
+        )
+
+    def test_from_config_config_label_mismatch(self):
+        test_config = {
+            'type': 'not-present-label',
+            'TestAlgo1': {'foo': 256, 'bar': 'Some string value'},
+            'TestAlgo2': {
+                'child': {'foo': -1, 'bar': 'some other value'},
+                'alpha': 1.0,
+                'beta': 'euclidean',
+            },
+            'notAnImpl': {}
+        }
+        self.assertRaisesRegexp(
+            ValueError,
+            "no configuration block was present for that type",
+            from_plugin_config,
+            test_config,
+            dummy_getter()
+        )
+
+    def test_from_config_impl_label_mismatch(self):
+        test_config = {
+            'type': 'notAnImpl',
+            'TestAlgo1': {'foo': 256, 'bar': 'Some string value'},
+            'TestAlgo2': {
+                'child': {'foo': -1, 'bar': 'some other value'},
+                'alpha': 1.0,
+                'beta': 'euclidean',
+            },
+            'notAnImpl': {}
+        }
+        self.assertRaisesRegexp(
+            ValueError,
+            "no plugin implementations are available for that type",
+            from_plugin_config,
+            test_config,
+            dummy_getter()
+        )

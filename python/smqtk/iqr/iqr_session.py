@@ -353,6 +353,8 @@ class IqrSession (SmqtkObject):
 
     ###########################################################################
     # I/O Methods
+
+    # I/O Constants. These should not be changed.
     STATE_ZIP_COMPRESSION = zipfile.ZIP_DEFLATED
     STATE_ZIP_FILENAME = "iqr_state.json"
 

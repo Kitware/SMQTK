@@ -16,6 +16,7 @@ import flask
 import PIL.Image
 import requests
 
+from smqtk.iqr import IqrSession
 from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -56,9 +57,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         * DescriptorElement related to a DataElement have the same UUIDs.
 
     """
-
-    ZIP_COMPRESSION_MODE = zipfile.ZIP_DEFLATED
-    ZIP_SERVICE_FILENAME = 'iqr_state.json'
 
     # TODO: User access white/black-list? See ``search_app/__init__.py``:L135
 
@@ -211,6 +209,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Get IQR session state information composed of positive and negative
             descriptor vectors.
+
+            We append to the state received from the service in order to produce
+            a state byte package that is compatible with the
+            ``IqrSession.set_state_bytes`` method. This way state bytes received
+            from this function can be directly consumed by the IQR service or
+            other IqrSession instances.
+
             """
             sid = self.get_current_iqr_session()
             r_get = self._iqr_service.get('state', sid=sid)
@@ -220,8 +225,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 zipfile.ZipFile(
                     BytesIO(r_get.content),
                     'r',
-                    self.ZIP_COMPRESSION_MODE
-                ).open(self.ZIP_SERVICE_FILENAME)
+                    IqrSession.STATE_ZIP_COMPRESSION
+                ).open(IqrSession.STATE_ZIP_FILENAME)
             )
 
             # Wrap service state with our UI state: uploaded data elements.
@@ -241,8 +246,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             z_wrapper_buffer = BytesIO()
             z_wrapper = zipfile.ZipFile(z_wrapper_buffer, 'w',
-                                        self.ZIP_COMPRESSION_MODE)
-            z_wrapper.writestr(self.ZIP_SERVICE_FILENAME, state_json)
+                                        IqrSession.STATE_ZIP_COMPRESSION)
+            z_wrapper.writestr(IqrSession.STATE_ZIP_FILENAME, state_json)
             z_wrapper.close()
 
             z_wrapper_buffer.seek(0)
@@ -281,9 +286,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             # Load ZIP package back in, then remove the uploaded file.
             try:
                 z = zipfile.ZipFile(
-                    upload_filepath, compression=self.ZIP_COMPRESSION_MODE
+                    upload_filepath,
+                    compression=IqrSession.STATE_ZIP_COMPRESSION
                 )
-                with z.open(self.ZIP_SERVICE_FILENAME) as f:
+                with z.open(IqrSession.STATE_ZIP_FILENAME) as f:
                     state_dict = json.load(f)
                 z.close()
             finally:
@@ -322,8 +328,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             #
             service_zip_buffer = BytesIO()
             service_zip = zipfile.ZipFile(service_zip_buffer, 'w',
-                                          self.ZIP_COMPRESSION_MODE)
-            service_zip.writestr(self.ZIP_SERVICE_FILENAME,
+                                          IqrSession.STATE_ZIP_COMPRESSION)
+            service_zip.writestr(IqrSession.STATE_ZIP_FILENAME,
                                  json.dumps(state_dict))
             service_zip.close()
             service_zip_base64 = \

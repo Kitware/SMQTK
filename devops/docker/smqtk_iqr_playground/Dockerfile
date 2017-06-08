@@ -64,7 +64,7 @@ RUN pip install ipython
 # Caffe installation
 # - git hash is master as of 2016/10/05
 ENV CAFFE_URL="https://github.com/BVLC/caffe.git" \
-    CAFFE_VERSION=4ba654f5c88c36ee8ba53964b7faf25c6d7010b4
+    CAFFE_VERSION=rc5
 # - Python deps
 RUN pip install numpy scikit-image protobuf
 # - Get the source code
@@ -94,14 +94,15 @@ RUN mkdir caffe/build \
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
 # - Get basic model files
-#   TODO: Pull MSRA ResNet 50 model stuff (MIT License, freely distributable)
-#
-RUN curl https://data.kitware.com/api/v1/item/57dae22f8d777f10f26a2a85/download \
-        -o caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel \
- && curl https://data.kitware.com/api/v1/item/57e2f3fd8d777f10f26e532b/download \
-        -o caffe/source/models/bvlc_alexnet/deploy.prototxt \
- && curl https://data.kitware.com/api/v1/item/57dae0a88d777f10f26a2a81/download \
-        -o caffe/source/data/ilsvrc12/imagenet_mean.binaryproto
+RUN mkdir -p caffe/msra_resnet \
+ && curl https://data.kitware.com/api/v1/item/5939a7828d777f16d01e4e5d/download \
+        -o caffe/msra_resnet/LICENSE.txt \
+ && curl https://data.kitware.com/api/v1/item/5939a61e8d777f16d01e4e52/download \
+        -o caffe/msra_resnet/ResNet_mean.binaryproto \
+ && curl https://data.kitware.com/api/v1/item/5939a6188d777f16d01e4e40/download \
+        -o caffe/msra_resnet/ResNet-50-deploy.prototxt \
+ && curl https://data.kitware.com/api/v1/item/5939a6198d777f16d01e4e43/download \
+        -o caffe/msra_resnet/ResNet-50-model.caffemodel
 
 
 # SMQTK local installation

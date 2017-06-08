@@ -153,7 +153,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                           methods=['GET'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
-                          methods=['GET'])
+                          methods=['POST'])
         self.add_url_rule('/iqr_classifier',
                           view_func=self.get_iqr_classifier_labels,
                           methods=['GET'])
@@ -192,10 +192,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         return make_response_json("All classifier labels.",
                                   labels=list(all_labels))
 
-    # GET /classify
+    # POST /classify
     def classify(self):
         """
-        Describe and classify provided base64 data.
+        Describe and classify provided base64 data, returning results in JSON
+        response.
 
         We expect the data to be transmitted in the body of the request in
         standard base64 encoding form ("bytes_b64" key). We look for the content
@@ -226,6 +227,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             content_type
                 The mimetype of the sent data.
 
+        Possible error codes:
+            400
+                No bytes or label provided
+
         Returns: {
             ...
             result: {
@@ -238,10 +243,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         }
 
         """
-        data_b64 = (flask.request.form.get('bytes_b64', None) or
-                    flask.request.args.get('bytes_b64', None))
-        content_type = (flask.request.args.get('content_type', None) or
-                        flask.request.form.get('content_type', None))
+        data_b64 = flask.request.form.get('bytes_b64', None)
+        content_type = flask.request.form.get('content_type', None)
 
         if data_b64 is None:
             return make_response_json("No base-64 bytes provided.", 400)
@@ -374,6 +377,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         return make_response_json("Finished training IQR-session-based "
                                   "classifier for label '%s'." % label,
+                                  201,
                                   label=label)
 
     # DEL /iqr_classifier
@@ -397,10 +401,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             return make_response_json("No label provided.", 400)
         elif label not in self.iqr_classifier_collection.labels():
             return make_response_json("Provided label does not refer to an "
-                                      "IQR classifier currently registered.")
+                                      "IQR classifier currently registered.",
+                                      404)
 
         self.iqr_classifier_collection.remove_classifier(label)
 
         return make_response_json("Removed IQR classifier with label '%s'."
                                   % label,
-                                  label=label)
+                                  removed_label=label)

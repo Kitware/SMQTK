@@ -29,6 +29,16 @@ return message content would be (:ref:`see above <standard-message-base>`).
 All endpoints return a 200 or 201 status code upon successful operation.
 
 
+[GET] /is_ready
+^^^^^^^^^^^^^^^
+Endpoint that response with a simple JSON message and response code 200 when the
+server is active.
+
+No arguments.
+
+Returns 200.
+
+
 [GET] /session_ids
 ^^^^^^^^^^^^^^^^^^
 Get the list of current, active session IDs.

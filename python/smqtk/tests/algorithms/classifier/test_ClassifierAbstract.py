@@ -48,7 +48,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
         d = DescriptorMemoryElement('test', 0)
         c = DummyClassifier()
         nose.tools.assert_raises_regexp(
-            RuntimeError,
+            ValueError,
             "does not contain a vector to classify",
             c.classify, d
         )

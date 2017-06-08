@@ -368,15 +368,19 @@ class LibSvmClassifier (SupervisedClassifier):
 
     def _classify(self, d):
         """
-        Internal method that defines the generation of the classification map
-        for a given DescriptorElement. This returns a dictionary mapping
-        integer labels to a floating point value.
+        Internal method that constructs the label-to-confidence map (dict) for
+        a given DescriptorElement.
+
+        The passed descriptor element is guaranteed to have a vector to extract.
+        It is not extracted yet due to the philosophy of waiting until the
+        vector is immediately needed. This moment is thus determined by the
+        implementing algorithm.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement
 
         :raises RuntimeError: Could not perform classification for some reason
-            (see message).
+            (see message in raised exception).
 
         :return: Dictionary mapping trained labels to classification confidence
             values
@@ -401,7 +405,7 @@ class LibSvmClassifier (SupervisedClassifier):
             # noinspection PyUnresolvedReferences
             if svm_type in [svm.NU_SVR, svm.EPSILON_SVR]:
                 nr_class = 0
-            # noinspection PyCallingNonCallable
+            # noinspection PyCallingNonCallable,PyTypeChecker
             prob_estimates = (ctypes.c_double * nr_class)()
             svm.libsvm.svm_predict_probability(self.svm_model, v,
                                                prob_estimates)
@@ -415,7 +419,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 nr_classifier = 1
             else:
                 nr_classifier = nr_class * (nr_class - 1) // 2
-            # noinspection PyCallingNonCallable
+            # noinspection PyCallingNonCallable,PyTypeChecker
             dec_values = (ctypes.c_double * nr_classifier)()
             label = svm.libsvm.svm_predict_values(self.svm_model, v,
                                                   dec_values)

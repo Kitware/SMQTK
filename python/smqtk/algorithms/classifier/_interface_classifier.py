@@ -42,16 +42,18 @@ class Classifier (SmqtkAlgorithm):
             factory.
         :type overwrite: bool
 
+        :raises ValueError: The given descriptor element did not have a vector
+            to operate on.
         :raises RuntimeError: Could not perform classification for some reason
-            (see message).
+            (see message in raised exception).
 
         :return: Classification result element
         :rtype: smqtk.representation.ClassificationElement
 
         """
         if not d.has_vector():
-            raise RuntimeError("Given DescriptorElement does not contain a "
-                               "vector to classify.")
+            raise ValueError("Given DescriptorElement does not contain a "
+                             "vector to classify.")
         c_elem = factory.new_classification(self.name, d.uuid())
         if overwrite or not c_elem.has_classifications():
             c = self._classify(d)
@@ -144,17 +146,19 @@ class Classifier (SmqtkAlgorithm):
     @abc.abstractmethod
     def _classify(self, d):
         """
-        Internal method that defines the generation of the classification map
-        for a given DescriptorElement.
+        Internal method that constructs the label-to-confidence map (dict) for
+        a given DescriptorElement.
 
-        For the purposes of this method, assume that the descriptor provided has
-        a stored vector.
+        The passed descriptor element is guaranteed to have a vector to extract.
+        It is not extracted yet due to the philosophy of waiting until the
+        vector is immediately needed. This moment is thus determined by the
+        implementing algorithm.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement
 
         :raises RuntimeError: Could not perform classification for some reason
-            (see logged message).
+            (see message in raised exception).
 
         :return: Dictionary mapping trained labels to classification confidence
             values

@@ -158,6 +158,16 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         standard base64 encoding form ("bytes_b64" key). We look for the content
         type either as URL parameter or within the body ("content_type" key).
 
+        Below is an example call to this endpoint via the ``requests`` python
+        module::
+
+            import base64
+            import requests
+            data_bytes = "Load some content bytes here."
+            requests.get('http://localhost:5000/classify',
+                         data={'bytes_b64': base64.b64encode(data_bytes),
+                               'content_type': 'text/plain'})
+
         Data args:
             bytes_b64
                 Bytes of the data to be described and classified in base64
@@ -167,7 +177,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         Returns: {
             ...
-
+            result: {
+                classifier-label: {
+                    class-label: prob,
+                    ...
+                },
+                ...
+            }
         }
 
         """

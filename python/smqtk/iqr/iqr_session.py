@@ -412,9 +412,16 @@ class IqrSession (SmqtkObject):
             generating descriptor elements from extracted data.
         :type descriptor_factory: smqtk.representation.DescriptorElementFactory
 
+        :raises ValueError: The input bytes could not be loaded due to
+            incompatibility.
+
         """
         z_buffer = io.BytesIO(b)
         z = zipfile.ZipFile(z_buffer, 'r', self.STATE_ZIP_COMPRESSION)
+        if self.STATE_ZIP_FILENAME not in z.namelist():
+            raise ValueError("Invalid bytes given, did not contain expected "
+                             "zipped file name.")
+
         # Extract expected json file object
         state = json.loads(z.read(self.STATE_ZIP_FILENAME))
         del z, z_buffer

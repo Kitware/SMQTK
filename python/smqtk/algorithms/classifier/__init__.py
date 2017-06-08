@@ -60,3 +60,7 @@ def get_classifier_impls(reload_modules=False, sub_interface=None):
         base_class = sub_interface
     return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
                               base_class, reload_modules=reload_modules)
+
+
+# Requires ``get_classifier_impls`` function.
+from ._classifier_collection import ClassifierCollection

@@ -24,6 +24,10 @@ class DummyClassifier (Classifier):
         return self.EXPECTED_LABELS
 
     def _classify(self, d):
+        """
+        Returns one "label" that is the UUID of the descriptor, mapping to the
+        descriptor's vector as a list.
+        """
         return {d.uuid(): d.vector().tolist()}
 
 

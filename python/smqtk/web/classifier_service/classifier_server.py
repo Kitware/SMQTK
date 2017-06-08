@@ -127,6 +127,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Classifier config for uploaded IQR states.
         self.iqr_state_classifier_config = \
             json_config[self.CONFIG_IQR_CLASSIFIER]
+        self.iqr_classifier_collection = ClassifierCollection()
 
     def run(self, host=None, port=None, debug=False, **options):
         # REST API endpoint routes
@@ -136,8 +137,15 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         #                   view_func=self.something,
         #                   methods=['GET'])
         #
-        self.add_url_rule('/is_ready', view_func=self.is_ready, methods=['GET'])
-        self.add_url_rule('/classify', view_func=self.classify, methods=['GET'])
+        self.add_url_rule('/is_ready',
+                          view_func=self.is_ready,
+                          methods=['GET'])
+        self.add_url_rule('/classifier_labels',
+                          view_func=self.get_classifier_labels,
+                          methods=['GET'])
+        self.add_url_rule('/classify',
+                          view_func=self.classify,
+                          methods=['GET'])
 
         super(SmqtkClassifierService, self).run(host, port, debug, **options)
 
@@ -148,6 +156,23 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         Simple endpoint that just means this server is up and responding.
         """
         return make_response_json("Yes, I'm alive!")
+
+    # GET /classifier_labels
+    def get_classifier_labels(self):
+        """
+        Get the descriptive labels of the classifiers currently set to classify
+        input data.
+
+        Returns 200: {
+            labels: list[str]
+        }
+
+        """
+        # join labels from both collections.
+        all_labels = (self.classifier_collection.labels() |
+                      self.iqr_classifier_collection.labels())
+        return make_response_json("Success",
+                                  labels=list(all_labels))
 
     # GET /classify
     def classify(self):
@@ -216,4 +241,3 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         return make_response_json('Finished classification.',
                                   result=c_json)
-

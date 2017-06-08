@@ -177,9 +177,7 @@ class LibSvmClassifier (SupervisedClassifier):
             self.svm_model_elem.clean_temp()
 
         if self.svm_label_map_elem and not self.svm_label_map_elem.is_empty():
-            svm_lm_tmp_fp = self.svm_label_map_elem.write_temp()
-            self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
-            self.svm_label_map_elem.clean_temp()
+            self.svm_label_map = cPickle.loads(self.svm_label_map_elem.get_bytes())
 
     @staticmethod
     def _gen_param_string(params):

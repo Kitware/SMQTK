@@ -13,12 +13,8 @@ will be used to train the configured SupervisedClassifier.
 
 """
 
-import json
 import logging
 import os
-import zipfile
-
-import numpy
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.algorithms import get_classifier_impls

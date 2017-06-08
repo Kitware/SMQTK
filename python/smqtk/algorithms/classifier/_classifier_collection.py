@@ -114,6 +114,17 @@ class ClassifierCollection (SmqtkObject, Configurable):
                                  "key-word arguments." % label)
             self._label_to_classifier[label] = classifier
 
+    def __enter__(self):
+        """
+        :rtype: IqrSession
+        """
+        self._label_to_classifier_lock.acquire()
+        return self
+
+    # noinspection PyUnusedLocal
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._label_to_classifier_lock.release()
+
     def get_config(self):
         with self._label_to_classifier_lock:
             c = dict((label, plugin.to_plugin_config(classifier))

@@ -40,6 +40,14 @@ var GalleryView = View.extend({
                     indexId: this.indexId
                 });
 
+                /*
+                 * Once the user has started an IQR session, returning to it before
+                 * their first refine will result in an empty page. Setting this
+                 * function to return false will give the user the "Are you sure
+                 * you want to leave this page, changes may be lost?" warning.
+                 * On the first refine, we unset this back to null so the warning
+                 * won't occur.
+                 **/
                 window.onbeforeunload = function () {
                     return false;
                 };

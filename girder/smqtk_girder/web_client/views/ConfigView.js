@@ -9,6 +9,8 @@ import ConfigViewTemplate from '../templates/configView.pug';
 
 var ConfigView = View.extend({
     _settingKeyToSelector: {
+        // These settings are reflected server side
+        // in constants.py
         'smqtk_girder.db_host': '#smqtk-girder-db-host',
         'smqtk_girder.db_name': '#smqtk-girder-db-name',
         'smqtk_girder.db_user': '#smqtk-girder-db-user',

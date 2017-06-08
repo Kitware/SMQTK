@@ -3,7 +3,7 @@ import IqrSessionModel from '../models/IqrSessionModel';
 
 var IqrSessionCollection = ItemCollection.extend({
     model: IqrSessionModel,
-    altUrl: 'smqtk_iqr/session'
+    altUrl: IqrSessionModel.altUrl
 });
 
 export default IqrSessionCollection;

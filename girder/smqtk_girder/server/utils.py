@@ -9,8 +9,19 @@ from girder_client import HttpError
 
 
 def getCreateFolder(gc, parentFolderId, name):
+    """
+    Gets or creates a folder on the remote host with the given name.
+
+    :param gc: Authenticated GirderClient instance
+    :param parentFolderId: The ID of the parent folder
+    :param name: Name of the folder to be created/retrieved
+    :returns: The created (or already existing) folder.
+    :rtype: dict
+    """
     try:
         # create/reuse existing
+        # note: this function can be simplified once
+        # https://github.com/girder/girder/pull/2072 is merged.
         smqtkFolder = gc.createFolder(parentFolderId, name)
     except HttpError:
         smqtkFolder = gc.get('folder', parameters={'parentId': parentFolderId,
@@ -22,18 +33,15 @@ def getCreateFolder(gc, parentFolderId, name):
 
 @filtermodel(model='folder')
 def getCreateSessionsFolder():
+    """
+    Gets or creates a folder for storing IQR sessions
+
+    :returns: The created (or already existing) folder
+    :rtype: dict
+    """
     user = getCurrentUser()
     folder = ModelImporter.model('folder')
-
-    # @todo Assumes a Private folder will always exist/be accessible
-    privateFolder = list(folder.childFolders(parentType='user',
-                                             parent=user,
-                                             user=user,
-                                             filters={
-                                                 'name': 'Private'
-                                             }))[0]
-
-    return folder.createFolder(privateFolder, '.smqtk_iqr_sessions', reuseExisting=True)
+    return folder.createFolder(user, '.smqtk_iqr_sessions', parentType='user', reuseExisting=True)
 
 
 def smqtkDataElementFromGirderFileId(fileId):
@@ -49,5 +57,15 @@ def localSmqtkFileIdFromName(smqtkFolder, name):
 
 
 def smqtkFileIdFromName(gc, smqtkFolder, name):
+    """
+    Retrieve a SMQTK file ID from a given name.
+
+    SMQTK file means a file stored in the .smqtk folder given.
+
+    :param gc: An authenticated GirderClient instance
+    :param smqtkFolder: The .smqtk folder object
+    :param name: Name of the file
+    :returns: File ID
+    """
     item = list(gc.listItem(smqtkFolder['_id'], name=name))[0]
     return list(gc.listFile(item['_id']))[0]['_id']

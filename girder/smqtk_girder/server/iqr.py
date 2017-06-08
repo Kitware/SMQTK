@@ -12,7 +12,7 @@ from girder.utility.model_importer import ModelImporter
 
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
-from smqtk.iqr import iqr_controller, iqr_session
+from smqtk.iqr import IqrSession, IqrController
 from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
@@ -38,10 +38,21 @@ class Iqr(Resource):
         # sessions under parent session's lock.
         #: :type: dict[collections.Hashable, bool]
         self.session_classifier_dirty = {}
-        self.controller = iqr_controller.IqrController(False)
+        self.controller = IqrController(False)
 
     @staticmethod
     def _descriptorIndexFromSessionId(sid):
+        """
+        Return the PostgresDescriptorIndex object from a given session id.
+
+        This essentially does the postfixing of the data folder's ID to
+        form the table name.
+
+        :param sid: ID of the session
+        :returns: Descriptor index representing the data folder related
+        to the sid or None if no session exists
+        :rtype: PostgresDescriptorIndex|None
+        """
         session = ModelImporter.model('item').findOne({'_id': ObjectId(sid)})
 
         if not session:
@@ -57,6 +68,15 @@ class Iqr(Resource):
 
     @staticmethod
     def _nearestNeighborIndex(sid, descriptor_index):
+        """
+        Retrieve the Nearest neighbor index for a given session.
+
+        :param sid: ID of the session
+        :param descriptor_index: The descriptor index corresponding to the session id,
+        see _descriptorIndexFromSessionId.
+        :returns: Nearest neighbor index or None if no session exists
+        :rtype: LSHNearestNeighborIndex|None
+        """
         session = ModelImporter.model('item').findOne({'_id': ObjectId(sid)})
 
         if not session:
@@ -65,9 +85,9 @@ class Iqr(Resource):
             smqtkFolder = {'_id': ObjectId(session['meta']['smqtk_folder_id'])}
 
             functor = ItqFunctor(smqtkDataElementFromGirderFileId(
-                localSmqtkFileIdFromName(smqtkFolder, 'mean_vec.npy')),
+                                 localSmqtkFileIdFromName(smqtkFolder, 'mean_vec.npy')),
                                  smqtkDataElementFromGirderFileId(
-                                     localSmqtkFileIdFromName(smqtkFolder, 'rotation.npy')))
+                                 localSmqtkFileIdFromName(smqtkFolder, 'rotation.npy')))
             hash2uuidsKV = MemoryKeyValueStore(
                 smqtkDataElementFromGirderFileId(localSmqtkFileIdFromName(smqtkFolder, 'hash2uuids.pickle')))
 
@@ -77,7 +97,7 @@ class Iqr(Resource):
     @access.user
     @filtermodel(model='item')
     @autoDescribeRoute(
-        Description('Get an IQR session.')
+        Description('Get an IQR session by ID.')
         .modelParam('id', model='item', level=AccessType.READ))
     def getSession(self, item, params):
         return item
@@ -92,7 +112,6 @@ class Iqr(Resource):
 
         # Get the folder with images in it, since this is what's used for computing
         # what descriptor index table to use
-        #import pudb; pu.db
         dataFolderId = ModelImporter.model('folder').load(ObjectId(smqtkFolder), user=getCurrentUser())
         dataFolderId = str(dataFolderId['parentId'])
 
@@ -113,7 +132,7 @@ class Iqr(Resource):
         if self.controller.has_session_uuid(sessionId):
             return session
 
-        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors, session_uid=sessionId)
+        iqrs = IqrSession(self.positive_seed_neighbors, session_uid=sessionId)
 
         with self.controller:
             with iqrs:  # because classifier maps locked by session
@@ -134,7 +153,6 @@ class Iqr(Resource):
         pos_uuids = params['pos_uuids']
         neg_uuids = params['neg_uuids'] if params['neg_uuids'] is not None else []
 
-
         if len(pos_uuids) == 0:
             raise RestException('No positive UUIDs given.')
 
@@ -149,7 +167,7 @@ class Iqr(Resource):
 
         if descriptor_index is None or neighbor_index is None:
             logger.error('Unable to compute descriptor or neighbor index from sid %s.' % sid)
-            raise RestException('Something went wrong.', 500)
+            raise RestException('Unable to compute descriptor or neighbor index from sid %s.' % sid, 500)
 
         # Get appropriate descriptor elements from index for
         # setting new adjudication state.
@@ -187,11 +205,11 @@ class Iqr(Resource):
     @autoDescribeRoute(
         Description('Retrieve results from an IQR session.')
         .modelParam('sid', model='item', level=AccessType.WRITE, paramType='query')
-        .param('limit', '')
-        .param('offset', ''))
+        .param('limit', 'Maximum number of results to return.')
+        .param('offset', 'Offset to start looking for results, useful for paginating results.'))
     def results(self, params):
         sid = params['sid']
-        limit = int(params.get('limit', 0))
+        limit = int(params.get('limit', 25))
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):

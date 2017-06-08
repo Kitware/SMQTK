@@ -30,6 +30,7 @@ var IqrView = View.extend({
                     neg_uuids: JSON.stringify(this.iqrSession.get('meta').neg_uuids)
                 }
             }).done(_.bind(function () {
+                // See documentation when starting an IQR session
                 window.onbeforeunload = null;
 
                 // either this is already an iqr results collection and we can just call .fetch

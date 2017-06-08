@@ -128,9 +128,7 @@ class SmqtkAPI(Resource):
         Process the images of a directory. This includes computing descriptors
         as well as training ITQ and computing hash codes.
 
-        :param folder:
-        :param params:
-        :returns:
+        :param folder: A folder to process images on.
         """
         def oldestFileId(item):
             """

@@ -1,7 +1,7 @@
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import Resource, filtermodel, getCurrentToken, getCurrentUser, getApiUrl
+from girder.api.rest import Resource, filtermodel, getCurrentToken, getCurrentUser, getApiUrl, RestException
 from girder.utility.model_importer import ModelImporter
 from girder.constants import AccessType
 
@@ -56,6 +56,7 @@ class NearestNeighbors(Resource):
 
         :param item: Item to find the nn index from, usually the item that the
             user is performing the nearest neighbors search on.
+        :param user: The owner of the .smqtk folder.
         :param descriptorIndex: The relevant descriptor index.
         """
         folder = ModelImporter.model('folder')
@@ -96,13 +97,13 @@ class NearestNeighbors(Resource):
         nn_index = self.nearestNeighborIndex(item, getCurrentUser(), desc_index)
 
         if nn_index is None:
-            pass # TODO Raise HTTP error
+            raise RestException('Nearest neighbor index could not be found.')
 
         try:
             smqtk_uuid = item['meta']['smqtk_uuid']
             descriptor = desc_index.get_descriptor(smqtk_uuid)
         except KeyError:
-            return {} # raise http error
+            raise RestException('Unable to retrieve image descriptor for querying object.')
 
         neighbors, dists = nn_index.nn(descriptor, limit)
         uuid_dist = dict(zip([x.uuid() for x in neighbors], dists))

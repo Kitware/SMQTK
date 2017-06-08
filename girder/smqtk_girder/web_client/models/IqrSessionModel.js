@@ -16,17 +16,17 @@ var IqrSessionModel = ItemModel.extend({
             data: JSON.stringify(metadata),
             type: 'PUT',
             error: null
-        }).done(_.bind(function (resp) {
+        }).done((resp) => {
             this.set('meta', resp.meta);
             if (_.isFunction(successCallback)) {
                 successCallback();
             }
-        }, this)).error(_.bind(function (err) {
+        }).error((err) => {
             err.message = err.responseJSON.message;
             if (_.isFunction(errorCallback)) {
                 errorCallback(err);
             }
-        }, this));
+        });
     },
 
     addPositiveUuid: function (uuid, done) {

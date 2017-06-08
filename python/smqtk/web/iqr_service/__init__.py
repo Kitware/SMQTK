@@ -7,7 +7,7 @@ import zipfile
 
 import flask
 import six
-from six.moves import StringIO
+from io import BytesIO
 
 # import smqtk.algorithms
 from smqtk.algorithms import (
@@ -905,37 +905,9 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        # Copy positive/negative descriptor vector values for encoding.
-        ext_pos_descriptors = dict(
-            (d.uuid(), d.vector().tolist())
-            for d in iqrs.external_positive_descriptors
-        )
-        ext_neg_descriptors = dict(
-            (d.uuid(), d.vector().tolist())
-            for d in iqrs.external_negative_descriptors
-        )
-        pos_descriptors = dict(
-            (d.uuid(), d.vector().tolist()) for d in iqrs.positive_descriptors
-        )
-        neg_descriptors = dict(
-            (d.uuid(), d.vector().tolist()) for d in iqrs.negative_descriptors
-        )
-
-        iqrs.lock.release()
-
-        z_buffer = StringIO()
-        # ZIP_DEFLATED means we're using zlib for compression.
-        z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
-        z.writestr('iqr_state.json', json.dumps({
-            'external_pos': ext_pos_descriptors,
-            'external_neg': ext_neg_descriptors,
-            'pos': pos_descriptors,
-            'neg': neg_descriptors,
-        }))
-        z.close()
-
+        iqrs_state_bytes = iqrs.get_state_bytes()
         # NOTE: May have to return base64 here instead of bytes.
-        return z_buffer.getvalue(), 200
+        return iqrs_state_bytes, 200
 
     # PUT /state
     def set_iqr_state(self):
@@ -957,15 +929,9 @@ class IqrService (SmqtkWebApp):
         # TODO: Limit the size of input state object? Is this already handled by
         #       other security measures?
 
-        # ``str()`` is required because the b64decode does not handle being
-        # given unicode.
-        state_bytes = base64.urlsafe_b64decode(str(state_base64))
-        z_buffer = StringIO(state_bytes)
-        z = zipfile.ZipFile(z_buffer, 'r', zipfile.ZIP_DEFLATED)
-        # Extract expected json file object
-        with z.open('iqr_state.json') as zf:
-            state = json.load(zf)
-        del z, z_buffer
+        # Encoding is required because the b64decode does not handle being
+        # given unicode (python2) or str (python3).
+        state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -974,36 +940,18 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        # Reset the session to prepare for new state.
-        iqrs.reset()
-
-        # Create descriptor element instances from input state using our
-        # configured descriptor factory.
-        def load_descriptor(uid, vec_list):
-            # Fixed type string because we don't know what type these
-            # descriptors are when loaded.
-            e = self.descriptor_factory.new_descriptor("loadedDescriptor", uid)
-            if e.has_vector():
-                assert e.vector().tolist() == vec_list, \
-                    "Found existing vector for UUID '%s' but vectors did not" \
-                    "match."
-            else:
-                e.set_vector(vec_list)
-            return e
-
-        # `source` are dictionaries of [uuid, vecList], `target` is session set.
-        for source, target in [(state['external_pos'],
-                                iqrs.external_positive_descriptors),
-                               (state['external_neg'],
-                                iqrs.external_negative_descriptors),
-                               (state['pos'], iqrs.positive_descriptors),
-                               (state['neg'], iqrs.negative_descriptors)]:
-            for uid, vector_list in six.iteritems(source):
-                e = load_descriptor(uid, vector_list)
-                target.add(e)
+        iqrs.set_state_bytes(state_bytes, self.descriptor_factory)
 
         iqrs.lock.release()
         return make_response_json("Success", sid=sid), 200
+
+    # GET /is_ready
+    # noinspection PyMethodMayBeStatic
+    def is_ready(self):
+        """
+        Simple function that returns True, indicating that the server is active.
+        """
+        return make_response_json("Yes, I'm alive."), 200
 
     def run(self, host=None, port=None, debug=False, **options):
         # Setup REST API here, register methods
@@ -1055,5 +1003,8 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/state',
                           view_func=self.set_iqr_state,
                           methods=['PUT'])
+        self.add_url_rule('/is_ready',
+                          view_func=self.is_ready,
+                          methods=['GET'])
 
         super(IqrService, self).run(host, port, debug, **options)

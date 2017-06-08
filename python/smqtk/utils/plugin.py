@@ -330,9 +330,13 @@ def from_plugin_config(config, plugin_map, *args):
     provided ``plugin_getter`` function given the plugin configuration
     dictionary ``config``.
 
-    :raises KeyError: There was no ``type`` field to inspect, or there was no
-        parameter specification for the specified ``type``.
-    :raises ValueError: Type field did not specify any implementation key.
+    :raises ValueError:
+        This may be raised if:
+            - type field set to ``None``
+            - type field did not match any available configuration in the given
+              config.
+            - Type field did not specify any implementation key.
+
     :raises TypeError: Insufficient/incorrect initialization parameters were
         specified for the specified ``type``'s constructor.
 
@@ -350,11 +354,28 @@ def from_plugin_config(config, plugin_map, *args):
     :rtype: smqtk.utils.Configurable
 
     """
+    if 'type' not in config:
+        raise ValueError("Configuration dictionary given does not have an "
+                         "implementation type specification.")
     t = config['type']
+    config_type_options = set(config.keys()) - {'type'}
+    plugin_type_options = set(plugin_map.keys())
+    # Type provided may either by None, not have a matching block in the config,
+    # not have a matching implementation type, or match both.
     if t is None:
-        options = set(config.keys()) - {'type'}
         raise ValueError("No implementation type specified. Options: %s"
-                         % options)
+                         % config_type_options)
+    elif t not in config_type_options:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "configuration block was present for that type. "
+                         "Available configuration block options: %s"
+                         % (t, list(config_type_options)))
+    elif t not in plugin_type_options:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "plugin implementations are available for that type. "
+                         "Available implementation types options: %s"
+                         % (t, list(plugin_type_options)))
+    #: :type: smqtk.utils.Configurable
     cls = plugin_map[t]
     # noinspection PyUnresolvedReferences
     return cls.from_config(config[t], *args)

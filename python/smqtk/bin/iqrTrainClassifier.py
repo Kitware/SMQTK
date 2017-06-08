@@ -13,16 +13,15 @@ will be used to train the configured SupervisedClassifier.
 
 """
 
-import json
 import logging
 import os
-import zipfile
-
-import numpy
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.algorithms import get_classifier_impls
 
+from smqtk.iqr import IqrSession
+
+from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
@@ -32,9 +31,6 @@ from smqtk.utils.bin_utils import (
 )
 from smqtk.utils.plugin import make_config
 from smqtk.utils.plugin import from_plugin_config
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 def get_cli_parser():
@@ -54,42 +50,22 @@ def train_classifier_iqr(config, iqr_state_fp):
     log = logging.getLogger(__name__)
 
     #: :type: smqtk.algorithms.SupervisedClassifier
-    classifier = from_plugin_config(config['classifier'], get_classifier_impls())
+    classifier = from_plugin_config(
+        config['classifier'],
+        get_classifier_impls(sub_interface=SupervisedClassifier)
+    )
 
-    if not isinstance(classifier, SupervisedClassifier):
-        raise RuntimeError("Configured classifier must be of the "
-                           "SupervisedClassifier type in order to train.")
+    # Load state into an empty IqrSession instance.
+    with open(iqr_state_fp, 'rb') as f:
+        state_bytes = f.read().strip()
+    descr_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
+    iqrs = IqrSession()
+    iqrs.set_state_bytes(state_bytes, descr_factory)
 
-    # Get pos/neg descriptors out of iqr state zip
-    z_file = open(iqr_state_fp, 'r')
-    z = zipfile.ZipFile(z_file)
-    if len(z.namelist()) != 1:
-        raise RuntimeError("Invalid IqrState file!")
-    iqrs = json.loads(z.read(z.namelist()[0]))
-    if len(iqrs) != 2:
-        raise RuntimeError("Invalid IqrState file!")
-    if 'pos' not in iqrs or 'neg' not in iqrs:
-        raise RuntimeError("Invalid IqrState file!")
-
-    log.info("Loading pos/neg descriptors")
-    #: :type: list[smqtk.representation.DescriptorElement]
-    pos = []
-    #: :type: list[smqtk.representation.DescriptorElement]
-    neg = []
-    i = 0
-    for v in set(map(tuple, iqrs['pos'])):
-        d = DescriptorMemoryElement('train', i)
-        d.set_vector(numpy.array(v))
-        pos.append(d)
-        i += 1
-    for v in set(map(tuple, iqrs['neg'])):
-        d = DescriptorMemoryElement('train', i)
-        d.set_vector(numpy.array(v))
-        neg.append(d)
-        i += 1
-    log.info('    positive -> %d', len(pos))
-    log.info('    negative -> %d', len(neg))
-
+    # Positive descriptor examples for training are composed of those from
+    # external and internal sets. Same for negative descriptor examples.
+    pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
+    neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
     classifier.train(positive=pos, negative=neg)
 
 

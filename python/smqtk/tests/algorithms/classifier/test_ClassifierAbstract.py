@@ -24,6 +24,10 @@ class DummyClassifier (Classifier):
         return self.EXPECTED_LABELS
 
     def _classify(self, d):
+        """
+        Returns one "label" that is the UUID of the descriptor, mapping to the
+        descriptor's vector as a list.
+        """
         return {d.uuid(): d.vector().tolist()}
 
 
@@ -44,16 +48,17 @@ class TestClassifierAbstractClass (unittest.TestCase):
         d = DescriptorMemoryElement('test', 0)
         c = DummyClassifier()
         nose.tools.assert_raises_regexp(
-            RuntimeError,
+            ValueError,
             "does not contain a vector to classify",
             c.classify, d
         )
 
-    @mock.patch('smqtk.algorithms.classifier.MemoryClassificationElement'
-                '.has_classifications')
+    @mock.patch('smqtk.algorithms.classifier._defaults'
+                '.MemoryClassificationElement.has_classifications')
     def test_classify_no_overwrite(self, m_ce_hc):
         # Testing logic when classifier element for descriptor already has
-        # stored results and we are NOT overwriting.
+        # stored results and we are NOT overwriting. Mocking classification
+        # element used in association with default element factory.
         m_ce_hc.return_value = True
 
         c = DummyClassifier()
@@ -66,11 +71,12 @@ class TestClassifierAbstractClass (unittest.TestCase):
         c.classify(d, overwrite=False)
         c._classify.assert_not_called()
 
-    @mock.patch('smqtk.algorithms.classifier.MemoryClassificationElement'
-                '.has_classifications')
+    @mock.patch('smqtk.algorithms.classifier._defaults'
+                '.MemoryClassificationElement.has_classifications')
     def test_classify_with_overwrite(self, m_ce_hc):
         # Testing logic when classification element for descriptor already has
-        # stored results but we call WITH overwrite on.
+        # stored results but we call WITH overwrite on. Mocking classification
+        # element used in association with default element factory.
         m_ce_hc.return_value = True
 
         c = DummyClassifier()

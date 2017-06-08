@@ -181,6 +181,7 @@ setuptools.setup(
     # See entry_points/console_scripts as the preferred method for publishing
     #   executable scripts. Might have redesign how scripts are done if that is
     #   to be used...
+    # TODO: Rename camel-case scripts to ``smqtk-...`` format without camel-case
     entry_points={
         'console_scripts': [
             'classifier_kfold_validation = \
@@ -188,14 +189,14 @@ setuptools.setup(
                 :classifier_kfold_validation',
             'classifier_model_validation = \
                 smqtk.bin.classifier_model_validation:main',
-            'classifyFiles = smqtk.bin.classifyFiles:main ',
+            'smqtk-classify-files = smqtk.bin.classifyFiles:main ',
             'compute_classifications = smqtk.bin.compute_classifications:main',
             'compute_hash_codes = smqtk.bin.compute_hash_codes:main',
             'compute_many_descriptors = \
                 smqtk.bin.compute_many_descriptors:main',
-            'computeDescriptor = smqtk.bin.computeDescriptor:main',
-            'createFileIngest = smqtk.bin.createFileIngest:main',
-            'createGirderIngest = smqtk.bin.createGirderIngest:main',
+            'smqtk-compute-descriptor = smqtk.bin.computeDescriptor:main',
+            'smqtk-create-file-ingest = smqtk.bin.createFileIngest:main',
+            'smqtk-create-girder-ingest = smqtk.bin.createGirderIngest:main',
             'descriptors_to_svmtrain = \
                 smqtk.bin.descriptors_to_svmtrainfile:main',
             'generate_image_transform = \
@@ -206,10 +207,10 @@ setuptools.setup(
             'make_balltree = smqtk.bin.make_balltree:main',
             'minibatch_kmeans_clusters = \
                 smqtk.bin.minibatch_kmeans_clusters:main',
-            'removeOldFiles = smqtk.bin.removeOldFiles:main',
-            'proxyManagerServer = smqtk.bin.proxyManagerServer:main',
+            'smqtk-remove-old-files = smqtk.bin.removeOldFiles:main',
+            'smqtk-proxy-manager-server = smqtk.bin.proxyManagerServer:main',
             'runApplication = smqtk.bin.runApplication:main',
-            'summarizePlugins = smqtk.bin.summarizePlugins:main',
+            'smqtk-summarize-plugins = smqtk.bin.summarizePlugins:main',
             'train_itq = smqtk.bin.train_itq:main',
             'smqtk-nearest-neighbors = smqtk.bin.nearest_neighbors:main',
             'smqtk-check-images = smqtk.bin.check_images:main'

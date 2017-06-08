@@ -648,6 +648,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 "uids": all_ids
             })
 
+        @self.route('/is_ready')
+        def is_ready():
+            """ Simple 'I'm alive' endpoint """
+            return flask.jsonify({
+                "alive": True,
+            })
+
     def __del__(self):
         for wdir in self._iqr_work_dirs.values():
             if os.path.isdir(wdir):

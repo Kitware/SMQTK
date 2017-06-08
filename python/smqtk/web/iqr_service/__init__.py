@@ -945,6 +945,14 @@ class IqrService (SmqtkWebApp):
         iqrs.lock.release()
         return make_response_json("Success", sid=sid), 200
 
+    # GET /is_ready
+    # noinspection PyMethodMayBeStatic
+    def is_ready(self):
+        """
+        Simple function that returns True, indicating that the server is active.
+        """
+        return make_response_json("Yes, I'm alive."), 200
+
     def run(self, host=None, port=None, debug=False, **options):
         # Setup REST API here, register methods
         self.add_url_rule('/session_ids',
@@ -995,5 +1003,8 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/state',
                           view_func=self.set_iqr_state,
                           methods=['PUT'])
+        self.add_url_rule('/is_ready',
+                          view_func=self.is_ready,
+                          methods=['GET'])
 
         super(IqrService, self).run(host, port, debug, **options)

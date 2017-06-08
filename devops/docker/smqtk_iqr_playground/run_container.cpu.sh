@@ -2,10 +2,11 @@
 #
 # Simple script for starting the SMQTK IQR container over a directory of
 # images. The ``-t`` option may be optionally provided to tile input imagery
-# into 64x64 tiles (default). We drop into watching the processing status after
-# starting the container.
+# into 128x128 tiles (default). We drop into watching the processing status
+# after starting the container.
 #
-# If the container is already running, we just start watching the container's status.
+# If the container is already running, we just start watching the container's
+# status.
 #
 set -e
 

@@ -16,17 +16,17 @@
     },
     "descriptor_generator": {
         "CaffeDescriptorGenerator": {
-            "batch_size": 100,
+            "batch_size": 20,
             "data_layer": "data",
             "gpu_device_id": 0,
-            "image_mean_uri": "/home/smqtk/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+            "image_mean_uri": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
             "input_scale": null,
             "load_truncated_images": true,
             "network_is_bgr": true,
-            "network_model_uri": "/home/smqtk/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
-            "network_prototxt_uri": "/home/smqtk/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+            "network_model_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
+            "network_prototxt_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
             "pixel_rescale": null,
-            "return_layer": "fc7",
+            "return_layer": "pool5",
             "use_gpu": false
         },
         "type": "CaffeDescriptorGenerator"

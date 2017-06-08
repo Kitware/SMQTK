@@ -18,7 +18,7 @@ function usage() {
     echo "
 Usage: $0 [-b|--build [-t|--tile]] [--rest]
 
-Run SMQTK IQR GUI application or REST services over some images.
+Run SMQTK IQR GUI application and IQR REST service over some images.
 Optionally, build required models for new imagery based on default or mounted
 configs.
 

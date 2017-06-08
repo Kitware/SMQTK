@@ -5,6 +5,7 @@ Runs conforming SMQTK Web Applications.
 import logging
 
 from flask_basicauth import BasicAuth
+import six
 
 from smqtk.utils import bin_utils
 import smqtk.web
@@ -18,7 +19,9 @@ def cli_parser():
     group_application.add_argument('-l', '--list',
                                    default=False, action="store_true",
                                    help="List currently available applications "
-                                        "for running")
+                                        "for running. More description is "
+                                        "included if SMQTK verbosity is "
+                                        "increased (-v | --debug-smqtk)")
     group_application.add_argument('-a', '--application', default=None,
                                    help="Label of the web application to run.")
 
@@ -78,8 +81,13 @@ def main():
         log.info("")
         log.info("Available applications:")
         log.info("")
-        for l in web_applications:
+        for l, cls in six.iteritems(web_applications):
             log.info("\t" + l)
+            if debug_smqtk:
+                log.info('\t' + ('^'*len(l)) + '\n' +
+
+                         cls.__doc__ + '\n' +
+                         ('*' * 80) + '\n')
         log.info("")
         exit(0)
 

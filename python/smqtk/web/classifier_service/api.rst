@@ -62,7 +62,7 @@ standard base64 encoding form ("bytes_b64" key). We look for the content
 type either as URL parameter or within the body ("content_type" key).
 
 Data/Form arguments:
-    bytes_base64
+    bytes_b64
         Bytes in the standard base64 encoding to be described and classified.
     content_type
         The mimetype of the sent data.

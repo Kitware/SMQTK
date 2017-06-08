@@ -1,9 +1,3 @@
-SMQTK Classifier REST Service Docker Image
-==========================================
-This docker image provides the ability to run a classifier REST service over
-a configuration and models to expose via a RESTful data classification API.
-
-
 .. _standard-message-base:
 
 Standard Base Message Format

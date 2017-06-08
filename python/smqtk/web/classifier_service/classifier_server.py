@@ -8,10 +8,12 @@ import six
 from smqtk.algorithms import (
     get_classifier_impls,
     get_descriptor_generator_impls,
+    SupervisedClassifier
 )
 from smqtk.algorithms.classifier import (
     ClassifierCollection,
 )
+from smqtk.iqr import IqrSession
 from smqtk.representation import (
     ClassificationElementFactory,
     DescriptorElementFactory,
@@ -55,6 +57,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
     """
 
+    CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL = "enable_iqr_classifier_removal"
     CONFIG_CLASSIFIER_COLLECTION = "classifier_collection"
     CONFIG_CLASSIFICATION_FACTORY = "classification_factory"
     CONFIG_DESCRIPTOR_GENERATOR = "descriptor_generator"
@@ -70,6 +73,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     @classmethod
     def get_default_config(cls):
         c = super(SmqtkClassifierService, cls).get_default_config()
+
+        c[cls.CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL] = False
 
         # Static classifier configurations
         c[cls.CONFIG_CLASSIFIER_COLLECTION] = \
@@ -87,7 +92,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # from-IQR-state *supervised* classifier configuration
         c[cls.CONFIG_IQR_CLASSIFIER] = smqtk.utils.plugin.make_config(
             get_classifier_impls(
-                sub_interface=smqtk.algorithms.SupervisedClassifier
+                sub_interface=SupervisedClassifier
             )
         )
 
@@ -95,6 +100,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
     def __init__(self, json_config):
         super(SmqtkClassifierService, self).__init__(json_config)
+
+        self.enable_iqr_classifier_removal = \
+            bool(json_config[self.CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL])
 
         # Convert configuration into SMQTK plugin instances.
         #   - Static classifier configurations.
@@ -146,6 +154,16 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['GET'])
+        self.add_url_rule('/iqr_classifier',
+                          view_func=self.get_iqr_classifier_labels,
+                          methods=['GET'])
+        self.add_url_rule('/iqr_classifier',
+                          view_func=self.add_iqr_state_classifier,
+                          methods=['POST'])
+        if self.enable_iqr_classifier_removal:
+            self.add_url_rule('/iqr_classifier',
+                              view_func=self.del_iqr_state_classifier,
+                              methods=['DELETE'])
 
         super(SmqtkClassifierService, self).run(host, port, debug, **options)
 
@@ -171,7 +189,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # join labels from both collections.
         all_labels = (self.classifier_collection.labels() |
                       self.iqr_classifier_collection.labels())
-        return make_response_json("Success",
+        return make_response_json("All classifier labels.",
                                   labels=list(all_labels))
 
     # GET /classify
@@ -184,7 +202,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         type either as URL parameter or within the body ("content_type" key).
 
         Below is an example call to this endpoint via the ``requests`` python
-        module::
+        module, showing how base64 data is sent::
 
             import base64
             import requests
@@ -192,6 +210,14 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             requests.get('http://localhost:5000/classify',
                          data={'bytes_b64': base64.b64encode(data_bytes),
                                'content_type': 'text/plain'})
+
+        With curl on the command line::
+
+            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+        Curl may fail depending on the size of the file and how long your
+        terminal allows argument lists.
 
         Data args:
             bytes_b64
@@ -212,10 +238,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         }
 
         """
-        data_b64 = flask.request.form.get('bytes_b64', None) or \
-                   flask.request.args.get('bytes_b64', None)
-        content_type = flask.request.args.get('content_type', None) or \
-                       flask.request.form.get('content_type', None)
+        data_b64 = (flask.request.form.get('bytes_b64', None) or
+                    flask.request.args.get('bytes_b64', None))
+        content_type = (flask.request.args.get('content_type', None) or
+                        flask.request.form.get('content_type', None))
 
         if data_b64 is None:
             return make_response_json("No base-64 bytes provided.", 400)
@@ -231,13 +257,150 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 
-        c_map = self.classifier_collection.classify(descr_elem,
-                                                    self.classification_factory)
+        static_c_map = self.classifier_collection.classify(
+            descr_elem, self.classification_factory
+        )
+        iqr_c_map = self.iqr_classifier_collection.classify(
+            descr_elem, self.classification_factory
+        )
 
         # Transform classification result into JSON
         c_json = {}
-        for classifier_label, c_elem in six.iteritems(c_map):
+        for classifier_label, c_elem in six.iteritems(static_c_map):
+            c_json[classifier_label] = c_elem.get_classification()
+        for classifier_label, c_elem in six.iteritems(iqr_c_map):
             c_json[classifier_label] = c_elem.get_classification()
 
         return make_response_json('Finished classification.',
                                   result=c_json)
+
+    # GET /iqr_classifier
+    def get_iqr_classifier_labels(self):
+        """
+        Get the labels of the classifiers specifically added via uploaded
+        IQR session states.
+
+        Returns 200: {
+            ...
+            labels: list[str]
+        }
+        """
+        return make_response_json(
+            "IQR state-based classifier labels.",
+            labels=list(self.iqr_classifier_collection.labels()),
+        )
+
+    # POST /iqr_classifier
+    def add_iqr_state_classifier(self):
+        """
+        Train a classifier based on the user-provided IQR state file bytes in a
+        base64 encoding, matched with a descriptive label of that classifier's
+        topic.
+
+        Since all IQR session classifiers end up only having two result classes
+        (positive and negative), the topic of the classifier is encoded in the
+        descriptive label the user applies to the classifier.
+
+        Below is an example call to this endpoint via the ``requests`` python
+        module, showing how base64 data is sent::
+
+            import base64
+            import requests
+            data_bytes = "Load some content bytes here."
+            requests.get('http://localhost:5000/classify',
+                         data={'bytes_b64': base64.b64encode(data_bytes),
+                               'content_type': 'text/plain'})
+
+        With curl on the command line::
+
+            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+        Curl may fail depending on the size of the file and how long your
+        terminal allows argument lists.
+
+        Form arguments:
+            iqr_state_b64
+                base64 encoding of the bytes of the IQR session state save file.
+            label
+                Descriptive label to apply to this classifier. This should not
+                conflict with existing classifier labels.
+
+        Returns 201.
+
+        """
+        data_b64 = (flask.request.form.get('bytes_b64', None) or
+                    flask.request.args.get('bytes_b64', None))
+        label = (flask.request.args.get('label', None) or
+                 flask.request.form.get('label', None))
+
+        if data_b64 is None or len(data_b64) == 0:
+            return make_response_json("No state base64 data provided.", 400)
+        elif label is None or len(label) == 0:
+            return make_response_json("No descriptive label provided.", 400)
+
+        # If the given label conflicts with one already in either
+        # collection, fail.
+        if label in self.classifier_collection.labels():
+            return make_response_json("Label already exists in static "
+                                      "classifier collection.", 400)
+        elif label in self.iqr_classifier_collection.labels():
+            return make_response_json("Label already exists in IQR "
+                                      "classifier collection.", 400)
+
+        # Create dummy IqrSession to extract pos/neg descriptors.
+        iqrs = IqrSession()
+        iqrs.set_state_bytes(base64.b64decode(data_b64.encode('utf-8')),
+                             self.descriptor_factory)
+        pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
+        neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
+
+        # Make a classifier instance from the stored config for IQR
+        # session-based classifiers.
+        #: :type: SupervisedClassifier
+        classifier = smqtk.utils.plugin.from_plugin_config(
+            self.iqr_state_classifier_config,
+            get_classifier_impls(sub_interface=SupervisedClassifier)
+        )
+        classifier.train(positive=pos, negative=neg)
+
+        try:
+            self.iqr_classifier_collection.add_classifier(label, classifier)
+        except ValueError:
+            return make_response_json("Duplicate label ('%s') added during "
+                                      "classifier training of provided IQR "
+                                      "session state." % label, 400,
+                                      label=label)
+
+        return make_response_json("Finished training IQR-session-based "
+                                  "classifier for label '%s'." % label,
+                                  label=label)
+
+    # DEL /iqr_classifier
+    def del_iqr_state_classifier(self):
+        """
+        Remove an IQR state classifier by the given label.
+
+        Form args:
+            label
+                Label of the IQR state classifier to remove.
+
+        Possible error codes:
+            400
+                No IQR state classifier exists for the given label.
+
+        Returns 200.
+
+        """
+        label = flask.request.form.get('label', None)
+        if label is None or not label:
+            return make_response_json("No label provided.", 400)
+        elif label not in self.iqr_classifier_collection.labels():
+            return make_response_json("Provided label does not refer to an "
+                                      "IQR classifier currently registered.")
+
+        self.iqr_classifier_collection.remove_classifier(label)
+
+        return make_response_json("Removed IQR classifier with label '%s'."
+                                  % label,
+                                  label=label)

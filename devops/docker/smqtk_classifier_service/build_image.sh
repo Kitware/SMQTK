@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "$SCRIPT_DIR"
 
 docker build -t kitware/smqtk/classifier_service:cpu \
              -f "${SCRIPT_DIR}/Dockerfile.cpu.df" \

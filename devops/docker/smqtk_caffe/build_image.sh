@@ -11,6 +11,4 @@ then
     nvidia-docker build -t kitware/smqtk/caffe_nvidia \
                         -f "${SCRIPT_DIR}/Dockerfile.nvidia_cuDNNv5" \
                         "${SCRIPT_DIR}"
-else
-    echo "ERROR: Cannot build image, no nvidia-docker."
 fi

@@ -1,43 +1,56 @@
-FROM ubuntu:14.04
+FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu16.04
 
-# System setup and package installation
+# System Package dependencies
+ENV TERM=xterm
 RUN rm /bin/sh \
  && ln -s /bin/bash /bin/sh \
  && apt-get -y update \
- && apt-get -y install git cmake curl wget \
-                       libatlas-base-dev libatlas-dev \
-                       libboost1.55-all-dev \
-                       libprotobuf-dev protobuf-compiler \
-                       libgoogle-glog-dev libgflags-dev \
-                       libhdf5-dev \
-                       libopencv-dev \
-                       liblmdb-dev \
-                       libleveldb-dev \
-                       libsnappy-dev
+ && apt-get -y install \
+        # Basic dependencies
+        build-essential python python-pip git cmake \
+        # Caffe Dependencies
+        libatlas-base-dev libatlas-dev libboost-all-dev libprotobuf-dev \
+        protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev \
+ # Python dependencies for pycaffe
+ && pip install numpy scikit-image protobuf \
+ # Clean products of ``update``
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Caffe installation
-# - Download caffe master as of 2016/05/20
-RUN mkdir /caffe /caffe/models /caffe/build \
- && curl -L https://github.com/BVLC/caffe/archive/e79bc8f.tar.gz >caffe-e79bc8f1f6df4db3a293ef057b7ca5299c01074a.tar.gz \
- && tar -xzf caffe-e79bc8f1f6df4db3a293ef057b7ca5299c01074a.tar.gz \
- && mv caffe-e79bc8f1f6df4db3a293ef057b7ca5299c01074a /caffe/source
-# - Build, linking to deps
-RUN cd /caffe/build \
+#
+# Caffe Install
+#
+ENV CAFFE_URL="https://github.com/BVLC/caffe.git" \
+    CAFFE_VERSION=rc5 \
+    PATH="/caffe/install/bin:${PATH}" \
+    PYTHONPATH="/caffe/install/python:${PYTHONPATH}" \
+    LD_LIBRARY_PATH="/caffe/install/lib:${LD_LIBRARY_PATH}"
+RUN git clone https://github.com/BVLC/caffe.git /caffe/source \
+ && cd /caffe/source \
+ && git checkout ${CAFFE_VERSION} \
+ # Create source/build directories for Caffe
+ && mkdir -p /caffe/build \
+ && cd /caffe/build \
  && cmake \
-    -DAtlas_BLAS_LIBRARY:PATH=/usr/lib/libatlas.so \
-    -DAtlas_CBLAS_LIBRARY:PATH=/usr/lib/libcblas.so \
-    -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/liblapack_atlas.so \
+    # Need to specifically point to libatlas installed stuff.
+    -DAtlas_BLAS_LIBRARY:PATH=/usr/lib/atlas-base/libatlas.so \
+    -DAtlas_CBLAS_LIBRARY:PATH=/usr/lib/atlas-base/libcblas.so \
+    -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/atlas-base/liblapack_atlas.so \
     -DCMAKE_BUILD_TYPE:STRING=Release \
-    -DCPU_ONLY:BOOL=ON \
-    -DPYTHON_EXECUTABLE:PATH=/miniconda/bin/python2.7 \
-    -DPYTHON_INCLUDE_DIR:PATH=/miniconda/include/python2.7 \
-    -DPYTHON_INCLUDE_DIR2:PATH=/miniconda/include/python2.7 \
-    -DPYTHON_LIBRARY:PATH=/miniconda/lib/libpython2.7.so \
-    -DUSE_CUDNN:BOOL=OFF \
+    -DCPU_ONLY:BOOL=OFF \
+    -DCUDA_ARCH_NAME:STRING=Manual \
+    -DCUDA_ARCH_BIN:STRING="30 32 35 37 50 52 53 60 61 62" \
+    -DCUDA_ARCH_PTX:STRING="" \
+    -DPYTHON_EXECUTABLE:PATH=/usr/bin/python2.7 \
+    -DPYTHON_INCLUDE_DIR:PATH=/usr/include/python2.7 \
+    -DPYTHON_LIBRARY:PATH=/usr/lib/x86_64-linux-gnu/libpython2.7.so \
+    -DUSE_CUDNN:BOOL=ON \
+    # Turn off uneeded parts.
+    -DUSE_LEVELDB:BOOL=OFF \
+    -DUSE_LMDB:BOOL=OFF \
+    -DUSE_OPENCV:BOOL=OFF \
     -DCMAKE_INSTALL_PREFIX:PATH=/caffe/install \
     /caffe/source \
  && make install -j12 \
- && cd \
- && rm -r /caffe/source /caffe/build
-ENV PATH="/caffe/install/bin:${PATH}" \
-    PYTHONPATH="/caffe/install/python:${PYTHONPATH}"
+ && rm -rf /caffe/source \
+           /caffe/build

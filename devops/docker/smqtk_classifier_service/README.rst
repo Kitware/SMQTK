@@ -7,7 +7,8 @@ This base image provides a SMQTK installation as well as an entrypoint to run
 the classifier service with a fixed configuration file path.
 
 Port 5002 is exposed and the configured server should use this port in any child
-images.
+images. Make sure to configure the host to ``0.0.0.0`` for the service to be
+accessible from outside the container.
 
 
 Server Configuration

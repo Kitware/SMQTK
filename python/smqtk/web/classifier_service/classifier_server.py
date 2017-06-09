@@ -214,7 +214,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         With curl on the command line::
 
-            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+            $ curl -X POST localhost:5000/iqr_classifier \
+                -d "content_type=text/plain" \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
         Curl may fail depending on the size of the file and how long your
@@ -312,11 +313,12 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             data_bytes = "Load some content bytes here."
             requests.get('http://localhost:5000/classify',
                          data={'bytes_b64': base64.b64encode(data_bytes),
-                               'content_type': 'text/plain'})
+                               'label': 'some_label'})
 
         With curl on the command line::
 
-            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+            $ curl -X POST localhost:5000/iqr_classifier \
+                -d "label=some_label" \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
         Curl may fail depending on the size of the file and how long your

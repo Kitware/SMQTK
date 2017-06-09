@@ -1,0 +1,52 @@
+{
+    "classification_factory": {
+        "MemoryClassificationElement": {},
+        "type": "MemoryClassificationElement"
+    },
+    "classifier_collection": {},
+    "descriptor_factory": {
+        "DescriptorMemoryElement": {},
+        "type": "DescriptorMemoryElement"
+    },
+    "descriptor_generator": {
+        "CaffeDescriptorGenerator": {
+            "batch_size": 10,
+            "data_layer": "data",
+            "gpu_device_id": 0,
+            "image_mean_uri": "/caffe/models/bvlc_alexnet/imagenet_mean.binaryproto",
+            "input_scale": null,
+            "load_truncated_images": true,
+            "network_is_bgr": true,
+            "network_model_uri": "/caffe/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+            "network_prototxt_uri": "/caffe/models/bvlc_alexnet/deploy.prototxt",
+            "pixel_rescale": null,
+            "return_layer": "fc7",
+            "use_gpu": false
+        },
+        "type": "CaffeDescriptorGenerator"
+    },
+    "enable_iqr_classifier_removal": true,
+    "flask_app": {
+        "BASIC_AUTH_PASSWORD": "demo",
+        "BASIC_AUTH_USERNAME": "demo",
+        "SECRET_KEY": "MySuperUltraSecret"
+    },
+    "iqr_state_classifier_config": {
+        "LibSvmClassifier": {
+            "normalize": 2,
+            "svm_label_map_uri": null,
+            "svm_model_uri": null,
+            "train_params": {
+                "-b": 1,
+                "-c": 2,
+                "-s": 0,
+                "-t": 0
+            }
+        },
+        "type": "LibSvmClassifier"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 5002
+    }
+}

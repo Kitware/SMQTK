@@ -93,7 +93,7 @@ RUN mkdir caffe/build \
  && make -j12
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
-# - Get basic model files
+# - Get MSRA ResNet-50 model files
 RUN mkdir -p caffe/msra_resnet \
  && curl https://data.kitware.com/api/v1/item/5939a7828d777f16d01e4e5d/download \
         -o caffe/msra_resnet/LICENSE.txt \

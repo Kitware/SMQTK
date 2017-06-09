@@ -906,6 +906,9 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         iqrs_state_bytes = iqrs.get_state_bytes()
+
+        iqrs.lock.release()
+
         # NOTE: May have to return base64 here instead of bytes.
         return iqrs_state_bytes, 200
 

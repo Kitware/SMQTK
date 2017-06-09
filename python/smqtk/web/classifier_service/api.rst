@@ -61,8 +61,26 @@ We expect the data to be transmitted in the body of the request in
 standard base64 encoding form ("bytes_b64" key). We look for the content
 type either as URL parameter or within the body ("content_type" key).
 
+Below is an example call to this endpoint via the ``requests`` python
+module, showing how base64 data is sent::
+
+    import base64
+    import requests
+    data_bytes = "Load some content bytes here."
+    requests.get('http://localhost:5000/classify',
+                 data={'bytes_b64': base64.b64encode(data_bytes),
+                       'content_type': 'text/plain'})
+
+With curl on the command line::
+
+    $ curl -X POST localhost:5000/iqr_classifier -d "content_type=text/plain" \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+Curl may fail depending on the size of the file and how long your
+terminal allows argument lists.
+
 Data/Form arguments:
-    bytes_base64
+    bytes_b64
         Bytes in the standard base64 encoding to be described and classified.
     content_type
         The mimetype of the sent data.
@@ -100,6 +118,24 @@ topic.
 Since all IQR session classifiers end up only having two result classes
 (positive and negative), the topic of the classifier is encoded in the
 descriptive label the user applies to the classifier.
+
+Below is an example call to this endpoint via the ``requests`` python
+module, showing how base64 data is sent::
+
+    import base64
+    import requests
+    data_bytes = "Load some content bytes here."
+    requests.get('http://localhost:5000/classify',
+                 data={'bytes_b64': base64.b64encode(data_bytes),
+                       'label': 'some_label'})
+
+With curl on the command line::
+
+    $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+Curl may fail depending on the size of the file and how long your
+terminal allows argument lists.
 
 Data/Form arguments:
     bytes_b64

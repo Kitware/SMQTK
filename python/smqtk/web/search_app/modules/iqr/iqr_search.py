@@ -228,6 +228,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     IqrSession.STATE_ZIP_COMPRESSION
                 ).open(IqrSession.STATE_ZIP_FILENAME)
             )
+            r_get.close()
 
             # Wrap service state with our UI state: uploaded data elements.
             # Data elements are stored as a dictionary mapping UUID to MIMETYPE

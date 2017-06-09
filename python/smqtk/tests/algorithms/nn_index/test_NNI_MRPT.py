@@ -26,7 +26,7 @@ if MRPTNearestNeighborsIndex.is_usable():
 
         def _make_inst(self):
             """
-            Make an instance of FlannNearestNeighborsIndex
+            Make an instance of MRPTNearestNeighborsIndex
             """
             return MRPTNearestNeighborsIndex(random_seed=self.RAND_SEED)
 
@@ -75,6 +75,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             # returned descriptors for a query of [0,0] should be in index order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(numpy.array([0, 0], float))
+            # TODO explain this
             r, dists = index.nn(q, i//2)
             for j, d, dist in zip(range(i), r, dists):
                 ntools.assert_equal(d.uuid(), j)

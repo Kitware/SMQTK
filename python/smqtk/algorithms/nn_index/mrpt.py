@@ -1,17 +1,18 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-import six.moves.cPickle as pickle
-from six.moves import range
+from os import path as osp
+
+from six.moves import range, cPickle as pickle
 
 # import logging
 import multiprocessing
-import os.path as osp
 
 import numpy as np
 from scipy.sparse import csr_matrix, random
 from scipy import stats
 
+from smqtk.utils import SmqtkObject
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
@@ -20,7 +21,36 @@ from smqtk.utils.file_utils import safe_create_dir
 __author__ = b"john.moeller@kitware.com"
 
 
-class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
+# TODO Run coverage
+class DescriptorCache(SmqtkObject):
+    def __init__(self):
+        self._descr_cache = None
+
+    def init_descr_cache(self, descriptors, descr_cache_filepath,
+                         pickle_protocol=pickle.HIGHEST_PROTOCOL):
+        self._descr_cache = list(descriptors)
+        if not self._descr_cache:
+            raise ValueError("No data provided in given iterable.")
+
+        # Cache descriptors if we have a path
+        if descr_cache_filepath:
+            self._log.debug("Caching descriptors: %s", descr_cache_filepath)
+            safe_create_dir(osp.dirname(descr_cache_filepath))
+            # noinspection PyTypeChecker
+            with open(descr_cache_filepath, "wb") as f:
+                pickle.dump(self._descr_cache, f, pickle_protocol)
+
+    def load_descr_cache(self, descr_cache_filepath):
+        if not self._descr_cache and descr_cache_filepath:
+            # Load descriptor cache
+            # - is copied on fork, so only need to load here.
+            self._log.debug("Loading cached descriptors")
+            # noinspection PyTypeChecker
+            with open(descr_cache_filepath, "rb") as f:
+                self._descr_cache = pickle.load(f)
+
+
+class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     """
     Nearest Neighbors index that uses the MRPT algorithm of [url]
     """
@@ -32,7 +62,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
     def __init__(self, index_filepath=None, parameters_filepath=None,
                  descriptor_cache_filepath=None,
                  # Parameters for building an index
-                 num_trees=1, depth=1, required_votes=1, random_seed=None):
+                 num_trees=1, depth=1, required_votes=1, random_seed=None,
+                 pickle_protocol=pickle.HIGHEST_PROTOCOL):
         """
         Initialize MRPT index properties. Does not contain a query-able index
         until one is built via the ``build_index`` method, or loaded from
@@ -41,6 +72,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         When using this algorithm in a multiprocessing environment, the model
         file path parameters must be specified due to needing to reload the
         index on separate processes.
+
+        :param pickle_protocol: The protocol version to be used by the pickle
+            module to serialize class information
+        :type pickle_protocol: int
 
         :param index_filepath: Optional file location to load/store MRPT index
             when initialized and/or built.
@@ -78,7 +113,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :type random_seed: int
 
         """
+        # TODO DOCUMENT THIS DAMNED ALGO
         super(MRPTNearestNeighborsIndex, self).__init__()
+
+        self._pickle_protocol = pickle_protocol
 
         def normpath(p):
             return (p and osp.abspath(osp.expanduser(p))) or p
@@ -98,7 +136,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         # In-order cache of descriptors we're indexing over.
         # - index will spit out indices to list
         #: :type: list[smqtk.representation.DescriptorElement] | None
-        self._descr_cache = None
 
         #: :type: None | int
         self._rand_seed = None
@@ -115,12 +152,17 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.info("Found existing model files. Loading.")
             self._load_mrpt_model()
 
+        if (self._descr_cache_filepath and
+                osp.isfile(self._descr_cache_filepath)):
+            self.load_descr_cache(self._descr_cache_filepath)
+
     def get_config(self):
         return {
             "index_filepath": self._index_filepath,
             "parameters_filepath": self._index_param_filepath,
             "descriptor_cache_filepath": self._descr_cache_filepath,
             "random_seed": self._rand_seed,
+            "pickle_protocol": self._pickle_protocol,
             "depth": self._depth,
             "num_trees": self._num_trees,
             "required_votes": self._required_votes,
@@ -131,8 +173,42 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         check if configured model files are configured and exist
         """
         return (self._index_filepath and osp.isfile(self._index_filepath) and
-                self._index_param_filepath and osp.isfile(self._index_param_filepath) and
-                self._descr_cache_filepath and osp.isfile(self._descr_cache_filepath))
+                self._index_param_filepath and osp.isfile(self._index_param_filepath))
+
+    def build_index(self, descriptors):
+        """
+        Build the index over the descriptor data elements.
+
+        Subsequent calls to this method should rebuild the index, not add to
+        it, or raise an exception to as to protect the current index.
+
+        :raises ValueError: No data available in the given iterable.
+
+        :param descriptors: Iterable of descriptor elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
+
+        self._log.info("Building new MRPT index")
+
+        self._log.debug("Storing descriptors")
+        self.init_descr_cache(descriptors, self._descr_cache_filepath,
+                              pickle_protocol=self._pickle_protocol)
+
+        self._log.debug("Accumulating descriptor vectors into matrix")
+        # XXX is an interval of 1.0 really a good idea?
+        pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
+
+        self._log.debug('Building MRPT index')
+        self._build_multiple_trees(pts_array)
+        del pts_array
+
+        self._save_mrpt_model()
+
+        self._pid = multiprocessing.current_process().pid
 
     def _build_multiple_trees(self, pts):
         """
@@ -225,103 +301,45 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         # Assemble index set
         return left_out + right_out
 
-    def build_index(self, descriptors):
-        """
-        Build the index over the descriptor data elements.
-
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
-
-        :raises ValueError: No data available in the given iterable.
-
-        :param descriptors: Iterable of descriptor elements to build index
-            over.
-        :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-        super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
-
-        self._log.info("Building new MRPT index")
-
-        self._log.debug("Storing descriptors")
-        self._descr_cache = list(descriptors)
-        if not self._descr_cache:
-            raise ValueError("No data provided in given iterable.")
-        # Cache descriptors if we have a path
-        if self._descr_cache_filepath:
-            self._log.debug("Caching descriptors: %s",
-                            self._descr_cache_filepath)
-            safe_create_dir(osp.dirname(self._descr_cache_filepath))
-            with open(self._descr_cache_filepath, b"wb") as f:
-                pickle.dump(self._descr_cache, f, -1)
-
-        self._log.debug("Accumulating descriptor vectors into matrix")
-        # XXX is an interval of 1.0 really a good idea?
-        pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
-
-        self._log.debug('Building MRPT index')
-        self._build_multiple_trees(pts_array)
-        del pts_array
-
+    def _save_mrpt_model(self):
         self._log.debug("Caching index and parameters: %s, %s",
                         self._index_filepath, self._index_param_filepath)
         if self._index_filepath:
             self._log.debug("Caching index: %s", self._index_filepath)
             safe_create_dir(osp.dirname(self._index_filepath))
-            with open(self._index_filepath, b"wb") as f:
-                pickle.dump(self._trees, f, -1)
-
+            # noinspection PyTypeChecker
+            with open(self._index_filepath, "wb") as f:
+                pickle.dump(self._trees, f, self._pickle_protocol)
         if self._index_param_filepath:
             self._log.debug("Caching index params: %s",
                             self._index_param_filepath)
+            safe_create_dir(osp.dirname(self._index_param_filepath))
             params = {
                 "num_trees": self._num_trees,
                 "depth": self._depth,
                 "required_votes": self._required_votes,
             }
-            safe_create_dir(osp.dirname(self._index_param_filepath))
-            with open(self._index_param_filepath, b"w") as f:
-                pickle.dump(params, f, -1)
-
-        self._pid = multiprocessing.current_process().pid
+            # noinspection PyTypeChecker
+            with open(self._index_param_filepath, "w") as f:
+                pickle.dump(params, f, self._pickle_protocol)
 
     def _load_mrpt_model(self):
-        if not self._descr_cache and self._descr_cache_filepath:
-            # Load descriptor cache
-            # - is copied on fork, so only need to load here.
-            self._log.debug("Loading cached descriptors")
-            with open(self._descr_cache_filepath, b"rb") as f:
-                self._descr_cache = pickle.load(f)
-
         if self._index_param_filepath:
+            # noinspection PyTypeChecker
             with open(self._index_param_filepath) as f:
                 params = pickle.load(f)
             self._num_trees = params['num_trees']
             self._depth = params['depth']
             self._required_votes = params['required_votes']
 
-        # Load the binary index
+        # Load the index
         if self._index_filepath:
-            with open(self._index_filepath, b"rb") as f:
+            # noinspection PyTypeChecker
+            with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
 
         # Set current PID to the current
         self._pid = multiprocessing.current_process().pid
-
-    def _restore_index(self):
-        """
-        If we think we're supposed to have an index, check the recorded PID with
-        the current PID, reloading the index from cache if they differ.
-
-        If there is a loaded index and we're on the same process that created it
-        this does nothing.
-        """
-        if self._pid == multiprocessing.current_process().pid:
-            return
-
-        if bool(self._trees) and self._has_model_files():
-            self._load_mrpt_model()
 
     def count(self):
         """
@@ -346,8 +364,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        self._restore_index()
-
         super(MRPTNearestNeighborsIndex, self).nn(d, n)
 
         def _query_single(tree):

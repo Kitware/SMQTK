@@ -21,7 +21,6 @@ from smqtk.utils.file_utils import safe_create_dir
 __author__ = b"john.moeller@kitware.com"
 
 
-# TODO Run coverage
 class DescriptorCache(SmqtkObject):
     def __init__(self):
         self._descr_cache = None
@@ -52,7 +51,38 @@ class DescriptorCache(SmqtkObject):
 
 class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     """
-    Nearest Neighbors index that uses the MRPT algorithm of [url]
+    Nearest Neighbors index that uses the MRPT algorithm of [url].
+
+    Multiple Random Projection Trees (MRPT) combines multiple shallow binary
+    trees of a set depth to quickly search for near neighbors. Each tree has a
+    separate set of random projections used to divide the dataset into a tree
+    structure. This algorithm differs from most RP tree implementations in
+    that all separators at a particular level in the tree share the same
+    projection, to save on space. Every branch partitions a set of points into
+    two equal portions relative to the corresponding random projection.
+
+    On query, the leaf corresponding to the query vector is found in each
+    tree. The neighbors are drawn from the set of points that are in at least
+    a certain number of leaves (`required_votes`).
+
+    The performance will depend on settings for the parameters:
+
+    - Set `required_votes` to a small integer greater than 1. If it is too
+        high, then a query may not return enough points. Higher values can
+        lower the variance of results, but `required_votes` should always be
+        much smaller than the number of trees.
+    - If `depth` is too high, then the leaves will not have enough points
+        to satisfy a query, and many trees will be required to compensate. If
+        `depth` is too low, then performance may suffer because the leaves are
+        large. If `N` is the size of the dataset, and `L = N/2^{depth}`, then
+        leaves should be small enough that all `num_trees*L` descriptors that
+        result from a query will fit easily in cache. Since query complexity
+        is linear in `depth`, this parameter should be kept as low as
+        possible.
+    - The `num_trees` parameter will lower the variance of the results for
+        higher values, but at the cost of using more memory on any particular
+        query. As a rule of thumb, for a given value of `k`, num_trees should
+        be about `3k/L`.
     """
 
     @classmethod
@@ -62,16 +92,12 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     def __init__(self, index_filepath=None, parameters_filepath=None,
                  descriptor_cache_filepath=None,
                  # Parameters for building an index
-                 num_trees=1, depth=1, required_votes=1, random_seed=None,
+                 num_trees=10, depth=1, required_votes=3, random_seed=None,
                  pickle_protocol=pickle.HIGHEST_PROTOCOL):
         """
-        Initialize MRPT index properties. Does not contain a query-able index
+        Initialize MRPT index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
-
-        When using this algorithm in a multiprocessing environment, the model
-        file path parameters must be specified due to needing to reload the
-        index on separate processes.
 
         :param pickle_protocol: The protocol version to be used by the pickle
             module to serialize class information
@@ -113,7 +139,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         :type random_seed: int
 
         """
-        # TODO DOCUMENT THIS DAMNED ALGO
         super(MRPTNearestNeighborsIndex, self).__init__()
 
         self._pickle_protocol = pickle_protocol

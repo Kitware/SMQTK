@@ -28,7 +28,8 @@ if MRPTNearestNeighborsIndex.is_usable():
             """
             Make an instance of MRPTNearestNeighborsIndex
             """
-            return MRPTNearestNeighborsIndex(random_seed=self.RAND_SEED)
+            return MRPTNearestNeighborsIndex(required_votes=1,
+                                             random_seed=self.RAND_SEED)
 
         def test_impl_findable(self):
             ntools.assert_in(MRPTNearestNeighborsIndex.__name__,
@@ -53,16 +54,40 @@ if MRPTNearestNeighborsIndex.is_usable():
             # -> all modeled descriptors should be equally distance (unit corners)
             q = DescriptorMemoryElement('query', 0)
             q.set_vector(numpy.zeros(dim, float))
-            r, dists = index.nn(q, dim)
+            r, dists = index.nn(q, n=dim)
+            ntools.assert_equal(len(dists), dim)
             # All dists should be 1.0, r order doesn't matter
             for d in dists:
                 ntools.assert_equal(d, 1.)
+
+        def test_known_descriptors_nearest(self):
+            dim = 5
+
+            ###
+            # Unit vectors -- Equal distance
+            #
+            index = self._make_inst()
+            test_descriptors = []
+            V = numpy.eye(dim, dtype=numpy.float32)
+            for i in range(dim):
+                d = DescriptorMemoryElement('unit', i)
+                d.set_vector(V[i])
+                test_descriptors.append(d)
+            index.build_index(test_descriptors)
+            # query descriptor -- first point
+            q = DescriptorMemoryElement('query', 0)
+            q.set_vector(V[0])
+            r, dists = index.nn(q)
+            ntools.assert_equal(len(dists), 1)
+            # Distance should be zero
+            ntools.assert_equal(dists[0], 0.)
+            ntools.assert_items_equal(r[0].vector(), V[0])
 
         def test_known_descriptors_euclidean_ordered(self):
             index = self._make_inst()
 
             # make vectors to return in a known euclidean distance order
-            i = 10
+            i = 100
             test_descriptors = []
             for j in range(i):
                 d = DescriptorMemoryElement('ordered', j)
@@ -75,8 +100,11 @@ if MRPTNearestNeighborsIndex.is_usable():
             # returned descriptors for a query of [0,0] should be in index order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(numpy.array([0, 0], float))
-            # TODO explain this
-            r, dists = index.nn(q, i//2)
+            r, dists = index.nn(q, n=i)
+            # Because the data is one-dimensional, all of the cells will have
+            # the same points (any division will just correspond to a point on
+            # the line), and a cell can't have more than half of the points
+            ntools.assert_equal(len(dists), i//2)
             for j, d, dist in zip(range(i), r, dists):
                 ntools.assert_equal(d.uuid(), j)
                 numpy.testing.assert_equal(d.vector(), [j, j*2])

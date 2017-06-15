@@ -20,8 +20,5 @@ psycopg2==2.6.2
 protobuf==3.0.0
 scikit-image==0.12.3
 
-# FLANN bindings if not using repo-build FLANN+bindings
-pyflann==1.8.4
-
 # Solr plugin dependency
 solrpy==0.9.7

@@ -8,7 +8,7 @@ addons:
   apt:
     packages:
       # basics
-      - linux-headers-3.13.0-40-generic
+      - linux-headers-generic
       - build-essential
       # For building things
       - cmake

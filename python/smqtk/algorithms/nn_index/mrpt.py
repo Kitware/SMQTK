@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
@@ -6,7 +7,6 @@ from os import path as osp
 from six.moves import range, cPickle as pickle
 
 # import logging
-import multiprocessing
 
 import numpy as np
 from scipy.sparse import csr_matrix, random
@@ -16,9 +16,6 @@ from smqtk.utils import SmqtkObject
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
-
-
-__author__ = b"john.moeller@kitware.com"
 
 
 class DescriptorCache(SmqtkObject):
@@ -51,7 +48,8 @@ class DescriptorCache(SmqtkObject):
 
 class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     """
-    Nearest Neighbors index that uses the MRPT algorithm of [url].
+    Nearest Neighbors index that uses the MRPT algorithm of [Hyvönen et
+    al](https://arxiv.org/abs/1509.06957).
 
     Multiple Random Projection Trees (MRPT) combines multiple shallow binary
     trees of a set depth to quickly search for near neighbors. Each tree has a
@@ -126,14 +124,14 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
 
         :param num_trees: The number of trees that will be generated for the
             data structure
-        :type num_trees: None | int
+        :type num_trees: int
 
         :param depth: The depth of the trees
-        :type depth: None | int
+        :type depth: int
 
         :param required_votes: The number of votes required for a nearest
             neighbor
-        :type required_votes: None | int
+        :type required_votes: int
 
         :param random_seed: Integer to use as the random number generator seed.
         :type random_seed: int
@@ -152,10 +150,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         # Now they're either None or an absolute path
 
         # parameters for building an index
+        if depth < 0:
+            # TODO Handle the zero-depth case, which is just exact NN
+            raise ValueError("The depth may not be negative.")
         self._depth = depth
+        if num_trees < 1:
+            raise ValueError("The number of trees must be positive.")
         self._num_trees = num_trees
+        if required_votes < 1:
+            raise ValueError("The number of required votes must be positive")
         self._required_votes = required_votes
 
+        # Set the list of trees to an empty list to have a sane value
         self._trees = []
 
         # In-order cache of descriptors we're indexing over.
@@ -166,11 +172,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         self._rand_seed = None
         if random_seed:
             self._rand_seed = int(random_seed)
-
-        # The process ID that the currently set MRPT instance was built/loaded
-        # on. If this differs from the current process ID, the index should be
-        # reloaded from cache.
-        self._pid = None
 
         # Load the index/parameters if one exists
         if self._has_model_files():
@@ -224,7 +225,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
                               pickle_protocol=self._pickle_protocol)
 
         self._log.debug("Accumulating descriptor vectors into matrix")
-        # XXX is an interval of 1.0 really a good idea?
         pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
 
         self._log.debug('Building MRPT index')
@@ -232,8 +232,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         del pts_array
 
         self._save_mrpt_model()
-
-        self._pid = multiprocessing.current_process().pid
 
     def _build_multiple_trees(self, pts):
         """
@@ -243,6 +241,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         """
         n, d = pts.shape
 
+        # Do transposition once
+        _ptsT = pts.T
+
         # Get the Normal distribution RNG
         rvs = stats.norm().rvs
         # Start with no trees
@@ -251,14 +252,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         density = 1 / np.sqrt(self._depth)
         for _ in range(self._num_trees):
             # Each tree has a basis of sparse random projections
-            random_basis = random(d, self._depth, density=density, format=b"csc",
-                                  dtype=np.float64, random_state=self._rand_seed,
-                                  data_rvs=rvs)
+            # NB: this matrix is constructed so that we can do left
+            # multiplication rather than right multiplication -- otherwise a
+            # transpose of the input matrix is incurred on every iteration
+            random_basis = random(
+                self._depth, d, density=density, format="csr",
+                dtype=np.float64, random_state=self._rand_seed, data_rvs=rvs)
             # Array of splits is a packed tree
             splits = np.empty(((1 << self._depth) - 1,), np.float64)
 
             # Build the tree & store it
-            leaves = self._build_single_tree(pts * random_basis, np.arange(n), splits)
+            leaves = self._build_single_tree(
+                random_basis * _ptsT, np.arange(n), splits)
             self._trees.append({
                 'random_basis': random_basis,
                 'splits': splits,
@@ -270,7 +275,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         Build a single RP tree for fast kNN search
 
         :param proj: Projections of the dataset for this tree
-        :type proj: np.ndarray
+        :type proj: np.ndarray (levels, N)
 
         :param indices: The indices of the projections for this tree
         :type indices: np.ndarray
@@ -294,8 +299,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             return [indices]
 
         # Get the random projections for these indices at this level
-        level_proj = proj[indices, level]
-        n = indices.shape[0]
+        # NB: Recall that the projection matrix has shape (levels, N)
+        level_proj = proj[level, indices]
+        n = indices.size
 
         # Split at the median if even, put median in upper half if not
         n_split = n // 2
@@ -363,9 +369,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
 
-        # Set current PID to the current
-        self._pid = multiprocessing.current_process().pid
-
     def count(self):
         """
         :return: Number of elements in this index.
@@ -392,9 +395,11 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         super(MRPTNearestNeighborsIndex, self).nn(d, n)
 
         def _query_single(tree):
+            # Search a single tree for the leaf that matches the query
+            # NB: random_basis has shape (levels, N)
             random_basis = tree['random_basis']
-            depth = random_basis.shape[1]
-            proj_query = d.vector() * random_basis
+            depth = random_basis.shape[0]
+            proj_query = random_basis * d.vector()
             splits = tree['splits']
             idx = 0
             for level in range(depth):
@@ -440,7 +445,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
 
         # Votes will be in CSR format after addition. We get indices for free
         # after computing the comparison.
-        sufficient_votes = votes.__ge__(self._required_votes)
+        sufficient_votes = (votes >= self._required_votes)
         indices, distances = _exact_query(sufficient_votes.indices)
         order = distances.argsort()
 

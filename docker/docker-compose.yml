@@ -1,0 +1,26 @@
+version: '3'
+services:
+  postgres:
+    container_name: smqtk-postgres
+    image: postgres
+
+  smqtk:
+    image: kitware/smqtk
+    links:
+      - postgres
+    volumes:
+      - "./${IMAGE_DIR}:/data"
+      - './smqtk_logs:/logs'
+    command: "-b"
+
+  wrapper:
+    build: ./wrapper
+    links:
+      - smqtk
+    volumes:
+      - "./${IMAGE_DIR}:/data"
+      - './newdata:/newdata'
+      - './links:/links'
+    ports:
+      - '12345:12345'
+      - '12346:12346'

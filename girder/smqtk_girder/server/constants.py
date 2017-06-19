@@ -1,0 +1,10 @@
+class PluginSettings(object):
+    DB_HOST = 'smqtk_girder.db_host'
+    DB_NAME = 'smqtk_girder.db_name'
+    DB_USER = 'smqtk_girder.db_user'
+    DB_PASS = 'smqtk_girder.db_pass'
+    DB_DESCRIPTORS_TABLE = 'smqtk_girder.db_descriptors_table'
+    IMAGE_BATCH_SIZE = 'smqtk_girder.image_batch_size'
+    CAFFE_NETWORK_MODEL = 'smqtk_girder.caffe_network_model'
+    CAFFE_NETWORK_PROTOTXT = 'smqtk_girder.caffe_network_prototxt'
+    CAFFE_IMAGE_MEAN = 'smqtk_girder.caffe_image_mean'

@@ -356,7 +356,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # If descriptor hash not in our map, we effectively skip it
             #: :type: collections.Iterable
             near_uuids = self.hash2uuids_kvstore.get(h_int, ())
-            neighbor_uuids.extend(near_uuids)
+            neighbor_uuids.extend([near_uuids])
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")

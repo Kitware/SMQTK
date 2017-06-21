@@ -54,6 +54,7 @@ poll_command="$poll_command -c \"\\\\echo $trigger\" 2>/dev/null"
 poll_command="$poll_command | grep -q \"$trigger\""
 
 echo "Waiting for a responsive database"
+
 (
     set +e
     eval "$poll_command"
@@ -74,7 +75,7 @@ echo "Waiting for a responsive database"
 echo "Creating required tables"
 docker exec -i $(docker-compose ps -q postgres) \
     psql postgres postgres 1>/dev/null << EOSQL
-$(docker-compose run --no-deps --rm --entrypoint cat smqtk \
+$(docker run --rm --entrypoint cat kitware/smqtk \
   /smqtk/install/etc/smqtk/postgres/descriptor_element/example_table_init.sql \
   /smqtk/install/etc/smqtk/postgres/descriptor_index/example_table_init.sql)
 EOSQL

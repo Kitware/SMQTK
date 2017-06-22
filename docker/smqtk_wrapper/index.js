@@ -103,8 +103,20 @@ const proxy = (options) => {
 
     let newLocation = protocol + '://' + host + ':' + port + '/' + path;
     console.log('  PROXYING TO ' + newLocation);
-    let proxyReq = request(newLocation);
-    req.pipe(proxyReq).pipe(res);
+
+    req
+      .pipe(request(newLocation))
+      .on('error', (err) => {
+        /* downstream server is not ready, yet! */
+        if (err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED') {
+          res.status(503).json({
+            message: 'downstream service not yet ready'
+          });
+        } else {
+          throw err;
+        }
+      })
+      .pipe(res);
   };
 
   return result;

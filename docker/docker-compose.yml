@@ -1,11 +1,11 @@
 version: '3'
 services:
   postgres:
-    container_name: smqtk-postgres
     image: postgres
+    container_name: smqtk-postgres
 
   smqtk:
-    image: kitware/smqtk
+    build: ./smqtk_services_2
     links:
       - postgres
     volumes:
@@ -14,7 +14,7 @@ services:
     command: "-b"
 
   wrapper:
-    build: ./wrapper
+    build: ./smqtk_wrapper
     links:
       - smqtk
     volumes:

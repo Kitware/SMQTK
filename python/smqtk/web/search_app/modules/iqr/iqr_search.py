@@ -688,6 +688,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         # Ensure there is an initialized session on the configured service.
         created_session = False
         get_r = self._iqr_service.get('session_ids')
+        get_r.raise_for_status()
         if sid not in get_r.json()['session_uuids']:
             post_r = self._iqr_service.post('session', sid=sid)
             post_r.raise_for_status()

@@ -8,7 +8,7 @@
             "db_pass": null,
             "db_port": 5432,
             "db_user": "smqtk",
-            "table_name": "descriptors_alexnet_fc7",
+            "table_name": "descriptors_resnet50_pool5",
             "type_col": "type_str",
             "uuid_col": "uid"
         },
@@ -43,7 +43,7 @@
             "multiquery_batch_size": 1000,
             "pickle_protocol": -1,
             "read_only": false,
-            "table_name": "descriptor_index_alexnet_fc7",
+            "table_name": "descriptor_index_resnet50_pool5",
             "uuid_col": "uid"
         },
         "type": "PostgresDescriptorIndex"

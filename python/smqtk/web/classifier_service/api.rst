@@ -108,7 +108,6 @@ Returns code 200 on success and the message: {
 }
 
 
-
 [POST] /iqr_classifier
 ^^^^^^^^^^^^^^^^^^^^^^
 Train a classifier based on the user-provided IQR state file bytes in standard

@@ -9,12 +9,13 @@ import unittest
 import nose.tools as ntools
 import numpy
 
+import os.path as osp
+
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
-
-__author__ = "john.moeller@kitware.com"
+from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 
 
 # Don't bother running tests of the class is not usable
@@ -28,8 +29,31 @@ if MRPTNearestNeighborsIndex.is_usable():
             """
             Make an instance of MRPTNearestNeighborsIndex
             """
-            return MRPTNearestNeighborsIndex(required_votes=1,
-                                             random_seed=self.RAND_SEED)
+            di = MemoryDescriptorIndex()
+            return MRPTNearestNeighborsIndex(
+                di, random_seed=self.RAND_SEED)
+
+        def test_many_descriptors(self):
+            numpy.random.seed(0)
+
+            n = 10 ** 4
+            dim = 256
+            depth = 5
+            num_trees = 10
+
+            d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+            [d.set_vector(numpy.random.rand(dim)) for d in d_index]
+            q = DescriptorMemoryElement('q', -1)
+            q.set_vector(numpy.zeros((dim,)))
+
+            di = MemoryDescriptorIndex()
+            mrpt = MRPTNearestNeighborsIndex(
+                di, num_trees=num_trees, depth=depth, random_seed=0)
+            mrpt.build_index(d_index)
+
+            nbrs, dists = mrpt.nn(q, 10)
+            ntools.assert_equal(len(nbrs), len(dists))
+            ntools.assert_equal(len(nbrs), 10)
 
         def test_impl_findable(self):
             ntools.assert_in(MRPTNearestNeighborsIndex.__name__,
@@ -51,7 +75,8 @@ if MRPTNearestNeighborsIndex.is_usable():
                 test_descriptors.append(d)
             index.build_index(test_descriptors)
             # query descriptor -- zero vector
-            # -> all modeled descriptors should be equally distance (unit corners)
+            # -> all modeled descriptors should be equally distant (unit
+            # corners)
             q = DescriptorMemoryElement('query', 0)
             q.set_vector(numpy.zeros(dim, float))
             r, dists = index.nn(q, n=dim)
@@ -68,20 +93,20 @@ if MRPTNearestNeighborsIndex.is_usable():
             #
             index = self._make_inst()
             test_descriptors = []
-            V = numpy.eye(dim, dtype=numpy.float32)
+            vectors = numpy.eye(dim, dtype=numpy.float32)
             for i in range(dim):
                 d = DescriptorMemoryElement('unit', i)
-                d.set_vector(V[i])
+                d.set_vector(vectors[i])
                 test_descriptors.append(d)
             index.build_index(test_descriptors)
             # query descriptor -- first point
             q = DescriptorMemoryElement('query', 0)
-            q.set_vector(V[0])
+            q.set_vector(vectors[0])
             r, dists = index.nn(q)
             ntools.assert_equal(len(dists), 1)
             # Distance should be zero
             ntools.assert_equal(dists[0], 0.)
-            ntools.assert_items_equal(r[0].vector(), V[0])
+            ntools.assert_items_equal(r[0].vector(), vectors[0])
 
         def test_known_descriptors_euclidean_ordered(self):
             index = self._make_inst()
@@ -97,7 +122,8 @@ if MRPTNearestNeighborsIndex.is_usable():
             index.build_index(test_descriptors)
 
             # Since descriptors were build in increasing distance from (0,0),
-            # returned descriptors for a query of [0,0] should be in index order.
+            # returned descriptors for a query of [0,0] should be in index
+            # order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(numpy.array([0, 0], float))
             r, dists = index.nn(q, n=i)
@@ -110,21 +136,19 @@ if MRPTNearestNeighborsIndex.is_usable():
                 numpy.testing.assert_equal(d.vector(), [j, j*2])
 
         def test_configuration(self):
-            index_filepath = '/index_filepath'
-            para_filepath = '/param_fp'
-            descr_cache_fp = '/descrcachefp'
+            index_filepath = osp.abspath(osp.expanduser('index_filepath'))
+            para_filepath = osp.abspath(osp.expanduser('param_fp'))
 
             # Make configuration based on default
             c = MRPTNearestNeighborsIndex.get_default_config()
             c['index_filepath'] = index_filepath
             c['parameters_filepath'] = para_filepath
-            c['descriptor_cache_filepath'] = descr_cache_fp
+            c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
 
             # Build based on configuration
             index = MRPTNearestNeighborsIndex.from_config(c)
             ntools.assert_equal(index._index_filepath, index_filepath)
             ntools.assert_equal(index._index_param_filepath, para_filepath)
-            ntools.assert_equal(index._descr_cache_filepath, descr_cache_fp)
 
             c2 = index.get_config()
             ntools.assert_equal(c, c2)

@@ -2,51 +2,24 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+# noinspection PyPep8Naming
+from six.moves import range, cPickle as pickle, zip
+
+from collections import defaultdict
+from heapq import nlargest
 from os import path as osp
 
-from six.moves import range, cPickle as pickle
-
-# import logging
-
 import numpy as np
-from scipy.sparse import csr_matrix, random
-from scipy import stats
+from scipy import stats, sparse
 
-from smqtk.utils import SmqtkObject
+from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
 
 
-class DescriptorCache(SmqtkObject):
-    def __init__(self):
-        self._descr_cache = None
-
-    def init_descr_cache(self, descriptors, descr_cache_filepath,
-                         pickle_protocol=pickle.HIGHEST_PROTOCOL):
-        self._descr_cache = list(descriptors)
-        if not self._descr_cache:
-            raise ValueError("No data provided in given iterable.")
-
-        # Cache descriptors if we have a path
-        if descr_cache_filepath:
-            self._log.debug("Caching descriptors: %s", descr_cache_filepath)
-            safe_create_dir(osp.dirname(descr_cache_filepath))
-            # noinspection PyTypeChecker
-            with open(descr_cache_filepath, "wb") as f:
-                pickle.dump(self._descr_cache, f, pickle_protocol)
-
-    def load_descr_cache(self, descr_cache_filepath):
-        if not self._descr_cache and descr_cache_filepath:
-            # Load descriptor cache
-            # - is copied on fork, so only need to load here.
-            self._log.debug("Loading cached descriptors")
-            # noinspection PyTypeChecker
-            with open(descr_cache_filepath, "rb") as f:
-                self._descr_cache = pickle.load(f)
-
-
-class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
+class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest Neighbors index that uses the MRPT algorithm of [Hyvönen et
     al](https://arxiv.org/abs/1509.06957).
@@ -60,23 +33,19 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     two equal portions relative to the corresponding random projection.
 
     On query, the leaf corresponding to the query vector is found in each
-    tree. The neighbors are drawn from the set of points that are in at least
-    a certain number of leaves (`required_votes`).
+    tree. The neighbors are drawn from the set of points that are in the most
+    leaves.
 
     The performance will depend on settings for the parameters:
 
-    - Set `required_votes` to a small integer greater than 1. If it is too
-        high, then a query may not return enough points. Higher values can
-        lower the variance of results, but `required_votes` should always be
-        much smaller than the number of trees.
     - If `depth` is too high, then the leaves will not have enough points
-        to satisfy a query, and many trees will be required to compensate. If
-        `depth` is too low, then performance may suffer because the leaves are
-        large. If `N` is the size of the dataset, and `L = N/2^{depth}`, then
-        leaves should be small enough that all `num_trees*L` descriptors that
-        result from a query will fit easily in cache. Since query complexity
-        is linear in `depth`, this parameter should be kept as low as
-        possible.
+        to satisfy a query, and num_trees will need to be higher in order to
+        compensate. If `depth` is too low, then performance may suffer because
+        the leaves are large. If `N` is the size of the dataset, and `L =
+        N/2^{depth}`, then leaves should be small enough that all
+        `num_trees*L` descriptors that result from a query will fit easily in
+        cache. Since query complexity is linear in `depth`, this parameter
+        should be kept as low as possible.
     - The `num_trees` parameter will lower the variance of the results for
         higher values, but at the cost of using more memory on any particular
         query. As a rule of thumb, for a given value of `k`, num_trees should
@@ -87,15 +56,52 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
     def is_usable(cls):
         return True
 
-    def __init__(self, index_filepath=None, parameters_filepath=None,
-                 descriptor_cache_filepath=None,
+    @classmethod
+    def get_default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as
+        arguments, turning those argument names into configuration dictionary
+        keys. If any of those arguments have defaults, we will add those
+        values into the configuration dictionary appropriately. The dictionary
+        returned should only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this
+        class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        default = super(MRPTNearestNeighborsIndex, cls).get_default_config()
+
+        di_default = plugin.make_config(get_descriptor_index_impls())
+        default['descriptor_set'] = di_default
+
+        return default
+
+    def __init__(self, descriptor_set, index_filepath=None,
+                 parameters_filepath=None,
                  # Parameters for building an index
-                 num_trees=10, depth=1, required_votes=3, random_seed=None,
-                 pickle_protocol=pickle.HIGHEST_PROTOCOL):
+                 num_trees=10, depth=1, random_seed=None,
+                 pickle_protocol=pickle.HIGHEST_PROTOCOL,
+                 use_multiprocessing=False):
         """
         Initialize MRPT index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
+
+        :param use_multiprocessing: Whether or not to use discrete processes
+            as the parallelization agent vs python threads.
+        :type use_multiprocessing: bool
+
+        :param descriptor_set: Index in which DescriptorElements will be
+            stored.
+        :type descriptor_set: smqtk.representation.DescriptorIndex
 
         :param pickle_protocol: The protocol version to be used by the pickle
             module to serialize class information
@@ -115,13 +121,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             disk.
         :type parameters_filepath: None | str
 
-        :param descriptor_cache_filepath: Optional file location to load/store
-            DescriptorElements in this index.
-
-            If not configured, no model files are written to or loaded from
-            disk.
-        :type descriptor_cache_filepath: None | str
-
         :param num_trees: The number of trees that will be generated for the
             data structure
         :type num_trees: int
@@ -129,16 +128,15 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         :param depth: The depth of the trees
         :type depth: int
 
-        :param required_votes: The number of votes required for a nearest
-            neighbor
-        :type required_votes: int
-
-        :param random_seed: Integer to use as the random number generator seed.
+        :param random_seed: Integer to use as the random number generator
+            seed.
         :type random_seed: int
 
         """
         super(MRPTNearestNeighborsIndex, self).__init__()
 
+        self._use_multiprocessing = use_multiprocessing
+        self._descriptor_set = descriptor_set
         self._pickle_protocol = pickle_protocol
 
         def normpath(p):
@@ -146,27 +144,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
 
         self._index_filepath = normpath(index_filepath)
         self._index_param_filepath = normpath(parameters_filepath)
-        self._descr_cache_filepath = normpath(descriptor_cache_filepath)
         # Now they're either None or an absolute path
 
         # parameters for building an index
-        if depth < 0:
-            # TODO Handle the zero-depth case, which is just exact NN
-            raise ValueError("The depth may not be negative.")
+        if depth < 1:
+            raise ValueError("The depth may not be less than 1.")
         self._depth = depth
         if num_trees < 1:
             raise ValueError("The number of trees must be positive.")
         self._num_trees = num_trees
-        if required_votes < 1:
-            raise ValueError("The number of required votes must be positive")
-        self._required_votes = required_votes
 
         # Set the list of trees to an empty list to have a sane value
         self._trees = []
-
-        # In-order cache of descriptors we're indexing over.
-        # - index will spit out indices to list
-        #: :type: list[smqtk.representation.DescriptorElement] | None
 
         #: :type: None | int
         self._rand_seed = None
@@ -178,28 +167,59 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             self._log.info("Found existing model files. Loading.")
             self._load_mrpt_model()
 
-        if (self._descr_cache_filepath and
-                osp.isfile(self._descr_cache_filepath)):
-            self.load_descr_cache(self._descr_cache_filepath)
-
     def get_config(self):
         return {
+            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
             "index_filepath": self._index_filepath,
             "parameters_filepath": self._index_param_filepath,
-            "descriptor_cache_filepath": self._descr_cache_filepath,
             "random_seed": self._rand_seed,
             "pickle_protocol": self._pickle_protocol,
+            "use_multiprocessing": self._use_multiprocessing,
             "depth": self._depth,
             "num_trees": self._num_trees,
-            "required_votes": self._required_votes,
         }
+
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        This method should not be called via super unless and instance of the
+        class is desired.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: LSHNearestNeighborIndex
+
+        """
+        if merge_default:
+            cfg = cls.get_default_config()
+            merge_dict(cfg, config_dict)
+        else:
+            cfg = config_dict
+
+        cfg['descriptor_set'] = \
+            plugin.from_plugin_config(cfg['descriptor_set'],
+                                      get_descriptor_index_impls())
+
+        return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
 
     def _has_model_files(self):
         """
         check if configured model files are configured and exist
         """
-        return (self._index_filepath and osp.isfile(self._index_filepath) and
-                self._index_param_filepath and osp.isfile(self._index_param_filepath))
+        return (self._index_filepath and
+                osp.isfile(self._index_filepath) and
+                self._index_param_filepath and
+                osp.isfile(self._index_param_filepath))
 
     def build_index(self, descriptors):
         """
@@ -220,29 +240,33 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
 
         self._log.info("Building new MRPT index")
 
-        self._log.debug("Storing descriptors")
-        self.init_descr_cache(descriptors, self._descr_cache_filepath,
-                              pickle_protocol=self._pickle_protocol)
-
-        self._log.debug("Accumulating descriptor vectors into matrix")
-        pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
+        self._log.debug("Clearing and adding new descriptor elements")
+        self._descriptor_set.clear()
+        self._descriptor_set.add_many_descriptors(descriptors)
 
         self._log.debug('Building MRPT index')
-        self._build_multiple_trees(pts_array)
-        del pts_array
+        self._build_multiple_trees()
 
         self._save_mrpt_model()
 
-    def _build_multiple_trees(self, pts):
+    def _build_multiple_trees(self):
         """
-        Build an MRPT structure for data pts
-        :param pts: The data. Each row is a datum.
-        :type pts: np.ndarray
+        Build an MRPT structure
         """
-        n, d = pts.shape
 
+        desc_ids, desc_els = zip(*self._descriptor_set.iteritems())
         # Do transposition once
-        _ptsT = pts.T
+        # XXX it may be smarter to do this by blocks, in another loop rather
+        # than transposing the whole thing
+        pts_array = elements_to_matrix(
+            desc_els, report_interval=1.0,
+            use_multiprocessing=self._use_multiprocessing).T
+        d, n = pts_array.shape
+
+        if (1 << self._depth) > n:
+            self._log.warn("There are insufficient elements to populate all "
+                           "the leaves of the tree. Consider lowering the "
+                           "depth parameter.")
 
         # Get the Normal distribution RNG
         rvs = stats.norm().rvs
@@ -255,7 +279,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             # NB: this matrix is constructed so that we can do left
             # multiplication rather than right multiplication -- otherwise a
             # transpose of the input matrix is incurred on every iteration
-            random_basis = random(
+
+            # noinspection PyTypeChecker
+            random_basis = sparse.random(
                 self._depth, d, density=density, format="csr",
                 dtype=np.float64, random_state=self._rand_seed, data_rvs=rvs)
             # Array of splits is a packed tree
@@ -263,14 +289,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
 
             # Build the tree & store it
             leaves = self._build_single_tree(
-                random_basis * _ptsT, np.arange(n), splits)
+                random_basis * pts_array, np.arange(n), splits)
+            leaves = [[desc_ids[idx] for idx in leaf]
+                      for leaf in leaves]
             self._trees.append({
                 'random_basis': random_basis,
                 'splits': splits,
                 'leaves': leaves
             })
+        del pts_array
 
-    def _build_single_tree(self, proj, indices, splits, split_index=0, level=0):
+    def _build_single_tree(self, proj, indices, splits,
+                           split_index=0, level=0):
         """
         Build a single RP tree for fast kNN search
 
@@ -296,12 +326,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         """
         # If we're at the bottom, no split, just return the set
         if level == self._depth:
+            assert ((0 <= indices) & (indices < proj.shape[1])).all()
             return [indices]
+
+        n = indices.size
+        # If we literally don't have enough to populate the leaf, make it
+        # empty
+        if n < 1:
+            return []
 
         # Get the random projections for these indices at this level
         # NB: Recall that the projection matrix has shape (levels, N)
         level_proj = proj[level, indices]
-        n = indices.size
 
         # Split at the median if even, put median in upper half if not
         n_split = n // 2
@@ -330,7 +366,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             level=level + 1)
 
         # Assemble index set
-        return left_out + right_out
+        left_out.extend(right_out)
+        return left_out
 
     def _save_mrpt_model(self):
         self._log.debug("Caching index and parameters: %s, %s",
@@ -348,23 +385,26 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             params = {
                 "num_trees": self._num_trees,
                 "depth": self._depth,
-                "required_votes": self._required_votes,
             }
             # noinspection PyTypeChecker
             with open(self._index_param_filepath, "w") as f:
                 pickle.dump(params, f, self._pickle_protocol)
 
     def _load_mrpt_model(self):
+        self._log.debug("Loading index and parameters: %s, %s",
+                        self._index_filepath, self._index_param_filepath)
         if self._index_param_filepath:
+            self._log.debug("Loading index: %s", self._index_filepath)
             # noinspection PyTypeChecker
             with open(self._index_param_filepath) as f:
                 params = pickle.load(f)
             self._num_trees = params['num_trees']
             self._depth = params['depth']
-            self._required_votes = params['required_votes']
 
         # Load the index
         if self._index_filepath:
+            self._log.debug("Loading index params: %s",
+                            self._index_param_filepath)
             # noinspection PyTypeChecker
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
@@ -374,8 +414,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         :return: Number of elements in this index.
         :rtype: int
         """
-        super(MRPTNearestNeighborsIndex, self).count()
-        return len(self._descr_cache) if self._descr_cache else 0
+        return len(self._descriptor_set)
 
     def nn(self, d, n=1):
         """
@@ -387,8 +426,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
-            the distance values to those neighbors.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple
+            of the distance values to those neighbors.
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
@@ -415,42 +454,44 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex, DescriptorCache):
             idx -= ((1 << depth) - 1)
             return tree['leaves'][idx]
 
-        def _exact_query(idcs):
+        def _exact_query(_uuids):
             # Assemble the array to query from the descriptors that match
-            pts_array = [self._descr_cache[idx].vector() for idx in idcs]
-            pts_array = np.array(pts_array, dtype=pts_array[0].dtype)
+            pts_array = elements_to_matrix(
+                list(self._descriptor_set.get_many_descriptors(_uuids)),
+                use_multiprocessing=self._use_multiprocessing)
 
             dists = ((pts_array - d.vector()) ** 2).sum(axis=1)
 
+            if n > dists.shape[0]:
+                self._log.warning("There were fewer points in the set than "
+                                  "requested in the query. Returning entire"
+                                  " set.")
             if n >= dists.shape[0]:
-                return idcs, dists
+                return _uuids, dists
 
             near_indices = np.argpartition(dists, n - 1)[:n]
-            return idcs[near_indices], dists[near_indices]
+            return ([_uuids[idx] for idx in near_indices],
+                    dists[near_indices])
 
-        # Use the sparse matrix trick to count the votes:
-        # I.e. construct a sparse matrix with ones as data, one row, and the
-        # indices as columns. After we add the votes for every tree, we extract
-        # the indices with enough votes.
-        votes = csr_matrix((1, len(self._descr_cache)), dtype=np.int32)
+        # Use a defaultdict to count tree hits
+        tree_hits = defaultdict(int)
 
+        # Count occurrences of each uuid in all the leaves that intersect the
+        # query
         for t in self._trees:
-            leaf = _query_single(t)
+            for uuid in _query_single(t):
+                tree_hits[uuid] += 1
 
-            # Use the (data, indices, indptr) constructor. For one row, it's
-            # simple
-            votes += csr_matrix(
-                (np.ones_like(leaf), leaf, [0, leaf.size]),
-                shape=votes.shape, dtype=votes.dtype)
+        # Collect the uuids with the most tree hits
+        most_hits = nlargest(n, tree_hits.keys(), key=lambda u: tree_hits[u])
 
-        # Votes will be in CSR format after addition. We get indices for free
-        # after computing the comparison.
-        sufficient_votes = (votes >= self._required_votes)
-        indices, distances = _exact_query(sufficient_votes.indices)
+        uuids, distances = _exact_query(most_hits)
         order = distances.argsort()
+        uuids, distances = zip(
+            *((uuids[oidx], distances[oidx]) for oidx in order))
 
-        return ([self._descr_cache[indices[oidx]] for oidx in order],
-                tuple(distances[oidx] for oidx in order))
+        return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
+                tuple(distances))
 
 
 NN_INDEX_CLASS = MRPTNearestNeighborsIndex

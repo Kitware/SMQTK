@@ -9,7 +9,7 @@ services:
     links:
       - postgres
     volumes:
-      - "./${IMAGE_DIR}:/data"
+      - "${IMAGE_DIR}:/data"
       - './smqtk_logs:/logs'
     command: "-b"
 
@@ -18,7 +18,7 @@ services:
     links:
       - smqtk
     volumes:
-      - "./${IMAGE_DIR}:/data"
+      - "${IMAGE_DIR}:/data"
       - './newdata:/newdata'
       - './links:/links'
     ports:

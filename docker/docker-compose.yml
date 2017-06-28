@@ -14,7 +14,7 @@ services:
     command: "-b"
 
   wrapper:
-    build: ./smqtk_wrapper
+    build: ./smqtk_wrapper_python
     links:
       - smqtk
     volumes:

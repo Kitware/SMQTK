@@ -12,6 +12,8 @@ services:
       - "${IMAGE_DIR}:/data"
       - './smqtk_logs:/logs'
     command: "-b"
+    depends_on:
+      - postgres
 
   wrapper:
     build: ./smqtk_wrapper_python
@@ -23,4 +25,5 @@ services:
       - './links:/links'
     ports:
       - '12345:12345'
-      - '12346:12346'
+    depends_on:
+      - smqtk

@@ -11,7 +11,7 @@ import urllib.parse
 from hashlib import sha1
 from threading import Thread
 
-from content_type_map import extension_to_type
+from mimetypes import guess_type
 
 RE_HTTP = re.compile(r'''^https?\://.*''')
 
@@ -45,10 +45,9 @@ def proxy(new_location):
 
     return res
 
-app0 = flask.Flask('wrapper0')
-app1 = flask.Flask('wrapper1')
+app = flask.Flask('wrapper0')
 
-@app0.route('/image/<hash>')
+@app.route('/image/<hash>')
 def image(hash):
     link_path = os.path.join('/links', hash)
     real_path = os.path.realpath(link_path)
@@ -65,21 +64,24 @@ def image(hash):
                 yield chunk
 
     res = flask.Response(generate())
-    res.headers['content-type'] = extension_to_type(image_ext)
+    c_type, encoding = guess_type(image_name)
+
+    res.headers['content-type'] = c_type
+    res.headers['content-encoding'] = encoding
     res.headers['content-disposition'] = 'inline'
     return res
 
-@app0.route('/<path:url_path>')
+@app.route('/<path:url_path>')
 def catch_all0(url_path):
     query = flask.request.query_string.decode('utf8')
     path = '?'.join(filter(bool, (url_path, query)))
     new_location = 'http://smqtk:12345/' + path
     return proxy(new_location)
 
-@app0.route('/nn/<path:url_path>')
-@app0.route('/nn/<int:n>/<path:url_path>')
-@app0.route('/nn/<int:n>/<int:start>/<path:url_path>')
-@app0.route('/nn/<int:n>/<int:start>/<int:end>/<path:url_path>')
+@app.route('/nn/<path:url_path>')
+@app.route('/nn/<int:n>/<path:url_path>')
+@app.route('/nn/<int:n>/<int:start>/<path:url_path>')
+@app.route('/nn/<int:n>/<int:start>/<int:end>/<path:url_path>')
 def intercept_path(n=None, start=None, end=None, url_path=None):
     log('  INTERCEPTING')
     query = flask.request.query_string.decode('utf8')
@@ -136,13 +138,6 @@ def intercept_path(n=None, start=None, end=None, url_path=None):
     log('PROXYING?')
     return proxy(new_location)
 
-@app1.route('/<path:url_path>')
-def catch_all1(url_path):
-    query = flask.request.query_string.decode('utf8')
-    path = '?'.join(filter(bool, (url_path, query)))
-    new_location = 'http://smqtk:12346/' + path
-    return proxy(new_location)
-
 if __name__ == '__main__':
     filenames = next(os.walk('/data'))[2]
     for name in filenames:
@@ -164,15 +159,4 @@ if __name__ == '__main__':
             if not os.path.exists(link_path):
                 os.symlink('..' + filepath, link_path)
 
-    th0 = Thread(target=app0.run, kwargs=dict(
-        host='0.0.0.0', port=12345, threaded=True))
-
-    th1 = Thread(target=app1.run, kwargs=dict(
-        host='0.0.0.0', port=12346, threaded=True))
-
-    th0.start()
-    th1.start()
-
-    th0.join()
-    th1.join()
-
+    app.run(host='0.0.0.0', port=12345, threaded=True)

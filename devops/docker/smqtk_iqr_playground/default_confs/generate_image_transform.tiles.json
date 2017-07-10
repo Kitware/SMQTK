@@ -5,6 +5,6 @@
         "center_levels": null,
         "quadrant_pyramid_levels": null,
         "tile_shape": [128, 128],
-        "tile_stride": [32, 32]
+        "tile_stride": [64, 64]
     }
 }

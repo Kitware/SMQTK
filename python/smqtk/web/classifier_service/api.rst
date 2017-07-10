@@ -67,13 +67,13 @@ module, showing how base64 data is sent::
     import base64
     import requests
     data_bytes = "Load some content bytes here."
-    requests.get('http://localhost:5000/classify',
-                 data={'bytes_b64': base64.b64encode(data_bytes),
-                       'content_type': 'text/plain'})
+    requests.post('http://localhost:5000/classify',
+                  data={'bytes_b64': base64.b64encode(data_bytes),
+                        'content_type': 'text/plain'})
 
 With curl on the command line::
 
-    $ curl -X POST localhost:5000/iqr_classifier -d "content_type=text/plain" \
+    $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
         --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
 Curl may fail depending on the size of the file and how long your
@@ -124,9 +124,9 @@ module, showing how base64 data is sent::
     import base64
     import requests
     data_bytes = "Load some content bytes here."
-    requests.get('http://localhost:5000/classify',
-                 data={'bytes_b64': base64.b64encode(data_bytes),
-                       'label': 'some_label'})
+    requests.post('http://localhost:5000/iqr_classifier',
+                  data={'bytes_b64': base64.b64encode(data_bytes),
+                        'label': 'some_label'})
 
 With curl on the command line::
 

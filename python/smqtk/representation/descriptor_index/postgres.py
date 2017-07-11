@@ -17,6 +17,7 @@ except ImportError:
 
 from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError
+from smqtk.utils.postgres import norm_psql_cmd_string
 
 try:
     import psycopg2
@@ -24,13 +25,6 @@ except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
-
-
-def norm_psql_cmd_string(s):
-    """
-    :rtype: str
-    """
-    return ' '.join(s.split())
 
 
 PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
@@ -66,13 +60,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
     # by psycopg2 will fill in the values appropriately as specified in a second
     # dictionary argument to ``cursor.execute(query, value_dict)``.
     #
-    UPSERT_TABLE_TMPL = ' '.join("""
+    UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
           {uuid_col:s} TEXT NOT NULL,
           {element_col:s} BYTEA NOT NULL,
           PRIMARY KEY ({uuid_col:s})
         );
-    """.split())
+    """)
 
     SELECT_TMPL = norm_psql_cmd_string("""
         SELECT {col:s}
@@ -140,7 +134,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :param uuid_col: Name of the column containing the UUID signatures.
         :type uuid_col: str
 
-        :param element_col: Name of the table column
+        :param element_col: Name of the table column that will contain
+            serialized elements.
+        :type element_col: str
 
         :param db_name: The name of the database to connect to.
         :type db_name: str
@@ -288,7 +284,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :type yield_result_rows: bool
 
         :param named: If a named cursor should be created, creating a
-            server-side cursor. This is only compatibly with executions of
+            server-side cursor. This is only compatible with executions of
             SELECT or VALUES commands.
         :type named: bool
 
@@ -341,7 +337,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :type yield_result_rows: bool
 
         :param named: If a named cursor should be created, creating a
-            server-side cursor. This is only compatibly with executions of
+            server-side cursor. This is only compatible with executions of
             SELECT or VALUES commands.
         :type named: bool
 

@@ -64,7 +64,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
     def values(self):
         """
-        :return: Iterator over values in this store. Values are not guarenteed
+        :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
         :rtype: collections.Iterator[object]
         """
@@ -154,6 +154,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         :rtype: object
 
         """
+
+    # TODO: get_many(self, keys, default=NO_DEFAULT_VALUE)
 
     @abc.abstractmethod
     def clear(self):

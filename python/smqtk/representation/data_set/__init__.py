@@ -82,8 +82,11 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         """
         Add the given data element(s) instance to this data set.
 
+        *NOTE: Implementing methods should check that input elements are in
+        fact DataElement instances.*
+
         :param elems: Data element(s) to add
-        :type elems: list[smqtk.representation.DataElement]
+        :type elems: smqtk.representation.DataElement
 
         """
 

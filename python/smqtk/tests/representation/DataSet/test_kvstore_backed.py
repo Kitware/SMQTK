@@ -15,7 +15,7 @@ from smqtk.tests.representation.KeyValueStore.test_KeyValueStoreAbstract \
 class TestKeyValueDataSet (unittest.TestCase):
 
     @classmethod
-    def setupClass(cls):
+    def setup_class(cls):
         cls.MEM_STORE = MemoryKeyValueStore()
         cls.MEM_STORE.add_many({
             0: 'a',

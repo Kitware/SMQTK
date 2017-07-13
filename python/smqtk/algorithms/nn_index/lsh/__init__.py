@@ -353,10 +353,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self._log.debug("getting UUIDs of descriptors for nearby hashes")
         neighbor_uuids = []
         for h_int in map(bit_vector_to_int_large, near_hashes):
-            # If descriptor hash not in our map, we effectively skip it
-            #: :type: collections.Iterable
-            near_uuids = self.hash2uuids_kvstore.get(h_int, ())
-            neighbor_uuids.extend([near_uuids])
+            # If descriptor hash not in our map, we effectively skip it.
+            # Get set of descriptor UUIDs for a hash code.
+            #: :type: set[collections.Hashable]
+            near_uuids = self.hash2uuids_kvstore.get(h_int, set())
+            # Accumulate matching descriptor UUIDs to a list.
+            neighbor_uuids.extend(near_uuids)
         self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
         self._log.debug("getting descriptors for neighbor_uuids")

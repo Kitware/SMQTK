@@ -1,6 +1,5 @@
 import errno
 import mock
-import nose.tools as ntools
 import os
 import unittest
 
@@ -14,8 +13,8 @@ class TestSafeCreateDir (unittest.TestCase):
         dir_path = "/some/directory/somewhere"
         p = file_utils.safe_create_dir(dir_path)
 
-        ntools.assert_true(mock_os_makedirs.called)
-        ntools.assert_equals(p, dir_path)
+        self.assertTrue(mock_os_makedirs.called)
+        self.assertEquals(p, dir_path)
 
     @mock.patch('smqtk.utils.file_utils.os.path.exists')
     @mock.patch('smqtk.utils.file_utils.os.makedirs')
@@ -28,10 +27,10 @@ class TestSafeCreateDir (unittest.TestCase):
         dir_path = '/existing/dir'
         p = file_utils.safe_create_dir(dir_path)
 
-        ntools.assert_true(mock_os_makedirs.called)
-        ntools.assert_true(mock_osp_exists.called)
+        self.assertTrue(mock_os_makedirs.called)
+        self.assertTrue(mock_osp_exists.called)
         mock_osp_exists.assert_called_once_with(dir_path)
-        ntools.assert_equal(p, dir_path)
+        self.assertEqual(p, dir_path)
 
     @mock.patch('smqtk.utils.file_utils.os.path.exists')
     @mock.patch('smqtk.utils.file_utils.os.makedirs')
@@ -41,7 +40,7 @@ class TestSafeCreateDir (unittest.TestCase):
         mock_osp_exists.return_value = False
 
         dir_path = '/some/dir'
-        ntools.assert_raises(OSError, file_utils.safe_create_dir, dir_path)
+        self.assertRaises(OSError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(dir_path)
         mock_osp_exists.assert_called_once_with(dir_path)
@@ -53,16 +52,16 @@ class TestSafeCreateDir (unittest.TestCase):
                                                "Permission Denied")
 
         dir_path = '/some/dir'
-        ntools.assert_raises(OSError, file_utils.safe_create_dir, dir_path)
+        self.assertRaises(OSError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(dir_path)
-        ntools.assert_false(mock_osp_exists.called)
+        self.assertFalse(mock_osp_exists.called)
 
     @mock.patch('smqtk.utils.file_utils.os.makedirs')
     def test_otherException(self, mock_os_makedirs):
         mock_os_makedirs.side_effect = RuntimeError("Some other exception")
 
         dir_path = 'something'
-        ntools.assert_raises(RuntimeError, file_utils.safe_create_dir, dir_path)
+        self.assertRaises(RuntimeError, file_utils.safe_create_dir, dir_path)
 
         mock_os_makedirs.assert_called_once_with(os.path.abspath(dir_path))

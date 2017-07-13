@@ -1,15 +1,13 @@
 import random
 import unittest
 
-import nose.tools
-
 from smqtk.utils.parallel import parallel_map
 
 
 class TestParallelMap (unittest.TestCase):
 
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         n = 10000
 
         # Random characters in range [a, z]
@@ -23,28 +21,28 @@ class TestParallelMap (unittest.TestCase):
         # Make sure results are still in order as requested
         r = list(parallel_map(self.test_func, self.test_string,
                               ordered=True, use_multiprocessing=False))
-        nose.tools.assert_equal(r, self.expected)
+        self.assertEqual(r, self.expected)
 
     def test_simple_ordered_multiprocess(self):
         r = list(parallel_map(self.test_func, self.test_string,
                               ordered=True, use_multiprocessing=True))
-        nose.tools.assert_equal(r, self.expected)
+        self.assertEqual(r, self.expected)
 
     def test_simple_unordered_threaded(self):
         r = list(parallel_map(self.test_func, self.test_string,
                               ordered=False, use_multiprocessing=False))
-        nose.tools.assert_equal(set(r), set(self.expected))
+        self.assertEqual(set(r), set(self.expected))
 
     def test_simple_unordered_multiprocess(self):
         r = list(parallel_map(self.test_func, self.test_string,
                               ordered=False, use_multiprocessing=True))
-        nose.tools.assert_equal(set(r), set(self.expected))
+        self.assertEqual(set(r), set(self.expected))
 
     def test_exception_handing_threaded(self):
         def raise_ex(_):
             raise RuntimeError("Expected exception")
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             RuntimeError,
             list,
             parallel_map(raise_ex, [1], use_multiprocessing=False)
@@ -54,7 +52,7 @@ class TestParallelMap (unittest.TestCase):
         def raise_ex(_):
             raise RuntimeError("Expected exception")
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             RuntimeError,
             list,
             parallel_map(raise_ex, [1], use_multiprocessing=True)
@@ -71,7 +69,7 @@ class TestParallelMap (unittest.TestCase):
                               use_multiprocessing=False))
 
         expected = [6] * 10
-        nose.tools.assert_equal(r, expected)
+        self.assertEqual(r, expected)
 
     def test_multisequence_short_cutoff(self):
         def test_func(a, b, c):
@@ -85,7 +83,7 @@ class TestParallelMap (unittest.TestCase):
                               ordered=True))
 
         exp = [6] * 4
-        nose.tools.assert_equal(r, exp)
+        self.assertEqual(r, exp)
 
     def test_multisequence_fill_void(self):
         def test_func(a, b, c):
@@ -100,7 +98,7 @@ class TestParallelMap (unittest.TestCase):
                               ordered=True))
 
         expected = [6] * 4 + [14] * 6
-        nose.tools.assert_equal(r, expected)
+        self.assertEqual(r, expected)
 
     def test_nested_multiprocessing(self):
         # char -> char -> ord -> char -> ord
@@ -122,7 +120,7 @@ class TestParallelMap (unittest.TestCase):
                           cores=2)
 
         expected = map(ord, self.test_string)
-        nose.tools.assert_equal(
+        self.assertEqual(
             list(g4),
             expected
         )
@@ -151,7 +149,7 @@ class TestParallelMap (unittest.TestCase):
                           name='g4')
 
         expected = map(ord, self.test_string)
-        nose.tools.assert_equal(
+        self.assertEqual(
             list(g4),
             expected
         )

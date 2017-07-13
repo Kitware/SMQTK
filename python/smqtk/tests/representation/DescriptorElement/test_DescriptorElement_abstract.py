@@ -1,12 +1,8 @@
 import mock
-import nose.tools as ntools
 import numpy
 import unittest
 
 from smqtk.representation import DescriptorElement
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class DummyDescriptorElement (DescriptorElement):
@@ -34,8 +30,8 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         expected_uuid = 'some uuid'
         expected_type_str = 'some type'
         de = DummyDescriptorElement(expected_type_str, expected_uuid)
-        ntools.assert_equal(de.type(), expected_type_str)
-        ntools.assert_equal(de.uuid(), expected_uuid)
+        self.assertEqual(de.type(), expected_type_str)
+        self.assertEqual(de.uuid(), expected_uuid)
 
     def test_equality(self):
         de1 = DummyDescriptorElement('t', 'u1')
@@ -43,16 +39,16 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         de1.vector = de2.vector = \
             mock.Mock(return_value=numpy.random.randint(0, 10, 10))
 
-        ntools.assert_true(de1 == de1)
-        ntools.assert_true(de2 == de2)
-        ntools.assert_true(de1 == de2)
-        ntools.assert_false(de1 != de2)
+        self.assertTrue(de1 == de1)
+        self.assertTrue(de2 == de2)
+        self.assertTrue(de1 == de2)
+        self.assertFalse(de1 != de2)
 
     def test_nonEquality_diffInstance(self):
         # diff instance
         de = DummyDescriptorElement('a', 'b')
-        ntools.assert_false(de == 'string')
-        ntools.assert_true(de != 'string')
+        self.assertFalse(de == 'string')
+        self.assertTrue(de != 'string')
 
     def test_nonEquality_diffVectors(self):
         # different vectors (same size)
@@ -65,8 +61,8 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d2 = DummyDescriptorElement('a', 'b')
         d2.vector = mock.Mock(return_value=v2)
 
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
+        self.assertFalse(d1 == d2)
+        self.assertTrue(d1 != d2)
 
     def test_nonEquality_diffVectorSize(self):
         # different sized vectors
@@ -79,16 +75,16 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d2 = DummyDescriptorElement('a', 'b')
         d2.vector = mock.Mock(return_value=v2)
 
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
+        self.assertFalse(d1 == d2)
+        self.assertTrue(d1 != d2)
 
     def test_nonEquality_diffTypeStr(self):
         v = numpy.random.randint(0, 10, 10)
         d1 = DummyDescriptorElement('a', 'u')
         d2 = DummyDescriptorElement('b', 'u')
         d1.vector = d2.vector = mock.Mock(return_value=v)
-        ntools.assert_true(d1 == d2)
-        ntools.assert_false(d1 != d2)
+        self.assertFalse(d1 == d2)
+        self.assertTrue(d1 != d2)
 
     def test_hash(self):
         # Hash of a descriptor element is solely based on the UUID value of that
@@ -101,6 +97,6 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         uuid2 = 'some uuid'
         de2 = DummyDescriptorElement(t2, uuid2)
 
-        ntools.assert_equal(hash(de1), hash(uuid1))
-        ntools.assert_equal(hash(de2), hash(uuid2))
-        ntools.assert_equal(hash(de1), hash(de2))
+        self.assertEqual(hash(de1), hash(uuid1))
+        self.assertEqual(hash(de2), hash(uuid2))
+        self.assertEqual(hash(de1), hash(de2))

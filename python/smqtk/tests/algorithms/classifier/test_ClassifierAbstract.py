@@ -1,8 +1,6 @@
 import mock
 import unittest
 
-import nose.tools
-
 from smqtk.algorithms.classifier import Classifier, SupervisedClassifier, \
     get_classifier_impls
 from smqtk.representation.descriptor_element.local_elements import \
@@ -39,15 +37,15 @@ class TestClassifierAbstractClass (unittest.TestCase):
 
         c = DummyClassifier()
         e = c.classify(d)
-        nose.tools.assert_equal(e.get_classification(), {
+        self.assertEqual(e.get_classification(), {
             0: [1, 2, 3]
         })
-        nose.tools.assert_equal(e.uuid, d.uuid())
+        self.assertEqual(e.uuid, d.uuid())
 
     def test_classify_empty_descriptor(self):
         d = DescriptorMemoryElement('test', 0)
         c = DummyClassifier()
-        nose.tools.assert_raises_regexp(
+        self.assertRaisesRegexp(
             ValueError,
             "does not contain a vector to classify",
             c.classify, d
@@ -107,9 +105,9 @@ class TestClassifierAbstractClass (unittest.TestCase):
         # result of classification, which in this case is the UUID of the
         # element
         for d in d_elems:
-            nose.tools.assert_in(d, m)
+            self.assertIn(d, m)
             # Check for expected classification
-            nose.tools.assert_equal(m[d].get_classification(),
+            self.assertEqual(m[d].get_classification(),
                                     {d.uuid(): d.vector().tolist()})
 
 
@@ -119,18 +117,18 @@ class TestGetClassifierImpls (unittest.TestCase):
     def test_get_classifier_impls_subclass_interface_classifier(self):
         # Simple test that primarily makes sure the function doesn't fall down.
         m = get_classifier_impls()
-        nose.tools.assert_is_instance(m, dict)
-        nose.tools.assert_in("IndexLabelClassifier", m)
+        self.assertIsInstance(m, dict)
+        self.assertIn("IndexLabelClassifier", m)
 
         # Should act the same as calling with no sub-interface
         m2 = get_classifier_impls(sub_interface=Classifier)
-        nose.tools.assert_is_instance(m, dict)
-        nose.tools.assert_in("IndexLabelClassifier", m)
-        nose.tools.assert_equal(m, m2)
+        self.assertIsInstance(m, dict)
+        self.assertIn("IndexLabelClassifier", m)
+        self.assertEqual(m, m2)
 
     def test_get_classifier_impls_subclass_interface_supervised(self):
         # should not return when sub_interface is set to the
         # SupervisedClassifier base-class.
         m = get_classifier_impls(sub_interface=SupervisedClassifier)
-        nose.tools.assert_is_instance(m, dict)
-        nose.tools.assert_not_in("IndexLabelClassifier", m)
+        self.assertIsInstance(m, dict)
+        self.assertNotIn("IndexLabelClassifier", m)

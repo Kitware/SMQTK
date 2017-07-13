@@ -1,7 +1,6 @@
 import unittest
 
 import mock
-import nose.tools as ntools
 import numpy
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
@@ -14,7 +13,7 @@ class TestGetDescriptorGeneratorImpls (unittest.TestCase):
     def test_get_descriptors(self):
         m = get_descriptor_generator_impls()
         # Currently no types that are guaranteed available
-        ntools.assert_is_instance(m, dict, "Should return a dictionary of "
+        self.assertIsInstance(m, dict, "Should return a dictionary of "
                                            "class label-to-types")
 
 
@@ -59,7 +58,7 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
-        ntools.assert_raises(ValueError, cd.compute_descriptor, m_d, m_factory)
+        self.assertRaises(ValueError, cd.compute_descriptor, m_d, m_factory)
 
     def test_computeDescriptor_validType_newVector(self):
         expected_image_type = 'image/png'
@@ -87,9 +86,9 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         d = cd.compute_descriptor(m_data, m_factory, overwrite=False)
 
         m_factory.new_descriptor.assert_called_once_with(cd.name, expected_uuid)
-        ntools.assert_true(cd._compute_descriptor.called)
+        self.assertTrue(cd._compute_descriptor.called)
         mDescrElement().set_vector.assert_called_once_with(expected_vector)
-        ntools.assert_is(d, mDescrElement())
+        self.assertIs(d, mDescrElement())
 
     def test_computeDescriptor_validType_existingVector(self):
         expected_image_type = 'image/png'
@@ -118,10 +117,10 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         # Call: matching content types, existing descriptor for data
         d = cd.compute_descriptor(m_data, m_factory, overwrite=False)
 
-        ntools.assert_true(mDescrElement().has_vector.called)
-        ntools.assert_false(cd._compute_descriptor.called)
-        ntools.assert_false(mDescrElement().set_vector.called)
-        ntools.assert_is(d, mDescrElement())
+        self.assertTrue(mDescrElement().has_vector.called)
+        self.assertFalse(cd._compute_descriptor.called)
+        self.assertFalse(mDescrElement().set_vector.called)
+        self.assertIs(d, mDescrElement())
 
     def test_computeDescriptor_validType_existingVector_overwrite(self):
         expected_image_type = 'image/png'
@@ -150,12 +149,12 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         # Call: matching content types, existing descriptor for data
         d = cd.compute_descriptor(m_data, m_factory, overwrite=True)
 
-        ntools.assert_false(mDescrElement().has_vector.called)
-        ntools.assert_true(cd._compute_descriptor.called)
+        self.assertFalse(mDescrElement().has_vector.called)
+        self.assertTrue(cd._compute_descriptor.called)
         cd._compute_descriptor.assert_called_once_with(m_data)
-        ntools.assert_true(mDescrElement().set_vector.called)
+        self.assertTrue(mDescrElement().set_vector.called)
         mDescrElement().set_vector.assert_called_once_with(expected_new_vector)
-        ntools.assert_is(d, mDescrElement())
+        self.assertIs(d, mDescrElement())
 
     def test_computeDescriptorAsync(self):
         # Only using threading because mock.Mock can't be serialized (pickled)
@@ -189,14 +188,14 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         m = generator.compute_descriptor_async([m_d0, m_d1], m_factory,
                                                overwrite=False, use_mp=False)
 
-        ntools.assert_equal(len(m), 2)
-        ntools.assert_in(m_d0.uuid(), m)
-        ntools.assert_in(m_d1.uuid(), m)
-        ntools.assert_equal(m[m_d0.uuid()], 1)
-        ntools.assert_equal(m[m_d1.uuid()], 2)
+        self.assertEqual(len(m), 2)
+        self.assertIn(m_d0.uuid(), m)
+        self.assertIn(m_d1.uuid(), m)
+        self.assertEqual(m[m_d0.uuid()], 1)
+        self.assertEqual(m[m_d1.uuid()], 2)
 
-        ntools.assert_true(generator.compute_descriptor.called)
-        ntools.assert_equal(generator.compute_descriptor.call_count, 2)
+        self.assertTrue(generator.compute_descriptor.called)
+        self.assertEqual(generator.compute_descriptor.call_count, 2)
         generator.compute_descriptor.assert_any_call(m_d0, m_factory, False)
         generator.compute_descriptor.assert_any_call(m_d1, m_factory, False)
 
@@ -215,7 +214,7 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
             side_effect=RuntimeError("Intended exception")
         )
 
-        ntools.assert_raises(
+        self.assertRaises(
             RuntimeError,
             generator.compute_descriptor_async,
             [m_d0, m_d1], m_factory,

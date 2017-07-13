@@ -1,13 +1,8 @@
 import unittest
 
-import nose.tools as ntools
-
 from smqtk.utils import (
     merge_dict
 )
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class TestMergeConfigs (unittest.TestCase):
@@ -26,7 +21,7 @@ class TestMergeConfigs (unittest.TestCase):
             'c': 3,
         }
         merge_dict(a, b)
-        ntools.assert_equal(a, expected)
+        self.assertEqual(a, expected)
 
     def test_subset_merge(self):
         a = {
@@ -41,7 +36,7 @@ class TestMergeConfigs (unittest.TestCase):
             'b': 2,
         }
         merge_dict(a, b)
-        ntools.assert_equal(a, expected)
+        self.assertEqual(a, expected)
 
     def test_partial_update(self):
         a = {
@@ -58,7 +53,7 @@ class TestMergeConfigs (unittest.TestCase):
             'c': 4,
         }
         merge_dict(a, b)
-        ntools.assert_equal(a, expected)
+        self.assertEqual(a, expected)
 
     def test_overrides(self):
         a = {
@@ -77,7 +72,7 @@ class TestMergeConfigs (unittest.TestCase):
             }
         }
         merge_dict(a, b)
-        ntools.assert_equal(a, expected)
+        self.assertEqual(a, expected)
 
     def test_nested(self):
         a = {
@@ -117,4 +112,4 @@ class TestMergeConfigs (unittest.TestCase):
             'j': 8,
         }
         merge_dict(a, b)
-        ntools.assert_equal(a, expected)
+        self.assertEqual(a, expected)

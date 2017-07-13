@@ -3,7 +3,6 @@ import unittest
 
 import multiprocessing
 import multiprocessing.pool
-import nose.tools as ntools
 import numpy
 
 from smqtk.algorithms.classifier import get_classifier_impls
@@ -22,7 +21,7 @@ if LibSvmClassifier.is_usable():
     class TestLibSvmClassifier (unittest.TestCase):
 
         def test_impl_findable(self):
-            ntools.assert_in(LibSvmClassifier.__name__,
+            self.assertIn(LibSvmClassifier.__name__,
                              get_classifier_impls())
 
         def test_no_save_model_pickle(self):
@@ -37,9 +36,9 @@ if LibSvmClassifier.is_usable():
                 },
                 normalize=None,  # DO NOT normalize descriptors
             )
-            ntools.assert_true(classifier.svm_model is None)
+            self.assertTrue(classifier.svm_model is None)
             # Empty model should not trigger __LOCAL__ content in pickle
-            ntools.assert_not_in('__LOCAL__', classifier.__getstate__())
+            self.assertNotIn('__LOCAL__', classifier.__getstate__())
             _ = cPickle.loads(cPickle.dumps(classifier))
 
             # train arbitrary model (same as ``test_simple_classification``)
@@ -76,11 +75,11 @@ if LibSvmClassifier.is_usable():
 
             # Should see __LOCAL__ content in pickle state now
             p_state = classifier.__getstate__()
-            ntools.assert_in('__LOCAL__', p_state)
-            ntools.assert_in('__LOCAL_LABELS__', p_state)
-            ntools.assert_in('__LOCAL_MODEL__', p_state)
-            ntools.assert_true(len(p_state['__LOCAL_LABELS__']) > 0)
-            ntools.assert_true(len(p_state['__LOCAL_MODEL__']) > 0)
+            self.assertIn('__LOCAL__', p_state)
+            self.assertIn('__LOCAL_LABELS__', p_state)
+            self.assertIn('__LOCAL_MODEL__', p_state)
+            self.assertTrue(len(p_state['__LOCAL_LABELS__']) > 0)
+            self.assertTrue(len(p_state['__LOCAL_MODEL__']) > 0)
 
             # Restored classifier should classify the same test descriptor the
             # same
@@ -93,8 +92,8 @@ if LibSvmClassifier.is_usable():
             c_pp_negative = c_post_pickle[NEG_LABEL]
             c_e_positive = c_expected[POS_LABEL]
             c_e_negative = c_expected[NEG_LABEL]
-            ntools.assert_almost_equal(c_e_positive, c_pp_positive, 5)
-            ntools.assert_almost_equal(c_e_negative, c_pp_negative, 5)
+            self.assertAlmostEqual(c_e_positive, c_pp_positive, 5)
+            self.assertAlmostEqual(c_e_negative, c_pp_negative, 5)
 
         def test_simple_classification(self):
             """
@@ -147,7 +146,7 @@ if LibSvmClassifier.is_usable():
             d_pos_sync = {}  # for comparing to async
             for d in d_pos:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(),
+                self.assertEqual(c.max_label(),
                                     POS_LABEL,
                                     "Found False positive: %s :: %s" %
                                     (d.vector(), c.get_classification()))
@@ -156,7 +155,7 @@ if LibSvmClassifier.is_usable():
             d_neg_sync = {}
             for d in d_neg:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(), NEG_LABEL,
+                self.assertEqual(c.max_label(), NEG_LABEL,
                                     "Found False negative: %s :: %s" %
                                     (d.vector(), c.get_classification()))
                 d_neg_sync[d] = c
@@ -164,13 +163,13 @@ if LibSvmClassifier.is_usable():
             # test that async classify produces the same results
             # -- d_pos
             m_pos = classifier.classify_async(d_pos, c_factory)
-            ntools.assert_equal(m_pos, d_pos_sync,
+            self.assertEqual(m_pos, d_pos_sync,
                                 "Async computation of pos set did not yield "
                                 "the same results as synchronous "
                                 "classification.")
             # -- d_neg
             m_neg = classifier.classify_async(d_neg, c_factory)
-            ntools.assert_equal(m_neg, d_neg_sync,
+            self.assertEqual(m_neg, d_neg_sync,
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous "
                                 "classification.")
@@ -181,7 +180,7 @@ if LibSvmClassifier.is_usable():
                 d_pos + d_neg, c_factory,
                 use_multiprocessing=False,
             )
-            ntools.assert_equal(m_combined, combined_truth,
+            self.assertEqual(m_combined, combined_truth,
                                 "Async computation of all test descriptors "
                                 "did not yield the same results as "
                                 "synchronous classification.")
@@ -190,7 +189,7 @@ if LibSvmClassifier.is_usable():
                 d_pos + d_neg, c_factory,
                 use_multiprocessing=True,
             )
-            ntools.assert_equal(m_combined, combined_truth,
+            self.assertEqual(m_combined, combined_truth,
                                 "Async computation of all test descriptors "
                                 "(mixed order) did not yield the same results "
                                 "as synchronous classification.")
@@ -262,7 +261,7 @@ if LibSvmClassifier.is_usable():
             d_p1_sync = {}
             for d in d_p1:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(),
+                self.assertEqual(c.max_label(),
                                     P1_LABEL,
                                     "Incorrect %s label: %s :: %s" %
                                     (P1_LABEL, d.vector(),
@@ -272,7 +271,7 @@ if LibSvmClassifier.is_usable():
             d_p2_sync = {}
             for d in d_p2:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(),
+                self.assertEqual(c.max_label(),
                                     P2_LABEL,
                                     "Incorrect %s label: %s :: %s" %
                                     (P2_LABEL, d.vector(),
@@ -282,7 +281,7 @@ if LibSvmClassifier.is_usable():
             d_neg_sync = {}
             for d in d_p3:
                 c = classifier.classify(d, c_factory)
-                ntools.assert_equal(c.max_label(),
+                self.assertEqual(c.max_label(),
                                     P3_LABEL,
                                     "Incorrect %s label: %s :: %s" %
                                     (P3_LABEL, d.vector(),
@@ -292,17 +291,17 @@ if LibSvmClassifier.is_usable():
             # test that async classify produces the same results
             # -- p1
             async_p1 = classifier.classify_async(d_p1, c_factory)
-            ntools.assert_equal(async_p1, d_p1_sync,
+            self.assertEqual(async_p1, d_p1_sync,
                                 "Async computation of p1 set did not yield "
                                 "the same results as synchronous computation.")
             # -- p2
             async_p2 = classifier.classify_async(d_p2, c_factory)
-            ntools.assert_equal(async_p2, d_p2_sync,
+            self.assertEqual(async_p2, d_p2_sync,
                                 "Async computation of p2 set did not yield "
                                 "the same results as synchronous computation.")
             # -- neg
             async_neg = classifier.classify_async(d_p3, c_factory)
-            ntools.assert_equal(async_neg, d_neg_sync,
+            self.assertEqual(async_neg, d_neg_sync,
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous computation.")
             # -- combined -- threaded
@@ -313,7 +312,7 @@ if LibSvmClassifier.is_usable():
                 d_p1 + d_p2 + d_p3, c_factory,
                 use_multiprocessing=False
             )
-            ntools.assert_equal(async_combined, sync_combined,
+            self.assertEqual(async_combined, sync_combined,
                                 "Async computation of all test descriptors "
                                 "did not yield the same results as "
                                 "synchronous classification.")
@@ -322,7 +321,7 @@ if LibSvmClassifier.is_usable():
                 d_p1 + d_p2 + d_p3, c_factory,
                 use_multiprocessing=True
             )
-            ntools.assert_equal(async_combined, sync_combined,
+            self.assertEqual(async_combined, sync_combined,
                                 "Async computation of all test descriptors "
                                 "(mixed order) did not yield the same results "
                                 "as synchronous classification.")

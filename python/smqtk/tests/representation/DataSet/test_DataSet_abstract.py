@@ -1,5 +1,4 @@
 import mock
-import nose.tools as ntools
 import random
 import unittest
 
@@ -45,7 +44,7 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.count = mock.MagicMock(return_value=expected_len)
 
-        ntools.assert_equal(len(ds), expected_len)
+        self.assertEqual(len(ds), expected_len)
 
     def test_getitem_mock(self):
         expected_key = 'foo'
@@ -59,12 +58,12 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.get_data = mock.MagicMock(side_effect=expected_effect)
 
-        ntools.assert_raises_regexp(
+        self.assertRaisesRegexp(
             RuntimeError,
             "^not expected key$",
             ds.__getitem__, 'unexpectedKey'
         )
-        ntools.assert_equal(ds[expected_key], expected_value)
+        self.assertEqual(ds[expected_key], expected_value)
 
     def test_contains(self):
         # Contains built-in hook expects data element and requests UUID from
@@ -82,8 +81,8 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.has_uuid = mock.MagicMock(side_effect=expected_has_uuid_effect)
 
-        ntools.assert_true(mock_data_element in ds)
+        self.assertTrue(mock_data_element in ds)
         ds.has_uuid.assert_called_once_with(expected_uuid)
 
         mock_data_element.uuid.return_value = 'not expected uuid'
-        ntools.assert_false(mock_data_element in ds)
+        self.assertFalse(mock_data_element in ds)

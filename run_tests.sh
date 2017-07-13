@@ -1,16 +1,23 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+set -e
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${script_dir}"
 if [ -f ".coverage" ]
 then
   echo "Removing previous coverage cache file"
-  rm ".coverage"
+  rm .coverage*
 fi
 DEFAULT_ROOT="python/smqtk"
 if [ "$#" -gt 0 ]
 then
-  nosetest_args="$@"
+  test_paths="$@"
 else
-  nosetest_args="${DEFAULT_ROOT}"
+  test_paths="${DEFAULT_ROOT}"
 fi
-nosetests -v --with-doctest --with-coverage --cover-package=smqtk ${nosetest_args}
+
+# -l :: Show local in trace-backs.
+# -v :: Increased verbosity.
+pytest -lv \
+  --cov=smqtk \
+  ${test_paths}

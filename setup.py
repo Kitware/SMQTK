@@ -174,7 +174,8 @@ setuptools.setup(
     tests_require=[
         'coverage',
         'mock',
-        'nose'
+        'pytest',
+        'pytest-cov',
     ],
 
     # See entry_points/console_scripts as the preferred method for publishing

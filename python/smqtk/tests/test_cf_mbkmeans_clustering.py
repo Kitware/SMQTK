@@ -1,6 +1,5 @@
 import unittest
 
-import nose.tools
 import numpy
 from sklearn.cluster import MiniBatchKMeans
 
@@ -42,7 +41,7 @@ class TestMBKMClustering (unittest.TestCase):
 
         # There should be 20 descriptors per class
         for c in d_classes:
-            nose.tools.assert_equal(
+            self.assertEqual(
                 len(d_classes[c]),
                 n_descriptors,
                 "Cluster %s did not have expected number of descriptors "
@@ -67,4 +66,4 @@ class TestMBKMClustering (unittest.TestCase):
         index = MemoryDescriptorIndex()
         mbkm = MiniBatchKMeans()
         d = mb_kmeans_build_apply(index, mbkm, 0)
-        nose.tools.assert_false(d)
+        self.assertFalse(d)

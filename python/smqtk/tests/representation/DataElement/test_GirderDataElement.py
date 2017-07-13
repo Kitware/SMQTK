@@ -2,13 +2,12 @@ import mock
 import os
 import unittest
 
-import nose.tools
 import requests
 
 from smqtk.exceptions import InvalidUriError
 from smqtk.representation.data_element.girder import (
     GirderDataElement,
-    girder_client  # None when not available
+    girder_client  # not None when GirderDataElement is usable.
 )
 from smqtk.tests import TEST_DATA_DIR
 from smqtk.exceptions import ReadOnlyError
@@ -58,12 +57,12 @@ if GirderDataElement.is_usable():
         def test_new_fileId(self):
             expected_id = "some id"
             e = GirderDataElement(expected_id)
-            nose.tools.assert_equal(e.file_id, expected_id)
-            nose.tools.assert_equal(e.api_root, self.LOCAL_APIROOT)
-            nose.tools.assert_is_none(e.api_key)
-            nose.tools.assert_is_none(e.token)
-            nose.tools.assert_is_none(e._content_type)
-            nose.tools.assert_is_instance(e.gc, girder_client.GirderClient)
+            self.assertEqual(e.file_id, expected_id)
+            self.assertEqual(e.api_root, self.LOCAL_APIROOT)
+            self.assertIsNone(e.api_key)
+            self.assertIsNone(e.token)
+            self.assertIsNone(e._content_type)
+            self.assertIsInstance(e.gc, girder_client.GirderClient)
 
         @mock.patch('girder_client.GirderClient.authenticate')
         def test_repr(self, mock_requests):
@@ -79,11 +78,11 @@ if GirderDataElement.is_usable():
                             "api_root: %s, " \
                             "api_key: %s, token: }" % (
                                 expected_file_id, expected_api_root, expected_api_key)
-            nose.tools.assert_equal(actual_repr, expected_repr)
+            self.assertEqual(actual_repr, expected_repr)
 
         def test_configuration_default(self):
             default_config = GirderDataElement.get_default_config()
-            nose.tools.assert_equal(default_config,
+            self.assertEqual(default_config,
                                     {"file_id": None,
                                      "api_root": self.LOCAL_APIROOT,
                                      "api_key": None,
@@ -101,18 +100,18 @@ if GirderDataElement.is_usable():
                 'api_key': expected_api_key,
             }
             e = GirderDataElement.from_config(new_config)
-            nose.tools.assert_equal(e.file_id, expected_file_id)
-            nose.tools.assert_equal(e.api_root, expected_api_root)
-            nose.tools.assert_equal(e.get_config(), new_config)
+            self.assertEqual(e.file_id, expected_file_id)
+            self.assertEqual(e.api_root, expected_api_root)
+            self.assertEqual(e.get_config(), new_config)
 
         def test_from_config_common_partial(self):
             expected_file_id = '5hjkl1345hjk'
             expected_api_root = self.LOCAL_APIROOT
             expected_api_key = None
             e = GirderDataElement.from_config({'file_id': expected_file_id})
-            nose.tools.assert_equal(e.file_id, expected_file_id)
-            nose.tools.assert_equal(e.api_root, expected_api_root)
-            nose.tools.assert_equal(e.get_config(),
+            self.assertEqual(e.file_id, expected_file_id)
+            self.assertEqual(e.api_root, expected_api_root)
+            self.assertEqual(e.get_config(),
                                     {'file_id': expected_file_id,
                                      'api_root': expected_api_root,
                                      'api_key': expected_api_key,
@@ -120,19 +119,19 @@ if GirderDataElement.is_usable():
 
         def test_from_uri_full_url(self):
             e = GirderDataElement.from_uri(self.EXAMPLE_GIRDER_FULL_URI)
-            nose.tools.assert_equal(e.file_id, self.EXAMPLE_ITEM_ID)
+            self.assertEqual(e.file_id, self.EXAMPLE_ITEM_ID)
 
         def test_from_uri_bad_tag(self):
             # Ensures we catch a bad tag in the URI, i.e., one that is neither
             # girder nor girders.
-            nose.tools.assert_raises(InvalidUriError, GirderDataElement.from_uri,
+            self.assertRaises(InvalidUriError, GirderDataElement.from_uri,
                                      uri='a_bad_tag')
 
         def test_from_uri_bad_path(self):
             # Ensures that we catch a URI that has an appropriate tag and netloc,
             # but the path does not begin with /api, so it is an invalid girder
             # API root.
-            nose.tools.assert_raises(InvalidUriError, GirderDataElement.from_uri,
+            self.assertRaises(InvalidUriError, GirderDataElement.from_uri,
                                      uri='girder://localhost:8080/bad/path')
 
         @mock.patch('girder_client.GirderClient.getFile')
@@ -148,11 +147,11 @@ if GirderDataElement.is_usable():
 
             e = GirderDataElement('foo')
             actual_type = e.content_type()
-            nose.tools.assert_equal(actual_type, expected_mimetype)
+            self.assertEqual(actual_type, expected_mimetype)
             m_getFile.assert_called_once()
 
             # Ensure that calling content_type a second time doesn't call getFile again
-            nose.tools.assert_equal(e.content_type(), expected_mimetype)
+            self.assertEqual(e.content_type(), expected_mimetype)
             m_getFile.assert_called_once()
 
         @mock.patch('girder_client.GirderClient.getFile')
@@ -176,13 +175,13 @@ if GirderDataElement.is_usable():
                                   self.EXAMPLE_GIRDER_API_ROOT)
             m = e.get_file_model()
 
-            nose.tools.assert_equal(m['_id'], expected_m['_id'])
-            nose.tools.assert_equal(m['_modelType'], expected_m['_modelType'])
-            nose.tools.assert_equal(m['exts'], expected_m['exts'])
-            nose.tools.assert_equal(m['mimeType'], expected_m['mimeType'])
-            nose.tools.assert_equal(m['name'], expected_m['name'])
-            nose.tools.assert_equal(m['sha512'], expected_m['sha512'])
-            nose.tools.assert_equal(m['size'], expected_m['size'])
+            self.assertEqual(m['_id'], expected_m['_id'])
+            self.assertEqual(m['_modelType'], expected_m['_modelType'])
+            self.assertEqual(m['exts'], expected_m['exts'])
+            self.assertEqual(m['mimeType'], expected_m['mimeType'])
+            self.assertEqual(m['name'], expected_m['name'])
+            self.assertEqual(m['sha512'], expected_m['sha512'])
+            self.assertEqual(m['size'], expected_m['size'])
 
         @mock.patch('girder_client.GirderClient.getFile')
         def test_get_file_model_item_no_exists(self, m_getFile):
@@ -192,24 +191,24 @@ if GirderDataElement.is_usable():
 
             e = GirderDataElement('foo', self.EXAMPLE_GIRDER_API_ROOT)
             m = e.get_file_model()
-            nose.tools.assert_is_none(m)
+            self.assertIsNone(m)
 
         def test_is_empty_none_model(self):
             # Uses model return, empty if no model return (no item in girder by ID)
             e = GirderDataElement('someId')
             e.get_file_model = mock.MagicMock(return_value=None)
-            nose.tools.assert_true(e.is_empty())
+            self.assertTrue(e.is_empty())
 
         def test_is_empty_zero_size(self):
             # Uses model return size parameter
             e = GirderDataElement('someId')
             e.get_file_model = mock.MagicMock(return_value={'size': 0})
-            nose.tools.assert_true(e.is_empty())
+            self.assertTrue(e.is_empty())
 
         def test_is_empty_nonzero_bytes(self):
             e = GirderDataElement('someId')
             e.get_file_model = mock.MagicMock(return_value={'size': 7})
-            nose.tools.assert_false(e.is_empty())
+            self.assertFalse(e.is_empty())
 
         @mock.patch('smqtk.representation.data_element.girder.GirderDataElement.get_file_model')
         @mock.patch('girder_client.GirderClient.getFolder')
@@ -218,16 +217,16 @@ if GirderDataElement.is_usable():
             m_getItem.return_value = {'folderId': 'someFolderId'}
             m_getFolder.return_value = {'_accessLevel': 1}
 
-            nose.tools.assert_true(GirderDataElement('someId').writable())
+            self.assertTrue(GirderDataElement('someId').writable())
 
             # Access level 0 should cause it to be unwritable
             m_getFolder.return_value = { '_accessLevel': 0 }
-            nose.tools.assert_false(GirderDataElement('someId').writable())
+            self.assertFalse(GirderDataElement('someId').writable())
 
             # A nonexistent file model should make writable return false
             gde = GirderDataElement('someId')
             gde.get_file_model = mock.MagicMock(return_value=None)
-            nose.tools.assert_false(gde.writable())
+            self.assertFalse(gde.writable())
 
         @mock.patch('girder_client.GirderClient.uploadFileContents')
         def test_set_bytes(self, m_uploadFileContents):
@@ -239,7 +238,7 @@ if GirderDataElement.is_usable():
         def test_set_bytes_non_writable(self):
             gde = GirderDataElement('someId')
             gde.writable = mock.MagicMock(return_value=False)
-            nose.tools.assert_raises(ReadOnlyError, gde.set_bytes, b=None)
+            self.assertRaises(ReadOnlyError, gde.set_bytes, b=None)
 
         def test_set_bytes_http_errors(self):
             gde = GirderDataElement('someId')
@@ -247,11 +246,11 @@ if GirderDataElement.is_usable():
 
             # Test access denied throws ReadOnlyError
             gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(401, '', None, None))
-            nose.tools.assert_raises(ReadOnlyError, gde.set_bytes, b=b'foo')
+            self.assertRaises(ReadOnlyError, gde.set_bytes, b=b'foo')
 
             # Test any other error (like a 500) re-raises the HttpError
             gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(500, '', None, None))
-            nose.tools.assert_raises(girder_client.HttpError, gde.set_bytes, b=b'foo')
+            self.assertRaises(girder_client.HttpError, gde.set_bytes, b=b'foo')
 
         @mock.patch('girder_client.GirderClient.downloadFile')
         @mock.patch('six.BytesIO.getvalue')
@@ -261,4 +260,4 @@ if GirderDataElement.is_usable():
             e = GirderDataElement('someId')
             actual_bytes = e.get_bytes()
 
-            nose.tools.assert_equal(actual_bytes, bytes('foo'))
+            self.assertEqual(actual_bytes, bytes('foo'))

@@ -5,8 +5,6 @@ import time
 import threading
 import unittest
 
-import nose.tools
-
 import smqtk.utils.file_utils
 
 
@@ -26,27 +24,27 @@ class TestFileModificationMonitor (unittest.TestCase):
 
         def cb(filepath):
             has_triggered[0] = True
-            nose.tools.assert_equal(filepath, fp)
+            self.assertEqual(filepath, fp)
 
         interval = 0.01
         monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
                                                                  0.5, cb)
-        nose.tools.assert_true(monitor.stopped())
+        self.assertTrue(monitor.stopped())
 
         monitor.start()
 
         try:
-            nose.tools.assert_false(has_triggered[0])
-            nose.tools.assert_true(monitor.is_alive())
-            nose.tools.assert_false(monitor.stopped())
+            self.assertFalse(has_triggered[0])
+            self.assertTrue(monitor.is_alive())
+            self.assertFalse(monitor.stopped())
 
             monitor.stop()
             # If thread hasn't entered while loop yet, it will immediately kick
             # out, otherwise its sleeping for the given interval.
             monitor.join(interval*2)
 
-            nose.tools.assert_false(has_triggered[0])
-            nose.tools.assert_false(monitor.is_alive())
+            self.assertFalse(has_triggered[0])
+            self.assertFalse(monitor.is_alive())
         finally:
             if monitor.is_alive():
                 print "WARNING :: Forcing thread stop by removing filepath var"
@@ -72,7 +70,7 @@ class TestFileModificationMonitor (unittest.TestCase):
 
         def cb(filepath):
             has_triggered[0] = True
-            nose.tools.assert_equal(filepath, fp)
+            self.assertEqual(filepath, fp)
 
         interval = 0.01
         settle   = 0.1
@@ -81,29 +79,29 @@ class TestFileModificationMonitor (unittest.TestCase):
         try:
             monitor.start()
             # file not touched, should still be waiting
-            nose.tools.assert_equal(monitor.state, monitor.STATE_WAITING)
-            nose.tools.assert_false(has_triggered[0])
+            self.assertEqual(monitor.state, monitor.STATE_WAITING)
+            self.assertFalse(has_triggered[0])
 
             time.sleep(interval)
             smqtk.utils.file_utils.touch(fp)
             time.sleep(interval*2)
             monitor._log.info('checking')
-            nose.tools.assert_false(has_triggered[0])
-            nose.tools.assert_equal(monitor.state, monitor.STATE_WATCHING)
+            self.assertFalse(has_triggered[0])
+            self.assertEqual(monitor.state, monitor.STATE_WATCHING)
 
             time.sleep(settle / 2.)
             monitor._log.info('checking')
-            nose.tools.assert_equal(monitor.state, monitor.STATE_WATCHING)
-            nose.tools.assert_false(has_triggered[0])
+            self.assertEqual(monitor.state, monitor.STATE_WATCHING)
+            self.assertFalse(has_triggered[0])
 
             time.sleep(settle / 4.)
             monitor._log.info('checking')
-            nose.tools.assert_equal(monitor.state, monitor.STATE_WATCHING)
-            nose.tools.assert_false(has_triggered[0])
+            self.assertEqual(monitor.state, monitor.STATE_WATCHING)
+            self.assertFalse(has_triggered[0])
 
             time.sleep(settle / 4.)
             monitor._log.info('checking')
-            nose.tools.assert_true(has_triggered[0])
+            self.assertTrue(has_triggered[0])
 
         finally:
             monitor.stop()
@@ -129,7 +127,7 @@ class TestFileModificationMonitor (unittest.TestCase):
 
         def cb(filepath):
             has_triggered[0] = True
-            nose.tools.assert_equal(filepath, fp)
+            self.assertEqual(filepath, fp)
 
         class AppendThread (threading.Thread):
             def __init__(self):
@@ -160,21 +158,21 @@ class TestFileModificationMonitor (unittest.TestCase):
 
             time.sleep(monitor_settle)
             m_thread._log.info('checking')
-            nose.tools.assert_false(m_thread.stopped())
-            nose.tools.assert_false(has_triggered[0])
-            nose.tools.assert_equal(m_thread.state, m_thread.STATE_WATCHING)
+            self.assertFalse(m_thread.stopped())
+            self.assertFalse(has_triggered[0])
+            self.assertEqual(m_thread.state, m_thread.STATE_WATCHING)
 
             time.sleep(monitor_settle)
             m_thread._log.info('checking')
-            nose.tools.assert_false(m_thread.stopped())
-            nose.tools.assert_false(has_triggered[0])
-            nose.tools.assert_equal(m_thread.state, m_thread.STATE_WATCHING)
+            self.assertFalse(m_thread.stopped())
+            self.assertFalse(has_triggered[0])
+            self.assertEqual(m_thread.state, m_thread.STATE_WATCHING)
 
             a_thread.stop()
 
             time.sleep(monitor_settle)
             m_thread._log.info('checking')
-            nose.tools.assert_true(has_triggered[0])
+            self.assertTrue(has_triggered[0])
 
         finally:
             a_thread.stop()
@@ -184,18 +182,18 @@ class TestFileModificationMonitor (unittest.TestCase):
         fp = self._mk_test_fp()
 
         # Invalid path value
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             smqtk.utils.file_utils.FileModificationMonitor,
             '/not/real', 1, 1, lambda p: None
         )
         # Invalid timers values
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             smqtk.utils.file_utils.FileModificationMonitor,
             fp, -1, 1, lambda p: None
         )
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             smqtk.utils.file_utils.FileModificationMonitor,
             fp, 1, -1, lambda p: None

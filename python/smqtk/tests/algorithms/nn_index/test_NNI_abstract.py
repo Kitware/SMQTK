@@ -234,3 +234,9 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         q.set_vector(numpy.random.rand(4))
         # Basically this shouldn't crash
         index.nn(q)
+
+    def test_query_empty_index(self):
+        index = DummySI()
+        q = DescriptorMemoryElement('q', 0)
+        q.set_vector(numpy.random.rand(4))
+        self.assertRaises(ValueError, index.nn, q)

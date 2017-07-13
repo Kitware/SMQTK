@@ -4,7 +4,6 @@ functionality.
 """
 import hashlib
 import mock
-import nose.tools as ntools
 import os.path as osp
 import tempfile
 import unittest
@@ -64,7 +63,7 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
 class TestDataElementAbstract (unittest.TestCase):
 
     def test_from_uri_default(self):
-        ntools.assert_raises(
+        self.assertRaises(
             NotImplementedError,
             DummyDataElement.from_uri, 'some uri'
         )
@@ -72,14 +71,14 @@ class TestDataElementAbstract (unittest.TestCase):
     def test_not_hashable(self):
         # Hash should be that of the UUID of the element
         de = DummyDataElement()
-        ntools.assert_raises(TypeError, hash, de)
+        self.assertRaises(TypeError, hash, de)
 
     def test_del(self):
         de = DummyDataElement()
         m_clean_temp = de.clean_temp = mock.Mock()
         del de
 
-        ntools.assert_true(m_clean_temp.called)
+        self.assertTrue(m_clean_temp.called)
 
     def test_equality(self):
         # equal when binary content is the same
@@ -88,26 +87,26 @@ class TestDataElementAbstract (unittest.TestCase):
 
         test_content_1 = 'some similar content'
         e1.TEST_BYTES = e2.TEST_BYTES = test_content_1
-        ntools.assert_equal(e1, e2)
+        self.assertEqual(e1, e2)
 
         test_content_2 = 'some other bytes'
         e2.TEST_BYTES = test_content_2
-        ntools.assert_not_equal(e1, e2)
+        self.assertNotEqual(e1, e2)
 
     def test_md5(self):
         de = DummyDataElement()
         md5 = de.md5()
-        ntools.assert_equal(md5, EXPECTED_MD5)
+        self.assertEqual(md5, EXPECTED_MD5)
 
     def test_sha1(self):
         de = DummyDataElement()
         sha1 = de.sha1()
-        ntools.assert_equal(sha1, EXPECTED_SHA1)
+        self.assertEqual(sha1, EXPECTED_SHA1)
 
     def test_sha512(self):
         de = DummyDataElement()
         sha1 = de.sha512()
-        ntools.assert_equal(sha1, EXPECTED_SHA512)
+        self.assertEqual(sha1, EXPECTED_SHA512)
 
     # Cases:
     #   - no existing temps, no specific dir
@@ -130,9 +129,9 @@ class TestDataElementAbstract (unittest.TestCase):
         # no existing temps, no specific dir
         fp = DummyDataElement().write_temp()
 
-        ntools.assert_false(mock_scd.called)
-        ntools.assert_true(mock_open.called)
-        ntools.assert_equal(osp.dirname(fp), tempfile.gettempdir())
+        self.assertFalse(mock_scd.called)
+        self.assertTrue(mock_open.called)
+        self.assertEqual(osp.dirname(fp), tempfile.gettempdir())
 
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
@@ -148,9 +147,9 @@ class TestDataElementAbstract (unittest.TestCase):
         fp = DummyDataElement().write_temp(target_dir)
 
         mock_scd.assert_called_once_with(target_dir)
-        ntools.assert_true(mock_open.called)
-        ntools.assert_not_equal(osp.dirname(fp), tempfile.gettempdir())
-        ntools.assert_equal(osp.dirname(fp), target_dir)
+        self.assertTrue(mock_open.called)
+        self.assertNotEqual(osp.dirname(fp), tempfile.gettempdir())
+        self.assertEqual(osp.dirname(fp), target_dir)
 
     @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
@@ -183,9 +182,9 @@ class TestDataElementAbstract (unittest.TestCase):
 
         fp = de.write_temp()
 
-        ntools.assert_false(mock_scd.called)
-        ntools.assert_false(mock_open.called)
-        ntools.assert_equal(fp, prev_1)
+        self.assertFalse(mock_scd.called)
+        self.assertFalse(mock_open.called)
+        self.assertEqual(fp, prev_1)
 
         # _temp_filepath_stack files don't exist, so make sure isfile returns
         # false so clean_temp doesn't try to remove files that don't exist.
@@ -211,9 +210,9 @@ class TestDataElementAbstract (unittest.TestCase):
 
         fp = de.write_temp(temp_dir=target_dir)
 
-        ntools.assert_true(mock_scd.called)
-        ntools.assert_true(mock_open.called)
-        ntools.assert_equal(osp.dirname(fp), target_dir)
+        self.assertTrue(mock_scd.called)
+        self.assertTrue(mock_open.called)
+        self.assertEqual(osp.dirname(fp), target_dir)
 
     @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
     @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
@@ -255,9 +254,9 @@ class TestDataElementAbstract (unittest.TestCase):
 
         fp = de.write_temp(temp_dir=target_dir)
 
-        ntools.assert_false(mock_scd.called)
-        ntools.assert_false(mock_open.called)
-        ntools.assert_equal(fp, prev_1)
+        self.assertFalse(mock_scd.called)
+        self.assertFalse(mock_open.called)
+        self.assertEqual(fp, prev_1)
 
         # _temp_filepath_stack files don't exist, so make sure isfile returns
         # false so clean_temp doesn't try to remove files that don't exist.
@@ -270,8 +269,8 @@ class TestDataElementAbstract (unittest.TestCase):
 
         de.clean_temp()
 
-        ntools.assert_false(mock_os.path.isfile.called)
-        ntools.assert_false(mock_os.remove.called)
+        self.assertFalse(mock_os.path.isfile.called)
+        self.assertFalse(mock_os.remove.called)
 
     @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_hasTemp_badPath(self, mock_os):
@@ -282,7 +281,7 @@ class TestDataElementAbstract (unittest.TestCase):
         de.clean_temp()
 
         mock_os.path.isfile.assert_called_once_with('tmp/thing')
-        ntools.assert_false(mock_os.remove.called)
+        self.assertFalse(mock_os.remove.called)
 
     @mock.patch("smqtk.representation.data_element.os")
     def test_cleanTemp_hasTemp_validPath(self, mock_os):
@@ -300,45 +299,45 @@ class TestDataElementAbstract (unittest.TestCase):
     def test_uuid(self):
         de = DummyDataElement()
         de.TEST_BYTES = EXPECTED_BYTES
-        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+        self.assertEqual(de.uuid(), EXPECTED_UUID)
 
     def test_to_buffered_reader(self):
         # Check that we get expected file-like returns.
         de = DummyDataElement()
         de.TEST_BYTES = EXPECTED_BYTES
         br = de.to_buffered_reader()
-        ntools.assert_equal(br.readlines(), ['hello world'])
+        self.assertEqual(br.readlines(), ['hello world'])
 
         de.TEST_BYTES = 'some content\nwith new \nlines'
         br = de.to_buffered_reader()
-        ntools.assert_equal(br.readlines(),
+        self.assertEqual(br.readlines(),
                             ['some content\n', 'with new \n', 'lines'])
 
     def test_is_read_only(self):
         de = DummyDataElement()
         de.TEST_WRITABLE = True
-        ntools.assert_false(de.is_read_only())
+        self.assertFalse(de.is_read_only())
         de.TEST_WRITABLE = False
-        ntools.assert_true(de.is_read_only())
+        self.assertTrue(de.is_read_only())
 
     def test_set_bytes_not_writable(self):
         de = DummyDataElement()
         # trigger UUID cache at least once
-        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+        self.assertEqual(de.uuid(), EXPECTED_UUID)
 
         de.TEST_WRITABLE = False
-        ntools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.ReadOnlyError,
             de.set_bytes, 'test bytes'
         )
 
         # Caches shouldn't have been invalidated due to error
-        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+        self.assertEqual(de.uuid(), EXPECTED_UUID)
 
     def test_set_bytes_checksum_cache_invalidation(self):
         de = DummyDataElement()
         # trigger UUID cache at least once
-        ntools.assert_equal(de.uuid(), EXPECTED_UUID)
+        self.assertEqual(de.uuid(), EXPECTED_UUID)
 
         new_expected_bytes = 'some new byte content'
         new_expected_uuid = hashlib.sha1(new_expected_bytes).hexdigest()
@@ -348,5 +347,5 @@ class TestDataElementAbstract (unittest.TestCase):
 
         # Caches should have been invalidated, so UUID return should now reflect
         # new byte content.
-        ntools.assert_not_equal(de.uuid(), EXPECTED_UUID)
-        ntools.assert_equal(de.uuid(), new_expected_uuid)
+        self.assertNotEqual(de.uuid(), EXPECTED_UUID)
+        self.assertEqual(de.uuid(), new_expected_uuid)

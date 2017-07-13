@@ -3,7 +3,7 @@ import multiprocessing
 import numpy
 
 from smqtk.representation import DescriptorElement
-
+from smqtk.utils.postgres import norm_psql_cmd_string
 
 # Try to import required modules
 try:
@@ -30,24 +30,24 @@ class PostgresDescriptorElement (DescriptorElement):
 
     ARRAY_DTYPE = numpy.float64
 
-    UPSERT_TABLE_TMPL = ' '.join("""
+    UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
           {type_col:s} TEXT NOT NULL,
           {uuid_col:s} TEXT NOT NULL,
           {binary_col:s} BYTEA NOT NULL,
           PRIMARY KEY ({type_col:s}, {uuid_col:s})
         );
-    """.split())
+    """)
 
-    SELECT_TMPL = ' '.join("""
+    SELECT_TMPL = norm_psql_cmd_string("""
         SELECT {binary_col:s}
           FROM {table_name:s}
           WHERE {type_col:s} = %(type_val)s
             AND {uuid_col:s} = %(uuid_val)s
         ;
-    """.split())
+    """)
 
-    UPSERT_TMPL = ' '.join("""
+    UPSERT_TMPL = norm_psql_cmd_string("""
         WITH upsert AS (
           UPDATE {table_name:s}
             SET {binary_col:s} = %(binary_val)s
@@ -58,7 +58,7 @@ class PostgresDescriptorElement (DescriptorElement):
         INSERT INTO {table_name:s} ({type_col:s}, {uuid_col:s}, {binary_col:s})
           SELECT %(type_val)s, %(uuid_val)s, %(binary_val)s
             WHERE NOT EXISTS (SELECT * FROM upsert);
-    """.split())
+    """)
 
     @classmethod
     def is_usable(cls):

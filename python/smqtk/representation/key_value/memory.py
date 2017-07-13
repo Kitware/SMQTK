@@ -25,7 +25,6 @@ class MemoryKeyValueStore (KeyValueStore):
     mediums.*
 
     """
-    # TODO: File-based locking using smqtk.utils.exclusive touch or other means.
 
     PICKLE_PROTOCOL = 2
 
@@ -129,7 +128,8 @@ class MemoryKeyValueStore (KeyValueStore):
         if hasattr(self._cache_element, 'get_config'):
             elem_config = to_plugin_config(self._cache_element)
         else:
-            elem_config = None
+            # No cache element, output default config with no type.
+            elem_config = make_config(get_data_element_impls())
         return {
             'cache_element': elem_config
         }

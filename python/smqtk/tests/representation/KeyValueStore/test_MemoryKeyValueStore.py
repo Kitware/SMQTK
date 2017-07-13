@@ -118,8 +118,10 @@ class TestMemoryKeyValueStore (unittest.TestCase):
     def test_get_config_no_cache_elem(self):
         s = MemoryKeyValueStore()
         s._cache_element = None
-        expected_config = {'cache_element': None}
-        nose.tools.assert_equal(s.get_config(), expected_config)
+        # We expect an default DataElement config (no impl type defined)
+        c = s.get_config()
+        self.assertIn('cache_element', c)
+        self.assertIsNone(c['cache_element']['type'])
 
     def test_get_config_mem_cache_elem(self):
         s = MemoryKeyValueStore()

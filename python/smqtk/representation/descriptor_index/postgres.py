@@ -17,6 +17,8 @@ except ImportError:
 
 from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError
+from smqtk.utils.postgres \
+    import norm_psql_cmd_string, PsqlConnectionHelper
 
 try:
     import psycopg2
@@ -24,13 +26,6 @@ except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
-
-
-def norm_psql_cmd_string(s):
-    """
-    :rtype: str
-    """
-    return ' '.join(s.split())
 
 
 PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
@@ -66,13 +61,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
     # by psycopg2 will fill in the values appropriately as specified in a second
     # dictionary argument to ``cursor.execute(query, value_dict)``.
     #
-    UPSERT_TABLE_TMPL = ' '.join("""
+    UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
           {uuid_col:s} TEXT NOT NULL,
           {element_col:s} BYTEA NOT NULL,
           PRIMARY KEY ({uuid_col:s})
         );
-    """.split())
+    """)
 
     SELECT_TMPL = norm_psql_cmd_string("""
         SELECT {col:s}
@@ -140,7 +135,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :param uuid_col: Name of the column containing the UUID signatures.
         :type uuid_col: str
 
-        :param element_col: Name of the table column
+        :param element_col: Name of the table column that will contain
+            serialized elements.
+        :type element_col: str
 
         :param db_name: The name of the database to connect to.
         :type db_name: str
@@ -196,12 +193,6 @@ class PostgresDescriptorIndex (DescriptorIndex):
         self.uuid_col = uuid_col
         self.element_col = element_col
 
-        self.db_name = db_name
-        self.db_host = db_host
-        self.db_port = db_port
-        self.db_user = db_user
-        self.db_pass = db_pass
-
         self.multiquery_batch_size = multiquery_batch_size
         self.pickle_protocol = pickle_protocol
         self.read_only = bool(read_only)
@@ -217,194 +208,36 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ("Given pickle protocol is not in the known valid range. Given: %s"
              % self.pickle_protocol)
 
+        self.psql_helper = PsqlConnectionHelper(db_name, db_host, db_port,
+                                                db_user, db_pass,
+                                                self.multiquery_batch_size,
+                                                PSQL_TABLE_CREATE_RLOCK)
+        if not self.read_only:
+            self.psql_helper.set_table_upsert_sql(
+                self.UPSERT_TABLE_TMPL.format(
+                    table_name=self.table_name,
+                    uuid_col=self.uuid_col,
+                    element_col=self.element_col,
+                )
+            )
+
     def get_config(self):
         return {
             "table_name": self.table_name,
             "uuid_col": self.uuid_col,
             "element_col": self.element_col,
 
-            "db_name": self.db_name,
-            "db_host": self.db_host,
-            "db_port": self.db_port,
-            "db_user": self.db_user,
-            "db_pass": self.db_pass,
+            "db_name": self.psql_helper.db_name,
+            "db_host": self.psql_helper.db_host,
+            "db_port": self.psql_helper.db_port,
+            "db_user": self.psql_helper.db_user,
+            "db_pass": self.psql_helper.db_pass,
 
             "multiquery_batch_size": self.multiquery_batch_size,
             "pickle_protocol": self.pickle_protocol,
             "read_only": self.read_only,
             "create_table": self.create_table,
         }
-
-    def _get_psql_connection(self):
-        """
-        :return: A new connection to the configured database
-        :rtype: psycopg2._psycopg.connection
-        """
-        return psycopg2.connect(
-            database=self.db_name,
-            user=self.db_user,
-            password=self.db_pass,
-            host=self.db_host,
-            port=self.db_port,
-        )
-
-    def _get_unique_cursor_name(self):
-        """
-        :return: New cursor name string with a unique, random UUID embedded.
-        :rtype: str
-        """
-        ruuid = str(uuid.uuid4()).replace('-', '')
-        return "smqtk_postgres_dindex_cursor_%s" % ruuid
-
-    def _ensure_table(self, cursor):
-        """
-        Execute on psql connector cursor the table create-of-not-exists query.
-
-        :param cursor: Connection active cursor.
-
-        """
-        if not self.read_only and self.create_table:
-            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
-                table_name=self.table_name,
-                uuid_col=self.uuid_col,
-                element_col=self.element_col,
-            ))
-            with PSQL_TABLE_CREATE_RLOCK:
-                cursor.execute(q_table_upsert)
-                cursor.connection.commit()
-
-    def _single_execute(self, execute_hook, yield_result_rows=False,
-                        named=False):
-        """
-        Perform a single execution in a new connection transaction. Handles
-        connection/cursor acquisition and handling.
-
-        :param execute_hook: Function controlling execution on a cursor. Takes
-            the active cursor.
-        :type execute_hook: (psycopg2._psycopg.cursor) -> None
-
-        :param yield_result_rows: Optionally yield rows from each batch
-            execution. False by default.
-        :type yield_result_rows: bool
-
-        :param named: If a named cursor should be created, creating a
-            server-side cursor. This is only compatibly with executions of
-            SELECT or VALUES commands.
-        :type named: bool
-
-        :return: Iterator over result rows if ``yield_result_rows`` is True,
-            otherwise None.
-        :rtype: __generator | None
-
-        """
-        conn = self._get_psql_connection()
-
-        # Optionally create a named cursor to allow server-side iteration. This
-        # is required in order to not pull the whole table into memory.
-        cursor_name = None
-        if named:
-            cursor_name = self._get_unique_cursor_name()
-
-        try:
-            with conn:
-                with conn.cursor() as cur:
-                    self._ensure_table(cur)
-                with conn.cursor(cursor_name) as cur:
-                    # This only maters if the cursor is a named cursor (server-
-                    # side)
-                    cur.itersize = self.multiquery_batch_size
-                    execute_hook(cur)
-                    if yield_result_rows:
-                        for r in cur:
-                            yield r
-        finally:
-            # conn.__exit__ doesn't close connection, just the transaction
-            conn.close()
-
-    def _batch_execute(self, iterable, execute_hook,
-                       yield_result_rows=False, named=False):
-        """
-        Due to this method optionally yielding values, calling this returns a
-        generator. This must be iterated over for anything to occur even if
-        nothing is to be actively yielded.
-
-        :param iterable: Iterable of elements to batch
-        :type iterable: collections.Iterable
-
-        :param execute_hook: Function controlling execution on a cursor for
-            a collected batch of elements. Takes the active cursor and a
-            sequence of the current batch of elements.
-        :type execute_hook: (psycopg2._psycopg.cursor, list) -> None
-
-        :param yield_result_rows: Optionally yield rows from each batch
-            execution. False by default.
-        :type yield_result_rows: bool
-
-        :param named: If a named cursor should be created, creating a
-            server-side cursor. This is only compatibly with executions of
-            SELECT or VALUES commands.
-        :type named: bool
-
-        :return: Iterator over result rows if ``yield_result_rows`` is True,
-            otherwise None.
-        :rtype: __generator | None
-
-        """
-        self._log.debug("starting multi operation (batching: %s)",
-                        self.multiquery_batch_size)
-
-        # Lazy initialize -- only if there are elements to iterate over
-        #: :type: None | psycopg2._psycopg.connection
-        conn = None
-
-        # Create a named cursor to allow server-side iteration. This is
-        # required in order to not pull the whole table into memory.
-        cursor_name = None
-        if named:
-            cursor_name = self._get_unique_cursor_name()
-
-        try:
-            batch = []
-            i = 0
-            for e in iterable:
-                if conn is None:
-                    conn = self._get_psql_connection()
-
-                batch.append(e)
-
-                if self.multiquery_batch_size and \
-                        len(batch) >= self.multiquery_batch_size:
-                    i += 1
-                    self._log.debug('-- batch %d (size: %d)', i, len(batch))
-
-                    with conn:
-                        with conn.cursor() as cur:
-                            self._ensure_table(cur)
-                        with conn.cursor(cursor_name) as cur:
-                            cur.itersize = self.multiquery_batch_size
-                            execute_hook(cur, batch)
-                            if yield_result_rows:
-                                for r in cur:
-                                    yield r
-                    batch = []
-
-            if batch:
-                self._log.debug('-- tail batch (size: %d)', len(batch))
-                with conn:
-                    with conn.cursor() as cur:
-                        self._ensure_table(cur)
-                    with conn.cursor(cursor_name) as cur:
-                        cur.itersize = self.multiquery_batch_size
-                        execute_hook(cur, batch)
-                        if yield_result_rows:
-                            for r in cur:
-                                yield r
-
-        finally:
-            # conn.__exit__ doesn't close connection, just the transaction
-            if conn is not None:
-                conn.close()
-            self._log.debug('-- done')
 
     def count(self):
         """
@@ -421,7 +254,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.execute(q)
 
         # There's only going to be one row returned with one element in it
-        return list(self._single_execute(exec_hook, True))[0][0]
+        return list(self.psql_helper.single_execute(exec_hook, True))[0][0]
 
     def clear(self):
         """
@@ -438,7 +271,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         def exec_hook(cur):
             cur.execute(q, {'uuid_like': '%'})
 
-        list(self._single_execute(exec_hook))
+        list(self.psql_helper.single_execute(exec_hook))
 
     def has_descriptor(self, uuid):
         """
@@ -463,7 +296,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.execute(q, {'uuid_like': str(uuid)})
 
         # Should either yield one or zero rows
-        return bool(list(self._single_execute(exec_hook, True)))
+        return bool(list(self.psql_helper.single_execute(exec_hook, True)))
 
     def add_descriptor(self, descriptor):
         """
@@ -495,7 +328,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         def exec_hook(cur):
             cur.execute(q, v)
 
-        list(self._single_execute(exec_hook))
+        list(self.psql_helper.single_execute(exec_hook))
 
     def add_many_descriptors(self, descriptors):
         """
@@ -534,7 +367,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.executemany(q, batch)
 
         self._log.debug("Adding many descriptors")
-        list(self._batch_execute(iter_elements(), exec_hook))
+        list(self.psql_helper.batch_execute(iter_elements(), exec_hook))
 
     def get_descriptor(self, uuid):
         """
@@ -566,7 +399,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    "uuid '%s' (got: %d)"
                                    % (uuid, c.rowcount))
 
-        r = list(self._single_execute(eh, True))
+        r = list(self.psql_helper.single_execute(eh, True))
         return pickle.loads(str(r[0][0]))
 
     def get_many_descriptors(self, uuids):
@@ -611,7 +444,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         #   - We also check that the number of rows we got back is the same
         #     as elements yielded, else there were trailing UUIDs that did not
         #     match anything in the database.
-        g = self._batch_execute(iterelems(), exec_hook, True)
+        g = self.psql_helper.batch_execute(iterelems(), exec_hook, True)
         i = 0
         for r, expected_uuid in itertools.izip(g, uuid_order):
             d = pickle.loads(str(r[0]))
@@ -651,7 +484,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             if c.rowcount == 0:
                 raise KeyError(uuid)
 
-        list(self._single_execute(execute))
+        list(self.psql_helper.single_execute(execute))
 
     def remove_many_descriptors(self, uuids):
         """
@@ -683,7 +516,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                 if uid not in deleted_uuid_set:
                     raise KeyError(uid)
 
-        list(self._single_execute(execute))
+        list(self.psql_helper.single_execute(execute))
 
     def iterkeys(self):
         """
@@ -708,7 +541,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ))
 
         #: :type: __generator
-        execution_results = self._single_execute(execute, True, named=True)
+        execution_results = self.psql_helper.single_execute(execute, True, named=True)
         for r in execution_results:
             d = pickle.loads(str(r[0]))
             yield d

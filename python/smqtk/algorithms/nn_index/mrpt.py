@@ -483,19 +483,12 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             return ([_uuids[idx] for idx in near_indices],
                     dists[near_indices])
 
-        # Use a defaultdict to count tree hits
-        tree_hits = defaultdict(int)
-
-        # Count occurrences of each uuid in all the leaves that intersect the
-        # query
+        # Take union of all tree hits
+        tree_hits = set()
         for t in self._trees:
-            for uuid in _query_single(t):
-                tree_hits[uuid] += 1
+            tree_hits.update(_query_single(t))
 
-        # Collect the uuids with the most tree hits
-        most_hits = nlargest(n, tree_hits.keys(), key=lambda u: tree_hits[u])
-
-        uuids, distances = _exact_query(most_hits)
+        uuids, distances = _exact_query(list(tree_hits))
         order = distances.argsort()
         uuids, distances = zip(
             *((uuids[oidx], distances[oidx]) for oidx in order))

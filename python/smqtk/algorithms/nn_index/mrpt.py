@@ -437,6 +437,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         super(MRPTNearestNeighborsIndex, self).nn(d, n)
 
+        self._log.debug("Received query for %d nearest neighbors", n)
+
         depth, ntrees, set_size = self._depth, self._num_trees, self.count()
         leaf_size = set_size//(2**depth)
         if leaf_size * ntrees < n:
@@ -470,9 +472,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             # Assemble the array to query from the descriptors that match
             d_v = d.vector()
             pts_array = np.empty((len(_uuids), d_v.size), dtype=d_v.dtype)
-            elements_to_matrix(
-                self._descriptor_set.get_many_descriptors(_uuids),
-                mat=pts_array, use_multiprocessing=False)
+            descriptors = self._descriptor_set.get_many_descriptors(_uuids)
+            for i, desc in enumerate(descriptors):
+                pts_array[i,:] = desc.vector()
 
             dists = ((pts_array - d_v) ** 2).sum(axis=1)
 
@@ -497,6 +499,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         order = distances.argsort()
         uuids, distances = zip(
             *((uuids[oidx], distances[oidx]) for oidx in order))
+
+        self._log.debug("Returning query result of size %d", len(uuids))
 
         return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
                 tuple(distances))

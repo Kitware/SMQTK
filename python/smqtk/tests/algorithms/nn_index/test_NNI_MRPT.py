@@ -55,6 +55,58 @@ if MRPTNearestNeighborsIndex.is_usable():
             ntools.assert_equal(len(nbrs), len(dists))
             ntools.assert_equal(len(nbrs), 10)
 
+        def test_small_leaves(self):
+            numpy.random.seed(0)
+
+            n = 10 ** 4
+            dim = 256
+            depth = 10
+            # L ~ n/2**depth = 10^4 / 2^10 ~ 10
+            k = 200
+            # 3k/L = 60
+            num_trees = 60
+
+            d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+            [d.set_vector(numpy.random.rand(dim)) for d in d_index]
+            q = DescriptorMemoryElement('q', -1)
+            q.set_vector(numpy.zeros((dim,)))
+
+            di = MemoryDescriptorIndex()
+            mrpt = MRPTNearestNeighborsIndex(
+                di, num_trees=num_trees, depth=depth, random_seed=0)
+            mrpt.build_index(d_index)
+
+            nbrs, dists = mrpt.nn(q, k)
+            ntools.assert_equal(len(nbrs), len(dists))
+            ntools.assert_equal(len(nbrs), k)
+
+        def test_pathological_example(self):
+            n = 10 ** 4
+            dim = 256
+            depth = 10
+            # L ~ n/2**depth = 10^4 / 2^10 ~ 10
+            k = 200
+            # 3k/L = 60
+            num_trees = 60
+
+            d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+            # Put all descriptors on a line so that different trees get same
+            # divisions
+            [d.set_vector(numpy.full(dim, d.uuid())) for d in d_index]
+            q = DescriptorMemoryElement('q', -1)
+            q.set_vector(numpy.zeros((dim,)))
+
+            di = MemoryDescriptorIndex()
+            mrpt = MRPTNearestNeighborsIndex(
+                di, num_trees=num_trees, depth=depth, random_seed=0)
+            mrpt.build_index(d_index)
+
+            nbrs, dists = mrpt.nn(q, k)
+            ntools.assert_equal(len(nbrs), len(dists))
+            # We should get about 10 descriptors back instead of the requested
+            # 200
+            ntools.assert_less(len(nbrs), 20)
+
         def test_impl_findable(self):
             ntools.assert_in(MRPTNearestNeighborsIndex.__name__,
                              get_nn_index_impls())

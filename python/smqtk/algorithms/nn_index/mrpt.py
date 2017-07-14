@@ -5,8 +5,6 @@ from __future__ import print_function, unicode_literals
 # noinspection PyPep8Naming
 from six.moves import range, cPickle as pickle, zip
 
-from collections import defaultdict
-from heapq import nlargest
 from os import path as osp
 
 import numpy as np
@@ -254,14 +252,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         Build an MRPT structure
         """
 
-        desc_ids, desc_els = zip(*self._descriptor_set.iteritems())
         # Do transposition once
         # XXX it may be smarter to do this by blocks, in another loop rather
         # than transposing the whole thing
-        pts_array = elements_to_matrix(
-            desc_els, report_interval=1.0,
-            use_multiprocessing=self._use_multiprocessing).T
-        d, n = pts_array.shape
+        sample = self._descriptor_set.iterdescriptors().next()
+        sample_v = sample.vector()
+        n = self.count()
+        d = sample_v.size
+        pts_array = np.empty((n, d), sample_v.dtype, order="F")
+        elements_to_matrix(
+            self._descriptor_set, mat=pts_array, report_interval=1.0,
+            use_multiprocessing=self._use_multiprocessing)
+        pts_array = pts_array.T
 
         if (1 << self._depth) > n:
             self._log.warn("There are insufficient elements to populate all "
@@ -274,7 +276,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         self._trees = []
         # 1/sqrt(depth) considered optimal for random projections
         density = 1 / np.sqrt(self._depth)
-        for _ in range(self._num_trees):
+        desc_ids = list(self._descriptor_set.iterkeys())
+        for t in range(self._num_trees):
             # Each tree has a basis of sparse random projections
             # NB: this matrix is constructed so that we can do left
             # multiplication rather than right multiplication -- otherwise a
@@ -287,6 +290,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             # Array of splits is a packed tree
             splits = np.empty(((1 << self._depth) - 1,), np.float64)
 
+            self._log.debug("Constructing tree #%d", t+1)
             # Build the tree & store it
             leaves = self._build_single_tree(
                 random_basis * pts_array, np.arange(n), splits)
@@ -446,7 +450,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             # Search a single tree for the leaf that matches the query
             # NB: random_basis has shape (levels, N)
             random_basis = tree['random_basis']
-            depth = random_basis.shape[0]
             proj_query = random_basis * d.vector()
             splits = tree['splits']
             idx = 0
@@ -465,11 +468,13 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         def _exact_query(_uuids):
             # Assemble the array to query from the descriptors that match
-            pts_array = elements_to_matrix(
-                list(self._descriptor_set.get_many_descriptors(_uuids)),
-                use_multiprocessing=self._use_multiprocessing)
+            d_v = d.vector()
+            pts_array = np.empty((len(_uuids), d_v.size), dtype=d_v.dtype)
+            elements_to_matrix(
+                self._descriptor_set.get_many_descriptors(_uuids),
+                mat=pts_array, use_multiprocessing=False)
 
-            dists = ((pts_array - d.vector()) ** 2).sum(axis=1)
+            dists = ((pts_array - d_v) ** 2).sum(axis=1)
 
             if n > dists.shape[0]:
                 self._log.warning(

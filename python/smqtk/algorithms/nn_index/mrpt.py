@@ -433,6 +433,15 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         super(MRPTNearestNeighborsIndex, self).nn(d, n)
 
+        depth, ntrees, set_size = self._depth, self._num_trees, self.count()
+        leaf_size = set_size//(2**depth)
+        if leaf_size * ntrees < n:
+            self._log.warning(
+                "The number of descriptors in a leaf (%d) times the number "
+                "of trees (%d) is less than the number of descriptors "
+                "requested by the query (%d). The query result will be "
+                "deficient.", leaf_size, ntrees, n)
+
         def _query_single(tree):
             # Search a single tree for the leaf that matches the query
             # NB: random_basis has shape (levels, N)
@@ -463,9 +472,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             dists = ((pts_array - d.vector()) ** 2).sum(axis=1)
 
             if n > dists.shape[0]:
-                self._log.warning("There were fewer points in the set than "
-                                  "requested in the query. Returning entire"
-                                  " set.")
+                self._log.warning(
+                    "There were fewer descriptors (%d) in the set than "
+                    "requested in the query (%d). Returning entire set.",
+                    dists.shape[0], n)
             if n >= dists.shape[0]:
                 return _uuids, dists
 

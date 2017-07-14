@@ -7,7 +7,7 @@ import random
 import unittest
 
 import nose.tools as ntools
-import numpy
+import numpy as np
 
 import os.path as osp
 
@@ -34,7 +34,7 @@ if MRPTNearestNeighborsIndex.is_usable():
                 di, random_seed=self.RAND_SEED)
 
         def test_many_descriptors(self):
-            numpy.random.seed(0)
+            np.random.seed(0)
 
             n = 10 ** 4
             dim = 256
@@ -42,9 +42,9 @@ if MRPTNearestNeighborsIndex.is_usable():
             num_trees = 10
 
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-            [d.set_vector(numpy.random.rand(dim)) for d in d_index]
+            [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
-            q.set_vector(numpy.zeros((dim,)))
+            q.set_vector(np.zeros((dim,)))
 
             di = MemoryDescriptorIndex()
             mrpt = MRPTNearestNeighborsIndex(
@@ -56,7 +56,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             ntools.assert_equal(len(nbrs), 10)
 
         def test_small_leaves(self):
-            numpy.random.seed(0)
+            np.random.seed(0)
 
             n = 10 ** 4
             dim = 256
@@ -67,9 +67,9 @@ if MRPTNearestNeighborsIndex.is_usable():
             num_trees = 60
 
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-            [d.set_vector(numpy.random.rand(dim)) for d in d_index]
+            [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
-            q.set_vector(numpy.zeros((dim,)))
+            q.set_vector(np.zeros((dim,)))
 
             di = MemoryDescriptorIndex()
             mrpt = MRPTNearestNeighborsIndex(
@@ -92,9 +92,10 @@ if MRPTNearestNeighborsIndex.is_usable():
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             # Put all descriptors on a line so that different trees get same
             # divisions
-            [d.set_vector(numpy.full(dim, d.uuid())) for d in d_index]
+            [d.set_vector(np.full(dim, d.uuid(), dtype=np.float64))
+             for d in d_index]
             q = DescriptorMemoryElement('q', -1)
-            q.set_vector(numpy.zeros((dim,)))
+            q.set_vector(np.zeros((dim,)))
 
             di = MemoryDescriptorIndex()
             mrpt = MRPTNearestNeighborsIndex(
@@ -120,7 +121,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             index = self._make_inst()
             test_descriptors = []
             for i in range(dim):
-                v = numpy.zeros(dim, float)
+                v = np.zeros(dim, float)
                 v[i] = 1.
                 d = DescriptorMemoryElement('unit', i)
                 d.set_vector(v)
@@ -130,7 +131,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             # -> all modeled descriptors should be equally distant (unit
             # corners)
             q = DescriptorMemoryElement('query', 0)
-            q.set_vector(numpy.zeros(dim, float))
+            q.set_vector(np.zeros(dim, float))
             r, dists = index.nn(q, n=dim)
             ntools.assert_equal(len(dists), dim)
             # All dists should be 1.0, r order doesn't matter
@@ -145,7 +146,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             #
             index = self._make_inst()
             test_descriptors = []
-            vectors = numpy.eye(dim, dtype=numpy.float32)
+            vectors = np.eye(dim, dtype=np.float32)
             for i in range(dim):
                 d = DescriptorMemoryElement('unit', i)
                 d.set_vector(vectors[i])
@@ -168,7 +169,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             test_descriptors = []
             for j in range(i):
                 d = DescriptorMemoryElement('ordered', j)
-                d.set_vector(numpy.array([j, j*2], float))
+                d.set_vector(np.array([j, j*2], float))
                 test_descriptors.append(d)
             random.shuffle(test_descriptors)
             index.build_index(test_descriptors)
@@ -177,7 +178,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             # returned descriptors for a query of [0,0] should be in index
             # order.
             q = DescriptorMemoryElement('query', 99)
-            q.set_vector(numpy.array([0, 0], float))
+            q.set_vector(np.array([0, 0], float))
             r, dists = index.nn(q, n=i)
             # Because the data is one-dimensional, all of the cells will have
             # the same points (any division will just correspond to a point on
@@ -185,7 +186,7 @@ if MRPTNearestNeighborsIndex.is_usable():
             ntools.assert_equal(len(dists), i//2)
             for j, d, dist in zip(range(i), r, dists):
                 ntools.assert_equal(d.uuid(), j)
-                numpy.testing.assert_equal(d.vector(), [j, j*2])
+                np.testing.assert_equal(d.vector(), [j, j*2])
 
         def test_configuration(self):
             index_filepath = osp.abspath(osp.expanduser('index_filepath'))

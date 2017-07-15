@@ -14,6 +14,7 @@ from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import safe_create_dir
 
 
@@ -83,7 +84,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         return default
 
     def __init__(self, descriptor_set, index_filepath=None,
-                 parameters_filepath=None,
+                 parameters_filepath=None, read_only=False,
                  # Parameters for building an index
                  num_trees=10, depth=1, random_seed=None,
                  pickle_protocol=pickle.HIGHEST_PROTOCOL,
@@ -93,17 +94,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
 
-        :param use_multiprocessing: Whether or not to use discrete processes
-            as the parallelization agent vs python threads.
-        :type use_multiprocessing: bool
-
         :param descriptor_set: Index in which DescriptorElements will be
             stored.
         :type descriptor_set: smqtk.representation.DescriptorIndex
-
-        :param pickle_protocol: The protocol version to be used by the pickle
-            module to serialize class information
-        :type pickle_protocol: int
 
         :param index_filepath: Optional file location to load/store MRPT index
             when initialized and/or built.
@@ -119,6 +112,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             disk.
         :type parameters_filepath: None | str
 
+        :param read_only: If True, `build_index` will error if there is an
+            existing index. False by default.
+        :type read_only: bool
+
         :param num_trees: The number of trees that will be generated for the
             data structure
         :type num_trees: int
@@ -130,9 +127,18 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             seed.
         :type random_seed: int
 
+        :param pickle_protocol: The protocol version to be used by the pickle
+            module to serialize class information
+        :type pickle_protocol: int
+
+        :param use_multiprocessing: Whether or not to use discrete processes
+            as the parallelization agent vs python threads.
+        :type use_multiprocessing: bool
+
         """
         super(MRPTNearestNeighborsIndex, self).__init__()
 
+        self._read_only = read_only
         self._use_multiprocessing = use_multiprocessing
         self._descriptor_set = descriptor_set
         self._pickle_protocol = pickle_protocol
@@ -170,6 +176,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
             "index_filepath": self._index_filepath,
             "parameters_filepath": self._index_param_filepath,
+            "read_only": self._read_only,
             "random_seed": self._rand_seed,
             "pickle_protocol": self._pickle_protocol,
             "use_multiprocessing": self._use_multiprocessing,
@@ -234,6 +241,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        if self._read_only:
+            raise ReadOnlyError("Cannot modify container attributes due to "
+                                "being in read-only mode.")
+
         super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
 
         self._log.info("Building new MRPT index")
@@ -387,6 +398,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                             self._index_param_filepath)
             safe_create_dir(osp.dirname(self._index_param_filepath))
             params = {
+                "read_only": self._read_only,
                 "num_trees": self._num_trees,
                 "depth": self._depth,
             }
@@ -398,17 +410,17 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Loading index and parameters: %s, %s",
                         self._index_filepath, self._index_param_filepath)
         if self._index_param_filepath:
-            self._log.debug("Loading index: %s", self._index_filepath)
-            # noinspection PyTypeChecker
+            self._log.debug("Loading index params: %s",
+                            self._index_param_filepath)
             with open(self._index_param_filepath) as f:
                 params = pickle.load(f)
+            self._read_only = params['read_only']
             self._num_trees = params['num_trees']
             self._depth = params['depth']
 
         # Load the index
         if self._index_filepath:
-            self._log.debug("Loading index params: %s",
-                            self._index_param_filepath)
+            self._log.debug("Loading index: %s", self._index_filepath)
             # noinspection PyTypeChecker
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)

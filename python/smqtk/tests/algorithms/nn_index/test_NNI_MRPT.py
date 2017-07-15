@@ -16,6 +16,7 @@ from smqtk.representation.descriptor_element.local_elements import \
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.utils.errors import ReadOnlyError
 
 
 # Don't bother running tests of the class is not usable
@@ -25,13 +26,14 @@ if MRPTNearestNeighborsIndex.is_usable():
 
         RAND_SEED = 42
 
-        def _make_inst(self):
+        def _make_inst(self, **kwargs):
             """
             Make an instance of MRPTNearestNeighborsIndex
             """
-            di = MemoryDescriptorIndex()
+            if 'random_seed' not in kwargs:
+                kwargs.update(random_seed=self.RAND_SEED)
             return MRPTNearestNeighborsIndex(
-                di, random_seed=self.RAND_SEED)
+                MemoryDescriptorIndex(), **kwargs)
 
         def test_many_descriptors(self):
             np.random.seed(0)
@@ -137,6 +139,17 @@ if MRPTNearestNeighborsIndex.is_usable():
             # All dists should be 1.0, r order doesn't matter
             for d in dists:
                 ntools.assert_equal(d, 1.)
+
+        def test_read_only(self):
+            v = np.zeros(5, float)
+            v[0] = 1.
+            d = DescriptorMemoryElement('unit', 0)
+            d.set_vector(v)
+            test_descriptors = [d]
+
+            index = self._make_inst(read_only=True)
+            ntools.assert_raises(
+                ReadOnlyError, lambda: index.build_index(test_descriptors))
 
         def test_known_descriptors_nearest(self):
             dim = 5

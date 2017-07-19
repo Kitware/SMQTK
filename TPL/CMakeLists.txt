@@ -3,7 +3,6 @@ include(ExternalProject)
 
 option(SMQTK_BUILD_LIBSVM "Enable building of libSVM." ON)
 option(SMQTK_BUILD_FLANN "Enable building of FLANN." ON)
-option(SMQTK_BUILD_EXAMPLES "Enable building examples." ON)
 
 # Variables defined by parent module:
 #   TPL_BUILD_PREFIX  - Where build files will go

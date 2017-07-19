@@ -18,6 +18,10 @@ set(SMQTK_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(SMQTK_VERSION_MINOR ${CMAKE_MATCH_3})
 set(SMQTK_VERSION_PATCH ${CMAKE_MATCH_5})
 
+###
+# Options
+#
+option(SMQTK_BUILD_EXAMPLES "Enable building examples." ON)
 
 ###
 # Determine where to install python things in our install tree

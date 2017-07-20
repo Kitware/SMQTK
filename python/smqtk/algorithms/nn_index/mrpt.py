@@ -263,48 +263,41 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         Build an MRPT structure
         """
 
-        # Do transposition once
-        # XXX it may be smarter to do this by blocks, in another loop rather
-        # than transposing the whole thing
         sample = self._descriptor_set.iterdescriptors().next()
         sample_v = sample.vector()
         n = self.count()
         d = sample_v.size
-        pts_array = np.empty((n, d), sample_v.dtype, order="F")
+        pts_array = np.empty((n, d), sample_v.dtype)
         elements_to_matrix(
             self._descriptor_set, mat=pts_array, report_interval=1.0,
             use_multiprocessing=self._use_multiprocessing)
-        pts_array = pts_array.T
 
         if (1 << self._depth) > n:
             self._log.warn("There are insufficient elements to populate all "
                            "the leaves of the tree. Consider lowering the "
                            "depth parameter.")
 
-        # Get the Normal distribution RNG
-        rvs = stats.norm().rvs
+        random_bases = np.random.randn(self._num_trees, d, self._depth)
+        self._log.debug("Projecting onto random bases")
+        projs = pts_array.dot(random_bases)
+        del pts_array
+
+        self._log.debug("Constructing trees")
+        desc_ids = list(self._descriptor_set.iterkeys())
         # Start with no trees
         self._trees = []
-        # 1/sqrt(depth) considered optimal for random projections
-        density = 1 / np.sqrt(self._depth)
-        desc_ids = list(self._descriptor_set.iterkeys())
         for t in range(self._num_trees):
-            # Each tree has a basis of sparse random projections
-            # NB: this matrix is constructed so that we can do left
-            # multiplication rather than right multiplication -- otherwise a
-            # transpose of the input matrix is incurred on every iteration
-
-            # noinspection PyTypeChecker
-            random_basis = sparse.random(
-                self._depth, d, density=density, format="csr",
-                dtype=np.float64, random_state=self._rand_seed, data_rvs=rvs)
+            random_basis = random_bases[t]
+            proj = projs[:,t]
             # Array of splits is a packed tree
             splits = np.empty(((1 << self._depth) - 1,), np.float64)
+            leafptr = np.arange((1 << self._depth)+1, dtype=np.int32)
+            leafptr[-1] = n
 
             self._log.debug("Constructing tree #%d", t+1)
+
             # Build the tree & store it
-            leaves = self._build_single_tree(
-                random_basis * pts_array, np.arange(n), splits)
+            leaves = self._build_single_tree(proj, splits)
             leaves = [[desc_ids[idx] for idx in leaf]
                       for leaf in leaves]
             self._trees.append({
@@ -312,77 +305,79 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 'splits': splits,
                 'leaves': leaves
             })
-        del pts_array
 
-    def _build_single_tree(self, proj, indices, splits,
-                           split_index=0, level=0):
+    def _build_single_tree(self, proj, splits):
         """
         Build a single RP tree for fast kNN search
 
         :param proj: Projections of the dataset for this tree
-        :type proj: np.ndarray (levels, N)
-
-        :param indices: The indices of the projections for this tree
-        :type indices: np.ndarray
+        :type proj: np.ndarray (N, levels)
 
         :param splits: (2^depth-1) array of splits corresponding to leaves
                        (tree, where immediate descendants follow parents;
                        index i's children are 2i+1 and 2i+2
         :type splits: np.ndarray
 
-        :param split_index: The index of the current split element
-        :type split_index: int
-
-        :param level: Current level of tree
-        :type level: int
-
         :return: Tree of splits and list of index arrays for each leaf
         :rtype: list[np.ndarray]
         """
-        # If we're at the bottom, no split, just return the set
-        if level == self._depth:
-            assert ((0 <= indices) & (indices < proj.shape[1])).all()
-            return [indices]
+        def _build_recursive(indices, split_index=0, level=0):
+            """
+            Descend recursively into tree to build it, setting splits and
+            returning indices for leaves
 
-        n = indices.size
-        # If we literally don't have enough to populate the leaf, make it
-        # empty
-        if n < 1:
-            return []
+            :param indices: The current set of indices before partitioning
+            :param split_index: The index of the split to set
+            :param level: The level in the tree
 
-        # Get the random projections for these indices at this level
-        # NB: Recall that the projection matrix has shape (levels, N)
-        level_proj = proj[level, indices]
+            :return: A list of arrays representing leaf membership
+            :rtype: list[np.ndarray]
+            """
+            # If we're at the bottom, no split, just return the set
+            if level == self._depth:
+                return [indices]
 
-        # Split at the median if even, put median in upper half if not
-        n_split = n // 2
-        if n % 2 == 0:
-            part_indices = np.argpartition(level_proj, (n_split - 1, n_split))
-            split_val = level_proj[part_indices[n_split - 1]]
-            split_val += level_proj[part_indices[n_split]]
-            split_val /= 2.0
-        else:
-            part_indices = np.argpartition(level_proj, n_split)
-            split_val = level_proj[part_indices[n_split]]
+            n = indices.size
+            # If we literally don't have enough to populate the leaf, make it
+            # empty
+            if n < 1:
+                return []
 
-        splits[split_index] = split_val
+            # Get the random projections for these indices at this level
+            # NB: Recall that the projection matrix has shape (levels, N)
+            level_proj = proj[indices, level]
 
-        # part_indices is relative to this block of values, recover
-        # main indices
-        left_indices = indices[part_indices[:n_split]]
-        right_indices = indices[part_indices[n_split:]]
+            # Split at the median if even, put median in upper half if not
+            n_split = n // 2
+            if n % 2 == 0:
+                part_indices = np.argpartition(
+                    level_proj, (n_split - 1, n_split))
+                split_val = level_proj[part_indices[n_split - 1]]
+                split_val += level_proj[part_indices[n_split]]
+                split_val /= 2.0
+            else:
+                part_indices = np.argpartition(level_proj, n_split)
+                split_val = level_proj[part_indices[n_split]]
 
-        # Descend into each split and get sub-splits
-        left_out = self._build_single_tree(
-            proj, left_indices, splits, split_index=2 * split_index + 1,
-            level=level + 1)
-        right_out = self._build_single_tree(
-            proj, right_indices, splits, split_index=2 * split_index + 2,
-            level=level + 1)
+            splits[split_index] = split_val
 
-        # Assemble index set
-        left_out.extend(right_out)
-        return left_out
+            # part_indices is relative to this block of values, recover
+            # main indices
+            left_indices = indices[part_indices[:n_split]]
+            right_indices = indices[part_indices[n_split:]]
+
+            # Descend into each split and get sub-splits
+            left_out = _build_recursive(left_indices,
+                split_index=2 * split_index + 1, level=level + 1)
+            right_out = _build_recursive(right_indices,
+                split_index=2 * split_index + 2, level=level + 1)
+
+            # Assemble index set
+            left_out.extend(right_out)
+            return left_out
+
+        n = proj.shape[0]
+        return _build_recursive(np.arange(n))
 
     def _save_mrpt_model(self):
         self._log.debug("Caching index and parameters: %s, %s",
@@ -464,7 +459,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             # Search a single tree for the leaf that matches the query
             # NB: random_basis has shape (levels, N)
             random_basis = tree['random_basis']
-            proj_query = random_basis * d.vector()
+            proj_query = d.vector().dot(random_basis)
             splits = tree['splits']
             idx = 0
             for level in range(depth):

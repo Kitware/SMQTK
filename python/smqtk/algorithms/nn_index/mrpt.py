@@ -267,18 +267,30 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         sample_v = sample.vector()
         n = self.count()
         d = sample_v.size
+        self._log.info("Building %d trees of depth %d from %d descriptors "
+                       "of length %d",
+                       self._num_trees, self._depth, n, d)
+        leaf_size = n / (1 << self._depth)
+        self._log.debug("Leaf size ~ %.2f", leaf_size)
+        self._log.debug("Total descriptors stored = %d * %d = %d",
+                        self._num_trees, n, self._num_trees*n)
+        self._log.debug("Total descriptors examined in query ~ %d * %.2f = "
+                        "%.2f",
+                        self._num_trees, leaf_size,
+                        self._num_trees*leaf_size)
+        if (1 << self._depth) > n:
+            self._log.warn("There are insufficient elements (%d < 2^%d) to "
+                           "populate all the leaves of the tree. Consider "
+                           "lowering the depth parameter.",
+                           n, self._depth)
+
         pts_array = np.empty((n, d), sample_v.dtype)
         elements_to_matrix(
             self._descriptor_set, mat=pts_array, report_interval=1.0,
             use_multiprocessing=self._use_multiprocessing)
 
-        if (1 << self._depth) > n:
-            self._log.warn("There are insufficient elements to populate all "
-                           "the leaves of the tree. Consider lowering the "
-                           "depth parameter.")
-
-        random_bases = np.random.randn(self._num_trees, d, self._depth)
         self._log.debug("Projecting onto random bases")
+        random_bases = np.random.randn(self._num_trees, d, self._depth)
         projs = pts_array.dot(random_bases)
         del pts_array
 
@@ -287,8 +299,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         # Start with no trees
         self._trees = []
         for t in range(self._num_trees):
-            random_basis = random_bases[t]
-            proj = projs[:,t]
             # Array of splits is a packed tree
             splits = np.empty(((1 << self._depth) - 1,), np.float64)
             leafptr = np.arange((1 << self._depth)+1, dtype=np.int32)
@@ -297,11 +307,11 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.debug("Constructing tree #%d", t+1)
 
             # Build the tree & store it
-            leaves = self._build_single_tree(proj, splits)
+            leaves = self._build_single_tree(projs[:, t], splits)
             leaves = [[desc_ids[idx] for idx in leaf]
                       for leaf in leaves]
             self._trees.append({
-                'random_basis': random_basis,
+                'random_basis': (random_bases[t]),
                 'splits': splits,
                 'leaves': leaves
             })
@@ -321,14 +331,14 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :return: Tree of splits and list of index arrays for each leaf
         :rtype: list[np.ndarray]
         """
-        def _build_recursive(indices, split_index=0, level=0):
+        def _build_recursive(indices, level=0, split_index=0):
             """
             Descend recursively into tree to build it, setting splits and
             returning indices for leaves
 
             :param indices: The current set of indices before partitioning
-            :param split_index: The index of the split to set
             :param level: The level in the tree
+            :param split_index: The index of the split to set
 
             :return: A list of arrays representing leaf membership
             :rtype: list[np.ndarray]
@@ -367,10 +377,12 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             right_indices = indices[part_indices[n_split:]]
 
             # Descend into each split and get sub-splits
-            left_out = _build_recursive(left_indices,
-                split_index=2 * split_index + 1, level=level + 1)
-            right_out = _build_recursive(right_indices,
-                split_index=2 * split_index + 2, level=level + 1)
+            left_out = _build_recursive(
+                left_indices, level=level + 1,
+                split_index=2 * split_index + 1)
+            right_out = _build_recursive(
+                right_indices, level=level + 1,
+                split_index=2 * split_index + 2)
 
             # Assemble index set
             left_out.extend(right_out)
@@ -447,7 +459,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Received query for %d nearest neighbors", n)
 
         depth, ntrees, set_size = self._depth, self._num_trees, self.count()
-        leaf_size = set_size//(2**depth)
+        leaf_size = set_size//(1<<depth)
+        self._log.debug("Query size/leaf size ~ %d/%.3f = %.3g",
+                        n, leaf_size, n/leaf_size)
         if leaf_size * ntrees < n:
             self._log.warning(
                 "The number of descriptors in a leaf (%d) times the number "
@@ -476,14 +490,19 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             return tree['leaves'][idx]
 
         def _exact_query(_uuids):
+            set_size = len(_uuids)
+            self._log.debug("Exact query requested with %d descriptors",
+                            set_size)
+
             # Assemble the array to query from the descriptors that match
             d_v = d.vector()
-            pts_array = np.empty((len(_uuids), d_v.size), dtype=d_v.dtype)
+            pts_array = np.empty((set_size, d_v.size), dtype=d_v.dtype)
             descriptors = self._descriptor_set.get_many_descriptors(_uuids)
             for i, desc in enumerate(descriptors):
                 pts_array[i,:] = desc.vector()
 
             dists = ((pts_array - d_v) ** 2).sum(axis=1)
+
 
             if n > dists.shape[0]:
                 self._log.warning(
@@ -501,6 +520,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         tree_hits = set()
         for t in self._trees:
             tree_hits.update(_query_single(t))
+
+        self._log.debug("Query: %d, Hits: %d, Set: %d, trees*leaf size: %d",
+                        n, len(tree_hits), set_size, leaf_size*ntrees)
 
         uuids, distances = _exact_query(list(tree_hits))
         order = distances.argsort()

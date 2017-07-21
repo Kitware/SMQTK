@@ -168,7 +168,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         # Load the index/parameters if one exists
         if self._has_model_files():
-            self._log.info("Found existing model files. Loading.")
+            self._log.debug("Found existing model files. Loading.")
             self._load_mrpt_model()
 
     def get_config(self):
@@ -267,22 +267,30 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         sample_v = sample.vector()
         n = self.count()
         d = sample_v.size
-        self._log.info("Building %d trees of depth %d from %d descriptors "
-                       "of length %d",
-                       self._num_trees, self._depth, n, d)
         leaf_size = n / (1 << self._depth)
-        self._log.debug("Leaf size ~ %.2f", leaf_size)
-        self._log.debug("Total descriptors stored = %d * %d = %d",
-                        self._num_trees, n, self._num_trees*n)
-        self._log.debug("Total descriptors examined in query ~ %d * %.2f = "
-                        "%.2f",
-                        self._num_trees, leaf_size,
-                        self._num_trees*leaf_size)
+
+        self._log.debug(
+            "Building %d trees of depth %d from %g descriptors of length "
+            "%g",
+            self._num_trees, self._depth, n, d)
+        self._log.debug(
+            "Leaf size             (L = N/2^l)  ~ %g/2^%d = %g",
+            n, self._depth, leaf_size)
+        self._log.debug(
+            "UUIDs stored                (T*N)  = %g * %g = %g",
+            self._num_trees, n, self._num_trees*n)
+        self._log.debug(
+            "Examined UUIDs              (T*L)  ~ %g * %g = %g",
+            self._num_trees, leaf_size, self._num_trees*leaf_size)
+        self._log.debug(
+            "Examined/DB size  (T*L/N = T/2^l)  ~ %g/%g = %.3f",
+            self._num_trees*leaf_size, n, self._num_trees*leaf_size/n)
+
         if (1 << self._depth) > n:
-            self._log.warn("There are insufficient elements (%d < 2^%d) to "
-                           "populate all the leaves of the tree. Consider "
-                           "lowering the depth parameter.",
-                           n, self._depth)
+            self._log.warn(
+                "There are insufficient elements (%d < 2^%d) to populate "
+                "all the leaves of the tree. Consider lowering the depth "
+                "parameter.", n, self._depth)
 
         pts_array = np.empty((n, d), sample_v.dtype)
         elements_to_matrix(
@@ -458,10 +466,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Received query for %d nearest neighbors", n)
 
-        depth, ntrees, set_size = self._depth, self._num_trees, self.count()
-        leaf_size = set_size//(1<<depth)
-        self._log.debug("Query size/leaf size ~ %d/%.3f = %.3g",
-                        n, leaf_size, n/leaf_size)
+        depth, ntrees, db_size = self._depth, self._num_trees, self.count()
+        leaf_size = db_size//(1<<depth)
         if leaf_size * ntrees < n:
             self._log.warning(
                 "The number of descriptors in a leaf (%d) times the number "
@@ -521,15 +527,21 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         for t in self._trees:
             tree_hits.update(_query_single(t))
 
-        self._log.debug("Query: %d, Hits: %d, Set: %d, trees*leaf size: %d",
-                        n, len(tree_hits), set_size, leaf_size*ntrees)
+        hits = len(tree_hits)
+        self._log.debug(
+            "Query (k): %g, Hits (h): %g, DB (N): %g, "
+            "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
+            n, hits, db_size, leaf_size, leaf_size * ntrees)
+        self._log.debug("k/L     = %.3f", n / leaf_size)
+        self._log.debug("h/N     = %.3f", hits / db_size)
+        self._log.debug("h/(T*L) = %.3f", hits / (leaf_size * ntrees))
 
         uuids, distances = _exact_query(list(tree_hits))
         order = distances.argsort()
         uuids, distances = zip(
             *((uuids[oidx], distances[oidx]) for oidx in order))
 
-        self._log.debug("Returning query result of size %d", len(uuids))
+        self._log.debug("Returning query result of size %g", len(uuids))
 
         return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
                 tuple(distances))

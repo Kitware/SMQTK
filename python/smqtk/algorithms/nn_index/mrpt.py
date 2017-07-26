@@ -9,12 +9,16 @@ from os import path as osp
 
 import numpy as np
 
+from itertools import groupby
+
 from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import safe_create_dir
+
+CHUNK_SIZE = 5000
 
 
 class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
@@ -257,7 +261,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._save_mrpt_model()
 
-    def _build_multiple_trees(self):
+    def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
         Build an MRPT structure
         """
@@ -269,8 +273,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         leaf_size = n / (1 << self._depth)
 
         self._log.debug(
-            "Building %d trees of depth %d from %g descriptors of length "
-            "%g",
+            "Building %d trees (T) of depth %d (l) from %g descriptors (N) "
+            "of length %g",
             self._num_trees, self._depth, n, d)
         self._log.debug(
             "Leaf size             (L = N/2^l)  ~ %g/2^%d = %g",
@@ -291,14 +295,29 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 "all the leaves of the tree. Consider lowering the depth "
                 "parameter.", n, self._depth)
 
-        pts_array = np.empty((n, d), sample_v.dtype)
-        elements_to_matrix(
-            self._descriptor_set, mat=pts_array, report_interval=1.0,
-            use_multiprocessing=self._use_multiprocessing)
-
         self._log.debug("Projecting onto random bases")
+        # Build all the random bases and the projections at the same time
+        # (_num_trees * _depth shouldn't really be that high -- if it is,
+        # you're a monster)
         random_bases = np.random.randn(self._num_trees, d, self._depth)
-        projs = pts_array.dot(random_bases)
+        projs = np.empty((n, self._num_trees, self._depth), dtype=np.float64)
+        # Load the data in chunks (because n * d IS high)
+        pts_array = np.empty((chunk_size, d), sample_v.dtype)
+        # Enumerate the descriptors and div the index by the chunk size
+        for k, g in groupby(enumerate(self._descriptor_set.iterdescriptors()),
+                            lambda pair: pair[0] // chunk_size):
+            # Items are still paired so extract the descriptors
+            chunk = list(desc for i, desc in g)
+            # Take care of dangling end piece
+            k_beg = k * chunk_size
+            k_end = min((k+1) * chunk_size, n)
+            k_len = k_end - k_beg
+            # Run the descriptors through elements_to_matrix
+            elements_to_matrix(
+                chunk, mat=pts_array, report_interval=1.0,
+                use_multiprocessing=self._use_multiprocessing)
+            # Insert into projection matrix
+            projs[k_beg:k_end] = pts_array[:k_len].dot(random_bases)
         del pts_array
 
         self._log.debug("Constructing trees")
@@ -308,8 +327,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         for t in range(self._num_trees):
             # Array of splits is a packed tree
             splits = np.empty(((1 << self._depth) - 1,), np.float64)
-            leafptr = np.arange((1 << self._depth)+1, dtype=np.int32)
-            leafptr[-1] = n
 
             self._log.debug("Constructing tree #%d", t+1)
 
@@ -384,12 +401,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             right_indices = indices[part_indices[n_split:]]
 
             # Descend into each split and get sub-splits
-            left_out = _build_recursive(
-                left_indices, level=level + 1,
-                split_index=2 * split_index + 1)
-            right_out = _build_recursive(
-                right_indices, level=level + 1,
-                split_index=2 * split_index + 2)
+            left_out = _build_recursive(left_indices, level=level + 1,
+                                        split_index=2 * split_index + 1)
+            right_out = _build_recursive(right_indices, level=level + 1,
+                                         split_index=2 * split_index + 2)
 
             # Assemble index set
             left_out.extend(right_out)

@@ -8,7 +8,6 @@ from six.moves import range, cPickle as pickle, zip
 from os import path as osp
 
 import numpy as np
-from scipy import stats, sparse
 
 from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
@@ -396,8 +395,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             left_out.extend(right_out)
             return left_out
 
-        n = proj.shape[0]
-        return _build_recursive(np.arange(n))
+        return _build_recursive(np.arange(proj.shape[0]))
 
     def _save_mrpt_model(self):
         self._log.debug("Caching index and parameters: %s, %s",
@@ -467,7 +465,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Received query for %d nearest neighbors", n)
 
         depth, ntrees, db_size = self._depth, self._num_trees, self.count()
-        leaf_size = db_size//(1<<depth)
+        leaf_size = db_size//(1 << depth)
         if leaf_size * ntrees < n:
             self._log.warning(
                 "The number of descriptors in a leaf (%d) times the number "
@@ -505,10 +503,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             pts_array = np.empty((set_size, d_v.size), dtype=d_v.dtype)
             descriptors = self._descriptor_set.get_many_descriptors(_uuids)
             for i, desc in enumerate(descriptors):
-                pts_array[i,:] = desc.vector()
+                pts_array[i, :] = desc.vector()
 
             dists = ((pts_array - d_v) ** 2).sum(axis=1)
-
 
             if n > dists.shape[0]:
                 self._log.warning(
@@ -527,14 +524,15 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         for t in self._trees:
             tree_hits.update(_query_single(t))
 
-        hits = len(tree_hits)
+        hit_union = len(tree_hits)
         self._log.debug(
-            "Query (k): %g, Hits (h): %g, DB (N): %g, "
+            "Query (k): %g, Hit union (h): %g, DB (N): %g, "
             "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
-            n, hits, db_size, leaf_size, leaf_size * ntrees)
+            n, hit_union, db_size, leaf_size, leaf_size * ntrees)
         self._log.debug("k/L     = %.3f", n / leaf_size)
-        self._log.debug("h/N     = %.3f", hits / db_size)
-        self._log.debug("h/(T*L) = %.3f", hits / (leaf_size * ntrees))
+        self._log.debug("h/N     = %.3f", hit_union / db_size)
+        self._log.debug("h/L     = %.3f", hit_union / leaf_size)
+        self._log.debug("h/(T*L) = %.3f", hit_union / (leaf_size * ntrees))
 
         uuids, distances = _exact_query(list(tree_hits))
         order = distances.argsort()

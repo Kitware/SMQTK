@@ -6,62 +6,76 @@ import math
 __all__ = ["sieve_of_eratosthenes", "prime_factors", "factors", "factor_pairs"]
 
 
+# Set of known prime values
+_soe_prime_cache = [2, 3]
+# Map of not-prime values and the increment after that value where the next
+# not-prime value may be found. This should only contain keys greater-than
+# the max(_prime_cache) value for finding further prime values.
+_soe_not_prime_map = {4: 2, 9: 3}
+# The next value to continue iterating from.
+_soe_c = 4
+# TODO: Lock these globals when in use.
+
+
 def sieve_of_eratosthenes(N):
     """
     Return an ascending ordered list of prime numbers up to the given value,
     generated via the sieve of eratosthenes method.
 
-    TODO: Add starting offset so as to be able to get primes within a range
-            / add dynamic programming concepts.
+    TODO: Add starting offset so as to be able to get primes within a range.
+
+    :param N: Value to get prime values less-than-or-equal this value.
+    :return: List of prime integer values <= N.
+
     """
     # TODO: Optimization - all primes after 2 are odd, so special case when
     #           N == 2, else loop over and deal only with odd numbers.
+    global _soe_c
 
     # in case we get N as a string or something
     N = float(N)
 
-    # maps non-prime number to an increment value defining the next value after
-    # the key that is not a prime.
-    not_primes = {}
-    primes = []
+    if _soe_c > N:
+        # We have already computed all primes up to N, so return cache-filled
+        # list.
+        primes = []
+        for p in _soe_prime_cache:
+            if p > N:
+                break
+            primes.append(p)
+        return primes
 
-    c = 2
-    while c <= N:
-        if c in not_primes:
-            i = not_primes[c]
-            # next non-prime number. Need to skip entries already in not_primes
-            # so we don't interfere with recorded key-interval pairings
-            nnp = c + i
-            while (nnp in not_primes) and (nnp < N):
-                nnp += i
-            # npp may become >N, meaning results of this interval have already
-            # been fully covered, and we can safely assign it out of the range
-            # of N as we know we won't be looking past N at the most in the map.
-            not_primes[nnp] = i
-            # Won't be looking at c again, so we can remove it from the map to
-            # save memory
-            del not_primes[c]
+    # We need to find more prime values, so start with the least known
+    # not-prime and sieve our way up.
+    while _soe_c <= N:
+        if _soe_c in _soe_not_prime_map:
+            # Get increment for the current non-prime value and record the next
+            # non-prime value, keeping this increment. Incrementing past N in
+            # order to main state in reused cache structure.
+            incr = _soe_not_prime_map[_soe_c]
+            nnp = _soe_c + incr
+            while (nnp in _soe_not_prime_map):
+                nnp += incr
+            _soe_not_prime_map[nnp] = incr
+            # Remove _soe_c from map as it has been considered now.
+            del _soe_not_prime_map[_soe_c]
         else:
-            primes.append(c)
-            # The lowest value that will
-            c_squared = c*c
-            if c_squared <= N:
-                not_primes[c_squared] = c
-        c += 1
+            # _soe_c is a prime value: record it and add square of _soe_c to
+            # not-prime-map (square of the prime is the first value not
+            # attaiable by multiplying preceeding prime value).
+            _soe_prime_cache.append(_soe_c)
+            _soe_not_prime_map[_soe_c*_soe_c] = _soe_c
+        _soe_c += 1
 
-    return primes
+    # since we had to extend it, return a copy of the cache
+    return list( _soe_prime_cache )
 
 
 def prime_factors(N):
     """
     Returns ordered ascending prime factors of N.
-
-    TODO: Could add caching of answers for quicker successive responses.
-          Could make this recursive and leverage dynamic programming concepts
-            -> find a prime factor, call prime_factors on remaining divisor
     """
     sqrt_N = math.sqrt(N)
-    # sqrt_N = math.sqrt(N) + math.log10(N)
     primes = sieve_of_eratosthenes(sqrt_N)
 
     # prime factorize N
@@ -101,7 +115,7 @@ def factors(N):
 
     # using sorted as we want to return a list, and directly converting a set
     # to a list causes things to be out of sequential order.
-    return sorted(ftors)
+    return ftors
 
 
 def factor_pairs(N):

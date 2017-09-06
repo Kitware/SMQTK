@@ -25,6 +25,11 @@ endif()
 # libSVM
 #
 if (SMQTK_BUILD_LIBSVM)
+  # Required a make command to build. Required its existance.
+  if( NOT MAKE_EXECUTABLE )
+    message( FATAL_ERROR "Could not find 'make', required to build libsvm." )
+  endif()
+
   set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.1-custom")
   ExternalProject_Add(libSVM
     PREFIX            "${TPL_BUILD_PREFIX}"

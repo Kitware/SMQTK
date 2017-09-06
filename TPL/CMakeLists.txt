@@ -10,6 +10,17 @@ option(SMQTK_BUILD_FLANN "Enable building of FLANN." ON)
 #   TPL_PYTHON_SP     - relative path of standarad Python site-packages dir
 
 
+# Pick "make" executable based on generator chosen or environment variable
+# set.
+if (CMAKE_GENERATOR MATCHES ".*Makefiles")
+  set(MAKE_EXECUTABLE "$(MAKE)")
+elseif(NOT "#@$ENV{MAKE}" STREQUAL "#@")
+  set(MAKE_EXECUTABLE $ENV{MAKE})
+else()
+  find_program(MAKE_EXECUTABLE make)
+endif()
+
+
 ###
 # libSVM
 #
@@ -20,7 +31,7 @@ if (SMQTK_BUILD_LIBSVM)
     SOURCE_DIR        "${libSVM_DIR}"
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE   1
-    BUILD_COMMAND     $(MAKE) lib
+    BUILD_COMMAND     ${MAKE_EXECUTABLE} lib
     INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
     INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
             COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"

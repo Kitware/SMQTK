@@ -8,7 +8,7 @@ import random
 import numpy
 import six
 
-from kw_vptree import INF
+from smqtk.utils import INF
 
 
 __all__ = [

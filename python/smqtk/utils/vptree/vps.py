@@ -6,8 +6,8 @@ import random
 
 import numpy
 
-from kw_vptree import INF
-from kw_vptree.vp import VpNode, _vp_select_vantage_random
+from smqtk.utils import INF
+from smqtk.utils.vptree.vp import VpNode, _vp_select_vantage_random
 
 
 __all__ = [

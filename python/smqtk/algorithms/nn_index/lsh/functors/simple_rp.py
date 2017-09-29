@@ -8,6 +8,13 @@ from smqtk.utils.bin_utils import report_progress
 
 
 class SimpleRPFunctor (LshFunctor):
+    '''
+    This class is meant purely as a baseline comparison for other 
+    LshFunctors and NNIndex plugins. It is not meant to be used in 
+    production, as it is unlikely to produce a quality index.
+    '''
+    
+    
     @classmethod
     def is_usable(cls):
         return True
@@ -93,6 +100,7 @@ class SimpleRPFunctor (LshFunctor):
         self.mean_vec = np.mean(x, axis=0, keepdims=True)
 
         self._log.debug("Generating random projections")
+        np.random.seed(self.random_seed)
         self.rps = np.random.randn(dim, self.bit_length)
 
         # self._log.debug("Info normalizing descriptors with norm type: %s",

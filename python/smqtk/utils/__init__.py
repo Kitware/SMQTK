@@ -11,6 +11,9 @@ import logging
 import operator as op
 
 
+INF = float("inf")
+
+
 class SmqtkObject (object):
     """
     Highest level object interface for classes defined in SMQTK.

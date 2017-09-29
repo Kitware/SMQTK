@@ -13,9 +13,9 @@ import numpy
 import scipy.stats
 from six.moves import range
 
-from kw_vptree import INF
-from kw_vptree.vp import _vp_select_vantage_random
-from kw_vptree.vps import VpsNode, VpsItem, _vps_check_in_bounds
+from smqtk.utils import INF
+from smqtk.utils.vptree.vp import _vp_select_vantage_random
+from smqtk.utils.vptree.vps import VpsNode, VpsItem, _vps_check_in_bounds
 
 
 __all__ = [

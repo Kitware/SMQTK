@@ -127,8 +127,8 @@ def _vpsb_make_tree_inner(item_list, d, branching_factor, mu_selection):
 
     # Determine bounds of this node's children with respect to item distances
     # from the parent (current last distance in ``item.hist`` list).
-    # - All item histories at this point should be of the same length, so we can
-    #   pick the first one to determine level.
+    # - All item histories at this point should be of the same length, so we
+    #   can pick the first one to determine level.
     n.bounds = []
     node_level = len(item_list[0].hist)
     for hist_i in range(node_level):
@@ -175,27 +175,28 @@ def _vpsb_make_tree_inner(item_list, d, branching_factor, mu_selection):
         n.mu = numpy.partition(p_dists, mu_indices)[mu_indices]
     elif mu_selection == 'quantile':
         # Quantile method -- uneven spaced bins, even bin counts.
-        # - basically more accurate version of selection method (getting similar
-        #   results experimentally)
-        # - quantile probability array is evenly spaced and given +1 in order to
-        #   make the appropriate number of bins.
+        # - basically more accurate version of selection method (getting
+        #   similar results experimentally)
+        # - quantile probability array is evenly spaced and given +1 in order
+        #   to make the appropriate number of bins.
         quantile_probs = numpy.linspace(0, 1, children + 1)
-        p_dist_quantiles = scipy.stats.mstats.mquantiles(p_dists, quantile_probs)
+        p_dist_quantiles = scipy.stats.mstats.mquantiles(
+            p_dists, quantile_probs)
         # Mu values are the quantile values minus the min/max bounds.
         n.mu = p_dist_quantiles[1:-1]
     else:
         raise ValueError("Invalid mu selection method: %s" % mu_selection)
 
     # Sift items into bins based on mu values. Bins are in congruent order the
-    # the mu value list, which is in ascending order (smallest to largest), i.e.
-    # bin[0] are items closest to the vantage point and bin[-1] are items
+    # the mu value list, which is in ascending order (smallest to largest),
+    # i.e. bin[0] are items closest to the vantage point and bin[-1] are items
     # farthest away.
     item_bins = tuple([] for _ in range(children))
     dist_bins = [-INF] + list(n.mu) + [INF]
     for item, bin_i in itertools.izip(item_list,
                                       numpy.digitize(p_dists, dist_bins)):
         # need the -1 because digitize's return is 1-index.
-        item_bins[bin_i-1].append(item)
+        item_bins[bin_i - 1].append(item)
 
     # Recurse for each child bin in order.
     n.children = map(lambda b: _vpsb_make_tree_inner(b, d, branching_factor,
@@ -241,8 +242,8 @@ def vpsb_knn_recursive(q, k, root, dist_func):
         'k': k,
         'q_distance': q_dist,
         # "Max" heap of neighbors. Python heapq always builds min-heaps, so we
-        # store (-dist, node) elements. Most distance neighbor will always be at
-        # top of heap due to distance negation.
+        # store (-dist, node) elements. Most distance neighbor will always be
+        # at top of heap due to distance negation.
         'neighbors': [],
         # Initial search radius. Whole tree considered, so tau is infinite to
         # start.
@@ -259,7 +260,7 @@ def vpsb_knn_recursive(q, k, root, dist_func):
 
 def _vpsb_child_order_key(child, dist):
     """
-    Generate the key value for a child node for potential recursive search 
+    Generate the key value for a child node for potential recursive search
     order.
     """
     if child is None:

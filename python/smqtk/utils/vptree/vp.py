@@ -29,8 +29,8 @@ class VpNode (object):
         # Median distance to children
         #: :type: float
         self.mu = None
-        # Number of nodes that can be found as descendants underneath this node,
-        # including immediate children.
+        # Number of nodes that can be found as descendants underneath this
+        # node, including immediate children.
         #: :type: int | long
         self.num_descendants = None
 
@@ -138,7 +138,7 @@ def _vp_select_vantage_random(S):
     :rtype: object
 
     """
-    return S[random.randint(0, len(S)-1)]
+    return S[random.randint(0, len(S) - 1)]
 
 
 def vp_select_vantage_probabilistic(S, d, r):
@@ -220,8 +220,8 @@ def vp_knn_recursive(q, k, root, d_func):
         'k': k,
         'q_distance': q_dist,
         # "Max"" heap of neighbors. Python heapq always builds min-heaps, so we
-        # store (-dist, node) elements. Most distance neighbor will always be at
-        # top of heap due to distance negation.
+        # store (-dist, node) elements. Most distance neighbor will always be
+        # at top of heap due to distance negation.
         'neighbors': [],
         # Initial search radius. Whole tree considered, so tau is infinite to
         # start.

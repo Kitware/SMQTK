@@ -104,8 +104,8 @@ def _vps_make_tree_inner(item_list, d):
 
     # Determine bounds of this node's children with respect to item distances
     # from the parent (current last distance in ``item.hist`` list).
-    # - All item histories at this point should be of the same length, so we can
-    #   pick the first one to determine level.
+    # - All item histories at this point should be of the same length, so we
+    #   can pick the first one to determine level.
     n.bounds = []
     node_level = len(item_list[0].hist)
     for hist_i in range(node_level):
@@ -168,8 +168,8 @@ def vps_knn_recursive(q, k, root, dist_func):
         'k': k,
         'q_distance': q_dist,
         # "Max" heap of neighbors. Python heapq always builds min-heaps, so we
-        # store (-dist, node) elements. Most distance neighbor will always be at
-        # top of heap due to distance negation.
+        # store (-dist, node) elements. Most distance neighbor will always be
+        # at top of heap due to distance negation.
         'neighbors': [],
         # Initial search radius. Whole tree considered, so tau is infinite to
         # start.
@@ -239,7 +239,7 @@ def vps_knn_iterative_heapq(q, k, root, dist_func):
     ``root`` must be the result of calling ``vps_make_tree`` in order for nodes
     to have the correct properties for this flavor of search.
 
-    This implementation uses a heap to rank the next branch to search down by 
+    This implementation uses a heap to rank the next branch to search down by
     distance from the query.
 
     :param q: Query value.
@@ -251,8 +251,8 @@ def vps_knn_iterative_heapq(q, k, root, dist_func):
     :param root: Root node of the VPS tree.
     :type root: VpsNode
 
-    :param dist_func: Metric distance function that returns a floating point 
-        value in the [0, 1] range. This must be the same function used in the 
+    :param dist_func: Metric distance function that returns a floating point
+        value in the [0, 1] range. This must be the same function used in the
         creation of the VPS tree.
     :type dist_func: (object, object) -> float
 

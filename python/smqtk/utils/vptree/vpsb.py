@@ -172,7 +172,10 @@ def _vpsb_make_tree_inner(item_list, d, branching_factor, mu_selection):
         #       array, simply sorting the array after proportion reaches a
         #       threshold as selecting a large portion of the array is slower
         #       than just sorting it.
-        n.mu = numpy.partition(p_dists, mu_indices)[mu_indices]
+        if not mu_indices:
+            n.mu = []
+        else:
+            n.mu = numpy.partition(p_dists, mu_indices)[mu_indices]
     elif mu_selection == 'quantile':
         # Quantile method -- uneven spaced bins, even bin counts.
         # - basically more accurate version of selection method (getting
@@ -187,7 +190,7 @@ def _vpsb_make_tree_inner(item_list, d, branching_factor, mu_selection):
     else:
         raise ValueError("Invalid mu selection method: %s" % mu_selection)
 
-    # Sift items into bins based on mu values. Bins are in congruent order the
+    # Sift items into bins based on mu values. Bins are in congruent order to
     # the mu value list, which is in ascending order (smallest to largest),
     # i.e. bin[0] are items closest to the vantage point and bin[-1] are items
     # farthest away.

@@ -1,7 +1,11 @@
 import os
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
-from smqtk.utils.vptree import vp_make_tree, vp_knn_recursive
+from smqtk.utils.vptree import (
+    vp_make_tree, vp_knn_recursive,
+    vps_make_tree, vps_knn_recursive,
+    vpsb_make_tree, vpsb_knn_recursive
+)
 from smqtk.utils.bit_utils import (
     bit_vector_to_int_large,
     int_to_bit_vector_large,
@@ -12,33 +16,51 @@ from smqtk.utils.metrics import hamming_distance
 __author__ = "william.p.hicks@gmail.com"
 
 
+_tree_type_dict = {
+    "vp": (vp_make_tree, vp_knn_recursive),
+    "vps": (vps_make_tree, vps_knn_recursive),
+    "vpsb": (vpsb_make_tree, vpsb_knn_recursive),
+}
+
+
 class VPTreeHashIndex (HashIndex):
     """
-    Index using a basic vantage point tree
+    Index using a vantage point tree
     """
 
     @classmethod
     def is_usable(cls):
         return True
 
-    def __init__(self, file_cache=None, random_seed=None):
+    def __init__(self, file_cache=None, random_seed=None, tree_type="vp"):
         """
         Initialize vantage point tree hash index
 
         :param file_cache: Optional path to a file to cache our index to.
         :type file_cache: str
 
+        :param random_seed: Optional random number generator seed (numpy).
+        :type random_seed: None | int
+
+        :param tree_type: One of "vp", "vps", or "vpsb" optionally specifying
+            the type of vp tree. Defaults to "vp".
+        :type tree_type: str
+
         """
         super(VPTreeHashIndex, self).__init__()
         self.file_cache = file_cache
         self.random_seed = random_seed
         self.vpt = None
+        self.tree_type = tree_type
+        self._tree_builder, self._tree_searcher = _tree_type_dict[
+            self.tree_type]
         self.load_cache()
 
     def get_config(self):
         return {
             'file_cache': self.file_cache,
             'random_seed': self.random_seed,
+            'tree_type': self.tree_type,
         }
 
     def load_cache(self):
@@ -78,8 +100,8 @@ class VPTreeHashIndex (HashIndex):
         hashes_as_ints = map(bit_vector_to_int_large, hashes)
         if not hashes_as_ints:
             raise ValueError("No hashes given to index.")
-        self.vpt = vp_make_tree(hashes_as_ints, hamming_distance,
-                                r_seed=self.random_seed)
+        self.vpt = self._tree_builder(hashes_as_ints, hamming_distance,
+                                      r_seed=self.random_seed)
         self.save_cache()
 
     def nn(self, h, n=1):
@@ -106,11 +128,12 @@ class VPTreeHashIndex (HashIndex):
         """
         super(VPTreeHashIndex, self).nn(h, n)
         h_int = bit_vector_to_int_large(h)
-        neighbors, dists = vp_knn_recursive(
+        neighbors, dists = self._tree_searcher(
             h_int, n, self.vpt, hamming_distance)
         bits = len(h)
         neighbors = [
             int_to_bit_vector_large(neighbor, bits=bits)
             for neighbor in neighbors
         ]
+        dists = [dist_ / float(bits) for dist_ in dists]
         return neighbors, dists

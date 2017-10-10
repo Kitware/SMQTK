@@ -259,15 +259,17 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        uuids_pos = [d.uuid() for d in iqrs.positive_descriptors]
-        uuids_pos_external = [d.uuid() for d in
-                              iqrs.external_positive_descriptors]
-        uuids_neg = [d.uuid() for d in iqrs.negative_descriptors]
-        uuids_neg_external = [d.uuid() for d in
-                              iqrs.external_negative_descriptors]
-        wi_count = iqrs.working_index.count()
+        try:
+            uuids_pos = [d.uuid() for d in iqrs.positive_descriptors]
+            uuids_pos_external = [d.uuid() for d in
+                                  iqrs.external_positive_descriptors]
+            uuids_neg = [d.uuid() for d in iqrs.negative_descriptors]
+            uuids_neg_external = [d.uuid() for d in
+                                  iqrs.external_negative_descriptors]
+            wi_count = iqrs.working_index.count()
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         return make_response_json("Session '%s' info" % sid,
                                   sid=sid,
@@ -333,10 +335,13 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs.reset()
-        self.session_classifiers[sid] = None
-        self.session_classifier_dirty[sid] = True
-        iqrs.lock.release()
+        try:
+            iqrs.reset()
+            self.session_classifiers[sid] = None
+            self.session_classifier_dirty[sid] = True
+
+        finally:
+            iqrs.lock.release()
 
         return make_response_json("Reset IQR session '%s'" % sid,
                                   sid=sid), 200
@@ -414,9 +419,11 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs.external_descriptors(positive=[descriptor])
+        try:
+            iqrs.external_descriptors(positive=[descriptor])
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         return make_response_json("Success", descr_uuid=descriptor.uuid()), 201
 
@@ -463,9 +470,11 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs.external_descriptors(negative=[descriptor])
+        try:
+            iqrs.external_descriptors(negative=[descriptor])
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         return make_response_json("Success",
                                   descr_uuid=descriptor.uuid()), 201
@@ -496,12 +505,14 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        all_pos = (iqrs.external_positive_descriptors |
-                   iqrs.positive_descriptors)
-        all_neg = (iqrs.external_negative_descriptors |
-                   iqrs.negative_descriptors)
+        try:
+            all_pos = (iqrs.external_positive_descriptors |
+                       iqrs.positive_descriptors)
+            all_neg = (iqrs.external_negative_descriptors |
+                       iqrs.negative_descriptors)
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         is_pos = uid in {d.uuid() for d in all_pos}
         is_neg = uid in {d.uuid() for d in all_neg}
@@ -557,44 +568,47 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        self._log.debug("Getting the descriptors for UUIDs")
         try:
-            pos_d = set(
-                self.descriptor_index.get_many_descriptors(pos_uuids)
-            )
-            neg_d = set(
-                self.descriptor_index.get_many_descriptors(neg_uuids)
-            )
-            neu_d = set(
-                self.descriptor_index.get_many_descriptors(neu_uuids)
-            )
-        except KeyError as ex:
-            err_uuid = str(ex)
-            self._log.warn(traceback.format_exc())
-            return make_response_json(
-                "Descriptor UUID '%s' cannot be found in the "
-                "configured descriptor index."
-                % err_uuid,
-                sid=sid,
-                uuid=err_uuid,
-            ), 404
+            self._log.debug("Getting the descriptors for UUIDs")
+            try:
+                pos_d = set(
+                    self.descriptor_index.get_many_descriptors(pos_uuids)
+                )
+                neg_d = set(
+                    self.descriptor_index.get_many_descriptors(neg_uuids)
+                )
+                neu_d = set(
+                    self.descriptor_index.get_many_descriptors(neu_uuids)
+                )
+            except KeyError as ex:
+                err_uuid = str(ex)
+                self._log.warn(traceback.format_exc())
+                return make_response_json(
+                    "Descriptor UUID '%s' cannot be found in the "
+                    "configured descriptor index."
+                    % err_uuid,
+                    sid=sid,
+                    uuid=err_uuid,
+                ), 404
 
-        orig_pos = set(iqrs.positive_descriptors)
-        orig_neg = set(iqrs.negative_descriptors)
+            orig_pos = set(iqrs.positive_descriptors)
+            orig_neg = set(iqrs.negative_descriptors)
 
-        self._log.debug("[%s] Adjudicating", sid)
-        iqrs.adjudicate(pos_d, neg_d, neu_d, neu_d)
+            self._log.debug("[%s] Adjudicating", sid)
+            iqrs.adjudicate(pos_d, neg_d, neu_d, neu_d)
 
-        # Flag classifier as dirty if change in pos/neg sets
-        diff_pos = \
-            iqrs.positive_descriptors.symmetric_difference(orig_pos)
-        diff_neg = \
-            iqrs.negative_descriptors.symmetric_difference(orig_neg)
-        if diff_pos or diff_neg:
-            self._log.debug("[%s] session Classifier dirty", sid)
-            self.session_classifier_dirty[sid] = True
+            # Flag classifier as dirty if change in pos/neg sets
+            diff_pos = \
+                iqrs.positive_descriptors.symmetric_difference(orig_pos)
+            diff_neg = \
+                iqrs.negative_descriptors.symmetric_difference(orig_neg)
+            if diff_pos or diff_neg:
+                self._log.debug("[%s] session Classifier dirty", sid)
+                self.session_classifier_dirty[sid] = True
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
+
         return make_response_json(
             "Finished adjudication",
             sid=sid,
@@ -623,16 +637,19 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            iqrs.update_working_index(self.neighbor_index)
-        except RuntimeError as ex:
-            if "No positive descriptors to query" in str(ex):
-                return make_response_json("Failed to initialize, no positive "
-                                          "descriptors to query",
-                                          sid=sid, success=False), 200
-            else:
-                raise
+            try:
+                iqrs.update_working_index(self.neighbor_index)
+            except RuntimeError as ex:
+                if "No positive descriptors to query" in str(ex):
+                    return make_response_json("Failed to initialize, no positive "
+                                              "descriptors to query",
+                                              sid=sid, success=False), 200
+                else:
+                    raise
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
+
         return make_response_json("Success", sid=sid, success=True), 200
 
     # POST /refine
@@ -658,10 +675,13 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        self._log.info("[%s] Refining", sid)
-        iqrs.refine()
+        try:
+            self._log.info("[%s] Refining", sid)
+            iqrs.refine()
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
+
         return make_response_json("Refine complete", sid=sid), 201
 
     # GET /num_results
@@ -686,12 +706,15 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        if iqrs.results:
-            size = len(iqrs.results)
-        else:
-            size = 0
+        try:
+            if iqrs.results:
+                size = len(iqrs.results)
+            else:
+                size = 0
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
+
         return make_response_json("Currently %d results for session %s"
                                   % (size, sid),
                                   num_results=size,
@@ -732,24 +755,27 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        num_results = (iqrs.results and len(iqrs.results)) or 0
-
-        if i is None:
-            i = 0
-        if j is None:
-            j = num_results
-
         try:
-            i = int(i)
-            j = int(j)
-        except ValueError:
-            return make_response_json("Invalid bounds index value(s)"), 400
+            num_results = (iqrs.results and len(iqrs.results)) or 0
 
-        r = []
-        if iqrs.results:
-            r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
+            if i is None:
+                i = 0
+            if j is None:
+                j = num_results
 
-        iqrs.lock.release()
+            try:
+                i = int(i)
+                j = int(j)
+            except ValueError:
+                return make_response_json("Invalid bounds index value(s)"), 400
+
+            r = []
+            if iqrs.results:
+                r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
+
+        finally:
+            iqrs.lock.release()
+
         return make_response_json("Returning result pairs",
                                   i=i, j=j, total_results=num_results,
                                   results=r,
@@ -800,72 +826,75 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        if not iqrs.positive_descriptors:
-            return make_response_json(
-                "No positive labels in current session. Required for a "
-                "supervised classifier.",
-                sid=sid
-            ), 400
-        if not iqrs.negative_descriptors:
-            return make_response_json(
-                "No negative labels in current session. Required for a "
-                "supervised classifier.",
-                sid=sid
-            ), 400
-
-        # Get descriptor elements for classification
         try:
-            descriptors = list(self.descriptor_index
-                                   .get_many_descriptors(uuids))
-        except KeyError as ex:
-            err_uuid = str(ex)
-            self._log.warn(traceback.format_exc())
-            return make_response_json(
-                "Descriptor UUID '%s' cannot be found in the "
-                "configured descriptor index."
-                % err_uuid,
-                sid=sid,
-                uuid=err_uuid,
-            ), 404
+            if not iqrs.positive_descriptors:
+                return make_response_json(
+                    "No positive labels in current session. Required for a "
+                    "supervised classifier.",
+                    sid=sid
+                ), 400
+            if not iqrs.negative_descriptors:
+                return make_response_json(
+                    "No negative labels in current session. Required for a "
+                    "supervised classifier.",
+                    sid=sid
+                ), 400
 
-        classifier = self.session_classifiers.get(sid, None)
+            # Get descriptor elements for classification
+            try:
+                descriptors = list(self.descriptor_index
+                                       .get_many_descriptors(uuids))
+            except KeyError as ex:
+                err_uuid = str(ex)
+                self._log.warn(traceback.format_exc())
+                return make_response_json(
+                    "Descriptor UUID '%s' cannot be found in the "
+                    "configured descriptor index."
+                    % err_uuid,
+                    sid=sid,
+                    uuid=err_uuid,
+                ), 404
 
-        pos_label = "positive"
-        neg_label = "negative"
-        if self.session_classifier_dirty[sid] or classifier is None:
-            self._log.debug("Training new classifier for current "
-                            "adjudication state...")
+            classifier = self.session_classifiers.get(sid, None)
 
-            #: :type: SupervisedClassifier
-            classifier = plugin.from_plugin_config(
-                self.classifier_config,
-                get_classifier_impls(sub_interface=SupervisedClassifier)
+            pos_label = "positive"
+            neg_label = "negative"
+            if self.session_classifier_dirty[sid] or classifier is None:
+                self._log.debug("Training new classifier for current "
+                                "adjudication state...")
+
+                #: :type: SupervisedClassifier
+                classifier = plugin.from_plugin_config(
+                    self.classifier_config,
+                    get_classifier_impls(sub_interface=SupervisedClassifier)
+                )
+                classifier.train(
+                    {pos_label: iqrs.positive_descriptors,
+                     neg_label: iqrs.negative_descriptors}
+                )
+
+                self.session_classifiers[sid] = classifier
+                self.session_classifier_dirty[sid] = False
+
+            classifications = classifier.classify_async(
+                descriptors, self.classification_factory,
+                use_multiprocessing=True, ri=1.0
             )
-            classifier.train(
-                {pos_label: iqrs.positive_descriptors,
-                 neg_label: iqrs.negative_descriptors}
-            )
 
-            self.session_classifiers[sid] = classifier
-            self.session_classifier_dirty[sid] = False
+            # Format output to be parallel lists of UUIDs input and
+            # positive class classification scores.
+            o_uuids = []
+            o_proba = []
+            for d in descriptors:
+                o_uuids.append(d.uuid())
+                o_proba.append(classifications[d][pos_label])
 
-        classifications = classifier.classify_async(
-            descriptors, self.classification_factory,
-            use_multiprocessing=True, ri=1.0
-        )
+            assert uuids == o_uuids, \
+                "Output UUID list is not congruent with INPUT list."
 
-        # Format output to be parallel lists of UUIDs input and
-        # positive class classification scores.
-        o_uuids = []
-        o_proba = []
-        for d in descriptors:
-            o_uuids.append(d.uuid())
-            o_proba.append(classifications[d][pos_label])
+        finally:
+            iqrs.lock.release()
 
-        assert uuids == o_uuids, \
-            "Output UUID list is not congruent with INPUT list."
-
-        iqrs.lock.release()
         return make_response_json(
             "Finished classification",
             sid=sid,
@@ -905,9 +934,11 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs_state_bytes = iqrs.get_state_bytes()
+        try:
+            iqrs_state_bytes = iqrs.get_state_bytes()
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         # NOTE: May have to return base64 here instead of bytes.
         return iqrs_state_bytes, 200
@@ -943,9 +974,12 @@ class IqrService (SmqtkWebApp):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        iqrs.set_state_bytes(state_bytes, self.descriptor_factory)
+        try:
+            iqrs.set_state_bytes(state_bytes, self.descriptor_factory)
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
+
         return make_response_json("Success", sid=sid), 200
 
     # GET /is_ready

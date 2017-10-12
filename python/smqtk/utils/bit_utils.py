@@ -1,4 +1,4 @@
-import math
+import sys
 
 import numpy
 
@@ -91,10 +91,35 @@ def neighbor_codes(b, c, d):
             yield c ^ fltr
 
 
+def _bit_vector_to_int_fast(v):
+    """
+    Transform a numpy vector representing a sequence of binary bits [0 | 1]
+    into an integer representation.
+
+    This version works only on contiguous arrays.
+
+    :param v: 1D Vector of bits
+    :type v: numpy.core.multiarray.ndarray
+
+    :return: Integer equivalent
+    :rtype: int
+    """
+    pad = '\x00' * (v.dtype.itemsize - 1)
+    if (
+            v.dtype.byteorder == '<' or
+            (v.dtype.byteorder == '=' and sys.byteorder == 'little')):
+        zero_str = '\x00{}'.format(pad)
+        one_str = '\x01{}'.format(pad)
+    else:
+        zero_str = '{}\x00'.format(pad)
+        one_str = '{}\x01'.format(pad)
+    return int(str(v.data).replace(one_str, '1').replace(zero_str, '0'), 2)
+
+
 @jit
 def bit_vector_to_int(v):
     """
-    Transform a numpy vector representing a sequence of binary bits [0 | >0]
+    Transform a numpy vector representing a sequence of binary bits [0 | 1]
     into an integer representation.
 
     This version handles vectors of up to 64bits in size.
@@ -106,15 +131,18 @@ def bit_vector_to_int(v):
     :rtype: int
 
     """
-    c = 0L
-    for b in v:
-        c = (c * 2L) + int(b)
-    return c
+    if not hasattr(v, 'data') or v.dtype == numpy.dtype('object'):
+        c = 0L
+        for b in v:
+            c = (c * 2L) + int(b)
+        return c
+    else:
+        return _bit_vector_to_int_fast(v)
 
 
 def bit_vector_to_int_large(v):
     """
-    Transform a numpy vector representing a sequence of binary bits [0 | >0]
+    Transform a numpy vector representing a sequence of binary bits [0 | 1]
     into an integer representation.
 
     This function is the special form that can handle very large integers
@@ -127,10 +155,33 @@ def bit_vector_to_int_large(v):
     :rtype: int
 
     """
-    c = 0L
-    for b in v:
-        c = (c * 2L) + int(b)
-    return c
+    if not hasattr(v, 'data') or v.dtype == numpy.dtype('object'):
+        return sum(int(x) << i for i, x in enumerate(v[::-1]))
+    else:
+        return _bit_vector_to_int_fast(v)
+
+
+def _int_to_bit_vector_fast(integer, bits=0):
+    """
+    :param integer: integer to convert
+    :type integer: int
+
+    :param bits: Optional fixed number of bits that should be represented by
+        the vector.
+    :type bits: Optional specification of the size of returned vector.
+
+    :return: Bit vector as numpy array (big endian), or None if too few
+        ``bits`` were specified to contain the result.
+    :rtype: numpy.ndarray[bool]
+
+    """
+    brep = bin(integer)
+    rep_len = len(brep) - 2
+    if bits and (bits - rep_len) < 0:
+        return None
+    brep = brep.replace('0b', '\x00' * (bits - rep_len))
+    brep = brep.replace('0', '\x00').replace('1', '\x01')
+    return numpy.frombuffer(brep, dtype='bool')
 
 
 @jit
@@ -143,8 +194,8 @@ def int_to_bit_vector(integer, bits=0):
     :param integer: integer to convert
     :type integer: int
 
-    :param bits: Optional fixed number of bits that should be represented by the
-        vector.
+    :param bits: Optional fixed number of bits that should be represented by
+        the vector.
     :type bits: Optional specification of the size of returned vector.
 
     :return: Bit vector as numpy array (big endian), or None if too few
@@ -152,23 +203,7 @@ def int_to_bit_vector(integer, bits=0):
     :rtype: numpy.ndarray[bool]
 
     """
-    # Converting integer to array
-    if integer:
-        # Can-t use math version because floating-point precision runs out after
-        # about 2^48
-        # -2 to remove length of '0b' string prefix
-        size = len(bin(integer)) - 2
-    else:
-        size = 0
-    if bits and (bits - size) < 0:
-        return None
-
-    v = numpy.zeros(bits or size, numpy.bool_)
-    for i in xrange(0, size):
-        v[-(i+1)] = integer & 1
-        integer >>= 1
-
-    return v
+    return _int_to_bit_vector_fast(integer, bits)
 
 
 def int_to_bit_vector_large(integer, bits=0):
@@ -181,8 +216,8 @@ def int_to_bit_vector_large(integer, bits=0):
     :param integer: integer to convert
     :type integer: int
 
-    :param bits: Optional fixed number of bits that should be represented by the
-        vector.
+    :param bits: Optional fixed number of bits that should be represented by
+        the vector.
     :type bits: Optional specification of the size of returned vector.
 
     :return: Bit vector as numpy array (big endian), or None if too few
@@ -190,23 +225,7 @@ def int_to_bit_vector_large(integer, bits=0):
     :rtype: numpy.ndarray[bool]
 
     """
-    # Converting integer to array'
-    if integer:
-        # Can-t use math version because floating-point precision runs out after
-        # about 2^48
-        # -2 to remove length of '0b' string prefix
-        size = len(bin(integer)) - 2
-    else:
-        size = 0
-    if bits and (bits - size) < 0:
-        return None
-
-    v = numpy.zeros(bits or size, numpy.bool_)
-    for i in xrange(0, size):
-        v[-(i+1)] = integer & 1
-        integer >>= 1
-
-    return v
+    return _int_to_bit_vector_fast(integer, bits)
 
 
 def popcount(v):

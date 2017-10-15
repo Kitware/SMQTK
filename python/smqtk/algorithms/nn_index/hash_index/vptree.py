@@ -1,10 +1,11 @@
 import os
+import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.utils.vptree import (
-    vp_make_tree, vp_knn_recursive,
-    vps_make_tree, vps_knn_recursive,
-    vpsb_make_tree, vpsb_knn_recursive
+    vp_make_tree, vp_knn_recursive, VpNode,
+    vps_make_tree, vps_knn_recursive, VpsNode,
+    vpsb_make_tree, vpsb_knn_recursive, VpsbNode
 )
 from smqtk.utils.bit_utils import (
     bit_vector_to_int_large,
@@ -17,9 +18,9 @@ __author__ = "william.p.hicks@gmail.com"
 
 
 _tree_type_dict = {
-    "vp": (vp_make_tree, vp_knn_recursive),
-    "vps": (vps_make_tree, vps_knn_recursive),
-    "vpsb": (vpsb_make_tree, vpsb_knn_recursive),
+    "vp": (vp_make_tree, vp_knn_recursive, VpNode),
+    "vps": (vps_make_tree, vps_knn_recursive, VpsNode),
+    "vpsb": (vpsb_make_tree, vpsb_knn_recursive, VpsbNode),
 }
 
 
@@ -52,9 +53,12 @@ class VPTreeHashIndex (HashIndex):
         self.random_seed = random_seed
         self.vpt = None
         self.tree_type = tree_type
-        self._tree_builder, self._tree_searcher = _tree_type_dict[
-            self.tree_type]
-        self.load_cache()
+        self._tree_builder, self._tree_searcher, self._tree_cls = \
+            _tree_type_dict[self.tree_type]
+        if self.file_cache and not self.file_cache.endswith('.npz'):
+            raise ValueError("File cache path given does not specify an npz "
+                             "file.")
+        self.load_model()
 
     def get_config(self):
         return {
@@ -63,19 +67,23 @@ class VPTreeHashIndex (HashIndex):
             'tree_type': self.tree_type,
         }
 
-    def load_cache(self):
+    def save_model(self):
+        """
+        Save to file cache if configured
+        """
+        if self.file_cache:
+            self._log.debug("Saving model: %s", self.file_cache)
+            numpy.savez(self.file_cache, **self.vpt.to_arrays())
+            self._log.debug("Saving model: Done")
+
+    def load_model(self):
         """
         Load from file cache if we have one
         """
         if self.file_cache and os.path.isfile(self.file_cache):
-            raise NotImplementedError
-
-    def save_cache(self):
-        """
-        save to file cache if configures
-        """
-        if self.file_cache:
-            raise NotImplementedError
+            self._log.debug("Loading model: %s", self.file_cache)
+            with numpy.load(self.file_cache) as cache:
+                self.vpt = self._tree_cls.from_arrays(**cache)
 
     def count(self):
         if self.vpt is not None:
@@ -85,7 +93,7 @@ class VPTreeHashIndex (HashIndex):
 
     def build_index(self, hashes):
         """
-        Build the index with the give hash codes (bit-vectors).
+        Build the index with the given hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the index, not add to
         it, or raise an exception to as to protect the current index.
@@ -102,7 +110,7 @@ class VPTreeHashIndex (HashIndex):
             raise ValueError("No hashes given to index.")
         self.vpt = self._tree_builder(hashes_as_ints, hamming_distance,
                                       r_seed=self.random_seed)
-        self.save_cache()
+        self.save_model()
 
     def nn(self, h, n=1):
         """

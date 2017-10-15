@@ -46,6 +46,105 @@ class VpNode (object):
                % (self.__class__.__name__, self.p, self.mu,
                   self.num_descendants)
 
+    def to_arrays(self, value_array=None, mu_array=None, nd_array=None):
+        """
+        Store data from this VP tree as numpy arrays for use in serialization.
+
+        The returned dictionary is suitable to be passed as the kwds argument
+        to numpy.savez.
+
+        :param value_array: An array to be filled with the node values of this
+            and child nodes arranged as a binary tree.
+        :type value_array: numpy.ndarray
+        :param mu_array: An array to be filled with the mu values of this
+            and child nodes arranged as a binary tree.
+        :type mu_array: numpy.ndarray[float]
+        :param nd_array: An array to be filled with the number of left and
+            right descendants of each node in tree.
+        :type nd_array: numpy.ndarray[float, float]
+        :return: Dictionary with arrays as values and label strings as keys.
+        :rtype: dict[str, numpy.ndarray]
+        """
+        if value_array is None:
+            if type(self.p) is long:
+                dtype = numpy.dtype('object')
+            else:
+                dtype = numpy.dtype(type(self.p))
+            value_array = numpy.zeros(
+                self.num_descendants + 1, dtype=dtype
+            )
+        if mu_array is None:
+            mu_array = numpy.zeros(self.num_descendants + 1, dtype='float')
+        if nd_array is None:
+            nd_array = numpy.zeros((self.num_descendants + 1, 2), dtype='int')
+
+        if not len(value_array):
+            return
+
+        value_array[0] = self.p
+        mu_array[0] = self.mu
+
+        left_end = 1
+        if self.left is not None:
+            nd_array[0][0] = self.left.num_descendants + 1
+            left_end += nd_array[0][0]
+            self.left.to_arrays(
+                value_array=value_array[1:left_end],
+                mu_array=mu_array[1:left_end],
+                nd_array=nd_array[1:left_end]
+            )
+        if self.right is not None:
+            nd_array[0][1] = self.right.num_descendants + 1
+            self.right.to_arrays(
+                value_array=value_array[left_end:],
+                mu_array=mu_array[left_end:],
+                nd_array=nd_array[left_end:]
+            )
+        return {
+            "value_array": value_array, "mu_array": mu_array,
+            "nd_array": nd_array
+        }
+
+    @classmethod
+    def from_arrays(cls, value_array, mu_array, nd_array):
+        """
+        Construct VP tree from arrays structured as binary trees.
+
+        This method is useful for reconstructing VP trees from serialized data.
+
+        :param value_array: An array with the node values of this and child
+            nodes arranged as a binary tree.
+        :type value_array: numpy.ndarray
+        :param mu_array: An array with the mu values of this and child nodes
+            arranged as a binary tree.
+        :type mu_array: numpy.ndarray[float]
+        :param nd_array: An array with the number of left and right descendants
+            of each node in tree.
+        :type nd_array: numpy.ndarray[float, float]
+        :return: Reconstructed VP tree.
+        :rtype: VpNode
+        """
+        if not len(value_array):
+            return None
+        new_node = cls()
+        new_node.p = value_array[0]
+        new_node.mu = mu_array[0]
+        new_node.num_descendants = numpy.sum(nd_array[0])
+        left_end = 1 + nd_array[0][0]
+        if nd_array[0][0]:
+            new_node.left = cls.from_arrays(
+                value_array[1:left_end],
+                mu_array[1:left_end],
+                nd_array[1:left_end]
+            )
+        if nd_array[0][1]:
+            new_node.right = cls.from_arrays(
+                value_array[left_end:],
+                mu_array[left_end:],
+                nd_array[left_end:]
+            )
+        return new_node
+
     def is_leaf(self):
         """
         :return: If this node is a leaf in the tree.

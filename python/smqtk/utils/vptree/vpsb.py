@@ -49,6 +49,127 @@ class VpsbNode (VpsNode):
         """
         return (self.children is None) or (len(self.children) == 0)
 
+    def to_arrays(
+            self, value_array=None, mu_array=None, nd_array=None,
+            bounds_array=None):
+        """
+        Store data from this VP tree as numpy arrays for use in serialization.
+
+        The returned dictionary is suitable to be passed as the kwds argument
+        to numpy.savez.
+
+        :param value_array: An array to be filled with the node values of this
+            and child nodes arranged as a binary tree.
+        :type value_array: numpy.ndarray
+        :param mu_array: An array to be filled with the mu values of this
+            and child nodes arranged as a binary tree.
+        :type mu_array: numpy.ndarray[float]
+        :param nd_array: An array to be filled with the number of descendants
+            in each branch of this node.
+        :type nd_array: numpy.ndarray[numpy.ndarray[float]]
+        :param bounds_array: An array to be filled with the bounds of each node
+            in the tree.
+        :type bounds_array: numpy.ndarray[object]
+        :return: Dictionary with arrays as values and label strings as keys.
+        :rtype: dict[str, numpy.ndarray]
+        """
+        max_children = getattr(self, "max_children", 2)
+        children = getattr(self, "children", (self.left, self.right))
+        if value_array is None:
+            value_array = numpy.zeros(
+                self.num_descendants + 1, dtype=numpy.dtype(type(self.p))
+            )
+        if mu_array is None:
+            mu_array = numpy.zeros(self.num_descendants + 1, dtype='object')
+        if nd_array is None:
+            nd_array = numpy.zeros(
+                (self.num_descendants + 1, max_children), dtype='int')
+        if bounds_array is None:
+            bounds_array = numpy.zeros(
+                self.num_descendants + 1, dtype='object')
+
+        if not len(value_array):
+            return
+
+        value_array[0] = self.p
+        mu_array[0] = self.mu
+        bounds_array[0] = self.bounds
+
+        if children is not None:
+            begin_index = 1
+            end_index = 1
+            for i, child in enumerate(children):
+                if child is not None:
+                    nd_array[0][i] = child.num_descendants + 1
+                    begin_index = end_index
+                    end_index += nd_array[0][i]
+                    child.to_arrays(
+                        value_array=value_array[begin_index:end_index],
+                        mu_array=mu_array[begin_index:end_index],
+                        nd_array=nd_array[begin_index:end_index],
+                        bounds_array=bounds_array[begin_index:end_index],
+                    )
+
+        return {
+            "value_array": value_array, "mu_array": mu_array,
+            "nd_array": nd_array, "bounds_array": bounds_array
+        }
+
+    @classmethod
+    def from_arrays(
+            cls, value_array, mu_array, nd_array, bounds_array,
+            max_children=None):
+        """
+        Construct VPSB tree from arrays structured as binary trees.
+
+        This method is useful for reconstructing VP trees from serialized data.
+
+        :param value_array: An array with the node values of this and child
+            nodes arranged as a binary tree.
+        :type value_array: numpy.ndarray
+        :param mu_array: An array with the mu values of this and child nodes
+            arranged as a binary tree.
+        :type mu_array: numpy.ndarray[float]
+        :param nd_array: An array with the number of left and right descendants
+            of each node in tree.
+        :type nd_array: numpy.ndarray[float, float]
+        :param bounds_array: An array with the bounds of each node in the tree.
+        :type bounds_array: numpy.ndarray[object]
+        :return: Reconstructed VPSB tree.
+        :rtype: VpsNode
+        """
+        if not len(value_array):
+            return None
+        new_node = cls()
+        new_node.p = value_array[0]
+        new_node.mu = mu_array[0]
+        new_node.num_descendants = numpy.sum(nd_array[0])
+        new_node.bounds = bounds_array[0]
+
+        children = []
+        begin_index = 1
+        end_index = 1
+        if max_children is None:
+            max_children = nd_array.shape[1]
+        new_node.max_children = max_children
+        for nd in nd_array[0]:
+            begin_index = end_index
+            end_index += nd
+            children.append(
+                cls.from_arrays(
+                    value_array[begin_index:end_index],
+                    mu_array[begin_index:end_index],
+                    nd_array[begin_index:end_index],
+                    bounds_array[begin_index:end_index],
+                    max_children=max_children
+                )
+            )
+        if all(child is None for child in children):
+            new_node.children = None
+        else:
+            new_node.children = tuple(children)
+        return new_node
+
 
 def vpsb_make_tree(S, d, branching_factor=2, deduplicate=False, r_seed=None,
                    mu_selection='partition'):

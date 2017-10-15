@@ -34,12 +34,9 @@ class VpNode (object):
         #: :type: int | long
         self.num_descendants = None
 
-        # to nodes within mu radius
-        #: :type: VpNode
-        self.left = None
-        # to nodes on/outside mu radius
-        #: :type: VpNode
-        self.right = None
+        # Tuple of child nodes to this node
+        #: :type: None | tuple
+        self.children = None
 
     def __repr__(self):
         return "%s{p: %s, mu: %s, descendants: %d}" \
@@ -84,22 +81,19 @@ class VpNode (object):
         value_array[0] = self.p
         mu_array[0] = self.mu
 
-        left_end = 1
-        if self.left is not None:
-            nd_array[0][0] = self.left.num_descendants + 1
-            left_end += nd_array[0][0]
-            self.left.to_arrays(
-                value_array=value_array[1:left_end],
-                mu_array=mu_array[1:left_end],
-                nd_array=nd_array[1:left_end]
-            )
-        if self.right is not None:
-            nd_array[0][1] = self.right.num_descendants + 1
-            self.right.to_arrays(
-                value_array=value_array[left_end:],
-                mu_array=mu_array[left_end:],
-                nd_array=nd_array[left_end:]
-            )
+        if self.children is not None:
+            begin_index = 1
+            end_index = 1
+            for i, child in enumerate(self.children):
+                if child is not None:
+                    nd_array[0][i] = child.num_descendants + 1
+                    begin_index = end_index
+                    end_index += nd_array[0][i]
+                    child.to_arrays(
+                        value_array=value_array[begin_index:end_index],
+                        mu_array=mu_array[begin_index:end_index],
+                        nd_array=nd_array[begin_index:end_index],
+                    )
         return {
             "value_array": value_array, "mu_array": mu_array,
             "nd_array": nd_array
@@ -130,19 +124,23 @@ class VpNode (object):
         new_node.p = value_array[0]
         new_node.mu = mu_array[0]
         new_node.num_descendants = numpy.sum(nd_array[0])
-        left_end = 1 + nd_array[0][0]
-        if nd_array[0][0]:
-            new_node.left = cls.from_arrays(
-                value_array[1:left_end],
-                mu_array[1:left_end],
-                nd_array[1:left_end]
+        children = []
+        begin_index = 1
+        end_index = 1
+        for nd in nd_array[0]:
+            begin_index = end_index
+            end_index += nd
+            children.append(
+                cls.from_arrays(
+                    value_array[begin_index:end_index],
+                    mu_array[begin_index:end_index],
+                    nd_array[begin_index:end_index],
+                )
             )
-        if nd_array[0][1]:
-            new_node.right = cls.from_arrays(
-                value_array[left_end:],
-                mu_array[left_end:],
-                nd_array[left_end:]
-            )
+        if all(child is None for child in children):
+            new_node.children = None
+        else:
+            new_node.children = tuple(children)
         return new_node
 
     def is_leaf(self):
@@ -150,7 +148,7 @@ class VpNode (object):
         :return: If this node is a leaf in the tree.
         :rtype: bool
         """
-        return self.left is None and self.right is None
+        return self.children is None
 
 
 def vp_make_tree(S, d, r_seed=None):
@@ -221,8 +219,7 @@ def _vp_make_tree_inner(S, d):
             L.append(s)
         else:
             R.append(s)
-    n.left = _vp_make_tree_inner(L, d)
-    n.right = _vp_make_tree_inner(R, d)
+    n.children = (_vp_make_tree_inner(L, d), _vp_make_tree_inner(R, d))
 
     return n
 
@@ -370,17 +367,17 @@ def _vp_knn_recursive_inner(state, n):
     if d < n.mu:
         # Should at least check left child, optionally right if distance
         # radius overlaps right region.
-        if n.left:  # d < n.mu + tau
-            _vp_knn_recursive_inner(state, n.left)
-        if n.right and d >= n.mu - state['tau']:
-            _vp_knn_recursive_inner(state, n.right)
+        if n.children[0]:  # d < n.mu + tau
+            _vp_knn_recursive_inner(state, n.children[0])
+        if n.children[1] and d >= n.mu - state['tau']:
+            _vp_knn_recursive_inner(state, n.children[1])
     else:
         # Should at least check right child, optionally left if distance
         # radius overlaps left region.
-        if n.right:  # d >= n.mu - tau
-            _vp_knn_recursive_inner(state, n.right)
-        if n.left and d < n.mu + state['tau']:
-            _vp_knn_recursive_inner(state, n.left)
+        if n.children[1]:  # d >= n.mu - tau
+            _vp_knn_recursive_inner(state, n.children[1])
+        if n.children[0] and d < n.mu + state['tau']:
+            _vp_knn_recursive_inner(state, n.children[0])
 
 
 def vp_knn_iterative(q, k, root, distance):
@@ -416,17 +413,17 @@ def vp_knn_iterative(q, k, root, distance):
         if d < n.mu:
             # Should at least check left child, optionally right if distance
             # radius overlaps right region.
-            if n.left:  # d < n.mu + tau
-                to_search.append(n.left)
-            if n.right and d >= n.mu - tau:
-                to_search.append(n.right)
+            if n.children[0]:  # d < n.mu + tau
+                to_search.append(n.children[0])
+            if n.children[1] and d >= n.mu - tau:
+                to_search.append(n.children[1])
         else:
             # Should at least check right child, optionally left if distance
             # radius overlaps left region.
-            if n.right:  # d >= n.mu - tau
-                to_search.append(n.right)
-            if n.left and d < n.mu + tau:
-                to_search.append(n.left)
+            if n.children[1]:  # d >= n.mu - tau
+                to_search.append(n.children[1])
+            if n.children[0] and d < n.mu + tau:
+                to_search.append(n.children[0])
 
     # Need to negate the negated distances for return
     for n in neighbors:
@@ -475,17 +472,17 @@ def vp_knn_iterative_heapq(q, k, root, distance):
         if d < n.mu:
             # Should at least check left child, optionally right if distance
             # radius overlaps right region.
-            if n.left:  # d < n.mu + tau
-                to_search_push(n.left)
-            if n.right and d >= n.mu - tau:
-                to_search_push(n.right)
+            if n.children[0]:  # d < n.mu + tau
+                to_search_push(n.children[0])
+            if n.children[1] and d >= n.mu - tau:
+                to_search_push(n.children[1])
         else:
             # Should at least check right child, optionally left if distance
             # radius overlaps left region.
-            if n.right:  # d >= n.mu - tau
-                to_search_push(n.right)
-            if n.left and d < n.mu + tau:
-                to_search_push(n.left)
+            if n.children[1]:  # d >= n.mu - tau
+                to_search_push(n.children[1])
+            if n.children[0] and d < n.mu + tau:
+                to_search_push(n.children[0])
 
     # Need to negate the negated distances for return
     for n in neighbors:

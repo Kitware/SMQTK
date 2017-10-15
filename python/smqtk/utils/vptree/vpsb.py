@@ -74,7 +74,6 @@ class VpsbNode (VpsNode):
         :rtype: dict[str, numpy.ndarray]
         """
         max_children = getattr(self, "max_children", 2)
-        children = getattr(self, "children", (self.left, self.right))
         if value_array is None:
             value_array = numpy.zeros(
                 self.num_descendants + 1, dtype=numpy.dtype(type(self.p))
@@ -95,10 +94,10 @@ class VpsbNode (VpsNode):
         mu_array[0] = self.mu
         bounds_array[0] = self.bounds
 
-        if children is not None:
+        if self.children is not None:
             begin_index = 1
             end_index = 1
-            for i, child in enumerate(children):
+            for i, child in enumerate(self.children):
                 if child is not None:
                     nd_array[0][i] = child.num_descendants + 1
                     begin_index = end_index

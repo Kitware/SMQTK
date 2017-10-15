@@ -52,8 +52,11 @@ def assert_vptrees_equal(tree1, tree2):
             nose.tools.assert_is(tree1.mu, tree2.mu)
         else:
             numpy.testing.assert_almost_equal(tree1.mu, tree2.mu)
-        assert_vptrees_equal(tree1.left, tree2.left)
-        assert_vptrees_equal(tree1.right, tree2.right)
+        if tree1.children is None or tree2.children is None:
+            nose.tools.assert_is(tree1.children, tree2.children)
+        else:
+            for child1, child2 in zip(tree1.children, tree2.children):
+                assert_vptrees_equal(child1, child2)
 
 
 def assert_vpstrees_equal(tree1, tree2):
@@ -74,8 +77,11 @@ def assert_vpstrees_equal(tree1, tree2):
             nose.tools.assert_is(tree1.mu, tree2.mu)
         else:
             numpy.testing.assert_almost_equal(tree1.mu, tree2.mu)
-        assert_vpstrees_equal(tree1.left, tree2.left)
-        assert_vpstrees_equal(tree1.right, tree2.right)
+        if tree1.children is None or tree2.children is None:
+            nose.tools.assert_is(tree1.children, tree2.children)
+        else:
+            for child1, child2 in zip(tree1.children, tree2.children):
+                assert_vpstrees_equal(child1, child2)
 
 
 def assert_vpsbtrees_equal(tree1, tree2):

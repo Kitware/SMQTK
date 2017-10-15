@@ -65,7 +65,6 @@ class VpsNode (VpNode):
         :rtype: dict[str, numpy.ndarray]
         """
         max_children = getattr(self, "max_children", 2)
-        children = getattr(self, "children", (self.left, self.right))
         if value_array is None:
             value_array = numpy.zeros(
                 self.num_descendants + 1, dtype=numpy.dtype(type(self.p))
@@ -76,7 +75,8 @@ class VpsNode (VpNode):
             nd_array = numpy.zeros(
                 (self.num_descendants + 1, max_children), dtype='int')
         if bounds_array is None:
-            bounds_array = numpy.zeros(self.num_descendants + 1, dtype='object')
+            bounds_array = numpy.zeros(
+                self.num_descendants + 1, dtype='object')
 
         if not len(value_array):
             return
@@ -85,19 +85,20 @@ class VpsNode (VpNode):
         mu_array[0] = self.mu
         bounds_array[0] = self.bounds
 
-        begin_index = 1
-        end_index = 1
-        for i, child in enumerate(children):
-            if child is not None:
-                nd_array[0][i] = child.num_descendants + 1
-                begin_index = end_index
-                end_index += nd_array[0][i]
-                child.to_arrays(
-                    value_array=value_array[begin_index:end_index],
-                    mu_array=mu_array[begin_index:end_index],
-                    nd_array=nd_array[begin_index:end_index],
-                    bounds_array=bounds_array[begin_index:end_index],
-                )
+        if self.children is not None:
+            begin_index = 1
+            end_index = 1
+            for i, child in enumerate(self.children):
+                if child is not None:
+                    nd_array[0][i] = child.num_descendants + 1
+                    begin_index = end_index
+                    end_index += nd_array[0][i]
+                    child.to_arrays(
+                        value_array=value_array[begin_index:end_index],
+                        mu_array=mu_array[begin_index:end_index],
+                        nd_array=nd_array[begin_index:end_index],
+                        bounds_array=bounds_array[begin_index:end_index],
+                    )
 
         return {
             "value_array": value_array, "mu_array": mu_array,
@@ -149,7 +150,10 @@ class VpsNode (VpNode):
                     bounds_array[begin_index:end_index]
                 )
             )
-        new_node.left, new_node.right = children
+        if all(child is None for child in children):
+            new_node.children = None
+        else:
+            new_node.children = tuple(children)
         return new_node
 
 
@@ -255,8 +259,7 @@ def _vps_make_tree_inner(item_list, d):
             L.append(i)
         else:
             R.append(i)
-    n.left = _vps_make_tree_inner(L, d)
-    n.right = _vps_make_tree_inner(R, d)
+    n.children = (_vps_make_tree_inner(L, d), _vps_make_tree_inner(R, d))
 
     return n
 
@@ -331,17 +334,17 @@ def _vps_knn_recursive_inner(state, n):
     if d < n.mu:
         # q inside mu radius, more likely intersects inner shell, but may
         # intersect outer shell.
-        if _vps_check_in_bounds(n.left, d, state['tau']):
-            _vps_knn_recursive_inner(state, n.left)
-        if _vps_check_in_bounds(n.right, d, state['tau']):
-            _vps_knn_recursive_inner(state, n.right)
+        if _vps_check_in_bounds(n.children[0], d, state['tau']):
+            _vps_knn_recursive_inner(state, n.children[0])
+        if _vps_check_in_bounds(n.children[1], d, state['tau']):
+            _vps_knn_recursive_inner(state, n.children[1])
     else:
         # q on/outside mu radius, more likely intersects outer shell, but may
         # intersect inner shell.
-        if _vps_check_in_bounds(n.right, d, state['tau']):
-            _vps_knn_recursive_inner(state, n.right)
-        if _vps_check_in_bounds(n.left, d, state['tau']):
-            _vps_knn_recursive_inner(state, n.left)
+        if _vps_check_in_bounds(n.children[1], d, state['tau']):
+            _vps_knn_recursive_inner(state, n.children[1])
+        if _vps_check_in_bounds(n.children[0], d, state['tau']):
+            _vps_knn_recursive_inner(state, n.children[0])
 
 
 def vps_knn_iterative_heapq(q, k, root, dist_func):
@@ -411,10 +414,10 @@ def vps_knn_iterative_heapq(q, k, root, dist_func):
         # Add child nodes whose bounds potentially overlap the current tau
         # search radius
         # TODO: Check multiple children when there are more than two.
-        if _vps_check_in_bounds(n.left, d, tau):
-            to_search_push(n.left)
-        if _vps_check_in_bounds(n.right, d, tau):
-            to_search_push(n.right)
+        if _vps_check_in_bounds(n.children[0], d, tau):
+            to_search_push(n.children[0])
+        if _vps_check_in_bounds(n.children[1], d, tau):
+            to_search_push(n.children[1])
 
     # Need to negate the distances stored in list for return.
     for n in neighbors:

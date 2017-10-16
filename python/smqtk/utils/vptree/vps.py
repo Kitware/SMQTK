@@ -7,7 +7,8 @@ import random
 import numpy
 
 from smqtk.utils import INF
-from smqtk.utils.vptree.vp import VpNode, _vp_select_vantage_random
+from smqtk.utils.vptree.vp import VpNode, _vp_select_vantage_random, \
+    VpSearchState
 
 
 __all__ = [
@@ -279,25 +280,14 @@ def vps_knn_recursive(q, k, root, dist_func):
         """
         return dist_func(q, n)
 
-    # TODO: Encode into a class.
-    state = {
-        'k': k,
-        'q_distance': q_dist,
-        # "Max" heap of neighbors. Python heapq always builds min-heaps, so we
-        # store (-dist, node) elements. Most distance neighbor will always be
-        # at top of heap due to distance negation.
-        'neighbors': [],
-        # Initial search radius. Whole tree considered, so tau is infinite to
-        # start.
-        'tau': INF,
-    }
+    state = VpSearchState(k, q_dist)
 
     # Start with the root node to search.
     _vps_knn_recursive_inner(state, root)
 
     # Unpack neighbor heap for return
     dists, neighbors = zip(*sorted(map(lambda dn: (-dn[0], dn[1]),
-                                       state['neighbors'])))
+                                       state.neighbors)))
     return neighbors, dists
 
 
@@ -306,24 +296,24 @@ def _vps_knn_recursive_inner(state, n):
     Inner recursive search function for searching a VPS tree. Returns nothing
     but updates the state as appropriate.
 
-    :param state: Search state dictionary.
-    :type state: dict
+    :param state: Search state.
+    :type state: VpSearchState
     :param n: Tree node to consider.
     :type n: VpsNode
     """
     # Distance of query point from current node.
-    d = state['q_distance'](n.p)
+    d = state.q_distance(n.p)
 
     # locally record reference to mutable heap container in the state.
-    neighbors_heap = state['neighbors']
+    neighbors_heap = state.neighbors
 
-    if len(neighbors_heap) < state['k']:
+    if len(neighbors_heap) < state.k:
         heapq.heappush(neighbors_heap, (-d, n.p))
-    elif d <= state['tau']:
+    elif d <= state.tau:
         # Add a k+1'th element to heap and remove the most distant candidate.
         heapq.heappushpop(neighbors_heap, (-d, n.p))
         # Set tau to the distance of the new most distance neighbor
-        state['tau'] = -neighbors_heap[0][0]
+        state.tau = -neighbors_heap[0][0]
 
     # Stop if n is a leaf
     if n.is_leaf():
@@ -334,16 +324,16 @@ def _vps_knn_recursive_inner(state, n):
     if d < n.mu:
         # q inside mu radius, more likely intersects inner shell, but may
         # intersect outer shell.
-        if _vps_check_in_bounds(n.children[0], d, state['tau']):
+        if _vps_check_in_bounds(n.children[0], d, state.tau):
             _vps_knn_recursive_inner(state, n.children[0])
-        if _vps_check_in_bounds(n.children[1], d, state['tau']):
+        if _vps_check_in_bounds(n.children[1], d, state.tau):
             _vps_knn_recursive_inner(state, n.children[1])
     else:
         # q on/outside mu radius, more likely intersects outer shell, but may
         # intersect inner shell.
-        if _vps_check_in_bounds(n.children[1], d, state['tau']):
+        if _vps_check_in_bounds(n.children[1], d, state.tau):
             _vps_knn_recursive_inner(state, n.children[1])
-        if _vps_check_in_bounds(n.children[0], d, state['tau']):
+        if _vps_check_in_bounds(n.children[0], d, state.tau):
             _vps_knn_recursive_inner(state, n.children[0])
 
 

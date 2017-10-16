@@ -6,7 +6,6 @@ import heapq
 import random
 
 import numpy
-import six
 
 from smqtk.utils import INF
 
@@ -151,6 +150,23 @@ class VpNode (object):
         return self.children is None
 
 
+class VpSearchState(object):
+    """
+    Structure used in searching a VP tree
+
+    :param k: The number of neighbors to be returned from search.
+    :type k: int
+    :param q_distance: Function to calculate distance from the query
+    :type q_distance: (object) -> float
+    """
+
+    def __init__(self, k, q_distance):
+        self.k = k
+        self.q_distance = q_distance
+        self.neighbors = []
+        self.tau = INF
+
+
 def vp_make_tree(S, d, r_seed=None):
     """
     Create VP Tree, returning the root node.
@@ -171,7 +187,7 @@ def vp_make_tree(S, d, r_seed=None):
     """
     if r_seed is not None:
         random.seed(r_seed)
-    # TODO: Convert S to a numpy object array to leverage array view slicing.
+    S = numpy.unique(numpy.array(S, dtype='object'))
     return _vp_make_tree_inner(S, d)
 
 
@@ -181,6 +197,7 @@ def _vp_make_tree_inner(S, d):
         in S are stored.
 
     :param S: metric space elements
+    :type S: numpy.ndarray[object]
     :param d: distance function between two elements of S. This should yield
         distances in the [0,1] range.
 
@@ -190,8 +207,6 @@ def _vp_make_tree_inner(S, d):
     """
     if S is None or len(S) == 0:
         return None
-
-    # TODO: make local sequence of S in case S is an iterable.
 
     n = VpNode()
 
@@ -205,14 +220,13 @@ def _vp_make_tree_inner(S, d):
     n.p = _vp_select_vantage_random(S)
     # n.p = vp_select_vantage_probabilistic(S, d, r)
 
-    S_d = dict((s_, d(n.p, s_)) for s_ in S)
-    del S_d[n.p]  # remove vantage point from children to consider.
-    n.mu = numpy.median(list(six.itervalues(S_d)))
+    S_d = [(s_, d(n.p, s_)) for s_ in S if s_ != n.p]
+    n.mu = numpy.median([elem[1] for elem in S_d])
     n.num_descendants = len(S_d)
 
     L = []
     R = []
-    for s, dist in six.iteritems(S_d):
+    for s, dist in S_d:
         # The vantage point was removed from this mapping earlier, so do not
         # have to worry about that.
         if dist < n.mu:
@@ -311,25 +325,14 @@ def vp_knn_recursive(q, k, root, d_func):
         """
         return d_func(q, n)
 
-    # TODO: Encode into a class.
-    state = {
-        'k': k,
-        'q_distance': q_dist,
-        # "Max"" heap of neighbors. Python heapq always builds min-heaps, so we
-        # store (-dist, node) elements. Most distance neighbor will always be
-        # at top of heap due to distance negation.
-        'neighbors': [],
-        # Initial search radius. Whole tree considered, so tau is infinite to
-        # start.
-        'tau': INF,
-    }
+    state = VpSearchState(k, q_dist)
 
     # Start with the root node to search.
     _vp_knn_recursive_inner(state, root)
 
     # Unpack neighbor heap for return
     dists, neighbors = zip(*sorted(map(lambda dn: (-dn[0], dn[1]),
-                                       state['neighbors'])))
+                                       state.neighbors)))
     return neighbors, dists
 
 
@@ -338,27 +341,27 @@ def _vp_knn_recursive_inner(state, n):
     Inner recursive search function. Returns nothing but updates the state as
     appropriate.
 
-    :param state: Search state dictionary
-    :type state: dict
+    :param state: Search state
+    :type state: VpSearchState
     :param n: Tree node to consider.
     :type n: VpNode
 
     """
     # Distance value from the current node's value to the query value.
-    d = state['q_distance'](n.p)
+    d = state.q_distance(n.p)
 
     # locally record reference to mutable heap container in the state.
-    neighbors_heap = state['neighbors']
+    neighbors_heap = state.neighbors
 
-    if len(state['neighbors']) < state['k']:
+    if len(state.neighbors) < state.k:
         heapq.heappush(neighbors_heap, (-d, n.p))
-    elif d <= state['tau']:
+    elif d <= state.tau:
         # Add current node as the k+1'th element to heap and remove the then
         # most distant candidate.
         heapq.heappushpop(neighbors_heap, (-d, n.p))
         # Update tau to the distance of the new most distance neighbor, which
         # should be the top of the heap.
-        state['tau'] = -neighbors_heap[0][0]
+        state.tau = -neighbors_heap[0][0]
 
     # Stop if n is a leaf
     if n.is_leaf():
@@ -369,14 +372,14 @@ def _vp_knn_recursive_inner(state, n):
         # radius overlaps right region.
         if n.children[0]:  # d < n.mu + tau
             _vp_knn_recursive_inner(state, n.children[0])
-        if n.children[1] and d >= n.mu - state['tau']:
+        if n.children[1] and d >= n.mu - state.tau:
             _vp_knn_recursive_inner(state, n.children[1])
     else:
         # Should at least check right child, optionally left if distance
         # radius overlaps left region.
         if n.children[1]:  # d >= n.mu - tau
             _vp_knn_recursive_inner(state, n.children[1])
-        if n.children[0] and d < n.mu + state['tau']:
+        if n.children[0] and d < n.mu + state.tau:
             _vp_knn_recursive_inner(state, n.children[0])
 
 

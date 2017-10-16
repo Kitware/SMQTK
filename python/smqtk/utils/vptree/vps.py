@@ -403,11 +403,9 @@ def vps_knn_iterative_heapq(q, k, root, dist_func):
 
         # Add child nodes whose bounds potentially overlap the current tau
         # search radius
-        # TODO: Check multiple children when there are more than two.
-        if _vps_check_in_bounds(n.children[0], d, tau):
-            to_search_push(n.children[0])
-        if _vps_check_in_bounds(n.children[1], d, tau):
-            to_search_push(n.children[1])
+        for child in n.children:
+            if _vps_check_in_bounds(child, d, tau):
+                to_search_push(child)
 
     # Need to negate the distances stored in list for return.
     for n in neighbors:

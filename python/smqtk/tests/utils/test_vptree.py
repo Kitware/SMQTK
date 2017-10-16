@@ -9,7 +9,12 @@ from six.moves import range
 import nose.tools
 import numpy
 
-from smqtk.utils.vptree import *
+from smqtk.utils.vptree import (
+    vp_make_tree, vps_make_tree, vpsb_make_tree,
+    vp_knn_recursive, vp_knn_iterative, vp_knn_iterative_heapq,
+    vps_knn_recursive, vps_knn_iterative_heapq, vpsb_knn_recursive,
+    VpNode, VpsNode, VpsbNode
+)
 
 
 D_COUNT = 0
@@ -25,12 +30,12 @@ def dist_func_counter(d):
 
 
 def print_tree(tree, offset=0):
-    ret = "{} {}".format("|"*offset, tree)
+    ret = "{} {}".format("|" * offset, tree)
     if tree is not None:
         ret = "\n".join((
             ret,
-            print_tree(tree.left, offset=offset+1),
-            print_tree(tree.right, offset=offset+1)
+            print_tree(tree.left, offset=offset + 1),
+            print_tree(tree.right, offset=offset + 1)
         ))
     return ret
 
@@ -170,7 +175,6 @@ class TestVpTree (unittest.TestCase, TestVpBase):
         )
         assert_vptrees_equal(vpt, vpt2)
 
-
     def test_knn_recursive(self):
         S = self._make_sequential_set()
         c = {}
@@ -182,7 +186,6 @@ class TestVpTree (unittest.TestCase, TestVpBase):
         q = 0  # we s
         nbors, dists = vp_knn_recursive(q, 10, root, dist_func)
         self.assertSequenceEqual(nbors, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        print("debug")
 
         # With query of "len(S)", we should see reverse sequence from S from
         # high to low.
@@ -212,8 +215,8 @@ class TestVpTree (unittest.TestCase, TestVpBase):
         q = max(S)
         nbors, dists = vp_knn_iterative(q, 10, root, dist_func)
         self.assertSequenceEqual(nbors,
-                                 [q,   q-1, q-2, q-3, q-4,
-                                  q-5, q-6, q-7, q-8, q-9])
+                                 [q, q - 1, q - 2, q - 3, q - 4,
+                                  q - 5, q - 6, q - 7, q - 8, q - 9])
 
     def test_knn_iterative_heapq(self):
         S = self._make_sequential_set()
@@ -233,8 +236,8 @@ class TestVpTree (unittest.TestCase, TestVpBase):
         q = max(S)
         nbors, dists = vp_knn_iterative_heapq(q, 10, root, dist_func)
         self.assertSequenceEqual(nbors,
-                                 [q,   q-1, q-2, q-3, q-4,
-                                  q-5, q-6, q-7, q-8, q-9])
+                                 [q, q - 1, q - 2, q - 3, q - 4,
+                                  q - 5, q - 6, q - 7, q - 8, q - 9])
 
 
 class TestVpsTree (unittest.TestCase, TestVpBase):
@@ -303,8 +306,8 @@ class TestVpsTree (unittest.TestCase, TestVpBase):
         q = max(S)
         nbors, dists = vps_knn_iterative_heapq(q, 10, root, dist_func)
         self.assertSequenceEqual(nbors,
-                                 [q,   q-1, q-2, q-3, q-4,
-                                  q-5, q-6, q-7, q-8, q-9])
+                                 [q, q - 1, q - 2, q - 3, q - 4,
+                                  q - 5, q - 6, q - 7, q - 8, q - 9])
 
     def test_make_deduplicate(self):
         # Make set with duplicate elements (two copies of each integer).
@@ -337,19 +340,19 @@ class TestVpsbTree (unittest.TestCase, TestVpBase):
         c = {}
         dist_func = self._make_dist_func(max(S), c)
 
-        root = vpsb_make_tree(S, dist_func, 2, r_seed=self.RAND_SEED)
+        vpsb_make_tree(S, dist_func, 2, r_seed=self.RAND_SEED)
         # Calls to distance function should be <= O(n*(log(n)/log(2)))
         max_expected_calls = len(S) * math.log(len(S), 2)
         self.assertLessEqual(c['count'], max_expected_calls)
         c['count'] = 0
 
-        root = vpsb_make_tree(S, dist_func, 3, r_seed=self.RAND_SEED)
+        vpsb_make_tree(S, dist_func, 3, r_seed=self.RAND_SEED)
         # Calls to distance function should be <= O(n*(log(n)/log(3)))
         max_expected_calls = len(S) * math.log(len(S), 3)
         self.assertLessEqual(c['count'], max_expected_calls)
         c['count'] = 0
 
-        root = vpsb_make_tree(S, dist_func, 9, r_seed=self.RAND_SEED)
+        vpsb_make_tree(S, dist_func, 9, r_seed=self.RAND_SEED)
         # Calls to distance function should be <= O(n*(log(n)/log(9)))
         # TODO: Adding a 10% fudge factor here because its clocking in at a
         #       little over expected runtime and not sure why at the moment,

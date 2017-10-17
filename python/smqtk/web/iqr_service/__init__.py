@@ -570,26 +570,16 @@ class IqrService (SmqtkWebApp):
 
         try:
             self._log.debug("Getting the descriptors for UUIDs")
-            try:
-                pos_d = set(
-                    self.descriptor_index.get_many_descriptors(pos_uuids)
-                )
-                neg_d = set(
-                    self.descriptor_index.get_many_descriptors(neg_uuids)
-                )
-                neu_d = set(
-                    self.descriptor_index.get_many_descriptors(neu_uuids)
-                )
-            except KeyError as ex:
-                err_uuid = str(ex)
-                self._log.warn(traceback.format_exc())
-                return make_response_json(
-                    "Descriptor UUID '%s' cannot be found in the "
-                    "configured descriptor index."
-                    % err_uuid,
-                    sid=sid,
-                    uuid=err_uuid,
-                ), 404
+            # get_many_descriptors can raise KeyError
+            pos_d = set(
+                self.descriptor_index.get_many_descriptors(pos_uuids)
+            )
+            neg_d = set(
+                self.descriptor_index.get_many_descriptors(neg_uuids)
+            )
+            neu_d = set(
+                self.descriptor_index.get_many_descriptors(neu_uuids)
+            )
 
             orig_pos = set(iqrs.positive_descriptors)
             orig_neg = set(iqrs.negative_descriptors)
@@ -605,6 +595,17 @@ class IqrService (SmqtkWebApp):
             if diff_pos or diff_neg:
                 self._log.debug("[%s] session Classifier dirty", sid)
                 self.session_classifier_dirty[sid] = True
+
+        except KeyError as ex:
+            err_uuid = str(ex)
+            self._log.warn(traceback.format_exc())
+            return make_response_json(
+                "Descriptor UUID '%s' cannot be found in the "
+                "configured descriptor index."
+                % err_uuid,
+                sid=sid,
+                uuid=err_uuid,
+            ), 404
 
         finally:
             iqrs.lock.release()
@@ -637,16 +638,14 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            try:
-                iqrs.update_working_index(self.neighbor_index)
-            except RuntimeError as ex:
-                if "No positive descriptors to query" in str(ex):
-                    return make_response_json("Failed to initialize, no positive "
-                                              "descriptors to query",
-                                              sid=sid, success=False), 200
-                else:
-                    raise
-
+            iqrs.update_working_index(self.neighbor_index)
+        except RuntimeError as ex:
+            if "No positive descriptors to query" in str(ex):
+                return make_response_json("Failed to initialize, no positive "
+                                          "descriptors to query",
+                                          sid=sid, success=False), 200
+            else:
+                raise
         finally:
             iqrs.lock.release()
 
@@ -763,15 +762,15 @@ class IqrService (SmqtkWebApp):
             if j is None:
                 j = num_results
 
-            try:
-                i = int(i)
-                j = int(j)
-            except ValueError:
-                return make_response_json("Invalid bounds index value(s)"), 400
+            # int() can raise ValueError, catch
+            i = int(i)
+            j = int(j)
 
-            r = []
-            if iqrs.results:
-                r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
+            # We ensured i, j are valid by this point
+            r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
+
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
 
         finally:
             iqrs.lock.release()
@@ -841,19 +840,9 @@ class IqrService (SmqtkWebApp):
                 ), 400
 
             # Get descriptor elements for classification
-            try:
-                descriptors = list(self.descriptor_index
-                                       .get_many_descriptors(uuids))
-            except KeyError as ex:
-                err_uuid = str(ex)
-                self._log.warn(traceback.format_exc())
-                return make_response_json(
-                    "Descriptor UUID '%s' cannot be found in the "
-                    "configured descriptor index."
-                    % err_uuid,
-                    sid=sid,
-                    uuid=err_uuid,
-                ), 404
+            # get_many_descriptors can raise KeyError
+            descriptors = list(self.descriptor_index
+                               .get_many_descriptors(uuids))
 
             classifier = self.session_classifiers.get(sid, None)
 
@@ -891,6 +880,17 @@ class IqrService (SmqtkWebApp):
 
             assert uuids == o_uuids, \
                 "Output UUID list is not congruent with INPUT list."
+
+        except KeyError as ex:
+            err_uuid = str(ex)
+            self._log.warn(traceback.format_exc())
+            return make_response_json(
+                "Descriptor UUID '%s' cannot be found in the "
+                "configured descriptor index."
+                % err_uuid,
+                sid=sid,
+                uuid=err_uuid,
+            ), 404
 
         finally:
             iqrs.lock.release()

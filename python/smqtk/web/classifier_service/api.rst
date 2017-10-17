@@ -95,10 +95,14 @@ Returns code 200 on success and the message: {
 }
 
 
-[GET] /iqr_classifier
-^^^^^^^^^^^^^^^^^^^^^
-Get the labels of the classifiers specifically added via uploaded IQR session
-states.
+[GET] /iqr_classifier [defunct]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+DEFUNCT: use [GET] /classifier_labels instead.
+
+Get the descriptive labels of all (static and IQR-based) classifiers currently
+available to classify input data. (Previously returned only IQR-based
+classifiers. This service no longer distinguishes between IQR and static
+classifiers.)
 
 No arguments.
 
@@ -108,15 +112,65 @@ Returns code 200 on success and the message: {
 }
 
 
+[POST] /classifier
+^^^^^^^^^^^^^^^^^^
+Upload a **trained** classifier pickled and encoded in standard base64
+encoding, matched with a descriptive label of that classifier's topic.
+
+Since all classifiers have only two result classes (positive and negative),
+the topic of the classifier is encoded in the descriptive label the user
+applies to the classifier.
+
+Below is an example call to this endpoint via the ``requests`` python
+module, showing how base64 data is sent::
+
+    import base64
+    import requests
+    data_bytes = "Load some content bytes here."
+    requests.post('http://localhost:5000/classifier',
+                  data={'bytes_b64': base64.b64encode(data_bytes),
+                        'label': 'some_label'})
+
+With curl on the command line::
+
+    $ curl -X POST localhost:5000/classifier -d label=some_label \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+Curl may fail depending on the size of the file and how long your
+terminal allows argument lists.
+
+Data/Form arguments:
+    bytes_b64
+        Bytes, in the standard base64 encoding, of the pickled classifier.
+    label
+        Descriptive label to apply to this classifier. This should not
+        conflict with existing classifier labels.
+    lock_label
+        If 'true', disallow deletion of this label. If 'false', allow
+        deletion of this label. Only has an effect if deletion is
+        enabled for this service. (Default: 'false')
+
+Possible error codes:
+    400
+        May mean one of:
+            - No pickled classifier base64 data or label provided.
+            - Label provided is in conflict with an existing label in the
+              classifier collection.
+
+Returns code 201 on success and the message: {
+    label: <str>
+}
+
+
 [POST] /iqr_classifier
 ^^^^^^^^^^^^^^^^^^^^^^
-Train a classifier based on the user-provided IQR state file bytes in standard
-base64 encoding, matched with a descriptive label of that classifier's
-topic.
+**Train** a classifier based on the user-provided IQR state file bytes in
+standard base64 encoding, matched with a descriptive label of that
+classifier's topic.
 
-Since all IQR session classifiers end up only having two result classes
-(positive and negative), the topic of the classifier is encoded in the
-descriptive label the user applies to the classifier.
+Since all classifiers have only two result classes (positive and negative),
+the topic of the classifier is encoded in the descriptive label the user
+applies to the classifier.
 
 Below is an example call to this endpoint via the ``requests`` python
 module, showing how base64 data is sent::
@@ -143,36 +197,66 @@ Data/Form arguments:
     label
         Descriptive label to apply to this classifier. This should not
         conflict with existing classifier labels.
+    lock_label
+        If 'true', disallow deletion of this label. If 'false', allow
+        deletion of this label. Only has an effect if deletion is
+        enabled for this service. (Default: 'false')
 
 Possible error codes:
     400
         May mean one of:
             - No IQR state base64 data or label provided.
-            - Label provided is in conflict with an existing label in the static
-              or IQR classifier collections.
+            - Label provided is in conflict with an existing label in the
+              classifier collection.
 
 Returns code 201 on success and the message: {
     label: <str>
 }
 
 
-[DELETE] /iqr_classifier [optional]
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Remove an IQR state classifier by the given label.
+[DELETE] /classifier [optional]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Remove a classifier by the given label.
 
 This end-point may or may not be enabled via the server configuration.
 
 Data/Form arguments:
     label
-        Descriptive label of the IQR state classifier to remove.
+        Descriptive label of the classifier to remove.
 
 Possible error codes:
     400
         No label provided.
     404
-        No IQR-state-based classifier to be removed for the given label.
+        No classifier to be removed for the given label.
 
 Returns 200 on success and the message: {
     ...
     removed_label: <str>
 }
+
+[DELETE] /iqr_classifier [defunct]
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+DEFUNCT: Use [DELETE] /classifier instead.
+
+Remove a classifier by the given label. (Previously deleted only an IQR-based
+classifier. This service no longer distinguishes between IQR and static
+classifiers.)
+
+This end-point may or may not be enabled via the server configuration.
+
+Data/Form arguments:
+    label
+        Descriptive label of the classifier to remove.
+
+Possible error codes:
+    400
+        No label provided.
+    404
+        No classifier to be removed for the given label.
+
+Returns 200 on success and the message: {
+    ...
+    removed_label: <str>
+}
+

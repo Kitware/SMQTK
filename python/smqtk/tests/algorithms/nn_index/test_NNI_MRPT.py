@@ -213,5 +213,7 @@ class TestMRPTIndex (unittest.TestCase):
         ntools.assert_equal(index._index_filepath, index_filepath)
         ntools.assert_equal(index._index_param_filepath, para_filepath)
 
-        c2 = index.get_config()
-        ntools.assert_equal(c, c2)
+        # Test that constructing a new instance from ``index``'s config yields
+        # an index with the same configuration (idempotent).
+        index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
+        ntools.assert_equal(index.get_config(), index2.get_config())

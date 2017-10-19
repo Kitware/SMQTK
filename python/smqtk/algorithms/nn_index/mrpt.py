@@ -205,7 +205,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :type merge_default: bool
 
         :return: Constructed instance from the provided config.
-        :rtype: LSHNearestNeighborIndex
+        :rtype: MRPTNearestNeighborsIndex
 
         """
         if merge_default:

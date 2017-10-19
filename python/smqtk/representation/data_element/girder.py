@@ -1,9 +1,13 @@
-from girder_client import GirderClient, HttpError
-from urlparse import urlparse
 import six
+from six.moves.urllib_parse import urlparse
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
+
+try:
+    import girder_client
+except ImportError:
+    girder_client = None
 
 
 __all__ = [
@@ -23,9 +27,7 @@ class GirderDataElement (DataElement):
         :return: If this element type is usable
         :rtype: bool
         """
-        # Requests module is a basic requirement
-        # URLs are not necessarily on the public internet.
-        return True
+        return girder_client is not None
 
     # TODO: from_uri
     #       - maybe optionally allow API key in place of user/pass spec
@@ -61,11 +63,11 @@ class GirderDataElement (DataElement):
         # http, so no replacing needs to be done.
         parsed_uri = urlparse(uri)
         if parsed_uri.scheme != 'girder':
-            raise InvalidUriError(uri,
-                                  'Invalid Girder URI. Girder URIs must start with girder://')
+            raise InvalidUriError(uri, 'Invalid Girder URI. Girder URIs must '
+                                       'start with girder://')
 
         if not parsed_uri.netloc:
-            raise InvalidUriError(uri)
+            raise InvalidUriError(uri, 'No parsed netloc from given URI.')
 
         token = api_key = None
 
@@ -83,11 +85,13 @@ class GirderDataElement (DataElement):
         try:
             path, file_id = parsed_uri.path.split('/file/')
         except ValueError:
-            raise InvalidUriError(uri, 'Invalid Girder URI. Girder URIs must contain a /file/<file_id> segment.')
+            raise InvalidUriError(uri, 'Invalid Girder URI. Girder URIs must '
+                                       'contain a /file/<file_id> segment.')
 
         return cls(file_id, '%s%s' % (scheme, path), api_key, token)
 
-    # note, this usage of api "root" contradicts girder client's notion of the api root
+    # NOTE: This usage of api "root" contradicts girder client's notion of the
+    #       api root
     def __init__(self, file_id, api_root='http://localhost:8080/api/v1',
                  api_key=None, token=None):
         """
@@ -118,7 +122,7 @@ class GirderDataElement (DataElement):
         # compat with DataFileElement (compute_many_descriptors needs this)
         self._filepath = self.file_id
 
-        self.gc = GirderClient(apiUrl=api_root)
+        self.gc = girder_client.GirderClient(apiUrl=api_root)
 
         if token is not None:
             self.gc.token = token
@@ -132,7 +136,8 @@ class GirderDataElement (DataElement):
     def __repr__(self):
         return super(GirderDataElement, self).__repr__() + \
             "{file_id: %s, api_root: %s, api_key: %s, token: %s}" % (
-                self.file_id, self.api_root, self.api_key or '', self.token or ''
+                self.file_id, self.api_root, self.api_key or '',
+                self.token or ''
             )
 
     def get_config(self):
@@ -145,7 +150,8 @@ class GirderDataElement (DataElement):
 
     def content_type(self):
         if self._content_type is None:
-            self._log.debug("Getting content type for file ID %s" % self.file_id)
+            self._log.debug("Getting content type for file ID %s"
+                            % self.file_id)
             file_model = self.get_file_model()
 
             if file_model is not None:
@@ -165,7 +171,7 @@ class GirderDataElement (DataElement):
         """
         try:
             return self.gc.getFile(self.file_id)
-        except HttpError:
+        except girder_client.HttpError:
             return None
 
     def is_empty(self):
@@ -198,9 +204,9 @@ class GirderDataElement (DataElement):
 
     def writable(self):
         """
-        Determine if a Girder file is able to be written to. Note that this requires
-        inferring the access level by traversing to the parent folder since this is
-        how Girder determines access.
+        Determine if a Girder file is able to be written to. Note that this
+        requires inferring the access level by traversing to the parent folder
+        since this is how Girder determines access.
 
         :return: if this instance supports setting bytes.
         :rtype: bool
@@ -231,12 +237,14 @@ class GirderDataElement (DataElement):
 
         """
         if not self.writable():
-            raise ReadOnlyError('Unauthorized access to write to Girder file %s' % self.file_id)
+            raise ReadOnlyError('Unauthorized access to write to Girder file %s'
+                                % self.file_id)
 
         try:
             self.gc.uploadFileContents(self.file_id, six.BytesIO(b), len(b))
-        except HttpError as e:
+        except girder_client.HttpError as e:
             if e.status == 401:
-                raise ReadOnlyError('Unauthorized access to write to Girder file %s' % self.file_id)
+                raise ReadOnlyError('Unauthorized access to write to Girder '
+                                    'file %s' % self.file_id)
             else:
                 raise e

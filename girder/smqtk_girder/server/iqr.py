@@ -162,42 +162,45 @@ class Iqr(Resource):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        descriptor_index = self._descriptorIndexFromSessionId(sid)
-        neighbor_index = self._nearestNeighborIndex(sid, descriptor_index)
-
-        if descriptor_index is None or neighbor_index is None:
-            logger.error('Unable to compute descriptor or neighbor index from sid %s.' % sid)
-            raise RestException('Unable to compute descriptor or neighbor index from sid %s.' % sid, 500)
-
-        # Get appropriate descriptor elements from index for
-        # setting new adjudication state.
         try:
-            pos_descrs = set(descriptor_index.get_many_descriptors(pos_uuids))
-            neg_descrs = set(descriptor_index.get_many_descriptors(neg_uuids))
-        except KeyError as ex:
-            logger.warn(traceback.format_exc())
-            raise RestException('Descriptor UUID %s not found in index.' % ex, 404)
+            descriptor_index = self._descriptorIndexFromSessionId(sid)
+            neighbor_index = self._nearestNeighborIndex(sid, descriptor_index)
 
-        # if a new classifier should be made upon the next
-        # classification request.
-        diff_pos = pos_descrs.symmetric_difference(iqrs.positive_descriptors)
-        diff_neg = neg_descrs.symmetric_difference(iqrs.negative_descriptors)
+            if descriptor_index is None or neighbor_index is None:
+                logger.error('Unable to compute descriptor or neighbor index from sid %s.' % sid)
+                raise RestException('Unable to compute descriptor or neighbor index from sid %s.' % sid, 500)
 
-        if diff_pos or diff_neg:
-            logger.debug("[%s] session Classifier dirty", sid)
-            self.session_classifier_dirty[sid] = True
+            # Get appropriate descriptor elements from index for
+            # setting new adjudication state.
+            try:
+                pos_descrs = set(descriptor_index.get_many_descriptors(pos_uuids))
+                neg_descrs = set(descriptor_index.get_many_descriptors(neg_uuids))
+            except KeyError as ex:
+                logger.warn(traceback.format_exc())
+                raise RestException('Descriptor UUID %s not found in index.' % ex, 404)
 
-        logger.info("[%s] Setting adjudications", sid)
-        iqrs.positive_descriptors = pos_descrs
-        iqrs.negative_descriptors = neg_descrs
+            # if a new classifier should be made upon the next
+            # classification request.
+            diff_pos = pos_descrs.symmetric_difference(iqrs.positive_descriptors)
+            diff_neg = neg_descrs.symmetric_difference(iqrs.negative_descriptors)
 
-        logger.info("[%s] Updating working index", sid)
-        iqrs.update_working_index(neighbor_index)
+            if diff_pos or diff_neg:
+                logger.debug("[%s] session Classifier dirty", sid)
+                self.session_classifier_dirty[sid] = True
 
-        logger.info("[%s] Refining", sid)
-        iqrs.refine()
+            logger.info("[%s] Setting adjudications", sid)
+            iqrs.positive_descriptors = pos_descrs
+            iqrs.negative_descriptors = neg_descrs
 
-        iqrs.lock.release()
+            logger.info("[%s] Updating working index", sid)
+            iqrs.update_working_index(neighbor_index)
+
+            logger.info("[%s] Refining", sid)
+            iqrs.refine()
+
+        finally:
+            iqrs.lock.release()
+
         return sid
 
     @access.user
@@ -217,18 +220,20 @@ class Iqr(Resource):
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
-        num_results = (iqrs.results and len(iqrs.results)) or 0
+        try:
+            num_results = (iqrs.results and len(iqrs.results)) or 0
 
-        offset = int(params.get('offset', num_results))
+            offset = int(params.get('offset', num_results))
 
-        uuid_dist = {}
-        if iqrs.results:
-            results = iqrs.ordered_results()[offset:limit]
+            uuid_dist = {}
+            if iqrs.results:
+                results = iqrs.ordered_results()[offset:limit]
 
-            for descriptor, confidence in results:
-                uuid_dist[descriptor.uuid()] = confidence
+                for descriptor, confidence in results:
+                    uuid_dist[descriptor.uuid()] = confidence
 
-        iqrs.lock.release()
+        finally:
+            iqrs.lock.release()
 
         dataFolder = {'_id': ObjectId(params['item']['meta']['data_folder_id'])}
         items = list(ModelImporter.model('folder').childItems(dataFolder, filters={'meta.smqtk_uuid': {

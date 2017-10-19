@@ -764,7 +764,7 @@ class IqrService (SmqtkWebApp):
 
             # int() can raise ValueError, catch
             i = 0 if i is None else int(i)
-            j = num_results if i is None else int(j)
+            j = num_results if j is None else int(j)
 
             # We ensured i, j are valid by this point
             r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]

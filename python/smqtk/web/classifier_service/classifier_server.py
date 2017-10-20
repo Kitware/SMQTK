@@ -329,12 +329,19 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         """
         data_b64 = flask.request.values.get('bytes_b64', default=None)
         label = flask.request.values.get('label', default=None)
-        lock_clfr = flask.request.values.get('lock_label', default='false')
+        lock_clfr_str = flask.request.values.get('lock_label', default='false')
 
         if data_b64 is None or len(data_b64) == 0:
             return make_response_json("No state base64 data provided.", 400)
         elif label is None or len(label) == 0:
             return make_response_json("No descriptive label provided.", 400)
+        try:
+            # This can throw a ValueError if lock_clfr is malformed JSON
+            lock_clfr = bool(flask.json.loads(lock_clfr_str))
+        except (ValueError, flask.json.JSONDecoder):
+            return make_response_json("Invalid boolean value for 'lock_label'. "
+                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      400)
 
         # If the given label conflicts with one already in either
         # collection, fail.
@@ -363,10 +370,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
             # If we're allowing deletions, get the lock flag from the form and
             # set it for this classifier
-            if self.enable_classifier_removal:
-                # This can throw a ValueError if lock_clfr is malformed JSON
-                if bool(flask.json.loads(lock_clfr)):
-                    self.immutable_labels.add(label)
+            if self.enable_classifier_removal and lock_clfr:
+                self.immutable_labels.add(label)
 
         except ValueError as e:
             if e.args[0].find('JSON') > -1:
@@ -444,12 +449,19 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         """
         clfr_b64 = flask.request.values.get('bytes_b64', default=None)
         label = flask.request.values.get('label', default=None)
-        lock_clfr = flask.request.values.get('lock_label', default='false')
+        lock_clfr_str = flask.request.values.get('lock_label', default='false')
 
         if clfr_b64 is None or len(clfr_b64) == 0:
             return make_response_json("No state base64 data provided.", 400)
         elif label is None or len(label) == 0:
             return make_response_json("No descriptive label provided.", 400)
+        try:
+            # This can throw a ValueError if lock_clfr is malformed JSON
+            lock_clfr = bool(flask.json.loads(lock_clfr_str))
+        except (ValueError, flask.json.JSONDecoder):
+            return make_response_json("Invalid boolean value for 'lock_label'. "
+                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      400)
 
         # If the given label conflicts with one already in either
         # collection, fail.
@@ -466,10 +478,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
             # If we're allowing deletions, get the lock flag from the form and
             # set it for this classifier
-            if self.enable_classifier_removal:
-                # This can throw a ValueError if lock_clfr is malformed JSON
-                if bool(flask.json.loads(lock_clfr)):
-                    self.immutable_labels.add(label)
+            if self.enable_classifier_removal and lock_clfr:
+                self.immutable_labels.add(label)
 
         except ValueError as e:
             if e.args[0].find('JSON') > -1:

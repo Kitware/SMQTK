@@ -4,6 +4,7 @@ import base64
 
 import flask
 import six
+from six.moves import cPickle as pickle
 
 from smqtk.algorithms import (
     get_classifier_impls,
@@ -57,11 +58,12 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
     """
 
-    CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL = "enable_iqr_classifier_removal"
+    CONFIG_ENABLE_CLASSIFIER_REMOVAL = "enable_classifier_removal"
     CONFIG_CLASSIFIER_COLLECTION = "classifier_collection"
     CONFIG_CLASSIFICATION_FACTORY = "classification_factory"
     CONFIG_DESCRIPTOR_GENERATOR = "descriptor_generator"
     CONFIG_DESCRIPTOR_FACTORY = "descriptor_factory"
+    CONFIG_IMMUTABLE_LABELS = "immutable_labels"
     CONFIG_IQR_CLASSIFIER = "iqr_state_classifier_config"
 
     DEFAULT_IQR_STATE_CLASSIFIER_KEY = '__default__'
@@ -74,7 +76,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     def get_default_config(cls):
         c = super(SmqtkClassifierService, cls).get_default_config()
 
-        c[cls.CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL] = False
+        c[cls.CONFIG_ENABLE_CLASSIFIER_REMOVAL] = False
 
         # Static classifier configurations
         c[cls.CONFIG_CLASSIFIER_COLLECTION] = \
@@ -95,14 +97,17 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 sub_interface=SupervisedClassifier
             )
         )
+        c[cls.CONFIG_IMMUTABLE_LABELS] = []
 
         return c
 
     def __init__(self, json_config):
         super(SmqtkClassifierService, self).__init__(json_config)
 
-        self.enable_iqr_classifier_removal = \
-            bool(json_config[self.CONFIG_ENABLE_IQR_CLASSIFIER_REMOVAL])
+        self.enable_classifier_removal = \
+            bool(json_config[self.CONFIG_ENABLE_CLASSIFIER_REMOVAL])
+
+        self.immutable_labels = set(json_config[self.CONFIG_IMMUTABLE_LABELS])
 
         # Convert configuration into SMQTK plugin instances.
         #   - Static classifier configurations.
@@ -135,7 +140,6 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Classifier config for uploaded IQR states.
         self.iqr_state_classifier_config = \
             json_config[self.CONFIG_IQR_CLASSIFIER]
-        self.iqr_classifier_collection = ClassifierCollection()
 
     def run(self, host=None, port=None, debug=False, **options):
         # REST API endpoint routes
@@ -154,16 +158,16 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['POST'])
-        self.add_url_rule('/iqr_classifier',
-                          view_func=self.get_iqr_classifier_labels,
-                          methods=['GET'])
+        self.add_url_rule('/classifier',
+                          view_func=self.add_classifier,
+                          methods=['POST'])
         self.add_url_rule('/iqr_classifier',
                           view_func=self.add_iqr_state_classifier,
                           methods=['POST'])
-        if self.enable_iqr_classifier_removal:
-            self.add_url_rule('/iqr_classifier',
-                              view_func=self.del_iqr_state_classifier,
-                              methods=['DELETE'])
+        if self.enable_classifier_removal:
+            self.add_url_rule('/classifier',
+                          view_func=self.del_classifier,
+                          methods=['DELETE'])
 
         super(SmqtkClassifierService, self).run(host, port, debug, **options)
 
@@ -186,10 +190,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         }
 
         """
-        # join labels from both collections.
-        all_labels = (self.classifier_collection.labels() |
-                      self.iqr_classifier_collection.labels())
-        return make_response_json("All classifier labels.",
+        all_labels = self.classifier_collection.labels()
+        return make_response_json("Classifier labels.",
                                   labels=list(all_labels))
 
     # POST /classify
@@ -244,8 +246,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         }
 
         """
-        data_b64 = flask.request.form.get('bytes_b64', None)
-        content_type = flask.request.form.get('content_type', None)
+        data_b64 = flask.request.values.get('bytes_b64', default=None)
+        content_type = flask.request.values.get('content_type', default=None)
 
         if data_b64 is None:
             return make_response_json("No base-64 bytes provided.", 400)
@@ -261,38 +263,17 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 
-        static_c_map = self.classifier_collection.classify(
-            descr_elem, self.classification_factory
-        )
-        iqr_c_map = self.iqr_classifier_collection.classify(
+        clfr_map = self.classifier_collection.classify(
             descr_elem, self.classification_factory
         )
 
         # Transform classification result into JSON
         c_json = {}
-        for classifier_label, c_elem in six.iteritems(static_c_map):
-            c_json[classifier_label] = c_elem.get_classification()
-        for classifier_label, c_elem in six.iteritems(iqr_c_map):
+        for classifier_label, c_elem in six.iteritems(clfr_map):
             c_json[classifier_label] = c_elem.get_classification()
 
         return make_response_json('Finished classification.',
                                   result=c_json)
-
-    # GET /iqr_classifier
-    def get_iqr_classifier_labels(self):
-        """
-        Get the labels of the classifiers specifically added via uploaded
-        IQR session states.
-
-        Returns 200: {
-            ...
-            labels: list[str]
-        }
-        """
-        return make_response_json(
-            "IQR state-based classifier labels.",
-            labels=list(self.iqr_classifier_collection.labels()),
-        )
 
     # POST /iqr_classifier
     def add_iqr_state_classifier(self):
@@ -324,34 +305,48 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         Curl may fail depending on the size of the file and how long your
         terminal allows argument lists.
 
+        To lock this classifier and guard it against deletion, add
+        "lock_label=true"::
+
+            $ curl -X POST localhost:5000/iqr_classifier \
+                -d "label=some_label" \
+                -d "lock_label=true" \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
         Form arguments:
             iqr_state_b64
                 base64 encoding of the bytes of the IQR session state save file.
             label
                 Descriptive label to apply to this classifier. This should not
                 conflict with existing classifier labels.
+            lock_label
+                If 'true', disallow deletion of this label. If 'false', allow
+                deletion of this label. Only has an effect if deletion is
+                enabled for this service. (Default: 'false')
 
         Returns 201.
 
         """
-        data_b64 = (flask.request.form.get('bytes_b64', None) or
-                    flask.request.args.get('bytes_b64', None))
-        label = (flask.request.args.get('label', None) or
-                 flask.request.form.get('label', None))
+        data_b64 = flask.request.values.get('bytes_b64', default=None)
+        label = flask.request.values.get('label', default=None)
+        lock_clfr_str = flask.request.values.get('lock_label', default='false')
 
         if data_b64 is None or len(data_b64) == 0:
             return make_response_json("No state base64 data provided.", 400)
         elif label is None or len(label) == 0:
             return make_response_json("No descriptive label provided.", 400)
+        try:
+            # This can throw a ValueError if lock_clfr is malformed JSON
+            lock_clfr = bool(flask.json.loads(lock_clfr_str))
+        except (ValueError, flask.json.JSONDecoder):
+            return make_response_json("Invalid boolean value for 'lock_label'. "
+                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      400)
 
-        # If the given label conflicts with one already in either
-        # collection, fail.
+        # If the given label conflicts with one already in the collection, fail.
         if label in self.classifier_collection.labels():
-            return make_response_json("Label already exists in static "
-                                      "classifier collection.", 400)
-        elif label in self.iqr_classifier_collection.labels():
-            return make_response_json("Label already exists in IQR "
-                                      "classifier collection.", 400)
+            return make_response_json(
+                "Label already exists in classifier collection.", 400)
 
         # Create dummy IqrSession to extract pos/neg descriptors.
         iqrs = IqrSession()
@@ -359,6 +354,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                              self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
+        del iqrs
 
         # Make a classifier instance from the stored config for IQR
         # session-based classifiers.
@@ -370,8 +366,17 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         classifier.train(positive=pos, negative=neg)
 
         try:
-            self.iqr_classifier_collection.add_classifier(label, classifier)
-        except ValueError:
+            self.classifier_collection.add_classifier(label, classifier)
+
+            # If we're allowing deletions, get the lock flag from the form and
+            # set it for this classifier
+            if self.enable_classifier_removal and lock_clfr:
+                self.immutable_labels.add(label)
+
+        except ValueError as e:
+            if e.args[0].find('JSON') > -1:
+                return make_response_json("Tried to parse malformed JSON in "
+                                          "form argument.", 400)
             return make_response_json("Duplicate label ('%s') added during "
                                       "classifier training of provided IQR "
                                       "session state." % label, 400,
@@ -382,32 +387,146 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                                   201,
                                   label=label)
 
-    # DEL /iqr_classifier
-    def del_iqr_state_classifier(self):
+    # POST /classifier
+    def add_classifier(self):
         """
-        Remove an IQR state classifier by the given label.
+        Upload a **trained** classifier pickled and encoded in standard base64
+        encoding, matched with a descriptive label of that classifier's topic.
 
-        Form args:
+        Since all classifiers have only two result classes (positive and
+        negative), the topic of the classifier is encoded in the descriptive
+        label the user applies to the classifier.
+
+        Below is an example call to this endpoint via the ``requests`` python
+        module, showing how base64 data is sent::
+
+            import base64
+            import requests
+            data_bytes = "Load some content bytes here."
+            requests.post('http://localhost:5000/classifier',
+                          data={'bytes_b64': base64.b64encode(data_bytes),
+                                'label': 'some_label'})
+
+        With curl on the command line::
+
+            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+        Curl may fail depending on the size of the file and how long your
+        terminal allows argument lists.
+
+        To lock this classifier and guard it against deletion, add
+        "lock_label=true"::
+
+            $ curl -X POST localhost:5000/iqr_classifier \
+                -d "label=some_label" \
+                -d "lock_label=true" \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+        Data/Form arguments:
+            bytes_b64
+                Bytes, in the standard base64 encoding, of the pickled
+                classifier.
             label
-                Label of the IQR state classifier to remove.
+                Descriptive label to apply to this classifier. This should not
+                conflict with existing classifier labels.
+            lock_label
+                If 'true', disallow deletion of this label. If 'false', allow
+                deletion of this label. Only has an effect if deletion is
+                enabled for this service. (Default: 'false')
 
         Possible error codes:
             400
-                No IQR state classifier exists for the given label.
+                May mean one of:
+                    - No pickled classifier base64 data or label provided.
+                    - Label provided is in conflict with an existing label in
+                    the classifier collection.
+
+        Returns code 201 on success and the message: {
+            label: <str>
+        }
+
+        """
+        clfr_b64 = flask.request.values.get('bytes_b64', default=None)
+        label = flask.request.values.get('label', default=None)
+        lock_clfr_str = flask.request.values.get('lock_label', default='false')
+
+        if clfr_b64 is None or len(clfr_b64) == 0:
+            return make_response_json("No state base64 data provided.", 400)
+        elif label is None or len(label) == 0:
+            return make_response_json("No descriptive label provided.", 400)
+        try:
+            # This can throw a ValueError if lock_clfr is malformed JSON
+            lock_clfr = bool(flask.json.loads(lock_clfr_str))
+        except (ValueError, flask.json.JSONDecoder):
+            return make_response_json("Invalid boolean value for 'lock_label'. "
+                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      400)
+
+        # If the given label conflicts with one already in the collection, fail.
+        if label in self.classifier_collection.labels():
+            return make_response_json("Label '%s' already exists in"
+                                      " classifier collection." % label,
+                                      400,
+                                      label=label)
+
+        clfr = pickle.loads(base64.b64decode(clfr_b64.encode('utf-8')))
+
+        try:
+            self.classifier_collection.add_classifier(label, clfr)
+
+            # If we're allowing deletions, get the lock flag from the form and
+            # set it for this classifier
+            if self.enable_classifier_removal and lock_clfr:
+                self.immutable_labels.add(label)
+
+        except ValueError as e:
+            if e.args[0].find('JSON') > -1:
+                return make_response_json("Tried to parse malformed JSON in "
+                                          "form argument.", 400)
+            return make_response_json("Data added for label '%s' is not a"
+                                      " Classifier." % label,
+                                      400,
+                                      label=label)
+
+        return make_response_json("Uploaded classifier for label '%s'."
+                                  "" % label,
+                                  201,
+                                  label=label)
+
+    # DEL /classifier
+    def del_classifier(self):
+        """
+        Remove a classifier by the given label.
+
+        Form args:
+            label
+                Label of the classifier to remove.
+
+        Possible error codes:
+            400
+                No classifier exists for the given label.
 
         Returns 200.
 
         """
-        label = flask.request.form.get('label', None)
+        label = flask.request.values.get('label', default=None)
         if label is None or not label:
             return make_response_json("No label provided.", 400)
-        elif label not in self.iqr_classifier_collection.labels():
-            return make_response_json("Provided label does not refer to an "
-                                      "IQR classifier currently registered.",
-                                      404)
+        elif label not in self.classifier_collection.labels():
+            return make_response_json("Label '%s' does not refer to a"
+                                      " classifier currently registered."
+                                      "" % label,
+                                      404,
+                                      label=label)
+        elif label in self.immutable_labels:
+            return make_response_json("Label '%s' refers to a classifier"
+                                      " that is immutable." % label,
+                                      405,
+                                      label=label)
 
-        self.iqr_classifier_collection.remove_classifier(label)
+        self.classifier_collection.remove_classifier(label)
 
-        return make_response_json("Removed IQR classifier with label '%s'."
+        return make_response_json("Removed classifier with label '%s'."
                                   % label,
                                   removed_label=label)

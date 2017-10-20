@@ -343,8 +343,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                                       "Was given: \"%s\"" % lock_clfr_str,
                                       400)
 
-        # If the given label conflicts with one already in either
-        # collection, fail.
+        # If the given label conflicts with one already in the collection, fail.
         if label in self.classifier_collection.labels():
             return make_response_json(
                 "Label already exists in classifier collection.", 400)
@@ -355,6 +354,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                              self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
+        del iqrs
 
         # Make a classifier instance from the stored config for IQR
         # session-based classifiers.
@@ -463,8 +463,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                                       "Was given: \"%s\"" % lock_clfr_str,
                                       400)
 
-        # If the given label conflicts with one already in either
-        # collection, fail.
+        # If the given label conflicts with one already in the collection, fail.
         if label in self.classifier_collection.labels():
             return make_response_json("Label '%s' already exists in"
                                       " classifier collection." % label,

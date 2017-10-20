@@ -117,8 +117,7 @@ Returns code 200 on success and the message: {
 Upload a **trained** classifier pickled and encoded in standard base64
 encoding, matched with a descriptive label of that classifier's topic.
 
-Since all classifiers have only two result classes (positive and negative),
-the topic of the classifier is encoded in the descriptive label the user
+The topic of the classifier is encoded in the descriptive label the user
 applies to the classifier.
 
 Below is an example call to this endpoint via the ``requests`` python
@@ -126,7 +125,10 @@ module, showing how base64 data is sent::
 
     import base64
     import requests
-    data_bytes = "Load some content bytes here."
+    from six.moves import cPickle as pickle
+
+    classifier = None # Instantiate a classifier
+    data_bytes = pickle.dumps(classifier)
     requests.post('http://localhost:5000/classifier',
                   data={'bytes_b64': base64.b64encode(data_bytes),
                         'label': 'some_label'})
@@ -134,7 +136,7 @@ module, showing how base64 data is sent::
 With curl on the command line::
 
     $ curl -X POST localhost:5000/classifier -d label=some_label \
-        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file.pkl)"
 
 Curl may fail depending on the size of the file and how long your
 terminal allows argument lists.

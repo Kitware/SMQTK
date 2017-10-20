@@ -364,10 +364,14 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             # If we're allowing deletions, get the lock flag from the form and
             # set it for this classifier
             if self.enable_classifier_removal:
+                # This can throw a ValueError if lock_clfr is malformed JSON
                 if bool(flask.json.loads(lock_clfr)):
                     self.immutable_labels.add(label)
 
-        except ValueError:
+        except ValueError as e:
+            if e.args[0].find('JSON') > -1:
+                return make_response_json("Tried to parse malformed JSON in "
+                                          "form argument.", 400)
             return make_response_json("Duplicate label ('%s') added during "
                                       "classifier training of provided IQR "
                                       "session state." % label, 400,
@@ -463,10 +467,14 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             # If we're allowing deletions, get the lock flag from the form and
             # set it for this classifier
             if self.enable_classifier_removal:
+                # This can throw a ValueError if lock_clfr is malformed JSON
                 if bool(flask.json.loads(lock_clfr)):
                     self.immutable_labels.add(label)
 
-        except ValueError:
+        except ValueError as e:
+            if e.args[0].find('JSON') > -1:
+                return make_response_json("Tried to parse malformed JSON in "
+                                          "form argument.", 400)
             return make_response_json("Data added for label '%s' is not a"
                                       " Classifier." % label,
                                       400,

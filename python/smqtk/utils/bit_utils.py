@@ -131,13 +131,10 @@ def bit_vector_to_int(v):
     :rtype: int
 
     """
-    if not hasattr(v, 'data') or v.dtype == numpy.dtype('object'):
-        c = 0L
-        for b in v:
-            c = (c * 2L) + int(b)
-        return c
-    else:
-        return _bit_vector_to_int_fast(v)
+    c = 0L
+    for b in v:
+        c = (c * 2L) + int(b)
+    return c
 
 
 def bit_vector_to_int_large(v):
@@ -184,7 +181,6 @@ def _int_to_bit_vector_fast(integer, bits=0):
     return numpy.frombuffer(brep, dtype='bool')
 
 
-@jit
 def int_to_bit_vector(integer, bits=0):
     """
     Transform integer into a bit vector, optionally of a specific length.

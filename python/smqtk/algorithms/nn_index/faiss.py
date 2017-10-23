@@ -87,11 +87,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         def normpath(p):
             return (p and osp.abspath(osp.expanduser(p))) or p
 
-        # self._index_filepath = normpath(index_filepath)
-        # self._index_param_filepath = normpath(parameters_filepath)
-        # # Now they're either None or an absolute path
-
-        #: :type: None | int
         self.random_seed = None
         if random_seed is not None:
             self.random_seed = int(random_seed)
@@ -104,8 +99,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "random_seed": self.random_seed,
             "pickle_protocol": self.pickle_protocol,
             "use_multiprocessing": self.use_multiprocessing,
-            # "parameters_filepath": self._index_param_filepath,
-            # "index_filepath": self._index_filepath,
         }
 
     @classmethod
@@ -189,9 +182,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._faiss_index = faiss.IndexIDMap(self.faiss_flat)
         else:
             nlist = 10000
-            # m = 10
-            # self._faiss_index = faiss.IndexIVFPQ(
-            #     self.faiss_flat, d, nlist, m, 8)
             self._faiss_index = faiss.IndexIVFFlat(
                 self.faiss_flat, d, nlist, faiss.METRIC_L2)
             self._faiss_index.train(data)

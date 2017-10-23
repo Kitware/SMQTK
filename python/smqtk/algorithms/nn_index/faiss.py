@@ -211,7 +211,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         dists, ids = self._faiss_index.search(q, n)
         dists, ids = np.sqrt(dists).squeeze(), ids.squeeze()
-        # uuids = [self._uuids[idx] for idx in ids]
         uuids = ids
 
         descriptors = tuple(self._descriptor_set.get_many_descriptors(uuids))

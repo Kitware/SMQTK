@@ -14,7 +14,6 @@ class SimpleRPFunctor (LshFunctor):
     production, as it is unlikely to produce a quality index.
     '''
     
-    
     @classmethod
     def is_usable(cls):
         return True
@@ -96,17 +95,13 @@ class SimpleRPFunctor (LshFunctor):
         self._log.debug("descriptor matrix shape: %s", x.shape)
         n, dim = x.shape
 
-        self._log.info("Centering data")
-        self.mean_vec = np.mean(x, axis=0, keepdims=True)
-
         self._log.debug("Generating random projections")
         np.random.seed(self.random_seed)
         self.rps = np.random.randn(dim, self.bit_length)
 
-        # self._log.debug("Info normalizing descriptors with norm type: %s",
-        #                 self.normalize)
-        # x = self._norm_vector(x)
-        # return (x >= 0.0)
+        self._log.debug("Info normalizing descriptors with norm type: %s",
+                        self.normalize)
+        return self.get_hash(x)
 
     def get_hash(self, descriptor):
         b = (self._norm_vector(descriptor).dot(self.rps) >= 0.0)

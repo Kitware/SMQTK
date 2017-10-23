@@ -52,20 +52,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             stored.
         :type descriptor_set: smqtk.representation.DescriptorIndex
 
-        :param index_filepath: Optional file location to load/store MRPT index
-            when initialized and/or built.
-
-            If not configured, no model files are written to or loaded from
-            disk.
-        :type index_filepath: None | str
-
-        :param parameters_filepath: Optional file location to load/save index
-            parameters determined at build time.
-
-            If not configured, no model files are written to or loaded from
-            disk.
-        :type parameters_filepath: None | str
-
         :param read_only: If True, `build_index` will error if there is an
             existing index. False by default.
         :type read_only: bool
@@ -109,11 +95,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.random_seed = None
         if random_seed is not None:
             self.random_seed = int(random_seed)
-
-            # # Load the index/parameters if one exists
-            # if self._has_model_files():
-            #     self._log.debug("Found existing model files. Loading.")
-            #     self._load_faiss_model()
 
     def get_config(self):
         return {
@@ -181,7 +162,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         super(FaissNearestNeighborsIndex, self).build_index(descriptors)
 
-        self._log.info("Building new MRPT index")
+        self._log.info("Building new FAISS index")
 
         self._log.debug("Clearing and adding new descriptor elements")
         self._descriptor_set.clear()
@@ -189,9 +170,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug('Building FAISS index')
         self._build_faiss_model()
-
-        # self._save_faiss_model()
-
 
     def _build_faiss_model(self):
         sample = self._descriptor_set.iterdescriptors().next()

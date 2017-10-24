@@ -38,12 +38,7 @@ def sieve_of_eratosthenes(N):
     if _soe_c > N:
         # We have already computed all primes up to N, so return cache-filled
         # list.
-        primes = []
-        for p in _soe_prime_cache:
-            if p > N:
-                break
-            primes.append(p)
-        return primes
+        return [p for p in _soe_prime_cache if p <= N]
 
     # We need to find more prime values, so start with the least known
     # not-prime and sieve our way up.

@@ -25,7 +25,10 @@ def sieve_of_eratosthenes(N):
     TODO: Add starting offset so as to be able to get primes within a range.
 
     :param N: Value to get prime values less-than-or-equal this value.
+    :type N: int | float | str
+
     :return: List of prime integer values <= N.
+    :rtype: list[int]
 
     """
     # TODO: Optimization - all primes after 2 are odd, so special case when
@@ -77,13 +80,22 @@ def sieve_of_eratosthenes(N):
 def prime_factors(N):
     """
     Returns ordered ascending prime factors of N.
+
+    If a floating point value is passed, we cast it to an integer.
+
+    :param N: Value to get the prime factors list of.
+    :type N: int
+
+    :returns: List of prime factors in ascending order.
+    :rtype: list[int]
+
     """
     sqrt_N = math.sqrt(N)
     primes = sieve_of_eratosthenes(sqrt_N)
 
     # prime factorize N
     p_factors = []
-    remaining = N
+    remaining = int(N)
     for p in primes:
         # Short-cut loop exit when we know we cant factorize any more
         if remaining == 1:
@@ -102,6 +114,13 @@ def prime_factors(N):
 def factors(N):
     """
     Return divisors/factors of N.
+
+    :param N: Value to get the factors of.
+    :type N: int
+
+    :returns: Set of factors for value N.
+    :rtype: set[int]
+
     """
     pf = prime_factors(N)
     # noinspection PySetFunctionToLiteral
@@ -123,11 +142,19 @@ def factors(N):
 
 def factor_pairs(N):
     """
-    Return a list of factor pairs of N, whose individual product produce N.
+    Return a list of factor pairs of N, whose individual products produce N.
+
+    :param N: Value to get the factor pairs for.
+    :type N: int
+
+    :returns: List of factor pairs ordered by minimum factor value.
+    :rtype: list[(int, int)]
+
     """
-    ftors = factors(N)
-    # since what comes out of factors is sorted, step indices from the edges
-    # towards the center, pairing the edges to produce factor pairs.
+    # Order factors in order to match outside edges of shrinking bounds.
+    ftors = sorted(factors(N))
+    # Step indices from the edges towards the center, pairing the edges to
+    # produce factor pairs.
     i = 0
     j = len(ftors) - 1
     pairs = []

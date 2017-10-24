@@ -122,6 +122,27 @@ class TestSoe (unittest.TestCase):
 
 class TestPrimeFactors (unittest.TestCase):
 
+    def test_2(self):
+        # If the N requested is itself a prime value
+        self.assertListEqual(
+            factors.prime_factors(2),
+            [2]
+        )
+
+    def test_8(self):
+        self.assertListEqual(
+            factors.prime_factors(8),
+            [2, 2, 2]
+        )
+
+    def test_26345(self):
+        # Tests when trailing "remaining" value is not 1 because a prime was
+        # greater than the square-root of N.
+        self.assertListEqual(
+            factors.prime_factors(26345),
+            [5, 11, 479]
+        )
+
     def test_600851475143(self):
         # Some large number with weird prime factors.  Known values taken from
         # wolfram alpha result (assuming WA is correct).
@@ -138,4 +159,20 @@ class TestFactors (unittest.TestCase):
             factors.factors(600851475143),
             {1, 71, 839, 1471, 6857, 59569, 104441, 486847, 1234169, 5753023,
              10086647, 87625999, 408464633, 716151937, 8462696833, 600851475143}
+        )
+
+
+class TestFactorPairs (unittest.TestCase):
+
+    def test_600851475143(self):
+        self.assertListEqual(
+            factors.factor_pairs(600851475143),
+            [(1, 600851475143),
+             (71, 8462696833),
+             (839, 716151937),
+             (1471, 408464633),
+             (6857, 87625999),
+             (59569, 10086647),
+             (104441, 5753023),
+             (486847, 1234169)]
         )

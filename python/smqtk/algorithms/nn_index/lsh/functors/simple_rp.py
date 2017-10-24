@@ -59,7 +59,7 @@ class SimpleRPFunctor (LshFunctor):
     def has_model(self):
         return (self.mean_vec is not None)
 
-    def fit(self, descriptors, use_multiprocessing=True):  #
+    def fit(self, descriptors, use_multiprocessing=True):
         """
         Fit the ITQ model given the input set of descriptors
 

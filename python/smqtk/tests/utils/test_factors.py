@@ -26,8 +26,8 @@ class TestSoe (unittest.TestCase):
         """
         # Values copied from head of factors.py file, simulating initial import.
         factors._soe_prime_cache = [2, 3]
-        factors._soe_not_prime_map = {4: 2, 9: 3}
-        factors._soe_c = 4
+        factors._soe_not_prime_map = {9: 3}
+        factors._soe_c = 5
 
     def test_0(self):
         self.assertListEqual(
@@ -76,7 +76,13 @@ class TestSoe (unittest.TestCase):
             factors.sieve_of_eratosthenes(15),
             [2, 3, 5, 7, 11, 13]
         )
-        
+
+    def test_25(self):
+        self.assertListEqual(
+            factors.sieve_of_eratosthenes(25),
+            [2, 3, 5, 7, 11, 13, 17, 19, 23]
+        )
+
     def test_100_primes(self):
         self.assertListEqual(factors.sieve_of_eratosthenes(541), p100)
 

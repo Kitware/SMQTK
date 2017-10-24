@@ -83,6 +83,12 @@ class TestSoe (unittest.TestCase):
             [2, 3, 5, 7, 11, 13, 17, 19, 23]
         )
 
+    def test_60(self):
+        self.assertListEqual(
+            factors.sieve_of_eratosthenes(60),
+            [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59]
+        )
+
     def test_100_primes(self):
         self.assertListEqual(factors.sieve_of_eratosthenes(541), p100)
 
@@ -112,3 +118,24 @@ class TestSoe (unittest.TestCase):
             actual_primes = factors.sieve_of_eratosthenes(r)
             self.assertListEqual(expected_primes, actual_primes,
                                  "Unexpected return for query value: %d" % r)
+
+
+class TestPrimeFactors (unittest.TestCase):
+
+    def test_600851475143(self):
+        # Some large number with weird prime factors.  Known values taken from
+        # wolfram alpha result (assuming WA is correct).
+        self.assertListEqual(
+            factors.prime_factors(600851475143),
+            [71, 839, 1471, 6857]
+        )
+
+
+class TestFactors (unittest.TestCase):
+
+    def test_600851475143(self):
+        self.assertSetEqual(
+            factors.factors(600851475143),
+            {1, 71, 839, 1471, 6857, 59569, 104441, 486847, 1234169, 5753023,
+             10086647, 87625999, 408464633, 716151937, 8462696833, 600851475143}
+        )

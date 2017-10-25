@@ -46,6 +46,31 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        try:
+            iter(descriptors).next()
+        except StopIteration:
+            raise ValueError("No DescriptorElement instances in provided "
+                             "iterable.")
+
+    @abc.abstractmethod
+    def update_index(self, descriptors):
+        """
+        Additively update the current index with the one or more descriptor
+        elements given.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors: collections.Iterable[smqtk.representation
+                                                     .DescriptorElement]
+
+        :raises ValueError: No descriptors provided in the given iterable.
+
+        """
+        try:
+            iter(descriptors).next()
+        except StopIteration:
+            raise ValueError("No DescriptorElement instances in provided "
+                             "iterable.")
 
     @abc.abstractmethod
     def nn(self, d, n=1):

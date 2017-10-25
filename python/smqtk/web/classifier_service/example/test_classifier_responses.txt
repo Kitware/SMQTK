@@ -2,10 +2,11 @@
 {
   "message": "Yes, I'm alive!", 
   "time": {
-    "unix": 1508951117.924878, 
-    "utc": "Wed Oct 25 17:05:17 2017"
+    "unix": 1508965936.801967, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
+:: Should have dummy
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -13,8 +14,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951117.938804, 
-    "utc": "Wed Oct 25 17:05:17 2017"
+    "unix": 1508965936.81181, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -27,19 +28,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951117.993491, 
-    "utc": "Wed Oct 25 17:05:17 2017"
+    "unix": 1508965936.867638, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
+
+:: Should fail
 + curl -s -X POST localhost:5000/classifier -d label=dummy --data-urlencode bytes_b64@dummy_classifier.pkl.b64
 {
   "label": "dummy", 
   "message": "Label 'dummy' already exists in classifier collection.", 
   "time": {
-    "unix": 1508951118.004226, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965936.877871, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
+:: Should have dummy
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -47,8 +51,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.015199, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965936.887995, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -61,19 +65,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.070442, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965936.938829, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
+
+:: Should fail
 + curl -s -X DELETE localhost:5000/classifier -d label=dummy
 {
   "label": "dummy", 
   "message": "Label 'dummy' refers to a classifier that is immutable.", 
   "time": {
-    "unix": 1508951118.08171, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965936.948414, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
+:: Should have dummy
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -81,8 +88,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.092745, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965936.957834, 
+    "utc": "Wed Oct 25 21:12:16 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -95,19 +102,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.148672, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.011506, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should succeed
 + curl -s -X POST localhost:5000/classifier -d label=foo --data-urlencode bytes_b64@dummy_classifier.pkl.b64
 {
   "label": "foo", 
   "message": "Uploaded classifier for label 'foo'.", 
   "time": {
-    "unix": 1508951118.159996, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.022021, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -116,8 +126,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.171048, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.033463, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -134,19 +144,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.22908, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.091938, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should succeed
 + curl -s -X DELETE localhost:5000/classifier -d label=foo
 {
   "message": "Removed classifier with label 'foo'.", 
   "removed_label": "foo", 
   "time": {
-    "unix": 1508951118.240309, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.102328, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -154,8 +167,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.251745, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.111343, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -168,19 +181,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.306416, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.162703, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should succeed
 + curl -s -X POST localhost:5000/classifier -d label=foo -d lock_label=true --data-urlencode bytes_b64@dummy_classifier.pkl.b64
 {
   "label": "foo", 
   "message": "Uploaded classifier for label 'foo'.", 
   "time": {
-    "unix": 1508951118.317357, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.174753, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -189,8 +205,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.329127, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.184913, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -207,19 +223,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.383439, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.243363, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should fail
 + curl -s -X POST localhost:5000/classifier -d label=foo -d lock_label=true --data-urlencode bytes_b64@dummy_classifier.pkl.b64
 {
   "label": "foo", 
   "message": "Label 'foo' already exists in classifier collection.", 
   "time": {
-    "unix": 1508951118.394673, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.254182, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -228,8 +247,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.406477, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.262821, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -246,19 +265,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.464024, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.315075, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should fail
 + curl -s -X DELETE localhost:5000/classifier -d label=foo
 {
   "label": "foo", 
   "message": "Label 'foo' refers to a classifier that is immutable.", 
   "time": {
-    "unix": 1508951118.475713, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.325581, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -267,8 +289,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.486896, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.333236, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -285,11 +307,14 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.541384, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.387925, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should succeed
 + curl -s -X GET localhost:5000/classifier -d label=foo
+:: Should have dummy, foo
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -298,8 +323,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.563547, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.406741, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -316,19 +341,22 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.619186, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.471121, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should succeed
 + curl -s -X POST localhost:5000/classifier -d label=bar --data-urlencode bytes_b64@foo_classifier.pkl.b64
 {
   "label": "bar", 
   "message": "Uploaded classifier for label 'bar'.", 
   "time": {
-    "unix": 1508951118.630636, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.480535, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo, bar
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -338,8 +366,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.642038, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.489277, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -360,20 +388,23 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.696419, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.543727, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + rm foo_classifier.pkl.b64
+
+:: Should fail
 + curl -s -X GET localhost:5000/classifier -d label=baz
 {
   "label": "baz", 
   "message": "Label 'baz' does not refer to a classifier currently registered.", 
   "time": {
-    "unix": 1508951118.707668, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.555657, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+:: Should have dummy, foo, bar
 + curl -s -X GET localhost:5000/classifier_labels
 {
   "labels": [
@@ -383,8 +414,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508951118.71849, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.56386, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -405,7 +436,125 @@
     }
   }, 
   "time": {
-    "unix": 1508951118.773928, 
-    "utc": "Wed Oct 25 17:05:18 2017"
+    "unix": 1508965937.615422, 
+    "utc": "Wed Oct 25 21:12:17 2017"
   }
 }
+
+:: Should fail
++ curl -s -X POST localhost:5000/classify -d label=baz -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "The following labels are not registered with any classifiers: 'baz'", 
+  "missing_labels": [
+    "baz"
+  ], 
+  "time": {
+    "unix": 1508965937.672086, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should succeed
++ curl -s -X POST localhost:5000/classify -d label=bar -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "Finished classification.", 
+  "result": {
+    "bar": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }
+  }, 
+  "time": {
+    "unix": 1508965937.727078, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should succeed
++ curl -s -X POST localhost:5000/classify -d 'label=["dummy","foo","bar"]' -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "Finished classification.", 
+  "result": {
+    "bar": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }, 
+    "dummy": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }, 
+    "foo": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }
+  }, 
+  "time": {
+    "unix": 1508965937.779254, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should succeed
++ curl -s -X POST localhost:5000/classify -d 'label=["dummy","foo"]' -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "Finished classification.", 
+  "result": {
+    "dummy": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }, 
+    "foo": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }
+  }, 
+  "time": {
+    "unix": 1508965937.831917, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should succeed, but have empty result
++ curl -s -X POST localhost:5000/classify -d 'label=[]' -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "Finished classification.", 
+  "result": {}, 
+  "time": {
+    "unix": 1508965937.883212, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should succeed
++ curl -s -X POST localhost:5000/classify -d 'label=["dummy","foo"]' -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "Finished classification.", 
+  "result": {
+    "dummy": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }, 
+    "foo": {
+      "negative": 0.5, 
+      "positive": 0.5
+    }
+  }, 
+  "time": {
+    "unix": 1508965937.93535, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+
+:: Should fail
++ curl -s -X POST localhost:5000/classify -d 'label=["dummy","foo","baz"]' -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
+{
+  "message": "The following labels are not registered with any classifiers: 'baz'", 
+  "missing_labels": [
+    "baz"
+  ], 
+  "time": {
+    "unix": 1508965937.995334, 
+    "utc": "Wed Oct 25 21:12:17 2017"
+  }
+}
+

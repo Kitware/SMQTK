@@ -150,6 +150,7 @@ Possible error codes:
 Returns 200 on success and the pickled and encoded classifier as the response
 content
 
+
 [POST] /classifier
 ^^^^^^^^^^^^^^^^^^
 Upload a **trained** classifier pickled and encoded in standard base64
@@ -296,6 +297,7 @@ Returns 200 on success and the message: {
     ...
     removed_label: <str>
 }
+
 
 [DELETE] /iqr_classifier [defunct]
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

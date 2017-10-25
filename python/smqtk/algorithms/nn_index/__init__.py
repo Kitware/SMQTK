@@ -3,6 +3,7 @@ Interface for generic element-wise nearest-neighbor computation.
 """
 
 import abc
+import itertools
 import os
 
 from smqtk.algorithms import SmqtkAlgorithm
@@ -38,6 +39,10 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         Subsequent calls to this method should rebuild the index, not add to
         it, or raise an exception to as to protect the current index.
 
+        **NOTE:** *This abstract method returns the iterable of descriptors to
+        use as the check for the iterable not being empty must try to consume
+        the first element of the iterable.*
+
         :raises ValueError: No data available in the given iterable.
 
         :param descriptors: Iterable of descriptor elements to build index
@@ -46,17 +51,26 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        i = iter(descriptors)
         try:
-            iter(descriptors).next()
+            first = i.next()
         except StopIteration:
             raise ValueError("No DescriptorElement instances in provided "
                              "iterable.")
+        return itertools.chain([first], i)
 
     @abc.abstractmethod
     def update_index(self, descriptors):
         """
         Additively update the current index with the one or more descriptor
         elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        **NOTE:** *This abstract method returns the iterable of descriptors to
+        use as the check for the iterable not being empty must try to consume
+        the first element of the iterable.*
 
         :param descriptors: Iterable of descriptor elements to add to this
             index.
@@ -66,11 +80,13 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         :raises ValueError: No descriptors provided in the given iterable.
 
         """
+        i = iter(descriptors)
         try:
-            iter(descriptors).next()
+            first = i.next()
         except StopIteration:
             raise ValueError("No DescriptorElement instances in provided "
                              "iterable.")
+        return itertools.chain([first], i)
 
     @abc.abstractmethod
     def nn(self, d, n=1):

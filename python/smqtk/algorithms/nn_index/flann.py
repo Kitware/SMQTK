@@ -1,8 +1,10 @@
-import cPickle
+import itertools
 import logging
 import multiprocessing
 import os
 import tempfile
+
+from six.moves import cPickle
 
 import numpy
 
@@ -249,14 +251,14 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        descriptors = \
+            super(FlannNearestNeighborsIndex, self).build_index(descriptors)
         # Not caring about restoring the index because we're just making a new
         # one
         self._log.info("Building new FLANN index")
 
-        self._log.debug("Storing descriptors")
+        self._log.debug("Caching descriptor elements")
         self._descr_cache = list(descriptors)
-        if not self._descr_cache:
-            raise ValueError("No data provided in given iterable.")
         # Cache descriptors if we have an element
         if self._descr_cache_elem and self._descr_cache_elem.writable():
             self._log.debug("Caching descriptors: %s", self._descr_cache_elem)
@@ -308,6 +310,38 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             self._index_param_elem.set_bytes(cPickle.dumps(state, -1))
 
         self._pid = multiprocessing.current_process().pid
+
+    def update_index(self, descriptors):
+        """
+        Additively update the current index with the one or more descriptor
+        elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        The currently bundled FLANN implementation bindings (v1.8.4) does not
+        support support incremental updating of an existing index.  Thus this
+        update method fully rebuilds the index based on the previous cache of
+        descriptors and the newly specified ones.  Due to requiring a full
+        rebuild this update method may take a significant amount of time
+        depending on the size of the index being updated.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors: collections.Iterable[smqtk.representation
+                                                     .DescriptorElement]
+
+        :raises ValueError: No descriptors provided in the given iterable.
+
+        """
+        descriptors = \
+            super(FlannNearestNeighborsIndex, self).update_index(descriptors)
+        self._restore_index()
+
+        # Build a new index that contains the union of the current descriptors
+        # and the new provided descriptors.
+        self._log.info("Rebuilding FLANN index to include new descriptors.")
+        self.build_index(itertools.chain(self._descr_cache, descriptors))
 
     def nn(self, d, n=1):
         """

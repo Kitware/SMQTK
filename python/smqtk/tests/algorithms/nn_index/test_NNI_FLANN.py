@@ -63,6 +63,51 @@ if FlannNearestNeighborsIndex.is_usable():
             )
             ntools.assert_true(f._has_model_data())
 
+        def test_build_index_no_descriptors(self):
+            index = self._make_inst('euclidean')
+            self.assertRaises(
+                ValueError,
+                index.build_index,
+                []
+            )
+
+        def test_build_index_one(self):
+            d = DescriptorMemoryElement('test', 0)
+            d.set_vector(numpy.zeros(8, float))
+            index = self._make_inst('euclidean')
+            index.build_index([d])
+            self.assertListEqual(
+                index._descr_cache,
+                [d]
+            )
+            self.assertIsNotNone(index._flann)
+            self.assertIsInstance(index._flann_build_params, dict)
+
+        def test_update_index_no_descriptors(self):
+            index = self._make_inst('euclidean')
+            self.assertRaises(
+                ValueError,
+                index.update_index,
+                []
+            )
+
+        def test_update_index(self):
+            # Build index with one descriptor, then "update" with a second
+            # different descriptor checking that the new cache contains both.
+            d1 = DescriptorMemoryElement('test', 0)
+            d1.set_vector(numpy.zeros(8))
+            d2 = DescriptorMemoryElement('test', 1)
+            d2.set_vector(numpy.ones(8))
+
+            index = self._make_inst('euclidean')
+            index.build_index([d1])
+            self.assertEqual(index.count(), 1)
+            self.assertSetEqual(set(index._descr_cache), {d1})
+
+            index.update_index([d2])
+            self.assertEqual(index.count(), 2)
+            self.assertSetEqual(set(index._descr_cache), {d1, d2})
+
         def test_known_descriptors_euclidean_unit(self):
             dim = 5
 

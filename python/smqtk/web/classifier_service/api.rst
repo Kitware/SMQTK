@@ -112,6 +112,27 @@ Returns code 200 on success and the message: {
 }
 
 
+[GET] /classifier
+^^^^^^^^^^^^^^^^^
+Download the classifier corresponding to the provided label, pickled and
+encoded in standard base64 encoding.
+
+Below is an example call to this endpoint via the ``requests`` python module::
+
+    import base64
+    import requests
+    from six.moves import cPickle as pickle
+
+    r = requests.get('http://localhost:5000/classifier',
+                     data={'label': 'some_label'})
+    data_bytes = base64.b64decode(r.content)
+    classifier = pickle.loads(data_bytes)
+
+With curl on the command line::
+
+    $ curl -X GET localhost:5000/classifier -d label=some_label | \
+        base64 -d > /path/to/file.pkl
+
 [POST] /classifier
 ^^^^^^^^^^^^^^^^^^
 Upload a **trained** classifier pickled and encoded in standard base64

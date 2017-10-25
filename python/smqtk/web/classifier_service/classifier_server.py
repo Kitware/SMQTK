@@ -159,6 +159,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                           view_func=self.classify,
                           methods=['POST'])
         self.add_url_rule('/classifier',
+                          view_func=self.get_classifier,
+                          methods=['GET'])
+        self.add_url_rule('/classifier',
                           view_func=self.add_classifier,
                           methods=['POST'])
         self.add_url_rule('/iqr_classifier',
@@ -166,8 +169,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                           methods=['POST'])
         if self.enable_classifier_removal:
             self.add_url_rule('/classifier',
-                          view_func=self.del_classifier,
-                          methods=['DELETE'])
+                              view_func=self.del_classifier,
+                              methods=['DELETE'])
 
         super(SmqtkClassifierService, self).run(host, port, debug, **options)
 
@@ -274,6 +277,60 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         return make_response_json('Finished classification.',
                                   result=c_json)
+
+    def get_classifier(self):
+        """
+        Download the classifier corresponding to the provided label, pickled
+        and encoded in standard base64 encoding.
+
+        Below is an example call to this endpoint via the ``requests`` python
+        module::
+
+            import base64
+            import requests
+            from six.moves import cPickle as pickle
+
+            r = requests.get('http://localhost:5000/classifier',
+                             data={'label': 'some_label'})
+            data_bytes = base64.b64decode(r.content)
+            classifier = pickle.loads(data_bytes)
+
+        With curl on the command line::
+
+            $ curl -X GET localhost:5000/classifier -d label=some_label | \
+                base64 -d > /path/to/file.pkl
+
+        Data args:
+            label
+                Label of the requested classifier
+
+        Possible error codes:
+            400
+                No label provided
+            404
+                Label does not refer to a registered classifier
+
+        Returns: The pickled and encoded classifier
+        """
+        label = flask.request.values.get('label', default=None)
+        if label is None or not label:
+            return make_response_json("No label provided.", 400)
+        elif label not in self.classifier_collection.labels():
+            return make_response_json("Label '%s' does not refer to a"
+                                      " classifier currently registered."
+                                      "" % label,
+                                      404,
+                                      label=label)
+
+        clfr = self.classifier_collection.get_classifier(label)
+
+        try:
+            return base64.b64encode(pickle.dumps(clfr)), 200
+        except pickle.PicklingError:
+            return make_response_json("Classifier corresponding to label"
+                                      " '%s' cannot be pickled." % label,
+                                      500,
+                                      label=label)
 
     # POST /iqr_classifier
     def add_iqr_state_classifier(self):

@@ -283,6 +283,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         return make_response_json('Finished classification.',
                                   result=c_json)
 
+    # GET /classifier
     def get_classifier(self):
         """
         Download the classifier corresponding to the provided label, pickled
@@ -321,9 +322,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         if label is None or not label:
             return make_response_json("No label provided.", 400)
         elif label not in self.classifier_collection.labels():
-            return make_response_json("Label '%s' does not refer to a"
-                                      " classifier currently registered."
-                                      "" % label,
+            return make_response_json("Label '%s' does not refer to a "
+                                      "classifier currently registered."
+                                      % label,
                                       404,
                                       label=label)
 
@@ -332,8 +333,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         try:
             return base64.b64encode(pickle.dumps(clfr)), 200
         except pickle.PicklingError:
-            return make_response_json("Classifier corresponding to label"
-                                      " '%s' cannot be pickled." % label,
+            return make_response_json("Classifier corresponding to label "
+                                      "'%s' cannot be pickled." % label,
                                       500,
                                       label=label)
 

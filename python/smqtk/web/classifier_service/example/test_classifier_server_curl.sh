@@ -83,7 +83,7 @@ curl -s -X GET localhost:5000/classifier \
     -d label=foo > foo_classifier.pkl.b64
 curl -s -X GET localhost:5000/classifier_labels
 curl -s -X POST localhost:5000/classify \
-    -d "content_type=text/plain" \
+    -d "content_type=image/jpeg" \
     --data-urlencode bytes_b64@fish-bike.jpg.b64
 
 # Add the classifier just retrieved under a new label
@@ -93,7 +93,7 @@ curl -s -X POST localhost:5000/classifier \
     --data-urlencode bytes_b64@foo_classifier.pkl.b64
 curl -s -X GET localhost:5000/classifier_labels
 curl -s -X POST localhost:5000/classify \
-    -d "content_type=text/plain" \
+    -d "content_type=image/jpeg" \
     --data-urlencode bytes_b64@fish-bike.jpg.b64
 rm foo_classifier.pkl.b64
 
@@ -103,5 +103,5 @@ curl -s -X GET localhost:5000/classifier \
     -d label=baz
 curl -s -X GET localhost:5000/classifier_labels
 curl -s -X POST localhost:5000/classify \
-    -d "content_type=text/plain" \
+    -d "content_type=image/jpeg" \
     --data-urlencode bytes_b64@fish-bike.jpg.b64

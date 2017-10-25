@@ -2,8 +2,8 @@
 {
   "message": "Yes, I'm alive!", 
   "time": {
-    "unix": 1508943618.26011,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.842234,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -13,8 +13,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.270105,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.851118,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -27,8 +27,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.323395,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.903696,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X POST localhost:5000/classifier -d label=dummy --data-urlencode bytes_b64@dummy_classifier.pkl.b64
@@ -36,8 +36,8 @@
   "label": "dummy", 
   "message": "Label 'dummy' already exists in classifier collection.", 
   "time": {
-    "unix": 1508943618.332663,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.914693,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -47,8 +47,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.342408,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.924303,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -61,8 +61,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.391824,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.974723,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X DELETE localhost:5000/classifier -d label=dummy
@@ -70,8 +70,8 @@
   "label": "dummy", 
   "message": "Label 'dummy' refers to a classifier that is immutable.", 
   "time": {
-    "unix": 1508943618.402108,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.984507,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -81,8 +81,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.411967,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944818.993127,
+    "utc": "Wed Oct 25 15:20:18 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -95,8 +95,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.463673,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.042902,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classifier -d label=foo --data-urlencode bytes_b64@dummy_classifier.pkl.b64
@@ -104,8 +104,8 @@
   "label": "foo", 
   "message": "Uploaded classifier for label 'foo'.", 
   "time": {
-    "unix": 1508943618.493994,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.051156,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -116,8 +116,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.503113,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.069174,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -134,8 +134,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.559911,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.131364,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X DELETE localhost:5000/classifier -d label=foo
@@ -143,8 +143,8 @@
   "message": "Removed classifier with label 'foo'.", 
   "removed_label": "foo", 
   "time": {
-    "unix": 1508943618.570458,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.141773,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -154,8 +154,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.579481,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.15117,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -168,8 +168,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.630872,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.202777,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classifier -d label=foo -d lock_label=true --data-urlencode bytes_b64@dummy_classifier.pkl.b64
@@ -177,8 +177,8 @@
   "label": "foo", 
   "message": "Uploaded classifier for label 'foo'.", 
   "time": {
-    "unix": 1508943618.644535,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.211839,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -189,8 +189,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.651866,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.218917,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -207,8 +207,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.704208,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.271149,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classifier -d label=foo -d lock_label=true --data-urlencode bytes_b64@dummy_classifier.pkl.b64
@@ -216,8 +216,8 @@
   "label": "foo", 
   "message": "Label 'foo' already exists in classifier collection.", 
   "time": {
-    "unix": 1508943618.712776,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.280465,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -228,8 +228,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.72166,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.290447,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64
@@ -246,8 +246,8 @@
     }
   }, 
   "time": {
-    "unix": 1508943618.77176,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.343274,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X DELETE localhost:5000/classifier -d label=foo
@@ -255,8 +255,8 @@
   "label": "foo", 
   "message": "Label 'foo' refers to a classifier that is immutable.", 
   "time": {
-    "unix": 1508943618.78004,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.352538,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X GET localhost:5000/classifier_labels
@@ -267,8 +267,8 @@
   ], 
   "message": "Classifier labels.", 
   "time": {
-    "unix": 1508943618.789126,
-    "utc": "Wed Oct 25 15:00:18 2017"
+    "unix": 1508944819.361925,
+    "utc": "Wed Oct 25 15:20:19 2017"
   }
 }
 + curl -s -X POST localhost:5000/classify -d content_type=image/jpeg --data-urlencode bytes_b64@fish-bike.jpg.b64

@@ -50,7 +50,7 @@ class DummyDescriptorGenerator (DescriptorGenerator):
             handle.
         :rtype: set[str]
         """
-        return ['text/plain']
+        return ['image/jpeg']
 
     def _compute_descriptor(self, data):
         """

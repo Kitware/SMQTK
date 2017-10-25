@@ -72,12 +72,12 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         use as the check for the iterable not being empty must try to consume
         the first element of the iterable.*
 
+        :raises ValueError: No data available in the given iterable.
+
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors: collections.Iterable[smqtk.representation
                                                      .DescriptorElement]
-
-        :raises ValueError: No descriptors provided in the given iterable.
 
         """
         i = iter(descriptors)

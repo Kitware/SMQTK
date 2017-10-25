@@ -27,6 +27,10 @@ class HashIndex (NearestNeighborsIndex):
         it. If an exception is raised, the current index, if there is one, will
         not be modified.
 
+        **NOTE:** *This abstract method returns the iterable of hash vectors to
+        use as the check for the iterable not being empty must try to consume
+        the first element of the iterable.*
+
         :raises ValueError: No data available in the given iterable.
 
         :param hashes: Iterable of descriptor elements to build index
@@ -34,6 +38,43 @@ class HashIndex (NearestNeighborsIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
+        # Same check as in NearestNeighborsIndex but different exception text.
+        try:
+            # noinspection PyTypeChecker
+            return super(HashIndex, self).update_index(hashes)
+        except ValueError as ex:
+            if str(ex).startswith("No DescriptorElement instances in provided "
+                                  "iterable."):
+                raise ValueError("No hash vectors in provided iterable.")
+
+    @abc.abstractmethod
+    def update_index(self, hashes):
+        """
+        Additively update the current hash index structure with the one or more
+        hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        **NOTE:** *This abstract method returns the iterable of hash vectors to
+        use as the check for the iterable not being empty must try to consume
+        the first element of the iterable.*
+
+        :raises ValueError: No data available in the given iterable.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        # Same check as in NearestNeighborsIndex but different exception text.
+        try:
+            # noinspection PyTypeChecker
+            return super(HashIndex, self).update_index(hashes)
+        except ValueError as ex:
+            if str(ex).startswith("No DescriptorElement instances in provided "
+                                  "iterable."):
+                raise ValueError("No hash vectors in provided iterable.")
 
     @abc.abstractmethod
     def nn(self, h, n=1):
@@ -59,6 +100,8 @@ class HashIndex (NearestNeighborsIndex):
         :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
+        # Only check for count because we're no longer dealing with descriptor
+        # elements.
         if not self.count():
             raise ValueError("No index currently set to query from!")
 

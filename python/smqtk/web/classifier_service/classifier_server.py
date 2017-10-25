@@ -219,12 +219,17 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         With curl on the command line::
 
-            $ curl -X POST localhost:5000/iqr_classifier \
+            $ curl -X POST localhost:5000/classify \
                 -d "content_type=text/plain" \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
-        Curl may fail depending on the size of the file and how long your
-        terminal allows argument lists.
+            # If this fails, you may wish to encode the file separately and
+            # use the file reference syntax instead:
+
+            $ base64 -w0 /path/to/file > /path/to/file.b64
+            $ curl -X POST localhost:5000/classify \
+                -d "content_type=text/plain" \
+                --data-urlencode bytes_64=@/path/to/file.b64
 
         Data args:
             bytes_b64
@@ -349,7 +354,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             import base64
             import requests
             data_bytes = "Load some content bytes here."
-            requests.get('http://localhost:5000/classify',
+            requests.get('http://localhost:5000/iqr_classifier',
                          data={'bytes_b64': base64.b64encode(data_bytes),
                                'label': 'some_label'})
 
@@ -359,8 +364,12 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 -d "label=some_label" \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
-        Curl may fail depending on the size of the file and how long your
-        terminal allows argument lists.
+            # If this fails, you may wish to encode the file separately and
+            # use the file reference syntax instead:
+
+            $ base64 -w0 /path/to/file > /path/to/file.b64
+            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+                --data-urlencode bytes_64=@/path/to/file.b64
 
         To lock this classifier and guard it against deletion, add
         "lock_label=true"::
@@ -466,19 +475,23 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         With curl on the command line::
 
-            $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+            $ curl -X POST localhost:5000/classifier -d label=some_label \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
-        Curl may fail depending on the size of the file and how long your
-        terminal allows argument lists.
+            # If this fails, you may wish to encode the file separately and
+            # use the file reference syntax instead:
+
+            $ base64 -w0 /path/to/file.pkl > /path/to/file.pkl.b64
+            $ curl -X POST localhost:5000/classifier -d label=some_label \
+                --data-urlencode bytes_64=@/path/to/file.pkl.b64
 
         To lock this classifier and guard it against deletion, add
         "lock_label=true"::
 
-            $ curl -X POST localhost:5000/iqr_classifier \
+            $ curl -X POST localhost:5000/classifier \
                 -d "label=some_label" \
                 -d "lock_label=true" \
-                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file.pkl)"
 
         Data/Form arguments:
             bytes_b64

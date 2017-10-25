@@ -53,9 +53,9 @@ Returns code 200 on success and the message: {
 
 [POST] /classify
 ^^^^^^^^^^^^^^^^
-Given a file's bytes (standard base64-format) and content mimetype, describe and
-classify the content against all currently stored classifiers, returning a map
-of classifier descriptive labels to their class-to-probability results.
+Given a file's bytes (standard base64-format) and content mimetype, describe
+and classify the content against all currently stored classifiers, returning a
+map of classifier descriptive labels to their class-to-probability results.
 
 We expect the data to be transmitted in the body of the request in
 standard base64 encoding form ("bytes_b64" key). We look for the content
@@ -76,8 +76,12 @@ With curl on the command line::
     $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
         --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
-Curl may fail depending on the size of the file and how long your
-terminal allows argument lists.
+    # If this fails, you may wish to encode the file separately and use the
+    # file reference syntax instead:
+
+    $ base64 -w0 /path/to/file > /path/to/file.b64
+    $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
+        --data-urlencode bytes_64=@/path/to/file.b64
 
 Data/Form arguments:
     bytes_b64
@@ -133,6 +137,19 @@ With curl on the command line::
     $ curl -X GET localhost:5000/classifier -d label=some_label | \
         base64 -d > /path/to/file.pkl
 
+Data args:
+    label
+        Label of the requested classifier
+
+Possible error codes:
+    400
+        No label provided
+    404
+        Label does not refer to a registered classifier
+
+Returns 200 on success and the pickled and encoded classifier as the response
+content
+
 [POST] /classifier
 ^^^^^^^^^^^^^^^^^^
 Upload a **trained** classifier pickled and encoded in standard base64
@@ -159,8 +176,19 @@ With curl on the command line::
     $ curl -X POST localhost:5000/classifier -d label=some_label \
         --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file.pkl)"
 
-Curl may fail depending on the size of the file and how long your
-terminal allows argument lists.
+    # If this fails, you may wish to encode the file separately and use the
+    # file reference syntax instead:
+
+    $ base64 -w0 /path/to/file.pkl > /path/to/file.pkl.b64
+    $ curl -X POST localhost:5000/classifier -d label=some_label \
+        --data-urlencode bytes_64=@/path/to/file.pkl.b64
+
+To lock this classifier and guard it against deletion, add "lock_label=true"::
+
+    $ curl -X POST localhost:5000/classifier \
+        -d "label=some_label" \
+        -d "lock_label=true" \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file.pkl)"
 
 Data/Form arguments:
     bytes_b64
@@ -210,8 +238,19 @@ With curl on the command line::
     $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
         --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
-Curl may fail depending on the size of the file and how long your
-terminal allows argument lists.
+    # If this fails, you may wish to encode the file separately and use the
+    # file reference syntax instead:
+
+    $ base64 -w0 /path/to/file > /path/to/file.b64
+    $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
+        --data-urlencode bytes_64=@/path/to/file.b64
+
+To lock this classifier and guard it against deletion, add "lock_label=true"::
+
+    $ curl -X POST localhost:5000/iqr_classifier \
+        -d "label=some_label" \
+        -d "lock_label=true" \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
 Data/Form arguments:
     bytes_b64

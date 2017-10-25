@@ -1,7 +1,6 @@
 import unittest
 
 import mock
-import nose.tools as ntools
 import numpy
 import six
 
@@ -37,19 +36,19 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
     def test_get_impls(self):
         # Some implementations should be returned
         m = get_nn_index_impls()
-        ntools.assert_true(m)
+        self.assertTrue(m)
         for cls in six.itervalues(m):
-            ntools.assert_true(issubclass(cls, NearestNeighborsIndex))
+            self.assertTrue(issubclass(cls, NearestNeighborsIndex))
 
     def test_count(self):
         index = DummySI()
-        ntools.assert_equal(index.count(), 0)
-        ntools.assert_equal(index.count(), len(index))
+        self.assertEqual(index.count(), 0)
+        self.assertEqual(index.count(), len(index))
 
         # Pretend that there were things in there. Len should pass it though
         index.count = mock.Mock()
         index.count.return_value = 5
-        ntools.assert_equal(len(index), 5)
+        self.assertEqual(len(index), 5)
 
     def test_build_index_no_descriptors(self):
         index = DummySI()
@@ -97,10 +96,10 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
         # intentionally empty
         q = DescriptorMemoryElement('q', 0)
-        ntools.assert_raises(ValueError, index.nn, q)
+        self.assertRaises(ValueError, index.nn, q)
 
     def test_query_empty_index(self):
         index = DummySI()
         q = DescriptorMemoryElement('q', 0)
         q.set_vector(numpy.random.rand(4))
-        ntools.assert_raises(ValueError, index.nn, q)
+        self.assertRaises(ValueError, index.nn, q)

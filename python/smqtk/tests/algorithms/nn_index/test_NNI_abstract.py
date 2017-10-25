@@ -20,7 +20,10 @@ class DummySI (NearestNeighborsIndex):
         return {}
 
     def build_index(self, descriptors):
-        return super(DummySI, self).build_index(descriptors)
+        super(DummySI, self).build_index(descriptors)
+
+    def update_index(self, descriptors):
+        super(DummySI, self).update_index(descriptors)
 
     def nn(self, d, n=1):
         return super(DummySI, self).nn(d, n)
@@ -47,6 +50,32 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         index.count = mock.Mock()
         index.count.return_value = 5
         ntools.assert_equal(len(index), 5)
+
+    def test_build_index_no_descriptors(self):
+        index = DummySI()
+        self.assertRaises(
+            ValueError,
+            index.build_index,
+            []
+        )
+
+    def test_build_index_nonzero_descriptors(self):
+        index = DummySI()
+        d = DescriptorMemoryElement('test', 0)
+        index.build_index([d])
+
+    def test_update_index_no_descriptors(self):
+        index = DummySI()
+        self.assertRaises(
+            ValueError,
+            index.update_index,
+            []
+        )
+
+    def test_update_index_nonzero_descriptors(self):
+        index = DummySI()
+        d = DescriptorMemoryElement('test', 0)
+        index.update_index([d])
 
     # noinspection PyUnresolvedReferences
     @mock.patch.object(DummySI, 'count')

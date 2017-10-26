@@ -1,6 +1,7 @@
 import unittest
 
 import numpy
+from six.moves import cStringIO
 
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -71,6 +72,38 @@ class TestLinearHashIndex (unittest.TestCase):
             i.build_index, []
         )
 
+    def test_update_index_no_input(self):
+        i = LinearHashIndex()
+        self.assertRaises(
+            ValueError,
+            i.update_index, []
+        )
+
+    def test_update_index_no_index(self):
+        # Test calling update index with no existing index.  Should result the
+        # same as calling build_index with no index.
+        i = LinearHashIndex()
+        # noinspection PyTypeChecker
+        i.update_index([[0, 1, 0],
+                        [1, 0, 0],
+                        [0, 1, 1],
+                        [0, 0, 1]])
+        self.assertEqual(i.index, {1, 2, 3, 4})
+        self.assertIsNone(i.cache_element)
+
+    def test_update_index_add_hashes(self):
+        i = LinearHashIndex()
+        # Build index with some initial hashes
+        # noinspection PyTypeChecker
+        i.build_index([[0, 0],
+                       [0, 1]])
+        self.assertSetEqual(i.index, {0, 1})
+        # Update index with new stuff
+        # noinspection PyTypeChecker
+        i.update_index([[1, 0],
+                        [1, 1]])
+        self.assertSetEqual(i.index, {0, 1, 2, 3})
+
     def test_nn(self):
         i = LinearHashIndex()
         # noinspection PyTypeChecker
@@ -78,6 +111,7 @@ class TestLinearHashIndex (unittest.TestCase):
                        [1, 1, 0],
                        [0, 1, 1],
                        [0, 0, 1]])
+        # noinspection PyTypeChecker
         near_codes, near_dists = i.nn([0, 0, 0], 4)
         self.assertEqual(set(map(tuple, near_codes[:2])),
                          {(0, 1, 0), (0, 0, 1)})
@@ -86,7 +120,7 @@ class TestLinearHashIndex (unittest.TestCase):
         numpy.testing.assert_array_almost_equal(near_dists,
                                                 (1/3., 1/3., 2/3., 2/3.))
 
-    def test_save_cache(self):
+    def test_save_cache_build_index(self):
         cache_element = DataMemoryElement()
         self.assertTrue(cache_element.is_empty())
 
@@ -97,15 +131,48 @@ class TestLinearHashIndex (unittest.TestCase):
                        [0, 1, 1],
                        [0, 0, 1]])
         self.assertFalse(cache_element.is_empty())
-        self.assertTrue(len(cache_element.get_bytes()) > 0)
+        # Check byte content
+        expected_cache = {1, 2, 3, 4}
+        actual_cache = set(numpy.load(cStringIO(cache_element.get_bytes())))
+        self.assertSetEqual(expected_cache, actual_cache)
 
-    def test_save_cache_readonly(self):
+    def test_save_cache_update_index(self):
+        cache_element = DataMemoryElement()
+        self.assertTrue(cache_element.is_empty())
+
+        i = LinearHashIndex(cache_element)
+        # noinspection PyTypeChecker
+        i.build_index([[0, 1, 0],
+                       [1, 0, 0]])
+        # noinspection PyTypeChecker
+        i.update_index([[0, 1, 1],
+                        [0, 0, 1]])
+        self.assertFalse(cache_element.is_empty())
+        # Check byte content
+        expected_cache = {1, 2, 3, 4}
+        actual_cache = set(numpy.load(cStringIO(cache_element.get_bytes())))
+        self.assertSetEqual(expected_cache, actual_cache)
+
+    def test_save_cache_readonly_build_index(self):
         ro_cache = DataMemoryElement(readonly=True)
         i = LinearHashIndex(ro_cache)
         self.assertRaisesRegexp(
             ValueError,
             "is read-only",
             i.build_index,
+            [[0, 1, 0],
+             [1, 0, 0],
+             [0, 1, 1],
+             [0, 0, 1]]
+        )
+
+    def test_save_cache_readonly_update_index(self):
+        ro_cache = DataMemoryElement(readonly=True)
+        i = LinearHashIndex(ro_cache)
+        self.assertRaisesRegexp(
+            ValueError,
+            "is read-only",
+            i.update_index,
             [[0, 1, 0],
              [1, 0, 0],
              [0, 1, 1],

@@ -1,11 +1,6 @@
 import heapq
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
+from six.moves import StringIO
 import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -145,9 +140,8 @@ class LinearHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
+        hashes = super(LinearHashIndex, self).build_index(hashes)
         new_index = set(map(bit_vector_to_int_large, hashes))
-        if not len(new_index):
-            raise ValueError("No hashes given to index.")
         self.index = new_index
         self.save_cache()
 

@@ -101,15 +101,15 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
     def test_update_index_iterable(self):
         # Test build check with a pure iterable
         index = DummySI()
-        d_set = [
+        d_set = {
             DescriptorMemoryElement('test', 0),
             DescriptorMemoryElement('test', 1),
             DescriptorMemoryElement('test', 2),
             DescriptorMemoryElement('test', 3),
-        ]
+        }
         it = iter(d_set)
         r = index.update_index(it)
-        r_set = list(r)
+        r_set = set(r)
         self.assertSetEqual(d_set, r_set)
 
     # noinspection PyUnresolvedReferences

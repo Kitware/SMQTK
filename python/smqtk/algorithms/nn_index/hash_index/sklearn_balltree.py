@@ -1,10 +1,5 @@
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 import numpy
+from six.moves import StringIO
 from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -188,20 +183,54 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         self._log.debug("Building ball tree")
+        hashes = super(SkLearnBallTreeHashIndex, self).build_index(hashes)
         if self.random_seed is not None:
             numpy.random.seed(self.random_seed)
         # BallTree can't take iterables, so catching input in a set of tuples
         # first in order to cull out duplicates (BT will index duplicate values
         # happily).
         hash_tuple_set = set(map(lambda v: tuple(v), hashes))
-        if not hash_tuple_set:
-            raise ValueError("No hashes given.")
         # Convert tuples back into numpy arrays for BallTree constructor.
         hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
         # If distance metric ever changes, need to update save/load model
         # functions.
         self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')
         self.save_model()
+
+    def update_index(self, hashes):
+        """
+        Additively update the current hash index structure with the one or more
+        hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        *Note:* The scikit-learn ball-tree implementation does not support
+        incremental updating of its model, so we need to rebuild the model from
+        scratch using the currently indexed hashes and the new ones provided to
+        this method.
+
+        :raises ValueError: No data available in the given iterable.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        # Can't use iterators with numpy operations.
+        new_hashes = tuple(
+            super(SkLearnBallTreeHashIndex, self).update_index(hashes)
+        )
+        if self.bt is None:
+            # 0-row array using bit-vector size of first new entry length.
+            # - Must have at least one new hash due to super-method check.
+            indexed_hash_vectors = numpy.ndarray((0, len(new_hashes[0])))
+        else:
+            indexed_hash_vectors = self.bt.data
+        # Build a new index as normal with the union of source data.
+        self.build_index(
+            numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
+        )
 
     def nn(self, h, n=1):
         """

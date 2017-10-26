@@ -1,7 +1,6 @@
 import unittest
 
 import mock
-import nose.tools
 import numpy
 
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
@@ -14,45 +13,45 @@ class TestBallTreeHashIndex (unittest.TestCase):
     def test_is_usable(self):
         # Should always be true because major dependency (sklearn) is a package
         # requirement.
-        nose.tools.assert_true(SkLearnBallTreeHashIndex.is_usable())
+        self.assertTrue(SkLearnBallTreeHashIndex.is_usable())
 
     def test_default_configuration(self):
         c = SkLearnBallTreeHashIndex.get_default_config()
-        nose.tools.assert_equal(len(c), 3)
-        nose.tools.assert_is_instance(c['cache_element'], dict)
-        nose.tools.assert_is_none(c['cache_element']['type'])
-        nose.tools.assert_equal(c['leaf_size'], 40)
-        nose.tools.assert_is_none(c['random_seed'])
+        self.assertEqual(len(c), 3)
+        self.assertIsInstance(c['cache_element'], dict)
+        self.assertIsNone(c['cache_element']['type'])
+        self.assertEqual(c['leaf_size'], 40)
+        self.assertIsNone(c['random_seed'])
 
     def test_init_without_cache(self):
         i = SkLearnBallTreeHashIndex(cache_element=None, leaf_size=52,
                                      random_seed=42)
-        nose.tools.assert_is_none(i.cache_element)
-        nose.tools.assert_equal(i.leaf_size, 52)
-        nose.tools.assert_equal(i.random_seed, 42)
-        nose.tools.assert_is_none(i.bt)
+        self.assertIsNone(i.cache_element)
+        self.assertEqual(i.leaf_size, 52)
+        self.assertEqual(i.random_seed, 42)
+        self.assertIsNone(i.bt)
 
     def test_init_with_empty_cache(self):
         empty_cache = DataMemoryElement()
         i = SkLearnBallTreeHashIndex(cache_element=empty_cache,
                                      leaf_size=52,
                                      random_seed=42)
-        nose.tools.assert_equal(i.cache_element, empty_cache)
-        nose.tools.assert_equal(i.leaf_size, 52)
-        nose.tools.assert_equal(i.random_seed, 42)
-        nose.tools.assert_is_none(i.bt)
+        self.assertEqual(i.cache_element, empty_cache)
+        self.assertEqual(i.leaf_size, 52)
+        self.assertEqual(i.random_seed, 42)
+        self.assertIsNone(i.bt)
 
     def test_get_config(self):
         bt = SkLearnBallTreeHashIndex()
         bt_c = bt.get_config()
 
-        nose.tools.assert_equal(len(bt_c), 3)
-        nose.tools.assert_in('cache_element', bt_c)
-        nose.tools.assert_in('leaf_size', bt_c)
-        nose.tools.assert_in('random_seed', bt_c)
+        self.assertEqual(len(bt_c), 3)
+        self.assertIn('cache_element', bt_c)
+        self.assertIn('leaf_size', bt_c)
+        self.assertIn('random_seed', bt_c)
 
-        nose.tools.assert_is_instance(bt_c['cache_element'], dict)
-        nose.tools.assert_is_none(bt_c['cache_element']['type'])
+        self.assertIsInstance(bt_c['cache_element'], dict)
+        self.assertIsNone(bt_c['cache_element']['type'])
 
     def test_init_consistency(self):
         # Test that constructing an instance with a configuration yields the
@@ -60,23 +59,22 @@ class TestBallTreeHashIndex (unittest.TestCase):
 
         # - Default config should be a valid configuration for this impl.
         c = SkLearnBallTreeHashIndex.get_default_config()
-        nose.tools.assert_equal(
+        self.assertEqual(
             SkLearnBallTreeHashIndex.from_config(c).get_config(),
             c
         )
         # With non-null cache element
         c['cache_element']['type'] = 'DataMemoryElement'
-        nose.tools.assert_equal(
+        self.assertEqual(
             SkLearnBallTreeHashIndex.from_config(c).get_config(),
             c
         )
 
-    def test_invalid_build(self):
-        bt = SkLearnBallTreeHashIndex()
-        nose.tools.assert_raises(
+    def test_build_index_no_input(self):
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        self.assertRaises(
             ValueError,
-            bt.build_index,
-            []
+            bt.build_index, []
         )
 
     def test_build_index(self):
@@ -87,15 +85,64 @@ class TestBallTreeHashIndex (unittest.TestCase):
 
         # deterministically sort index of built and source data to determine
         # that an index was built.
-        nose.tools.assert_is_not_none(bt.bt)
+        self.assertIsNotNone(bt.bt)
         numpy.testing.assert_array_almost_equal(
             sorted(numpy.array(bt.bt.data).tolist()),
             sorted(m.tolist())
         )
 
+    def test_update_index_no_input(self):
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        self.assertRaises(
+            ValueError,
+            bt.update_index, []
+        )
+
+    def test_update_index_new_index(self):
+        # Virtually the same as `test_build_index` but using update_index.
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        # Make 1000 random bit vectors of length 256
+        m = numpy.random.randint(0, 2, 1000 * 256).reshape(1000, 256)\
+                 .astype(bool)
+        bt.update_index(m)
+
+        # deterministically sort index of built and source data to determine
+        # that an index was built.
+        self.assertIsNotNone(bt.bt)
+        numpy.testing.assert_array_almost_equal(
+            sorted(numpy.array(bt.bt.data).tolist()),
+            sorted(m.tolist())
+        )
+
+    def test_update_index_additive(self):
+        # Test updating an existing index, i.e. rebuilding using the union of
+        # previous and new data.
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        # Make 1000 random bit vectors of length 256
+        m1 = numpy.random.randint(0, 2, 1000 * 256).reshape(1000, 256) \
+                  .astype(bool)
+        m2 = numpy.random.randint(0, 2, 100 * 256).reshape(100, 256) \
+                  .astype(bool)
+
+        # Build initial index
+        bt.build_index(m1)
+        # Current model should only contain m1's data.
+        numpy.testing.assert_array_almost_equal(
+            sorted(numpy.array(bt.bt.data).tolist()),
+            sorted(m1.tolist())
+        )
+
+        # "Update" index with new hashes
+        bt.update_index(m2)
+        # New model should contain the union of the data.
+        numpy.testing.assert_array_almost_equal(
+            sorted(numpy.array(bt.bt.data).tolist()),
+            sorted(numpy.concatenate([m1, m2], 0).tolist())
+        )
+
     def test_count_empty(self):
         bt = SkLearnBallTreeHashIndex()
-        nose.tools.assert_equal(bt.count(), 0)
+        self.assertEqual(bt.count(), 0)
 
     def test_count_nonempty(self):
         bt = SkLearnBallTreeHashIndex()
@@ -103,12 +150,12 @@ class TestBallTreeHashIndex (unittest.TestCase):
         m = numpy.random.randint(0, 2, 234 * 256).reshape(234, 256)
         bt.build_index(m)
 
-        nose.tools.assert_equal(bt.count(), 234)
+        self.assertEqual(bt.count(), 234)
 
     def test_nn_no_index(self):
         i = SkLearnBallTreeHashIndex()
 
-        nose.tools.assert_raises_regexp(
+        self.assertRaisesRegexp(
             ValueError,
             "No index currently set to query from",
             i.nn, [0, 0, 0]
@@ -121,13 +168,13 @@ class TestBallTreeHashIndex (unittest.TestCase):
         bt.build_index(m)
         # Underlying serialization function should not have been called
         # because no cache element set.
-        nose.tools.assert_false(m_savez.called)
+        self.assertFalse(m_savez.called)
 
     def test_save_model_with_readonly_cache(self):
         cache_element = DataMemoryElement(readonly=True)
         bt = SkLearnBallTreeHashIndex(cache_element)
         m = numpy.random.randint(0, 2, 1000 * 256).reshape(1000, 256)
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             bt.build_index, m
         )
@@ -138,8 +185,8 @@ class TestBallTreeHashIndex (unittest.TestCase):
         bt = SkLearnBallTreeHashIndex(cache_element, random_seed=0)
         m = numpy.random.randint(0, 2, 1000 * 256).reshape(1000, 256)
         bt.build_index(m)
-        nose.tools.assert_true(m_savez.called)
-        nose.tools.assert_equal(m_savez.call_count, 1)
+        self.assertTrue(m_savez.called)
+        self.assertEqual(m_savez.call_count, 1)
 
     def test_load_model(self):
         # Create two index instances, building model with one, and loading
@@ -152,13 +199,13 @@ class TestBallTreeHashIndex (unittest.TestCase):
         bt1.build_index(m)
 
         bt2 = SkLearnBallTreeHashIndex(cache_element)
-        nose.tools.assert_is_not_none(bt2.bt)
+        self.assertIsNotNone(bt2.bt)
 
         q = numpy.random.randint(0, 2, 256).astype(bool)
         bt_neighbors, bt_dists = bt1.nn(q, 10)
         bt2_neighbors, bt2_dists = bt2.nn(q, 10)
 
-        nose.tools.assert_is_not(bt1, bt2)
-        nose.tools.assert_is_not(bt1.bt, bt2.bt)
+        self.assertIsNot(bt1, bt2)
+        self.assertIsNot(bt1.bt, bt2.bt)
         numpy.testing.assert_equal(bt2_neighbors, bt_neighbors)
         numpy.testing.assert_equal(bt2_dists, bt_dists)

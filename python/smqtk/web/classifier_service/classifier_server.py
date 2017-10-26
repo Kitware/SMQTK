@@ -141,7 +141,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.iqr_state_classifier_config = \
             json_config[self.CONFIG_IQR_CLASSIFIER]
 
-    def run(self, host=None, port=None, debug=False, **options):
+        self.add_routes()
+
+    def add_routes(self):
         # REST API endpoint routes
         #
         # Example:
@@ -171,8 +173,6 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             self.add_url_rule('/classifier',
                               view_func=self.del_classifier,
                               methods=['DELETE'])
-
-        super(SmqtkClassifierService, self).run(host, port, debug, **options)
 
     # GET /is_ready
     # noinspection PyMethodMayBeStatic
@@ -624,9 +624,6 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 self.immutable_labels.add(label)
 
         except ValueError as e:
-            if e.args[0].find('JSON') > -1:
-                return make_response_json("Tried to parse malformed JSON in "
-                                          "form argument.", 400)
             return make_response_json("Data added for label '%s' is not a"
                                       " Classifier." % label,
                                       400,

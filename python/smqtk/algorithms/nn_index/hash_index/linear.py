@@ -90,7 +90,7 @@ class LinearHashIndex (HashIndex):
         """
         Initialize linear, brute-force hash index.
 
-        :param cache_element: Optional path to a file to cache our index to.
+        :param cache_element: Optional data element to cache our index to.
         :type cache_element: smqtk.representation.DataElement | None
 
         """
@@ -149,6 +149,25 @@ class LinearHashIndex (HashIndex):
         if not len(new_index):
             raise ValueError("No hashes given to index.")
         self.index = new_index
+        self.save_cache()
+
+    def update_index(self, hashes):
+        """
+        Additively update the current hash index structure with the one or more
+        hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        :raises ValueError: No data available in the given iterable.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        hashes = super(LinearHashIndex, self).update_index(hashes)
+        self.index.update(set(map(bit_vector_to_int_large, hashes)))
         self.save_cache()
 
     def nn(self, h, n=1):

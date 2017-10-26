@@ -163,17 +163,22 @@ class ProgressReporter (SmqtkObject):
 
         Repeated calls to this method resets the state of the reporting for
         multiple uses.
+
+        :returns: Self
+        :rtype: ProgressReporter
+
         """
         with self.lock:
             self.started = True
             self.c_last = self.c = self.c_delta = 0
             self.t_last = self.t = self.t_start = time.time()
             self.t_delta = 0.0
+        return self
 
     def increment_report(self):
         """
-        Increment counter and time period, starting a new "interval" then
-        reporting the state.
+        Increment counter and time since last report, reporting if delta exceeds
+        the set reporting interval period.
         """
         with self.lock:
             if not self.started:

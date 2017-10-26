@@ -46,11 +46,11 @@ class TestLargeBitVecConversions (unittest.TestCase):
 class TestBitVecConversions (unittest.TestCase):
 
     def setUp(self):
-        one_bits = (62, 61, 2, 1, 0)
-        standard_bits = [int(i in one_bits) for i in range(64)]
+        one_bits = (61, 60, 2, 1, 0)
+        standard_bits = [int(i in one_bits) for i in range(63)]
         self.boolvec = numpy.array(standard_bits, dtype='bool')
         self.intvec = numpy.array(standard_bits, dtype='int')
-        self.int_rep = sum(2L**(63 - x) for x in one_bits)
+        self.int_rep = sum(2L**(62 - x) for x in one_bits)
         self.rev_int_rep = sum(2L**x for x in one_bits)
 
     def test_bit_vector_to_int(self):
@@ -69,5 +69,5 @@ class TestBitVecConversions (unittest.TestCase):
         )
         numpy.testing.assert_array_equal(
             self.boolvec[::-1],
-            int_to_bit_vector(self.rev_int_rep, bits=64)
+            int_to_bit_vector(self.rev_int_rep, bits=63)
         )

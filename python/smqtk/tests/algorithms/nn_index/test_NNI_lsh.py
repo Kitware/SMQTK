@@ -25,10 +25,22 @@ class DummyHashFunctor (LshFunctor):
         return True
 
     def get_config(self):
-        return {}
+        """ stub """
 
     def get_hash(self, descriptor):
-        return numpy.zeros(8, bool)
+        """
+        Dummy function that returns the bits of the integer sum of descriptor
+        vector.
+
+        :param descriptor: Descriptor vector we should generate the hash of.
+        :type descriptor: numpy.ndarray[float]
+
+        :return: Generated bit-vector as a numpy array of booleans.
+        :rtype: numpy.ndarray[bool]
+
+        """
+        return numpy.asarray([int(c) for c in bin(int(descriptor.sum()))[2:]],
+                             bool)
 
 
 class TestLshIndex (unittest.TestCase):
@@ -124,6 +136,13 @@ class TestLshIndex (unittest.TestCase):
             0.0
         )
 
+    def test_get_dist_func_invalid_string(self):
+        self.assertRaises(
+            ValueError,
+            LSHNearestNeighborIndex._get_dist_func,
+            'not-valid-string'
+        )
+
     def test_build_index_read_only(self):
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
                                         MemoryDescriptorIndex(),
@@ -155,18 +174,19 @@ class TestLshIndex (unittest.TestCase):
             DescriptorMemoryElement('t', 3),
             DescriptorMemoryElement('t', 4),
         ]
+        # Vectors of length 1 for easy dummy hashing prediction.
         for i, d in enumerate(descriptors):
-            d.set_vector(numpy.ones(8, float) * i)
+            d.set_vector(numpy.ones(1, float) * i)
         index.build_index(descriptors)
 
         # Make sure descriptors are now in attached index and in key-value-store
         self.assertEqual(descr_index.count(), 5)
         for d in descriptors:
             self.assertIn(d, descr_index)
-        # Dummy hash functor always returns the same hash (0), so there should
-        # only be one key (0) in KVS that contains all descriptor UUIDs.
-        self.assertEqual(hash_kvs.count(), 1)
-        self.assertSetEqual(hash_kvs.get(0), set(d.uuid() for d in descriptors))
+        # Dummy hash function bins sum of descriptor vectors.
+        self.assertEqual(hash_kvs.count(), 5)
+        for i in range(5):
+            self.assertSetEqual(hash_kvs.get(i), {i})
 
     def test_build_index_fresh_build_with_hash_index(self):
         descr_index = MemoryDescriptorIndex()
@@ -182,22 +202,13 @@ class TestLshIndex (unittest.TestCase):
             DescriptorMemoryElement('t', 3),
             DescriptorMemoryElement('t', 4),
         ]
+        # Vectors of length 1 for easy dummy hashing prediction.
         for i, d in enumerate(descriptors):
-            d.set_vector(numpy.ones(8, float) * i)
+            d.set_vector(numpy.ones(1, float) * i)
         index.build_index(descriptors)
-
-        # Make sure descriptors are now in attached index and in key-value-store
-        # - This block is the same as ``test_build_index_fresh_build``
-        self.assertEqual(descr_index.count(), 5)
-        for d in descriptors:
-            self.assertIn(d, descr_index)
-        # Dummy hash functor always returns the same hash (0), so there should
-        # only be one key (0) in KVS that contains all descriptor UUIDs.
-        self.assertEqual(hash_kvs.count(), 1)
-        self.assertSetEqual(hash_kvs.get(0), set(d.uuid() for d in descriptors))
-
-        # hash index should have been built with hash vectors, or 0 in our case.
-        self.assertEqual(linear_hi.index, {0})
+        # Hash index should have been built with hash vectors, and linearHI
+        # converts those to integers for storage.
+        self.assertEqual(linear_hi.index, {0, 1, 2, 3, 4})
 
     def test_update_index_read_only(self):
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
@@ -233,18 +244,19 @@ class TestLshIndex (unittest.TestCase):
             DescriptorMemoryElement('t', 3),
             DescriptorMemoryElement('t', 4),
         ]
+        # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors:
-            d.set_vector(numpy.ones(8, float) * d.uuid())
+            d.set_vector(numpy.ones(1, float) * d.uuid())
         index.update_index(descriptors)
 
         # Make sure descriptors are now in attached index and in key-value-store
         self.assertEqual(descr_index.count(), 5)
         for d in descriptors:
             self.assertIn(d, descr_index)
-        # Dummy hash functor always returns the same hash (0), so there should
-        # only be one key (0) in KVS that contains all descriptor UUIDs.
-        self.assertEqual(hash_kvs.count(), 1)
-        self.assertSetEqual(hash_kvs.get(0), set(d.uuid() for d in descriptors))
+        # Dummy hash function bins sum of descriptor vectors.
+        self.assertEqual(hash_kvs.count(), 5)
+        for i in range(5):
+            self.assertSetEqual(hash_kvs.get(i), {i})
 
     def test_update_index_add_new_descriptors(self):
         # Test that calling update index after a build index causes index
@@ -264,8 +276,9 @@ class TestLshIndex (unittest.TestCase):
             DescriptorMemoryElement('t', 5),
             DescriptorMemoryElement('t', 6),
         ]
+        # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors1 + descriptors2:
-            d.set_vector(numpy.ones(8, float) * d.uuid())
+            d.set_vector(numpy.ones(1, float) * d.uuid())
 
         # Build initial index.
         index.build_index(descriptors1)
@@ -274,18 +287,55 @@ class TestLshIndex (unittest.TestCase):
             self.assertIn(d, descr_index)
         for d in descriptors2:
             self.assertNotIn(d, descr_index)
-        self.assertEqual(hash_kvs.count(), 1)
-        self.assertSetEqual(hash_kvs.get(0),
-                            set(d.uuid() for d in descriptors1))
+        # Dummy hash function bins sum of descriptor vectors.
+        self.assertEqual(hash_kvs.count(), 5)
+        for i in range(5):
+            self.assertSetEqual(hash_kvs.get(i), {i})
 
         # Update index and check that components have new data.
         index.update_index(descriptors2)
         self.assertEqual(descr_index.count(), 7)
         for d in descriptors1 + descriptors2:
             self.assertIn(d, descr_index)
-        self.assertEqual(hash_kvs.count(), 1)
-        self.assertSetEqual(hash_kvs.get(0),
-                            set(d.uuid() for d in descriptors1 + descriptors2))
+        # Dummy hash function bins sum of descriptor vectors.
+        self.assertEqual(hash_kvs.count(), 7)
+        for i in range(7):
+            self.assertSetEqual(hash_kvs.get(i), {i})
+
+    def test_update_index_with_hash_index(self):
+        # Simiar test to `test_update_index_add_new_descriptors` but with a
+        # linear hash index.
+        descr_index = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        linear_hi = LinearHashIndex()  # simplest hash index, heap-sorts.
+        index = LSHNearestNeighborIndex(DummyHashFunctor(),
+                                        descr_index, hash_kvs, linear_hi)
+
+        descriptors1 = [
+            DescriptorMemoryElement('t', 0),
+            DescriptorMemoryElement('t', 1),
+            DescriptorMemoryElement('t', 2),
+            DescriptorMemoryElement('t', 3),
+            DescriptorMemoryElement('t', 4),
+        ]
+        descriptors2 = [
+            DescriptorMemoryElement('t', 5),
+            DescriptorMemoryElement('t', 6),
+        ]
+        # Vectors of length 1 for easy dummy hashing prediction.
+        for d in descriptors1 + descriptors2:
+            d.set_vector(numpy.ones(1, float) * d.uuid())
+
+        # Build initial index.
+        index.build_index(descriptors1)
+        # Initial hash index should only encode hashes for first batch of
+        # descriptors.
+        self.assertSetEqual(linear_hi.index, {0, 1, 2, 3, 4})
+
+        # Update index and check that components have new data.
+        index.update_index(descriptors2)
+        # Now the hash index should include all descriptor hashes.
+        self.assertSetEqual(linear_hi.index, {0, 1, 2, 3, 4, 5, 6})
 
 
 class TestLshIndexAlgorithms (unittest.TestCase):

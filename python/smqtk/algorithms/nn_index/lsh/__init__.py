@@ -19,7 +19,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
-from smqtk.utils.bin_utils import report_progress, ProgressReporter
+from smqtk.utils.bin_utils import ProgressReporter
 from smqtk.utils import merge_dict
 
 try:
@@ -299,10 +299,10 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.hash2uuids_kvstore.clear()
         prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
         for d in self.descriptor_index:
-            h = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h)
+            h_vec = self.lsh_functor.get_hash(d.vector())
+            hash_vectors.append(h_vec)
 
-            h_int = bit_vector_to_int_large(h)
+            h_int = bit_vector_to_int_large(h_vec)
 
             # Get, update and reinsert hash UUID set object
             #: :type: set
@@ -352,9 +352,9 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         #: :type: collections.deque[numpy.ndarray[bool]]
         hash_vectors = collections.deque()  # for updating hash_index
         for d in d_for_hashing:
-            h = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h)
-            h_int = bit_vector_to_int_large(h)
+            h_vec = self.lsh_functor.get_hash(d.vector())
+            hash_vectors.append(h_vec)
+            h_int = bit_vector_to_int_large(h_vec)
             # Get, update and reinsert hash UUID set object
             #: :type: set
             hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())

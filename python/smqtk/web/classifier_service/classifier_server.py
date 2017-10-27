@@ -141,7 +141,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.iqr_state_classifier_config = \
             json_config[self.CONFIG_IQR_CLASSIFIER]
 
-    def run(self, host=None, port=None, debug=False, **options):
+        self.add_routes()
+
+    def add_routes(self):
         # REST API endpoint routes
         #
         # Example:
@@ -172,8 +174,6 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                               view_func=self.del_classifier,
                               methods=['DELETE'])
 
-        super(SmqtkClassifierService, self).run(host, port, debug, **options)
-
     # GET /is_ready
     # noinspection PyMethodMayBeStatic
     def is_ready(self):
@@ -200,12 +200,16 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     # POST /classify
     def classify(self):
         """
-        Describe and classify provided base64 data, returning results in JSON
-        response.
+        Given a file's bytes (standard base64-format) and content mimetype,
+        describe and classify the content against all currently stored
+        classifiers (optionally a list of requested classifiers), returning a
+        map of classifier descriptive labels to their class-to-probability
+        results.
 
         We expect the data to be transmitted in the body of the request in
-        standard base64 encoding form ("bytes_b64" key). We look for the content
-        type either as URL parameter or within the body ("content_type" key).
+        standard base64 encoding form ("bytes_b64" key). We look for the
+        content type either as URL parameter or within the body
+        ("content_type" key).
 
         Below is an example call to this endpoint via the ``requests`` python
         module, showing how base64 data is sent::
@@ -213,9 +217,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             import base64
             import requests
             data_bytes = "Load some content bytes here."
-            requests.get('http://localhost:5000/classify',
-                         data={'bytes_b64': base64.b64encode(data_bytes),
-                               'content_type': 'text/plain'})
+            requests.post('http://localhost:5000/classify',
+                          data={'bytes_b64': base64.b64encode(data_bytes),
+                                'content_type': 'text/plain'})
 
         With curl on the command line::
 
@@ -231,16 +235,37 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 -d "content_type=text/plain" \
                 --data-urlencode bytes_64=@/path/to/file.b64
 
-        Data args:
+        Optionally, the `label` parameter can be provided to limit the results
+        of classification to a set of classifiers::
+
+            $ curl -X POST localhost:5000/classify \
+                -d "content_type=text/plain" \
+                -d 'label=["some_label","other_label"]' \
+                --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+            # If this fails, you may wish to encode the file separately and
+            # use the file reference syntax instead:
+
+            $ base64 -w0 /path/to/file > /path/to/file.b64
+            $ curl -X POST localhost:5000/classify \
+                -d "content_type=text/plain" \
+                -d 'label=["some_label","other_label"]' \
+                --data-urlencode bytes_64=@/path/to/file.b64
+
+        Data/Form arguments:
             bytes_b64
-                Bytes of the data to be described and classified in base64
-                encoding.
+                Bytes in the standard base64 encoding to be described and
+                classified.
             content_type
                 The mimetype of the sent data.
+            label
+                (Optional) JSON-encoded label or list of labels
 
         Possible error codes:
             400
-                No bytes or label provided
+                No bytes provided, or provided labels are malformed
+            404
+                Label or labels provided do not match any registered classifier
 
         Returns: {
             ...
@@ -256,6 +281,50 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         """
         data_b64 = flask.request.values.get('bytes_b64', default=None)
         content_type = flask.request.values.get('content_type', default=None)
+        label_str = flask.request.values.get('label', default=None)
+
+        labels = None
+        if label_str is not None:
+            try:
+                labels = flask.json.loads(label_str)
+
+                if isinstance(labels, six.string_types):
+                    labels = [labels]
+                elif isinstance(labels, list):
+                    for el in labels:
+                        if not isinstance(el, six.string_types):
+                            return make_response_json(
+                                "Label must be a list of strings or a"
+                                " single string.", 400)
+                else:
+                    return make_response_json(
+                        "Label must be a list of strings or a single"
+                        " string.", 400)
+
+            except (ValueError, flask.json.JSONDecoder):
+                # Unquoted strings aren't valid JSON. That is, a plain string
+                # needs to be passed as '"label"' rather than just 'label' or
+                # "label". However, we can be a bit more generous and just
+                # allow such a string, but we have to place *some* restriction
+                # on it. We use `urllib.quote` for this since essentially it
+                # just checks to make sure that the string is made up of one
+                # of the following types of characters:
+                #
+                #   - letters
+                #   - numbers
+                #   - spaces, underscores, periods, and dashes
+                #
+                # Since the concept of a "letter" is fraught with encoding and
+                # locality issues, we simply let urllib make this decision for
+                # us.
+                from urllib import quote
+                # If label_str matches the url-encoded version of itself, go
+                # ahead and use it
+                if quote(label_str, safe='') == label_str:
+                    labels = [label_str]
+                else:
+                    return make_response_json(
+                        "Label(s) are not properly formatted JSON.", 400)
 
         if data_b64 is None:
             return make_response_json("No base-64 bytes provided.", 400)
@@ -271,9 +340,28 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 
-        clfr_map = self.classifier_collection.classify(
-            descr_elem, self.classification_factory
-        )
+        if labels is not None:
+            # Get a lock on the classifier collection
+            with self.classifier_collection as coll:
+                # If we're missing some of the requested labels, complain
+                missing_labels = set(labels) - coll.labels()
+                if missing_labels:
+                    return make_response_json(
+                        "The following labels are not registered with"
+                        " any classifiers: '%s'"
+                        % "', '".join(missing_labels),
+                        404,
+                        missing_labels=list(missing_labels))
+
+                clfr_map = {}
+                for label in labels:
+                    clfr = coll.get_classifier(label)
+                    clfr_map[label] = clfr.classify(
+                        descr_elem, self.classification_factory)
+        else:
+            clfr_map = self.classifier_collection.classify(
+                descr_elem, self.classification_factory
+            )
 
         # Transform classification result into JSON
         c_json = {}
@@ -407,7 +495,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
             return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      "Was given: '%s'" % lock_clfr_str,
                                       400)
 
         # If the given label conflicts with one already in the collection, fail.
@@ -531,7 +619,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
             return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      "Was given: '%s'" % lock_clfr_str,
                                       400)
 
         # If the given label conflicts with one already in the collection, fail.
@@ -552,16 +640,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 self.immutable_labels.add(label)
 
         except ValueError as e:
-            if e.args[0].find('JSON') > -1:
-                return make_response_json("Tried to parse malformed JSON in "
-                                          "form argument.", 400)
             return make_response_json("Data added for label '%s' is not a"
                                       " Classifier." % label,
                                       400,
                                       label=label)
 
         return make_response_json("Uploaded classifier for label '%s'."
-                                  "" % label,
+                                  % label,
                                   201,
                                   label=label)
 
@@ -587,7 +672,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         elif label not in self.classifier_collection.labels():
             return make_response_json("Label '%s' does not refer to a"
                                       " classifier currently registered."
-                                      "" % label,
+                                      % label,
                                       404,
                                       label=label)
         elif label in self.immutable_labels:

@@ -54,8 +54,9 @@ Returns code 200 on success and the message: {
 [POST] /classify
 ^^^^^^^^^^^^^^^^
 Given a file's bytes (standard base64-format) and content mimetype, describe
-and classify the content against all currently stored classifiers, returning a
-map of classifier descriptive labels to their class-to-probability results.
+and classify the content against all currently stored classifiers (optionally
+a list of requested classifiers), returning a map of classifier descriptive
+labels to their class-to-probability results.
 
 We expect the data to be transmitted in the body of the request in
 standard base64 encoding form ("bytes_b64" key). We look for the content
@@ -83,15 +84,35 @@ With curl on the command line::
     $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
         --data-urlencode bytes_64=@/path/to/file.b64
 
+Optionally, the `label` parameter can be provided to limit the results of
+classification to a set of classifiers::
+
+    $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
+        -d 'label=["some_label","other_label"]' \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+    # If this fails, you may wish to encode the file separately and use the
+    # file reference syntax instead:
+
+    $ base64 -w0 /path/to/file > /path/to/file.b64
+    $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
+        -d 'label=["some_label","other_label"]' \
+        --data-urlencode bytes_64=@/path/to/file.b64
+
 Data/Form arguments:
     bytes_b64
         Bytes in the standard base64 encoding to be described and classified.
     content_type
         The mimetype of the sent data.
+    label
+        (Optional) Label of the requested classifier, or JSON list of
+        requested classifiers
 
 Possible error codes:
     400
-        No bytes or label provided
+        No bytes provided
+    404
+        Label or labels provided do not match any registered classifier
 
 Returns code 200 on success and the message: {
     ...

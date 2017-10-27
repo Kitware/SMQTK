@@ -105,8 +105,8 @@ Data/Form arguments:
     content_type
         The mimetype of the sent data.
     label
-        Label of the requested classifier, or JSON list of requested
-        classifiers
+        (Optional) Label of the requested classifier, or JSON list of
+        requested classifiers
 
 Possible error codes:
     400

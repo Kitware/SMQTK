@@ -240,9 +240,9 @@ fi
 echo "Starting SMQTK IqrService..."
 SMQTK_REST_IQR_PID="smqtk_rest_iqr.pid"
 runApplication \
--a IqrService \
--vtc "${CONFIG_DIR}/${SMQTK_REST_IQR_CONFIG}" \
-&>"${LOG_DIR}/runApp.IqrService.log" &
+  -a IqrService \
+  -vtc "${CONFIG_DIR}/${SMQTK_REST_IQR_CONFIG}" \
+  &>"${LOG_DIR}/runApp.IqrService.log" &
 echo "$!" >"${SMQTK_REST_IQR_PID}"
 echo "Starting SMQTK IqrService... Done"
 

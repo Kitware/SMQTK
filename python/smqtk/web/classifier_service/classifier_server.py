@@ -240,7 +240,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
             $ curl -X POST localhost:5000/classify \
                 -d "content_type=text/plain" \
-                -d "label=[some_label,other_label]" \
+                -d 'label=["some_label","other_label"]' \
                 --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
             # If this fails, you may wish to encode the file separately and
@@ -249,7 +249,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             $ base64 -w0 /path/to/file > /path/to/file.b64
             $ curl -X POST localhost:5000/classify \
                 -d "content_type=text/plain" \
-                -d "label=[some_label,other_label]" \
+                -d 'label=["some_label","other_label"]' \
                 --data-urlencode bytes_64=@/path/to/file.b64
 
         Data/Form arguments:
@@ -259,7 +259,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             content_type
                 The mimetype of the sent data.
             label
-                JSON-encoded label or list of labels
+                (Optional) JSON-encoded label or list of labels
 
         Possible error codes:
             400

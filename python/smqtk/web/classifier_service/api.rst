@@ -88,7 +88,7 @@ Optionally, the `label` parameter can be provided to limit the results of
 classification to a set of classifiers::
 
     $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
-        -d "label=[some_label,other_label]" \
+        -d 'label=["some_label","other_label"]' \
         --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
 
     # If this fails, you may wish to encode the file separately and use the
@@ -96,7 +96,7 @@ classification to a set of classifiers::
 
     $ base64 -w0 /path/to/file > /path/to/file.b64
     $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
-        -d "label=[some_label,other_label]" \
+        -d 'label=["some_label","other_label"]' \
         --data-urlencode bytes_64=@/path/to/file.b64
 
 Data/Form arguments:

@@ -306,15 +306,19 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         # Build all the random bases and the projections at the same time
         # (_num_trees * _depth shouldn't really be that high -- if it is,
         # you're a monster)
+        if self._rand_seed is not None:
+            np.random.seed(self._rand_seed)
         random_bases = np.random.randn(self._num_trees, d, self._depth)
         projs = np.empty((n, self._num_trees, self._depth), dtype=np.float64)
         # Load the data in chunks (because n * d IS high)
         pts_array = np.empty((chunk_size, d), sample_v.dtype)
         # Enumerate the descriptors and div the index by the chunk size
+        # (causes each loop to only deal with at most chunk_size descriptors at
+        # a time).
         for k, g in groupby(enumerate(self._descriptor_set.iterdescriptors()),
                             lambda pair: pair[0] // chunk_size):
             # Items are still paired so extract the descriptors
-            chunk = list(desc for i, desc in g)
+            chunk = list(desc for (i, desc) in g)
             # Take care of dangling end piece
             k_beg = k * chunk_size
             k_end = min((k+1) * chunk_size, n)

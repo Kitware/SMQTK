@@ -302,9 +302,24 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                         " string.", 400)
 
             except (ValueError, flask.json.JSONDecoder):
+                # Unquoted strings aren't valid JSON. That is, a plain string
+                # needs to be passed as '"label"' rather than just 'label' or
+                # "label". However, we can be a bit more generous and just
+                # allow such a string, but we have to place *some* restriction
+                # on it. We use `urllib.quote` for this since essentially it
+                # just checks to make sure that the string is made up of one
+                # of the following types of characters:
+                #
+                #   - letters
+                #   - numbers
+                #   - spaces, underscores, periods, and dashes
+                #
+                # Since the concept of a "letter" is fraught with encoding and
+                # locality issues, we simply let urllib make this decision for
+                # us.
                 from urllib import quote
-                # It might not be valid JSON, but check for alphanumeric +
-                # space + -._, and use it directly if it matches
+                # If label_str matches the url-encoded version of itself, go
+                # ahead and use it
                 if quote(label_str, safe='') == label_str:
                     labels = [label_str]
                 else:
@@ -333,9 +348,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 if missing_labels:
                     return make_response_json(
                         "The following labels are not registered with"
-                        " any classifiers:"
-                        " '%s'" % "', '".join(missing_labels),
-                        404, missing_labels=list(missing_labels))
+                        " any classifiers: '%s'"
+                        % "', '".join(missing_labels),
+                        404,
+                        missing_labels=list(missing_labels))
 
                 clfr_map = {}
                 for label in labels:
@@ -479,7 +495,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
             return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      "Was given: '%s'" % lock_clfr_str,
                                       400)
 
         # If the given label conflicts with one already in the collection, fail.
@@ -603,7 +619,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
             return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: \"%s\"" % lock_clfr_str,
+                                      "Was given: '%s'" % lock_clfr_str,
                                       400)
 
         # If the given label conflicts with one already in the collection, fail.
@@ -630,7 +646,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                                       label=label)
 
         return make_response_json("Uploaded classifier for label '%s'."
-                                  "" % label,
+                                  % label,
                                   201,
                                   label=label)
 
@@ -656,7 +672,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         elif label not in self.classifier_collection.labels():
             return make_response_json("Label '%s' does not refer to a"
                                       " classifier currently registered."
-                                      "" % label,
+                                      % label,
                                       404,
                                       label=label)
         elif label in self.immutable_labels:

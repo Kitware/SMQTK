@@ -54,7 +54,7 @@ class TestClassifierService (unittest.TestCase):
         self.app = SmqtkClassifierService(json_config=self.config)
         
     def assertStatus(self, rv, code):
-        self.assertStatus(rv, code)
+        self.assertEqual(rv.status_code, code)
         
     def assertMessage(self, resp_data, message):
         self.assertEqual(resp_data['message'], message)
@@ -133,7 +133,7 @@ class TestClassifierService (unittest.TestCase):
             resp_data = json.loads(rv.data)
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
-                             "" % new_label)
+                             % new_label)
             self.assertEqual(resp_data["label"], new_label)
 
             rv = cli.post('/classify', data={
@@ -175,7 +175,7 @@ class TestClassifierService (unittest.TestCase):
             resp_data = json.loads(rv.data)
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
-                             "" % new_label)
+                             % new_label)
             self.assertEqual(resp_data["label"], new_label)
 
             rv = cli.get('/classifier_labels')
@@ -192,7 +192,7 @@ class TestClassifierService (unittest.TestCase):
             resp_data = json.loads(rv.data)
             self.assertEqual(resp_data["message"],
                              "Removed classifier with label '%s'."
-                             "" % new_label)
+                             % new_label)
             self.assertEqual(resp_data["removed_label"], new_label)
 
             rv = cli.get('/classifier_labels')
@@ -218,7 +218,7 @@ class TestClassifierService (unittest.TestCase):
             resp_data = json.loads(rv.data)
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
-                             "" % new_label)
+                             % new_label)
             self.assertEqual(resp_data["label"], new_label)
 
             rv = cli.get('/classifier_labels')
@@ -283,7 +283,7 @@ class TestClassifierService (unittest.TestCase):
             self.assertStatus(rv, 400)
             self.assertMessage(json.loads(rv.data),
                                "Invalid boolean value for 'lock_label'."
-                               " Was given: \"%s\"" % lock_clfr_str)
+                               " Was given: '%s'" % lock_clfr_str)
 
             rv = cli.post('/classifier', data={
                 'label': new_label,

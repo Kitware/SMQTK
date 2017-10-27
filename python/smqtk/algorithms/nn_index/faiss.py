@@ -159,6 +159,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug('Building FAISS index')
         self._build_faiss_model()
 
+    def update_index(self, descriptors):
+        # This experimental wrapper does not currently plug into FAISS's update
+        # capabilities.
+        raise NotImplementedError()
+
     def _build_faiss_model(self):
         sample = self._descriptor_set.iterdescriptors().next()
         sample_v = sample.vector()

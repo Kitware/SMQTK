@@ -1,21 +1,16 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-# noinspection PyPep8Naming
-from six.moves import range, cPickle as pickle, zip
-
-import logging
-import multiprocessing
 import os.path as osp
 
 import numpy as np
+from six.moves import cPickle as pickle, zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import plugin, merge_dict
-from smqtk.utils.file_utils import safe_create_dir
 
 
 # Requires FAISS bindings

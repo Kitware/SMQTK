@@ -174,8 +174,7 @@ setuptools.setup(
     tests_require=[
         'coverage',
         'mock',
-        'nose',
-        'nose-exclude'
+        'nose'
     ],
 
     # See entry_points/console_scripts as the preferred method for publishing

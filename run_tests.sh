@@ -13,4 +13,4 @@ then
 else
   nosetest_args="${DEFAULT_ROOT}"
 fi
-nosetests -v --with-doctest --with-coverage --cover-package=smqtk --exclude-dir-file=nose_exclude_dirs.txt ${nosetest_args}
+nosetests -v --with-doctest --with-coverage --cover-package=smqtk ${nosetest_args}

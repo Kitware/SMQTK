@@ -49,6 +49,77 @@ class TestMRPTIndex (unittest.TestCase):
         index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
         self.assertEqual(index.get_config(), index2.get_config())
 
+    def test_read_only(self):
+        v = np.zeros(5, float)
+        v[0] = 1.
+        d = DescriptorMemoryElement('unit', 0)
+        d.set_vector(v)
+        test_descriptors = [d]
+
+        index = self._make_inst(read_only=True)
+        self.assertRaises(
+            ReadOnlyError,
+            index.build_index, test_descriptors
+        )
+
+    def test_update_index_no_input(self):
+        index = self._make_inst()
+        self.assertRaises(
+            ValueError,
+            index.update_index, []
+        )
+
+    def test_update_index_new_index(self):
+        n = 100
+        dim = 8
+        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_index]
+
+        index = self._make_inst()
+        index.update_index(d_index)
+        self.assertEqual(index.count(), 100)
+        for d in d_index:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return stuff from the set used.
+        # - nearest element to the query element when the query is in the index
+        #   should be the query element.
+        random.seed(self.RAND_SEED)
+        for _ in range(10):
+            i = random.randint(0, n-1)
+            q = d_index[i]
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
+
+    def test_update_index_additive(self):
+        n1 = 100
+        n2 = 10
+        dim = 8
+        set1 = {DescriptorMemoryElement('test', i) for i in range(n1)}
+        set2 = {DescriptorMemoryElement('test', i) for i in range(n1, n1+n2)}
+        [d.set_vector(np.random.rand(dim)) for d in set1.union(set1 | set2)]
+
+        # Create and build initial index.
+        index = self._make_inst()
+        index.build_index(set1)
+        self.assertEqual(index.count(), len(set1))
+        for d in set1:
+            self.assertIn(d, index._descriptor_set)
+
+        # Update and check that all intended descriptors are present in index.
+        index.update_index(set2)
+        set_all = set1 | set2
+        self.assertEqual(index.count(), len(set_all))
+        for d in set_all:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return something from the updated set.
+        # - nearest element to the query element when the query is in the index
+        #   should be the query element.
+        for q in set2:
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
+
     def test_many_descriptors(self):
         np.random.seed(0)
 
@@ -153,19 +224,6 @@ class TestMRPTIndex (unittest.TestCase):
         # All dists should be 1.0, r order doesn't matter
         for d in dists:
             self.assertEqual(d, 1.)
-
-    def test_read_only(self):
-        v = np.zeros(5, float)
-        v[0] = 1.
-        d = DescriptorMemoryElement('unit', 0)
-        d.set_vector(v)
-        test_descriptors = [d]
-
-        index = self._make_inst(read_only=True)
-        self.assertRaises(
-            ReadOnlyError,
-            index.build_index, test_descriptors
-        )
 
     def test_known_descriptors_nearest(self):
         dim = 5

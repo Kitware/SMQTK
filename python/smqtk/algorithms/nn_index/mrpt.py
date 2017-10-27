@@ -2,14 +2,11 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-# noinspection PyPep8Naming
-from six.moves import range, cPickle as pickle, zip
-
+from itertools import chain, groupby
 from os import path as osp
 
 import numpy as np
-
-from itertools import groupby
+from six.moves import range, cPickle as pickle, zip
 
 from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
@@ -17,6 +14,7 @@ from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.file_utils import safe_create_dir
+
 
 CHUNK_SIZE = 5000
 
@@ -254,12 +252,16 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         if self._read_only:
             raise ReadOnlyError("Cannot modify container attributes due to "
                                 "being in read-only mode.")
-
-        super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
+        descriptors = \
+            super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
 
         self._log.info("Building new MRPT index")
 
         self._log.debug("Clearing and adding new descriptor elements")
+        # NOTE: It may be the case for some DescriptorIndex implementations,
+        # this clear may interfere with iteration when part of the input
+        # iterator of descriptors was this index's previous descriptor-set, as
+        # is the case with ``update_index``.
         self._descriptor_set.clear()
         self._descriptor_set.add_many_descriptors(descriptors)
 
@@ -268,11 +270,36 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._save_mrpt_model()
 
+    def update_index(self, descriptors):
+        """
+        Additively update the current index with the one or more descriptor
+        elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        *NOTE:* This implementation fully rebuilds the index using the current
+        index contents merged with the provided new descriptor elements.
+
+        :raises ValueError: No data available in the given iterable.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors: collections.Iterable[smqtk.representation
+                                                     .DescriptorElement]
+
+        """
+        if self._read_only:
+            raise ReadOnlyError("Cannot modify container attributes due to "
+                                "being in read-only mode.")
+        new_descriptors = \
+            super(MRPTNearestNeighborsIndex, self).update_index(descriptors)
+        self.build_index(chain(self._descriptor_set, new_descriptors))
+
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
         Build an MRPT structure
         """
-
         sample = self._descriptor_set.iterdescriptors().next()
         sample_v = sample.vector()
         n = self.count()

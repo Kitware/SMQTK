@@ -16,8 +16,4 @@ else
   test_paths="${DEFAULT_ROOT}"
 fi
 
-# -l :: Show local in trace-backs.
-# -v :: Increased verbosity.
-pytest -lv \
-  --cov=smqtk \
-  ${test_paths}
+pytest ${test_paths}

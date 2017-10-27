@@ -44,6 +44,15 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         self.assertTrue(de1 == de2)
         self.assertFalse(de1 != de2)
 
+    def test_equality_diffTypeStr(self):
+        # Type strings no longer considered in descriptor equality nor hashing.
+        v = numpy.random.randint(0, 10, 10)
+        d1 = DummyDescriptorElement('a', 'u')
+        d2 = DummyDescriptorElement('b', 'u')
+        d1.vector = d2.vector = mock.Mock(return_value=v)
+        self.assertFalse(d1 != d2)
+        self.assertTrue(d1 == d2)
+
     def test_nonEquality_diffInstance(self):
         # diff instance
         de = DummyDescriptorElement('a', 'b')
@@ -75,14 +84,6 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d2 = DummyDescriptorElement('a', 'b')
         d2.vector = mock.Mock(return_value=v2)
 
-        self.assertFalse(d1 == d2)
-        self.assertTrue(d1 != d2)
-
-    def test_nonEquality_diffTypeStr(self):
-        v = numpy.random.randint(0, 10, 10)
-        d1 = DummyDescriptorElement('a', 'u')
-        d2 = DummyDescriptorElement('b', 'u')
-        d1.vector = d2.vector = mock.Mock(return_value=v)
         self.assertFalse(d1 == d2)
         self.assertTrue(d1 != d2)
 

@@ -34,6 +34,7 @@ errors.log
 
 # Py.test cache directory
 /.cache
+__pycache__
 
 #
 # TPL

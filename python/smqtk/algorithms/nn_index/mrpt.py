@@ -86,6 +86,39 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         return default
 
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        This method should not be called via super unless and instance of the
+        class is desired.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: MRPTNearestNeighborsIndex
+
+        """
+        if merge_default:
+            cfg = cls.get_default_config()
+            merge_dict(cfg, config_dict)
+        else:
+            cfg = config_dict
+
+        cfg['descriptor_set'] = \
+            plugin.from_plugin_config(cfg['descriptor_set'],
+                                      get_descriptor_index_impls())
+
+        return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
+
     def __init__(self, descriptor_set, index_filepath=None,
                  parameters_filepath=None, read_only=False,
                  # Parameters for building an index
@@ -187,39 +220,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             "num_trees": self._num_trees,
         }
 
-    @classmethod
-    def from_config(cls, config_dict, merge_default=True):
-        """
-        Instantiate a new instance of this class given the configuration
-        JSON-compliant dictionary encapsulating initialization arguments.
-
-        This method should not be called via super unless and instance of the
-        class is desired.
-
-        :param config_dict: JSON compliant dictionary encapsulating
-            a configuration.
-        :type config_dict: dict
-
-        :param merge_default: Merge the given configuration on top of the
-            default provided by ``get_default_config``.
-        :type merge_default: bool
-
-        :return: Constructed instance from the provided config.
-        :rtype: MRPTNearestNeighborsIndex
-
-        """
-        if merge_default:
-            cfg = cls.get_default_config()
-            merge_dict(cfg, config_dict)
-        else:
-            cfg = config_dict
-
-        cfg['descriptor_set'] = \
-            plugin.from_plugin_config(cfg['descriptor_set'],
-                                      get_descriptor_index_impls())
-
-        return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
-
     def _has_model_files(self):
         """
         check if configured model files are configured and exist
@@ -228,6 +228,13 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 osp.isfile(self._index_filepath) and
                 self._index_param_filepath and
                 osp.isfile(self._index_param_filepath))
+
+    def count(self):
+        """
+        :return: Number of elements in this index.
+        :rtype: int
+        """
+        return len(self._descriptor_set)
 
     def build_index(self, descriptors):
         """
@@ -452,13 +459,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             # noinspection PyTypeChecker
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
-
-    def count(self):
-        """
-        :return: Number of elements in this index.
-        :rtype: int
-        """
-        return len(self._descriptor_set)
 
     def nn(self, d, n=1):
         """

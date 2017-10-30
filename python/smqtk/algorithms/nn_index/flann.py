@@ -228,13 +228,16 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return len(self._descr_cache) if self._descr_cache else 0
+        return len(self._descr_cache) if (self._descr_cache is not None) else 0
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         """
-        Build the index over the descriptors data elements.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         Implementation Notes:
             - We keep a cache file serialization around for our index in case
@@ -243,16 +246,12 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                 a main or child process rebuild's the index, as we clear the old
                 cache away.
 
-        :raises ValueError: No data available in the given iterable.
-
-        :param descriptors: Iterable of descriptors elements to build index
+        :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        descriptors = \
-            super(FlannNearestNeighborsIndex, self).build_index(descriptors)
         # Not caring about restoring the index because we're just making a new
         # one
         self._log.info("Building new FLANN index")
@@ -311,10 +310,10 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._pid = multiprocessing.current_process().pid
 
-    def update_index(self, descriptors):
+    def _update_index(self, descriptors):
         """
-        Additively update the current index with the one or more descriptor
-        elements given.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
 
         If no index exists yet, a new one should be created using the given
         descriptors.
@@ -331,21 +330,20 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :type descriptors: collections.Iterable[smqtk.representation
                                                      .DescriptorElement]
 
-        :raises ValueError: No descriptors provided in the given iterable.
-
         """
-        descriptors = \
-            super(FlannNearestNeighborsIndex, self).update_index(descriptors)
         self._restore_index()
-
         # Build a new index that contains the union of the current descriptors
         # and the new provided descriptors.
         self._log.info("Rebuilding FLANN index to include new descriptors.")
         self.build_index(itertools.chain(self._descr_cache, descriptors))
 
-    def nn(self, d, n=1):
+    def _nn(self, d, n=1):
         """
-        Return the nearest `N` neighbors to the given descriptor element.
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
+
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
 
         :param d: Descriptor element to compute the neighbors of.
         :type d: smqtk.representation.DescriptorElement
@@ -359,7 +357,6 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
         """
         self._restore_index()
-        super(FlannNearestNeighborsIndex, self).nn(d, n)
         vec = d.vector()
 
         # If the distance method is HIK, we need to treat it special since that

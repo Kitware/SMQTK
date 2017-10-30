@@ -31,6 +31,29 @@ if FlannNearestNeighborsIndex.is_usable():
             ntools.assert_in(FlannNearestNeighborsIndex.__name__,
                              get_nn_index_impls())
 
+        def test_configuration(self):
+            index_filepath = '/index_filepath'
+            para_filepath = '/param_fp'
+            descr_cache_fp = '/descrcachefp'
+
+            # Make configuration based on default
+            c = FlannNearestNeighborsIndex.get_default_config()
+            c['index_uri'] = index_filepath
+            c['parameters_uri'] = para_filepath
+            c['descriptor_cache_uri'] = descr_cache_fp
+            c['distance_method'] = 'hik'
+            c['random_seed'] = 42
+
+            # Build based on configuration
+            #: :type: FlannNearestNeighborsIndex
+            index = FlannNearestNeighborsIndex.from_config(c)
+            ntools.assert_equal(index._index_uri, index_filepath)
+            ntools.assert_equal(index._index_param_uri, para_filepath)
+            ntools.assert_equal(index._descr_cache_uri, descr_cache_fp)
+
+            c2 = index.get_config()
+            ntools.assert_equal(c, c2)
+
         def test_has_model_data_no_uris(self):
             f = FlannNearestNeighborsIndex()
             ntools.assert_false(f._has_model_data())
@@ -63,14 +86,6 @@ if FlannNearestNeighborsIndex.is_usable():
             )
             ntools.assert_true(f._has_model_data())
 
-        def test_build_index_no_descriptors(self):
-            index = self._make_inst('euclidean')
-            self.assertRaises(
-                ValueError,
-                index.build_index,
-                []
-            )
-
         def test_build_index_one(self):
             d = DescriptorMemoryElement('test', 0)
             d.set_vector(numpy.zeros(8, float))
@@ -83,13 +98,31 @@ if FlannNearestNeighborsIndex.is_usable():
             self.assertIsNotNone(index._flann)
             self.assertIsInstance(index._flann_build_params, dict)
 
-        def test_update_index_no_descriptors(self):
-            index = self._make_inst('euclidean')
-            self.assertRaises(
-                ValueError,
-                index.update_index,
-                []
-            )
+        def test_build_index_with_cache(self):
+            # Empty memory data elements for storage
+            empty_data = 'base64://'
+            f = FlannNearestNeighborsIndex(empty_data, empty_data, empty_data)
+            # Internal elements should initialize have zero-length byte values
+            ntools.assert_equal(len(f._index_elem.get_bytes()), 0)
+            ntools.assert_equal(len(f._index_param_elem.get_bytes()), 0)
+            ntools.assert_equal(len(f._descr_cache_elem.get_bytes()), 0)
+
+            # Make unit vectors, one for each feature dimension.
+            dim = 8
+            test_descriptors = []
+            for i in range(dim):
+                v = numpy.zeros(dim, float)
+                v[i] = 1.
+                d = DescriptorMemoryElement('unit', i)
+                d.set_vector(v)
+                test_descriptors.append(d)
+
+            f.build_index(test_descriptors)
+
+            # Internal elements should not have non-zero byte values.
+            ntools.assert_greater(len(f._index_elem.get_bytes()), 0)
+            ntools.assert_greater(len(f._index_param_elem.get_bytes()), 0)
+            ntools.assert_greater(len(f._descr_cache_elem.get_bytes()), 0)
 
         def test_update_index(self):
             # Build index with one descriptor, then "update" with a second
@@ -108,7 +141,7 @@ if FlannNearestNeighborsIndex.is_usable():
             self.assertEqual(index.count(), 2)
             self.assertSetEqual(set(index._descr_cache), {d1, d2})
 
-        def test_known_descriptors_euclidean_unit(self):
+        def test_nn_known_descriptors_euclidean_unit(self):
             dim = 5
 
             ###
@@ -133,7 +166,7 @@ if FlannNearestNeighborsIndex.is_usable():
             for d in dists:
                 ntools.assert_equal(d, 1.)
 
-        def test_known_descriptors_euclidean_ordered(self):
+        def test_nn_known_descriptors_euclidean_ordered(self):
             index = self._make_inst('euclidean')
 
             # make vectors to return in a known euclidean distance order
@@ -156,7 +189,7 @@ if FlannNearestNeighborsIndex.is_usable():
                 ntools.assert_equal(d.uuid(), j)
                 numpy.testing.assert_equal(d.vector(), [j, j*2])
 
-        def test_known_descriptors_hik_unit(self):
+        def test_nn_known_descriptors_hik_unit(self):
             dim = 5
 
             ###
@@ -190,58 +223,3 @@ if FlannNearestNeighborsIndex.is_usable():
             r, dists = index.nn(q, dim)
             ntools.assert_equal(r[0], q)
             ntools.assert_equal(dists[0], 0.)
-
-        def test_configuration(self):
-            index_filepath = '/index_filepath'
-            para_filepath = '/param_fp'
-            descr_cache_fp = '/descrcachefp'
-
-            # Make configuration based on default
-            c = FlannNearestNeighborsIndex.get_default_config()
-            c['index_uri'] = index_filepath
-            c['parameters_uri'] = para_filepath
-            c['descriptor_cache_uri'] = descr_cache_fp
-            c['distance_method'] = 'hik'
-            c['random_seed'] = 42
-
-            # Build based on configuration
-            index = FlannNearestNeighborsIndex.from_config(c)
-            ntools.assert_equal(index._index_uri, index_filepath)
-            ntools.assert_equal(index._index_param_uri, para_filepath)
-            ntools.assert_equal(index._descr_cache_uri, descr_cache_fp)
-
-            c2 = index.get_config()
-            ntools.assert_equal(c, c2)
-
-        def test_build_index_no_descriptors(self):
-            f = FlannNearestNeighborsIndex()
-            ntools.assert_raises(
-                ValueError,
-                f.build_index, []
-            )
-
-        def test_build_index(self):
-            # Empty memory data elements for storage
-            empty_data = 'base64://'
-            f = FlannNearestNeighborsIndex(empty_data, empty_data, empty_data)
-            # Internal elements should initialize have zero-length byte values
-            ntools.assert_equal(len(f._index_elem.get_bytes()), 0)
-            ntools.assert_equal(len(f._index_param_elem.get_bytes()), 0)
-            ntools.assert_equal(len(f._descr_cache_elem.get_bytes()), 0)
-
-            # Make unit vectors, one for each feature
-            dim = 8
-            test_descriptors = []
-            for i in range(dim):
-                v = numpy.zeros(dim, float)
-                v[i] = 1.
-                d = DescriptorMemoryElement('unit', i)
-                d.set_vector(v)
-                test_descriptors.append(d)
-
-            f.build_index(test_descriptors)
-
-            # Internal elements should not have non-zero byte values.
-            ntools.assert_greater(len(f._index_elem.get_bytes()), 0)
-            ntools.assert_greater(len(f._index_param_elem.get_bytes()), 0)
-            ntools.assert_greater(len(f._descr_cache_elem.get_bytes()), 0)

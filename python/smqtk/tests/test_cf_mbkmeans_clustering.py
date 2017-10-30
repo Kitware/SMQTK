@@ -11,7 +11,6 @@ from smqtk.representation.descriptor_element.local_elements import \
 
 
 class TestMBKMClustering (unittest.TestCase):
-    """ Test class to be picked up by nosetests """
 
     def test_clustering_equal_descriptors(self):
         # Test that clusters of descriptor of size  n-features are correctly

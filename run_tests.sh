@@ -22,4 +22,4 @@ then
     rm ${PYCO_FILES}
 fi
 
-pytest
+pytest "$@"

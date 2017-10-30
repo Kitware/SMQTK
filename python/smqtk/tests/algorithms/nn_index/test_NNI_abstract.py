@@ -20,14 +20,14 @@ class DummySI (NearestNeighborsIndex):
     def get_config(self):
         return {}
 
-    def build_index(self, descriptors):
-        return super(DummySI, self).build_index(descriptors)
+    def _build_index(self, descriptors):
+        return
 
-    def update_index(self, descriptors):
-        return super(DummySI, self).update_index(descriptors)
+    def _update_index(self, descriptors):
+        return
 
-    def nn(self, d, n=1):
-        return super(DummySI, self).nn(d, n)
+    def _nn(self, d, n=1):
+        return
 
     def count(self):
         return 0
@@ -42,7 +42,56 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         for cls in six.itervalues(m):
             self.assertTrue(issubclass(cls, NearestNeighborsIndex))
 
-    def test_count(self):
+    def test_empty_iterable_exception(self):
+        v = DummySI._empty_iterable_exception()
+        self.assertIsInstance(v, ValueError)
+
+    def test_check_empty_iterable_no_data(self):
+        # Test that an exception is thrown when an empty list/iterable is
+        # passed.  Additionally check that the exception thrown has expected
+        # message from exception generation method.
+        callback = mock.MagicMock()
+
+        # Not-stateful iterable (list)
+        self.assertRaisesRegexp(
+            ValueError,
+            str(DummySI._empty_iterable_exception()),
+            DummySI._check_empty_iterable, [], callback
+        )
+        callback.assert_not_called()
+
+        # with a stateful iterator.
+        self.assertRaisesRegexp(
+            ValueError,
+            str(DummySI._empty_iterable_exception()),
+            DummySI._check_empty_iterable, iter([]), callback
+        )
+        callback.assert_not_called()
+
+    def test_check_empty_iterable_valid_iterable(self):
+        # Test that the method correctly calls the callback with the full
+        # iterable when what is passed is not empty.
+        callback = mock.MagicMock()
+
+        # non-stateful iterator (set)
+        d_set = {0, 1, 2, 3, 4}
+        DummySI._check_empty_iterable(d_set, callback)
+        callback.assert_called_once()
+        self.assertSetEqual(
+            set(callback.call_args[0][0]),
+            d_set
+        )
+
+        # Stateful iterator
+        callback = mock.MagicMock()
+        DummySI._check_empty_iterable(iter(d_set), callback)
+        callback.assert_called_once()
+        self.assertSetEqual(
+            set(callback.call_args[0][0]),
+            d_set
+        )
+
+    def test_count_and_len(self):
         index = DummySI()
         self.assertEqual(index.count(), 0)
         self.assertEqual(index.count(), len(index))
@@ -54,23 +103,31 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
     def test_build_index_no_descriptors(self):
         index = DummySI()
+        index._build_index = mock.MagicMock()
         self.assertRaises(
             ValueError,
             index.build_index,
             []
         )
+        index._build_index.assert_not_called()
 
     def test_build_index_nonzero_descriptors(self):
         index = DummySI()
+        index._build_index = mock.MagicMock()
         d = DescriptorMemoryElement('test', 0)
+        index.build_index([d])
+        index._build_index.assert_called_once()
+        # Check that the last call's first (only) argument was the same iterable
+        # given.
         self.assertSetEqual(
-            set(index.build_index([d])),
+            set(index._build_index.call_args[0][0]),
             {d}
         )
 
     def test_build_index_iterable(self):
         # Test build check with a pure iterable
         index = DummySI()
+        index._build_index = mock.MagicMock()
         d_set = {
             DescriptorMemoryElement('test', 0),
             DescriptorMemoryElement('test', 1),
@@ -78,29 +135,48 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
             DescriptorMemoryElement('test', 3),
         }
         it = iter(d_set)
-        r = index.build_index(it)
-        r_set = set(r)
-        self.assertSetEqual(d_set, r_set)
+        index.build_index(it)
+        # _build_index should have been called and the contents of the iterable
+        # it was called with should equal d_set.
+        index._build_index.assert_called_once()
+        self.assertSetEqual(
+            set(index._build_index.call_args[0][0]),
+            d_set
+        )
 
     def test_update_index_no_descriptors(self):
         index = DummySI()
+        index._update_index = mock.MagicMock()
         self.assertRaises(
             ValueError,
             index.update_index,
             []
         )
+        # internal method should not have been called.
+        index._update_index.assert_not_called()
 
     def test_update_index_nonzero_descriptors(self):
         index = DummySI()
-        d = DescriptorMemoryElement('test', 0)
+        index._update_index = mock.MagicMock()
+
+        # Testing with dummy input data.
+        d_set = {
+            DescriptorMemoryElement('test', 0),
+            DescriptorMemoryElement('test', 1),
+            DescriptorMemoryElement('test', 2),
+            DescriptorMemoryElement('test', 3),
+        }
+        index.update_index(d_set)
+        index._update_index.assert_called_once()
         self.assertSetEqual(
-            set(index.update_index([d])),
-            {d}
+            set(index._update_index.call_args[0][0]),
+            d_set
         )
 
     def test_update_index_iterable(self):
-        # Test build check with a pure iterable
+        # Test build check with a pure iterable.
         index = DummySI()
+        index._update_index = mock.MagicMock()
         d_set = {
             DescriptorMemoryElement('test', 0),
             DescriptorMemoryElement('test', 1),
@@ -108,34 +184,51 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
             DescriptorMemoryElement('test', 3),
         }
         it = iter(d_set)
-        r = index.update_index(it)
-        r_set = set(r)
-        self.assertSetEqual(d_set, r_set)
+        index.update_index(it)
 
-    # noinspection PyUnresolvedReferences
-    @mock.patch.object(DummySI, 'count')
-    def test_normal_conditions(self, mock_dsi_count):
+        index._update_index.assert_called_once()
+        self.assertSetEqual(
+            set(index._update_index.call_args[0][0]),
+            d_set,
+        )
+
+    def test_nn_empty_vector(self):
+        # ValueError should be thrown if the input element has no vector.
         index = DummySI()
-        mock_dsi_count.return_value = 1
+        # Need to force a non-zero index size for knn to be performed.
+        index.count = mock.MagicMock(return_value=1)
+        # Observe internal function
+        index._nn = mock.MagicMock()
+
+        q = DescriptorMemoryElement('test', 0)
+        self.assertRaises(
+            ValueError,
+            index.nn, q
+        )
+        # template method should not have been called.
+        index._nn.assert_not_called()
+
+    def test_nn_empty_index(self):
+        # nn should fail if index size is 0
+        index = DummySI()
+        index.count = mock.MagicMock(return_value=0)
+        index._nn = mock.MagicMock()
 
         q = DescriptorMemoryElement('q', 0)
         q.set_vector(numpy.random.rand(4))
+        self.assertRaises(
+            ValueError,
+            index.nn, q
+        )
+
+    # noinspection PyUnresolvedReferences
+    def test_nn_normal_conditions(self):
+        index = DummySI()
+        # Need to force a non-zero index size for knn to be performed.
+        index.count = mock.MagicMock()
+        index.count.return_value = 1
+
+        q = DescriptorMemoryElement('q', 0)
+        q.set_vector(numpy.random.rand(4))
+        # Basically this shouldn't crash
         index.nn(q)
-
-    # noinspection PyUnresolvedReferences
-    @mock.patch.object(DummySI, 'count')
-    def test_query_empty_value(self, mock_dsi_count):
-        # distance method doesn't matter
-        index = DummySI()
-        # pretend that we have an index of some non-zero size
-        mock_dsi_count.return_value = 1
-
-        # intentionally empty
-        q = DescriptorMemoryElement('q', 0)
-        self.assertRaises(ValueError, index.nn, q)
-
-    def test_query_empty_index(self):
-        index = DummySI()
-        q = DescriptorMemoryElement('q', 0)
-        q.set_vector(numpy.random.rand(4))
-        self.assertRaises(ValueError, index.nn, q)

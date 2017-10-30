@@ -41,7 +41,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     def _check_empty_iterable(iterable, callback):
         """
         Check that the given iterable is not empty, then call the given callback
-        function with the reconstructed iterable.
+        function with the reconstructed iterable when it is not empty.
 
         :param iterable: Iterable to check.
         :type iterable: collections.Iterable

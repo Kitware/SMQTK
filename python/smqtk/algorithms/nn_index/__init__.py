@@ -37,8 +37,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         return ValueError("No DescriptorElement instances in provided "
                           "iterable.")
 
-    @staticmethod
-    def _check_empty_iterable(iterable, callback):
+    def _check_empty_iterable(self, iterable, callback):
         """
         Check that the given iterable is not empty, then call the given callback
         function with the reconstructed iterable when it is not empty.
@@ -55,7 +54,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         try:
             first = next(i)
         except StopIteration:
-            raise NearestNeighborsIndex._empty_iterable_exception()
+            raise self._empty_iterable_exception()
         callback(itertools.chain([first], i))
 
     def build_index(self, descriptors):

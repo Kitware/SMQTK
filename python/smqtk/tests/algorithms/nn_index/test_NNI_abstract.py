@@ -45,18 +45,20 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
     def test_empty_iterable_exception(self):
         v = DummySI._empty_iterable_exception()
         self.assertIsInstance(v, ValueError)
+        self.assertRegexpMatches(str(v), "DescriptorElement")
 
     def test_check_empty_iterable_no_data(self):
         # Test that an exception is thrown when an empty list/iterable is
         # passed.  Additionally check that the exception thrown has expected
         # message from exception generation method.
+        index = DummySI()
         callback = mock.MagicMock()
 
         # Not-stateful iterable (list)
         self.assertRaisesRegexp(
             ValueError,
             str(DummySI._empty_iterable_exception()),
-            DummySI._check_empty_iterable, [], callback
+            index._check_empty_iterable, [], callback
         )
         callback.assert_not_called()
 
@@ -64,7 +66,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         self.assertRaisesRegexp(
             ValueError,
             str(DummySI._empty_iterable_exception()),
-            DummySI._check_empty_iterable, iter([]), callback
+            index._check_empty_iterable, iter([]), callback
         )
         callback.assert_not_called()
 
@@ -75,7 +77,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
         # non-stateful iterator (set)
         d_set = {0, 1, 2, 3, 4}
-        DummySI._check_empty_iterable(d_set, callback)
+        DummySI()._check_empty_iterable(d_set, callback)
         callback.assert_called_once()
         self.assertSetEqual(
             set(callback.call_args[0][0]),
@@ -84,7 +86,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
         # Stateful iterator
         callback = mock.MagicMock()
-        DummySI._check_empty_iterable(iter(d_set), callback)
+        DummySI()._check_empty_iterable(iter(d_set), callback)
         callback.assert_called_once()
         self.assertSetEqual(
             set(callback.call_args[0][0]),

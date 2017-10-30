@@ -36,6 +36,11 @@ class TestHashIndex (unittest.TestCase):
         for cls in six.itervalues(m):
             self.assertTrue(issubclass(cls, HashIndex))
 
+    def test_empty_iterable_exception(self):
+        v = DummyHI._empty_iterable_exception()
+        self.assertIsInstance(v, ValueError)
+        self.assertRegexpMatches(str(v), "hash vectors")
+
     def test_build_index_empty_iter(self):
         idx = DummyHI()
         idx._build_index = mock.MagicMock()

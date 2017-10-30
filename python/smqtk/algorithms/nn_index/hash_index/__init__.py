@@ -32,18 +32,11 @@ class HashIndex (NearestNeighborsIndex):
 
     def build_index(self, hashes):
         """
-        Build the index with the give hash codes (bit-vectors).
+        Build the index with the given hash codes (bit-vectors).
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it. If an exception is raised, the current index, if there is one, will
-        not be modified.
-
-        **NOTE:** *This abstract method must be called by implementing
-        methods.  This base method returns the iterable of DescriptorElements
-        to be used to build the index after checking that the input iterable is
-        not empty.  This method's return must be used due to the
-        iterable-not-empty potentially modifying the state of the input
-        iterable.*
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -56,18 +49,11 @@ class HashIndex (NearestNeighborsIndex):
 
     def update_index(self, hashes):
         """
-        Additively update the current hash index structure with the one or more
-        hash vectors given.
+        Additively update the current index with the one or more hash vectors
+        given.
 
         If no index exists yet, a new one should be created using the given hash
         vectors.
-
-        **NOTE:** *This abstract method must be called by implementing
-        methods.  This base method returns the iterable of DescriptorElements
-        to be used to update the index after checking that the input iterable is
-        not empty.  This method's return must be used due to the
-        iterable-not-empty potentially modifying the state of the input
-        iterable.*
 
         :raises ValueError: No data available in the given iterable.
 
@@ -110,10 +96,12 @@ class HashIndex (NearestNeighborsIndex):
     @abc.abstractmethod
     def _build_index(self, hashes):
         """
-        Internal method to be implemented by sub-classes to build this index.
+        Internal method to be implemented by sub-classes to build the index with
+        the given hash codes (bit-vectors).
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param hashes: Iterable of descriptor elements to build index
             over.
@@ -124,10 +112,11 @@ class HashIndex (NearestNeighborsIndex):
     @abc.abstractmethod
     def _update_index(self, hashes):
         """
-        Internal method to be implemented by sub-classes to update this index.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more hash vectors given.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
 
         :param hashes: Iterable of numpy boolean hash vectors to add to this
             index.
@@ -138,8 +127,13 @@ class HashIndex (NearestNeighborsIndex):
     @abc.abstractmethod
     def _nn(self, h, n=1):
         """
-        Internal method to be implemented by sub-classes to return
-        k-nearest-neighbors.
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbor hash codes as bit-vectors to the given hash code
+        bit-vector.
+
+        Distances are in the range [0,1] and are the percent different each
+        neighbor hash is from the query, based on the number of bits contained
+        in the query (normalized hamming distance).
 
         When this internal method is called, we have already checked that our
         index is not empty.

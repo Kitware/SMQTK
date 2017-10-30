@@ -60,10 +60,11 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
 
     def build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements.
+        Build the index with the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -82,13 +83,6 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
 
         If no index exists yet, a new one should be created using the given
         descriptors.
-
-        **NOTE:** *This abstract method must be called by implementing
-        methods.  This base method returns the iterable of DescriptorElements
-        to be used to update the index after checking that the input iterable is
-        not empty.  This method's return must be used due to the
-        iterable-not-empty potentially modifying the state of the input
-        iterable.*
 
         :raises ValueError: No data available in the given iterable.
 
@@ -134,10 +128,12 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     @abc.abstractmethod
     def _build_index(self, descriptors):
         """
-        Internal method to be implemented by sub-classes to build this index.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -149,10 +145,11 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     @abc.abstractmethod
     def _update_index(self, descriptors):
         """
-        Internal method to be implemented by sub-classes to update this index.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        If no index exists yet, a new one should be created using the given
+        descriptors.
 
         :param descriptors: Iterable of descriptor elements to add to this
             index.
@@ -164,8 +161,8 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     @abc.abstractmethod
     def _nn(self, d, n=1):
         """
-        Internal method to be implemented by sub-classes to return
-        k-nearest-neighbors.
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
 
         When this internal method is called, we have already checked that there
         is a vector in ``d`` and our index is not empty.

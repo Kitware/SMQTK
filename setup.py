@@ -170,6 +170,9 @@ setuptools.setup(
         'solr': [
             'solrpy',
         ],
+        'girder': [
+            'girder-client',
+        ]
     },
     tests_require=[
         'coverage',

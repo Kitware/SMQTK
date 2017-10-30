@@ -245,11 +245,13 @@ if GirderDataElement.is_usable():
             gde.writable = mock.MagicMock(return_value=True)
 
             # Test access denied throws ReadOnlyError
-            gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(401, '', None, None))
+            gde.gc.uploadFileContents = mock.MagicMock(
+                side_effect=girder_client.HttpError(401, '', None, None))
             self.assertRaises(ReadOnlyError, gde.set_bytes, b=b'foo')
 
             # Test any other error (like a 500) re-raises the HttpError
-            gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(500, '', None, None))
+            gde.gc.uploadFileContents = mock.MagicMock(
+                side_effect=girder_client.HttpError(500, '', None, None))
             self.assertRaises(girder_client.HttpError, gde.set_bytes, b=b'foo')
 
         @mock.patch('girder_client.GirderClient.downloadFile')

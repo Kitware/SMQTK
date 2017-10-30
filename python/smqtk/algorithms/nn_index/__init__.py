@@ -6,6 +6,8 @@ import abc
 import itertools
 import os
 
+import six
+
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils.plugin import get_plugins
 
@@ -39,9 +41,12 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         Subsequent calls to this method should rebuild the index, not add to
         it, or raise an exception to as to protect the current index.
 
-        **NOTE:** *This abstract method returns the iterable of descriptors to
-        use as the check for the iterable not being empty must try to consume
-        the first element of the iterable.*
+        **NOTE:** *This abstract method must be called by implementing
+        methods.  This base method returns the iterable of DescriptorElements
+        to be used to build the index after checking that the input iterable is
+        not empty.  This method's return must be used due to the
+        iterable-not-empty potentially modifying the state of the input
+        iterable.*
 
         :raises ValueError: No data available in the given iterable.
 
@@ -53,7 +58,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         """
         i = iter(descriptors)
         try:
-            first = i.next()
+            first = next(i)
         except StopIteration:
             raise ValueError("No DescriptorElement instances in provided "
                              "iterable.")
@@ -68,9 +73,12 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         If no index exists yet, a new one should be created using the given
         descriptors.
 
-        **NOTE:** *This abstract method returns the iterable of descriptors to
-        use as the check for the iterable not being empty must try to consume
-        the first element of the iterable.*
+        **NOTE:** *This abstract method must be called by implementing
+        methods.  This base method returns the iterable of DescriptorElements
+        to be used to update the index after checking that the input iterable is
+        not empty.  This method's return must be used due to the
+        iterable-not-empty potentially modifying the state of the input
+        iterable.*
 
         :raises ValueError: No data available in the given iterable.
 
@@ -82,7 +90,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         """
         i = iter(descriptors)
         try:
-            first = i.next()
+            first = next(i)
         except StopIteration:
             raise ValueError("No DescriptorElement instances in provided "
                              "iterable.")

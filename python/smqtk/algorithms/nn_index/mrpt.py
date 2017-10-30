@@ -234,14 +234,14 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         return len(self._descriptor_set)
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
-
-        :raises ValueError: No data available in the given iterable.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -252,8 +252,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         if self._read_only:
             raise ReadOnlyError("Cannot modify container attributes due to "
                                 "being in read-only mode.")
-        descriptors = \
-            super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
 
         self._log.info("Building new MRPT index")
 
@@ -270,10 +268,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._save_mrpt_model()
 
-    def update_index(self, descriptors):
+    def _update_index(self, descriptors):
         """
-        Additively update the current index with the one or more descriptor
-        elements given.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
 
         If no index exists yet, a new one should be created using the given
         descriptors.
@@ -281,20 +279,16 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         *NOTE:* This implementation fully rebuilds the index using the current
         index contents merged with the provided new descriptor elements.
 
-        :raises ValueError: No data available in the given iterable.
-
         :param descriptors: Iterable of descriptor elements to add to this
             index.
-        :type descriptors: collections.Iterable[smqtk.representation
-                                                     .DescriptorElement]
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self._read_only:
             raise ReadOnlyError("Cannot modify container attributes due to "
                                 "being in read-only mode.")
-        new_descriptors = \
-            super(MRPTNearestNeighborsIndex, self).update_index(descriptors)
-        self.build_index(chain(self._descriptor_set, new_descriptors))
+        self.build_index(chain(self._descriptor_set, descriptors))
 
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
@@ -491,9 +485,13 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
 
-    def nn(self, d, n=1):
+    def _nn(self, d, n=1):
         """
-        Return the nearest `N` neighbors to the given descriptor element.
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
+
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
 
         :param d: Descriptor element to compute the neighbors of.
         :type d: smqtk.representation.DescriptorElement
@@ -501,13 +499,11 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple
-            of the distance values to those neighbors.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        super(MRPTNearestNeighborsIndex, self).nn(d, n)
-
         self._log.debug("Received query for %d nearest neighbors", n)
 
         depth, ntrees, db_size = self._depth, self._num_trees, self.count()

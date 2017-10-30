@@ -149,16 +149,7 @@ class TestLshIndex (unittest.TestCase):
                                         MemoryKeyValueStore(), read_only=True)
         self.assertRaises(
             ReadOnlyError,
-            index.build_index, []
-        )
-
-    def test_build_index_no_descriptors(self):
-        index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        MemoryDescriptorIndex(),
-                                        MemoryKeyValueStore(), read_only=False)
-        self.assertRaises(
-            ValueError,
-            index.build_index, []
+            index._build_index, []
         )
 
     def test_build_index_fresh_build(self):
@@ -216,16 +207,7 @@ class TestLshIndex (unittest.TestCase):
                                         MemoryKeyValueStore(), read_only=True)
         self.assertRaises(
             ReadOnlyError,
-            index.update_index, []
-        )
-
-    def test_update_index_no_descriptors(self):
-        index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        MemoryDescriptorIndex(),
-                                        MemoryKeyValueStore(), read_only=False)
-        self.assertRaises(
-            ValueError,
-            index.update_index, []
+            index._update_index, []
         )
 
     def test_update_index_no_existing_index(self):

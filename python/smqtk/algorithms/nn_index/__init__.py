@@ -116,7 +116,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
             raise ValueError("Query descriptor did not have a vector set!")
         elif not self.count():
             raise ValueError("No index currently set to query from!")
-        self._nn(d, n)
+        return self._nn(d, n)
 
     @abc.abstractmethod
     def count(self):

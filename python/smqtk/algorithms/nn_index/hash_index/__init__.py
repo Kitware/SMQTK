@@ -91,7 +91,7 @@ class HashIndex (NearestNeighborsIndex):
         # elements.
         if not self.count():
             raise ValueError("No index currently set to query from!")
-        self._nn(h, n)
+        return self._nn(h, n)
 
     @abc.abstractmethod
     def _build_index(self, hashes):

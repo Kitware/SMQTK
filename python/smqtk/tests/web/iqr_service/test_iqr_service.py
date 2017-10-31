@@ -65,10 +65,13 @@ class StubNearestNeighborIndex (NearestNeighborsIndex):
     def count(self):
         pass
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         pass
 
-    def nn(self, d, n=1):
+    def _update_index(self, descriptors):
+        pass
+
+    def _nn(self, d, n=1):
         pass
 
 

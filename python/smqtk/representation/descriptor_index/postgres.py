@@ -367,7 +367,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.executemany(q, batch)
 
         self._log.debug("Adding many descriptors")
-        list(self.psql_helper.batch_execute(iter_elements(), exec_hook))
+        list(self.psql_helper.batch_execute(iter_elements(), exec_hook,
+                                            self.multiquery_batch_size))
 
     def get_descriptor(self, uuid):
         """
@@ -444,7 +445,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
         #   - We also check that the number of rows we got back is the same
         #     as elements yielded, else there were trailing UUIDs that did not
         #     match anything in the database.
-        g = self.psql_helper.batch_execute(iterelems(), exec_hook, True)
+        g = self.psql_helper.batch_execute(iterelems(), exec_hook,
+                                           self.multiquery_batch_size, True)
         i = 0
         for r, expected_uuid in itertools.izip(g, uuid_order):
             d = pickle.loads(str(r[0]))

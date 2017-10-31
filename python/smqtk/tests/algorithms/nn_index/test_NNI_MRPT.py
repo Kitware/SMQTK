@@ -1,15 +1,12 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-from six.moves import range, zip
-
 import random
+import os.path as osp
 import unittest
 
-import nose.tools as ntools
 import numpy as np
-
-import os.path as osp
+from six.moves import range, zip
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -32,6 +29,97 @@ class TestMRPTIndex (unittest.TestCase):
         return MRPTNearestNeighborsIndex(
             MemoryDescriptorIndex(), **kwargs)
 
+    def test_configuration(self):
+        index_filepath = osp.abspath(osp.expanduser('index_filepath'))
+        para_filepath = osp.abspath(osp.expanduser('param_fp'))
+
+        # Make configuration based on default
+        c = MRPTNearestNeighborsIndex.get_default_config()
+        c['index_filepath'] = index_filepath
+        c['parameters_filepath'] = para_filepath
+        c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+
+        # Build based on configuration
+        index = MRPTNearestNeighborsIndex.from_config(c)
+        self.assertEqual(index._index_filepath, index_filepath)
+        self.assertEqual(index._index_param_filepath, para_filepath)
+
+        # Test that constructing a new instance from ``index``'s config yields
+        # an index with the same configuration (idempotent).
+        index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
+        self.assertEqual(index.get_config(), index2.get_config())
+
+    def test_read_only(self):
+        v = np.zeros(5, float)
+        v[0] = 1.
+        d = DescriptorMemoryElement('unit', 0)
+        d.set_vector(v)
+        test_descriptors = [d]
+
+        index = self._make_inst(read_only=True)
+        self.assertRaises(
+            ReadOnlyError,
+            index.build_index, test_descriptors
+        )
+
+    def test_update_index_no_input(self):
+        index = self._make_inst()
+        self.assertRaises(
+            ValueError,
+            index.update_index, []
+        )
+
+    def test_update_index_new_index(self):
+        n = 100
+        dim = 8
+        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_index]
+
+        index = self._make_inst()
+        index.update_index(d_index)
+        self.assertEqual(index.count(), 100)
+        for d in d_index:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return stuff from the set used.
+        # - nearest element to the query element when the query is in the index
+        #   should be the query element.
+        random.seed(self.RAND_SEED)
+        for _ in range(10):
+            i = random.randint(0, n-1)
+            q = d_index[i]
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
+
+    def test_update_index_additive(self):
+        n1 = 100
+        n2 = 10
+        dim = 8
+        set1 = {DescriptorMemoryElement('test', i) for i in range(n1)}
+        set2 = {DescriptorMemoryElement('test', i) for i in range(n1, n1+n2)}
+        [d.set_vector(np.random.rand(dim)) for d in set1.union(set1 | set2)]
+
+        # Create and build initial index.
+        index = self._make_inst()
+        index.build_index(set1)
+        self.assertEqual(index.count(), len(set1))
+        for d in set1:
+            self.assertIn(d, index._descriptor_set)
+
+        # Update and check that all intended descriptors are present in index.
+        index.update_index(set2)
+        set_all = set1 | set2
+        self.assertEqual(index.count(), len(set_all))
+        for d in set_all:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return something from the updated set.
+        # - nearest element to the query element when the query is in the index
+        #   should be the query element.
+        for q in set2:
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
+
     def test_many_descriptors(self):
         np.random.seed(0)
 
@@ -51,8 +139,8 @@ class TestMRPTIndex (unittest.TestCase):
         mrpt.build_index(d_index)
 
         nbrs, dists = mrpt.nn(q, 10)
-        ntools.assert_equal(len(nbrs), len(dists))
-        ntools.assert_equal(len(nbrs), 10)
+        self.assertEqual(len(nbrs), len(dists))
+        self.assertEqual(len(nbrs), 10)
 
     def test_small_leaves(self):
         np.random.seed(0)
@@ -76,8 +164,8 @@ class TestMRPTIndex (unittest.TestCase):
         mrpt.build_index(d_index)
 
         nbrs, dists = mrpt.nn(q, k)
-        ntools.assert_equal(len(nbrs), len(dists))
-        ntools.assert_equal(len(nbrs), k)
+        self.assertEqual(len(nbrs), len(dists))
+        self.assertEqual(len(nbrs), k)
 
     def test_pathological_example(self):
         n = 10 ** 4
@@ -102,14 +190,14 @@ class TestMRPTIndex (unittest.TestCase):
         mrpt.build_index(d_index)
 
         nbrs, dists = mrpt.nn(q, k)
-        ntools.assert_equal(len(nbrs), len(dists))
+        self.assertEqual(len(nbrs), len(dists))
         # We should get about 10 descriptors back instead of the requested
         # 200
-        ntools.assert_less(len(nbrs), 20)
+        self.assertLess(len(nbrs), 20)
 
     def test_impl_findable(self):
-        ntools.assert_in(MRPTNearestNeighborsIndex.__name__,
-                         get_nn_index_impls())
+        self.assertIn(MRPTNearestNeighborsIndex.__name__,
+                      get_nn_index_impls())
 
     def test_known_descriptors_euclidean_unit(self):
         dim = 5
@@ -132,21 +220,10 @@ class TestMRPTIndex (unittest.TestCase):
         q = DescriptorMemoryElement('query', 0)
         q.set_vector(np.zeros(dim, float))
         r, dists = index.nn(q, n=dim)
-        ntools.assert_equal(len(dists), dim)
+        self.assertEqual(len(dists), dim)
         # All dists should be 1.0, r order doesn't matter
         for d in dists:
-            ntools.assert_equal(d, 1.)
-
-    def test_read_only(self):
-        v = np.zeros(5, float)
-        v[0] = 1.
-        d = DescriptorMemoryElement('unit', 0)
-        d.set_vector(v)
-        test_descriptors = [d]
-
-        index = self._make_inst(read_only=True)
-        ntools.assert_raises(
-            ReadOnlyError, lambda: index.build_index(test_descriptors))
+            self.assertEqual(d, 1.)
 
     def test_known_descriptors_nearest(self):
         dim = 5
@@ -166,10 +243,10 @@ class TestMRPTIndex (unittest.TestCase):
         q = DescriptorMemoryElement('query', 0)
         q.set_vector(vectors[0])
         r, dists = index.nn(q)
-        ntools.assert_equal(len(dists), 1)
+        self.assertEqual(len(dists), 1)
         # Distance should be zero
-        ntools.assert_equal(dists[0], 0.)
-        ntools.assert_items_equal(r[0].vector(), vectors[0])
+        self.assertEqual(dists[0], 0.)
+        self.assertItemsEqual(r[0].vector(), vectors[0])
 
     def test_known_descriptors_euclidean_ordered(self):
         index = self._make_inst()
@@ -193,27 +270,7 @@ class TestMRPTIndex (unittest.TestCase):
         # Because the data is one-dimensional, all of the cells will have
         # the same points (any division will just correspond to a point on
         # the line), and a cell can't have more than half of the points
-        ntools.assert_equal(len(dists), i//2)
+        self.assertEqual(len(dists), i//2)
         for j, d, dist in zip(range(i), r, dists):
-            ntools.assert_equal(d.uuid(), j)
+            self.assertEqual(d.uuid(), j)
             np.testing.assert_equal(d.vector(), [j, j*2])
-
-    def test_configuration(self):
-        index_filepath = osp.abspath(osp.expanduser('index_filepath'))
-        para_filepath = osp.abspath(osp.expanduser('param_fp'))
-
-        # Make configuration based on default
-        c = MRPTNearestNeighborsIndex.get_default_config()
-        c['index_filepath'] = index_filepath
-        c['parameters_filepath'] = para_filepath
-        c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-
-        # Build based on configuration
-        index = MRPTNearestNeighborsIndex.from_config(c)
-        ntools.assert_equal(index._index_filepath, index_filepath)
-        ntools.assert_equal(index._index_param_filepath, para_filepath)
-
-        # Test that constructing a new instance from ``index``'s config yields
-        # an index with the same configuration (idempotent).
-        index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
-        ntools.assert_equal(index.get_config(), index2.get_config())

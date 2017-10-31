@@ -231,21 +231,35 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
             # given base-class.
             for attr_name in dir(module):
                 if VALUE_ATTRIBUTE_RE.match(attr_name):
-                    log.debug("[%s] Checking attribute '%s'", module_path,
-                              attr_name)
                     attr = getattr(module, attr_name)
                     # If the attribute looks like a class that descends and
                     # implements the interface, add it to the class list
                     # - we require that base is pluggable, so if class descends
                     #   from the given base-class, it will have
                     #   __abstractmethods__ property.
-                    if isinstance(attr, type) and \
-                            attr is not baseclass_type and \
-                            issubclass(attr, baseclass_type) and \
-                            not bool(attr.__abstractmethods__):
-                        log.debug("[%s] -- Discovered subclass: %s",
-                                  module_path, attr.__name__)
-                        classes.append(attr)
+                    if isinstance(attr, type):
+                        log.debug("[%s] Checking type attribute '%s'",
+                                  module_path, attr_name)
+                        # noinspection PyUnresolvedReferences
+                        if attr is baseclass_type:
+                            log.debug('[%s] [skip] Literally the base class',
+                                      module_path)
+                        elif not issubclass(attr, baseclass_type):
+                            log.debug('[%s] [skip] %s does not descend from '
+                                      'base class', attr_name, module_path)
+                        elif bool(attr.__abstractmethods__):
+                            # Making a warning as I think this is generally
+                            # useful to know as there are broken implementations
+                            # in the ecosystem.
+                            # noinspection PyUnresolvedReferences
+                            log.warn('[%s] [skip] %s does not implement one or '
+                                     'more abstract methods: %s',
+                                     module_path, attr_name,
+                                     list(attr.__abstractmethods__))
+                        else:
+                            log.debug("[%s] [KEEP] Discovered subclass: %s",
+                                      module_path, attr.__name__)
+                            classes.append(attr)
 
         # Check the validity of the discovered class types
         for cls in classes:

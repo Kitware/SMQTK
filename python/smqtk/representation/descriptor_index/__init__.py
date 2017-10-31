@@ -1,11 +1,8 @@
 import abc
 import os.path as osp
 
-from smqtk.representation import SmqtkRepresentation
+from smqtk.representation import SmqtkRepresentation, DescriptorElement
 from smqtk.utils import plugin
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
@@ -31,6 +28,12 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
 
     def __len__(self):
         return self.count()
+
+    def __contains__(self, item):
+        if isinstance(item, DescriptorElement):
+            # Testing for UUID inclusion since element hash based on UUID value.
+            return self.has_descriptor(item.uuid())
+        return False
 
     @abc.abstractmethod
     def count(self):

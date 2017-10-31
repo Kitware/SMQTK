@@ -1,10 +1,5 @@
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 import numpy
+from six.moves import StringIO
 from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -172,15 +167,14 @@ class SkLearnBallTreeHashIndex (HashIndex):
     def count(self):
         return self.bt.data.shape[0] if self.bt else 0
 
-    def build_index(self, hashes):
+    def _build_index(self, hashes):
         """
-        Build the index with the give hash codes (bit-vectors).
+        Internal method to be implemented by sub-classes to build the index with
+        the given hash codes (bit-vectors).
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it. If an exception is raised, the current index, if there is one, will
-        not be modified.
-
-        :raises ValueError: No data available in the given iterable.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param hashes: Iterable of descriptor elements to build index
             over.
@@ -194,8 +188,6 @@ class SkLearnBallTreeHashIndex (HashIndex):
         # first in order to cull out duplicates (BT will index duplicate values
         # happily).
         hash_tuple_set = set(map(lambda v: tuple(v), hashes))
-        if not hash_tuple_set:
-            raise ValueError("No hashes given.")
         # Convert tuples back into numpy arrays for BallTree constructor.
         hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
         # If distance metric ever changes, need to update save/load model
@@ -203,13 +195,49 @@ class SkLearnBallTreeHashIndex (HashIndex):
         self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')
         self.save_model()
 
-    def nn(self, h, n=1):
+    def _update_index(self, hashes):
         """
-        Return the nearest `N` neighbors to the given hash code.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        *Note:* The scikit-learn ball-tree implementation does not support
+        incremental updating of its model, so we need to rebuild the model from
+        scratch using the currently indexed hashes and the new ones provided to
+        this method.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        # Can't use iterators with numpy operations.
+        new_hashes = tuple(hashes)
+        if self.bt is None:
+            # 0-row array using bit-vector size of first new entry length.
+            # - Must have at least one new hash due to super-method check.
+            indexed_hash_vectors = numpy.ndarray((0, len(new_hashes[0])))
+        else:
+            indexed_hash_vectors = self.bt.data
+        # Build a new index as normal with the union of source data.
+        self.build_index(
+            numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
+        )
+
+    def _nn(self, h, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbor hash codes as bit-vectors to the given hash code
+        bit-vector.
 
         Distances are in the range [0,1] and are the percent different each
         neighbor hash is from the query, based on the number of bits contained
-        in the query.
+        in the query (normalized hamming distance).
+
+        When this internal method is called, we have already checked that our
+        index is not empty.
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.
@@ -218,14 +246,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :raises ValueError: No index to query from.
-
         :return: Tuple of nearest N hash codes and a tuple of the distance
             values to those neighbors.
         :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
-        super(SkLearnBallTreeHashIndex, self).nn(h, n)
         # Reselect N based on how many hashes are currently indexes
         n = min(n, self.count())
         # Reshaping ``h`` into an array of arrays, with just one array (ball

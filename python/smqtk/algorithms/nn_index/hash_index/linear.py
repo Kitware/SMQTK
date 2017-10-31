@@ -1,11 +1,6 @@
 import heapq
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
-
+from six.moves import StringIO
 import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -90,7 +85,7 @@ class LinearHashIndex (HashIndex):
         """
         Initialize linear, brute-force hash index.
 
-        :param cache_element: Optional path to a file to cache our index to.
+        :param cache_element: Optional data element to cache our index to.
         :type cache_element: smqtk.representation.DataElement | None
 
         """
@@ -130,15 +125,14 @@ class LinearHashIndex (HashIndex):
     def count(self):
         return len(self.index)
 
-    def build_index(self, hashes):
+    def _build_index(self, hashes):
         """
-        Build the index with the give hash codes (bit-vectors).
+        Internal method to be implemented by sub-classes to build the index with
+        the given hash codes (bit-vectors).
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it. If an exception is raised, the current index, if there is one, will
-        not be modified.
-
-        :raises ValueError: No data available in the given iterable.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param hashes: Iterable of descriptor elements to build index
             over.
@@ -146,35 +140,50 @@ class LinearHashIndex (HashIndex):
 
         """
         new_index = set(map(bit_vector_to_int_large, hashes))
-        if not len(new_index):
-            raise ValueError("No hashes given to index.")
         self.index = new_index
         self.save_cache()
 
-    def nn(self, h, n=1):
+    def _update_index(self, hashes):
         """
-        Return the nearest `N` neighbors to the given hash code.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        self.index.update(set(map(bit_vector_to_int_large, hashes)))
+        self.save_cache()
+
+    def _nn(self, h, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbor hash codes as bit-vectors to the given hash code
+        bit-vector.
 
         Distances are in the range [0,1] and are the percent different each
         neighbor hash is from the query, based on the number of bits contained
-        in the query.
+        in the query (normalized hamming distance).
+
+        When this internal method is called, we have already checked that our
+        index is not empty.
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.
-        :type h: numpy.ndarray[bool] | list[bool]
+        :type h: numpy.ndarray[bool]
 
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :raises ValueError: No index to query from.
-
         :return: Tuple of nearest N hash codes and a tuple of the distance
             values to those neighbors.
-        :rtype: (tuple[numpy.ndarray[bool], tuple[float])
+        :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
-        super(LinearHashIndex, self).nn(h, n)
-
         h_int = bit_vector_to_int_large(h)
         bits = len(h)
         #: :type: list[int|long]

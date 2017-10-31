@@ -129,14 +129,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
-
-        :raises ValueError: No data available in the given iterable.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -148,8 +148,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             raise ReadOnlyError("Cannot modify container attributes due to "
                                 "being in read-only mode.")
 
-        super(FaissNearestNeighborsIndex, self).build_index(descriptors)
-
         self._log.info("Building new FAISS index")
 
         self._log.debug("Clearing and adding new descriptor elements")
@@ -158,6 +156,24 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug('Building FAISS index')
         self._build_faiss_model()
+
+    def _update_index(self, descriptors):
+        """
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        # This experimental wrapper does not currently plug into FAISS's update
+        # capabilities.
+        raise NotImplementedError()
 
     def _build_faiss_model(self):
         sample = self._descriptor_set.iterdescriptors().next()
@@ -197,9 +213,25 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         return len(self._descriptor_set)
 
-    def nn(self, d, n=1):
-        super(FaissNearestNeighborsIndex, self).nn(d, n)
+    def _nn(self, d, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
 
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
+
+        :param d: Descriptor element to compute the neighbors of.
+        :type d: smqtk.representation.DescriptorElement
+
+        :param n: Number of nearest neighbors to find.
+        :type n: int
+
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
+        :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
+
+        """
         q = d.vector().reshape(1, -1).astype(np.float32)
 
         self._log.debug("Received query for %d nearest neighbors", n)

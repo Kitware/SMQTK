@@ -7,9 +7,6 @@ import nose.tools as ntools
 from smqtk.utils.plugin import Pluggable, get_plugins, OS_ENV_PATH_SEP
 
 
-__author__ = 'paul.tunison@kitware.com'
-
-
 class DummyInterface (Pluggable):
 
     @abc.abstractmethod

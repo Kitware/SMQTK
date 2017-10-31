@@ -4,6 +4,7 @@ nearest neighbor indexing, and various implementations of LSH functors for use
 in the base.
 """
 import collections
+import itertools
 
 import numpy
 
@@ -18,7 +19,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 from smqtk.utils import merge_dict
 
 try:
@@ -264,17 +265,17 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         return len(self.descriptor_index)
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements. This in turn builds
-        the configured hash index if one is set.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index. Rebuilding
-        the LSH index involves clearing the set descriptor index, key-value
-        store and, if set, the hash index.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
-        :raises ValueError: No data available in the given iterable.
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -291,14 +292,15 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.descriptor_index.add_many_descriptors(descriptors)
 
         self._log.debug("Generating hash codes")
-        state = [0] * 7
+        #: :type: collections.deque[numpy.ndarray[bool]]
         hash_vectors = collections.deque()
         self.hash2uuids_kvstore.clear()
+        prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
         for d in self.descriptor_index:
-            h = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h)
+            h_vec = self.lsh_functor.get_hash(d.vector())
+            hash_vectors.append(h_vec)
 
-            h_int = bit_vector_to_int_large(h)
+            h_int = bit_vector_to_int_large(h_vec)
 
             # Get, update and reinsert hash UUID set object
             #: :type: set
@@ -306,9 +308,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             hash_uuid_set.add(d.uuid())
             self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
 
-            report_progress(self._log.debug, state, 1.0)
-        state[1] -= 1
-        report_progress(self._log.debug, state, 0)
+            prog_reporter.increment_report()
+        prog_reporter.report()
 
         if self.hash_index is not None:
             self._log.debug("Clearing and building hash index of type %s",
@@ -316,9 +317,60 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # a build is supposed to clear previous state.
             self.hash_index.build_index(hash_vectors)
 
-    def nn(self, d, n=1):
+    def _update_index(self, descriptors):
         """
-        Return the nearest `N` neighbors to the given descriptor element.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        if self.read_only:
+            raise ReadOnlyError("Cannot modify container attributes due to "
+                                "being in read-only mode.")
+        # tee out iterable for use in adding to index as well as hash code
+        # generation.
+        d_for_index, d_for_hashing = itertools.tee(descriptors, 2)
+
+        self._log.debug("Updating descriptor index.")
+        self.descriptor_index.add_many_descriptors(d_for_index)
+
+        self._log.debug("Generating hash codes for new descriptors")
+        prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+        #: :type: collections.deque[numpy.ndarray[bool]]
+        hash_vectors = collections.deque()  # for updating hash_index
+        for d in d_for_hashing:
+            h_vec = self.lsh_functor.get_hash(d.vector())
+            hash_vectors.append(h_vec)
+            h_int = bit_vector_to_int_large(h_vec)
+            # Get, update and reinsert hash UUID set object
+            #: :type: set
+            hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
+            hash_uuid_set.add(d.uuid())
+            self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+            prog_reporter.increment_report()
+        prog_reporter.report()
+
+        if self.hash_index is not None:
+            self._log.debug("Updating hash index structure.")
+            self.hash_index.update_index(hash_vectors)
+
+    def _nn(self, d, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
+
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
 
         :param d: Descriptor element to compute the neighbors of.
         :type d: smqtk.representation.DescriptorElement
@@ -326,13 +378,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple
-            of the distance values to those neighbors.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        super(LSHNearestNeighborIndex, self).nn(d, n)
-
         self._log.debug("generating hash for descriptor")
         d_v = d.vector()
         d_h = self.lsh_functor.get_hash(d_v)

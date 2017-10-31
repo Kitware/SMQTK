@@ -365,7 +365,7 @@ def from_uri(uri, impl_generator=get_data_element_impls):
     log = logging.getLogger(__name__)
     log.debug("Trying to parse URI: '%s'", uri)
 
-    #: :type: __generator[DataElement]
+    #: :type: collections.Iterable[DataElement]
     de_type_iter = six.itervalues(impl_generator())
     inst = None
     for de_type in de_type_iter:

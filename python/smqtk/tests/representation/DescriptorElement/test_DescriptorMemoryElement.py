@@ -1,30 +1,26 @@
 import cPickle
 import unittest
 
-import nose.tools as ntools
 import numpy
 
 from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class TestDescriptorMemoryElement (unittest.TestCase):
 
     def test_configuration(self):
         default_config = DescriptorMemoryElement.get_default_config()
-        ntools.assert_equal(default_config, {})
+        self.assertEqual(default_config, {})
 
         inst1 = DescriptorMemoryElement.from_config(default_config, 'test', 'a')
-        ntools.assert_equal(default_config, inst1.get_config())
-        ntools.assert_equal(inst1.type(), 'test')
-        ntools.assert_equal(inst1.uuid(), 'a')
+        self.assertEqual(default_config, inst1.get_config())
+        self.assertEqual(inst1.type(), 'test')
+        self.assertEqual(inst1.uuid(), 'a')
 
         # vector-based equality
         inst2 = DescriptorMemoryElement.from_config(inst1.get_config(),
                                                     'test', 'a')
-        ntools.assert_equal(inst1, inst2)
+        self.assertEqual(inst1, inst2)
 
     def test_pickle_dump_load(self):
         # Make a couple descriptors
@@ -58,8 +54,8 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         d = DescriptorMemoryElement('test', 0)
         d.set_vector(v)
         v[:] = 0
-        ntools.assert_true((v == 0).all())
-        ntools.assert_false(sum(t) == 0.)
+        self.assertTrue((v == 0).all())
+        self.assertFalse(sum(t) == 0.)
         numpy.testing.assert_equal(d.vector(), t)
 
         #
@@ -89,12 +85,12 @@ class TestDescriptorMemoryElement (unittest.TestCase):
 
         # Changing the source should not change stored vectors
         m[:, :] = 0.
-        ntools.assert_true((v1 == 0).all())
-        ntools.assert_true((v2 == 0).all())
-        ntools.assert_true((v3 == 0).all())
-        ntools.assert_false(sum(t1) == 0.)
-        ntools.assert_false(sum(t2) == 0.)
-        ntools.assert_false(sum(t3) == 0.)
+        self.assertTrue((v1 == 0).all())
+        self.assertTrue((v2 == 0).all())
+        self.assertTrue((v3 == 0).all())
+        self.assertFalse(sum(t1) == 0.)
+        self.assertFalse(sum(t2) == 0.)
+        self.assertFalse(sum(t3) == 0.)
         numpy.testing.assert_equal(d1.vector(), t1)
         numpy.testing.assert_equal(d2.vector(), t2)
         numpy.testing.assert_equal(d3.vector(), t3)
@@ -104,21 +100,21 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         # extraction
         v = numpy.ones(16)
         d = DescriptorMemoryElement('test', 0)
-        ntools.assert_false(d.has_vector())
+        self.assertFalse(d.has_vector())
         d.set_vector(v)
         r = d.vector()
         r[:] = 0
-        ntools.assert_equal(r.sum(), 0)
-        ntools.assert_equal(d.vector().sum(), 16)
+        self.assertEqual(r.sum(), 0)
+        self.assertEqual(d.vector().sum(), 16)
 
     def test_none_set(self):
         d = DescriptorMemoryElement('test', 0)
-        ntools.assert_false(d.has_vector())
+        self.assertFalse(d.has_vector())
 
         d.set_vector(numpy.ones(16))
-        ntools.assert_true(d.has_vector())
+        self.assertTrue(d.has_vector())
         numpy.testing.assert_equal(d.vector(), numpy.ones(16))
 
         d.set_vector(None)
-        ntools.assert_false(d.has_vector())
-        ntools.assert_is(d.vector(), None)
+        self.assertFalse(d.has_vector())
+        self.assertIs(d.vector(), None)

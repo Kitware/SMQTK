@@ -5,7 +5,6 @@ import unittest
 
 import PIL.Image
 import mock
-import nose.tools
 import numpy
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
@@ -43,7 +42,7 @@ if CaffeDescriptorGenerator.is_usable():
             'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
 
         def test_impl_findable(self):
-            nose.tools.assert_in(CaffeDescriptorGenerator.__name__,
+            self.assertIn(CaffeDescriptorGenerator.__name__,
                                  get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
@@ -69,10 +68,10 @@ if CaffeDescriptorGenerator.is_usable():
             expected_param_keys = \
                 set(inspect.getargspec(CaffeDescriptorGenerator.__init__)
                            .args[1:])
-            nose.tools.assert_set_equal(set(expected_params.keys()),
+            self.assertSetEqual(set(expected_params.keys()),
                                         expected_param_keys)
             g = CaffeDescriptorGenerator(**expected_params)
-            nose.tools.assert_equal(g.get_config(), expected_params)
+            self.assertEqual(g.get_config(), expected_params)
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
@@ -95,16 +94,16 @@ if CaffeDescriptorGenerator.is_usable():
             }
             g = CaffeDescriptorGenerator(**expected_params)
             # Initialization sets up the network on construction.
-            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 1)
+            self.assertEqual(m_cdg_setupNetwork.call_count, 1)
 
             g_pickled = pickle.dumps(g, -1)
             g2 = pickle.loads(g_pickled)
             # Network should be setup for second class class just like in
             # initial construction.
-            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 2)
+            self.assertEqual(m_cdg_setupNetwork.call_count, 2)
 
-            nose.tools.assert_is_instance(g2, CaffeDescriptorGenerator)
-            nose.tools.assert_equal(g.get_config(),
+            self.assertIsInstance(g2, CaffeDescriptorGenerator)
+            self.assertEqual(g.get_config(),
                                     g2.get_config())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
@@ -113,7 +112,7 @@ if CaffeDescriptorGenerator.is_usable():
             # dummy network setup
             g = CaffeDescriptorGenerator(None, None, None)
             bad_element = from_uri(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
-            nose.tools.assert_raises(
+            self.assertRaises(
                 ValueError,
                 g.compute_descriptor,
                 bad_element
@@ -143,7 +142,7 @@ if CaffeDescriptorGenerator.is_usable():
 
             # dummy network setup because _setup_network is mocked out
             g = CaffeDescriptorGenerator(0, 0, 0)
-            nose.tools.assert_raises(
+            self.assertRaises(
                 NotImplementedError,
                 g._compute_descriptor, None
             )
@@ -159,7 +158,7 @@ if CaffeDescriptorGenerator.is_usable():
                                          self.dummy_img_mean_fp,
                                          return_layer='fc', use_gpu=False)
             d = g.compute_descriptor(from_uri(self.lenna_image_fp))
-            nose.tools.assert_almost_equal(d.vector().sum(), 0., 12)
+            self.assertAlmostEqual(d.vector().sum(), 0., 12)
 
         @unittest.skipUnless(DataUrlElement.is_usable(),
                              "URL resolution not functional")
@@ -184,7 +183,7 @@ if CaffeDescriptorGenerator.is_usable():
                                          self.dummy_caffe_model_fp,
                                          self.dummy_img_mean_fp,
                                          return_layer='fc', use_gpu=False)
-            nose.tools.assert_raises(
+            self.assertRaises(
                 ValueError,
                 g.compute_descriptor_async, []
             )

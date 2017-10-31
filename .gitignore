@@ -25,12 +25,16 @@
 errors.log
 
 # Coverage report
-.coverage
+.coverage*
 
 # Setuptools/Distutils produced files/dirs
 /build
 /dist
 /python/smqtk.egg-info
+
+# Py.test cache directory
+/.cache
+__pycache__
 
 #
 # TPL

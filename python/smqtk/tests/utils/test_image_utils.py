@@ -4,7 +4,6 @@ import sys
 import tempfile
 import unittest
 
-import nose.tools as ntools
 from StringIO import StringIO
 
 from smqtk.bin.check_images import main as check_images_main
@@ -15,18 +14,20 @@ from smqtk.utils.image_utils import is_loadable_image, is_valid_element
 
 class TestIsLoadableImage(unittest.TestCase):
 
-    def setUp(self):
-        self.good_image = DataFileElement(os.path.join(TEST_DATA_DIR,
-                                                       'Lenna.png'))
-        self.non_image = DataFileElement(os.path.join(TEST_DATA_DIR,
-                                                      'test_file.dat'))
+    @classmethod
+    def setup_class(cls):
+        cls.good_image = DataFileElement(os.path.join(TEST_DATA_DIR,
+                                                      'Lenna.png'))
+        cls.non_image = DataFileElement(os.path.join(TEST_DATA_DIR,
+                                                     'test_file.dat'))
 
-    @ntools.raises(AttributeError)
     def test_non_data_element_raises_exception(self):
         # should throw:
         # AttributeError: 'bool' object has no attribute 'get_bytes'
-        is_loadable_image(False)
-
+        self.assertRaises(
+            AttributeError,
+            is_loadable_image, False
+        )
 
     def test_unloadable_image_returns_false(self):
         assert is_loadable_image(self.non_image) == False
@@ -38,11 +39,12 @@ class TestIsLoadableImage(unittest.TestCase):
 
 class TestIsValidElement(unittest.TestCase):
 
-    def setUp(self):
-        self.good_image = DataFileElement(os.path.join(TEST_DATA_DIR,
-                                                       'Lenna.png'))
-        self.non_image = DataFileElement(os.path.join(TEST_DATA_DIR,
-                                                      'test_file.dat'))
+    @classmethod
+    def setup_class(cls):
+        cls.good_image = DataFileElement(os.path.join(TEST_DATA_DIR,
+                                                      'Lenna.png'))
+        cls.non_image = DataFileElement(os.path.join(TEST_DATA_DIR,
+                                                     'test_file.dat'))
 
 
     def test_non_data_element(self):

@@ -24,6 +24,8 @@ before_install:
   - conda update -q --all
   # Useful for debugging any issues with conda
   - conda info -a
+  # Make sure pip is up-to-date
+  - pip install -U pip
 
 # "Install" of SMQTK + immediate deps
 install:
@@ -41,4 +43,4 @@ install:
 
 # Run tests here
 script:
-  - sh ./run_tests.sh
+  - bash ./run_tests.sh

@@ -1,7 +1,5 @@
 import unittest
 
-import nose.tools
-
 from smqtk.algorithms.classifier import SupervisedClassifier
 
 
@@ -44,7 +42,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         # already has a model. Shouldn't matter what is passed to the method (or
         # lack of things passed to the method).
         self.test_classifier.EXPECTED_HAS_MODEL = True
-        nose.tools.assert_raises(
+        self.assertRaises(
             RuntimeError,
             self.test_classifier.train
         )
@@ -56,7 +54,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
 
     def test_train_noModel_noExamples(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             self.test_classifier.train
         )
@@ -66,14 +64,14 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         input_class_examples = {
             'label_1': [0, 1, 2],
         }
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             self.test_classifier.train, input_class_examples
         )
 
     def test_train_noModel_oneExample_kwargs(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             self.test_classifier.train, label_1=[0, 1]
         )
@@ -85,7 +83,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             'label_2': [3, 4, 5, 6],
         }
         m = self.test_classifier.train(input_class_examples)
-        nose.tools.assert_equal(m, input_class_examples)
+        self.assertEqual(m, input_class_examples)
 
     def test_train_noModel_kwargs_only(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
@@ -96,7 +94,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         }
 
         m = self.test_classifier.train(label_1=e['label_1'], label_2=e['label_2'])
-        nose.tools.assert_equal(m, e)
+        self.assertEqual(m, e)
 
     def test_train_noModel_combined(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
@@ -116,4 +114,4 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         label_3 = expected['label_3']
         m = self.test_classifier.train(class_examples, label_2=label_2,
                                        label_3=label_3)
-        nose.tools.assert_equal(m, expected)
+        self.assertEqual(m, expected)

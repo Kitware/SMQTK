@@ -134,7 +134,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         self._parent_app = parent_app
         self._data_set = data_set
-        self._iqr_service = IqrService(iqr_service_url.rstrip('/'))
+        self._iqr_service = IqrServiceProxy(iqr_service_url.rstrip('/'))
 
         # base directory that's transformed by the ``work_dir`` property into
         # an absolute path.
@@ -218,12 +218,21 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             """
             sid = self.get_current_iqr_session()
-            r_get = self._iqr_service.get('state', sid=sid)
 
-            # Load state dictionary from ZIP payload from service
+            # Get the state base64 from the underlying service.
+            r_get = self._iqr_service.get('state', sid=sid)
+            r_get.raise_for_status()
+            state_b64 = r_get.json()['state_b64']
+            state_bytes = base64.b64decode(state_b64)
+
+            # Load state dictionary from base-64 ZIP payload from service
+            # - GET content is base64, so decode first and then read as a
+            #   ZipFile buffer.
+            # - `r_get.content` is `byte` type so it can be passed directly to
+            #   base64 decode.
             state_dict = json.load(
                 zipfile.ZipFile(
-                    BytesIO(r_get.content),
+                    BytesIO(state_bytes),
                     'r',
                     IqrSession.STATE_ZIP_COMPRESSION
                 ).open(IqrSession.STATE_ZIP_FILENAME)
@@ -727,7 +736,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         self._iqr_example_data[sid].clear()
 
 
-class IqrService (object):
+class IqrServiceProxy (object):
     """
     Helper class for interacting with the IQR service
     """

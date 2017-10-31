@@ -248,7 +248,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 working_data[uid] = {
                     'content_type': workingElem.content_type(),
                     'bytes_base64':
-                        base64.urlsafe_b64encode(str(workingElem.get_bytes())),
+                        base64.b64encode(workingElem.get_bytes()),
                 }
 
             state_dict["working_data"] = working_data
@@ -343,7 +343,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                                  json.dumps(state_dict))
             service_zip.close()
             service_zip_base64 = \
-                base64.urlsafe_b64encode(service_zip_buffer.getvalue())
+                base64.b64encode(service_zip_buffer.getvalue())
 
             # Update service state
             self._iqr_service.put('state',
@@ -464,7 +464,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             # Extend session ingest -- modifying
             self._log.debug("[%s::%s] Adding new data to session "
                             "external positives", sid, fid)
-            data_b64 = base64.urlsafe_b64encode(upload_data.get_bytes())
+            data_b64 = base64.b64encode(upload_data.get_bytes())
             data_ct = upload_data.content_type()
             r = self._iqr_service.post('add_external_pos', sid=sid,
                                        base64=data_b64, content_type=data_ct)

@@ -1069,7 +1069,9 @@ class IqrService (SmqtkWebApp):
         # given unicode (python2) or str (python3): needs bytes.
 
         try:
-            state_bytes = base64.b64decode(state_base64.encode('utf-8'))
+            # Using urlsafe version because it handles both regular and urlsafe
+            # alphabets.
+            state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
         except TypeError as ex:
             return make_response_json("Invalid base64 input: %s" % str(ex)), 400
 

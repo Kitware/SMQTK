@@ -151,6 +151,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
     // clear children of results container
     // get ordered results information
     // display first X results
+    // noinspection JSValidateTypes
     this.results_container_refine.children().remove();
     this.refine_result_uuids = [];
     this.refine_result_score = [];
@@ -167,6 +168,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
         success: function (data) {
             if (parseInt(data["wi_count"]) > 0) {
                 // enable buttons
+                // noinspection JSValidateTypes
                 self.button_container_refine_top.children().prop("disabled", false);
                 // Fetch ordered results + display
                 $.ajax({
@@ -198,6 +200,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
             }
             else {
                 // disable buttons + hide bottom button container
+                // noinspection JSValidateTypes
                 self.button_container_refine_top.children().prop("disabled", true);
                 self.button_container_refine_bot.hide();
             }
@@ -249,10 +252,12 @@ IqrRefineView.prototype.iqr_refine = function() {
 
     // helper methods for display stuff
     function disable_buttons() {
+        // noinspection JSValidateTypes
         self.button_container_refine_top.children().prop("disabled", true);
         self.button_container_refine_bot.children().prop("disabled", true);
     }
     function enable_buttons() {
+        // noinspection JSValidateTypes
         self.button_container_refine_top.children().prop("disabled", false);
         self.button_container_refine_bot.children().prop("disabled", false);
     }
@@ -353,6 +358,7 @@ IqrRefineView.prototype.hide_random_functionals = function () {
  * Clear currently displayed and stored random results.
  */
 IqrRefineView.prototype.clear_random_results = function () {
+    // noinspection JSValidateTypes
     this.results_container_random.children().remove();
     this.random_results_displayed = 0;
 };

@@ -71,7 +71,8 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
     :return: Generator that yields (DataElement, DescriptorElement) for each data
         element given, in the order they were provided.
-    :rtype: __generator[(smqtk.representation.DataElement, smqtk.representation.DescriptorElement)]
+    :rtype: collections.Iterable[(smqtk.representation.DataElement,
+                                  smqtk.representation.DescriptorElement)]
 
     """
     log = logging.getLogger(__name__)
@@ -85,16 +86,16 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
     unique = 0
 
     def iter_capture_elements():
-        for de in data_elements:
-            de_deque.append(de)
-            yield de
+        for d in data_elements:
+            de_deque.append(d)
+            yield d
 
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
 
         batch_i = 0
 
-        for de in iter_capture_elements():
+        for _ in iter_capture_elements():
             # elements captured ``de_deque`` in iter_capture_elements
 
             if len(de_deque) == batch_size:
@@ -154,7 +155,6 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
         log.debug("yielding generated elements")
         for de in de_deque:
-            # noinspection PyProtectedMember
             yield de, m[de.uuid()]
 
 

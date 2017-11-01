@@ -60,6 +60,16 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         return "%s{type: %s, uuid: %s}" % (self.__class__.__name__, self.type(),
                                            self.uuid())
 
+    def __getstate__(self):
+        return {
+            "_type_label": self._type_label,
+            "_uuid": self._uuid,
+        }
+
+    def __setstate__(self, state):
+        self._type_label = state['_type_label']
+        self._uuid = state['_uuid']
+
     @classmethod
     def get_default_config(cls):
         """

@@ -119,7 +119,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :return: Mapping of input DataElement UUIDs to the computed descriptor
             element for that data. DescriptorElement UUID's are congruent with
             the UUID of the data element it is the descriptor of.
-        :rtype: dict[smqtk.representation.DataElement,
+        :rtype: dict[collections.Hashable,
                      smqtk.representation.DescriptorElement]
 
         """

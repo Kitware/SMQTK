@@ -47,13 +47,6 @@ class DescriptorMemoryElement (DescriptorElement):
             b = StringIO(state['v'])
         self.__v = numpy.load(b)
 
-    def _get_cache_index(self):
-        """
-        :return: Index tuple for this element in the global cache
-        :rtype: (str, collections.Hashable)
-        """
-        return self.type(), self.uuid()
-
     def get_config(self):
         """
         :return: JSON type compliant configuration dictionary.
@@ -158,22 +151,36 @@ class DescriptorFileElement (DescriptorElement):
 
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
-
         self._save_dir = osp.abspath(osp.expanduser(save_dir))
-
-        # Saving components
         self._subdir_split = subdir_split
-        if subdir_split and int(subdir_split) > 1:
-            save_dir = osp.join(self._save_dir,
-                                *partition_string(str(uuid).replace('-', ''),
-                                                  int(subdir_split))[:-1]
-                                )
+
+        # Generate filepath from parameters
+        if self._subdir_split and int(self._subdir_split) > 1:
+            save_dir = osp.join(
+                self._save_dir,
+                *partition_string(str(self.uuid()).replace('-', ''),
+                                  int(self._subdir_split))[:-1]
+            )
         else:
             save_dir = self._save_dir
-
         self._vec_filepath = osp.join(save_dir,
-                                      "%s.%s.vector.npy" % (self._type_label,
-                                                            str(uuid)))
+                                      "%s.%s.vector.npy" % (self.type(),
+                                                            str(self.uuid())))
+
+    def __getstate__(self):
+        state = super(DescriptorFileElement, self).__getstate__()
+        state.update({
+            '_save_dir': self._save_dir,
+            '_subdir_split': self._subdir_split,
+            '_vec_filepath': self._vec_filepath,
+        })
+        return state
+
+    def __setstate__(self, state):
+        super(DescriptorFileElement, self).__setstate__(state)
+        self._save_dir = state['_save_dir']
+        self._subdir_split = state['_subdir_split']
+        self._vec_filepath = state['_vec_filepath']
 
     def get_config(self):
         return {

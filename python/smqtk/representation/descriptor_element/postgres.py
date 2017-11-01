@@ -3,7 +3,6 @@ import multiprocessing
 import numpy
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils import merge_dict
 from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
@@ -168,23 +167,20 @@ class PostgresDescriptorElement (DescriptorElement):
         creation post-deserialization only happens once, this is acceptable.
 
         """
-        return merge_dict(
-            # Base DescriptorElement parts
-            super(PostgresDescriptorElement, self).__getstate__(),
-            # Our parts
-            {
-                "table_name": self.table_name,
-                "uuid_col": self.uuid_col,
-                "type_col": self.type_col,
-                "binary_col": self.binary_col,
-                "create_table": self.create_table,
-                "db_name": self.db_name,
-                "db_host": self.db_host,
-                "db_port": self.db_port,
-                "db_user": self.db_user,
-                "db_pass": self.db_pass,
-            }
-        )
+        state = super(PostgresDescriptorElement, self).__getstate__()
+        state.update({
+            "table_name": self.table_name,
+            "uuid_col": self.uuid_col,
+            "type_col": self.type_col,
+            "binary_col": self.binary_col,
+            "create_table": self.create_table,
+            "db_name": self.db_name,
+            "db_host": self.db_host,
+            "db_port": self.db_port,
+            "db_user": self.db_user,
+            "db_pass": self.db_pass,
+        })
+        return state
 
     def __setstate__(self, state):
         # Base DescriptorElement parts

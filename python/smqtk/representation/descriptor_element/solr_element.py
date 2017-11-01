@@ -1,6 +1,8 @@
-import numpy
-from smqtk.representation import DescriptorElement
 import time
+
+import numpy
+
+from smqtk.representation import DescriptorElement
 
 
 # Try to import required module
@@ -8,9 +10,6 @@ try:
     import solr
 except ImportError:
     solr = None
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class SolrDescriptorElement (DescriptorElement):
@@ -88,9 +87,8 @@ class SolrDescriptorElement (DescriptorElement):
                               )
 
     def __getstate__(self):
-        return {
-            "type_label": self._type_label,
-            "uuid": self._uuid,
+        state = super(SolrDescriptorElement, self).__getstate__()
+        state.update({
             "type_field": self.type_field,
             "uuid_field": self.uuid_field,
             "vector_field": self.vector_field,
@@ -99,11 +97,16 @@ class SolrDescriptorElement (DescriptorElement):
             "solr_url": self.solr.url,
             "solr_persistent": self.solr.persistent,
             "solr_timeout": self.solr.timeout,
-        }
+        })
+        return state
 
     def __setstate__(self, state):
-        self._type_label = state['type_label']
-        self._uuid = state['uuid']
+        # Support older version of serialization
+        if 'type_label' in state:
+            self._type_label = state['type_label']
+            self._uuid = state['uuid']
+        else:
+            super(SolrDescriptorElement, self).__setstate__(state)
         self.type_field = state['type_field']
         self.uuid_field = state['uuid_field']
         self.vector_field = state['vector_field']

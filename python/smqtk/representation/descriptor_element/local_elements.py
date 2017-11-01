@@ -1,6 +1,8 @@
 import numpy
 import os.path as osp
 
+from six.moves import cStringIO as StringIO
+
 from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
@@ -27,15 +29,22 @@ class DescriptorMemoryElement (DescriptorElement):
         self.__v = None
 
     def __getstate__(self):
+        state = super(DescriptorMemoryElement, self).__getstate__()
         # save vector as binary string
         b = StringIO()
         numpy.save(b, self.vector())
-        return self.type(), self.uuid(), b.getvalue(),
+        state['v'] = b.getvalue()
+        return state
 
     def __setstate__(self, state):
-        self._type_label = state[0]
-        self._uuid = state[1]
-        b = StringIO(state[2])
+        # Handle the previous state format:
+        if isinstance(state, tuple):
+            self._type_label = state[0]
+            self._uuid = state[1]
+            b = StringIO(state[2])
+        else:  # dictionary
+            super(DescriptorMemoryElement, self).__setstate__(state)
+            b = StringIO(state['v'])
         self.__v = numpy.load(b)
 
     def _get_cache_index(self):

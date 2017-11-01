@@ -27,6 +27,7 @@ EXPECTED_UUID = EXPECTED_SHA1
 tempfile.gettempdir()
 
 
+# noinspection PyClassHasNoInit,PyAbstractClass
 class DummyDataElement (smqtk.representation.data_element.DataElement):
 
     TEST_WRITABLE = True

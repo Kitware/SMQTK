@@ -212,7 +212,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                                 db_user, db_pass,
                                                 self.multiquery_batch_size,
                                                 PSQL_TABLE_CREATE_RLOCK)
-        if not self.read_only:
+        if not self.read_only and self.create_table:
             self.psql_helper.set_table_upsert_sql(
                 self.UPSERT_TABLE_TMPL.format(
                     table_name=self.table_name,

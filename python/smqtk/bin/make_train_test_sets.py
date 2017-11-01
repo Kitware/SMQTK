@@ -7,7 +7,7 @@ import re
 
 import numpy
 import six
-from sklearn.cross_validation import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class KeyToFilepath(argparse.Action):
@@ -99,14 +99,14 @@ def main():
     all_label = numpy.array(all_label)
     all_uuids = numpy.array(all_uuids)
 
-    # ``n_iter=1``  -- Only make one train/test split
-    sss = StratifiedShuffleSplit(all_label,
-                                 n_iter=1, test_size=TEST_PERCENT,
+    # ``n_splits=1``  -- Only make one train/test split
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=TEST_PERCENT,
                                  random_state=RAND_STATE)
 
     # Get array of index position values of ``all_uuids`` of uuids to use for
     # train and test sets, respectively.
-    train_index, test_index = iter(sss).next()
+    train_index, test_index = \
+        iter(sss.split(numpy.zeros(len(all_label)), all_label)).next()
     uuids_train, uuids_test = all_uuids[train_index], all_uuids[test_index]
     label_train, label_test = all_label[train_index], all_label[test_index]
 

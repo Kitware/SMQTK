@@ -3,7 +3,7 @@ import multiprocessing
 import numpy
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils.postgres import norm_psql_cmd_string
+from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
 try:
@@ -148,11 +148,20 @@ class PostgresDescriptorElement (DescriptorElement):
         self.binary_col = binary_col
         self.create_table = create_table
 
-        self.db_name = db_name
-        self.db_host = db_host
-        self.db_port = db_port
-        self.db_user = db_user
-        self.db_pass = db_pass
+        # Only using a transport iteration size of 1 since this element is only
+        # meant to refer to a single entry in the associated table.
+        self.psql_helper = PsqlConnectionHelper(
+            db_name, db_host, db_port, db_user, db_pass, itersize=1,
+            table_upsert_lock=PSQL_TABLE_CREATE_RLOCK
+        )
+        # Register table upsert command
+        if self.create_table:
+            self.psql_helper.set_table_upsert_sql(self.UPSERT_TABLE_TMPL.format(
+                table_name=self.table_name,
+                type_col=self.type_col,
+                uuid_col=self.uuid_col,
+                binary_col=self.binary_col,
+            ))
 
     def get_config(self):
         return {
@@ -162,43 +171,12 @@ class PostgresDescriptorElement (DescriptorElement):
             "binary_col": self.binary_col,
             "create_table": self.create_table,
 
-            "db_name": self.db_name,
-            "db_host": self.db_host,
-            "db_port": self.db_port,
-            "db_user": self.db_user,
-            "db_pass": self.db_pass,
+            "db_name": self.psql_helper.db_name,
+            "db_host": self.psql_helper.db_host,
+            "db_port": self.psql_helper.db_port,
+            "db_user": self.psql_helper.db_user,
+            "db_pass": self.psql_helper.db_pass,
         }
-
-    def _get_psql_connection(self):
-        """
-        :return: A new connection to the configured database
-        :rtype: psycopg2._psycopg.connection
-        """
-        return psycopg2.connect(
-            database=self.db_name,
-            user=self.db_user,
-            password=self.db_pass,
-            host=self.db_host,
-            port=self.db_port,
-        )
-
-    def _ensure_table(self, cursor):
-        """
-        Execute on psql connector cursor the table create-of-not-exists query.
-
-        :param cursor: Connection active cursor.
-
-        """
-        if self.create_table:
-            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
-                table_name=self.table_name,
-                type_col=self.type_col,
-                uuid_col=self.uuid_col,
-                binary_col=self.binary_col,
-            ))
-            with PSQL_TABLE_CREATE_RLOCK:
-                cursor.execute(q_table_upsert)
-                cursor.connection.commit()
 
     def has_vector(self):
         """
@@ -232,22 +210,13 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
+        def cb(cursor):
+            cursor.execute(q_select, q_select_values)
 
-        try:
-            self._ensure_table(cur)
-            cur.execute(q_select, q_select_values)
-            r = cur.fetchone()
-            # For server cleaning (e.g. pgbouncer)
-            conn.commit()
-            return bool(r)
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+        # Should either yield one or zero rows.
+        return bool(list(self.psql_helper.single_execute(
+            cb, yield_result_rows=True
+        )))
 
     def vector(self):
         """
@@ -255,7 +224,7 @@ class PostgresDescriptorElement (DescriptorElement):
 
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
-        :rtype: numpy.core.multiarray.ndarray or None
+        :rtype: numpy.ndarray or None
 
         """
         q_select = self.SELECT_TMPL.format(**{
@@ -269,27 +238,21 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
-        try:
-            self._ensure_table(cur)
-            cur.execute(q_select, q_select_values)
+        # query execution callback
+        # noinspection PyProtectedMember
+        def cb(cursor):
+            # type: (psycopg2._psycopg.cursor) -> None
+            cursor.execute(q_select, q_select_values)
 
-            r = cur.fetchone()
-            conn.commit()
-
-            if not r:
-                return None
-            else:
-                b = r[0]
-                v = numpy.frombuffer(b, self.ARRAY_DTYPE)
-                return v
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+        # This should only fetch a single row.  Cannot yield more than one due
+        # use of primary keys.
+        r = list(self.psql_helper.single_execute(cb, yield_result_rows=True))
+        if not r:
+            return None
+        else:
+            b = r[0][0]
+            v = numpy.frombuffer(b, self.ARRAY_DTYPE)
+            return v
 
     def set_vector(self, new_vec):
         """
@@ -309,7 +272,7 @@ class PostgresDescriptorElement (DescriptorElement):
         :raises ValueError: ``new_vec`` was not a numpy ndarray.
 
         :param new_vec: New vector to contain. This must be a numpy array.
-        :type new_vec: numpy.core.multiarray.ndarray
+        :type new_vec: numpy.ndarray
 
         """
         if not isinstance(new_vec, numpy.ndarray):
@@ -319,8 +282,8 @@ class PostgresDescriptorElement (DescriptorElement):
             try:
                 new_vec = new_vec.astype(self.ARRAY_DTYPE)
             except TypeError:
-                raise ValueError("Could not convert input to a vector of %s."
-                                 % self.ARRAY_DTYPE)
+                raise ValueError("Could not convert input to a vector of type "
+                                 "%s." % self.ARRAY_DTYPE)
 
         q_upsert = self.UPSERT_TMPL.strip().format(**{
             "table_name": self.table_name,
@@ -334,15 +297,11 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid()),
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
-        try:
-            self._ensure_table(cur)
-            cur.execute(q_upsert, q_upsert_values)
-            conn.commit()
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+        # query execution callback
+        # noinspection PyProtectedMember
+        def cb(cursor):
+            # type: (psycopg2._psycopg.cursor) -> None
+            cursor.execute(q_upsert, q_upsert_values)
+
+        # No return but need to force iteration.
+        list(self.psql_helper.single_execute(cb))

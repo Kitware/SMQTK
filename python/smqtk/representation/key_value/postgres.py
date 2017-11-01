@@ -264,7 +264,9 @@ class PostgresKeyValueStore (KeyValueStore):
                 query='count(%s)' % self._key_col,
                 table_name=self._table_name,
             ))
-        return list(self._psql_helper.single_execute(cb, True))[0][0]
+        return list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        ))[0][0]
 
     def keys(self):
         """
@@ -278,7 +280,8 @@ class PostgresKeyValueStore (KeyValueStore):
             ))
         # We can use a named cursor because this is a select statement as well
         # as server table size may be large.
-        for r in self._psql_helper.single_execute(cb, True, True):
+        for r in self._psql_helper.single_execute(cb, yield_result_rows=True,
+                                                  named=True):
             # Convert from buffer -> string -> python
             yield self._bin_to_py(r[0])
 
@@ -293,7 +296,8 @@ class PostgresKeyValueStore (KeyValueStore):
                 query=self._value_col,
                 table_name=self._table_name,
             ))
-        for r in self._psql_helper.single_execute(cb, True, True):
+        for r in self._psql_helper.single_execute(cb, yield_result_rows=True,
+                                                  named=True):
             # Convert from buffer -> string -> python
             yield self._bin_to_py(r[0])
 
@@ -327,7 +331,9 @@ class PostgresKeyValueStore (KeyValueStore):
 
         def cb(cur):
             cur.execute(q, {'key_like': self._py_to_bin(key)})
-        return bool(list(self._psql_helper.single_execute(cb, True)))
+        return bool(list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        )))
 
     def add(self, key, value):
         """
@@ -429,7 +435,9 @@ class PostgresKeyValueStore (KeyValueStore):
         def cb(cur):
             cur.execute(q, v)
 
-        rows = list(self._psql_helper.single_execute(cb, True))
+        rows = list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        ))
         # If no rows and no default, raise KeyError.
         if len(rows) == 0:
             if default is NO_DEFAULT_VALUE:

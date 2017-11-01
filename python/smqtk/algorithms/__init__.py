@@ -13,6 +13,7 @@ __all__ = [
 ]
 
 
+# noinspection PyAbstractClass
 class SmqtkAlgorithm (SmqtkObject, Configurable, plugin.Pluggable):
     """
     Parent class for all algorithm interfaces.

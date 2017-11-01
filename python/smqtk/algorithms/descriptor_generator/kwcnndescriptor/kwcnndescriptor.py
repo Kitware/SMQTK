@@ -138,6 +138,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.__dict__.update(state)
         self._setup_network()
 
+    # noinspection PyProtectedMember
     def _setup_network(self, pre_initialize_network=True):
         """Initialize KWCNN data, model, and network objects."""
         # Check KWCNN
@@ -157,8 +158,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 self._log.debug("Using CPU")
                 assert not kwcnn.tpl._lasagne.USING_GPU
         except AssertionError:
-            self._log.error("Theano misconfigured for specified device!")
-            url = "http://deeplearning.net/software/theano/library/config.html#environment-variables"  # NOQA
+            self._log.error("Theano mis-configured for specified device!")
+            url = "http://deeplearning.net/software/theano/library/config.html" \
+                  "#environment-variables"  # NOQA
             self._log.error("Review Theano documentation here: %s" % (url, ))
 
             self._log.error("Requested configuration:")
@@ -211,6 +213,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             def _input_shape(model):
                 return (64, 64, 1) if model.greyscale else (64, 64, 3)
 
+            # noinspection PyProtectedMember
             def architecture(model, batch_size, in_width, in_height,
                              in_channels, out_classes):
                 """FCNN architecture."""

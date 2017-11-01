@@ -140,6 +140,10 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     try:
         rps = [0] * 7
         for de, descr in m:
+            # We know that we are using DataFileElements going into the
+            # compute_many_descriptors, so we can assume that's what comes out
+            # of it as well.
+            # noinspection PyProtectedMember
             cf_writer.writerow([de._filepath, descr.uuid()])
             report_progress(log.debug, rps, 1.)
     finally:

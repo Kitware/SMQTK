@@ -9,7 +9,11 @@ import numpy
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
-    caffe, CaffeDescriptorGenerator, _process_load_img_array
+    caffe, CaffeDescriptorGenerator
+# Testing protected helper function
+# noinspection PyProtectedMember
+from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
+    _process_load_img_array
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR

@@ -78,13 +78,13 @@ class SolrDescriptorElement (DescriptorElement):
         self.uuid_field = uuid_field
         self.vector_field = vector_field
         self.timestamp_field = timestamp_field
-        self.commit_on_set = commit_on_set
 
-        self.solr = solr.Solr(solr_conn_addr,
-                              persistent=persistent_connection,
-                              timeout=timeout,
-                              # debug=True  # This makes things pretty verbose
-                              )
+        self.solr_conn_addr = solr_conn_addr
+        self.solr_timeout = timeout
+        self.solr_persistent_connection = persistent_connection
+        self.solr_commit_on_set = commit_on_set
+
+        self.solr = self._make_solr_inst()
 
     def __getstate__(self):
         state = super(SolrDescriptorElement, self).__getstate__()
@@ -93,10 +93,10 @@ class SolrDescriptorElement (DescriptorElement):
             "uuid_field": self.uuid_field,
             "vector_field": self.vector_field,
             "timestamp_field": self.timestamp_field,
-            "commit_on_set": self.commit_on_set,
-            "solr_url": self.solr.url,
-            "solr_persistent": self.solr.persistent,
-            "solr_timeout": self.solr.timeout,
+            "solr_conn_addr": self.solr_conn_addr,
+            "solr_persistent_connection": self.solr_persistent_connection,
+            "solr_timeout": self.solr_timeout,
+            "solr_commit_on_set": self.solr_commit_on_set,
         })
         return state
 
@@ -111,18 +111,25 @@ class SolrDescriptorElement (DescriptorElement):
         self.uuid_field = state['uuid_field']
         self.vector_field = state['vector_field']
         self.timestamp_field = state['timestamp_field']
-        self.commit_on_set = state['commit_on_set']
-        self.solr = solr.Solr(state['solr_url'],
-                              persistent=state['solr_persistent'],
-                              timeout=state['solr_timeout'],
-                              # debug=True  # see above
-                              )
+        self.solr_conn_addr = state['solr_conn_addr']
+        self.solr_timeout = state['solr_timeout']
+        self.solr_persistent_connection = state['solr_persistent_connection']
+        self.solr_commit_on_set = state['solr_commit_on_set']
+
+        self.solr = self._make_solr_inst()
 
     def __repr__(self):
         return super(SolrDescriptorElement, self).__repr__() + \
             '[url: %s, timeout: %d, ' \
             'persistent: %s]' \
             % (self.solr.url, self.solr.timeout, self.solr.persistent)
+
+    def _make_solr_inst(self):
+        return solr.Solr(self.solr_conn_addr,
+                         persistent=self.solr_persistent_connection,
+                         timeout=self.solr_timeout,
+                         # debug=True  # This makes things pretty verbose
+                         )
 
     def _base_doc(self):
         t = self.type()
@@ -151,14 +158,14 @@ class SolrDescriptorElement (DescriptorElement):
 
     def get_config(self):
         return {
-            "solr_conn_addr": self.solr.url,
+            "solr_conn_addr": self.solr_conn_addr,
             "type_field": self.type_field,
             "uuid_field": self.uuid_field,
             "vector_field": self.vector_field,
             "timestamp_field": self.timestamp_field,
-            "timeout": self.solr.timeout,
-            "persistent_connection": self.solr.persistent,
-            "commit_on_set": self.commit_on_set,
+            "timeout": self.solr_timeout,
+            "persistent_connection": self.solr_persistent_connection,
+            "commit_on_set": self.solr_commit_on_set,
         }
 
     def has_vector(self):
@@ -178,7 +185,7 @@ class SolrDescriptorElement (DescriptorElement):
         doc = self._base_doc()
         doc[self.vector_field] = new_vec.tolist()
         doc[self.timestamp_field] = time.time()
-        self.solr.add(doc, commit=self.commit_on_set)
+        self.solr.add(doc, commit=self.solr_commit_on_set)
 
     def vector(self):
         doc = self._get_existing_doc()

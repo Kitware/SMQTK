@@ -10,7 +10,8 @@ import tempfile
 
 import six
 
-from smqtk.exceptions import InvalidUriError, ReadOnlyError
+from smqtk.exceptions import InvalidUriError, NoUriResolutionError, \
+    ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
 from smqtk.utils import plugin
@@ -45,7 +46,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :param uri: URI string to resolve into an element instance
         :type uri: str
 
-        :raises NotImplementedError: This element type does not implement URI
+        :raises NoUriResolutionError: This element type does not implement URI
             resolution.
         :raises smqtk.exceptions.InvalidUriError: This element type could not
             resolve the provided URI string.
@@ -54,7 +55,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :rtype: DataElement
 
         """
-        raise NotImplementedError()
+        raise NoUriResolutionError()
 
     def __init__(self):
         super(DataElement, self).__init__()
@@ -371,7 +372,9 @@ def from_uri(uri, impl_generator=get_data_element_impls):
     for de_type in de_type_iter:
         try:
             inst = de_type.from_uri(uri)
-        except NotImplementedError:
+        except NoUriResolutionError:
+            # Expected error signaling that DataElement implementation does not
+            # or cannot resolve from a URI.
             pass
         except InvalidUriError as ex:
             log.debug("Implementation '%s' failed to parse URI: %s",

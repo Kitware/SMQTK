@@ -65,7 +65,7 @@ class TestDataElementAbstract (unittest.TestCase):
 
     def test_from_uri_default(self):
         self.assertRaises(
-            NotImplementedError,
+            smqtk.exceptions.NoUriResolutionError,
             DummyDataElement.from_uri, 'some uri'
         )
 

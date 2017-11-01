@@ -89,7 +89,7 @@
                     "distance_method": "hik",
                     "index_uri": "workdir/alexnet_fc7/flann/index.flann",
                     "parameters_uri": "workdir/alexnet_fc7/flann/index.parameters",
-                    "random_seed": 42,
+                    "random_seed": 42
                 },
                 "LSHNearestNeighborIndex": {
                     "descriptor_index": {

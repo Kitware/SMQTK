@@ -23,6 +23,12 @@ from smqtk.utils.plugin import make_config, from_plugin_config
 
 
 def default_config():
+
+    # Trick for mixing in our Configurable class API on top of scikit-learn's
+    # MiniBatchKMeans class in order to introspect construction parameters.
+    # We never construct this class so we do not need to implement "pure
+    # virtual" instance methods.
+    # noinspection PyAbstractClass
     class MBKTemp (MiniBatchKMeans, Configurable):
         pass
 

@@ -12,6 +12,7 @@ __all__ = [
 ]
 
 
+# noinspection PyAbstractClass
 class SmqtkRepresentation (SmqtkObject, Configurable):
     """
     Interface for data representation interfaces and implementations.

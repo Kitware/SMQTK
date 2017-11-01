@@ -6,38 +6,54 @@ from smqtk.utils.configurable_interface import Configurable
 class TestConfigurablePluginInterface (unittest.TestCase):
 
     def test_default_config(self):
-        class T1 (Configurable):
+        # Only using class method.
+        # noinspection PyAbstractClass
+        class T (Configurable):
+            # noinspection PyUnusedLocal
             def __init__(self, a, b, cat):
                 pass
         self.assertEqual(
-            T1.get_default_config(),
+            T.get_default_config(),
             {'a': None, 'b': None, 'cat': None}
         )
 
-        # star stuff shouldn't change anything
-        class T2 (Configurable):
+    def test_default_config_with_star_args(self):
+        # Test that star stuff shouldn't change anything
+
+        # Only using class method.
+        # noinspection PyAbstractClass
+        class T (Configurable):
+            # noinspection PyUnusedLocal
             def __init__(self, a, b, cat, *args, **kwargs):
                 pass
         self.assertEqual(
-            T2.get_default_config(),
+            T.get_default_config(),
             {'a': None, 'b': None, 'cat': None}
         )
 
     def test_default_config_with_default_values(self):
-        class T1 (Configurable):
+        # Only using class method.
+        # noinspection PyAbstractClass
+        class T (Configurable):
+            # noinspection PyUnusedLocal
             def __init__(self, a, b, c=0, d='foobar'):
                 pass
         self.assertEqual(
-            T1.get_default_config(),
+            T.get_default_config(),
             {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
         )
 
-        # star stuff shouldn't change anything
-        class T2 (Configurable):
+    def test_default_config_with_default_values_with_star_args(self):
+        # Test that star stuff shouldn't change anything.
+
+        # Only using class method.
+        # noinspection PyAbstractClass
+        class T (Configurable):
+            # noinspection PyUnusedLocal
             def __init__(self, a, b, c=0, d='foobar', *args, **kwargs):
                 pass
         self.assertEqual(
-            T2.get_default_config(),
+            T.get_default_config(),
             {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
         )
 

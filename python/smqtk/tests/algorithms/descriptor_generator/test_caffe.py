@@ -113,7 +113,12 @@ if CaffeDescriptorGenerator.is_usable():
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
         def test_invalid_datatype(self, m_cdg_setupNetwork):
-            # dummy network setup
+            # Test that a data element with an incorrect content type raises an
+            # exception.
+
+            # Passing purposefully bag constructor parameters and ignoring
+            # Caffe network setup (above mocking).
+            # noinspection PyTypeChecker
             g = CaffeDescriptorGenerator(None, None, None)
             bad_element = from_uri(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
             self.assertRaises(
@@ -144,7 +149,9 @@ if CaffeDescriptorGenerator.is_usable():
             # interface. Thus, ``_compute_descriptor`` should not be
             # implemented.
 
-            # dummy network setup because _setup_network is mocked out
+            # Passing purposefully bag constructor parameters and ignoring
+            # Caffe network setup (above mocking).
+            # noinspection PyTypeChecker
             g = CaffeDescriptorGenerator(0, 0, 0)
             self.assertRaises(
                 NotImplementedError,

@@ -107,7 +107,7 @@ IqrView.prototype.construct_view = function (container) {
             data: {
                 fid: fid
             },
-            success: function(data) {
+            success: function() {
                 bar.on(message_prefix+"Complete");
                 bar.stop_active("success");
                 bar.progress_div.fadeOut('slow', function () {
@@ -125,7 +125,6 @@ IqrView.prototype.construct_view = function (container) {
     });
 
     state_load_flow.onFileSuccess(function(file) {
-        var fname = file.name;
         var fid = file.uniqueIdentifier;
 
         var bar = new ActivityBar(self.ingest_progress_zone,
@@ -141,7 +140,7 @@ IqrView.prototype.construct_view = function (container) {
                     data: {
                         fid: fid
                     },
-                    success: function(data) {
+                    success: function() {
                         bar.on("Finished ingesting new state.");
                         bar.stop_active("success");
                         bar.progress_div.fadeOut("slow", function () {

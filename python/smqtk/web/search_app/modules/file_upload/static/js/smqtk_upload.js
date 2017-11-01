@@ -22,7 +22,7 @@ function FileProgressIndicator(container, flow_file) {
 
     this.remove_icon = $('<img width=12px height=12px ' +
                           'src="/static/img/cancel.png">');
-    this.remove_icon.click(function(event) {
+    this.remove_icon.click(function() {
         self.remove();
     });
     this.remove_icon.prependTo(this.header);
@@ -131,13 +131,13 @@ function FlowUploadZone(container, upload_url) {
         return true;
     });
 
-    flow.on("fileAdded", function(file, event){
+    flow.on("fileAdded", function(file){
         // TODO: add rejection rules via hook functions?
         ffid_fpi_map[file.uniqueIdentifier] =
                 new FileProgressIndicator($('.flow-progress'), file);
     });
 
-    flow.on("filesSubmitted", function(array, event) {
+    flow.on("filesSubmitted", function() {
         flow.upload();
     });
 
@@ -234,13 +234,13 @@ function FlowUploadButton(button, upload_url) {
         return true;
     });
 
-    flow.on("fileAdded", function(file, event){
+    flow.on("fileAdded", function(file){
         // TODO: add rejection rules via hook functions?
         ffid_fpi_map[file.uniqueIdentifier] =
                 new FileProgressIndicator($('.flow-progress'), file);
     });
 
-    flow.on("filesSubmitted", function(array, event) {
+    flow.on("filesSubmitted", function() {
         flow.upload();
     });
 

@@ -363,8 +363,6 @@ IqrRefineView.prototype.clear_random_results = function () {
  * currently have any stored random IDs.
  */
 IqrRefineView.prototype.display_random_results_range = function (s, e) {
-    var inst = this;
-
     // bound the start and end indices to prevent overflow
     s = Math.min(Math.max(0, s), this.random_ids.length);
     e = Math.min(e, this.random_ids.length);

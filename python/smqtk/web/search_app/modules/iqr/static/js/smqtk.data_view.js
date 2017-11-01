@@ -6,9 +6,13 @@
  *
  * for image load progress status, see: http://usablica.github.io/progress.js/
  *
- * @param is_example: Boolean flag for whether or not this is a view of example
- *                    data, in contrast to data in the IQR working index.
- *
+ * @param container jQuery or DOM element that should contain this DataView.
+ * @param rank 0-indexed rank value of this data element.
+ * @param uid UID of this data element
+ * @param probability Floating point relevance probability value in the range
+ *                    [0,1]
+ * @param is_example Boolean flag for whether or not this is a view of example
+ *                   data, in contrast to data in the IQR working index.
  */
 function DataView(container, rank, uid, probability, is_example) {
     Object.call(this);
@@ -223,7 +227,9 @@ DataView.prototype.update_view = function (server_update) {
                     inst.image_preview_data = inst.adj_neg_on_icon;
                 }
                 else {
+                    // noinspection JSUnresolvedVariable
                     inst.image_preview_data = data.static_preview_link;
+                    // noinspection JSUnresolvedVariable
                     inst.static_view_link = data.static_file_link;
                     inst.image_loaded = true;
 
@@ -268,7 +274,7 @@ DataView.prototype.set_positive = function () {
         url: "adjudicate",
         data: post_data,
         method: "POST",
-        success: function (data) {
+        success: function () {
             //alert_info("Marked ID "+inst.uid+" as "+adj_type);
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -306,7 +312,7 @@ DataView.prototype.set_negative = function () {
         url: "adjudicate",
         data: post_data,
         method: "POST",
-        success: function (data) {
+        success: function () {
             //alert_info("Marked ID "+inst.uid+" as "+adj_type);
         },
         error: function (jqXHR, textStatus, errorThrown) {

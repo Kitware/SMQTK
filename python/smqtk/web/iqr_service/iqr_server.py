@@ -210,6 +210,64 @@ class IqrService (SmqtkWebApp):
         self.session_timeout = \
             sc_config['session_expiration']['session_timeout']
 
+        self.add_routes()
+
+    def add_routes(self):
+        """
+        Setup Flask URL rules.
+        """
+        self.add_url_rule('/is_ready',
+                          view_func=self.is_ready,
+                          methods=['GET'])
+        self.add_url_rule('/session_ids',
+                          view_func=self.get_sessions_ids,
+                          methods=['GET'])
+        self.add_url_rule('/session',
+                          view_func=self.get_session_info,
+                          methods=['GET'])
+        self.add_url_rule('/session',
+                          view_func=self.init_session,
+                          methods=['POST'])
+        self.add_url_rule('/session',
+                          view_func=self.reset_session,
+                          methods=['PUT'])
+        self.add_url_rule('/session',
+                          view_func=self.clean_session,
+                          methods=['DELETE'])
+        self.add_url_rule('/add_external_pos',
+                          view_func=self.add_external_positive,
+                          methods=['POST'])
+        self.add_url_rule('/add_external_neg',
+                          view_func=self.add_external_negative,
+                          methods=['POST'])
+        self.add_url_rule('/adjudicate',
+                          view_func=self.get_adjudication,
+                          methods=['GET'])
+        self.add_url_rule('/adjudicate',
+                          view_func=self.adjudicate,
+                          methods=['POST'])
+        self.add_url_rule('/initialize',
+                          view_func=self.initialize,
+                          methods=['POST'])
+        self.add_url_rule('/refine',
+                          view_func=self.refine,
+                          methods=['POST'])
+        self.add_url_rule('/num_results',
+                          view_func=self.num_results,
+                          methods=['GET'])
+        self.add_url_rule('/get_results',
+                          view_func=self.get_results,
+                          methods=['GET'])
+        self.add_url_rule('/classify',
+                          view_func=self.classify,
+                          methods=['GET'])
+        self.add_url_rule('/state',
+                          view_func=self.get_iqr_state,
+                          methods=['GET'])
+        self.add_url_rule('/state',
+                          view_func=self.set_iqr_state,
+                          methods=['PUT'])
+
     def describe_base64_data(self, b64, content_type):
         """
         Compute and return the descriptor element for the given base64 data.
@@ -229,6 +287,14 @@ class IqrService (SmqtkWebApp):
         return self.descriptor_generator.compute_descriptor(
             de, self.descriptor_factory
         )
+
+    # GET /is_ready
+    # noinspection PyMethodMayBeStatic
+    def is_ready(self):
+        """
+        Simple function that returns True, indicating that the server is active.
+        """
+        return make_response_json("Yes, I'm alive."), 200
 
     # GET /session_ids
     def get_sessions_ids(self):
@@ -387,9 +453,9 @@ class IqrService (SmqtkWebApp):
             sid
                 The id of the session to add the generated descriptor to.
             base64
-                The base64 byes of the data. This should use the standard and
+                The base64 byes of the data. This should use the standard or
                 URL-safe alphabet as the python ``base64.urlsafe_b64decode``
-                module function would expect.
+                module function would expect (handles either alphabet).
             content_type
                 The mimetype of the bytes given.
 
@@ -437,9 +503,9 @@ class IqrService (SmqtkWebApp):
             sid
                 The id of the session to add the generated descriptor to.
             base64
-                The base64 byes of the data. This should use the standard and
+                The base64 byes of the data. This should use the standard or
                 URL-safe alphabet as the python ``base64.urlsafe_b64decode``
-                module function would expect.
+                module function would expect (handles either alphabet).
             content_type
                 The mimetype of the bytes given.
 
@@ -906,20 +972,30 @@ class IqrService (SmqtkWebApp):
 
     # GET /state
     def get_iqr_state(self):
-        """
-        Create a binary package of a session's IQR state.
+        """ [See api.rst]
+        Create and return a binary package representing this IQR session's
+        state.
 
-        This state is composed of the descriptor vectors, and their UUIDs, that
-        were adjudicated positive and negative.
+        An IQR state is composed of the descriptor vectors, and their UUIDs,
+        that were added from external sources, or were adjudicated, positive and
+        negative.
 
-        This function returns a JSON response with the bytes.
-
-        URI Arguments:
+        URL Arguments:
             sid
-                Session UUID to get the state of.
+                Session ID to get the state of.
 
-        This function returns the bytes of the state object (zipfile of json
-        dump)
+        Possible error code returns:
+            400
+                No session ID provided.
+            404
+                No session for the given ID.
+
+        Success returns 200: {
+            message = "Success"
+            ...
+            sid = <str>
+            state_b64 = <str>
+        }
 
         """
         sid = flask.request.args.get('sid', None)
@@ -936,20 +1012,46 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs_state_bytes = iqrs.get_state_bytes()
-
         finally:
             iqrs.lock.release()
 
-        # NOTE: May have to return base64 here instead of bytes.
-        return iqrs_state_bytes, 200
+        # Convert state bytes to a base64 string
+        # - `b64encode` returns bytes, so decode to a string.
+        iqrs_state_b64 = base64.b64encode(iqrs_state_bytes).decode('utf8')
+
+        return make_response_json("Success",
+                                  sid=sid,
+                                  state_b64=iqrs_state_b64), 200
 
     # PUT /state
     def set_iqr_state(self):
-        """
+        """ [See api.rst]
         Set the IQR session state for a given session ID.
 
-        We expect to be given a the URL-safe base64 encoding of bytes of the
-        zip-file buffer returned from the above ``get_iqr_state`` function.
+        We expect the input bytes to have been generated by the matching
+        get-state endpoint (see above). However, unlike the other endpoint's
+        return format, the byte input to this endpoint must be encoded in
+        URL-safe base64.
+
+        Form Args:
+            sid
+                Session ID to set the input state to.
+            state_base64
+                Base64 of the state to set the session to.  This should be
+                retrieved from the [GET] /state endpoint.
+
+        Possible error code returns:
+            400
+                - No session ID provided.
+                - No base64 bytes provided.
+            404
+                No session for the given ID.
+
+        Success returns 200: {
+            message = "Success"
+            ...
+            sid = <str>
+        }
 
         """
         sid = flask.request.form.get('sid', None)
@@ -964,8 +1066,14 @@ class IqrService (SmqtkWebApp):
         #       other security measures?
 
         # Encoding is required because the b64decode does not handle being
-        # given unicode (python2) or str (python3).
-        state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
+        # given unicode (python2) or str (python3): needs bytes.
+
+        try:
+            # Using urlsafe version because it handles both regular and urlsafe
+            # alphabets.
+            state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
+        except TypeError as ex:
+            return make_response_json("Invalid base64 input: %s" % str(ex)), 400
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -976,72 +1084,7 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs.set_state_bytes(state_bytes, self.descriptor_factory)
-
         finally:
             iqrs.lock.release()
 
         return make_response_json("Success", sid=sid), 200
-
-    # GET /is_ready
-    # noinspection PyMethodMayBeStatic
-    def is_ready(self):
-        """
-        Simple function that returns True, indicating that the server is active.
-        """
-        return make_response_json("Yes, I'm alive."), 200
-
-    def run(self, host=None, port=None, debug=False, **options):
-        # Setup REST API here, register methods
-        self.add_url_rule('/session_ids',
-                          view_func=self.get_sessions_ids,
-                          methods=['GET'])
-        self.add_url_rule('/session',
-                          view_func=self.get_session_info,
-                          methods=['GET'])
-        self.add_url_rule('/session',
-                          view_func=self.init_session,
-                          methods=['POST'])
-        self.add_url_rule('/session',
-                          view_func=self.reset_session,
-                          methods=['PUT'])
-        self.add_url_rule('/session',
-                          view_func=self.clean_session,
-                          methods=['DELETE'])
-        self.add_url_rule('/add_external_pos',
-                          view_func=self.add_external_positive,
-                          methods=['POST'])
-        self.add_url_rule('/add_external_neg',
-                          view_func=self.add_external_negative,
-                          methods=['POST'])
-        self.add_url_rule('/adjudicate',
-                          view_func=self.get_adjudication,
-                          methods=['GET'])
-        self.add_url_rule('/adjudicate',
-                          view_func=self.adjudicate,
-                          methods=['POST'])
-        self.add_url_rule('/initialize',
-                          view_func=self.initialize,
-                          methods=['POST'])
-        self.add_url_rule('/refine',
-                          view_func=self.refine,
-                          methods=['POST'])
-        self.add_url_rule('/num_results',
-                          view_func=self.num_results,
-                          methods=['GET'])
-        self.add_url_rule('/get_results',
-                          view_func=self.get_results,
-                          methods=['GET'])
-        self.add_url_rule('/classify',
-                          view_func=self.classify,
-                          methods=['GET'])
-        self.add_url_rule('/state',
-                          view_func=self.get_iqr_state,
-                          methods=['GET'])
-        self.add_url_rule('/state',
-                          view_func=self.set_iqr_state,
-                          methods=['PUT'])
-        self.add_url_rule('/is_ready',
-                          view_func=self.is_ready,
-                          methods=['GET'])
-
-        super(IqrService, self).run(host, port, debug, **options)

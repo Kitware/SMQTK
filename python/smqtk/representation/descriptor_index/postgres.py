@@ -253,8 +253,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
         def exec_hook(cur):
             cur.execute(q)
 
-        # There's only going to be one row returned with one element in it
-        return list(self.psql_helper.single_execute(exec_hook, True))[0][0]
+        # There's only going to be one row returned with one element in it.
+        return list(self.psql_helper.single_execute(
+            exec_hook, yield_result_rows=True
+        ))[0][0]
 
     def clear(self):
         """
@@ -296,7 +298,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.execute(q, {'uuid_like': str(uuid)})
 
         # Should either yield one or zero rows
-        return bool(list(self.psql_helper.single_execute(exec_hook, True)))
+        return bool(list(self.psql_helper.single_execute(
+            exec_hook, yield_result_rows=True
+        )))
 
     def add_descriptor(self, descriptor):
         """
@@ -367,7 +371,8 @@ class PostgresDescriptorIndex (DescriptorIndex):
             cur.executemany(q, batch)
 
         self._log.debug("Adding many descriptors")
-        list(self.psql_helper.batch_execute(iter_elements(), exec_hook))
+        list(self.psql_helper.batch_execute(iter_elements(), exec_hook,
+                                            self.multiquery_batch_size))
 
     def get_descriptor(self, uuid):
         """
@@ -399,7 +404,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    "uuid '%s' (got: %d)"
                                    % (uuid, c.rowcount))
 
-        r = list(self.psql_helper.single_execute(eh, True))
+        r = list(self.psql_helper.single_execute(eh, yield_result_rows=True))
         return pickle.loads(str(r[0][0]))
 
     def get_many_descriptors(self, uuids):
@@ -444,7 +449,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
         #   - We also check that the number of rows we got back is the same
         #     as elements yielded, else there were trailing UUIDs that did not
         #     match anything in the database.
-        g = self.psql_helper.batch_execute(iterelems(), exec_hook, True)
+        g = self.psql_helper.batch_execute(iterelems(), exec_hook,
+                                           self.multiquery_batch_size,
+                                           yield_result_rows=True)
         i = 0
         for r, expected_uuid in itertools.izip(g, uuid_order):
             d = pickle.loads(str(r[0]))
@@ -541,7 +548,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
             ))
 
         #: :type: __generator
-        execution_results = self.psql_helper.single_execute(execute, True, named=True)
+        execution_results = self.psql_helper.single_execute(
+            execute, yield_result_rows=True, named=True
+        )
         for r in execution_results:
             d = pickle.loads(str(r[0]))
             yield d

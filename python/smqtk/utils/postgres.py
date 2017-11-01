@@ -267,9 +267,10 @@ class PsqlConnectionHelper (SmqtkObject):
             forward.
         :type cursor_callback: (psycopg2._psycopg.cursor, list) -> None
 
-        :param batch_size: Batch size limit. May be a positive integer, 0 or
-            None. A value of 0 or None means that no batching occurs and all
-            elements from the iterable are collected.
+        :param batch_size: Batch size limit when pulling elements from the input
+            iterable. May be a positive integer, 0 or None. A value of 0 or None
+            means that no batching occurs and all elements from the iterable are
+            collected.
 
             Once this number of elements are collected from the iterable, the
             callback is called with the collected batch of elements.
@@ -343,9 +344,11 @@ class PsqlConnectionHelper (SmqtkObject):
                             for r in cur:
                                 yield r
 
-            conn.commit()
+            if conn is not None:
+                conn.commit()
         except:
-            conn.rollback()
+            if conn is not None:
+                conn.rollback()
             raise
         finally:
             # conn.__exit__ doesn't close connection, just the transaction

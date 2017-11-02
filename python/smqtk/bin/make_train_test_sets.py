@@ -17,7 +17,7 @@ class KeyToFilepath(argparse.Action):
     """
     re_key2path = re.compile('(\w+)=(.+)', flags=re.UNICODE)
 
-    # noinspection PyUnusedLocal
+    # noinspection PyUnusedLocal,PyShadowingBuiltins
     def __init__(self, option_strings, dest, nargs=None, const=None,
                  default=None, type=None, choices=None, required=False,
                  help=None, metavar=None):

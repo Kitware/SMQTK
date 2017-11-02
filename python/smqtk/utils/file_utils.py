@@ -87,7 +87,7 @@ def safe_file_write(path, b, tmp_dir=None):
     os.rename(fp, path)
 
 
-def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
+def make_tempfile(suffix="", prefix="tmp", directory=None, text=False):
     """
     Wrapper for ``tempfile.mkstemp`` that closes/discards the file descriptor
     returned from the method. Arguments/keywords passed are the same as, and
@@ -97,7 +97,7 @@ def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
     :rtype: str
 
     """
-    fd, fp = tempfile.mkstemp(suffix, prefix, dir, text)
+    fd, fp = tempfile.mkstemp(suffix, prefix, directory, text)
     os.close(fd)
     return fp
 

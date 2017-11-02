@@ -1,32 +1,4 @@
-from smqtk.utils import SmqtkObject
-from smqtk.utils import Configurable, plugin
-
-
-__all__ = [
-    'SmqtkAlgorithm',
-    'Classifier', 'SupervisedClassifier', 'get_classifier_impls',
-    'DescriptorGenerator', 'get_descriptor_generator_impls',
-    'NearestNeighborsIndex', 'get_nn_index_impls',
-    'HashIndex', 'get_hash_index_impls',
-    'LshFunctor', 'get_lsh_functor_impls',
-    'RelevancyIndex', 'get_relevancy_index_impls',
-]
-
-
-# noinspection PyAbstractClass
-class SmqtkAlgorithm (SmqtkObject, Configurable, plugin.Pluggable):
-    """
-    Parent class for all algorithm interfaces.
-    """
-
-    @property
-    def name(self):
-        """
-        :return: The name of this class type.
-        :rtype: str
-        """
-        return self.__class__.__name__
-
+from ._interface import SmqtkAlgorithm
 
 # Import module abstracts and plugin getter functions
 from .classifier import Classifier, SupervisedClassifier, get_classifier_impls

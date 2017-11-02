@@ -53,6 +53,7 @@ def flann_build(codebook, flann_index_file=None, target_precision=0.99,
     Prepares quantization module based on pyflann
 
     @param codebook: loaded codebook in numpy format (row-wise)
+    @param flann_index_file: path to the index file to read from.
     @param target_precision: amount of exactness of approximation, the lower,
         the faster
     @param log_level: log data format to be generatede by flann
@@ -90,14 +91,18 @@ def flann_quantize_data(flann,
     """
     Quantize raw data based on flann module
 
+    @param flann: FLANN index instance.
     @param filein_name: input file (raw contents before quantization)
-    @param filein_gzipped: is the input file in gziped encoding?
-        (default = False)
     @param fileout_name: output file (quantized results)
     @param func_normalize: a function to normalize each data row (if not
         necessary, use None)
+    @param filein_gzipped: is the input file in gziped encoding?
+        (default = False)
+    @param filein_bzipped:is the input file in bziped encoding?
+        (default = False)
     @param delimiter: delimiter used for input file
-    @param fileout_gzipped:
+    @param fileout_gzipped: if the file out should be compressed with gzip
+    @param fileout_bzipped: if the file out should be compressed with bzip
     @param k: number of quantization nearest neighbors to be saved (if k>1,
         that's soft quantization)
     @param sparsity: controls the amount of input data to be used. E.g., if 3,
@@ -276,6 +281,7 @@ def quantizeResults2(file_input, file_output, file_codebook, file_flann,
     @param file_codebook: codebook file
     @param file_flann: quantization parameters for approximate nearest-neighbor
     @param filein_gzipped: if True, treat the file as gzipped version
+    @param filein_bzipped: if True, treat the file as bzipped version
     """
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
     flann = flann_build(cbook, file_flann)
@@ -294,7 +300,7 @@ def quantizeResults3(in_descriptors, file_codebook, file_flann):
     :param in_descriptors: Matrix of input descriptors, first row: frame number,
         rows 2-3: colorDescriptor info, rows 4+: descriptor
     :param file_codebook: codebook file
-    ;param file_flann: quantization parameters for approximate nearest-neighbor
+    :param file_flann: quantization parameters for approximate nearest-neighbor
 
     """
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
@@ -375,6 +381,11 @@ def build_sp_hist2(feas, bins_code=np.arange(0, 4096+1)):
 
     :param feas: quantized data matrix
     :type feas: numpy.matrixlib.defmatrix.matrix
+
+    :param bins_code: Index code array for input features.  This is usually a
+        sequential array of integers the same size as the dimensionalty of the
+        feature vectors.
+    :type bins_code: np.ndarray[int]
 
     :return: martrix of 8 rows representing the histograms for the different
         spacial regions.

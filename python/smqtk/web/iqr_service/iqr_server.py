@@ -310,7 +310,7 @@ class IqrService (SmqtkWebApp):
         """
         Get a JSON return with session state information.
 
-        Arguments:
+        URL Arguments:
             sid
                 ID of the session.
         """

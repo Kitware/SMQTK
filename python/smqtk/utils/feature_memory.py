@@ -41,6 +41,9 @@ class FeatureMemory (object):
             to whether or not the associated clip ID should be considered a
             background video or not.
         :type bg_flags_file: str
+        :param rw_lock: Optional ReadWriteLock for this instance to use. If not
+            provided, we will create our own.
+        :type rw_lock: None or ReadWriteLock
         :return: Symmetric FeatureMemory constructed with the data provided in
             the provided files.
         :rtype: FeatureMemory
@@ -419,6 +422,8 @@ class FeatureMemoryMap (object):
             ``id_vector`` maps row indices to the clip ID the feature
             represents.
         :param kernel_mat: Pre-computed distance kernel
+        :param rw_lock: Optional read-write lock to manually use with underlying
+            feature memory construct.  Otherwise we create our own.
 
         """
         with self._map_lock:
@@ -538,9 +543,12 @@ class FeatureMemoryMap (object):
         :raise ValueError: If the given clip ID is not represented in the
             feature matrix.
 
+        :param feature_type: Feature type to access:
+        :type feature_type: str
+
         :param clip_id_or_ids: One or more integer clip IDs to retrieve the
             feature vectors for.
-        :type clip_id_or_ids: tuple of int
+        :type clip_id_or_ids: int
 
         :return: NxM matrix, where N is the number of clip IDs requested and M
             is the length of a feature vector for this vector.

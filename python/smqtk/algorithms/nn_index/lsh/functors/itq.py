@@ -304,6 +304,11 @@ class ItqFunctor (LshFunctor):
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :param use_multiprocessing: If multiprocessing should be used, as
+            opposed to threading, when collecting descriptor elements from the
+            given iterable.
+        :type use_multiprocessing: bool
+
         :raises RuntimeError: There is already a model loaded
 
         :return: Matrix hash codes for provided descriptors in order.

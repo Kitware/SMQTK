@@ -57,7 +57,7 @@ class SimpleRPFunctor (LshFunctor):
         }
 
     def has_model(self):
-        return (self.mean_vec is not None)
+        return self.mean_vec is not None
 
     def fit(self, descriptors, use_multiprocessing=True):
         """
@@ -67,6 +67,11 @@ class SimpleRPFunctor (LshFunctor):
             the model to.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param use_multiprocessing: If multiprocessing should be used, as
+            opposed to threading, for collecting descriptor vectors from the
+            provided iterable.
+        :type use_multiprocessing: bool
 
         :raises RuntimeError: There is already a model loaded
 
@@ -78,7 +83,7 @@ class SimpleRPFunctor (LshFunctor):
             raise RuntimeError("Model components have already been loaded.")
 
         dbg_report_interval = None
-        if self.logger().getEffectiveLevel() <= logging.DEBUG:
+        if self.get_logger().getEffectiveLevel() <= logging.DEBUG:
             dbg_report_interval = 1.0  # seconds
         if not hasattr(descriptors, "__len__"):
             self._log.info("Creating sequence from iterable")

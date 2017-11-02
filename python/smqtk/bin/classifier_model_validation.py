@@ -353,16 +353,31 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                label2classifications, plot_ci, plot_ci_alpha,
                plot_ci_make_poly):
     """
+    :param log: Logger to use.
+    :type log: logging.Logger
+
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays of the curve plot.
     :type skl_curve_func:
         (list[float], list[float]) ->
             (numpy.ndarray[float], numpy.ndarray[float], numpy.ndarray[float])
 
+    :param title: Title of the plot.
+    :param xlabel: X-axis label for the plot.
+    :param ylabel: Y-axis label for the plot.
+    :param output_filepath: Path to write the generated plot image to.
+
     :param label2classifications: Mapping of label to the classification
         elements that should be that label.
     :type label2classifications:
         dict[str, set[smqtk.representation.ClassificationElement]]
+
+    :param plot_ci: Flag for whether to draw the confidence interval or not.
+    :type plot_ci: bool
+
+    :param plot_ci_alpha: Alpha value to use for coloring the confidence
+        interval area in the range [0, 1].
+    :type plot_ci_alpha: float
 
     :param plot_ci_make_poly: Function that takes x, y, and their upper and
         lower confidence interval estimations, and returns a plt.Polygon

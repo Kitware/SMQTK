@@ -295,8 +295,17 @@ def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
             ...
         }
 
+    :param log: Logger instance to use.
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays.
+    :param title_hook: Descriptive label of the classifier.
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :param fold_data: Truth and classification probability results for test data
+        per fold.  See above for format.
+    :param output_dir: Directory to output plot images to.
+    :param plot_prefix: String prefix for output files.
+    :param show: Show the output plots interactively or not.
     """
     file_utils.safe_create_dir(output_dir)
 

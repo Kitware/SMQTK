@@ -356,7 +356,7 @@ class TimedCacheProxy (BaseProxy2):
 class ProxyManager (SyncManager):
     """
     This class shouldn't be initialized directly, but instead initialized and
-    retrieved through the init and get functions below.
+    retrieved through the init* and get* functions below.
     """
     pass
 
@@ -399,8 +399,8 @@ __mgr_cache__ = {}
 
 
 # noinspection PyPep8Naming
-def initFeatureManagerConnection(address=None, authkey=None,
-                                 serializer='pickle'):
+def initProxyManagerConnection(address=None, authkey=None,
+                               serializer='pickle'):
     """ Initialize ProxyManager connection
 
     :raises ValueError: The given address already maps to an initialized
@@ -417,6 +417,9 @@ def initFeatureManagerConnection(address=None, authkey=None,
         are getting the feature manager for this process tree (creating the
         connection).
     :type authkey: None or str
+
+    :param serializer: Transport serialization method.  This can be 'pickle' or
+        'xmlrpclib' (see ``multiprocessing.managers.listener_client``).
 
     """
     global __mgr_cache__
@@ -441,7 +444,7 @@ def initFeatureManagerConnection(address=None, authkey=None,
         raise
 
 
-def removeFeatureManagerConnection(address=None):
+def removeProxyManagerConnection(address=None):
     """ Shutdown and remove an initialized ProxyManager connection
     :raises KeyError: if the given address is not associated with to an active
         manager.
@@ -457,7 +460,7 @@ def removeFeatureManagerConnection(address=None):
 
 
 # noinspection PyPep8Naming
-def getFeatureManager(address=None):
+def getProxyManager(address=None):
     """
     Get the ProxyManager instance for the given address from the cache. If the
     address is None, returns the ProxyManager for the current process tree

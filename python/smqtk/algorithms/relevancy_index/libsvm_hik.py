@@ -158,8 +158,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # matrix for creating distance kernel
         self._descr_matrix = []
 
-        def get_vector(d):
-            return d, d.vector()
+        def get_vector(d_elem):
+            return d_elem, d_elem.vector()
 
         # noinspection PyTypeChecker
         vector_iter = parallel_map(get_vector, descriptors,

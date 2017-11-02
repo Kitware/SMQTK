@@ -8,7 +8,6 @@ References:
 import itertools
 import logging
 import multiprocessing
-import uuid
 
 try:
     import cPickle as pickle

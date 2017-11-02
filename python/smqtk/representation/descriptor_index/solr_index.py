@@ -250,12 +250,13 @@ class SolrDescriptorIndex (DescriptorIndex):
         """
         # Chunk up query based on max clauses available to us
 
-        def batch_query(batch):
+        def batch_query(_batch):
             """
-            :type batch: list[collections.Hashable]
+            :param _batch: Batch of UIDs to select.
+            :type _batch: list[collections.Hashable]
             """
-            query = ' OR '.join([self.d_uid_field + (':%s' % uid)
-                                 for uid in batch])
+            query = ' OR '.join([self.d_uid_field + (':%s' % _uid)
+                                 for _uid in _batch])
             r = self.solr.select("%s:%s AND (%s)"
                                  % (self.index_uuid_field, self.index_uuid,
                                     query))
@@ -309,12 +310,13 @@ class SolrDescriptorIndex (DescriptorIndex):
         """
         # Chunk up operation based on max clauses available to us
 
-        def batch_op(batch):
+        def batch_op(_batch):
             """
-            :type batch: list[collections.Hashable]
+            :param _batch: UIDs to remove from index.
+            :type _batch: list[collections.Hashable]
             """
-            uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(uid))
-                                      for uid in batch])
+            uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
+                                      for _uid in _batch])
             self.solr.delete("%s:%s AND (%s)"
                              % (self.index_uuid_field, self.index_uuid,
                                 uuid_query))

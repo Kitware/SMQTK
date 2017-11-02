@@ -253,14 +253,14 @@ def generate_image_transformations(image_path,
     p_base = os.path.join(output_dir, p_base)
     image = PIL.Image.open(image_path).convert('RGB')
 
-    def save_image(i, suffixes):
+    def save_image(img, suffixes):
         """
         Save an image based on source image basename and an iterable of suffix
         parts that will be separated by periods.
         """
         fn = '.'.join([p_base] + list(suffixes)) + p_ext
         log.debug("Saving: %s", fn)
-        i.save(fn)
+        img.save(fn)
 
     if crop_center_n:
         log.info("Computing center crops")

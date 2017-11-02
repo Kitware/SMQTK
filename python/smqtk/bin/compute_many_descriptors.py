@@ -95,12 +95,12 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
     def iter_valid_elements():
         def is_valid(file_path):
-            dfe = DataFileElement(file_path)
+            e = DataFileElement(file_path)
 
             if is_valid_element(
-                    dfe, valid_content_types=generator.valid_content_types(),
+                    e, valid_content_types=generator.valid_content_types(),
                     check_image=check_image):
-                return dfe
+                return e
             else:
                 return False
 

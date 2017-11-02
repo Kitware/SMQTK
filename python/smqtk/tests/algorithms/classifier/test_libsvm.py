@@ -116,9 +116,9 @@ if LibSvmClassifier.is_usable():
             )
 
             def make_element((i, v)):
-                d = d_factory.new_descriptor('test', i)
-                d.set_vector(v)
-                return d
+                elem = d_factory.new_descriptor('test', i)
+                elem.set_vector(v)
+                return elem
 
             # Constructing artificial descriptors
             x = numpy.random.rand(N, DIM)
@@ -223,9 +223,9 @@ if LibSvmClassifier.is_usable():
             di = 0
 
             def make_element((i, v)):
-                d = d_factory.new_descriptor('test', i)
-                d.set_vector(v)
-                return d
+                elem = d_factory.new_descriptor('test', i)
+                elem.set_vector(v)
+                return elem
 
             # Constructing artificial descriptors
             x = numpy.random.rand(N, DIM)

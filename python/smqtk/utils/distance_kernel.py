@@ -71,9 +71,10 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     s = [0] * 7
     if row_wise:
         log.debug("Computing row-wise distances")
-        # For all rows except the last one. We'll have computed all distanced by
+        # For all rows except the last one. We'll have computed all distances by
         # the time reach m[side-1]
         if parallel:
+            # noinspection PyShadowingNames
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side - 1):
@@ -94,6 +95,7 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     else:
         log.debug("Computing element-wise distances")
         if parallel:
+            # noinspection PyShadowingNames
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row

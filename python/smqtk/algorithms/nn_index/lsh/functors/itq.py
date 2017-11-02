@@ -371,8 +371,8 @@ class ItqFunctor (LshFunctor):
                             'singular value')
 
         # Same ordering method for both eig/svd sources.
-        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda p: p[0],
-                              reverse=1)
+        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda _p: _p[0],
+                              reverse=True)
 
         self._log.debug("-- top vector extraction")
         # Only keep the top ``bit_length`` vectors after ordering by descending

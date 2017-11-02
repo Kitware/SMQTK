@@ -63,12 +63,13 @@ class TestIsValidElement(unittest.TestCase):
 
 class TestCheckImageCli(unittest.TestCase):
 
-    def check_images(self):
-        stdout, stderr = False, False
+    @staticmethod
+    def check_images():
+        """ Simulate execution of check_images utility main. """
         saved_stdout, saved_stderr = sys.stdout, sys.stderr
 
+        out, err = StringIO(), StringIO()
         try:
-            out, err = StringIO(), StringIO()
             sys.stdout, sys.stderr = out, err
             check_images_main()
         except SystemExit:

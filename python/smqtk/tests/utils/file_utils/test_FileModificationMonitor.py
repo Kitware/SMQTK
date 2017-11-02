@@ -12,7 +12,8 @@ import smqtk.utils.file_utils
 
 class TestFileModificationMonitor (unittest.TestCase):
 
-    def _mk_test_fp(self):
+    @staticmethod
+    def _mk_test_fp():
         fd, fp = tempfile.mkstemp()
         os.close(fd)
         atexit.register(lambda: os.remove(fp))

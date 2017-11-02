@@ -3,7 +3,10 @@ import unittest
 # modified path since this is now being embeded in another project.
 from smqtk.utils import jsmin
 
-class JsTests(unittest.TestCase):
+
+class JsTests (unittest.TestCase):
+
+    # noinspection PyMethodMayBeStatic
     def _minify(self, js):
         return jsmin.jsmin(js)
 
@@ -14,6 +17,7 @@ class JsTests(unittest.TestCase):
             raise AssertionError
         return True
 
+    # noinspection PyMethodMayBeStatic
     def assertMinified(self, js_input, expected):
         minified = jsmin.jsmin(js_input)
         assert minified == expected, "%r != %r" % (minified, expected)
@@ -203,6 +207,7 @@ var  foo    =  "hey";
         js = r'// a comment\n'
         self.assertMinified(js, '')
 
+    # noinspection PyMethodMayBeStatic
     def testInputStream(self):
         from six.moves import StringIO
 

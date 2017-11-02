@@ -1,12 +1,12 @@
 import os
 
 from smqtk.utils.plugin import get_plugins
+from .hash_index import HashIndex
 
 __all__ = [
     'HashIndex', 'get_hash_index_impls',
 ]
 
-from .hash_index import HashIndex
 
 def get_hash_index_impls(reload_modules=False):
     """
@@ -17,10 +17,11 @@ def get_hash_index_impls(reload_modules=False):
     We search for implementation classes in:
         - modules next to this file this function is defined in (ones that
           begin with an alphanumeric character),
-        - python modules listed in the environment variable ``HASH_INDEX_PATH``
+        - python modules listed in the environment variable
+         ``HASH_INDEX_PATH``
             - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
+              specifications, separated by the platform specific PATH
+              separator character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
     ``HASH_INDEX_CLASS``, which can either be a single class object or

@@ -1,12 +1,11 @@
 import os
 
 from smqtk.utils.plugin import get_plugins
+from .nn_index import NearestNeighborsIndex
 
 __all__ = [
     'NearestNeighborsIndex', 'get_nn_index_impls',
 ]
-
-from .nn_index import NearestNeighborsIndex
 
 
 def get_nn_index_impls(reload_modules=False):
@@ -16,12 +15,12 @@ def get_nn_index_impls(reload_modules=False):
     values are the actual class type objects.
 
     We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
+        - modules next to this file this function is defined in (ones that
+          begin with an alphanumeric character),
         - python modules listed in the environment variable ``NN_INDEX_PATH``
             - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
+              specifications, separated by the platform specific PATH
+              separator character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
     ``NN_INDEX_CLASS``, which can either be a single class object or

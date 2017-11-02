@@ -359,7 +359,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
             return osp.join(self._get_checkpoint_dir(data),
                             "%s.feature.npy" % str(data.uuid()))
 
-    def generate_model(self, data_set, **kwargs):
+    def generate_model(self, data_set):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.

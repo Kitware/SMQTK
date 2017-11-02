@@ -82,6 +82,7 @@ def flann_build(codebook, flann_index_file=None, target_precision=0.99,
     return flann
 
 
+# noinspection PyUnusedLocal
 def flann_quantize_data(flann,
                         filein_name, fileout_name,
                         func_normalize,
@@ -116,7 +117,6 @@ def flann_quantize_data(flann,
     assert not (fileout_gzipped and fileout_bzipped), \
         "Output file cannot be declared as both gzipped and bzipped."
 
-    fin = None
     if filein_gzipped or os.path.splitext(filein_name)[1] == '.gz':
         fin = gzip.open(filein_name, 'rb')
     elif filein_bzipped or os.path.splitext(filein_name)[1] == '.bz2':
@@ -164,8 +164,6 @@ def flann_quantize_data(flann,
 
     if count2 > 0:
         quantize_then_write(lines)
-        count2 = 0
-        lines = []
 
     fin.close()
     fout.close()

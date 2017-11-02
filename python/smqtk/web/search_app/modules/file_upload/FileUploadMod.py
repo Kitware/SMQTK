@@ -70,8 +70,6 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
             self._log.debug("POST form contents: %s" % str(flask.request.form))
 
             fid = form['flowIdentifier']
-            success = True
-            chunk_size = int(form['flowChunkSize'])
             current_chunk = int(form['flowChunkNumber'])
             total_chunks = int(form['flowTotalChunks'])
             filename = form['flowFilename']
@@ -108,13 +106,11 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                     except IOError as ex:
                         self._log.debug("[%s] Failed to write combined chunks",
                                         filename+"::"+fid)
-                        success = False
                         message = "Failed to write out combined chunks for " \
                                   "file %s: %s" % (filename, str(ex))
                         raise RuntimeError(message)
 
                     except NotImplementedError as ex:
-                        success = False
                         message = "Encountered non-implemented code path: %s" \
                                   % str(ex)
                         raise RuntimeError(message)
@@ -124,16 +120,6 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                         del self._file_chunks[fid]
                         del self._fid_locks[fid]
 
-            # return flask.jsonify({
-            #     'id': fid,
-            #     'success': success,
-            #     'message': message,
-            #
-            #     'chunk_size': chunk_size,
-            #     'current_chunk': current_chunk,
-            #     'total_chunks': total_chunks,
-            #     'filename': filename,
-            # })
             # Flow only displays return as a string, so just returning the
             # message component.
             return message

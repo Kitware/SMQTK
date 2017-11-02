@@ -182,7 +182,7 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.file_utils'
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
-    def test_add_data_single(self, m_isinstance, m_scd, m_open, m_pickle):
+    def test_add_data_single(self, m_isinstance, m_scd, m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -214,7 +214,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk0(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -249,7 +249,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk3(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -286,7 +286,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk3_relative(self, m_isinstance, m_scd,
-                                               m_open, m_pickle):
+                                               m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 

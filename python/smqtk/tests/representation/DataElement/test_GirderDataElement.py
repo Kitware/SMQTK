@@ -65,7 +65,7 @@ if GirderDataElement.is_usable():
             self.assertIsInstance(e.gc, girder_client.GirderClient)
 
         @mock.patch('girder_client.GirderClient.authenticate')
-        def test_repr(self, mock_requests):
+        def test_repr(self, _mock_requests):
             expected_file_id = 'some_file id'
             expected_api_root = 'https://some.server/api/v1'
             expected_api_key = 'someKeyHere'
@@ -90,7 +90,7 @@ if GirderDataElement.is_usable():
                               "token": None})
 
         @mock.patch('girder_client.GirderClient.authenticate')
-        def test_from_config_full_constructor(self, mock_authenticate):
+        def test_from_config_full_constructor(self, _mock_authenticate):
             expected_file_id = '34uhki34gh2345ghjk'
             expected_api_root = 'https://some.other.server/api/v1'
             expected_api_key = '1234ghk135hlg23435'
@@ -100,6 +100,7 @@ if GirderDataElement.is_usable():
                 'api_root': expected_api_root,
                 'api_key': expected_api_key,
             }
+            #: :type: GirderDataElement
             e = GirderDataElement.from_config(new_config)
             self.assertEqual(e.file_id, expected_file_id)
             self.assertEqual(e.api_root, expected_api_root)
@@ -109,6 +110,7 @@ if GirderDataElement.is_usable():
             expected_file_id = '5hjkl1345hjk'
             expected_api_root = self.LOCAL_APIROOT
             expected_api_key = None
+            #: :type: GirderDataElement
             e = GirderDataElement.from_config({'file_id': expected_file_id})
             self.assertEqual(e.file_id, expected_file_id)
             self.assertEqual(e.api_root, expected_api_root)
@@ -187,7 +189,7 @@ if GirderDataElement.is_usable():
 
         @mock.patch('girder_client.GirderClient.getFile')
         def test_get_file_model_item_no_exists(self, m_getFile):
-            def raise_http_error(*args, **kwargs):
+            def raise_http_error(*_, **__):
                 raise girder_client.HttpError(None, None, None, None)
             m_getFile.side_effect = raise_http_error
 
@@ -217,7 +219,7 @@ if GirderDataElement.is_usable():
                     '.get_file_model')
         @mock.patch('girder_client.GirderClient.getFolder')
         @mock.patch('girder_client.GirderClient.getItem')
-        def test_writable(self, m_getItem, m_getFolder, m_get_file_model):
+        def test_writable(self, m_getItem, m_getFolder, _m_get_file_model):
             m_getItem.return_value = {'folderId': 'someFolderId'}
             m_getFolder.return_value = {'_accessLevel': 1}
 
@@ -260,7 +262,7 @@ if GirderDataElement.is_usable():
 
         @mock.patch('girder_client.GirderClient.downloadFile')
         @mock.patch('six.BytesIO.getvalue')
-        def test_get_bytes(self, m_getvalue, m_downloadFile):
+        def test_get_bytes(self, m_getvalue, _m_downloadFile):
             m_getvalue.return_value = 'foo'
 
             e = GirderDataElement('someId')

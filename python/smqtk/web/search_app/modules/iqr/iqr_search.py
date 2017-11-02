@@ -367,7 +367,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             # Getting the current IQR session ensures that one has been
             # constructed for the current session.
-            sid = self.get_current_iqr_session()
+            _ = self.get_current_iqr_session()
             return flask.jsonify({
                 "success": True
             })

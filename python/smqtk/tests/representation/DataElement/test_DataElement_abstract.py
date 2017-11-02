@@ -125,8 +125,8 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_noExisting_noDir(self,
-                                        mock_open, mock_os_open, mock_os_close,
-                                        mock_fcntl, mock_scd):
+                                        mock_open, _mock_os_open,
+                                        _mock_os_close, _mock_fcntl, mock_scd):
         # no existing temps, no specific dir
         fp = DummyDataElement().write_temp()
 
@@ -140,8 +140,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_noExisting_givenDir(self,
-                                           mock_open, mock_os_open,
-                                           mock_os_close, mock_fcntl, mock_scd):
+                                           mock_open, _mock_os_open,
+                                           _mock_os_close, _mock_fcntl,
+                                           mock_scd):
         # no existing temps, given specific dir
         target_dir = '/some/dir/somewhere'
 
@@ -159,8 +160,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_noDir(self,
-                                         mock_open, mock_os_open, mock_os_close,
-                                         mock_fcntl, mock_scd, mock_isfile):
+                                         mock_open, _mock_os_open,
+                                         _mock_os_close, _mock_fcntl, mock_scd,
+                                         mock_isfile):
         # Pretend we have existing temps. Will to "write" a temp file to no
         # specific dir, which should not write anything new and just return the
         # last path in the list.
@@ -196,8 +198,8 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
-    def test_writeTemp_hasExisting_givenNewDir(self, mock_open, mock_os_open,
-                                               mock_os_close, mock_fcntl,
+    def test_writeTemp_hasExisting_givenNewDir(self, mock_open, _mock_os_open,
+                                               _mock_os_close, _mock_fcntl,
                                                mock_scd):
         # existing temps, given specific dir
         prev_0 = '/tmp/file.txt'
@@ -222,9 +224,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_givenExistingDir(self, mock_open,
-                                                    mock_os_open, mock_os_close,
-                                                    mock_fcntl, mock_scd,
-                                                    mock_isfile):
+                                                    _mock_os_open,
+                                                    _mock_os_close, _mock_fcntl,
+                                                    mock_scd, mock_isfile):
         # Pretend these files already exist as written temp files.
         # We test that write_temp with a target directory yields a previously
         #   "written" temp file.

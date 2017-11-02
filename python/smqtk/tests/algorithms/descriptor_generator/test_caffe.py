@@ -54,7 +54,7 @@ if CaffeDescriptorGenerator.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_get_config(self, m_cdg_setupNetwork):
+        def test_get_config(self, _m_cdg_setupNetwork):
             # Mocking set_network so we don't have to worry about actually
             # initializing any caffe things for this test.
             expected_params = {
@@ -114,7 +114,7 @@ if CaffeDescriptorGenerator.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_invalid_datatype(self, m_cdg_setupNetwork):
+        def test_invalid_datatype(self, _m_cdg_setupNetwork):
             # Test that a data element with an incorrect content type raises an
             # exception.
 
@@ -145,7 +145,7 @@ if CaffeDescriptorGenerator.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_no_internal_compute_descriptor(self, m_cdg_setupNetwork):
+        def test_no_internal_compute_descriptor(self, _m_cdg_setupNetwork):
             # This implementation's descriptor computation logic sits in async
             # method override due to caffe's natural multi-element computation
             # interface. Thus, ``_compute_descriptor`` should not be

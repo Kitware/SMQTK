@@ -39,7 +39,7 @@ class DummyRWLock (object):
     def releaseWrite(self, _id=None):
         pass
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def read_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyReadWithLock (object):
@@ -50,8 +50,8 @@ class DummyRWLock (object):
                 pass
         return DummyReadWithLock()
 
-    # noinspection PyMethodMayBeStatic
-    def write_lock(self, timneout=None, _id=None):
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def write_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyWriteWithLock (object):
             def __enter__(_self):

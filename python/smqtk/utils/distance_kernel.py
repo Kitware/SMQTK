@@ -44,21 +44,6 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     :rtype: numpy.ndarray
 
     """
-    if hasattr(dist_func, 'im_func'):
-        # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.im_class.__name__,
-                                  dist_func.im_func.func_name])
-    elif hasattr(dist_func, 'func_name'):
-        # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.func_name])
-    elif hasattr(dist_func, 'py_func') \
-            and hasattr(dist_func.py_func, 'func_name'):
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.py_func.func_name])
-    else:
-        distance_name = "<unknown>"
     log = logging.getLogger(__name__)
 
     if m.ndim == 1:

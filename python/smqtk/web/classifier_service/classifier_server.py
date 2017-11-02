@@ -639,7 +639,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             if self.enable_classifier_removal and lock_clfr:
                 self.immutable_labels.add(label)
 
-        except ValueError as e:
+        except ValueError:
             return make_response_json("Data added for label '%s' is not a"
                                       " Classifier." % label,
                                       400,

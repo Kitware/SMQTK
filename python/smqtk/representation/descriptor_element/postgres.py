@@ -207,7 +207,7 @@ class PostgresDescriptorElement (DescriptorElement):
         # `hasattr` check used for backwards compatibility when interacting with
         # databases containing elements serialized before the inclusion of this
         # helper class.
-        if not hasattr(self, 'psql_helper') or self._psql_helper is None:
+        if self._psql_helper is None:
             # Only using a transport iteration size of 1 since this element is
             # only meant to refer to a single entry in the associated table.
             self._psql_helper = PsqlConnectionHelper(

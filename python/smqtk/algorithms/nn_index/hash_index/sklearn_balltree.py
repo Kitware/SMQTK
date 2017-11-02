@@ -137,6 +137,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             s = self.bt.__getstate__()
             tail = s[4:11]
             buff = StringIO()
+            # noinspection PyTypeChecker
             numpy.savez(buff,
                         data_arr=s[0],
                         idx_array_arr=s[1],
@@ -160,6 +161,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 s = (cache['data_arr'], cache['idx_array_arr'],
                      cache['node_data_arr'], cache['node_bounds_arr']) +\
                     tail + (DistanceMetric.get_metric('hamming'),)
+            # noinspection PyTypeChecker
             #: :type: sklearn.neighbors.BallTree
             self.bt = BallTree.__new__(BallTree)
             self.bt.__setstate__(s)

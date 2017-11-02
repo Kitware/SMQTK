@@ -202,12 +202,12 @@ def main():
     if plot_filepath_cm:
         plot_cm(conf_mat, labels, plot_filepath_cm)
 
-    # CM of descriptor UUIDs to output json
+    # Confusion Matrix of descriptor UUIDs to output json
     if output_uuid_cm:
         # Top dictionary keys are true labels, inner dictionary keys are UUID
         # predicted labels.
         log.info("Computing UUID Confusion Matrix")
-        #: :type: dict[str, dict[str, set | list]]
+        #: :type: dict[str, dict[collections.Hashable, set]]
         uuid_cm = {}
         for tlabel in tlabel2classifications:
             uuid_cm[tlabel] = collections.defaultdict(set)
@@ -360,7 +360,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays of the curve plot.
     :type skl_curve_func:
-        (list[float], list[float]) ->
+        (numpy.ndarray[float], numpy.ndarray[float]) ->
             (numpy.ndarray[float], numpy.ndarray[float], numpy.ndarray[float])
 
     :param title: Title of the plot.

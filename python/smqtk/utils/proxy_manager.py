@@ -411,7 +411,7 @@ ProxyManager.register("rFeatureMemory",
 
 
 # Map of ProxyManager instance keyed on the address
-#: :type: dict of (tuple or str or None, ProxyManager)
+#: :type: dict[tuple or str or None, ProxyManager]
 __mgr_cache__ = {}
 
 

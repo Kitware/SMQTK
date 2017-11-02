@@ -241,6 +241,7 @@ class GirderDataElement (DataElement):
                                 % self.file_id)
 
         try:
+            # noinspection PyTypeChecker
             self.gc.uploadFileContents(self.file_id, six.BytesIO(b), len(b))
         except girder_client.HttpError as e:
             if e.status == 401:

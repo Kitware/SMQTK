@@ -187,7 +187,7 @@ class DistanceKernel (object):
         else:
             bg_clips = None
 
-        return DistanceKernel(clip_ids, clip_ids, kernel_mat, bg_clips)
+        return DistanceKernel(clip_ids, clip_ids, kernel_mat, set(bg_clips))
 
     @classmethod
     def construct_asymmetric_from_files(cls, row_ids_file, col_ids_file,
@@ -257,7 +257,7 @@ class DistanceKernel (object):
         :param bg_clip_ids: Optional array of boolean flags, marking whether an
             index should be considered a "background" video. Contents will be
             treated as ints.
-        :type bg_clip_ids: set of int
+        :type bg_clip_ids: None | set[int]
         :param rw_lock: Read-Write lock for data provided. This should be
             provided if the any of the data is shared with other objects/
             sources. If this is given None (default), then a lock is created.
@@ -281,7 +281,7 @@ class DistanceKernel (object):
 
         assert ((bg_clip_ids is None)
                 or isinstance(bg_clip_ids, (set, frozenset))), \
-            "Must either given None or a set for the bg_clip_ids " \
+            "Must either give None or a set for the bg_clip_ids " \
             "vector. Got: %s" % type(bg_clip_ids)
         self._bg_cid_set = bg_clip_ids
         if bg_clip_ids is not None:

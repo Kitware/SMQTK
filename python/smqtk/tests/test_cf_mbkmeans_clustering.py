@@ -24,7 +24,7 @@ class TestMBKMClustering (unittest.TestCase):
         index = MemoryDescriptorIndex()
         c = 0
         for i in range(n_features):
-            v = numpy.ndarray(8)
+            v = numpy.ndarray((8,))
             v[...] = 0
             v[i] = 1
             for j in range(n_descriptors):

@@ -393,7 +393,7 @@ class FeatureMemoryMap (object):
 
     def __init__(self):
         self._map_lock = multiprocessing.RLock()
-        #: :type: dict of (str, FeatureMemory)
+        #: :type: dict[str, FeatureMemory]
         self._feature2memory = {}
 
     def get_feature_types(self):

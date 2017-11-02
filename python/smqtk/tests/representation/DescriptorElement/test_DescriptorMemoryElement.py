@@ -49,6 +49,7 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         expected_uid = 'test-uid'
         expected_v = numpy.array([1, 2, 3])
         expected_v_b = cStringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_v_b, expected_v)
         expected_v_dump = expected_v_b.getvalue()
 

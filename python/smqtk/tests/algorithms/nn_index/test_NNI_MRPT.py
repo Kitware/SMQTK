@@ -178,7 +178,8 @@ class TestMRPTIndex (unittest.TestCase):
 
         d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
         # Put all descriptors on a line so that different trees get same
-        # divisions
+        # divisions.
+        # noinspection PyTypeChecker
         [d.set_vector(np.full(dim, d.uuid(), dtype=np.float64))
          for d in d_index]
         q = DescriptorMemoryElement('q', -1)

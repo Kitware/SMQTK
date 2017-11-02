@@ -142,7 +142,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
     :return: Map of discovered class objects descending from type
         ``baseclass_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
         the string names of the class types.
-    :rtype: dict of (str, type)
+    :rtype: dict[str, type]
 
     """
     log = logging.getLogger('.'.join([__name__,

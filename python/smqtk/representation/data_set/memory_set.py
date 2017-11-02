@@ -218,7 +218,7 @@ class DataMemorySet (DataSet):
         Add the given data element(s) instance to this data set.
 
         :param elems: Data element(s) to add
-        :type elems: list[smqtk.representation.DataElement]
+        :type elems: smqtk.representation.DataElement
 
         """
         with self._element_map_lock:

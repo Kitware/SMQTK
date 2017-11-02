@@ -934,12 +934,12 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         # If an odd number of jobs, favor descriptor extraction
         if self.parallel:
-            descr_parallel = int(max(1, math.ceil(self.parallel/2.0)))
-            extract_parallel = int(max(1, math.floor(self.parallel/2.0)))
+            descr_parallel = int(max(1.0, math.ceil(self.parallel/2.0)))
+            extract_parallel = int(max(1.0, math.floor(self.parallel/2.0)))
         else:
             cpuc = multiprocessing.cpu_count()
-            descr_parallel = int(max(1, math.ceil(cpuc/2.0)))
-            extract_parallel = int(max(1, math.floor(cpuc/2.0)))
+            descr_parallel = int(max(1.0, math.ceil(cpuc/2.0)))
+            extract_parallel = int(max(1.0, math.floor(cpuc/2.0)))
 
         # For each video, extract frames and submit colorDescriptor processing
         # jobs for each frame, combining all results into a single matrix for

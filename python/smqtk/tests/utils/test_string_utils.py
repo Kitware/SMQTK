@@ -23,5 +23,7 @@ class TestRandomCharacters (unittest.TestCase):
         )
 
     def test_floating_point_n(self):
+        # Testing that this should cast down to the integer 4.
+        # noinspection PyTypeChecker
         s = random_characters(4.7)
         self.assertEqual(len(s), 4)

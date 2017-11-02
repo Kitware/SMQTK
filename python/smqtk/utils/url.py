@@ -32,7 +32,7 @@ def url_join(url, *urls):
     :type url: str
 
     :param urls: path components to join with slashes.
-    :type urls: str
+    :type urls: string-castable
 
     :return: Joined URL string
     :rtype: str

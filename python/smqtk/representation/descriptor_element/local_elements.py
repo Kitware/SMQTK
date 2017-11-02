@@ -32,6 +32,7 @@ class DescriptorMemoryElement (DescriptorElement):
         state = super(DescriptorMemoryElement, self).__getstate__()
         # save vector as binary string
         b = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(b, self.vector())
         state['v'] = b.getvalue()
         return state

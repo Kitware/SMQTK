@@ -230,10 +230,12 @@ class ItqFunctor (LshFunctor):
                 self.rotation_cache_elem.writable() and
                 self.mean_vec is not None and self.rotation is not None):
             b = StringIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.mean_vec)
             self.mean_vec_cache_elem.set_bytes(b.getvalue())
 
             b = StringIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.rotation)
             self.rotation_cache_elem.set_bytes(b.getvalue())
 

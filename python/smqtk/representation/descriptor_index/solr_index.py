@@ -1,3 +1,4 @@
+import collections
 import time
 
 from six.moves import cPickle, range
@@ -239,13 +240,13 @@ class SolrDescriptorIndex (DescriptorIndex):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.Hashable
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
-        :rtype: __generator[smqtk.representation.DescriptorElement]
+        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
@@ -295,14 +296,14 @@ class SolrDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         """
-        self.remove_many_descriptors(uuid)
+        self.remove_many_descriptors([uuid])
 
     def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: tuple[collections.Hashable]
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -313,7 +314,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         def batch_op(_batch):
             """
             :param _batch: UIDs to remove from index.
-            :type _batch: list[collections.Hashable]
+            :type _batch: collections.Iterable[collections.Hashable]
             """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
                                       for _uid in _batch])
@@ -321,14 +322,14 @@ class SolrDescriptorIndex (DescriptorIndex):
                              % (self.index_uuid_field, self.index_uuid,
                                 uuid_query))
 
-        batch = []
+        batch = collections.deque()
         for uid in uuids:
             batch.append(uid)
 
             # Will end up using max_clauses-1 OR statements, and one AND
             if len(batch) == self.max_boolean_clauses:
                 batch_op(batch)
-            batch = []
+            batch.clear()
 
         # tail batch
         if batch:

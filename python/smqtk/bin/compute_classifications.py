@@ -181,7 +181,7 @@ def main():
     file_utils.safe_create_dir(os.path.dirname(output_csv_header_filepath))
     with open(output_csv_header_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
-        w.writerow(['uuid'] + c_labels)
+        w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
     # CSV file
     log.info("Writing CSV data file: %s", output_csv_filepath)

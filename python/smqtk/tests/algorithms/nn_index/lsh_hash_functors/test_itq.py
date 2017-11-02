@@ -31,10 +31,12 @@ class TestItqFunctor (unittest.TestCase):
         expected_rotation = numpy.eye(3)
 
         expected_mean_vec_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
         expected_mean_vec_bytes = expected_mean_vec_bytes.getvalue()
 
         expected_rotation_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
         expected_rotation_bytes = expected_rotation_bytes.getvalue()
 

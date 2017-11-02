@@ -57,6 +57,7 @@ class TestHashIndex (unittest.TestCase):
         idx._build_index = mock.MagicMock()
         # No error should be returned. Returned iterable contents should match
         # input values.
+        # noinspection PyTypeChecker
         idx.build_index([0, 1, 2])
         self.assertSetEqual(
             set(idx._build_index.call_args[0][0]),
@@ -79,6 +80,7 @@ class TestHashIndex (unittest.TestCase):
         idx._update_index = mock.MagicMock()
         # No error should be returned. Returned iterable contents should match
         # input values.
+        # noinspection PyTypeChecker
         idx.update_index([0, 1, 2])
         self.assertSetEqual(
             set(idx._update_index.call_args[0][0]),
@@ -101,8 +103,10 @@ class TestHashIndex (unittest.TestCase):
         idx.count.return_value = 10
         idx._nn = mock.MagicMock()
         # This call should now pass that count returns something greater than 0.
+        # noinspection PyTypeChecker
         idx.nn('dummy')
         idx._nn.assert_called_with("dummy", 1)
 
+        # noinspection PyTypeChecker
         idx.nn('bar', 10)
         idx._nn.assert_called_with("bar", 10)

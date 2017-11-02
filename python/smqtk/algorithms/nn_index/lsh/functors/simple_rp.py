@@ -8,11 +8,11 @@ from smqtk.utils.bin_utils import report_progress
 
 
 class SimpleRPFunctor (LshFunctor):
-    '''
-    This class is meant purely as a baseline comparison for other 
-    LshFunctors and NNIndex plugins. It is not meant to be used in 
+    """
+    This class is meant purely as a baseline comparison for other
+    LshFunctors and NNIndex plugins. It is not meant to be used in
     production, as it is unlikely to produce a quality index.
-    '''
+    """
     
     @classmethod
     def is_usable(cls):
@@ -26,6 +26,7 @@ class SimpleRPFunctor (LshFunctor):
         self.random_seed = random_seed
 
         # Model components
+        self.rps = None
         self.mean_vec = None
 
     def _norm_vector(self, v):
@@ -109,5 +110,8 @@ class SimpleRPFunctor (LshFunctor):
         return self.get_hash(x)
 
     def get_hash(self, descriptor):
+        if self.rps is None:
+            raise RuntimeError("Random projection model not constructed. Call "
+                               "`fit` first!")
         b = (self._norm_vector(descriptor).dot(self.rps) >= 0.0)
         return b.squeeze()

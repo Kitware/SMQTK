@@ -102,7 +102,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         return cls(parent_app, **merged)
 
-    def __init__(self, parent_app, iqr_service_url, data_set, working_directory):
+    def __init__(self, parent_app, iqr_service_url, data_set,
+                 working_directory):
         """
         Initialize a generic IQR Search module with a single descriptor and
         indexer.
@@ -186,7 +187,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             r = {
                 "module_name": self.name,
                 "uploader_url": self.mod_upload.url_prefix.lstrip('/'),
-                "uploader_post_url": self.mod_upload.upload_post_url().lstrip('/'),
+                "uploader_post_url":
+                    self.mod_upload.upload_post_url().lstrip('/'),
             }
             self._log.debug("Uploader URL: %s", r['uploader_url'])
             # noinspection PyUnresolvedReferences
@@ -550,9 +552,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 }
             """
             pos_to_add = json.loads(flask.request.form.get('add_pos', '[]'))
-            pos_to_remove = json.loads(flask.request.form.get('remove_pos', '[]'))
+            pos_to_remove = json.loads(flask.request.form.get('remove_pos',
+                                                              '[]'))
             neg_to_add = json.loads(flask.request.form.get('add_neg', '[]'))
-            neg_to_remove = json.loads(flask.request.form.get('remove_neg', '[]'))
+            neg_to_remove = json.loads(flask.request.form.get('remove_neg',
+                                                              '[]'))
 
             msg = "Adjudicated Positive{+%s, -%s}, " \
                   "Negative{+%s, -%s} " \
@@ -562,7 +566,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             sid = self.get_current_iqr_session()
 
-            to_neutral = list(set(pos_to_remove)| set(neg_to_remove))
+            to_neutral = list(set(pos_to_remove) | set(neg_to_remove))
 
             post_r = self._iqr_service.post('adjudicate',
                                             sid=sid,

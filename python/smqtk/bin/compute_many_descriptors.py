@@ -97,9 +97,9 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
         def is_valid(file_path):
             dfe = DataFileElement(file_path)
 
-            if is_valid_element(dfe,
-                                valid_content_types=generator.valid_content_types(),
-                                check_image=check_image):
+            if is_valid_element(
+                    dfe, valid_content_types=generator.valid_content_types(),
+                    check_image=check_image):
                 return dfe
             else:
                 return False
@@ -196,7 +196,7 @@ def cli_parser():
 def main():
     args = cli_parser().parse_args()
     config = utility_main_helper(default_config, args)
-    l = logging.getLogger(__name__)
+    log = logging.getLogger(__name__)
 
     completed_files_fp = args.completed_files
     filelist_fp = args.file_list
@@ -205,18 +205,18 @@ def main():
 
     # Input checking
     if not filelist_fp:
-        l.error("No file-list file specified")
+        log.error("No file-list file specified")
         exit(102)
     elif not os.path.isfile(filelist_fp):
-        l.error("Invalid file list path: %s", filelist_fp)
+        log.error("Invalid file list path: %s", filelist_fp)
         exit(103)
 
     if not completed_files_fp:
-        l.error("No complete files output specified")
+        log.error("No complete files output specified")
         exit(104)
 
     if batch_size < 0:
-        l.error("Batch size must be >= 0.")
+        log.error("Batch size must be >= 0.")
         exit(105)
 
     run_file_list(

@@ -69,9 +69,11 @@ def default_config():
             "use_multiprocessing": False,
         },
         "plugins": {
-            "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
+            "descriptor_index":
+                plugin.make_config(get_descriptor_index_impls()),
             "lsh_functor": plugin.make_config(get_lsh_functor_impls()),
-            "hash2uuid_kvstore": plugin.make_config(get_key_value_store_impls()),
+            "hash2uuid_kvstore":
+                plugin.make_config(get_key_value_store_impls()),
         },
     }
 
@@ -149,11 +151,12 @@ def main():
     #
     log.info("Starting hash code computation")
     kv_update = {}
-    for uuid, hash_int in compute_hash_codes(uuids_for_processing(iter_uuids(),
-                                                                  hash2uuids_kvstore),
-                                             descriptor_index, lsh_functor,
-                                             report_interval,
-                                             use_multiprocessing, True):
+    for uuid, hash_int in \
+        compute_hash_codes(uuids_for_processing(iter_uuids(),
+                                                hash2uuids_kvstore),
+                           descriptor_index, lsh_functor,
+                           report_interval,
+                           use_multiprocessing, True):
         # Get original value in KV-store if not in update dict.
         if hash_int not in kv_update:
             kv_update[hash_int] = hash2uuids_kvstore.get(hash_int, frozenset())

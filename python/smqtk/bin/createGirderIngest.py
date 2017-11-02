@@ -257,11 +257,13 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
         log.debug("-F %s", folder_id)
 
         # Find sub-folders
-        folder_fifo.extend(get_folder_subfolders(api_root, folder_id, tm, query_batch))
+        folder_fifo.extend(get_folder_subfolders(api_root, folder_id, tm,
+                                                 query_batch))
 
         for item_id in get_folder_items(api_root, folder_id, tm, query_batch):
             log.debug('   -i %s', item_id)
-            for file_id, ct in get_item_files(api_root, item_id, tm, query_batch):
+            for file_id, ct in get_item_files(api_root, item_id, tm,
+                                              query_batch):
                 log.debug('      -f %s (%s)', file_id, ct)
                 e = GirderDataElement(file_id, api_root, api_key)
                 e._content_type = ct

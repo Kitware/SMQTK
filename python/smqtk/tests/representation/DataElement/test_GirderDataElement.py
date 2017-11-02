@@ -76,17 +76,18 @@ if GirderDataElement.is_usable():
 
             expected_repr = "GirderDataElement{file_id: %s, " \
                             "api_root: %s, " \
-                            "api_key: %s, token: }" % (
-                                expected_file_id, expected_api_root, expected_api_key)
+                            "api_key: %s, token: }" \
+                            % (expected_file_id, expected_api_root,
+                               expected_api_key)
             self.assertEqual(actual_repr, expected_repr)
 
         def test_configuration_default(self):
             default_config = GirderDataElement.get_default_config()
             self.assertEqual(default_config,
-                                    {"file_id": None,
-                                     "api_root": self.LOCAL_APIROOT,
-                                     "api_key": None,
-                                     "token": None})
+                             {"file_id": None,
+                              "api_root": self.LOCAL_APIROOT,
+                              "api_key": None,
+                              "token": None})
 
         @mock.patch('girder_client.GirderClient.authenticate')
         def test_from_config_full_constructor(self, mock_authenticate):
@@ -112,10 +113,10 @@ if GirderDataElement.is_usable():
             self.assertEqual(e.file_id, expected_file_id)
             self.assertEqual(e.api_root, expected_api_root)
             self.assertEqual(e.get_config(),
-                                    {'file_id': expected_file_id,
-                                     'api_root': expected_api_root,
-                                     'api_key': expected_api_key,
-                                     'token': None})
+                             {'file_id': expected_file_id,
+                              'api_root': expected_api_root,
+                              'api_key': expected_api_key,
+                              'token': None})
 
         def test_from_uri_full_url(self):
             e = GirderDataElement.from_uri(self.EXAMPLE_GIRDER_FULL_URI)
@@ -125,14 +126,14 @@ if GirderDataElement.is_usable():
             # Ensures we catch a bad tag in the URI, i.e., one that is neither
             # girder nor girders.
             self.assertRaises(InvalidUriError, GirderDataElement.from_uri,
-                                     uri='a_bad_tag')
+                              uri='a_bad_tag')
 
         def test_from_uri_bad_path(self):
-            # Ensures that we catch a URI that has an appropriate tag and netloc,
-            # but the path does not begin with /api, so it is an invalid girder
-            # API root.
+            # Ensures that we catch a URI that has an appropriate tag and
+            # netloc, but the path does not begin with /api, so it is an invalid
+            # girder API root.
             self.assertRaises(InvalidUriError, GirderDataElement.from_uri,
-                                     uri='girder://localhost:8080/bad/path')
+                              uri='girder://localhost:8080/bad/path')
 
         @mock.patch('girder_client.GirderClient.getFile')
         def test_content_type_no_cache(self, m_getFile):
@@ -150,7 +151,8 @@ if GirderDataElement.is_usable():
             self.assertEqual(actual_type, expected_mimetype)
             m_getFile.assert_called_once()
 
-            # Ensure that calling content_type a second time doesn't call getFile again
+            # Ensure that calling content_type a second time doesn't call
+            # getFile again.
             self.assertEqual(e.content_type(), expected_mimetype)
             m_getFile.assert_called_once()
 
@@ -194,7 +196,8 @@ if GirderDataElement.is_usable():
             self.assertIsNone(m)
 
         def test_is_empty_none_model(self):
-            # Uses model return, empty if no model return (no item in girder by ID)
+            # Uses model return, empty if no model return (no item in girder by
+            # ID)
             e = GirderDataElement('someId')
             e.get_file_model = mock.MagicMock(return_value=None)
             self.assertTrue(e.is_empty())
@@ -210,7 +213,8 @@ if GirderDataElement.is_usable():
             e.get_file_model = mock.MagicMock(return_value={'size': 7})
             self.assertFalse(e.is_empty())
 
-        @mock.patch('smqtk.representation.data_element.girder.GirderDataElement.get_file_model')
+        @mock.patch('smqtk.representation.data_element.girder.GirderDataElement'
+                    '.get_file_model')
         @mock.patch('girder_client.GirderClient.getFolder')
         @mock.patch('girder_client.GirderClient.getItem')
         def test_writable(self, m_getItem, m_getFolder, m_get_file_model):
@@ -220,7 +224,7 @@ if GirderDataElement.is_usable():
             self.assertTrue(GirderDataElement('someId').writable())
 
             # Access level 0 should cause it to be unwritable
-            m_getFolder.return_value = { '_accessLevel': 0 }
+            m_getFolder.return_value = {'_accessLevel': 0}
             self.assertFalse(GirderDataElement('someId').writable())
 
             # A nonexistent file model should make writable return false

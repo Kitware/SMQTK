@@ -13,7 +13,7 @@ if ColorDescriptor_Image_csift.is_usable():
 
         def test_impl_findable(self):
             self.assertIn(ColorDescriptor_Image_csift.__name__,
-                             get_descriptor_generator_impls())
+                          get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator'
                     '.colordescriptor.colordescriptor'
@@ -34,9 +34,9 @@ if ColorDescriptor_Image_csift.is_usable():
             self.assertEqual(inst._work_dir, inst2._work_dir)
             self.assertEqual(inst._kmeans_k, inst2._kmeans_k)
             self.assertEqual(inst._flann_target_precision,
-                                inst2._flann_target_precision)
+                             inst2._flann_target_precision)
             self.assertEqual(inst._flann_sample_fraction,
-                                inst2._flann_sample_fraction)
+                             inst2._flann_sample_fraction)
             self.assertEqual(inst._flann_autotune, inst2._flann_autotune)
             self.assertEqual(inst._use_sp, inst2._use_sp)
             self.assertEqual(inst._rand_seed, inst2._rand_seed)

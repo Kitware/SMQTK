@@ -23,16 +23,16 @@ if magic is not None:
                 file_mimetype_filemagic('/this/path/probably/doesnt/exist.txt')
             except IOError as ex:
                 self.assertEqual(ex.errno, 2,
-                                        "Expected directory IO error #2. "
-                                        "Got %d" % ex.errno)
+                                 "Expected directory IO error #2. "
+                                 "Got %d" % ex.errno)
 
         def test_directory_provided(self):
             try:
                 file_mimetype_filemagic(TEST_DATA_DIR)
             except IOError as ex:
                 self.assertEqual(ex.errno, 21,
-                                        "Expected directory IO error #21. "
-                                        "Got %d" % ex.errno)
+                                 "Expected directory IO error #21. "
+                                 "Got %d" % ex.errno)
 
         def test_get_mimetype_lenna(self):
             m = file_mimetype_filemagic(os.path.join(TEST_DATA_DIR,

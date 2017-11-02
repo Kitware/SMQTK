@@ -125,7 +125,8 @@ class FeatureMemory (object):
 
         # The kernel should be square and should be the same size as the feature
         # matrix's number or rows (unique stored clip features).
-        if not (kernel_mat.shape[0] == kernel_mat.shape[1] == feature_mat.shape[0]):
+        if not (kernel_mat.shape[0] == kernel_mat.shape[1] ==
+                feature_mat.shape[0]):
             raise ValueError("The distance kernel matrix provided is either "
                              "misshapen or conflicts with the dimensions of "
                              "the provided feature matrix. (kernel matrix "
@@ -279,7 +280,8 @@ class FeatureMemory (object):
             return ret_mat
 
     # noinspection PyUnresolvedReferences,PyCallingNonCallable
-    def update(self, clip_id, feature_vec=None, is_background=False, timeout=None):
+    def update(self, clip_id, feature_vec=None, is_background=False,
+               timeout=None):
         """
         Update this feature with a feature vector associated with a clip ID. If
         clip ID is already in the feature matrix, we replace the current vector

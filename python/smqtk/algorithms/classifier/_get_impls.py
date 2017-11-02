@@ -49,5 +49,7 @@ def get_classifier_impls(reload_modules=False, sub_interface=None):
         assert issubclass(sub_interface, Classifier), \
             "The given sub-interface type must descend from `Classifier`."
         base_class = sub_interface
-    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
+    # __package__ resolves to the containing module of this module, or
+    # `smqtk.algorithms.classifier` in this case.
+    return plugin.get_plugins(__package__, this_dir, env_var, helper_var,
                               base_class, reload_modules=reload_modules)

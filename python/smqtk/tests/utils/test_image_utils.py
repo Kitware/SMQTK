@@ -30,10 +30,10 @@ class TestIsLoadableImage(unittest.TestCase):
         )
 
     def test_unloadable_image_returns_false(self):
-        assert is_loadable_image(self.non_image) == False
+        assert is_loadable_image(self.non_image) is False
 
     def test_loadable_image_returns_true(self):
-        assert is_loadable_image(self.good_image) == True
+        assert is_loadable_image(self.good_image) is True
 
 
 class TestIsValidElement(unittest.TestCase):
@@ -51,7 +51,8 @@ class TestIsValidElement(unittest.TestCase):
         assert is_valid_element(False) is False
 
     def test_invalid_content_type(self):
-        assert is_valid_element(self.good_image, valid_content_types=[]) is False
+        assert is_valid_element(self.good_image, valid_content_types=[]) \
+               is False
 
     def test_valid_content_type(self):
         assert is_valid_element(self.good_image,
@@ -101,9 +102,11 @@ class TestCheckImageCli(unittest.TestCase):
                                     '3ee0d360dc12003c0d43e3579295b52b64906e85'])
             assert 'non-existent-file.jpeg' not in out
 
-        with mock.patch.object(sys, 'argv', ['', '--file-list', filename, '--invert']):
+        with mock.patch.object(sys, 'argv',
+                               ['', '--file-list', filename, '--invert']):
             out, err = self.check_images()
 
-            assert out == ','.join([os.path.join(TEST_DATA_DIR, 'test_file.dat'),
+            assert out == ','.join([os.path.join(TEST_DATA_DIR,
+                                                 'test_file.dat'),
                                     'da39a3ee5e6b4b0d3255bfef95601890afd80709'])
             assert 'non-existent-file.jpeg' not in out

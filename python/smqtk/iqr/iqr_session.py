@@ -190,11 +190,13 @@ class IqrSession (SmqtkObject):
 
         :param positive: Iterable of descriptors from external sources to
             consider positive examples.
-        :type positive: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type positive:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param negative: Iterable of descriptors from external sources to
             consider negative examples.
-        :type negative: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type negative:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         positive = set(positive)
@@ -221,19 +223,23 @@ class IqrSession (SmqtkObject):
 
         :param new_positives: Descriptors of elements in our working index to
             now be considered to be positively relevant.
-        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param new_negatives: Descriptors of elements in our working index to
             now be considered to be negatively relevant.
-        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_positives: Descriptors of elements in our working index to now
             be considered not positive any more.
-        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_negatives: Descriptors of elements in our working index to now
             be considered not negative any more.
-        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         new_positives = set(new_positives)
@@ -290,8 +296,9 @@ class IqrSession (SmqtkObject):
         if updated:
             self._log.info("Creating new relevancy index over working index.")
             #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
-            self.rel_index = plugin.from_plugin_config(self.rel_index_config,
-                                                       get_relevancy_index_impls())
+            self.rel_index = plugin.from_plugin_config(
+                self.rel_index_config, get_relevancy_index_impls()
+            )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 
     def refine(self):

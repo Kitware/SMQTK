@@ -81,4 +81,4 @@ class TestBitUtils (unittest.TestCase):
             v_pop_count = bit_utils.popcount(v)
 
             self.assertEqual(v_pop_count, v_bin_count,
-                                    'popcount failed for integer %d' % v)
+                             'popcount failed for integer %d' % v)

@@ -76,7 +76,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertEqual(filepath, fp)
 
         interval = 0.01
-        settle   = 0.1
+        settle = 0.1
         monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
                                                                  settle, cb)
         try:
@@ -149,10 +149,9 @@ class TestFileModificationMonitor (unittest.TestCase):
                         f.write('0')
                     time.sleep(append_interval)
 
-        m_thread = smqtk.utils.file_utils.FileModificationMonitor(fp,
-                                                                  monitor_interval,
-                                                                  monitor_settle,
-                                                                  cb)
+        m_thread = smqtk.utils.file_utils.FileModificationMonitor(
+            fp, monitor_interval, monitor_settle, cb
+        )
         a_thread = AppendThread()
 
         try:

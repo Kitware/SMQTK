@@ -90,7 +90,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
 
                 if total_chunks == len(self._file_chunks[fid]):
                     self._log.debug("[%s] Final chunk uploaded",
-                                   filename+"::"+fid)
+                                    filename+"::"+fid)
                     # have all chucks in memory now
                     try:
                         # Combine chunks into single file
@@ -99,7 +99,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                             self._file_chunks[fid], file_ext
                         )
                         self._log.debug("[%s] saved from chunks: %s",
-                                       filename+"::"+fid, file_saved_path)
+                                        filename+"::"+fid, file_saved_path)
                         # now in file, free up dict memory
 
                         self._completed_files[fid] = file_saved_path
@@ -107,7 +107,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
 
                     except IOError as ex:
                         self._log.debug("[%s] Failed to write combined chunks",
-                                       filename+"::"+fid)
+                                        filename+"::"+fid)
                         success = False
                         message = "Failed to write out combined chunks for " \
                                   "file %s: %s" % (filename, str(ex))

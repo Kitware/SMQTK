@@ -93,7 +93,7 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
                         line_buff = ''
                     elif line_buff:
                         # add the segment to the non-empty buffer
-                        line_buff = ' '.join([ line_buff, segments.pop(0) ])
+                        line_buff = ' '.join([line_buff, segments.pop(0)])
                     else:
                         # Nothing in the buffer. Start a new one with the
                         # starting ;
@@ -106,7 +106,7 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
                 # Write the block out. Every block should already end in a new-
                 # line char because of how lines are added to the buffer.
                 # - fp is the file object passed to the parent write method
-                fp.write( block_buff  )
+                fp.write(block_buff)
 
         if self._defaults:
             fp.write("[%s]\n" % configparser.DEFAULTSECT)
@@ -199,7 +199,8 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
         if not section:
             section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+        if not self.has_section(section) and \
+                section != configparser.DEFAULTSECT:
             raise configparser.NoSectionError(section)
 
         if option:
@@ -234,7 +235,8 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
         if not section:
             section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+        if not self.has_section(section) and \
+                section != configparser.DEFAULTSECT:
             raise configparser.NoSectionError(section)
 
         if option:
@@ -247,8 +249,8 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
             option = '__name__'
 
         # Combined statement to handle both section and option requests.
-        return ( self._comments.get(section, None)
-                 and self._comments[section].get(option, None) )
+        return (self._comments.get(section, None) and
+                self._comments[section].get(option, None))
 
     def set_comment(self, comment, section, option=None):
         """
@@ -262,7 +264,8 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
         if not section:
             section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+        if not self.has_section(section) and \
+                section != configparser.DEFAULTSECT:
             raise configparser.NoSectionError(section)
 
         if section not in self._comments:
@@ -296,7 +299,8 @@ class SafeConfigCommentParser (configparser.SafeConfigParser, object):
         """
         if not section:
             section = configparser.DEFAULTSECT
-        elif not self.has_section(section) and section != configparser.DEFAULTSECT:
+        elif not self.has_section(section) and \
+                section != configparser.DEFAULTSECT:
             raise configparser.NoSectionError(section)
 
         if option:

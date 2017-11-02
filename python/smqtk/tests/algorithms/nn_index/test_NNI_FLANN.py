@@ -28,7 +28,7 @@ if FlannNearestNeighborsIndex.is_usable():
             # Already here because the implementation is reporting itself as
             # usable.
             self.assertIn(FlannNearestNeighborsIndex.__name__,
-                             get_nn_index_impls())
+                          get_nn_index_impls())
 
         def test_configuration(self):
             index_filepath = '/index_filepath'

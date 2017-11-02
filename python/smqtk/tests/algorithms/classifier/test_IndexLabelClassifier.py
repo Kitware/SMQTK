@@ -27,7 +27,7 @@ class TestIndexLabelClassifier (unittest.TestCase):
 
     def test_impl_findable(self):
         self.assertIn(IndexLabelClassifier.__name__,
-                             get_classifier_impls())
+                      get_classifier_impls())
 
     def test_new(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)

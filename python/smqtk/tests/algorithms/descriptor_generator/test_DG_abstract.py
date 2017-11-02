@@ -14,7 +14,7 @@ class TestGetDescriptorGeneratorImpls (unittest.TestCase):
         m = get_descriptor_generator_impls()
         # Currently no types that are guaranteed available
         self.assertIsInstance(m, dict, "Should return a dictionary of "
-                                           "class label-to-types")
+                                       "class label-to-types")
 
 
 class DummyDescriptorGenerator (DescriptorGenerator):
@@ -54,7 +54,8 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         m_d.content_type.return_value = 'image/jpeg'
 
         mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
-        mDescriptorFactory = mock.Mock(spec=smqtk.representation.DescriptorElementFactory)
+        mDescriptorFactory = mock.Mock(
+            spec=smqtk.representation.DescriptorElementFactory)
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
@@ -78,7 +79,8 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
         mDescrElement().has_vector.return_value = False
 
-        mDescriptorFactory = mock.Mock(spec=smqtk.representation.DescriptorElementFactory)
+        mDescriptorFactory = mock.Mock(
+            spec=smqtk.representation.DescriptorElementFactory)
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
@@ -106,7 +108,8 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         mDescrElement().has_vector.return_value = True
         mDescrElement().vector.return_value = expected_existing_vector
 
-        mDescriptorFactory = mock.Mock(spec=smqtk.representation.DescriptorElementFactory)
+        mDescriptorFactory = mock.Mock(
+            spec=smqtk.representation.DescriptorElementFactory)
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 
@@ -138,7 +141,8 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         mDescrElement().has_vector.return_value = True
         mDescrElement().vector.return_value = expected_existing_vector
 
-        mDescriptorFactory = mock.Mock(spec=smqtk.representation.DescriptorElementFactory)
+        mDescriptorFactory = mock.Mock(
+            spec=smqtk.representation.DescriptorElementFactory)
         m_factory = mDescriptorFactory()
         m_factory.new_descriptor.return_value = mDescrElement()
 

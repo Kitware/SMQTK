@@ -69,8 +69,8 @@ class LibSvmClassifier (SupervisedClassifier):
         :param svm_model_uri: Path to the libSVM model file.
         :type svm_model_uri: None | str
 
-        :param svm_label_map_uri: Path to the pickle file containing this model's
-            output labels.
+        :param svm_label_map_uri: Path to the pickle file containing this
+            model's output labels.
         :type svm_label_map_uri: None | str
 
         :param train_params: SVM parameters used for training. See libSVM
@@ -178,7 +178,8 @@ class LibSvmClassifier (SupervisedClassifier):
             self.svm_model_elem.clean_temp()
 
         if self.svm_label_map_elem and not self.svm_label_map_elem.is_empty():
-            self.svm_label_map = cPickle.loads(self.svm_label_map_elem.get_bytes())
+            self.svm_label_map = \
+                cPickle.loads(self.svm_label_map_elem.get_bytes())
 
     @staticmethod
     def _gen_param_string(params):

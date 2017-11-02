@@ -293,7 +293,8 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
             raise StopIteration()
 
-        except:
+        # If anything bad happens, stop iteration and workers.
+        except Exception:
             self.stop()
             raise
 

@@ -39,15 +39,18 @@ if CaffeDescriptorGenerator.is_usable():
             os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
 
         www_uri_alexnet_prototxt = \
-            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c/download'
+            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c' \
+            '/download'
         www_uri_alexnet_caffemodel = \
-            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
+            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86' \
+            '/download'
         www_uri_image_mean_proto = \
-            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
+            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82' \
+            '/download'
 
         def test_impl_findable(self):
             self.assertIn(CaffeDescriptorGenerator.__name__,
-                                 get_descriptor_generator_impls())
+                          get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
@@ -73,7 +76,7 @@ if CaffeDescriptorGenerator.is_usable():
                 set(inspect.getargspec(CaffeDescriptorGenerator.__init__)
                            .args[1:])
             self.assertSetEqual(set(expected_params.keys()),
-                                        expected_param_keys)
+                                expected_param_keys)
             g = CaffeDescriptorGenerator(**expected_params)
             self.assertEqual(g.get_config(), expected_params)
 
@@ -107,8 +110,7 @@ if CaffeDescriptorGenerator.is_usable():
             self.assertEqual(m_cdg_setupNetwork.call_count, 2)
 
             self.assertIsInstance(g2, CaffeDescriptorGenerator)
-            self.assertEqual(g.get_config(),
-                                    g2.get_config())
+            self.assertEqual(g.get_config(), g2.get_config())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')

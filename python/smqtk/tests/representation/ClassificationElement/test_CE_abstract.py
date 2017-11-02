@@ -34,7 +34,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
 
     def test_hash(self):
         self.assertEqual(hash(DummyCEImpl('foo', 'bar')),
-                                hash(('foo', 'bar')))
+                         hash(('foo', 'bar')))
 
     def test_equality(self):
         e1 = DummyCEImpl('test', 0)
@@ -98,13 +98,12 @@ class TestClassificationElementAbstract (unittest.TestCase):
     def test_set_input_dict(self):
         e = DummyCEImpl('test', 0)
         v = {1: 0, 2: 1}
-        self.assertEqual(e.set_classification(v),
-                                v)
+        self.assertEqual(e.set_classification(v),  v)
 
     def test_set_kwargs(self):
         e = DummyCEImpl('test', 0)
         self.assertEqual(e.set_classification(a=1, b=0),
-                                {'a': 1, 'b': 0})
+                         {'a': 1, 'b': 0})
 
     def test_set_mixed(self):
         e = DummyCEImpl('test', 0)

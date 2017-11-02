@@ -71,7 +71,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         # Parse ``cache_element`` configuration if set.
         cache_element = None
-        if config_dict['cache_element'] and config_dict['cache_element']['type']:
+        if config_dict['cache_element'] and \
+                config_dict['cache_element']['type']:
             cache_element = \
                 plugin.from_plugin_config(config_dict['cache_element'],
                                           get_data_element_impls())

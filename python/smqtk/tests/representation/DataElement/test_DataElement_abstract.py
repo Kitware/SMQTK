@@ -173,12 +173,12 @@ class TestDataElementAbstract (unittest.TestCase):
 
         # Make sure os.path.isfile returns true so we think things in temp stack
         # exist.
-        simulate = True
         def osp_isfile_se(path):
             if simulate and path in {prev_0, prev_1}:
                 return True
             else:
                 return False
+        simulate = True
         mock_isfile.side_effect = osp_isfile_se
 
         fp = de.write_temp()
@@ -234,12 +234,12 @@ class TestDataElementAbstract (unittest.TestCase):
         prev_1 = '/tmp/things/file_two.png'
         prev_2 = '/some/specific/dir'
 
-        simulate = True
         def osp_isfile_se(path):
             if simulate and path in {prev_0, prev_1, prev_2}:
                 return True
             else:
                 return False
+        simulate = True
         mock_isfile.side_effect = osp_isfile_se
 
         de = DummyDataElement()
@@ -312,7 +312,7 @@ class TestDataElementAbstract (unittest.TestCase):
         de.TEST_BYTES = 'some content\nwith new \nlines'
         br = de.to_buffered_reader()
         self.assertEqual(br.readlines(),
-                            ['some content\n', 'with new \n', 'lines'])
+                         ['some content\n', 'with new \n', 'lines'])
 
     def test_is_read_only(self):
         de = DummyDataElement()

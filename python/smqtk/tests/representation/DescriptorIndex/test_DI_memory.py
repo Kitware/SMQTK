@@ -36,8 +36,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
     def test_default_config(self):
         # Default should be valid for constructing a new instance.
         c = MemoryDescriptorIndex.get_default_config()
-        self.assertEqual(MemoryDescriptorIndex.from_config(c).get_config(),
-                            c)
+        self.assertEqual(MemoryDescriptorIndex.from_config(c).get_config(), c)
 
     def test_from_config_null_cache_elem(self):
         inst = MemoryDescriptorIndex.from_config({'cache_element': None})
@@ -147,7 +146,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         inst.cache_table()
         self.assertIsNotNone(inst.cache_element)
         self.assertEqual(inst.cache_element.get_bytes(),
-                            expected_table_pickle_bytes)
+                         expected_table_pickle_bytes)
 
     def test_add_descriptor(self):
         index = MemoryDescriptorIndex()
@@ -173,7 +172,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
         # Compare code keys of input to code keys in internal table
         self.assertEqual(set(index._table.keys()),
-                            set([e.uuid() for e in descrs]))
+                         set([e.uuid() for e in descrs]))
 
         # Get the set of descriptors in the internal table and compare it with
         # the set of generated random descriptors.
@@ -192,7 +191,9 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         index.add_descriptor(d1)
         self.assertEqual(index.count(), 1)
 
-        d2, d3, d4 = random_descriptor(), random_descriptor(), random_descriptor()
+        d2, d3, d4 = (random_descriptor(),
+                      random_descriptor(),
+                      random_descriptor())
         index.add_many_descriptors([d2, d3, d4])
         self.assertEqual(index.count(), 4)
 
@@ -220,7 +221,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
                                              descrs[3].uuid()]))
         self.assertEqual(len(r), 2)
         self.assertEqual(set(r),
-                            {descrs[0], descrs[3]})
+                         {descrs[0], descrs[3]})
 
     def test_clear(self):
         i = MemoryDescriptorIndex()
@@ -253,7 +254,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         i.add_many_descriptors(descrs)
         self.assertFalse(cache_elem.is_empty())
         self.assertEqual(pickle.loads(i.cache_element.get_bytes()),
-                            expected_table)
+                         expected_table)
 
         # Changing the internal table (remove, add) it should reflect in
         # cache
@@ -261,13 +262,13 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         expected_table[new_d.uuid()] = new_d
         i.add_descriptor(new_d)
         self.assertEqual(pickle.loads(i.cache_element.get_bytes()),
-                            expected_table)
+                         expected_table)
 
         rm_d = expected_table.values()[0]
         del expected_table[rm_d.uuid()]
         i.remove_descriptor(rm_d.uuid())
         self.assertEqual(pickle.loads(i.cache_element.get_bytes()),
-                            expected_table)
+                         expected_table)
 
     def test_remove(self):
         i = MemoryDescriptorIndex()
@@ -280,32 +281,32 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         i.remove_descriptor(descrs[0].uuid())
         self.assertEqual(len(i), 99)
         self.assertEqual(set(i.iterdescriptors()),
-                            set(descrs[1:]))
+                         set(descrs[1:]))
 
         # remove many
         rm_d = descrs[slice(45, 80, 3)]
         i.remove_many_descriptors((d.uuid() for d in rm_d))
         self.assertEqual(len(i), 99 - len(rm_d))
         self.assertEqual(set(i.iterdescriptors()),
-                            set(descrs[1:]).difference(rm_d))
+                         set(descrs[1:]).difference(rm_d))
 
     def test_iterdescrs(self):
         i = MemoryDescriptorIndex()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(i.iterdescriptors()),
-                            set(descrs))
+                         set(descrs))
 
     def test_iterkeys(self):
         i = MemoryDescriptorIndex()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(i.iterkeys()),
-                            set(d.uuid() for d in descrs))
+                         set(d.uuid() for d in descrs))
 
     def test_iteritems(self):
         i = MemoryDescriptorIndex()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(i.iteritems()),
-                            set((d.uuid(), d) for d in descrs))
+                         set((d.uuid(), d) for d in descrs))

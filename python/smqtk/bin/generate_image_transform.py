@@ -283,7 +283,9 @@ def generate_image_transformations(image_path,
                  % (t_width, t_height, crop_tile_stride))
         # List needed to iterate generator.
         list(smqtk.utils.parallel.parallel_map(
-            lambda (x, y, i): save_image(i, [tag, '%dx%d+%d+%d' % (t_width, t_height, x, y)]),
+            lambda (x, y, ii):
+                save_image(ii, [tag,
+                                '%dx%d+%d+%d' % (t_width, t_height, x, y)]),
             image_crop_tiles(image, t_width, t_height, crop_tile_stride)
         ))
 

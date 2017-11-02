@@ -36,11 +36,12 @@ def flann_load_codebook(filename, is_rowwise=True):
     kmeans to build the centroid list given a set of colorDescriptor outputs.
 
     @param filename: file path to the codebook file
-    @param is_rowwise: asks if codebook is stored as rowwise. If not, it will be transposed internally after loading.
+    @param is_rowwise: asks if codebook is stored as rowwise. If not, it will be
+        transposed internally after loading.
     @return: row-wise numpy codebook
     """
 
-    cbook = np.loadtxt(filename, delimiter= ',')
+    cbook = np.loadtxt(filename, delimiter=',')
     if not is_rowwise:
         cbook = cbook.T
 
@@ -123,8 +124,10 @@ def flann_quantize_data(flann,
     else:
         fin = open(filein_name, 'rb')
 
-    count1 = 0  # tracks how many lines are read from file
-    count2 = 0  # tracks how many lines are to be processed by being stored in 'lines'
+    # tracks how many lines are read from file
+    count1 = 0
+    # tracks how many lines are to be processed by being stored in 'lines'
+    count2 = 0
     lines = []
 
     fout = None
@@ -143,7 +146,7 @@ def flann_quantize_data(flann,
             data[:, 3:] = func_normalize(data[:, 3:])
 
         idx, dists = flann.nn_index(data[:, 3:], k)
-        out_data = np.concatenate((data[:, 0:3], idx, dists), axis = 1)
+        out_data = np.concatenate((data[:, 0:3], idx, dists), axis=1)
         np.savetxt(fout, out_data, fmt='%g')
 
     for line in csv.reader(fin, delimiter=' '):
@@ -156,7 +159,7 @@ def flann_quantize_data(flann,
 
         if count2 == size_block:
             quantize_then_write(lines)
-            count2 = 0 # reset
+            count2 = 0  # reset
             lines = []
 
     if count2 > 0:
@@ -257,9 +260,9 @@ def quantizeResults(key, outdir, outtype,
     fileout_name = os.path.join(outdir, key+'.'+outname)
     # put codebook file under the path
     thisdir = os.path.dirname(os.path.realpath(__file__))
-    file_codebook = os.path.join(thisdir, pattern_codebook %outtype)
+    file_codebook = os.path.join(thisdir, pattern_codebook % outtype)
     # put flann index file under the path
-    file_flann = os.path.join(thisdir, '%s.flann' %outtype)
+    file_flann = os.path.join(thisdir, '%s.flann' % outtype)
     # load codebook and build flann knn query engine
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
     flann = flann_build(cbook, file_flann)
@@ -313,8 +316,8 @@ def quantizeResults3(in_descriptors, file_codebook, file_flann):
 
 #########################################################################
 def build_sp_hist(key, outdir, outtype):
-    inname  = outtype + '-all.encode.txt'
-    filein  = os.path.join(outdir, key+'.'+inname)
+    inname = outtype + '-all.encode.txt'
+    filein = os.path.join(outdir, key+'.'+inname)
     outname = outtype + '-sp.hist.txt'
     fileout = os.path.join(outdir, key+'.'+outname)
     return build_sp_hist_(filein, fileout)

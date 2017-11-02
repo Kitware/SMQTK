@@ -69,8 +69,8 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         ``compute_descriptor_async`` function on the descriptor generator.
     :type kwds: dict
 
-    :return: Generator that yields (DataElement, DescriptorElement) for each data
-        element given, in the order they were provided.
+    :return: Generator that yields (DataElement, DescriptorElement) for each
+        data element given, in the order they were provided.
     :rtype: collections.Iterable[(smqtk.representation.DataElement,
                                   smqtk.representation.DescriptorElement)]
 
@@ -204,7 +204,8 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
     log = logging.getLogger(__name__)
 
     if log.getEffectiveLevel() > logging.DEBUG or report_interval <= 0:
-        log_func = lambda m: None
+        def log_func(*_, **__):
+            return
         log.debug("Not logging progress")
     else:
         log.debug("Logging progress at %f second intervals", report_interval)
@@ -302,14 +303,14 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
 
     # Final fit with any remaining descriptors
     if k_deque:
-       log.info("Final partial fit of size %d", len(k_deque))
-       log.info('- collecting vectors')
-       vectors = get_vectors(k_deque)
-       log.info('- fitting model')
-       mbkm.partial_fit(vectors)
-       log.info('- cleaning')
-       d_fitted += len(k_deque)
-       k_deque.clear()
+        log.info("Final partial fit of size %d", len(k_deque))
+        log.info('- collecting vectors')
+        vectors = get_vectors(k_deque)
+        log.info('- fitting model')
+        mbkm.partial_fit(vectors)
+        log.info('- cleaning')
+        d_fitted += len(k_deque)
+        k_deque.clear()
 
     log.info("Computing descriptor classes with final KMeans model")
     mbkm.verbose = False

@@ -79,9 +79,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.exhaustive = exhaustive
         self._descriptor_set = descriptor_set
 
-        def normpath(p):
-            return (p and osp.abspath(osp.expanduser(p))) or p
-
         self.random_seed = None
         if random_seed is not None:
             self.random_seed = int(random_seed)
@@ -255,6 +252,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Returning query result of size %g", len(uuids))
 
-        return (descriptors, tuple(dists))
+        return descriptors, tuple(dists)
+
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

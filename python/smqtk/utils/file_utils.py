@@ -78,8 +78,8 @@ def safe_file_write(path, b, tmp_dir=None):
         c = os.write(fd, b)
         if c != len(b):
             raise RuntimeError("Failed to write all bytes to file.")
-    except:
-        # Remove temporary file if something bad happens.
+    except Exception:
+        # Remove temporary file if anything bad happens.
         os.remove(fp)
         raise
     finally:

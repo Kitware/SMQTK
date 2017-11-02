@@ -240,7 +240,8 @@ def gen_confusion_matrix(tlabel2classifications):
 
     :param tlabel2classifications: Mapping of true label for mapped set of
         classifications.
-    :type tlabel2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
+    :type tlabel2classifications:
+        dict[str, set[smqtk.representation.ClassificationElement]]
 
     :return: Numpy confusion matrix and label vectors for rows and columns
     :rtype: numpy.ndarray[int], list[str]
@@ -382,7 +383,8 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
     :param plot_ci_make_poly: Function that takes x, y, and their upper and
         lower confidence interval estimations, and returns a plt.Polygon
         correctly for the curve we're trying to draw.
-    :type plot_ci_make_poly: (x, x_l, x_u, y, y_l, y_u, **poly_args) -> plt.Polygon
+    :type plot_ci_make_poly: (x, x_l, x_u, y, y_l, y_u, **poly_args) ->
+        plt.Polygon
 
     """
     # Create curves for each label and then for overall.
@@ -445,7 +447,8 @@ def make_pr_curves(label2classifications, output_filepath, plot_ci,
         # Add points to flush ends with plot border
         poly_points = (
             [(x[0], y_l[0])] + zip(x_l, y_l) + [(x[-1], y_l[-1])] +
-            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) + [(x[0], y_u[0])]
+            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) +
+            [(x[0], y_u[0])]
         )
         return plt.Polygon(poly_points, **poly_kwds)
 
@@ -467,7 +470,8 @@ def make_roc_curves(label2classifications, output_filepath, plot_ci,
         y_u = numpy.max([y, y_u], 0)
         poly_points = (
             [(x[0], y_u[0])] + zip(x_l, y_u) + [(x[-1], y_u[-1])] +
-            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) + [(x[0], y_l[0])]
+            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) +
+            [(x[0], y_l[0])]
         )
         return plt.Polygon(poly_points, **poly_kwds)
 
@@ -501,9 +505,9 @@ def curve_wilson_ci(p, n, confidence=0.95):
     n = float(n)
     u = (1/(1+(z*z/n))) * \
         (p + (z*z)/(2*n) + z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
-    l = (1/(1+(z*z/n))) * \
+    L = (1/(1+(z*z/n))) * \
         (p + (z*z)/(2*n) - z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
-    return u, l
+    return u, L
 
 
 if __name__ == '__main__':

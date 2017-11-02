@@ -160,8 +160,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 assert not kwcnn.tpl._lasagne.USING_GPU
         except AssertionError:
             self._log.error("Theano mis-configured for specified device!")
-            url = "http://deeplearning.net/software/theano/library/config.html" \
-                  "#environment-variables"  # NOQA
+            url = "http://deeplearning.net/software/theano/library/" \
+                  "config.html#environment-variables"  # NOQA
             self._log.error("Review Theano documentation here: %s" % (url, ))
 
             self._log.error("Requested configuration:")
@@ -173,9 +173,12 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             self._log.error("Theano configuration:")
             # Check the configuration reported by imported Theano
             self._log.error("\t Imported theano module configuration")
-            self._log.error("\t\t Using CPU       : %s", not kwcnn.tpl._lasagne.USING_GPU)
-            self._log.error("\t\t Using GPU       : %s", kwcnn.tpl._lasagne.USING_GPU)
-            self._log.error("\t\t Using GPU Device: %s", kwcnn.tpl._lasagne.USING_DEVICE)
+            self._log.error("\t\t Using CPU       : %s",
+                            not kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU       : %s",
+                            kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU Device: %s",
+                            kwcnn.tpl._lasagne.USING_DEVICE)
 
             # Check the $HOME/.theanorc file for configuration
             self._log.error("\t $HOME/.theanorc configuration file")
@@ -533,7 +536,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
         # loading of those images
         img_a = numpy.array(img, dtype=numpy.float32)
         img_a = img_a.reshape(input_shape)
-    except:
+    except Exception:
         logging.getLogger(__name__).error(
             "Failed array-ifying data element. Image may be truncated: %s",
             data_element

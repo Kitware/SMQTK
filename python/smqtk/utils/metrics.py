@@ -134,7 +134,8 @@ def cosine_distance(i, j, pos_vectors=True):
     """
     Cosine similarity converted into angular distance.
 
-    See: https://en.wikipedia.org/wiki/Cosine_similarity#Angular_distance_and_similarity
+    See: https://en.wikipedia.org/wiki/Cosine_similarity, section
+    "Angular distance and similarity".
 
     :param i: Vector i
     :type i: numpy.core.multiarray.ndarray
@@ -150,7 +151,7 @@ def cosine_distance(i, j, pos_vectors=True):
     :rtype: float
 
     """
-    sim = max(-1, min(cosine_similarity(i, j), 1))
+    sim = max(-1.0, min(cosine_similarity(i, j), 1))
     return (1 + bool(pos_vectors)) * acos(sim) / pi
 
 

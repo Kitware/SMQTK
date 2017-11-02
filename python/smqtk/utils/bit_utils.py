@@ -214,8 +214,8 @@ def popcount(v):
     """
     Count the number of bits set (number of 1-bits, not 0-bits).
 
-    Pure python popcount algorithm adapted implementation at:
-    see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+    Pure python popcount algorithm adapted implementation at
+    https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel.
 
     Maximum known stable value that can be passed through this method:
     2**256 - 2. See the ``popcount.v_max`` function property.
@@ -256,6 +256,7 @@ def popcount(v):
     # truncation as if v were only a tp-bit integer
     # Magic 8 represents bits ina byte
     return ((v * h01) & t) >> ((b-1) * 8)
+
 
 # Maximum known stable value that can be passed as ``v``.
 popcount.v_max = (2**256) - 2

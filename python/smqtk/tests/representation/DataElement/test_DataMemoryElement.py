@@ -21,13 +21,14 @@ class TestDataMemoryElement (unittest.TestCase):
         cls.INVALID_BASE64 = '$%&^c85swd8a5sw568vs!'
 
         cls.VALID_B64_URI = 'base64://' + cls.VALID_BASE64
-        cls.VALID_DATA_URI = 'data:' + cls.EXPECTED_CT + ';base64,' + cls.VALID_BASE64
+        cls.VALID_DATA_URI = 'data:' + cls.EXPECTED_CT + ';base64,' + \
+                             cls.VALID_BASE64
 
     def test_configuration(self):
         default_config = DataMemoryElement.get_default_config()
         self.assertEqual(default_config,
-                            {'bytes': None, 'content_type': None,
-                             'readonly': False})
+                         {'bytes': None, 'content_type': None,
+                          'readonly': False})
 
         default_config['bytes'] = 'Hello World.'
         default_config['content_type'] = 'text/plain'

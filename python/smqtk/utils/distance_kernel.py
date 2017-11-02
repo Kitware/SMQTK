@@ -422,7 +422,8 @@ class DistanceKernel (object):
 
                 try:
                     clip_ids = [int(e) for e in clip_ids]
-                except:
+                except ValueError:
+                    # Re-raise with more informative exception.
                     raise ValueError("Not all clip IDs could be used as ints!")
 
                 id_diff = set(clip_ids).difference(self._row_id_index_map)
@@ -499,7 +500,8 @@ class DistanceKernel (object):
 
             # Reorder the given clip IDs so that they are in the same relative
             # order as the kernel matrix edge order
-            with SimpleTimer("Creating focus index/cid sequence", self._log.debug):
+            with SimpleTimer("Creating focus index/cid sequence",
+                             self._log.debug):
                 focus_row_indices = []
                 focus_row_clipids = []
                 for idx, cid in enumerate(self._row_id_index_map):

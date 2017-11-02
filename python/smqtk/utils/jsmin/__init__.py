@@ -114,8 +114,8 @@ class JavascriptMinify(object):
             next2 = read(1)
             if not next2:
                 last = next1.strip()
-                if not (doing_single_comment or doing_multi_comment)\
-                    and last not in ('', '/'):
+                if not (doing_single_comment or doing_multi_comment) and \
+                        last not in ('', '/'):
                     write(last)
                 break
             if doing_multi_comment:
@@ -147,22 +147,22 @@ class JavascriptMinify(object):
                         in_quote = ''
                         write(''.join(quote_buf))
             elif next1 in '\r\n':
-                if previous_non_space in newlineend_strings \
-                    or previous_non_space > '~':
+                if previous_non_space in newlineend_strings or \
+                        previous_non_space > '~':
                     while 1:
                         if next2 < '!':
                             next2 = read(1)
                             if not next2:
                                 break
                         else:
-                            if next2 in newlinestart_strings \
-                                or next2 > '~' or next2 == '/':
+                            if next2 in newlinestart_strings or \
+                                    next2 > '~' or next2 == '/':
                                 do_newline = True
                             break
             elif next1 < '!' and not in_re:
-                if (previous_non_space in space_strings
-                    or previous_non_space > '~') \
-                    and (next2 in space_strings or next2 > '~'):
+                if (previous_non_space in space_strings or
+                        previous_non_space > '~') and \
+                        (next2 in space_strings or next2 > '~'):
                     do_space = True
             elif next1 == '/':
                 if in_re:

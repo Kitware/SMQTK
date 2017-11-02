@@ -79,7 +79,7 @@ class TestHistogramIntersectionDistance (unittest.TestCase):
         )
 
         self.assertRaises(ValueError, df.histogram_intersection_distance,
-                             self.m1, self.m2)
+                          self.m1, self.m2)
 
 
 class TestHammingDistance (unittest.TestCase):
@@ -92,7 +92,7 @@ class TestHammingDistance (unittest.TestCase):
         for i in range(1000):
             a = gen(n)
             b = gen(n)
-            actual = bin(a^b).count('1')
+            actual = bin(a ^ b).count('1')
             self.assertEqual(df.hamming_distance(a, b), actual)
 
     def test_rand_large(self):
@@ -100,5 +100,5 @@ class TestHammingDistance (unittest.TestCase):
         for i in range(1000):
             a = gen(n)
             b = gen(n)
-            actual = bin(a^b).count('1')
+            actual = bin(a ^ b).count('1')
             self.assertEqual(df.hamming_distance(a, b), actual)

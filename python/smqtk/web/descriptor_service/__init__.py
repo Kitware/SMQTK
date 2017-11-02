@@ -47,15 +47,15 @@ class DescriptorServiceServer (SmqtkWebApp):
     Additional Configuration
 
 
-
-    .. note:: We will look for an environment variable `DescriptorService_CONFIG` for a
-              string file path to an additional JSON configuration file to consider.
+    .. note:: We will look for an environment variable
+              `DescriptorService_CONFIG` for a string file path to an additional
+              JSON configuration file to consider.
 
     """
 
     @classmethod
     def is_usable(cls):
-      return True
+        return True
 
     @classmethod
     def get_default_config(cls):
@@ -161,8 +161,8 @@ class DescriptorServiceServer (SmqtkWebApp):
             finished_loop = False
             if data_elem:
                 for l in self.generator_label_configs:
-                    if data_elem.content_type() \
-                            in self.get_descriptor_inst(l).valid_content_types():
+                    if data_elem.content_type() in \
+                            self.get_descriptor_inst(l).valid_content_types():
                         d = None
                         try:
                             d = self.generate_descriptor(data_elem, l)

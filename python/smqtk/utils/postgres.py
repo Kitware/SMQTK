@@ -209,7 +209,7 @@ class PsqlConnectionHelper (SmqtkObject):
 
                 # For server cleaning (e.g. pgbouncer)
                 conn.commit()
-        except:
+        except Exception:
             conn.rollback()
             raise
         finally:
@@ -347,7 +347,7 @@ class PsqlConnectionHelper (SmqtkObject):
 
             if conn is not None:
                 conn.commit()
-        except:
+        except Exception:
             if conn is not None:
                 conn.rollback()
             raise

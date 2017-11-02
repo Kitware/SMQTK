@@ -246,7 +246,7 @@ def classifier_kfold_validation():
         # Only considering positive labels
         for t_label in pos_map:
             fold_data[i][t_label] = {
-                "truth": [l == t_label for l in truth_labels[test]],
+                "truth": [L == t_label for L in truth_labels[test]],
                 "proba": [uuid2c[uuid][t_label] for uuid in uuids[test]]
             }
 

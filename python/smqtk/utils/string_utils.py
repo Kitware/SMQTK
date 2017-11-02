@@ -25,7 +25,8 @@ def partition_string(s, segments):
     then the length of trailing segments will be shorter than leading segments.
 
     >>> partition_string('d7ca25c5-b886-4a1b-87fe-5945313d350b', 11)
-    ['d7ca', '25c5', '-b88', '6-4', 'a1b', '-87', 'fe-', '594', '531', '3d3', '50b']
+    ['d7ca', '25c5', '-b88', '6-4', 'a1b', '-87', 'fe-', '594', '531', '3d3',
+     '50b']
     >>> partition_string('abcde', 2)
     ['abc', 'de']
     >>> partition_string('abcde', 4)
@@ -37,7 +38,8 @@ def partition_string(s, segments):
     >>> partition_string('a', 2)
     Traceback (most recent call last):
         ...
-    AssertionError: Cannot split given string into more segments than there are characters in the string!
+    AssertionError: Cannot split given string into more segments than there are
+    characters in the string!
 
     :raises AssertionError: Segmentation value greater than the length of the
         string.
@@ -99,7 +101,7 @@ def random_characters(n, char_set=DEFAULT_CHAR_SET):
     n = int(n)
     if n < 0:
         raise ValueError("n must be a positive integer.")
-    l = len(char_set)
-    if l == 0:
+    L = len(char_set)
+    if L == 0:
         raise ValueError("Empty char_set given.")
-    return ''.join(char_set[random.randint(0, l - 1)] for _ in range(n))
+    return ''.join(char_set[random.randint(0, L - 1)] for _ in range(n))

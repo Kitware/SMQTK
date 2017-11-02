@@ -233,7 +233,8 @@ class ExposedAutoGenMeta (type):
 
 # Wrapper around numpy ndarray class, providing pass-through functions for class
 # functions as of numpy 1.8.0
-# TODO: Add``method_to_typeid`` for numpy.array functions that return copies of data
+# TODO: Add``method_to_typeid`` for numpy.array functions that return copies of
+#       data.
 class ArrayProxy (BaseProxy2):
     __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(ndarray)
@@ -245,7 +246,8 @@ class ArrayProxy (BaseProxy2):
 
 # Wrapper around numpy matrix class, providing pass-through functions for class
 # functions as of numpy 1.8.0.
-# TODO: Add``method_to_typeid`` for numpy.matrix functions that return copies of data
+# TODO: Add``method_to_typeid`` for numpy.matrix functions that return copies of
+#       data.
 class MatrixProxy (BaseProxy2):
     __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(matrix)
@@ -296,6 +298,7 @@ class ReadWriteLockProxy (BaseProxy2):
     def write_lock(self, timeout=None, _id=None):
         me = _id or (current_process().ident, current_thread().ident)
         return self._callmethod('write_lock', (timeout, me))
+
 
 # Return types can't seem to be the same as a type that is creatable, so we use
 # a standard 'r' character prefix on return types. This required a manager
@@ -368,9 +371,11 @@ ProxyManager.register('matrix',           np.matrix,        MatrixProxy)
 ProxyManager.register('ReadWriteLock',    ReadWriteLock,    ReadWriteLockProxy)
 ProxyManager.register('DistanceKernel',   DistanceKernel,   DistanceKernelProxy)
 ProxyManager.register('FeatureMemory',    FeatureMemory,    FeatureMemoryProxy)
-ProxyManager.register('FeatureMemoryMap', FeatureMemoryMap, FeatureMemoryMapProxy)
+ProxyManager.register('FeatureMemoryMap', FeatureMemoryMap,
+                      FeatureMemoryMapProxy)
 # Function based
-ProxyManager.register('get_common_fmm',   get_common_fmm,   FeatureMemoryMapProxy)
+ProxyManager.register('get_common_fmm',   get_common_fmm,
+                      FeatureMemoryMapProxy)
 ProxyManager.register('get_common_tc',    get_common_tc,    TimedCacheProxy)
 ProxyManager.register("symmetric_dk_from_file",
                       DistanceKernel.construct_symmetric_from_files,
@@ -384,13 +389,25 @@ ProxyManager.register("asymmetric_dk_from_file",
 #   proxy type that it returns CANNOT have been registered with
 #   ``create_method=True``. Reason: the server uses the registered typeid's
 #   callable to create the return object
-ProxyManager.register('rarray',           proxytype=ArrayProxy,           create_method=False)
-ProxyManager.register("rmatrix",          proxytype=MatrixProxy,          create_method=False)
+ProxyManager.register('rarray',
+                      proxytype=ArrayProxy,
+                      create_method=False)
+ProxyManager.register("rmatrix",
+                      proxytype=MatrixProxy,
+                      create_method=False)
 # Generated structure from read_lock() and write_lock() methods in ReadWriteLock
-ProxyManager.register("rRWLockWith",      proxytype=RWLockWithProxy,      create_method=False)
-ProxyManager.register("rReadWriteLock",   proxytype=ReadWriteLockProxy,   create_method=False)
-ProxyManager.register("rDistanceKernel",  proxytype=DistanceKernelProxy,  create_method=False)
-ProxyManager.register("rFeatureMemory",   proxytype=FeatureMemoryProxy,   create_method=False)
+ProxyManager.register("rRWLockWith",
+                      proxytype=RWLockWithProxy,
+                      create_method=False)
+ProxyManager.register("rReadWriteLock",
+                      proxytype=ReadWriteLockProxy,
+                      create_method=False)
+ProxyManager.register("rDistanceKernel",
+                      proxytype=DistanceKernelProxy,
+                      create_method=False)
+ProxyManager.register("rFeatureMemory",
+                      proxytype=FeatureMemoryProxy,
+                      create_method=False)
 
 
 # Map of ProxyManager instance keyed on the address

@@ -218,9 +218,9 @@ IqrRefineView.prototype.show_more_refine_results = function () {
     while (this.refine_results_displayed < to_display)
     {
         new DataView(this.results_container_refine,
-                      this.refine_results_displayed+1,  // show 1-indexed rank value
-                      this.refine_result_uuids[this.refine_results_displayed],
-                      this.refine_result_score[this.refine_results_displayed]);
+                     this.refine_results_displayed,
+                     this.refine_result_uuids[this.refine_results_displayed],
+                     this.refine_result_score[this.refine_results_displayed]);
         this.refine_results_displayed++;
     }
 

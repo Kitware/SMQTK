@@ -4,6 +4,7 @@ import os
 
 import flask
 import requests
+import six
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.representation import DescriptorElementFactory
@@ -14,6 +15,7 @@ from smqtk.utils import SimpleTimer
 from smqtk.utils import plugin
 from smqtk.utils import merge_dict
 from smqtk.web import SmqtkWebApp
+
 
 MIMETYPES = mimetypes.MimeTypes()
 
@@ -95,15 +97,15 @@ class DescriptorServiceServer (SmqtkWebApp):
         #: :type: dict[str, dict]
         self.generator_label_configs = self.json_config['descriptor_generators']
 
-        # Cache of DescriptorGenerator instances so we don't have to continuously
-        # initialize them as we get requests.
+        # Cache of DescriptorGenerator instances so we don't have to
+        # continuously initialize them as we get requests.
         self.descriptor_cache = {}
         self.descriptor_cache_lock = multiprocessing.RLock()
 
         @self.route("/")
         def list_ingest_labels():
             return flask.jsonify({
-                "labels": sorted(self.generator_label_configs.iterkeys())
+                "labels": sorted(self.generator_label_configs)
             })
 
         @self.route("/all/content_types")
@@ -152,7 +154,7 @@ class DescriptorServiceServer (SmqtkWebApp):
             data_elem = None
             try:
                 data_elem = self.resolve_data_element(uri)
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "Failed URI resolution: %s" % str(ex)
 
             descriptors = {}
@@ -164,10 +166,10 @@ class DescriptorServiceServer (SmqtkWebApp):
                         d = None
                         try:
                             d = self.generate_descriptor(data_elem, l)
-                        except RuntimeError, ex:
+                        except RuntimeError as ex:
                             message = "Descriptor extraction failure: %s" \
                                       % str(ex)
-                        except ValueError, ex:
+                        except ValueError as ex:
                             message = "Data content type issue: %s" % str(ex)
 
                         descriptors[l] = d and d.vector().tolist()
@@ -240,15 +242,15 @@ class DescriptorServiceServer (SmqtkWebApp):
             de = None
             try:
                 de = self.resolve_data_element(uri)
-            except ValueError, ex:
+            except ValueError as ex:
                 message = "URI resolution issue: %s" % str(ex)
 
             if de:
                 try:
                     descriptor = self.generate_descriptor(de, descriptor_label)
-                except RuntimeError, ex:
+                except RuntimeError as ex:
                     message = "Descriptor extraction failure: %s" % str(ex)
-                except ValueError, ex:
+                except ValueError as ex:
                     message = "Data content type issue: %s" % str(ex)
 
             return flask.jsonify({
@@ -317,7 +319,7 @@ class DescriptorServiceServer (SmqtkWebApp):
             self._log.debug("Given URL")
             try:
                 de = DataUrlElement(uri)
-            except requests.HTTPError, ex:
+            except requests.HTTPError as ex:
                 raise ValueError("Failed to initialize URL element due to "
                                  "HTTPError: %s" % str(ex))
 

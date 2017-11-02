@@ -8,6 +8,7 @@ import threading
 
 import flask
 from flask_cors import cross_origin
+import six
 from werkzeug.exceptions import NotFound
 from werkzeug.wsgi import peek_path_info, pop_path_info
 
@@ -106,7 +107,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
         # IQR modules
         # - for each entry in 'iqr_tabs', initialize a separate IqrSearch
         #   instance.
-        for prefix, config in self.json_config['iqr_tabs'].iteritems():
+        for prefix, config in six.iteritems(self.json_config['iqr_tabs']):
             if prefix == "__default__":
                 # skipping default config sample
                 continue

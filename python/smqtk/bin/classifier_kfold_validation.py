@@ -70,7 +70,8 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy
-import sklearn.cross_validation
+import six
+import sklearn.model_selection
 import sklearn.metrics
 
 from smqtk.algorithms import get_classifier_impls
@@ -184,10 +185,10 @@ def classifier_kfold_validation():
     #
     # Cross validation
     #
-    kfolds = sklearn.cross_validation.StratifiedKFold(
-        truth_labels, config['cross_validation']['num_folds'],
-        random_state=config['cross_validation']['random_seed']
-    )
+    kfolds = sklearn.model_selection.StratifiedKFold(
+        n_splits=config['cross_validation']['num_folds'],
+        random_state=config['cross_validation']['random_seed'],
+    ).split(numpy.zeros(len(truth_labels)), truth_labels)
 
     """
     Truth and classification probability results for test data per fold.
@@ -239,7 +240,7 @@ def classifier_kfold_validation():
             use_multiprocessing=use_mp, ri=1.0
         )
         uuid2c = dict((d.uuid(), c.get_classification())
-                      for d, c in m.iteritems())
+                      for d, c in six.iteritems(m))
 
         log.info("-- Pairing truth and computed probabilities")
         # Only considering positive labels

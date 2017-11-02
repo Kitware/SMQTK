@@ -1,4 +1,3 @@
-import cPickle
 import collections
 from copy import deepcopy
 import ctypes
@@ -8,6 +7,8 @@ import tempfile
 
 import numpy
 import numpy.linalg
+import six
+from six.moves import cPickle
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.representation.data_element import from_uri
@@ -184,7 +185,8 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         Make a single string out of a parameters dictionary
         """
-        return ' '.join((str(k) + ' ' + str(v) for k, v in params.iteritems()))
+        return ' '.join((str(k) + ' ' + str(v)
+                         for k, v in six.iteritems(params)))
 
     def _norm_vector(self, v):
         """

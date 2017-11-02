@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 
-from StringIO import StringIO
+from six.moves import cStringIO as StringIO
 
 from smqtk.bin.check_images import main as check_images_main
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -32,7 +32,6 @@ class TestIsLoadableImage(unittest.TestCase):
     def test_unloadable_image_returns_false(self):
         assert is_loadable_image(self.non_image) == False
 
-
     def test_loadable_image_returns_true(self):
         assert is_loadable_image(self.good_image) == True
 
@@ -46,21 +45,20 @@ class TestIsValidElement(unittest.TestCase):
         cls.non_image = DataFileElement(os.path.join(TEST_DATA_DIR,
                                                      'test_file.dat'))
 
-
     def test_non_data_element(self):
-        assert is_valid_element(False) == False
-
+        # Should check that input datum is a DataElement instance.
+        # noinspection PyTypeChecker
+        assert is_valid_element(False) is False
 
     def test_invalid_content_type(self):
-        assert is_valid_element(self.good_image, valid_content_types=[]) == False
+        assert is_valid_element(self.good_image, valid_content_types=[]) is False
 
     def test_valid_content_type(self):
         assert is_valid_element(self.good_image,
-                                valid_content_types=['image/png']) == True
-
+                                valid_content_types=['image/png']) is True
 
     def test_invalid_image_returns_false(self):
-        assert is_valid_element(self.non_image, check_image=True) == False
+        assert is_valid_element(self.non_image, check_image=True) is False
 
 
 class TestCheckImageCli(unittest.TestCase):
@@ -81,12 +79,10 @@ class TestCheckImageCli(unittest.TestCase):
 
         return stdout, stderr
 
-
     def test_base_case(self):
         with mock.patch.object(sys, 'argv', ['']):
             assert 'Validate a list of images returning the filepaths' in \
                 self.check_images()[0]
-
 
     def test_check_images(self):
         # Create test file with a valid, invalid, and non-existent image

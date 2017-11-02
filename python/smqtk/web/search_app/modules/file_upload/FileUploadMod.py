@@ -2,8 +2,9 @@
 import flask
 import multiprocessing
 import os
-from StringIO import StringIO
 import tempfile
+
+from six.moves import cStringIO as StringIO
 
 from smqtk.utils import SmqtkObject
 from smqtk.utils import file_utils

@@ -1,5 +1,6 @@
-import cPickle
 import unittest
+
+from six.moves import cPickle
 
 import smqtk.representation.classification_element.memory
 

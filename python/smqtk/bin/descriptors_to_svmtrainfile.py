@@ -25,6 +25,8 @@ import csv
 import itertools
 import logging
 
+import six
+
 from smqtk.representation import (
     get_descriptor_index_impls,
 )
@@ -101,7 +103,7 @@ def main():
             )
 
     log.info("Integer label association:")
-    for i, l in sorted((i, l) for l, i in label2int.iteritems()):
+    for i, l in sorted((i, l) for l, i in six.iteritems(label2int)):
         log.info('\t%d :: %s', i, l)
 
 

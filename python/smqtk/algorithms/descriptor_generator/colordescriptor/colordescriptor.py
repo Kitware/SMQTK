@@ -12,6 +12,7 @@ import sys
 import tempfile
 
 import numpy
+import six
 import sklearn.cluster
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
@@ -823,7 +824,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                 # descriptor generation may have failed for this ingest UID
                 try:
                     i_shape, d_shape = r.get()
-                except RuntimeError, ex:
+                except RuntimeError as ex:
                     self._log.warning("Descriptor generation failed for "
                                       "UID[%s], skipping its inclusion in "
                                       "model: %s", uid, str(ex))
@@ -964,7 +965,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 )
 
                 # Compute descriptors for extracted frames.
-                for frame, imgPath in fm.iteritems():
+                for frame, imgPath in six.iteritems(fm):
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di, frame)
                     r = pool.apply_async(
@@ -1002,7 +1003,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     # Descriptor generation may have failed for this UID
                     try:
                         i_shape, d_shape = r.get()
-                    except RuntimeError, ex:
+                    except RuntimeError as ex:
                         self._log.warning('Descriptor generation failed for '
                                           'frame %d in video UID[%s]: %s',
                                           frame, uid, str(ex))

@@ -1,6 +1,8 @@
 import random
 import unittest
 
+from six.moves import range
+
 from smqtk.utils.parallel import parallel_map
 
 
@@ -11,7 +13,7 @@ class TestParallelMap (unittest.TestCase):
         n = 10000
 
         # Random characters in range [a, z]
-        cls.test_string = [chr(random.randint(97, 122)) for _ in xrange(n)]
+        cls.test_string = [chr(random.randint(97, 122)) for _ in range(n)]
         cls.test_func = ord
         # Since this parallel function is intended to perform similar to the
         # built-in map function.

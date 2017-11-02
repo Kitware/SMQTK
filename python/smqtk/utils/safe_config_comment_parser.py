@@ -7,21 +7,17 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-from ConfigParser import (
-    SafeConfigParser,
-    DEFAULTSECT,
-    NoSectionError,
-    NoOptionError,
-)
-from StringIO import StringIO
+from six.moves import configparser
+
+from six.moves import StringIO
 
 
-class SafeConfigCommentParser (SafeConfigParser, object):
+class SafeConfigCommentParser (configparser.SafeConfigParser, object):
     """
-    Adaptation of the ConfigParser.SafeConfigParser object that can also record
+    Adaptation of the configparser.SafeConfigParser object that can also record
     a comment for an option.
 
-    Matched to python 2.6 ConfigParser version at the minimum.
+    Matched to python 2.6 configparser version at the minimum.
 
     NOTE: As of right now, comments are not read in from file. They are there
     for creating a configuration object for the intent of writing out to file.
@@ -50,8 +46,8 @@ class SafeConfigCommentParser (SafeConfigParser, object):
         # Add slot for DEFAULT section option comments since it won't be added
         # by the user. Also adding an initial null comment to get around bug in
         # comment retrieval.
-        self._comments[DEFAULTSECT] = self._dict()
-        self.set_comment(None, DEFAULTSECT)
+        self._comments[configparser.DEFAULTSECT] = self._dict()
+        self.set_comment(None, configparser.DEFAULTSECT)
 
     def write(self, fp):
         """
@@ -81,14 +77,13 @@ class SafeConfigCommentParser (SafeConfigParser, object):
                 line_buff = ''
                 block_buff = ''
 
-                #for seg in segments:
                 while segments:
                     # if the concatenation of the current segment would make the
                     # total line buffer length greater than the output length
                     # limit, dump the line to the block buffer.
 
-                    if line_buff and \
-                       len(line_buff) + len(segments[0]) + 1 > self.OUTPUT_LINE_LENGTH:
+                    line_length = len(line_buff) + len(segments[0]) + 1
+                    if line_buff and line_length > self.OUTPUT_LINE_LENGTH:
                         # The buffer isn't empty and the next segment won't fit
                         # in the buffer. Dumping out the current buffer into the
                         # block buffer and starting a new line buffer. The '+1'
@@ -114,12 +109,15 @@ class SafeConfigCommentParser (SafeConfigParser, object):
                 fp.write( block_buff  )
 
         if self._defaults:
-            fp.write("[%s]\n" % DEFAULTSECT)
+            fp.write("[%s]\n" % configparser.DEFAULTSECT)
             for (key, value) in self._defaults.items():
                 # write comment if there is one for this default key
-                if ( self._comments.get(DEFAULTSECT, False)
-                     and self._comments[DEFAULTSECT].get(key, False) ):
-                    write_comment(self._comments[DEFAULTSECT][key])
+                has_comment = (
+                    self._comments.get(configparser.DEFAULTSECT, False) and
+                    self._comments[configparser.DEFAULTSECT].get(key, False)
+                )
+                if has_comment:
+                    write_comment(self._comments[configparser.DEFAULTSECT][key])
                 # write key/val
                 fp.write("%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
             # spacer before next section heading
@@ -130,7 +128,6 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
             # write comment for section if there is one
             if self.has_comment(section):
-                #noinspection PyTypeChecker
                 write_comment(self.get_comment(section))
 
             # section head
@@ -141,7 +138,6 @@ class SafeConfigCommentParser (SafeConfigParser, object):
                     fp.write("\n")
                     # write comment for pair of there is one
                     if self.has_comment(section, key):
-                        #noinspection PyTypeChecker
                         write_comment(self.get_comment(section, key))
                     # write key/val
                     fp.write("%s = %s\n" %
@@ -168,7 +164,7 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
     def set(self, section, option, value=None, comment=None):
         """
-        Set an option.  Extend ConfigParser.set: check for string values. Also
+        Set an option.  Extend configparser.set: check for string values. Also
         optionally records a comment for the option.
 
         @type section: str
@@ -181,7 +177,7 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
         if comment is not None:
             if not section:
-                section = DEFAULTSECT
+                section = configparser.DEFAULTSECT
 
             if section not in self._comments:
                 self._comments[section] = self._dict()
@@ -201,15 +197,15 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
         """
         if not section:
-            section = DEFAULTSECT
+            section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != DEFAULTSECT:
-            raise NoSectionError(section)
+        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+            raise configparser.NoSectionError(section)
 
         if option:
             option = self.optionxform(option)
             if not self.has_option(section, option):
-                raise NoOptionError(option, section)
+                raise configparser.NoOptionError(option, section)
         else:
             # looking for section comment
             option = '__name__'
@@ -236,15 +232,15 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
         """
         if not section:
-            section = DEFAULTSECT
+            section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != DEFAULTSECT:
-            raise NoSectionError(section)
+        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+            raise configparser.NoSectionError(section)
 
         if option:
             option = self.optionxform(option)
             if not self.has_option(section, option):
-                raise NoOptionError(option, section)
+                raise configparser.NoOptionError(option, section)
 
         else:
             # looking for section comment
@@ -264,10 +260,10 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
         """
         if not section:
-            section = DEFAULTSECT
+            section = configparser.DEFAULTSECT
 
-        if not self.has_section(section) and section != DEFAULTSECT:
-            raise NoSectionError(section)
+        if not self.has_section(section) and section != configparser.DEFAULTSECT:
+            raise configparser.NoSectionError(section)
 
         if section not in self._comments:
             self._comments[section] = self._dict()
@@ -275,7 +271,7 @@ class SafeConfigCommentParser (SafeConfigParser, object):
         if option:
             option = self.optionxform(option)
             if not self.has_option(section, option):
-                raise NoOptionError(option, section)
+                raise configparser.NoOptionError(option, section)
         else:
             # setting section comment
             option = '__name__'
@@ -299,14 +295,14 @@ class SafeConfigCommentParser (SafeConfigParser, object):
 
         """
         if not section:
-            section = DEFAULTSECT
-        elif not self.has_section(section) and section != DEFAULTSECT:
-            raise NoSectionError(section)
+            section = configparser.DEFAULTSECT
+        elif not self.has_section(section) and section != configparser.DEFAULTSECT:
+            raise configparser.NoSectionError(section)
 
         if option:
             option = self.optionxform(option)
             if not self.has_option(section, option):
-                raise NoOptionError(option, section)
+                raise configparser.NoOptionError(option, section)
         else:
             # setting section comment
             option = '__name__'

@@ -2,6 +2,7 @@ import random
 import unittest
 
 import numpy as np
+from six.moves import range
 
 from smqtk.utils import metrics as df
 
@@ -88,7 +89,7 @@ class TestHammingDistance (unittest.TestCase):
 
     def test_rand(self):
         n = 64
-        for i in xrange(1000):
+        for i in range(1000):
             a = gen(n)
             b = gen(n)
             actual = bin(a^b).count('1')
@@ -96,7 +97,7 @@ class TestHammingDistance (unittest.TestCase):
 
     def test_rand_large(self):
         n = 1024
-        for i in xrange(1000):
+        for i in range(1000):
             a = gen(n)
             b = gen(n)
             actual = bin(a^b).count('1')

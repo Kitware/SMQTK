@@ -99,15 +99,15 @@ def bit_vector_to_int(v):
     This version handles vectors of up to 64bits in size.
 
     :param v: 1D Vector of bits
-    :type v: numpy.core.multiarray.ndarray
+    :type v: numpy.ndarray
 
     :return: Integer equivalent
     :rtype: int
 
     """
-    c = 0L
+    c = 0
     for b in v:
-        c = (c * 2L) + int(b)
+        c = (c << 1) + int(b)
     return c
 
 
@@ -120,15 +120,15 @@ def bit_vector_to_int_large(v):
     (>64bit).
 
     :param v: 1D Vector of bits
-    :type v: numpy.core.multiarray.ndarray
+    :type v: numpy.ndarray
 
     :return: Integer equivalent
     :rtype: int
 
     """
-    c = 0L
+    c = 0
     for b in v:
-        c = (c * 2L) + int(b)
+        c = (c << 1) + int(b)
     return c
 
 

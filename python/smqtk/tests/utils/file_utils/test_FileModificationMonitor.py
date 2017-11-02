@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import atexit
 import os
 import tempfile
@@ -47,7 +49,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertFalse(monitor.is_alive())
         finally:
             if monitor.is_alive():
-                print "WARNING :: Forcing thread stop by removing filepath var"
+                print("WARNING :: Forcing thread stop by removing filepath var")
                 monitor.filepath = None
 
     def test_short_file_copy(self):

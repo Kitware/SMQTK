@@ -1,4 +1,4 @@
-import cPickle
+from six.moves import cPickle
 
 from smqtk.exceptions import  NoClassificationError
 from smqtk.representation import ClassificationElement

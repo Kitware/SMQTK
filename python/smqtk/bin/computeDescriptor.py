@@ -82,7 +82,7 @@ def main():
         # noinspection PyTypeChecker
         for f in vec:
             s.append('%15f' % f)
-        print ' '.join(s)
+        print(' '.join(s))
 
 
 if __name__ == "__main__":

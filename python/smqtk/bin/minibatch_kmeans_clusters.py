@@ -6,12 +6,11 @@ mini-batch KMeans implementation from Scikit-learn
 By the nature of Scikit-learn's MiniBatchKMeans implementation, euclidean
 distance is used to measure distance between descriptors.
 """
-
-import cPickle
 import logging
 import os
 
 import numpy
+from six.moves import cPickle
 from sklearn.cluster import MiniBatchKMeans
 
 from smqtk.compute_functions import mb_kmeans_build_apply

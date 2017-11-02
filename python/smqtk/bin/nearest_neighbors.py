@@ -1,9 +1,17 @@
 """
 Retrieve the nearest neighbors of a set of UUIDs.
+
+Input UIDs, specified in files input to the -u/--uuid-list option, are located
+within the configured "descriptor_set" and then queried against the configured
+"nn_index".  Thus, all UIDs provided in the input file should exist in the
+configured "descriptor_set" otherwise a KeyError is raised.  Input descriptors
+do not have to be necessarily indexed in the configured "nn_index".
 """
 import logging
 import os
 import sys
+
+import six
 
 from smqtk.utils.bin_utils import (
     basic_cli_parser,
@@ -11,6 +19,7 @@ from smqtk.utils.bin_utils import (
 )
 
 from smqtk.algorithms.nn_index import get_nn_index_impls
+from smqtk.representation import get_descriptor_index_impls
 from smqtk.utils import plugin
 
 
@@ -37,6 +46,7 @@ def get_cli_parser():
 def get_default_config():
     return {
         'plugins': {
+            'descriptor_set': plugin.make_config(get_descriptor_index_impls()),
             'nn_index': plugin.make_config(get_nn_index_impls())
         }
     }
@@ -54,9 +64,16 @@ def main():
     log = logging.getLogger(__name__)
     log.debug('Showing debug messages.')
 
-    nearest_neighbor_index = plugin.from_plugin_config(config['plugins']['nn_index'],
-                                                       get_nn_index_impls())
+    #: :type: smqtk.representation.DescriptorIndex
+    descriptor_set = plugin.from_plugin_config(
+        config['plugins']['descriptor_set'], get_descriptor_index_impls()
+    )
+    #: :type: smqtk.algorithms.NearestNeighborsIndex
+    nearest_neighbor_index = plugin.from_plugin_config(
+        config['plugins']['nn_index'], get_nn_index_impls()
+    )
 
+    # noinspection PyShadowingNames
     def nearest_neighbors(descriptor, n):
         if n == 0:
             n = len(nearest_neighbor_index)
@@ -75,14 +92,12 @@ def main():
     if args.uuid_list is not None:
         with open(args.uuid_list, 'r') as infile:
             for line in infile:
-                descriptor = nearest_neighbor_index.descriptor_index \
-                                                   .get_descriptor(line.strip())
+                descriptor = descriptor_set.get_descriptor(line.strip())
                 print(descriptor.uuid())
                 for neighbor in nearest_neighbors(descriptor, args.num):
                     print('%s,%f' % neighbor)
     else:
-        for (uuid, descriptor) in nearest_neighbor_index.descriptor_index\
-                                                        .iteritems():
+        for (uuid, descriptor) in descriptor_set.iteritems():
             print(uuid)
             for neighbor in nearest_neighbors(descriptor, args.num):
                 print('%s,%f' % neighbor)

@@ -3,6 +3,8 @@ import logging
 import os
 import shutil
 
+import six
+
 from smqtk.utils import file_utils, video_utils
 from smqtk.utils.mimetype import get_mimetypes
 
@@ -45,7 +47,7 @@ class PreviewCache (object):
         """
         Cleanup after ourselves.
         """
-        for fp in self._preview_cache.itervalues():
+        for fp in six.itervalues(self._preview_cache):
             os.remove(fp)
 
     def get_preview_image(self, elem):
@@ -70,14 +72,16 @@ class PreviewCache (object):
             self._log.debug("Generating preview image based on content type: "
                             "%s", elem.content_type)
             file_utils.safe_create_dir(self._cache_dir)
-            fp = self.PREVIEW_GEN_METHOD[elem.content_type()](elem, self._cache_dir)
+            fp = self.PREVIEW_GEN_METHOD[elem.content_type()](elem,
+                                                              self._cache_dir)
         else:
             content_class = elem.content_type().split('/', 1)[0]
             if content_class in self.PREVIEW_GEN_METHOD:
                 self._log.debug("Generating preview image based on content "
                                 "class: %s", content_class)
                 file_utils.safe_create_dir(self._cache_dir)
-                fp = self.PREVIEW_GEN_METHOD[content_class](elem, self._cache_dir)
+                fp = self.PREVIEW_GEN_METHOD[content_class](elem,
+                                                            self._cache_dir)
             else:
                 raise ValueError("No preview generation method for the data "
                                  "element provided, of content type '%s'."

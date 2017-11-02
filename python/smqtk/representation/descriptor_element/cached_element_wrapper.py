@@ -1,12 +1,11 @@
 import threading
 import time
 
+import six
+
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation import get_descriptor_element_impls
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class CachingDescriptorElement (DescriptorElement):
@@ -54,7 +53,7 @@ class CachingDescriptorElement (DescriptorElement):
 
             # Construct config block DescriptorElementFactory wants
             c_def = {"type": None}
-            for label, de_cls in de_impls.iteritems():
+            for label, de_cls in six.iteritems(de_impls):
                 # noinspection PyUnresolvedReferences
                 c_def[label] = de_cls.get_default_config()
             c['wrapped_element_factory'] = c_def
@@ -146,21 +145,22 @@ class CachingDescriptorElement (DescriptorElement):
             self.cache_thread.join()
 
     def __getstate__(self):
-        return {
-            # Base DescriptorElement stuff
-            "type": self.type(),
-            "uuid": self.uuid(),
-            # This impl's stuff
+        state = super(CachingDescriptorElement, self).__getstate__()
+        state.update({
             "wrapped_element_factory": self.wrapped_element_factory,
             "cache_expiration_timeout": self.cache_expiration_timeout,
             "poll_interval": self.poll_interval
-        }
+        })
+        return state
 
     def __setstate__(self, c):
-        # base-class
-        self._type_label = c['type']
-        self._uuid = c['uuid']
-        # this-class
+        # Support older state version
+        if 'type' in c:
+            self._type_label = c['type']
+            self._uuid = c['uuid']
+        else:
+            super(CachingDescriptorElement, self).__setstate__(c)
+
         self.wrapped_element_factory = c['wrapped_element_factory']
         self.cache_expiration_timeout = c['cache_expiration_timeout']
         self.poll_interval = c['poll_interval']

@@ -12,16 +12,16 @@ class DummyDescriptorElement (DescriptorElement):
         return True
 
     def get_config(self):
-        return {}
+        """ stub """
 
     def set_vector(self, new_vec):
-        pass
+        """ stub """
 
     def has_vector(self):
-        pass
+        """ stub """
 
     def vector(self):
-        pass
+        """ stub """
 
 
 class TestDescriptorElementAbstract (unittest.TestCase):
@@ -101,3 +101,31 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         self.assertEqual(hash(de1), hash(uuid1))
         self.assertEqual(hash(de2), hash(uuid2))
         self.assertEqual(hash(de1), hash(de2))
+
+    def test_getstate(self):
+        expected_type = 'a'
+        expected_uid = 'b'
+        e = DummyDescriptorElement(expected_type, expected_uid)
+        state = e.__getstate__()
+        self.assertDictEqual(
+            state,
+            {
+                '_type_label': expected_type,
+                '_uuid': expected_uid,
+            }
+        )
+
+    def test_setstate(self):
+        e = DummyDescriptorElement(None, None)
+        self.assertIsNone(e._type_label)
+        self.assertIsNone(e._uuid)
+
+        expected_type = 'a'
+        expected_uid = 'b'
+        state = {
+            '_type_label': expected_type,
+            '_uuid': expected_uid,
+        }
+        e.__setstate__(state)
+        self.assertEqual(e._type_label, expected_type)
+        self.assertEqual(e._uuid, expected_uid)

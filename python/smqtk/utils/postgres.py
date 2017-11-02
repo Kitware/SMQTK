@@ -127,7 +127,8 @@ class PsqlConnectionHelper (SmqtkObject):
         :type s: str | None
 
         """
-        self.table_upsert_sql = s
+        with self.table_upsert_lock:
+            self.table_upsert_sql = s
 
     def ensure_table(self, cursor):
         """
@@ -138,8 +139,8 @@ class PsqlConnectionHelper (SmqtkObject):
 
         :param cursor: Connection active cursor
         """
-        if self.table_upsert_sql is not None:
-            with self.table_upsert_lock:
+        with self.table_upsert_lock:
+            if self.table_upsert_sql is not None:
                 cursor.execute(self.table_upsert_sql)
                 cursor.connection.commit()
 

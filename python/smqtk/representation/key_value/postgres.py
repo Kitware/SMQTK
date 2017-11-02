@@ -166,7 +166,7 @@ class PostgresKeyValueStore (KeyValueStore):
         )
 
         # Only set table upsert if not read-only.
-        if not self._read_only:
+        if not self._read_only and self._create_table:
             # NOT read-only, so allow table upsert.
             self._psql_helper.set_table_upsert_sql(
                 self.SqlTemplates.UPSERT_TABLE_TMPL.format(

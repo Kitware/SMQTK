@@ -2,8 +2,10 @@ import mock
 import unittest
 
 import numpy
+from six.moves import cPickle
 
-from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorFileElement
 
 
 class TestDescriptorFileElement (unittest.TestCase):
@@ -19,6 +21,7 @@ class TestDescriptorFileElement (unittest.TestCase):
         default_config['save_dir'] = '/some/path/somewhere'
         default_config['subdir_split'] = 4
 
+        #: :type: DescriptorFileElement
         inst1 = DescriptorFileElement.from_config(default_config,
                                                   'test', 'abcd')
         self.assertEqual(default_config, inst1.get_config())
@@ -50,6 +53,26 @@ class TestDescriptorFileElement (unittest.TestCase):
         d = DescriptorFileElement('test', 'abcd', '/base')
         self.assertEqual(d._vec_filepath,
                             '/base/test.abcd.vector.npy')
+
+    def test_serialization(self):
+        # Test that an instance can be serialized and deserialized via pickle
+        # successfully.
+        ex_type = 'test'
+        ex_uid = 12345
+        ex_save_dir = 'some-dir'
+        ex_split = 5
+        e1 = DescriptorFileElement(ex_type, ex_uid, ex_save_dir, ex_split)
+
+        # pickle dump and load into a new copy
+        #: :type: DescriptorFileElement
+        e2 = cPickle.loads(cPickle.dumps(e1))
+        # Make sure the two have the smme attributes, including base descriptor
+        # element things.
+        self.assertEqual(e1.type(), e2.type())
+        self.assertEqual(e1.uuid(), e2.uuid())
+        self.assertEqual(e1._save_dir, e2._save_dir)
+        self.assertEqual(e1._subdir_split, e2._subdir_split)
+        self.assertEqual(e1._vec_filepath, e2._vec_filepath)
 
     @mock.patch('smqtk.representation.descriptor_element.local_elements'
                 '.numpy.save')

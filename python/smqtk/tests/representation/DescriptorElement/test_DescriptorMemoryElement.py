@@ -1,9 +1,10 @@
-import cPickle
 import unittest
 
 import numpy
+from six.moves import cPickle, cStringIO
 
-from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 
 
 class TestDescriptorMemoryElement (unittest.TestCase):
@@ -41,6 +42,21 @@ class TestDescriptorMemoryElement (unittest.TestCase):
 
         numpy.testing.assert_array_equal(v1, d1_r.vector())
         numpy.testing.assert_array_equal(v2, d2_r.vector())
+
+    def test_set_state_version_1(self):
+        # Test support of older state version
+        expected_type = 'test-type'
+        expected_uid = 'test-uid'
+        expected_v = numpy.array([1, 2, 3])
+        expected_v_b = cStringIO()
+        numpy.save(expected_v_b, expected_v)
+        expected_v_dump = expected_v_b.getvalue()
+
+        e = DescriptorMemoryElement(None, None)
+        e.__setstate__((expected_type, expected_uid, expected_v_dump))
+        self.assertEqual(e.type(), expected_type)
+        self.assertEqual(e.uuid(), expected_uid)
+        numpy.testing.assert_array_equal(e.vector(), expected_v)
 
     def test_input_immutability(self):
         # make sure that data stored is not susceptible to shifts in the

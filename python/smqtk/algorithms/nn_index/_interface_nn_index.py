@@ -3,9 +3,9 @@ Interface for generic element-wise nearest-neighbor computation.
 """
 
 import abc
-import itertools
 
 from smqtk.algorithms import SmqtkAlgorithm
+from smqtk.utils import check_empty_iterable
 
 
 class NearestNeighborsIndex (SmqtkAlgorithm):
@@ -35,26 +35,6 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         return ValueError("No DescriptorElement instances in provided "
                           "iterable.")
 
-    def _check_empty_iterable(self, iterable, callback):
-        """
-        Check that the given iterable is not empty, then call the given callback
-        function with the reconstructed iterable when it is not empty.
-
-        :param iterable: Iterable to check.
-        :type iterable: collections.Iterable
-
-        :param callback: Function to call with the reconstructed, not-empty
-            iterable.
-        :type callback: (collections.Iterable) -> None
-
-        """
-        i = iter(iterable)
-        try:
-            first = next(i)
-        except StopIteration:
-            raise self._empty_iterable_exception()
-        callback(itertools.chain([first], i))
-
     def build_index(self, descriptors):
         """
         Build the index with the given descriptor data elements.
@@ -71,7 +51,8 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        self._check_empty_iterable(descriptors, self._build_index)
+        check_empty_iterable(descriptors, self._build_index,
+                             self._empty_iterable_exception())
 
     def update_index(self, descriptors):
         """
@@ -89,7 +70,8 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
                                                      .DescriptorElement]
 
         """
-        self._check_empty_iterable(descriptors, self._update_index)
+        check_empty_iterable(descriptors, self._update_index,
+                             self._empty_iterable_exception())
 
     def nn(self, d, n=1):
         """

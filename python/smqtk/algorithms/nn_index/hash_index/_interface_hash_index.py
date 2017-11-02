@@ -1,8 +1,7 @@
 import abc
-import itertools
-from abc import abstractmethod
 
 from smqtk.algorithms import SmqtkAlgorithm
+from smqtk.utils import check_empty_iterable
 
 
 class HashIndex (SmqtkAlgorithm):
@@ -33,26 +32,6 @@ class HashIndex (SmqtkAlgorithm):
         """
         return ValueError("No hash vectors in provided iterable.")
 
-    def _check_empty_iterable(self, iterable, callback):
-        """
-        Check that the given iterable is not empty, then call the given callback
-        function with the reconstructed iterable when it is not empty.
-
-        :param iterable: Iterable to check.
-        :type iterable: collections.Iterable
-
-        :param callback: Function to call with the reconstructed, not-empty
-            iterable.
-        :type callback: (collections.Iterable) -> None
-
-        """
-        i = iter(iterable)
-        try:
-            first = next(i)
-        except StopIteration:
-            raise self._empty_iterable_exception()
-        callback(itertools.chain([first], i))
-
     def build_index(self, hashes):
         """
         Build the index with the given hash codes (bit-vectors).
@@ -68,7 +47,8 @@ class HashIndex (SmqtkAlgorithm):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        self._check_empty_iterable(hashes, self._build_index)
+        check_empty_iterable(hashes, self._build_index,
+                             self._empty_iterable_exception())
 
     def update_index(self, hashes):
         """
@@ -85,7 +65,8 @@ class HashIndex (SmqtkAlgorithm):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        self._check_empty_iterable(hashes, self._update_index)
+        check_empty_iterable(hashes, self._update_index,
+                             self._empty_iterable_exception())
 
     def nn(self, h, n=1):
         """
@@ -116,7 +97,7 @@ class HashIndex (SmqtkAlgorithm):
             raise ValueError("No index currently set to query from!")
         return self._nn(h, n)
 
-    @abstractmethod
+    @abc.abstractmethod
     def count(self):
         """
         :return: Number of elements in this index.

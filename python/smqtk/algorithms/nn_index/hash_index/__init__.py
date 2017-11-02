@@ -3,6 +3,7 @@ import os
 from smqtk.utils.plugin import get_plugins
 from .hash_index import HashIndex
 
+
 __all__ = [
     'HashIndex', 'get_hash_index_impls',
 ]

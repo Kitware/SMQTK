@@ -105,9 +105,8 @@ def _bit_vector_to_int_fast(v):
     :rtype: int
     """
     pad = '\x00' * (v.dtype.itemsize - 1)
-    if (
-            v.dtype.byteorder == '<' or
-            (v.dtype.byteorder == '=' and sys.byteorder == 'little')):
+    if (v.dtype.byteorder == '<' or
+        (v.dtype.byteorder == '=' and sys.byteorder == 'little')):
         zero_str = '\x00{}'.format(pad)
         one_str = '\x01{}'.format(pad)
     else:

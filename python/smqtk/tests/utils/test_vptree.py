@@ -29,17 +29,6 @@ def dist_func_counter(d):
     d['count'] = d.get('count', 0) + 1
 
 
-def print_tree(tree, offset=0):
-    ret = "{} {}".format("|" * offset, tree)
-    if tree is not None:
-        ret = "\n".join((
-            ret,
-            print_tree(tree.left, offset=offset + 1),
-            print_tree(tree.right, offset=offset + 1)
-        ))
-    return ret
-
-
 def assert_vptrees_equal(tree1, tree2):
     """
     Assert two vp trees are equivalent

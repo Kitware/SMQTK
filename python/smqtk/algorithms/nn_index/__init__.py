@@ -3,6 +3,7 @@ import os
 from smqtk.utils.plugin import get_plugins
 from .nn_index import NearestNeighborsIndex
 
+
 __all__ = [
     'NearestNeighborsIndex', 'get_nn_index_impls',
 ]

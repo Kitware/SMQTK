@@ -103,7 +103,7 @@ def iterate_query(q, batch_size):
     y_total = 0
     while query_again:
         y_this_query = 0
-        for r in q(offset=y_total, limit=batch_size):
+        for r in q(y_total, batch_size):
             yield r
             y_this_query += 1
         query_again = batch_size > 0 and (y_this_query == batch_size)

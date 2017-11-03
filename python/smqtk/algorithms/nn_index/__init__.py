@@ -1,7 +1,7 @@
 import os
 
 from smqtk.utils.plugin import get_plugins
-from .nn_index import NearestNeighborsIndex
+from ._interface_nn_index import NearestNeighborsIndex
 
 
 __all__ = [

@@ -9,6 +9,7 @@ import six
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
+from smqtk.utils.iter_validation import check_empty_iterable
 
 
 class DummySI (NearestNeighborsIndex):
@@ -58,7 +59,8 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         self.assertRaisesRegexp(
             ValueError,
             str(DummySI._empty_iterable_exception()),
-            index._check_empty_iterable, [], callback
+            check_empty_iterable, [], callback,
+            DummySI._empty_iterable_exception()
         )
         callback.assert_not_called()
 
@@ -66,7 +68,8 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         self.assertRaisesRegexp(
             ValueError,
             str(DummySI._empty_iterable_exception()),
-            index._check_empty_iterable, iter([]), callback
+            check_empty_iterable, iter([]), callback,
+            DummySI._empty_iterable_exception()
         )
         callback.assert_not_called()
 
@@ -77,7 +80,8 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
         # non-stateful iterator (set)
         d_set = {0, 1, 2, 3, 4}
-        DummySI()._check_empty_iterable(d_set, callback)
+        check_empty_iterable(d_set, callback,
+                             DummySI._empty_iterable_exception())
         callback.assert_called_once()
         self.assertSetEqual(
             set(callback.call_args[0][0]),
@@ -86,7 +90,8 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
 
         # Stateful iterator
         callback = mock.MagicMock()
-        DummySI()._check_empty_iterable(iter(d_set), callback)
+        check_empty_iterable(iter(d_set), callback,
+                             DummySI()._empty_iterable_exception())
         callback.assert_called_once()
         self.assertSetEqual(
             set(callback.call_args[0][0]),

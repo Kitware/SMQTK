@@ -32,6 +32,7 @@ class TestDataMemoryElement (unittest.TestCase):
 
         default_config['bytes'] = 'Hello World.'
         default_config['content_type'] = 'text/plain'
+        #: :type: DataMemoryElement
         inst1 = DataMemoryElement.from_config(default_config)
         self.assertEqual(default_config, inst1.get_config())
         self.assertEqual(inst1._bytes, 'Hello World.')

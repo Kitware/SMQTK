@@ -4,7 +4,6 @@ glob strings.
 """
 
 import glob
-import json
 import logging
 import os.path as osp
 

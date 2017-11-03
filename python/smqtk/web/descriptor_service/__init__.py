@@ -4,7 +4,6 @@ import os
 
 import flask
 import requests
-import six
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.representation import DescriptorElementFactory

@@ -29,7 +29,6 @@ TODO: Add support for searching collections
 """
 
 import collections
-from itertools import repeat
 import logging
 
 import requests
@@ -38,7 +37,6 @@ from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.utils import bin_utils, plugin
 from smqtk.utils.girder import GirderTokenManager
-from smqtk.utils.parallel import parallel_map
 from smqtk.utils.url import url_join
 
 

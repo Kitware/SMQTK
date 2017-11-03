@@ -1,5 +1,3 @@
-import collections
-import itertools
 import unittest
 
 import mock
@@ -52,7 +50,6 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         # Test that an exception is thrown when an empty list/iterable is
         # passed.  Additionally check that the exception thrown has expected
         # message from exception generation method.
-        index = DummySI()
         callback = mock.MagicMock()
 
         # Not-stateful iterable (list)

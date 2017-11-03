@@ -235,6 +235,7 @@ def file_mimetype_filemagic(filepath):
     :rtype: str
 
     """
+    # noinspection PyUnresolvedReferences
     import magic
     if os.path.isfile(filepath):
         d = magic.detect_from_filename(filepath)
@@ -262,6 +263,7 @@ def file_mimetype_tika(filepath):
     :rtype: str
 
     """
+    # noinspection PyUnresolvedReferences
     import tika.detector
     return tika.detector.from_file(filepath)
 

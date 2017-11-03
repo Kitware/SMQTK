@@ -1,8 +1,6 @@
 """
 Utilities for URLs
 """
-
-import collections
 import re
 
 

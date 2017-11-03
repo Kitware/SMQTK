@@ -1,8 +1,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-import os.path as osp
-
 import numpy as np
 from six.moves import cPickle as pickle, zip
 

@@ -344,8 +344,11 @@ def utility_main_helper(default_config, args, additional_logging_domains=(),
     :rtype: dict
 
     """
+    # noinspection PyUnresolvedReferences
     config_filepath = args.config
+    # noinspection PyUnresolvedReferences
     config_generate = args.generate_config
+    # noinspection PyUnresolvedReferences
     verbose = args.verbose
 
     if not skip_logging_init:

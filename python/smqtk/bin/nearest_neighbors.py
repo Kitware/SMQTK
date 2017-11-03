@@ -11,8 +11,6 @@ import logging
 import os
 import sys
 
-import six
-
 from smqtk.utils.bin_utils import (
     basic_cli_parser,
     utility_main_helper,

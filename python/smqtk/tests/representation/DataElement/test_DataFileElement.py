@@ -85,6 +85,7 @@ class TestDataFileElement (unittest.TestCase):
         c = {
             "filepath": fp
         }
+        #: :type: DataFileElement
         df = DataFileElement.from_config(c)
         self.assertEqual(df._filepath, fp)
 

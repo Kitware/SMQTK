@@ -1,21 +1,17 @@
 import unittest
 
-import mock
 
 from smqtk.representation.data_element.memory_element \
     import DataMemoryElement
 from smqtk.representation.data_set.kvstore_backed \
     import KVSDataSet, DFLT_KVSTORE
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
-# Get the dummy kvstore for mocking.
-from smqtk.tests.representation.KeyValueStore.test_KeyValueStoreAbstract \
-    import DummyKVStore
 
 
 class TestKeyValueDataSet (unittest.TestCase):
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.MEM_STORE = MemoryKeyValueStore()
         cls.MEM_STORE.add_many({
             0: 'a',

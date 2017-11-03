@@ -13,6 +13,7 @@ from smqtk.web.classifier_service.classifier_server import \
 
 class TestClassifierService (unittest.TestCase):
 
+    # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
         'CLASSIFIER_PATH':
             'smqtk.tests.web.classifier_service.dummy_classifier',

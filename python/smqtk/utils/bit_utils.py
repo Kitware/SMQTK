@@ -8,6 +8,7 @@ from six.moves import range
 from . import ncr
 
 try:
+    # noinspection PyUnresolvedReferences
     from numba import jit
 except (ImportError, TypeError):
     # Create passthrough function if numba is not installed.

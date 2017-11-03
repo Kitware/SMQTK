@@ -43,6 +43,7 @@ if LibSvmHikRelevancyIndex.is_usable():
             # change default for something different
             c['descr_cache_filepath'] = 'foobar.thing'
 
+            #: :type: LibSvmHikRelevancyIndex
             iqr_index = LibSvmHikRelevancyIndex.from_config(c)
             self.assertEqual(iqr_index.descr_cache_fp,
                              c['descr_cache_filepath'])

@@ -65,6 +65,7 @@ class TestDataUrlElement (unittest.TestCase):
         self.assertEqual(default_config, {'url_address': None})
 
         default_config['url_address'] = self.EXAMPLE_URL
+        #: :type: DataUrlElement
         inst1 = DataUrlElement.from_config(default_config)
         self.assertEqual(default_config, inst1.get_config())
         self.assertEqual(inst1._url, self.EXAMPLE_URL)

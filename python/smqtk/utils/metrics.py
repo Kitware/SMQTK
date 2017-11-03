@@ -7,7 +7,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
 
-from math import log, ceil, acos, pi
+from math import acos, pi
 import numpy as np
 
 

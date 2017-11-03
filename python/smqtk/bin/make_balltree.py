@@ -4,8 +4,6 @@ implementation of ``HashIndex``.
 """
 import logging
 
-from six.moves import cPickle as pickle
-
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
     SkLearnBallTreeHashIndex
 import smqtk.representation

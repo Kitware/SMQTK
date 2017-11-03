@@ -1,5 +1,4 @@
 import mock
-import random
 import unittest
 
 from smqtk.representation import DataSet

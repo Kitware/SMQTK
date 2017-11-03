@@ -82,6 +82,7 @@ class TestCheckImageCli(unittest.TestCase):
         return stdout, stderr
 
     def test_base_case(self):
+        # noinspection PyUnresolvedReferences
         with mock.patch.object(sys, 'argv', ['']):
             assert 'Validate a list of images returning the filepaths' in \
                 self.check_images()[0]
@@ -95,6 +96,7 @@ class TestCheckImageCli(unittest.TestCase):
             outfile.write(os.path.join(TEST_DATA_DIR, 'test_file.dat') + '\n')
             outfile.write(os.path.join(TEST_DATA_DIR, 'non-existent-file.jpeg'))
 
+        # noinspection PyUnresolvedReferences
         with mock.patch.object(sys, 'argv', ['', '--file-list', filename]):
             out, err = self.check_images()
 
@@ -102,6 +104,7 @@ class TestCheckImageCli(unittest.TestCase):
                                     '3ee0d360dc12003c0d43e3579295b52b64906e85'])
             assert 'non-existent-file.jpeg' not in out
 
+        # noinspection PyUnresolvedReferences
         with mock.patch.object(sys, 'argv',
                                ['', '--file-list', filename, '--invert']):
             out, err = self.check_images()

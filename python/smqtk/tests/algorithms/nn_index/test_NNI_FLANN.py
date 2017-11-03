@@ -237,6 +237,7 @@ if FlannNearestNeighborsIndex.is_usable():
             c['random_seed'] = 42
 
             # Build based on configuration
+            #: :type: FlannNearestNeighborsIndex
             index = FlannNearestNeighborsIndex.from_config(c)
             self.assertEqual(index._index_uri, index_filepath)
             self.assertEqual(index._index_param_uri, para_filepath)

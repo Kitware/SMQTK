@@ -9,12 +9,12 @@ def check_empty_iterable(iterable, callback, exception_inst):
     :param iterable: Iterable to check.
     :type iterable: collections.Iterable
 
-    :param exception_inst:
-    :type exception_inst: ValueError
-
     :param callback: Function to call with the reconstructed, not-empty
         iterable.
     :type callback: (collections.Iterable) -> None
+
+    :param exception_inst: The exception to throw if the iterable is empty
+    :type exception_inst: Exception
 
     """
     i = iter(iterable)

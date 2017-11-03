@@ -85,6 +85,34 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         }
 
     @classmethod
+    def get_default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as
+        arguments, turning those argument names into configuration dictionary
+        keys. If any of those arguments have defaults, we will add those
+        values into the configuration dictionary appropriately. The dictionary
+        returned should only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this
+        class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        default = super(FaissNearestNeighborsIndex, cls).get_default_config()
+
+        di_default = plugin.make_config(get_descriptor_index_impls())
+        default['descriptor_set'] = di_default
+
+        return default
+
+    @classmethod
     def from_config(cls, config_dict, merge_default=True):
         """
         Instantiate a new instance of this class given the configuration
@@ -111,8 +139,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg = config_dict
 
-        cfg['_descriptor_set'] = \
-            plugin.from_plugin_config(cfg['_descriptor_set'],
+        cfg['descriptor_set'] = \
+            plugin.from_plugin_config(cfg['descriptor_set'],
                                       get_descriptor_index_impls())
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
@@ -164,7 +192,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         raise NotImplementedError()
 
     def _build_faiss_model(self):
-        sample = self._descriptor_set.iterdescriptors().next()
+        sample = next(self._descriptor_set.iterdescriptors())
         sample_v = sample.vector()
         n, d = self.count(), sample_v.size
 
@@ -174,22 +202,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             use_multiprocessing=self.use_multiprocessing,
             report_interval=1.0,
         )
-        self._uuids = np.array(list(self._descriptor_set.iterkeys()))
-        self.faiss_flat = faiss.IndexFlatL2(d)
+        self._uuids = list(self._descriptor_set.iterkeys())
 
-        if self.exhaustive:
-            self._faiss_index = faiss.IndexIDMap(self.faiss_flat)
-        else:
-            nlist = 10000
-            self._faiss_index = faiss.IndexIVFFlat(
-                self.faiss_flat, d, nlist, faiss.METRIC_L2)
-            self._faiss_index.train(data)
-            self._faiss_index.nprobe = 5000
+        # This needs to be a bytestring because of the swig interface of
+        # faiss.index_factory
+        self._faiss_index = faiss.index_factory(d, b"Flat")
 
         self._log.info("data shape, type: %s, %s", data.shape, data.dtype)
-        self._log.info("uuid shape, type: %s, %s",
-                       self._uuids.shape, self._uuids.dtype)
-        self._faiss_index.add_with_ids(data, self._uuids)
+        self._log.info("# uuids: %d", len(self._uuids))
+        self._faiss_index.train(data)
+        self._faiss_index.add(data)
 
         self._log.info("FAISS index has been constructed with %d vectors",
                        self._faiss_index.ntotal)
@@ -225,8 +247,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Received query for %d nearest neighbors", n)
 
         dists, ids = self._faiss_index.search(q, n)
-        dists, ids = np.sqrt(dists).squeeze(), ids.squeeze()
-        uuids = ids
+        dists, ids = np.sqrt(dists).squeeze(), ids[0,:]
+        uuids = [self._uuids[id] for id in ids]
 
         descriptors = tuple(self._descriptor_set.get_many_descriptors(uuids))
         d_vectors = elements_to_matrix(descriptors)

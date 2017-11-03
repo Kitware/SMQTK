@@ -10,9 +10,9 @@ function GeneralProgressBar(container, min, max) {
     this.value = 0;
     this.message = '';
 
-    this.progress_div = $('<div class="progress"/>');
+    this.progress_div = $('<div class="progress"></div>');
     this.progress_div.css('text-align', 'center');
-    this.bar = $('<div class="progress-bar" role="progressbar"/>');
+    this.bar = $('<div class="progress-bar" role="progressbar"></div>');
     this.bar.css({width: "100%"});
     this.bar.appendTo(this.progress_div);
     this.progress_div.appendTo(this.contained_by);
@@ -71,7 +71,7 @@ function ActivityBar(container, message) {
     this.c = $(container);
     this.color_class = null;
 
-    this.progress_div = $('<div class="progress" style="text-align: center;"/>');
+    this.progress_div = $('<div class="progress" style="text-align: center;"></div>');
     this.progress_div.appendTo(this.c);
     this.progress_div.hide();
 

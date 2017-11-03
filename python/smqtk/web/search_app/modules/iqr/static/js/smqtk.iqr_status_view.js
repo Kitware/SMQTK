@@ -12,8 +12,8 @@ function IqrStatusView (container) {
     this.example_neg_data_zone = $('<div>');
     this.buttons_bottom = $('<div>');
 
-    this.button_view_pos = $('<button class="btn btn-primary" type="button"/>');
-    this.button_view_neg = $('<button class="btn btn-primary" type="button"/>');
+    this.button_view_pos = $('<button class="btn btn-primary" type="button"></button>');
+    this.button_view_neg = $('<button class="btn btn-primary" type="button"></button>');
 
     //
     // Setup

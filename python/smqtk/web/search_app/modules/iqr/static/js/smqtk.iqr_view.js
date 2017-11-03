@@ -32,12 +32,12 @@ function IqrView(container, upload_post_url) {
     // -- contains IQR refinement results + controls
     this.results_zone = $('<div>');
 
-    this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
-    this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
+    this.button_index_initialize = $('<button class="btn btn-primary" type="button"></button>');
+    this.button_reset_session = $('<button class="btn btn-danger" type="button"></button>');
     // TODO: Add div around load/save state buttons that has pull-right class,
     //       not the buttons themselves.
-    this.button_state_save = $('<button class="btn" type="button"/>');
-    this.button_state_load = $('<button class="btn" type="button"/>');
+    this.button_state_save = $('<button class="btn" type="button"></button>');
+    this.button_state_load = $('<button class="btn" type="button"></button>');
 
     //
     // Setup

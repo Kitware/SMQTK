@@ -53,11 +53,11 @@ function DataView(container, rank, uid, probability, is_example) {
     //
 
     // top-level container
-    this.result = $('<div class="iqr-result"/>');
+    this.result = $('<div class="iqr-result"></div>');
     this.result.appendTo($(container));
 
     // Header container textual identifiers
-    this.header = $('<div/>');
+    this.header = $('<div></div>');
     this.header.css('height', '24px');
     if (isFinite(this.probability)) {
         // ``probability`` is a numeric value, so assume a [0,1] percentage and
@@ -74,11 +74,11 @@ function DataView(container, rank, uid, probability, is_example) {
     }
 
     // adjudication icons / functionality
-    this.adjudication_controls = $('<div class="adjudication-box"/>');
-    this.adj_pos_icon = $('<img height="24px">');
+    this.adjudication_controls = $('<div class="adjudication-box"></div>');
+    this.adj_pos_icon = $('<img height="24px" src="">');
     this.adj_pos_icon.css('padding-left', '12px');
     this.adj_pos_icon.attr('src', inst.adj_pos_off_icon);
-    this.adj_neg_icon = $('<img height="24px">');
+    this.adj_neg_icon = $('<img height="24px" src="">');
     this.adj_neg_icon.css('padding-left', '12px');
     this.adj_neg_icon.attr('src', inst.adj_neg_off_icon);
 
@@ -86,8 +86,8 @@ function DataView(container, rank, uid, probability, is_example) {
     this.adjudication_controls.append(this.adj_neg_icon);
 
     // image container image data and adjudication buttons
-    this.image_container = $('<div class="iqr-result-img-container"/>');
-    this.image_data_view = $('<img>');
+    this.image_container = $('<div class="iqr-result-img-container"></div>');
+    this.image_data_view = $('<img src="">');
     // Showing loading GIF by default until image preview actually loaded via
     // ajax call.
     this.image_data_view.attr('src', this.loading_gif);
@@ -125,16 +125,6 @@ function DataView(container, rank, uid, probability, is_example) {
 
     return this;
 }
-/**
- * Return boolean value indicating if this result has or has not been
- * adjudicated yet.
- *
- * @returns boolean True of this result has been adjudicated and false if
- *      not.
- */
-DataView.prototype.is_adjudicated = function () {
-    return (this.is_negative || this.is_positive);
-};
 
 /**
  * Update the view of this element based on current state.

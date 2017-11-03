@@ -27,45 +27,45 @@ function IqrRefineView(container) {
     //
 
     // top-level container for layout
-    this.iqr_view_container = $('<div id="iqr_view_instance"/>');
+    this.iqr_view_container = $('<div id="iqr_view_instance"></div>');
 
     // for DataView views
-    this.refine_container = $('<div class="iqr-view-results-container"/>');
+    this.refine_container = $('<div class="iqr-view-results-container"></div>');
     this.refine_container.css('width', '100%');
 
     // for random result views, initially hidden
-    this.random_container = $('<div class="iqr-view-results-container"/>');
+    this.random_container = $('<div class="iqr-view-results-container"></div>');
     this.random_container.css('border', 'solid red 1px');
 
     // Shown at top of search view area (shouldn't cover random area)
     this.progress_bar_refine = new ActivityBar();
     this.progress_bar_random = new ActivityBar();
 
-    this.button_container_refine_top = $('<div/>');
+    this.button_container_refine_top = $('<div></div>');
     this.button_container_refine_top.css('text-align', 'center');
     this.button_container_refine_bot = this.button_container_refine_top.clone();
     this.button_container_random_top = this.button_container_refine_top.clone();
     this.button_container_random_bot = this.button_container_refine_top.clone();
 
-    this.button_refine_top = $('<button class="btn btn-primary" type="button"/>');
+    this.button_refine_top = $('<button class="btn btn-primary" type="button"></button>');
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
 
     // To be put in top button container
-    this.button_toggle_random = $('<button class="btn" type="button"/>');
+    this.button_toggle_random = $('<button class="btn" type="button"></button>');
     this.button_toggle_random.text('Toggle Random Results');
 
     // To be put in bottom button container in results panel
-    this.button_refine_showMore = $('<button class="btn" type="button"/>');
+    this.button_refine_showMore = $('<button class="btn" type="button"></button>');
     this.button_refine_showMore.text("Show More");
 
-    this.button_random_refresh = $('<button class="btn btn-danger" type="button"/>');
+    this.button_random_refresh = $('<button class="btn btn-danger" type="button"></button>');
     this.button_random_refresh.text("Refresh Random Results");
 
     this.button_random_showMore = this.button_refine_showMore.clone();
 
-    this.results_container_refine = $('<div/>');
-    this.results_container_random = $('<div/>');
+    this.results_container_refine = $('<div></div>');
+    this.results_container_random = $('<div></div>');
 
     //
     // Construct layout

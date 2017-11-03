@@ -19,7 +19,6 @@ import requests
 from smqtk.iqr import IqrSession
 from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import Configurable
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin

@@ -49,13 +49,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             existing index. False by default.
         :type read_only: bool
 
-        :param num_trees: The number of trees that will be generated for the
-            data structure
-        :type num_trees: int
-
-        :param depth: The depth of the trees
-        :type depth: int
-
         :param random_seed: Integer to use as the random number generator
             seed.
         :type random_seed: int

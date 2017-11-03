@@ -81,7 +81,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         # non-stateful iterator (set)
         d_set = {0, 1, 2, 3, 4}
         check_empty_iterable(d_set, callback,
-                             DummySI._empty_iterable_exception())
+                             DummySI()._empty_iterable_exception())
         callback.assert_called_once()
         self.assertSetEqual(
             set(callback.call_args[0][0]),

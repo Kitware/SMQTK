@@ -20,7 +20,6 @@ class ReaderUpdateException (Exception):
     pass
 
 
-# noinspection PyPep8Naming
 class DummyRWLock (object):
     """
     Dummy object that mimics the API of a ReadWrite lock but doesn't actually
@@ -62,7 +61,6 @@ class DummyRWLock (object):
         return DummyWriteWithLock()
 
 
-# noinspection PyPep8Naming
 class ReadWriteLock (object):
     """ Reentrant Read-Write for multiprocessing
 
@@ -431,3 +429,52 @@ class ReadWriteLock (object):
                 self.releaseWrite(me)
 
         return WriteWithLock()
+
+
+class ContextualReadWriteLock (object):
+    """
+    Case-3 reader-writer lock that does NOT allow read-lock carriers to upgrade
+    to a write lock.
+
+    Care should be made to not nest write-lock contexts under an existing read
+    or write-lock context, otherwise a dead-lock will occur.
+
+    Source algorithm:
+        https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem#Third_readers-writers_problem
+    """
+
+    def __init__(self):
+        self._service_lock = multiprocessing.Lock()
+        self._resource_lock = multiprocessing.Lock()
+        self._reader_count_lock = multiprocessing.Lock()
+        self._reader_count = 0
+
+    def read_context(self):
+        # noinspection PyMethodParameters
+        class ReadLockContext (object):
+            def __enter__(_self):
+                with self._service_lock:
+                    with self._reader_count_lock:
+                        if self._reader_count == 0:
+                            self._resource_lock.acquire()
+                        self._reader_count += 1
+
+            def __exit__(_self, exc_type, exc_val, exc_tb):
+                with self._reader_count_lock:
+                    self._reader_count -= 1
+                    if self._reader_count == 0:
+                        self._resource_lock.release()
+
+        return ReadLockContext()
+
+    def write_context(self):
+        # noinspection PyMethodParameters
+        class WriteLockContext (object):
+            def __enter__(_self):
+                with self._service_lock:
+                    self._resource_lock.acquire()
+
+            def __exit__(_self, exc_type, exc_val, exc_tb):
+                self._resource_lock.release()
+
+        return WriteLockContext()

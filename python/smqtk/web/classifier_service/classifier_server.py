@@ -25,6 +25,15 @@ from smqtk.utils.web import make_response_json
 import smqtk.web
 
 
+# Get expected JSON decode exception
+# noinspection PyProtectedMember
+if hasattr(flask.json._json, 'JSONDecodeError'):
+    # noinspection PyProtectedMember
+    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
+else:
+    JSON_DECODE_EXCEPTION = ValueError
+
+
 class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     """
     Headless web-app providing a RESTful API for classifying new data against a
@@ -301,7 +310,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                         "Label must be a list of strings or a single"
                         " string.", 400)
 
-            except (ValueError, flask.json.JSONDecoder):
+            except JSON_DECODE_EXCEPTION:
                 # Unquoted strings aren't valid JSON. That is, a plain string
                 # needs to be passed as '"label"' rather than just 'label' or
                 # "label". However, we can be a bit more generous and just

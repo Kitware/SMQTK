@@ -1,4 +1,5 @@
 import base64
+import collections
 import json
 import multiprocessing
 import time
@@ -47,6 +48,15 @@ def make_response_json(message, **params):
     }
     merge_dict(r, params)
     return flask.jsonify(**r)
+
+
+# Get expected JSON decode exception
+# noinspection PyProtectedMember
+if hasattr(flask.json._json, 'JSONDecodeError'):
+    # noinspection PyProtectedMember
+    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
+else:
+    JSON_DECODE_EXCEPTION = ValueError
 
 
 class IqrService (SmqtkWebApp):
@@ -287,6 +297,8 @@ class IqrService (SmqtkWebApp):
         :param content_type: Data content type.
         :type content_type: str
 
+        :raises TypeError: Failed to parse base64 data.
+
         :return: Computed descriptor element.
         :rtype: smqtk.representation.DescriptorElement
         """
@@ -338,7 +350,13 @@ class IqrService (SmqtkWebApp):
         if not content_type:
             return make_response_json("No data mimetype provided."), 400
 
-        descriptor = self.describe_base64_data(data_b64, content_type)
+        try:
+            descriptor = self.describe_base64_data(data_b64, content_type)
+        except TypeError as e:
+            if str(e) == "Incorrect padding":
+                return make_response_json("Failed to parse base64 data."), 400
+            # In case some other exception is raised, actually a server error.
+            raise
         # Concurrent updating of descriptor set should be handled by underlying
         # implementation.
         self.descriptor_index.add_descriptor(descriptor)
@@ -376,10 +394,22 @@ class IqrService (SmqtkWebApp):
         if not descr_uid_str:
             return make_response_json("No descriptor UID JSON provided."), 400
 
-        descr_uid_list = flask.json.loads(descr_uid_str)
-        if not descr_uid_list:
-            return make_response_json("No descriptor UIDs provided in given "
-                                      "JSON."), 400
+        # Load and check JSON input.
+        # noinspection PyBroadException
+        try:
+            descr_uid_list = flask.json.loads(descr_uid_str)
+            if not isinstance(descr_uid_list, list):
+                return make_response_json("JSON provided is not a list."), 400
+            # Should not be an empty list.
+            elif not descr_uid_list:
+                return make_response_json("JSON list empty."), 400
+            # Contents of list should be numeric or string values.
+            elif not all(isinstance(el, collections.Hashable)
+                         for el in descr_uid_list):
+                return make_response_json("Not all JSON list parts were "
+                                          "possibly valid UIDs."), 400
+        except JSON_DECODE_EXCEPTION as ex:
+            return make_response_json("JSON parsing error: %s" % str(ex)), 400
 
         try:
             descr_elems = \
@@ -391,8 +421,9 @@ class IqrService (SmqtkWebApp):
             for uid in descr_uid_list:
                 if not self.descriptor_index.has_descriptor(uid):
                     uids_not_ingested.append(uid)
-            return make_response_json("Some provided UIDs do not exist in the"
-                                      "current index: %s")
+            return make_response_json("Some provided UIDs do not exist in the "
+                                      "current index.",
+                                      bad_uids=uids_not_ingested), 400
 
         self.neighbor_index.update_index(descr_elems)
 

@@ -265,6 +265,183 @@ class TestIqrService (unittest.TestCase):
         self.assertListEqual(r_json['descriptor_uids'], expected_uid_list)
         self.assertEqual(r_json['index_size'], expected_new_index_count)
 
+    def test_data_nearest_neighbors_no_base64(self):
+        """ Test not providing base64 """
+        data = dict(
+            # data_b64=base64.b64encode('test-data'),
+            content_type='text/plain',
+            k=10,
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, 'No or empty base64 data provided')
+
+    def test_data_nearest_neighbors_no_contenttype(self):
+        """ Test not providing base64 """
+        data = dict(
+            data_b64=base64.b64encode('test-data'),
+            # content_type='text/plain',
+            k=10,
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, 'No data mimetype provided')
+
+    def test_data_nearest_neighbors_no_k(self):
+        """ Test not providing base64 """
+        data = dict(
+            data_b64=base64.b64encode('test-data'),
+            content_type='text/plain',
+            # k=10,
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "No 'k' value provided")
+
+    def test_data_nearest_neighbors_bad_k_json(self):
+        """ Test string for k """
+        data = dict(
+            data_b64=base64.b64encode('test-data'),
+            content_type='text/plain',
+            k="10.2",  # float string fails an int cast.
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
+                                       "integer")
+
+    def test_data_nearest_neighbors_bad_base64(self):
+        data = dict(
+            data_b64="not-valid-base-64%",
+            content_type='text/plain',
+            k=10,
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Failed to parse base64 data")
+
+    def test_data_nearest_neighbors(self):
+        expected_uids = ['a', 'b', 'c']
+        expected_neighbors = []
+        for uid in expected_uids:
+            e = mock.Mock(spec=DescriptorElement)
+            e.uuid.return_value = uid
+            expected_neighbors.append(e)
+        expected_dists = [1, 2, 3]
+
+        self.app.describe_base64_data = mock.Mock()
+        self.app.neighbor_index.nn = mock.Mock(
+            return_value=[expected_neighbors, expected_dists]
+        )
+
+        data = dict(
+            data_b64=base64.b64encode('test-data'),
+            content_type='text/plain',
+            k=3,  # float string fails an int cast.
+        )
+        r = self.app.test_client().post('/data_nearest_neighbors',
+                                        data=data)
+        self.app.describe_base64_data.assert_called_once_with(
+            data['data_b64'], data['content_type']
+        )
+        # noinspection PyArgumentList
+        self.app.neighbor_index.nn.assert_called_once_with(
+            self.app.describe_base64_data(), data['k']
+        )
+
+        self.assertStatusCode(r, 200)
+        r_json = json.loads(r.data)
+        self.assertListEqual(r_json['neighbor_uids'], expected_uids)
+        self.assertListEqual(r_json['neighbor_dists'], expected_dists)
+
+    def test_uid_nearest_neighbors_no_uid(self):
+        """ Test not providing base64 """
+        data = dict(
+            # uid='some-uid',
+            k=10,
+        )
+        r = self.app.test_client().post('/uid_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, 'No UID provided')
+
+    def test_uid_nearest_neighbors_no_k(self):
+        """ Test not providing base64 """
+        data = dict(
+            uid='some-uid',
+            # k=10,
+        )
+        r = self.app.test_client().post('/uid_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "No 'k' value provided")
+
+    def test_uid_nearest_neighbors_bad_k_json(self):
+        """ Test string for k """
+        data = dict(
+            uid='some-uid',
+            k="10.2",  # float string fails an int cast.
+        )
+        r = self.app.test_client().post('/uid_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
+                                       "integer")
+
+    def test_uid_nearest_neighbors_no_elem_for_uid(self):
+        def raise_keyerror(*_):
+            raise KeyError("invalid-key")
+        self.app.descriptor_index.get_descriptor = mock.Mock(
+            side_effect=raise_keyerror
+        )
+
+        data = dict(
+            uid='some-uid',
+            k=3,
+        )
+        r = self.app.test_client().post('/uid_nearest_neighbors',
+                                        data=data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Failed to get descriptor for UID "
+                                       "some-uid")
+
+    def test_uid_nearest_neighbors(self):
+        expected_uids = ['a', 'b', 'c']
+        expected_neighbors = []
+        for uid in expected_uids:
+            e = mock.Mock(spec=DescriptorElement)
+            e.uuid.return_value = uid
+            expected_neighbors.append(e)
+        expected_dists = [1, 2, 3]
+
+        self.app.descriptor_index.get_descriptor = mock.Mock()
+        self.app.neighbor_index.nn = mock.Mock(
+            return_value=[expected_neighbors, expected_dists]
+        )
+
+        data = dict(
+            uid='some-uid',
+            k=10,
+        )
+        r = self.app.test_client().post('/uid_nearest_neighbors',
+                                        data=data)
+        self.app.descriptor_index.get_descriptor.assert_called_once_with(
+            data['uid']
+        )
+        self.app.neighbor_index.nn.assert_called_once_with(
+            self.app.descriptor_index.get_descriptor(), data['k']
+        )
+
+        self.assertStatusCode(r, 200)
+        r_json = json.loads(r.data)
+        self.assertListEqual(r_json['neighbor_uids'], expected_uids)
+        self.assertListEqual(r_json['neighbor_dists'], expected_dists)
+
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.
         r = self.app.test_client().get('/state')

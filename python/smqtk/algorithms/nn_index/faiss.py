@@ -2,6 +2,8 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import numpy as np
+from multiprocessing import RLock
+import six
 from six.moves import cPickle as pickle, zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
@@ -32,7 +34,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # if underlying library is not found, the import above will error
         return faiss is not None
 
-    def __init__(self, descriptor_set, read_only=False, exhaustive=False,
+    def __init__(self, descriptor_set, read_only=False,
+                 factory_string=b'Flat',
                  use_multiprocessing=True,
                  pickle_protocol=pickle.HIGHEST_PROTOCOL,
                  random_seed=None):
@@ -49,26 +52,40 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             existing index. False by default.
         :type read_only: bool
 
-        :param random_seed: Integer to use as the random number generator
-            seed.
-        :type random_seed: int
-
-        :param pickle_protocol: The protocol version to be used by the pickle
-            module to serialize class information
-        :type pickle_protocol: int
+        :param factory_string: String to pass to FAISS' `index_factory`;
+            see the
+            [documentation](https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory)
+            on this feature for more details.
+        :type factory_string: six.binary_type
 
         :param use_multiprocessing: Whether or not to use discrete processes
             as the parallelization agent vs python threads.
         :type use_multiprocessing: bool
 
+        :param pickle_protocol: The protocol version to be used by the pickle
+            module to serialize class information
+        :type pickle_protocol: int
+
+        :param random_seed: Integer to use as the random number generator
+            seed.
+        :type random_seed: int
+
         """
         super(FaissNearestNeighborsIndex, self).__init__()
+
+        if isinstance(factory_string, six.text_type):
+            self.factory_string = factory_string.encode()
+        elif isinstance(factory_string, six.binary_type):
+            self.factory_string = factory_string
+        else:
+            raise ValueError('The factory_string parameter must be a'
+                             ' recognized string type.')
 
         self.read_only = read_only
         self.use_multiprocessing = use_multiprocessing
         self.pickle_protocol = pickle_protocol
-        self.exhaustive = exhaustive
         self._descriptor_set = descriptor_set
+        self._lock = RLock()
 
         self.random_seed = None
         if random_seed is not None:
@@ -77,7 +94,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     def get_config(self):
         return {
             "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
-            "exhaustive": self.exhaustive,
+            "factory_string": self.factory_string,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
             "pickle_protocol": self.pickle_protocol,
@@ -139,9 +156,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg = config_dict
 
-        cfg['descriptor_set'] = \
-            plugin.from_plugin_config(cfg['descriptor_set'],
-                                      get_descriptor_index_impls())
+        if isinstance(cfg['factory_string'], six.text_type):
+            cfg['factory_string'] = cfg['factory_string'].encode()
+        elif not isinstance(cfg['factory_string'], six.binary_type):
+            raise ValueError('The factory_string parameter must be a'
+                             ' recognized string type.')
+
+        cfg['descriptor_set'] = plugin.from_plugin_config(
+            cfg['descriptor_set'], get_descriptor_index_impls())
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 
@@ -167,11 +189,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.info("Building new FAISS index")
 
         self._log.debug("Clearing and adding new descriptor elements")
-        self._descriptor_set.clear()
-        self._descriptor_set.add_many_descriptors(descriptors)
-
-        self._log.debug('Building FAISS index')
-        self._build_faiss_model()
+        with self._lock:
+            self._descriptor_set.clear()
+            self._descriptor_set.add_many_descriptors(descriptors)
+            self._build_faiss_model()
 
     def _update_index(self, descriptors):
         """
@@ -187,41 +208,44 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        # This experimental wrapper does not currently plug into FAISS's update
-        # capabilities.
-        raise NotImplementedError()
+        with self._lock:
+            # This experimental wrapper does not currently plug into FAISS's
+            # update capabilities.
+            raise NotImplementedError()
 
     def _build_faiss_model(self):
-        sample = next(self._descriptor_set.iterdescriptors())
-        sample_v = sample.vector()
-        n, d = self.count(), sample_v.size
+        self._log.debug('Building FAISS index')
+        with self._lock:
+            sample = next(self._descriptor_set.iterdescriptors())
+            sample_v = sample.vector()
+            n, d = self.count(), sample_v.size
 
-        data = np.empty((n, d), dtype=np.float32)
-        elements_to_matrix(
-            self._descriptor_set, mat=data,
-            use_multiprocessing=self.use_multiprocessing,
-            report_interval=1.0,
-        )
-        self._uuids = list(self._descriptor_set.iterkeys())
+            data = np.empty((n, d), dtype=np.float32)
+            elements_to_matrix(
+                self._descriptor_set, mat=data,
+                use_multiprocessing=self.use_multiprocessing,
+                report_interval=1.0,
+            )
+            self._uuids = list(self._descriptor_set.iterkeys())
 
-        # This needs to be a bytestring because of the swig interface of
-        # faiss.index_factory
-        self._faiss_index = faiss.index_factory(d, b"Flat")
+            self._faiss_index = faiss.index_factory(d, self.factory_string)
 
-        self._log.info("data shape, type: %s, %s", data.shape, data.dtype)
-        self._log.info("# uuids: %d", len(self._uuids))
-        self._faiss_index.train(data)
-        self._faiss_index.add(data)
+            self._log.info("data shape, type: %s, %s",
+                           data.shape, data.dtype)
+            self._log.info("# uuids: %d", len(self._uuids))
+            self._faiss_index.train(data)
+            self._faiss_index.add(data)
 
-        self._log.info("FAISS index has been constructed with %d vectors",
-                       self._faiss_index.ntotal)
+            self._log.info("FAISS index has been constructed with %d"
+                           " vectors", self._faiss_index.ntotal)
 
     def count(self):
         """
         :return: Number of elements in this index.
         :rtype: int
         """
-        return len(self._descriptor_set)
+        with self._lock:
+            return len(self._descriptor_set)
 
     def _nn(self, d, n=1):
         """
@@ -246,14 +270,17 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Received query for %d nearest neighbors", n)
 
-        dists, ids = self._faiss_index.search(q, n)
-        dists, ids = np.sqrt(dists).squeeze(), ids[0,:]
-        uuids = [self._uuids[id] for id in ids]
+        with self._lock:
+            dists, ids = self._faiss_index.search(q, n)
+            dists, ids = np.sqrt(dists[0,:]), ids[0,:]
+            uuids = [self._uuids[id] for id in ids]
 
-        descriptors = tuple(self._descriptor_set.get_many_descriptors(uuids))
+            descriptors = self._descriptor_set.get_many_descriptors(uuids)
+
+        descriptors = tuple(descriptors)
         d_vectors = elements_to_matrix(descriptors)
         d_dists = np.sqrt(((d_vectors - q)**2).sum(axis=1))
-        
+
         order = dists.argsort()
         uuids, dists = zip(*((uuids[oidx], d_dists[oidx]) for oidx in order))
 
@@ -265,7 +292,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Returning query result of size %g", len(uuids))
 
-        return descriptors, tuple(dists)
-
+        return descriptors, tuple(d_dists)
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

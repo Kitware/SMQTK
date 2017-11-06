@@ -5,6 +5,7 @@ import random
 import unittest
 
 import numpy as np
+import six
 from six.moves import range, zip
 
 from smqtk.representation.descriptor_element.local_elements import \
@@ -38,8 +39,8 @@ class TestFAISSIndex (unittest.TestCase):
 
         # # Build based on configuration
         index = FaissNearestNeighborsIndex.from_config(c)
-        # self.assertEqual(index._index_filepath, index_filepath)
-        # self.assertEqual(index._index_param_filepath, para_filepath)
+        self.assertEqual(index.factory_string, b'Flat')
+        self.assertIsInstance(index.factory_string, six.binary_type)
 
         # Test that constructing a new instance from ``index``'s config yields
         # an index with the same configuration (idempotent).
@@ -132,14 +133,50 @@ class TestFAISSIndex (unittest.TestCase):
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        di = MemoryDescriptorIndex()
-        faiss_index = FaissNearestNeighborsIndex(di, random_seed=0)
+        faiss_index = self._make_inst()
         faiss_index.build_index(d_index)
 
         nbrs, dists = faiss_index.nn(q, 10)
         self.assertEqual(len(nbrs), len(dists))
         self.assertEqual(len(nbrs), 10)
 
+    def test_non_flat_index(self):
+        faiss_index = self._make_inst(factory_string='IVF256,Flat')
+        self.assertEqual(faiss_index.factory_string, b'IVF256,Flat')
+
+        np.random.seed(self.RAND_SEED)
+        n = 10 ** 4
+        dim = 256
+
+        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        q = DescriptorMemoryElement('q', -1)
+        q.set_vector(np.zeros((dim,)))
+
+        faiss_index.build_index(d_index)
+
+        nbrs, dists = faiss_index.nn(q, 10)
+        self.assertEqual(len(nbrs), len(dists))
+        self.assertEqual(len(nbrs), 10)
+
+    def test_preprocess_index(self):
+        faiss_index = self._make_inst(factory_string='PCAR64,Flat')
+        self.assertEqual(faiss_index.factory_string, b'PCAR64,Flat')
+
+        np.random.seed(self.RAND_SEED)
+        n = 10 ** 4
+        dim = 256
+
+        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        q = DescriptorMemoryElement('q', -1)
+        q.set_vector(np.zeros((dim,)))
+
+        faiss_index.build_index(d_index)
+
+        nbrs, dists = faiss_index.nn(q, 10)
+        self.assertEqual(len(nbrs), len(dists))
+        self.assertEqual(len(nbrs), 10)
 
     def test_impl_findable(self):
         self.assertIn(FaissNearestNeighborsIndex.__name__,

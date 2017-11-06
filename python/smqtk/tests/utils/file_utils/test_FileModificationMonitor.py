@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import atexit
 import os
 import tempfile
@@ -10,7 +12,8 @@ import smqtk.utils.file_utils
 
 class TestFileModificationMonitor (unittest.TestCase):
 
-    def _mk_test_fp(self):
+    @staticmethod
+    def _mk_test_fp():
         fd, fp = tempfile.mkstemp()
         os.close(fd)
         atexit.register(lambda: os.remove(fp))
@@ -47,7 +50,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertFalse(monitor.is_alive())
         finally:
             if monitor.is_alive():
-                print "WARNING :: Forcing thread stop by removing filepath var"
+                print("WARNING :: Forcing thread stop by removing filepath var")
                 monitor.filepath = None
 
     def test_short_file_copy(self):
@@ -73,7 +76,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertEqual(filepath, fp)
 
         interval = 0.01
-        settle   = 0.1
+        settle = 0.1
         monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
                                                                  settle, cb)
         try:
@@ -146,10 +149,9 @@ class TestFileModificationMonitor (unittest.TestCase):
                         f.write('0')
                     time.sleep(append_interval)
 
-        m_thread = smqtk.utils.file_utils.FileModificationMonitor(fp,
-                                                                  monitor_interval,
-                                                                  monitor_settle,
-                                                                  cb)
+        m_thread = smqtk.utils.file_utils.FileModificationMonitor(
+            fp, monitor_interval, monitor_settle, cb
+        )
         a_thread = AppendThread()
 
         try:

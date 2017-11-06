@@ -13,10 +13,10 @@ class TestDescriptorFileElement (unittest.TestCase):
     def test_configuration1(self):
         default_config = DescriptorFileElement.get_default_config()
         self.assertEqual(default_config,
-                            {
-                                'save_dir': None,
-                                'subdir_split': None,
-                            })
+                         {
+                             'save_dir': None,
+                             'subdir_split': None,
+                         })
 
         default_config['save_dir'] = '/some/path/somewhere'
         default_config['subdir_split'] = 4
@@ -36,23 +36,23 @@ class TestDescriptorFileElement (unittest.TestCase):
     def test_vec_filepath_generation(self):
         d = DescriptorFileElement('test', 'abcd', '/base', 4)
         self.assertEqual(d._vec_filepath,
-                            '/base/a/b/c/test.abcd.vector.npy')
+                         '/base/a/b/c/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 2)
         self.assertEqual(d._vec_filepath,
-                            '/base/ab/test.abcd.vector.npy')
+                         '/base/ab/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 1)
         self.assertEqual(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+                         '/base/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 0)
         self.assertEqual(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+                         '/base/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base')
         self.assertEqual(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+                         '/base/test.abcd.vector.npy')
 
     def test_serialization(self):
         # Test that an instance can be serialized and deserialized via pickle
@@ -81,7 +81,7 @@ class TestDescriptorFileElement (unittest.TestCase):
     def test_vector_set(self, mock_scd, mock_save):
         d = DescriptorFileElement('test', 1234, '/base', 4)
         self.assertEqual(d._vec_filepath,
-                            '/base/1/2/3/test.1234.vector.npy')
+                         '/base/1/2/3/test.1234.vector.npy')
 
         v = numpy.zeros(16)
         d.set_vector(v)

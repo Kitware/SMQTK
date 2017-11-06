@@ -71,7 +71,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         # Parse ``cache_element`` configuration if set.
         cache_element = None
-        if config_dict['cache_element'] and config_dict['cache_element']['type']:
+        if config_dict['cache_element'] and \
+                config_dict['cache_element']['type']:
             cache_element = \
                 plugin.from_plugin_config(config_dict['cache_element'],
                                           get_data_element_impls())
@@ -136,6 +137,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             s = self.bt.__getstate__()
             tail = s[4:11]
             buff = StringIO()
+            # noinspection PyTypeChecker
             numpy.savez(buff,
                         data_arr=s[0],
                         idx_array_arr=s[1],
@@ -159,6 +161,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 s = (cache['data_arr'], cache['idx_array_arr'],
                      cache['node_data_arr'], cache['node_bounds_arr']) +\
                     tail + (DistanceMetric.get_metric('hamming'),)
+            # noinspection PyTypeChecker
             #: :type: sklearn.neighbors.BallTree
             self.bt = BallTree.__new__(BallTree)
             self.bt.__setstate__(s)

@@ -2,19 +2,14 @@
 Script for building and saving the model for the ``SkLearnBallTreeHashIndex``
 implementation of ``HashIndex``.
 """
+import logging
 
-import logging, os
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
     SkLearnBallTreeHashIndex
 import smqtk.representation
 import smqtk.utils.bin_utils
 import smqtk.utils.bit_utils
 import smqtk.utils.plugin
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 def default_config():

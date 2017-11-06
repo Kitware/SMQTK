@@ -2,8 +2,7 @@ import unittest
 
 import mock
 
-from smqtk.algorithms.relevancy_index import \
-    RelevancyIndex, get_relevancy_index_impls
+from smqtk.algorithms.relevancy_index import RelevancyIndex
 
 
 class DummyRI (RelevancyIndex):

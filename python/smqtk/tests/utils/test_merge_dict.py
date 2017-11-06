@@ -69,14 +69,14 @@ class TestMergeDict (unittest.TestCase):
         # set values that are mutable structures should be the same instances as
         # what's in ``b``.
         self.assertEqual(self.a['nested']['l'],
-                                self.b['nested']['l'])
+                         self.b['nested']['l'])
         self.assertIs(self.a['nested']['l'],
-                             self.b['nested']['l'])
+                      self.b['nested']['l'])
 
         self.assertEqual(self.a['nested']['even_deeper']['j'],
-                                self.b['nested']['even_deeper']['j'])
+                         self.b['nested']['even_deeper']['j'])
         self.assertIs(self.a['nested']['even_deeper']['j'],
-                             self.b['nested']['even_deeper']['j'])
+                      self.b['nested']['even_deeper']['j'])
 
     def test_merge_dict_deepcopy(self):
         # dict merger with deepcopy
@@ -86,14 +86,14 @@ class TestMergeDict (unittest.TestCase):
         # set values that are mutable structures should be the same instances as
         # what's in ``b``.
         self.assertEqual(self.a['nested']['l'],
-                                self.b['nested']['l'])
+                         self.b['nested']['l'])
         self.assertIsNot(self.a['nested']['l'],
-                                 self.b['nested']['l'])
+                         self.b['nested']['l'])
 
         self.assertEqual(self.a['nested']['even_deeper']['j'],
-                                self.b['nested']['even_deeper']['j'])
+                         self.b['nested']['even_deeper']['j'])
         self.assertIsNot(self.a['nested']['even_deeper']['j'],
-                                 self.b['nested']['even_deeper']['j'])
+                         self.b['nested']['even_deeper']['j'])
 
     def test_merge_dict_return_a(self):
         # Return value should be the ``a`` parameter input value

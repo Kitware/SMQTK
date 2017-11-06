@@ -190,11 +190,13 @@ class IqrSession (SmqtkObject):
 
         :param positive: Iterable of descriptors from external sources to
             consider positive examples.
-        :type positive: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type positive:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param negative: Iterable of descriptors from external sources to
             consider negative examples.
-        :type negative: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type negative:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         positive = set(positive)
@@ -221,19 +223,23 @@ class IqrSession (SmqtkObject):
 
         :param new_positives: Descriptors of elements in our working index to
             now be considered to be positively relevant.
-        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param new_negatives: Descriptors of elements in our working index to
             now be considered to be negatively relevant.
-        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_positives: Descriptors of elements in our working index to now
             be considered not positive any more.
-        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_negatives: Descriptors of elements in our working index to now
             be considered not negative any more.
-        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         new_positives = set(new_positives)
@@ -290,8 +296,9 @@ class IqrSession (SmqtkObject):
         if updated:
             self._log.info("Creating new relevancy index over working index.")
             #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
-            self.rel_index = plugin.from_plugin_config(self.rel_index_config,
-                                                       get_relevancy_index_impls())
+            self.rel_index = plugin.from_plugin_config(
+                self.rel_index_config, get_relevancy_index_impls()
+            )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 
     def refine(self):
@@ -429,15 +436,15 @@ class IqrSession (SmqtkObject):
         with self:
             self.reset()
 
-            def load_descriptor(uid, tstr, vec_list):
-                e = descriptor_factory.new_descriptor(tstr, uid)
-                if e.has_vector():
-                    assert e.vector().tolist() == vec_list, \
+            def load_descriptor(_uid, _type_str, vec_list):
+                _e = descriptor_factory.new_descriptor(_type_str, _uid)
+                if _e.has_vector():
+                    assert _e.vector().tolist() == vec_list, \
                         "Found existing vector for UUID '%s' but vectors did " \
                         "not match."
                 else:
-                    e.set_vector(vec_list)
-                return e
+                    _e.set_vector(vec_list)
+                return _e
 
             # Read in raw descriptor data from the state, convert to descriptor
             # element, then store in our descriptor sets.
@@ -447,6 +454,6 @@ class IqrSession (SmqtkObject):
                                     self.external_negative_descriptors),
                                    (state['pos'], self.positive_descriptors),
                                    (state['neg'], self.negative_descriptors)]:
-                for uid, tstr, vector_list in source:
-                    e = load_descriptor(uid, tstr, vector_list)
+                for uid, type_str, vector_list in source:
+                    e = load_descriptor(uid, type_str, vector_list)
                     target.add(e)

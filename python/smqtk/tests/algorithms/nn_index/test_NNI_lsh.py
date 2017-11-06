@@ -335,6 +335,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
 
         return itq_ftor, itq_fit
 
+    # noinspection PyMethodMayBeStatic
     def _make_hi_linear(self):
         return LinearHashIndex()
 

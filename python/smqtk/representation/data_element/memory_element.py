@@ -94,7 +94,8 @@ class DataMemoryElement (DataElement):
         # Additionally, the encoding alphabet should not container any unicode
         # symbols, so this aught to be safe.
         b64_str = str(b64_str)
-        return DataMemoryElement(base64.urlsafe_b64decode(b64_str), content_type)
+        return DataMemoryElement(base64.urlsafe_b64decode(b64_str),
+                                 content_type)
 
     # noinspection PyShadowingBuiltins
     def __init__(self, bytes=None, content_type=None, readonly=False):

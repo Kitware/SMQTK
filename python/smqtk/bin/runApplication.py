@@ -100,6 +100,7 @@ def main():
         log.error("Invalid application label '%s'", application_name)
         exit(1)
 
+    #: :type: smqtk.web.SmqtkWebApp
     app_class = web_applications[application_name]
 
     config = bin_utils.utility_main_helper(app_class.get_default_config, args,

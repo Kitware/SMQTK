@@ -1,5 +1,7 @@
-import cPickle
+import collections
 import time
+
+from six.moves import cPickle, range
 
 from smqtk.representation.descriptor_index import DescriptorIndex
 
@@ -238,30 +240,31 @@ class SolrDescriptorIndex (DescriptorIndex):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.Hashable
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
-        :rtype: __generator[smqtk.representation.DescriptorElement]
+        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
 
-        def batch_query(batch):
+        def batch_query(_batch):
             """
-            :type batch: list[collections.Hashable]
+            :param _batch: Batch of UIDs to select.
+            :type _batch: list[collections.Hashable]
             """
-            query = ' OR '.join([self.d_uid_field + (':%s' % uid)
-                                 for uid in batch])
+            query = ' OR '.join([self.d_uid_field + (':%s' % _uid)
+                                 for _uid in _batch])
             r = self.solr.select("%s:%s AND (%s)"
                                  % (self.index_uuid_field, self.index_uuid,
                                     query))
             # result batches come in chunks of 10
             for doc in r.results:
                 yield cPickle.loads(doc[self.descriptor_field])
-            for j in xrange(r.numFound // 10):
+            for j in range(r.numFound // 10):
                 r = r.next_batch()
                 for doc in r.results:
                     yield cPickle.loads(doc[self.descriptor_field])
@@ -293,14 +296,14 @@ class SolrDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         """
-        self.remove_many_descriptors(uuid)
+        self.remove_many_descriptors([uuid])
 
     def remove_many_descriptors(self, uuids):
         """
         Remove descriptors associated to given descriptor UUIDs from this index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: tuple[collections.Hashable]
+        :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -308,24 +311,25 @@ class SolrDescriptorIndex (DescriptorIndex):
         """
         # Chunk up operation based on max clauses available to us
 
-        def batch_op(batch):
+        def batch_op(_batch):
             """
-            :type batch: list[collections.Hashable]
+            :param _batch: UIDs to remove from index.
+            :type _batch: collections.Iterable[collections.Hashable]
             """
-            uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(uid))
-                                      for uid in batch])
+            uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
+                                      for _uid in _batch])
             self.solr.delete("%s:%s AND (%s)"
                              % (self.index_uuid_field, self.index_uuid,
                                 uuid_query))
 
-        batch = []
+        batch = collections.deque()
         for uid in uuids:
             batch.append(uid)
 
             # Will end up using max_clauses-1 OR statements, and one AND
             if len(batch) == self.max_boolean_clauses:
                 batch_op(batch)
-            batch = []
+            batch.clear()
 
         # tail batch
         if batch:
@@ -340,7 +344,7 @@ class SolrDescriptorIndex (DescriptorIndex):
                                 self.d_uid_field))
         for doc in r.results:
             yield doc[self.d_uid_field]
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 yield doc[self.d_uid_field]
@@ -354,7 +358,7 @@ class SolrDescriptorIndex (DescriptorIndex):
                                 self.descriptor_field))
         for doc in r.results:
             yield cPickle.loads(doc[self.descriptor_field])
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 yield cPickle.loads(doc[self.descriptor_field])
@@ -369,7 +373,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         for doc in r.results:
             d = cPickle.loads(doc[self.descriptor_field])
             yield d.uuid(), d
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 d = cPickle.loads(doc[self.descriptor_field])

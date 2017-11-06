@@ -191,7 +191,8 @@ def get_descriptor_element_impls(reload_modules=False):
     We search for implementation classes in:
         - modules next to this file this function is defined in (ones that begin
           with an alphanumeric character),
-        - python modules listed in the environment variable ``DESCRIPTOR_ELEMENT_PATH``
+        - python modules listed in the environment variable
+          ``DESCRIPTOR_ELEMENT_PATH``
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)

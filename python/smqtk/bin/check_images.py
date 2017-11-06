@@ -53,21 +53,27 @@ def main():
 
     def check_image(image_path):
         if not os.path.exists(image_path):
-            log.warn('Invalid image path given (does not exist): %s', image_path)
-            return (False, False)
+            log.warn('Invalid image path given (does not exist): %s',
+                     image_path)
+            return False, False
         else:
-            dfe = DataFileElement(image_path)
-            return (is_valid_element(dfe, check_image=True), dfe)
+            d = DataFileElement(image_path)
+            return is_valid_element(d, check_image=True), d
 
     with open(args.file_list) as infile:
-        checked_images = parallel.parallel_map(check_image,
-                                               itertools.imap(str.strip, infile),
-                                               name='check-image-validity',
-                                               use_multiprocessing=True)
+        checked_images = \
+            parallel.parallel_map(check_image,
+                                  itertools.imap(str.strip, infile),
+                                  name='check-image-validity',
+                                  use_multiprocessing=True)
 
-        for (is_valid, dfe) in checked_images:
-            if dfe != False: # in the case of a non-existent file
-                if (is_valid and not args.invert) or (not is_valid and args.invert):
+        for is_valid, dfe in checked_images:
+            if dfe:  # in the case of a non-existent file
+                if (is_valid and not args.invert) or \
+                        (not is_valid and args.invert):
+                    # We know the callback above is creating DataFileElement
+                    # instances.
+                    # noinspection PyProtectedMember
                     print('%s,%s' % (dfe._filepath, dfe.uuid()))
 
 

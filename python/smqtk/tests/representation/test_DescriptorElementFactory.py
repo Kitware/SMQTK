@@ -1,4 +1,3 @@
-import mock
 import numpy
 import unittest
 
@@ -106,7 +105,7 @@ class TestDescriptorElemFactory (unittest.TestCase):
         c['type'] = 'DescriptorMemoryElement'
         factory = DescriptorElementFactory.from_config(c)
         self.assertEqual(factory._d_type.__name__,
-                            DescriptorMemoryElement.__name__)
+                         DescriptorMemoryElement.__name__)
         self.assertEqual(factory._d_type_config, {})
 
         d = factory.new_descriptor('test', 'foo')

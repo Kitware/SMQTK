@@ -27,45 +27,45 @@ function IqrRefineView(container) {
     //
 
     // top-level container for layout
-    this.iqr_view_container = $('<div id="iqr_view_instance"/>');
+    this.iqr_view_container = $('<div id="iqr_view_instance"></div>');
 
     // for DataView views
-    this.refine_container = $('<div class="iqr-view-results-container"/>');
+    this.refine_container = $('<div class="iqr-view-results-container"></div>');
     this.refine_container.css('width', '100%');
 
     // for random result views, initially hidden
-    this.random_container = $('<div class="iqr-view-results-container"/>');
+    this.random_container = $('<div class="iqr-view-results-container"></div>');
     this.random_container.css('border', 'solid red 1px');
 
     // Shown at top of search view area (shouldn't cover random area)
     this.progress_bar_refine = new ActivityBar();
     this.progress_bar_random = new ActivityBar();
 
-    this.button_container_refine_top = $('<div/>');
+    this.button_container_refine_top = $('<div></div>');
     this.button_container_refine_top.css('text-align', 'center');
     this.button_container_refine_bot = this.button_container_refine_top.clone();
     this.button_container_random_top = this.button_container_refine_top.clone();
     this.button_container_random_bot = this.button_container_refine_top.clone();
 
-    this.button_refine_top = $('<button class="btn btn-primary" type="button"/>');
+    this.button_refine_top = $('<button class="btn btn-primary" type="button"></button>');
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
 
     // To be put in top button container
-    this.button_toggle_random = $('<button class="btn" type="button"/>');
+    this.button_toggle_random = $('<button class="btn" type="button"></button>');
     this.button_toggle_random.text('Toggle Random Results');
 
     // To be put in bottom button container in results panel
-    this.button_refine_showMore = $('<button class="btn" type="button"/>');
+    this.button_refine_showMore = $('<button class="btn" type="button"></button>');
     this.button_refine_showMore.text("Show More");
 
-    this.button_random_refresh = $('<button class="btn btn-danger" type="button"/>');
+    this.button_random_refresh = $('<button class="btn btn-danger" type="button"></button>');
     this.button_random_refresh.text("Refresh Random Results");
 
     this.button_random_showMore = this.button_refine_showMore.clone();
 
-    this.results_container_refine = $('<div/>');
-    this.results_container_random = $('<div/>');
+    this.results_container_refine = $('<div></div>');
+    this.results_container_random = $('<div></div>');
 
     //
     // Construct layout
@@ -151,6 +151,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
     // clear children of results container
     // get ordered results information
     // display first X results
+    // noinspection JSValidateTypes
     this.results_container_refine.children().remove();
     this.refine_result_uuids = [];
     this.refine_result_score = [];
@@ -167,6 +168,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
         success: function (data) {
             if (parseInt(data["wi_count"]) > 0) {
                 // enable buttons
+                // noinspection JSValidateTypes
                 self.button_container_refine_top.children().prop("disabled", false);
                 // Fetch ordered results + display
                 $.ajax({
@@ -198,6 +200,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
             }
             else {
                 // disable buttons + hide bottom button container
+                // noinspection JSValidateTypes
                 self.button_container_refine_top.children().prop("disabled", true);
                 self.button_container_refine_bot.hide();
             }
@@ -249,10 +252,12 @@ IqrRefineView.prototype.iqr_refine = function() {
 
     // helper methods for display stuff
     function disable_buttons() {
+        // noinspection JSValidateTypes
         self.button_container_refine_top.children().prop("disabled", true);
         self.button_container_refine_bot.children().prop("disabled", true);
     }
     function enable_buttons() {
+        // noinspection JSValidateTypes
         self.button_container_refine_top.children().prop("disabled", false);
         self.button_container_refine_bot.children().prop("disabled", false);
     }
@@ -353,6 +358,7 @@ IqrRefineView.prototype.hide_random_functionals = function () {
  * Clear currently displayed and stored random results.
  */
 IqrRefineView.prototype.clear_random_results = function () {
+    // noinspection JSValidateTypes
     this.results_container_random.children().remove();
     this.random_results_displayed = 0;
 };
@@ -363,8 +369,6 @@ IqrRefineView.prototype.clear_random_results = function () {
  * currently have any stored random IDs.
  */
 IqrRefineView.prototype.display_random_results_range = function (s, e) {
-    var inst = this;
-
     // bound the start and end indices to prevent overflow
     s = Math.min(Math.max(0, s), this.random_ids.length);
     e = Math.min(e, this.random_ids.length);

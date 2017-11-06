@@ -41,6 +41,9 @@ class FeatureMemory (object):
             to whether or not the associated clip ID should be considered a
             background video or not.
         :type bg_flags_file: str
+        :param rw_lock: Optional ReadWriteLock for this instance to use. If not
+            provided, we will create our own.
+        :type rw_lock: None or ReadWriteLock
         :return: Symmetric FeatureMemory constructed with the data provided in
             the provided files.
         :rtype: FeatureMemory
@@ -122,7 +125,8 @@ class FeatureMemory (object):
 
         # The kernel should be square and should be the same size as the feature
         # matrix's number or rows (unique stored clip features).
-        if not (kernel_mat.shape[0] == kernel_mat.shape[1] == feature_mat.shape[0]):
+        if not (kernel_mat.shape[0] == kernel_mat.shape[1] ==
+                feature_mat.shape[0]):
             raise ValueError("The distance kernel matrix provided is either "
                              "misshapen or conflicts with the dimensions of "
                              "the provided feature matrix. (kernel matrix "
@@ -276,7 +280,8 @@ class FeatureMemory (object):
             return ret_mat
 
     # noinspection PyUnresolvedReferences,PyCallingNonCallable
-    def update(self, clip_id, feature_vec=None, is_background=False, timeout=None):
+    def update(self, clip_id, feature_vec=None, is_background=False,
+               timeout=None):
         """
         Update this feature with a feature vector associated with a clip ID. If
         clip ID is already in the feature matrix, we replace the current vector
@@ -388,7 +393,7 @@ class FeatureMemoryMap (object):
 
     def __init__(self):
         self._map_lock = multiprocessing.RLock()
-        #: :type: dict of (str, FeatureMemory)
+        #: :type: dict[str, FeatureMemory]
         self._feature2memory = {}
 
     def get_feature_types(self):
@@ -419,6 +424,8 @@ class FeatureMemoryMap (object):
             ``id_vector`` maps row indices to the clip ID the feature
             represents.
         :param kernel_mat: Pre-computed distance kernel
+        :param rw_lock: Optional read-write lock to manually use with underlying
+            feature memory construct.  Otherwise we create our own.
 
         """
         with self._map_lock:
@@ -538,9 +545,12 @@ class FeatureMemoryMap (object):
         :raise ValueError: If the given clip ID is not represented in the
             feature matrix.
 
+        :param feature_type: Feature type to access:
+        :type feature_type: str
+
         :param clip_id_or_ids: One or more integer clip IDs to retrieve the
             feature vectors for.
-        :type clip_id_or_ids: tuple of int
+        :type clip_id_or_ids: int
 
         :return: NxM matrix, where N is the number of clip IDs requested and M
             is the length of a feature vector for this vector.

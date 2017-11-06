@@ -39,22 +39,24 @@ class DummyRWLock (object):
     def releaseWrite(self, _id=None):
         pass
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def read_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyReadWithLock (object):
             def __enter__(_self):
                 pass
+
             def __exit__(_self, *args):
                 pass
         return DummyReadWithLock()
 
-    # noinspection PyMethodMayBeStatic
-    def write_lock(self, timneout=None, _id=None):
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def write_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyWriteWithLock (object):
             def __enter__(_self):
                 pass
+
             def __exit__(_self, *args):
                 pass
         return DummyWriteWithLock()
@@ -145,6 +147,11 @@ class ReadWriteLock (object):
         :param timeout: Optional timeout on the lock acquire time in seconds.
         :type timeout: int or None
 
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
+
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
@@ -200,6 +207,11 @@ class ReadWriteLock (object):
 
         :param timeout: Optional timeout on the lock acquire time in seconds.
         :type timeout: int or None
+
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
 
         """
         me = _id or (multiprocessing.current_process().ident,
@@ -356,6 +368,11 @@ class ReadWriteLock (object):
         :param timeout: Optional timeout on the lock acquire in seconds.
         :type timeout: int
 
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
+
         :return: New object instance with __enter__ and __exit__ methods
             defined.
         :rtype: object
@@ -390,6 +407,11 @@ class ReadWriteLock (object):
 
         :param timeout: Optional timeout on the lock acquire in seconds.
         :type timeout: int
+
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
 
         :return: New object instance with __enter__ and __exit__ methods
             defined.

@@ -47,8 +47,6 @@ def get_default_config():
 
 
 def train_classifier_iqr(config, iqr_state_fp):
-    log = logging.getLogger(__name__)
-
     #: :type: smqtk.algorithms.SupervisedClassifier
     classifier = from_plugin_config(
         config['classifier'],

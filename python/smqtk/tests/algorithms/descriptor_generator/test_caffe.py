@@ -9,7 +9,11 @@ import numpy
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
-    caffe, CaffeDescriptorGenerator, _process_load_img_array
+    caffe, CaffeDescriptorGenerator
+# Testing protected helper function
+# noinspection PyProtectedMember
+from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
+    _process_load_img_array
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR
@@ -35,19 +39,22 @@ if CaffeDescriptorGenerator.is_usable():
             os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
 
         www_uri_alexnet_prototxt = \
-            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c/download'
+            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c' \
+            '/download'
         www_uri_alexnet_caffemodel = \
-            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
+            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86' \
+            '/download'
         www_uri_image_mean_proto = \
-            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
+            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82' \
+            '/download'
 
         def test_impl_findable(self):
             self.assertIn(CaffeDescriptorGenerator.__name__,
-                                 get_descriptor_generator_impls())
+                          get_descriptor_generator_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_get_config(self, m_cdg_setupNetwork):
+        def test_get_config(self, _m_cdg_setupNetwork):
             # Mocking set_network so we don't have to worry about actually
             # initializing any caffe things for this test.
             expected_params = {
@@ -69,7 +76,7 @@ if CaffeDescriptorGenerator.is_usable():
                 set(inspect.getargspec(CaffeDescriptorGenerator.__init__)
                            .args[1:])
             self.assertSetEqual(set(expected_params.keys()),
-                                        expected_param_keys)
+                                expected_param_keys)
             g = CaffeDescriptorGenerator(**expected_params)
             self.assertEqual(g.get_config(), expected_params)
 
@@ -103,13 +110,17 @@ if CaffeDescriptorGenerator.is_usable():
             self.assertEqual(m_cdg_setupNetwork.call_count, 2)
 
             self.assertIsInstance(g2, CaffeDescriptorGenerator)
-            self.assertEqual(g.get_config(),
-                                    g2.get_config())
+            self.assertEqual(g.get_config(), g2.get_config())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_invalid_datatype(self, m_cdg_setupNetwork):
-            # dummy network setup
+        def test_invalid_datatype(self, _m_cdg_setupNetwork):
+            # Test that a data element with an incorrect content type raises an
+            # exception.
+
+            # Passing purposefully bag constructor parameters and ignoring
+            # Caffe network setup (above mocking).
+            # noinspection PyTypeChecker
             g = CaffeDescriptorGenerator(None, None, None)
             bad_element = from_uri(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
             self.assertRaises(
@@ -134,13 +145,15 @@ if CaffeDescriptorGenerator.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                     '.CaffeDescriptorGenerator._setup_network')
-        def test_no_internal_compute_descriptor(self, m_cdg_setupNetwork):
+        def test_no_internal_compute_descriptor(self, _m_cdg_setupNetwork):
             # This implementation's descriptor computation logic sits in async
             # method override due to caffe's natural multi-element computation
             # interface. Thus, ``_compute_descriptor`` should not be
             # implemented.
 
-            # dummy network setup because _setup_network is mocked out
+            # Passing purposefully bag constructor parameters and ignoring
+            # Caffe network setup (above mocking).
+            # noinspection PyTypeChecker
             g = CaffeDescriptorGenerator(0, 0, 0)
             self.assertRaises(
                 NotImplementedError,

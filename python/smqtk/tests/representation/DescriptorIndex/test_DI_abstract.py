@@ -77,8 +77,8 @@ class TestDescriptorIndexAbstract (unittest.TestCase):
         di = DummyDescriptorIndex()
 
         def dumb_iterator():
-            for i in range(3):
-                yield i
+            for _i in range(3):
+                yield _i
 
         di.iterdescriptors = mock.Mock(side_effect=dumb_iterator)
 

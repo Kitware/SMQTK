@@ -12,8 +12,8 @@ function IqrStatusView (container) {
     this.example_neg_data_zone = $('<div>');
     this.buttons_bottom = $('<div>');
 
-    this.button_view_pos = $('<button class="btn btn-primary" type="button"/>');
-    this.button_view_neg = $('<button class="btn btn-primary" type="button"/>');
+    this.button_view_pos = $('<button class="btn btn-primary" type="button"></button>');
+    this.button_view_neg = $('<button class="btn btn-primary" type="button"></button>');
 
     //
     // Setup
@@ -73,6 +73,7 @@ IqrStatusView.prototype.construct_view = function (container) {
  */
 IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
+    // noinspection JSValidateTypes
     this.example_pos_data_zone.children().remove();
     for (var i=0; i < iqr_sess_state["uuids_pos_ext"].length; i++) {
         new DataView(this.example_pos_data_zone, 0,
@@ -89,6 +90,7 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
  */
 IqrStatusView.prototype.update_neg_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
+    // noinspection JSValidateTypes
     this.example_neg_data_zone.children().remove();
     for (var i=0; i < iqr_sess_state["uuids_neg_ext"].length; i++) {
         new DataView(this.example_neg_data_zone, 0,

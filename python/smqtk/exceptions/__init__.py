@@ -12,6 +12,13 @@ class ReadOnlyError (Exception):
     """
 
 
+class NoUriResolutionError (Exception):
+    """
+    Standard exception thrown by base DataElement from_uri method when a
+    subclass does not implement URI resolution.
+    """
+
+
 class InvalidUriError (Exception):
     """
     An invalid URI was provided.

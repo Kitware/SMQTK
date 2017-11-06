@@ -85,6 +85,7 @@ class TestDataFileElement (unittest.TestCase):
         c = {
             "filepath": fp
         }
+        #: :type: DataFileElement
         df = DataFileElement.from_config(c)
         self.assertEqual(df._filepath, fp)
 
@@ -98,8 +99,8 @@ class TestDataFileElement (unittest.TestCase):
         fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
         default_config = DataFileElement.get_default_config()
         self.assertEqual(default_config,
-                            {'filepath': None, 'readonly': False,
-                             'explicit_mimetype': None})
+                         {'filepath': None, 'readonly': False,
+                          'explicit_mimetype': None})
 
         default_config['filepath'] = fp
         inst1 = DataFileElement.from_config(default_config)
@@ -111,18 +112,18 @@ class TestDataFileElement (unittest.TestCase):
     def test_repr(self):
         e = DataFileElement('foo')
         self.assertEqual(repr(e),
-                            "DataFileElement{filepath: foo, readonly: False, "
-                            "explicit_mimetype: None}")
+                         "DataFileElement{filepath: foo, readonly: False, "
+                         "explicit_mimetype: None}")
 
         e = DataFileElement('bar', readonly=True)
         self.assertEqual(repr(e),
-                            "DataFileElement{filepath: bar, readonly: True, "
-                            "explicit_mimetype: None}")
+                         "DataFileElement{filepath: bar, readonly: True, "
+                         "explicit_mimetype: None}")
 
         e = DataFileElement('baz', readonly=True, explicit_mimetype='some/type')
         self.assertEqual(repr(e),
-                            "DataFileElement{filepath: baz, readonly: True, "
-                            "explicit_mimetype: some/type}")
+                         "DataFileElement{filepath: baz, readonly: True, "
+                         "explicit_mimetype: some/type}")
 
     def test_from_uri_invalid_uri_empty(self):
         # Given empty string
@@ -249,7 +250,8 @@ class TestDataFileElement (unittest.TestCase):
         e = DataFileElement('foo', readonly=True)
         self.assertFalse(e.writable())
 
-    @mock.patch('smqtk.representation.data_element.file_element.safe_file_write')
+    @mock.patch('smqtk.representation.data_element.file_element'
+                '.safe_file_write')
     def test_set_bytes_writable(self, m_sfw):
         # Using a relative filepath
         test_path = 'foo'

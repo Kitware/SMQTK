@@ -28,7 +28,7 @@ if FlannNearestNeighborsIndex.is_usable():
             # Already here because the implementation is reporting itself as
             # usable.
             self.assertIn(FlannNearestNeighborsIndex.__name__,
-                             get_nn_index_impls())
+                          get_nn_index_impls())
 
         def test_configuration(self):
             index_filepath = '/index_filepath'
@@ -75,7 +75,7 @@ if FlannNearestNeighborsIndex.is_usable():
 
         @mock.patch("smqtk.algorithms.nn_index.flann"
                     ".FlannNearestNeighborsIndex._load_flann_model")
-        def test_has_model_data_valid_uris(self, m_flann_lfm):
+        def test_has_model_data_valid_uris(self, _m_flann_lfm):
             # Mocking flann data loading that occurs in constructor when given
             # non-empty URI targets
             f = FlannNearestNeighborsIndex(
@@ -237,6 +237,7 @@ if FlannNearestNeighborsIndex.is_usable():
             c['random_seed'] = 42
 
             # Build based on configuration
+            #: :type: FlannNearestNeighborsIndex
             index = FlannNearestNeighborsIndex.from_config(c)
             self.assertEqual(index._index_uri, index_filepath)
             self.assertEqual(index._index_param_uri, para_filepath)

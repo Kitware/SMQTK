@@ -43,9 +43,10 @@ if LibSvmHikRelevancyIndex.is_usable():
             # change default for something different
             c['descr_cache_filepath'] = 'foobar.thing'
 
+            #: :type: LibSvmHikRelevancyIndex
             iqr_index = LibSvmHikRelevancyIndex.from_config(c)
             self.assertEqual(iqr_index.descr_cache_fp,
-                                c['descr_cache_filepath'])
+                             c['descr_cache_filepath'])
 
             # test config idempotency
             self.assertDictEqual(c, iqr_index.get_config())
@@ -85,7 +86,8 @@ if LibSvmHikRelevancyIndex.is_usable():
             iqr_index.build_index(self.index_descriptors)
 
             rank = iqr_index.rank([self.q_pos], [self.q_neg])
-            rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
+            rank_ordered = sorted(rank.items(), key=lambda e: e[1],
+                                  reverse=True)
 
             # Check expected ordering
             # 0-5-1-2-6-3-4

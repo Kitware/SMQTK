@@ -7,8 +7,9 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import logging
+
 import numpy as np
-from numpy.core.multiarray import ndarray  # for shortening doc strings
+from six.moves import range
 
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
@@ -25,7 +26,7 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     ``smqtk.utils.distance_functions.histogram_intersection_distance2``.
 
     :param m: An array of vectors to compute the pairwise distance kernel for.
-    :type m: numpy.core.multiarray.ndarray
+    :type m: numpy.ndarray
 
     :param dist_func: Distance function
     :type dist_func: (ndarray, ndarray) -> ndarray[float] | float
@@ -40,24 +41,9 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     :type parallel: bool
 
     :return: Computed symmetric distance kernel
-    :rtype: numpy.core.multiarray.ndarray
+    :rtype: numpy.ndarray
 
     """
-    if hasattr(dist_func, 'im_func'):
-        # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.im_class.__name__,
-                                  dist_func.im_func.func_name])
-    elif hasattr(dist_func, 'func_name'):
-        # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.func_name])
-    elif hasattr(dist_func, 'py_func') \
-            and hasattr(dist_func.py_func, 'func_name'):
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.py_func.func_name])
-    else:
-        distance_name = "<unknown>"
     log = logging.getLogger(__name__)
 
     if m.ndim == 1:
@@ -70,9 +56,10 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     s = [0] * 7
     if row_wise:
         log.debug("Computing row-wise distances")
-        # For all rows except the last one. We'll have computed all distanced by
+        # For all rows except the last one. We'll have computed all distances by
         # the time reach m[side-1]
         if parallel:
+            # noinspection PyShadowingNames
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side - 1):
@@ -80,11 +67,11 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                                                                 m[i + 1:, :])
             # Using threading for in-place modification
             s = [0] * 7
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 # Compute col/row wise distances
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side-1):
@@ -93,20 +80,21 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     else:
         log.debug("Computing element-wise distances")
         if parallel:
+            # noinspection PyShadowingNames
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
             # Using threading for in-place modification
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
                 report_progress(log.debug, s, 1.)
 
@@ -125,11 +113,11 @@ def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
     k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
     if row_wise:
         # row wise
-        for i in xrange(m1.shape[0]):
+        for i in range(m1.shape[0]):
             k[i, :] = dist_func(m1[i], m2)
     else:
-        for i in xrange(m1.shape[0]):
-            for j in xrange(m2.shape[0]):
+        for i in range(m1.shape[0]):
+            for j in range(m2.shape[0]):
                 k[i, j] = dist_func(m1[i], m2[j])
     return k
 
@@ -199,7 +187,7 @@ class DistanceKernel (object):
         else:
             bg_clips = None
 
-        return DistanceKernel(clip_ids, clip_ids, kernel_mat, bg_clips)
+        return DistanceKernel(clip_ids, clip_ids, kernel_mat, set(bg_clips))
 
     @classmethod
     def construct_asymmetric_from_files(cls, row_ids_file, col_ids_file,
@@ -269,7 +257,7 @@ class DistanceKernel (object):
         :param bg_clip_ids: Optional array of boolean flags, marking whether an
             index should be considered a "background" video. Contents will be
             treated as ints.
-        :type bg_clip_ids: set of int
+        :type bg_clip_ids: None | set[int]
         :param rw_lock: Read-Write lock for data provided. This should be
             provided if the any of the data is shared with other objects/
             sources. If this is given None (default), then a lock is created.
@@ -293,7 +281,7 @@ class DistanceKernel (object):
 
         assert ((bg_clip_ids is None)
                 or isinstance(bg_clip_ids, (set, frozenset))), \
-            "Must either given None or a set for the bg_clip_ids " \
+            "Must either give None or a set for the bg_clip_ids " \
             "vector. Got: %s" % type(bg_clip_ids)
         self._bg_cid_set = bg_clip_ids
         if bg_clip_ids is not None:
@@ -421,7 +409,8 @@ class DistanceKernel (object):
 
                 try:
                     clip_ids = [int(e) for e in clip_ids]
-                except:
+                except ValueError:
+                    # Re-raise with more informative exception.
                     raise ValueError("Not all clip IDs could be used as ints!")
 
                 id_diff = set(clip_ids).difference(self._row_id_index_map)
@@ -485,7 +474,7 @@ class DistanceKernel (object):
             with SimpleTimer("Checking inputs", self._log.debug):
                 try:
                     clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
-                except Exception, ex:
+                except Exception as ex:
                     raise ValueError("Not all clip IDs could be used as ints: "
                                      "%s" % str(ex))
 
@@ -498,7 +487,8 @@ class DistanceKernel (object):
 
             # Reorder the given clip IDs so that they are in the same relative
             # order as the kernel matrix edge order
-            with SimpleTimer("Creating focus index/cid sequence", self._log.debug):
+            with SimpleTimer("Creating focus index/cid sequence",
+                             self._log.debug):
                 focus_row_indices = []
                 focus_row_clipids = []
                 for idx, cid in enumerate(self._row_id_index_map):

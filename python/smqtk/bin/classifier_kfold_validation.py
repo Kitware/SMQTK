@@ -70,7 +70,8 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy
-import sklearn.cross_validation
+import six
+import sklearn.model_selection
 import sklearn.metrics
 
 from smqtk.algorithms import get_classifier_impls
@@ -184,10 +185,11 @@ def classifier_kfold_validation():
     #
     # Cross validation
     #
-    kfolds = sklearn.cross_validation.StratifiedKFold(
-        truth_labels, config['cross_validation']['num_folds'],
-        random_state=config['cross_validation']['random_seed']
-    )
+    kfolds = sklearn.model_selection.StratifiedKFold(
+        n_splits=config['cross_validation']['num_folds'],
+        shuffle=True,
+        random_state=config['cross_validation']['random_seed'],
+    ).split(numpy.zeros(len(truth_labels)), truth_labels)
 
     """
     Truth and classification probability results for test data per fold.
@@ -239,13 +241,13 @@ def classifier_kfold_validation():
             use_multiprocessing=use_mp, ri=1.0
         )
         uuid2c = dict((d.uuid(), c.get_classification())
-                      for d, c in m.iteritems())
+                      for d, c in six.iteritems(m))
 
         log.info("-- Pairing truth and computed probabilities")
         # Only considering positive labels
         for t_label in pos_map:
             fold_data[i][t_label] = {
-                "truth": [l == t_label for l in truth_labels[test]],
+                "truth": [L == t_label for L in truth_labels[test]],
                 "proba": [uuid2c[uuid][t_label] for uuid in uuids[test]]
             }
 
@@ -294,8 +296,17 @@ def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
             ...
         }
 
+    :param log: Logger instance to use.
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays.
+    :param title_hook: Descriptive label of the classifier.
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :param fold_data: Truth and classification probability results for test data
+        per fold.  See above for format.
+    :param output_dir: Directory to output plot images to.
+    :param plot_prefix: String prefix for output files.
+    :param show: Show the output plots interactively or not.
     """
     file_utils.safe_create_dir(output_dir)
 

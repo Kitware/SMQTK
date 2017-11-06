@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import time
 
+import six
+
 from smqtk.utils import file_utils, string_utils
 
 
@@ -163,6 +165,9 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         extracted and returned.
     :type frames: collections.Iterable[int]
 
+    :param output_image_ext: Extension to use for output images.
+    :type output_image_ext: str
+
     :param parallel: Number of processes to use for frame extraction. This is
         None by default, meaning that all available cores/threads are used.
     :type parallel: int or None
@@ -172,7 +177,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
     :type ffmpeg_exe: str or unicode
 
     :return: Map of frame-to-filepath for requested video frames
-    :rtype: dict of (int, str)
+    :rtype: dict[int, str]
 
     """
     log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map')
@@ -231,6 +236,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
             yield int(next_frm)
             next_frm += incr
 
+    # noinspection PyShadowingNames
     def extract_frames(frames_to_process):
         """
         Extract specific frames from the input video file using ffmpeg. If not
@@ -257,9 +263,9 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
 
         p = multiprocessing.Pool(parallel)
         # Mapping of frame to (result, output_filepath)
-        #: :type: dict of (int, (AsyncResult, str))
+        #: :type: dict[int, (AsyncResult, str)]
         rmap = {}
-        for f, ofp in frames_to_process.iteritems():
+        for f, ofp in six.iteritems(frames_to_process):
             tfp = os.path.join(tmp_extraction_dir,
                                filename_for_frame(f, output_image_ext))
             t = f / video_md.fps
@@ -271,7 +277,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         p.close()
         # Check for failures
         extracted_frames = []
-        for f, ofp in frames_to_process.iteritems():
+        for f, ofp in six.iteritems(frames_to_process):
             r, tfp = rmap[f]
             r.get()  # wait for finish
             if not os.path.isfile(tfp):

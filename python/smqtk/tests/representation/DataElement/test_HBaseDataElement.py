@@ -43,6 +43,7 @@ class TestHBaseDataElement(TestCase):
         })
 
         cfg = self.DUMMY_CFG
+        #: :type: HBaseDataElement
         e = HBaseDataElement.from_config(cfg)
 
         self.assertEqual(e.element_key, cfg['element_key'])

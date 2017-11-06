@@ -1,9 +1,9 @@
-
 import flask
 import functools
 import json
 import os.path
 
+import six
 import requests
 
 from smqtk.utils import SmqtkObject
@@ -110,7 +110,7 @@ class LoginMod (SmqtkObject, flask.Blueprint):
 
         :param user_info: The user dictionary as recorded in our users.json
             config file.
-        :type user_info: dict of (str, str or list of str)
+        :type user_info: dict[str, str or list of str]
 
         """
         flask.session['user'] = {
@@ -142,8 +142,8 @@ class LoginMod (SmqtkObject, flask.Blueprint):
         def deco(*args, **kwds):
             # Combine to handle both GET arguments and form data
             c = {}
-            c.update(dict(flask.request.form.iteritems()))
-            c.update(dict(flask.request.args.iteritems()))
+            c.update(dict(six.iteritems(flask.request.form)))
+            c.update(dict(six.iteritems(flask.request.args)))
             log.debug("Combined arguments: %s", c)
 
             if not {'girder_token', 'girder_origin', 'girder_apiRoot'} \

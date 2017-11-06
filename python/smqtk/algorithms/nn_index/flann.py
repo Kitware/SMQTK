@@ -176,15 +176,18 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         check if configured model files are configured and not empty
         """
         return (self._index_elem and not self._index_elem.is_empty() and
-                self._index_param_elem and not self._index_param_elem.is_empty() and
-                self._descr_cache_elem and not self._descr_cache_elem.is_empty())
+                self._index_param_elem and
+                not self._index_param_elem.is_empty() and
+                self._descr_cache_elem and
+                not self._descr_cache_elem.is_empty())
 
     def _load_flann_model(self):
         if not self._descr_cache and not self._descr_cache_elem.is_empty():
             # Load descriptor cache
             # - is copied on fork, so only need to load here.
             self._log.debug("Loading cached descriptors")
-            self._descr_cache = cPickle.loads(self._descr_cache_elem.get_bytes())
+            self._descr_cache = \
+                cPickle.loads(self._descr_cache_elem.get_bytes())
 
         # Params pickle include the build params + our local state params
         if self._index_param_elem and not self._index_param_elem.is_empty():

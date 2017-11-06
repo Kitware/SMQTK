@@ -108,7 +108,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
             self.assertIn(d, m)
             # Check for expected classification
             self.assertEqual(m[d].get_classification(),
-                                    {d.uuid(): d.vector().tolist()})
+                             {d.uuid(): d.vector().tolist()})
 
 
 class TestGetClassifierImpls (unittest.TestCase):

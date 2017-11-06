@@ -265,7 +265,8 @@ def basic_cli_parser(description=None, configuration_group=True):
 
     The returned parser instance has an option for extra verbosity
     (-v/--verbose) and a group for configuration specification (-c/--config and
-    configuration generation (-g/--generate-config) if enabled (true by default).
+    configuration generation (-g/--generate-config) if enabled (true by
+    default).
 
     :param description: Optional description string for the parser.
     :type description: str
@@ -294,11 +295,11 @@ def basic_cli_parser(description=None, configuration_group=True):
                               help='Path to the JSON configuration file.')
         g_config.add_argument('-g', '--generate-config',
                               metavar="PATH",
-                              help='Optionally generate a default configuration '
-                                   'file at the specified path. If a '
-                                   'configuration file was provided, we update '
-                                   'the default configuration with the contents '
-                                   'of the given configuration.')
+                              help='Optionally generate a default '
+                                   'configuration file at the specified path. '
+                                   'If a configuration file was provided, we '
+                                   'update the default configuration with the '
+                                   'contents of the given configuration.')
 
     return parser
 
@@ -343,8 +344,11 @@ def utility_main_helper(default_config, args, additional_logging_domains=(),
     :rtype: dict
 
     """
+    # noinspection PyUnresolvedReferences
     config_filepath = args.config
+    # noinspection PyUnresolvedReferences
     config_generate = args.generate_config
+    # noinspection PyUnresolvedReferences
     verbose = args.verbose
 
     if not skip_logging_init:

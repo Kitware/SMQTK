@@ -36,11 +36,12 @@ def flann_load_codebook(filename, is_rowwise=True):
     kmeans to build the centroid list given a set of colorDescriptor outputs.
 
     @param filename: file path to the codebook file
-    @param is_rowwise: asks if codebook is stored as rowwise. If not, it will be transposed internally after loading.
+    @param is_rowwise: asks if codebook is stored as rowwise. If not, it will be
+        transposed internally after loading.
     @return: row-wise numpy codebook
     """
 
-    cbook = np.loadtxt(filename, delimiter= ',')
+    cbook = np.loadtxt(filename, delimiter=',')
     if not is_rowwise:
         cbook = cbook.T
 
@@ -53,6 +54,7 @@ def flann_build(codebook, flann_index_file=None, target_precision=0.99,
     Prepares quantization module based on pyflann
 
     @param codebook: loaded codebook in numpy format (row-wise)
+    @param flann_index_file: path to the index file to read from.
     @param target_precision: amount of exactness of approximation, the lower,
         the faster
     @param log_level: log data format to be generatede by flann
@@ -80,6 +82,7 @@ def flann_build(codebook, flann_index_file=None, target_precision=0.99,
     return flann
 
 
+# noinspection PyUnusedLocal
 def flann_quantize_data(flann,
                         filein_name, fileout_name,
                         func_normalize,
@@ -90,14 +93,18 @@ def flann_quantize_data(flann,
     """
     Quantize raw data based on flann module
 
+    @param flann: FLANN index instance.
     @param filein_name: input file (raw contents before quantization)
-    @param filein_gzipped: is the input file in gziped encoding?
-        (default = False)
     @param fileout_name: output file (quantized results)
     @param func_normalize: a function to normalize each data row (if not
         necessary, use None)
+    @param filein_gzipped: is the input file in gziped encoding?
+        (default = False)
+    @param filein_bzipped:is the input file in bziped encoding?
+        (default = False)
     @param delimiter: delimiter used for input file
-    @param fileout_gzipped:
+    @param fileout_gzipped: if the file out should be compressed with gzip
+    @param fileout_bzipped: if the file out should be compressed with bzip
     @param k: number of quantization nearest neighbors to be saved (if k>1,
         that's soft quantization)
     @param sparsity: controls the amount of input data to be used. E.g., if 3,
@@ -110,7 +117,6 @@ def flann_quantize_data(flann,
     assert not (fileout_gzipped and fileout_bzipped), \
         "Output file cannot be declared as both gzipped and bzipped."
 
-    fin = None
     if filein_gzipped or os.path.splitext(filein_name)[1] == '.gz':
         fin = gzip.open(filein_name, 'rb')
     elif filein_bzipped or os.path.splitext(filein_name)[1] == '.bz2':
@@ -118,8 +124,10 @@ def flann_quantize_data(flann,
     else:
         fin = open(filein_name, 'rb')
 
-    count1 = 0  # tracks how many lines are read from file
-    count2 = 0  # tracks how many lines are to be processed by being stored in 'lines'
+    # tracks how many lines are read from file
+    count1 = 0
+    # tracks how many lines are to be processed by being stored in 'lines'
+    count2 = 0
     lines = []
 
     fout = None
@@ -138,7 +146,7 @@ def flann_quantize_data(flann,
             data[:, 3:] = func_normalize(data[:, 3:])
 
         idx, dists = flann.nn_index(data[:, 3:], k)
-        out_data = np.concatenate((data[:, 0:3], idx, dists), axis = 1)
+        out_data = np.concatenate((data[:, 0:3], idx, dists), axis=1)
         np.savetxt(fout, out_data, fmt='%g')
 
     for line in csv.reader(fin, delimiter=' '):
@@ -151,13 +159,11 @@ def flann_quantize_data(flann,
 
         if count2 == size_block:
             quantize_then_write(lines)
-            count2 = 0 # reset
+            count2 = 0  # reset
             lines = []
 
     if count2 > 0:
         quantize_then_write(lines)
-        count2 = 0
-        lines = []
 
     fin.close()
     fout.close()
@@ -252,9 +258,9 @@ def quantizeResults(key, outdir, outtype,
     fileout_name = os.path.join(outdir, key+'.'+outname)
     # put codebook file under the path
     thisdir = os.path.dirname(os.path.realpath(__file__))
-    file_codebook = os.path.join(thisdir, pattern_codebook %outtype)
+    file_codebook = os.path.join(thisdir, pattern_codebook % outtype)
     # put flann index file under the path
-    file_flann = os.path.join(thisdir, '%s.flann' %outtype)
+    file_flann = os.path.join(thisdir, '%s.flann' % outtype)
     # load codebook and build flann knn query engine
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
     flann = flann_build(cbook, file_flann)
@@ -276,6 +282,7 @@ def quantizeResults2(file_input, file_output, file_codebook, file_flann,
     @param file_codebook: codebook file
     @param file_flann: quantization parameters for approximate nearest-neighbor
     @param filein_gzipped: if True, treat the file as gzipped version
+    @param filein_bzipped: if True, treat the file as bzipped version
     """
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
     flann = flann_build(cbook, file_flann)
@@ -294,7 +301,7 @@ def quantizeResults3(in_descriptors, file_codebook, file_flann):
     :param in_descriptors: Matrix of input descriptors, first row: frame number,
         rows 2-3: colorDescriptor info, rows 4+: descriptor
     :param file_codebook: codebook file
-    ;param file_flann: quantization parameters for approximate nearest-neighbor
+    :param file_flann: quantization parameters for approximate nearest-neighbor
 
     """
     cbook = flann_load_codebook(file_codebook, is_rowwise=False)
@@ -307,8 +314,8 @@ def quantizeResults3(in_descriptors, file_codebook, file_flann):
 
 #########################################################################
 def build_sp_hist(key, outdir, outtype):
-    inname  = outtype + '-all.encode.txt'
-    filein  = os.path.join(outdir, key+'.'+inname)
+    inname = outtype + '-all.encode.txt'
+    filein = os.path.join(outdir, key+'.'+inname)
     outname = outtype + '-sp.hist.txt'
     fileout = os.path.join(outdir, key+'.'+outname)
     return build_sp_hist_(filein, fileout)
@@ -375,6 +382,11 @@ def build_sp_hist2(feas, bins_code=np.arange(0, 4096+1)):
 
     :param feas: quantized data matrix
     :type feas: numpy.matrixlib.defmatrix.matrix
+
+    :param bins_code: Index code array for input features.  This is usually a
+        sequential array of integers the same size as the dimensionalty of the
+        feature vectors.
+    :type bins_code: np.ndarray[int]
 
     :return: martrix of 8 rows representing the histograms for the different
         spacial regions.

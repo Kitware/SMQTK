@@ -13,7 +13,7 @@ if SolrDescriptorElement.is_usable():
         TEST_URL = 'http://localhost:8983/solr'
 
         @mock.patch("solr.Solr")
-        def test_configuration(self, mock_Solr):
+        def test_configuration(self, _mock_Solr):
             default_config = SolrDescriptorElement.get_default_config()
             self.assertEqual(default_config, {
                 "solr_conn_addr": None,

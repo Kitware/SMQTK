@@ -119,7 +119,6 @@ def parallel_map(work_func, *sequences, **kwargs):
               messages. ``None`` means no names are added.
             - type: str
             - default: None
-    :type kwargs: dict
 
     :return: A new parallel results iterator that starts work on the input
         iterable when iterated.
@@ -294,7 +293,8 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
             raise StopIteration()
 
-        except:
+        # If anything bad happens, stop iteration and workers.
+        except Exception:
             self.stop()
             raise
 

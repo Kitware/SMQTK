@@ -123,7 +123,8 @@ class TestDataFileSet (unittest.TestCase):
         )
 
     @mock.patch('smqtk.representation.data_set.file_set.pickle')
-    @mock.patch('smqtk.representation.data_set.file_set.open', new_callable=mock.MagicMock)
+    @mock.patch('smqtk.representation.data_set.file_set.open',
+                new_callable=mock.MagicMock)
     def test_iter(self, m_open, m_pickle):
         expected_file_tree_iter = ['/a', '/b', '/d']
         dfs = DataFileSet('/')
@@ -181,7 +182,7 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.file_utils'
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
-    def test_add_data_single(self, m_isinstance, m_scd, m_open, m_pickle):
+    def test_add_data_single(self, m_isinstance, m_scd, m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -213,7 +214,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk0(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -248,7 +249,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk3(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -284,8 +285,8 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.file_utils'
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
-    def test_add_data_multiple_chunk3_relative(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+    def test_add_data_multiple_chunk3_relative(self, m_isinstance, m_scd,
+                                               m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -312,9 +313,12 @@ class TestDataFileSet (unittest.TestCase):
         m_scd.assert_any_call('rel/subdir/4F*/s93')
         # called open correctly 3 times
         self.assertEqual(m_open.call_count, 3)
-        m_open.assert_any_call('rel/subdir/abc/de/UUID_abcdefg.dataElement', 'wb')
-        m_open.assert_any_call('rel/subdir/123/45/UUID_1234567.dataElement', 'wb')
-        m_open.assert_any_call('rel/subdir/4F*/s93/UUID_4F*s93#5.dataElement', 'wb')
+        m_open.assert_any_call('rel/subdir/abc/de/UUID_abcdefg.dataElement',
+                               'wb')
+        m_open.assert_any_call('rel/subdir/123/45/UUID_1234567.dataElement',
+                               'wb')
+        m_open.assert_any_call('rel/subdir/4F*/s93/UUID_4F*s93#5.dataElement',
+                               'wb')
 
     @mock.patch('smqtk.representation.data_set.file_set.osp.isfile')
     def test_get_data_no_file(self, m_isfile):

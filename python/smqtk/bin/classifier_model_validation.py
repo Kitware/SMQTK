@@ -45,6 +45,8 @@ import logging
 import matplotlib.pyplot as plt
 import numpy
 import scipy.stats
+import six
+from six.moves import range
 import sklearn.metrics
 
 from smqtk.algorithms import (
@@ -179,7 +181,7 @@ def main():
     # Truth label to predicted classification results
     #: :type: dict[str, set[smqtk.representation.ClassificationElement]]
     tlabel2classifications = {}
-    for tlabel, descriptors in tlabel2descriptors.iteritems():
+    for tlabel, descriptors in six.iteritems(tlabel2descriptors):
         tlabel2classifications[tlabel] = \
             set(classifier.classify_async(
                 descriptors, classification_factory,
@@ -200,12 +202,12 @@ def main():
     if plot_filepath_cm:
         plot_cm(conf_mat, labels, plot_filepath_cm)
 
-    # CM of descriptor UUIDs to output json
+    # Confusion Matrix of descriptor UUIDs to output json
     if output_uuid_cm:
         # Top dictionary keys are true labels, inner dictionary keys are UUID
         # predicted labels.
         log.info("Computing UUID Confusion Matrix")
-        #: :type: dict[str, dict[str, set | list]]
+        #: :type: dict[str, dict[collections.Hashable, set]]
         uuid_cm = {}
         for tlabel in tlabel2classifications:
             uuid_cm[tlabel] = collections.defaultdict(set)
@@ -238,7 +240,8 @@ def gen_confusion_matrix(tlabel2classifications):
 
     :param tlabel2classifications: Mapping of true label for mapped set of
         classifications.
-    :type tlabel2classifications: dict[str, set[smqtk.representation.ClassificationElement]]
+    :type tlabel2classifications:
+        dict[str, set[smqtk.representation.ClassificationElement]]
 
     :return: Numpy confusion matrix and label vectors for rows and columns
     :rtype: numpy.ndarray[int], list[str]
@@ -273,7 +276,7 @@ def log_cm(p_func, conf_mat, labels):
 
     # get col max widths
     col_max_lens = []
-    for x in xrange(print_mat.shape[1]):
+    for x in range(print_mat.shape[1]):
         col_max_lens.append(max(map(len, print_mat[:, x].flatten().tolist())))
 
     # Construct printed rows based on column max width
@@ -317,8 +320,8 @@ def plot_cm(conf_mat, labels, output_path):
     fig.colorbar(cax)
 
     # Annotate cells with count values
-    for y in xrange(cm.shape[0]):
-        for x in xrange(cm.shape[1]):
+    for y in range(cm.shape[0]):
+        for x in range(cm.shape[1]):
             ax.annotate(s=str(cm[y, x]), xy=(x, y), xycoords='data')
 
     ax.set_xticklabels([''] + labels)
@@ -351,21 +354,37 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
                label2classifications, plot_ci, plot_ci_alpha,
                plot_ci_make_poly):
     """
+    :param log: Logger to use.
+    :type log: logging.Logger
+
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays of the curve plot.
     :type skl_curve_func:
-        (list[float], list[float]) ->
+        (numpy.ndarray[float], numpy.ndarray[float]) ->
             (numpy.ndarray[float], numpy.ndarray[float], numpy.ndarray[float])
+
+    :param title: Title of the plot.
+    :param xlabel: X-axis label for the plot.
+    :param ylabel: Y-axis label for the plot.
+    :param output_filepath: Path to write the generated plot image to.
 
     :param label2classifications: Mapping of label to the classification
         elements that should be that label.
     :type label2classifications:
         dict[str, set[smqtk.representation.ClassificationElement]]
 
+    :param plot_ci: Flag for whether to draw the confidence interval or not.
+    :type plot_ci: bool
+
+    :param plot_ci_alpha: Alpha value to use for coloring the confidence
+        interval area in the range [0, 1].
+    :type plot_ci_alpha: float
+
     :param plot_ci_make_poly: Function that takes x, y, and their upper and
         lower confidence interval estimations, and returns a plt.Polygon
         correctly for the curve we're trying to draw.
-    :type plot_ci_make_poly: (x, x_l, x_u, y, y_l, y_u, **poly_args) -> plt.Polygon
+    :type plot_ci_make_poly: (x, x_l, x_u, y, y_l, y_u, **poly_args) ->
+        plt.Polygon
 
     """
     # Create curves for each label and then for overall.
@@ -428,7 +447,8 @@ def make_pr_curves(label2classifications, output_filepath, plot_ci,
         # Add points to flush ends with plot border
         poly_points = (
             [(x[0], y_l[0])] + zip(x_l, y_l) + [(x[-1], y_l[-1])] +
-            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) + [(x[0], y_u[0])]
+            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) +
+            [(x[0], y_u[0])]
         )
         return plt.Polygon(poly_points, **poly_kwds)
 
@@ -450,7 +470,8 @@ def make_roc_curves(label2classifications, output_filepath, plot_ci,
         y_u = numpy.max([y, y_u], 0)
         poly_points = (
             [(x[0], y_u[0])] + zip(x_l, y_u) + [(x[-1], y_u[-1])] +
-            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) + [(x[0], y_l[0])]
+            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) +
+            [(x[0], y_l[0])]
         )
         return plt.Polygon(poly_points, **poly_kwds)
 
@@ -484,9 +505,9 @@ def curve_wilson_ci(p, n, confidence=0.95):
     n = float(n)
     u = (1/(1+(z*z/n))) * \
         (p + (z*z)/(2*n) + z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
-    l = (1/(1+(z*z/n))) * \
+    L = (1/(1+(z*z/n))) * \
         (p + (z*z)/(2*n) - z*numpy.sqrt(p * (1 - p) / n + (z*z)/(4*n*n)))
-    return u, l
+    return u, L
 
 
 if __name__ == '__main__':

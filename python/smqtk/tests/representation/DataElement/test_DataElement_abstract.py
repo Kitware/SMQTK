@@ -27,6 +27,7 @@ EXPECTED_UUID = EXPECTED_SHA1
 tempfile.gettempdir()
 
 
+# noinspection PyClassHasNoInit,PyAbstractClass
 class DummyDataElement (smqtk.representation.data_element.DataElement):
 
     TEST_WRITABLE = True
@@ -64,7 +65,7 @@ class TestDataElementAbstract (unittest.TestCase):
 
     def test_from_uri_default(self):
         self.assertRaises(
-            NotImplementedError,
+            smqtk.exceptions.NoUriResolutionError,
             DummyDataElement.from_uri, 'some uri'
         )
 
@@ -124,8 +125,8 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_noExisting_noDir(self,
-                                        mock_open, mock_os_open, mock_os_close,
-                                        mock_fcntl, mock_scd):
+                                        mock_open, _mock_os_open,
+                                        _mock_os_close, _mock_fcntl, mock_scd):
         # no existing temps, no specific dir
         fp = DummyDataElement().write_temp()
 
@@ -139,8 +140,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_noExisting_givenDir(self,
-                                           mock_open, mock_os_open,
-                                           mock_os_close, mock_fcntl, mock_scd):
+                                           mock_open, _mock_os_open,
+                                           _mock_os_close, _mock_fcntl,
+                                           mock_scd):
         # no existing temps, given specific dir
         target_dir = '/some/dir/somewhere'
 
@@ -158,8 +160,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_noDir(self,
-                                         mock_open, mock_os_open, mock_os_close,
-                                         mock_fcntl, mock_scd, mock_isfile):
+                                         mock_open, _mock_os_open,
+                                         _mock_os_close, _mock_fcntl, mock_scd,
+                                         mock_isfile):
         # Pretend we have existing temps. Will to "write" a temp file to no
         # specific dir, which should not write anything new and just return the
         # last path in the list.
@@ -172,12 +175,12 @@ class TestDataElementAbstract (unittest.TestCase):
 
         # Make sure os.path.isfile returns true so we think things in temp stack
         # exist.
-        simulate = True
         def osp_isfile_se(path):
             if simulate and path in {prev_0, prev_1}:
                 return True
             else:
                 return False
+        simulate = True
         mock_isfile.side_effect = osp_isfile_se
 
         fp = de.write_temp()
@@ -195,8 +198,8 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
-    def test_writeTemp_hasExisting_givenNewDir(self, mock_open, mock_os_open,
-                                               mock_os_close, mock_fcntl,
+    def test_writeTemp_hasExisting_givenNewDir(self, mock_open, _mock_os_open,
+                                               _mock_os_close, _mock_fcntl,
                                                mock_scd):
         # existing temps, given specific dir
         prev_0 = '/tmp/file.txt'
@@ -221,9 +224,9 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('os.open')  # global
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_givenExistingDir(self, mock_open,
-                                                    mock_os_open, mock_os_close,
-                                                    mock_fcntl, mock_scd,
-                                                    mock_isfile):
+                                                    _mock_os_open,
+                                                    _mock_os_close, _mock_fcntl,
+                                                    mock_scd, mock_isfile):
         # Pretend these files already exist as written temp files.
         # We test that write_temp with a target directory yields a previously
         #   "written" temp file.
@@ -233,12 +236,12 @@ class TestDataElementAbstract (unittest.TestCase):
         prev_1 = '/tmp/things/file_two.png'
         prev_2 = '/some/specific/dir'
 
-        simulate = True
         def osp_isfile_se(path):
             if simulate and path in {prev_0, prev_1, prev_2}:
                 return True
             else:
                 return False
+        simulate = True
         mock_isfile.side_effect = osp_isfile_se
 
         de = DummyDataElement()
@@ -311,7 +314,7 @@ class TestDataElementAbstract (unittest.TestCase):
         de.TEST_BYTES = 'some content\nwith new \nlines'
         br = de.to_buffered_reader()
         self.assertEqual(br.readlines(),
-                            ['some content\n', 'with new \n', 'lines'])
+                         ['some content\n', 'with new \n', 'lines'])
 
     def test_is_read_only(self):
         de = DummyDataElement()

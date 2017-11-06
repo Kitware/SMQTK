@@ -31,10 +31,12 @@ class TestItqFunctor (unittest.TestCase):
         expected_rotation = numpy.eye(3)
 
         expected_mean_vec_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
         expected_mean_vec_bytes = expected_mean_vec_bytes.getvalue()
 
         expected_rotation_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
         expected_rotation_bytes = expected_rotation_bytes.getvalue()
 
@@ -120,9 +122,9 @@ class TestItqFunctor (unittest.TestCase):
         self.assertEqual(c['random_seed'], 8)
         self.assertEqual(c['mean_vec_cache']['type'], "DataMemoryElement")
         self.assertEqual(c['mean_vec_cache']['DataMemoryElement']['bytes'],
-                        'cached vec bytes')
+                         'cached vec bytes')
         self.assertEqual(c['rotation_cache']['DataMemoryElement']['bytes'],
-                        'cached rot bytes')
+                         'cached rot bytes')
 
     def test_has_model(self):
         itq = ItqFunctor()
@@ -188,10 +190,12 @@ class TestItqFunctor (unittest.TestCase):
         expected_rotation = numpy.eye(3)
 
         expected_mean_vec_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
         expected_mean_vec_bytes = expected_mean_vec_bytes.getvalue()
 
         expected_rotation_bytes = StringIO()
+        # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
         expected_rotation_bytes = expected_rotation_bytes.getvalue()
 
@@ -203,9 +207,9 @@ class TestItqFunctor (unittest.TestCase):
 
         itq.save_model()
         self.assertEqual(itq.mean_vec_cache_elem.get_bytes(),
-                        expected_mean_vec_bytes)
+                         expected_mean_vec_bytes)
         self.assertEqual(itq.rotation_cache_elem.get_bytes(),
-                        expected_rotation_bytes)
+                         expected_rotation_bytes)
 
     def test_fit_has_model(self):
         # When trying to run fit where there is already a mean vector and
@@ -256,7 +260,6 @@ class TestItqFunctor (unittest.TestCase):
 
         itq = ItqFunctor(bit_length=1, random_seed=0)
         itq.fit(fit_descriptors)
-
 
         # TODO: Explanation as to why this is the expected result.
         numpy.testing.assert_array_almost_equal(itq.mean_vec, [0, 0])

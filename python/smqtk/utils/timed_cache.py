@@ -24,11 +24,11 @@ class TimedCache (object):
         self._lock = multiprocessing.RLock()
 
         # Mapping of a key to an object
-        #: :type: dict of (str, object)
+        #: :type: dict[str, object]
         self._obj_cache = {}
 
         # Mapping of a key to the last access time for that object (UNIX time)
-        #: :type: dict of (str, float)
+        #: :type: dict[str, float]
         self._obj_last_access = {}
 
         # Mapping of timeout values for each entry

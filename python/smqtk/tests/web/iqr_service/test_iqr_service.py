@@ -78,6 +78,7 @@ class StubNearestNeighborIndex (NearestNeighborsIndex):
 class TestIqrService (unittest.TestCase):
 
     # Patch in this module for stub implementation access.
+    # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
         "CLASSIFIER_PATH": THIS_MODULE_PATH,
         "DESCRIPTOR_GENERATOR_PATH": THIS_MODULE_PATH,

@@ -146,7 +146,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         :raises ValueError: No data available in the given iterable.
 
         :param descriptors: Iterable of descriptor elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # ordered cache of descriptors in our index.
@@ -157,8 +158,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # matrix for creating distance kernel
         self._descr_matrix = []
 
-        def get_vector(d):
-            return d, d.vector()
+        def get_vector(d_elem):
+            return d_elem, d_elem.vector()
 
         # noinspection PyTypeChecker
         vector_iter = parallel_map(get_vector, descriptors,
@@ -227,8 +228,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
         if not neg:
-            self._log.info("Auto-selecting negative examples. (%d per positive)",
-                           self.autoneg_select_ratio)
+            self._log.info("Auto-selecting negative examples. (%d per "
+                           "positive)", self.autoneg_select_ratio)
             # ``train_vectors`` only composed of positive examples at this point
             for p in pos:
                 # where d is the distance vector to descriptor elements in cache
@@ -237,8 +238,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 # Scan vector for max distance index
                 # - Allow variable number of maximally distance descriptors to
                 #   be picked per positive.
-                m_set = {}  # track most distance neighbors
-                m_val = -float('inf')  # track smallest distance of most distant neighbors
+                # track most distance neighbors
+                m_set = {}
+                # track smallest distance of most distant neighbors
+                m_val = -float('inf')
                 for i in range(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i

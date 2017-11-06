@@ -2,6 +2,7 @@ import random
 import unittest
 
 import numpy as np
+from six.moves import range
 
 from smqtk.utils import metrics as df
 
@@ -78,7 +79,7 @@ class TestHistogramIntersectionDistance (unittest.TestCase):
         )
 
         self.assertRaises(ValueError, df.histogram_intersection_distance,
-                             self.m1, self.m2)
+                          self.m1, self.m2)
 
 
 class TestHammingDistance (unittest.TestCase):
@@ -88,16 +89,16 @@ class TestHammingDistance (unittest.TestCase):
 
     def test_rand(self):
         n = 64
-        for i in xrange(1000):
+        for i in range(1000):
             a = gen(n)
             b = gen(n)
-            actual = bin(a^b).count('1')
+            actual = bin(a ^ b).count('1')
             self.assertEqual(df.hamming_distance(a, b), actual)
 
     def test_rand_large(self):
         n = 1024
-        for i in xrange(1000):
+        for i in range(1000):
             a = gen(n)
             b = gen(n)
-            actual = bin(a^b).count('1')
+            actual = bin(a ^ b).count('1')
             self.assertEqual(df.hamming_distance(a, b), actual)

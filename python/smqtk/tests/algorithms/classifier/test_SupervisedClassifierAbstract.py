@@ -93,7 +93,8 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             'label_2': [3, 4, 5, 6, 7],
         }
 
-        m = self.test_classifier.train(label_1=e['label_1'], label_2=e['label_2'])
+        m = self.test_classifier.train(label_1=e['label_1'],
+                                       label_2=e['label_2'])
         self.assertEqual(m, e)
 
     def test_train_noModel_combined(self):

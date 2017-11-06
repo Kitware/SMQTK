@@ -65,6 +65,7 @@ class TestDataUrlElement (unittest.TestCase):
         self.assertEqual(default_config, {'url_address': None})
 
         default_config['url_address'] = self.EXAMPLE_URL
+        #: :type: DataUrlElement
         inst1 = DataUrlElement.from_config(default_config)
         self.assertEqual(default_config, inst1.get_config())
         self.assertEqual(inst1._url, self.EXAMPLE_URL)
@@ -94,14 +95,14 @@ class TestDataUrlElement (unittest.TestCase):
         )
 
     @mock.patch('smqtk.representation.data_element.url_element.requests.get')
-    def test_is_empty_zero_bytes(self, m_requests_get):
+    def test_is_empty_zero_bytes(self, _m_requests_get):
         e = DataUrlElement('some-address')
         # simulate no content bytes returned
         e.get_bytes = mock.MagicMock(return_value='')
         self.assertTrue(e.is_empty())
 
     @mock.patch('smqtk.representation.data_element.url_element.requests.get')
-    def test_is_empty_nonzero_bytes(self, m_requests_get):
+    def test_is_empty_nonzero_bytes(self, _m_requests_get):
         e = DataUrlElement('some-address')
         # simulate some content bytes returned
         e.get_bytes = mock.MagicMock(return_value='some bytes returned')

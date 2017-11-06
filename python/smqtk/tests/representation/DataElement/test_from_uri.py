@@ -8,7 +8,9 @@ import smqtk.exceptions
 import smqtk.representation.data_element
 
 
+# noinspection PyClassHasNoInit
 class UnresolvableElement (smqtk.representation.data_element.DataElement):
+    """ Does not implement from_uri, declaring no support for URI resolution """
 
     @classmethod
     def is_usable(cls):
@@ -36,6 +38,7 @@ class UnresolvableElement (smqtk.representation.data_element.DataElement):
         pass
 
 
+# noinspection PyClassHasNoInit
 class ResolvableElement (smqtk.representation.data_element.DataElement):
 
     @classmethod

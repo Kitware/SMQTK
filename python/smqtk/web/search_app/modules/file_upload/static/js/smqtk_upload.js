@@ -13,7 +13,7 @@ function FileProgressIndicator(container, flow_file) {
     this.flow_file = flow_file;
     var self = this;
 
-    this.progress_c = $('<div id="file-' + flow_file.uniqueIdentifier + '"/>');
+    this.progress_c = $('<div id="file-' + flow_file.uniqueIdentifier + '"></div>');
     this.progress_c.appendTo(this.c);
 
     // content before the loading bar
@@ -22,7 +22,7 @@ function FileProgressIndicator(container, flow_file) {
 
     this.remove_icon = $('<img width=12px height=12px ' +
                           'src="/static/img/cancel.png">');
-    this.remove_icon.click(function(event) {
+    this.remove_icon.click(function() {
         self.remove();
     });
     this.remove_icon.prependTo(this.header);
@@ -34,7 +34,7 @@ function FileProgressIndicator(container, flow_file) {
                                 aria-valuemin="0" aria-valuemax="100">\
                                0%\
                            </div>');
-    this.progress_c.append($('<div class="progress"/>')
+    this.progress_c.append($('<div class="progress"></div>')
                    .append(this.progress_bar));
 
     return this;
@@ -97,7 +97,7 @@ function FlowUploadZone(container, upload_url) {
     var hook_fileSuccess = null;
 
     // GUI Components
-    this.flow_drop = $("<div/>");
+    this.flow_drop = $("<div></div>");
     this.flow_drop.addClass('flow-drop');
     this.flow_drop.attr({
         ondragenter: "jQuery(this).addClass('flow-dragover');",
@@ -106,11 +106,11 @@ function FlowUploadZone(container, upload_url) {
     });
     this.flow_drop.text("To see the search, drag & drop files here or ");
 
-    this.flow_browse = $("<a/>");
+    this.flow_browse = $("<a></a>");
     this.flow_browse.addClass('flow-browse');
     this.flow_browse.text("select one or more files");
 
-    this.flow_progress = $("<div/>");
+    this.flow_progress = $("<div></div>");
     this.flow_progress.addClass("flow-progress");
 
     $(container).append(this.flow_drop);
@@ -131,13 +131,13 @@ function FlowUploadZone(container, upload_url) {
         return true;
     });
 
-    flow.on("fileAdded", function(file, event){
+    flow.on("fileAdded", function(file){
         // TODO: add rejection rules via hook functions?
         ffid_fpi_map[file.uniqueIdentifier] =
                 new FileProgressIndicator($('.flow-progress'), file);
     });
 
-    flow.on("filesSubmitted", function(array, event) {
+    flow.on("filesSubmitted", function() {
         flow.upload();
     });
 
@@ -234,13 +234,13 @@ function FlowUploadButton(button, upload_url) {
         return true;
     });
 
-    flow.on("fileAdded", function(file, event){
+    flow.on("fileAdded", function(file){
         // TODO: add rejection rules via hook functions?
         ffid_fpi_map[file.uniqueIdentifier] =
                 new FileProgressIndicator($('.flow-progress'), file);
     });
 
-    flow.on("filesSubmitted", function(array, event) {
+    flow.on("filesSubmitted", function() {
         flow.upload();
     });
 

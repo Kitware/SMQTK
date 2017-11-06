@@ -45,16 +45,6 @@ class SignalHandler(object):
         self._sig_map = dict([(getattr(signal, sig), sig)
                               for sig in sig_list])
 
-    def _handle_signal(self, signum, stack):
-        """
-        Callback method to be registered to signal.signal for a particular
-        signal to catch.
-        """
-        # print "Caught signal:", signum
-        with self.__s_lock:
-            self._log.debug("'%s' caught", self._sig_map[signum])
-            self.__signal_caught[signum] = True
-
     def _gen_signal_handle(self, custom_func=None):
         """
         Generated a callback method to be registered to signal.signal for a

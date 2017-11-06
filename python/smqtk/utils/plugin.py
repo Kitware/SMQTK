@@ -28,13 +28,7 @@ import re
 import sys
 
 import six
-
-try:
-    # noinspection PyStatementEffect
-    reload
-except NameError:
-    # noinspection PyUnresolvedReferences
-    reload = importlib.reload
+from six.moves import reload_module
 
 
 # Template for checking validity of sub-module files
@@ -148,7 +142,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
     :return: Map of discovered class objects descending from type
         ``baseclass_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
         the string names of the class types.
-    :rtype: dict of (str, type)
+    :rtype: dict[str, type]
 
     """
     log = logging.getLogger('.'.join([__name__,
@@ -191,7 +185,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
         # We want any exception this might throw to continue up. If a module
         # in the directory is not importable, the user should know.
         try:
-            module = importlib.import_module(module_path)
+            _module = importlib.import_module(module_path)
         except Exception as ex:
             if warn:
                 log.warn("[%s] Failed to import module due to exception: "
@@ -200,16 +194,18 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
             continue
         if reload_modules:
             # Invoke reload in case the module changed between imports.
-            module = reload(module)
-            if module is None:
+            # six should find the right thing.
+            # noinspection PyCompatibility
+            _module = reload_module(_module)
+            if _module is None:
                 raise RuntimeError("[%s] Failed to reload"
                                    % module_path)
 
         # Find valid classes in the discovered module by:
         classes = []
-        if hasattr(module, helper_var):
+        if hasattr(_module, helper_var):
             # Looking for magic variable for import guidance
-            classes = getattr(module, helper_var)
+            classes = getattr(_module, helper_var)
             if classes is None:
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
@@ -229,9 +225,9 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
         else:
             # Scan module valid attributes for classes that descend from the
             # given base-class.
-            for attr_name in dir(module):
+            for attr_name in dir(_module):
                 if VALUE_ATTRIBUTE_RE.match(attr_name):
-                    attr = getattr(module, attr_name)
+                    attr = getattr(_module, attr_name)
                     # If the attribute looks like a class that descends and
                     # implements the interface, add it to the class list
                     # - we require that base is pluggable, so if class descends

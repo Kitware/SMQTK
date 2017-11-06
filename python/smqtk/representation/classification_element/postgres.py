@@ -1,6 +1,6 @@
-import cPickle
+from six.moves import cPickle
 
-from smqtk.exceptions import  NoClassificationError
+from smqtk.exceptions import NoClassificationError
 from smqtk.representation import ClassificationElement
 
 
@@ -260,7 +260,7 @@ class PostgresClassificationElement (ClassificationElement):
                 b = r[0]
                 c = cPickle.loads(str(b))
                 return c
-        except:
+        except Exception:
             conn.rollback()
             raise
         finally:
@@ -304,7 +304,7 @@ class PostgresClassificationElement (ClassificationElement):
             cur.execute(q_upsert, q_upsert_values)
             cur.close()
             conn.commit()
-        except:
+        except Exception:
             conn.rollback()
             raise
         finally:

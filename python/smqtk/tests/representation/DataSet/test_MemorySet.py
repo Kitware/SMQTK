@@ -17,7 +17,7 @@ class TestDataFileSet (unittest.TestCase):
         self.assertEqual(len(default_config), 2)
         self.assertIn('cache_element', default_config)
         self.assertIsInstance(default_config['cache_element'],
-                                  dict)
+                              dict)
         self.assertIsNone(default_config['cache_element']['type'])
         self.assertIn('pickle_protocol', default_config)
 
@@ -104,8 +104,7 @@ class TestDataFileSet (unittest.TestCase):
         dms.cache()
         # technically caches something, but that something is an empty map.
         self.assertFalse(dms.cache_element.is_empty())
-        self.assertEqual(pickle.loads(dms.cache_element.get_bytes()),
-                            {})
+        self.assertEqual(pickle.loads(dms.cache_element.get_bytes()), {})
 
     def test_cacheing_with_map(self):
         expected_cache = DataMemoryElement()
@@ -120,8 +119,7 @@ class TestDataFileSet (unittest.TestCase):
         dms.cache()
 
         self.assertFalse(expected_cache.is_empty())
-        self.assertEqual(pickle.loads(expected_cache.get_bytes()),
-                            expected_map)
+        self.assertEqual(pickle.loads(expected_cache.get_bytes()), expected_map)
 
     def test_caching_readonly_cache(self):
         ro_cache = DataMemoryElement(readonly=True)

@@ -119,6 +119,7 @@ class LinearHashIndex (HashIndex):
                 raise ValueError("Cache element (%s) is read-only."
                                  % self.cache_element)
             buff = StringIO()
+            # noinspection PyTypeChecker
             numpy.save(buff, tuple(self.index))
             self.cache_element.set_bytes(buff.getvalue())
 

@@ -16,9 +16,10 @@ from six.moves import range
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
-
 from smqtk.utils.bin_utils import report_progress
-from smqtk.utils.parallel import parallel_map
+
+# Autoencoder network model definition class
+from .autoencoder_model_def import AutoEncoderModel
 
 try:
     import cPickle as pickle
@@ -138,6 +139,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.__dict__.update(state)
         self._setup_network()
 
+    # noinspection PyProtectedMember
     def _setup_network(self, pre_initialize_network=True):
         """Initialize KWCNN data, model, and network objects."""
         # Check KWCNN
@@ -157,8 +159,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 self._log.debug("Using CPU")
                 assert not kwcnn.tpl._lasagne.USING_GPU
         except AssertionError:
-            self._log.error("Theano misconfigured for specified device!")
-            url = "http://deeplearning.net/software/theano/library/config.html#environment-variables"  # NOQA
+            self._log.error("Theano mis-configured for specified device!")
+            url = "http://deeplearning.net/software/theano/library/" \
+                  "config.html#environment-variables"  # NOQA
             self._log.error("Review Theano documentation here: %s" % (url, ))
 
             self._log.error("Requested configuration:")
@@ -170,9 +173,12 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             self._log.error("Theano configuration:")
             # Check the configuration reported by imported Theano
             self._log.error("\t Imported theano module configuration")
-            self._log.error("\t\t Using CPU       : %s", not kwcnn.tpl._lasagne.USING_GPU)
-            self._log.error("\t\t Using GPU       : %s", kwcnn.tpl._lasagne.USING_GPU)
-            self._log.error("\t\t Using GPU Device: %s", kwcnn.tpl._lasagne.USING_DEVICE)
+            self._log.error("\t\t Using CPU       : %s",
+                            not kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU       : %s",
+                            kwcnn.tpl._lasagne.USING_GPU)
+            self._log.error("\t\t Using GPU Device: %s",
+                            kwcnn.tpl._lasagne.USING_DEVICE)
 
             # Check the $HOME/.theanorc file for configuration
             self._log.error("\t $HOME/.theanorc configuration file")
@@ -196,107 +202,6 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                 self._log.error("\t\t NO ENVIRONMENT VARIABLE")
             # Raise RuntimeError for the user to address the configuration issue
             raise RuntimeError("Theano misconfigured for specified device")
-
-        # Define model definition
-        class OLCD_AutoEncoder_Model(kwcnn.core.KWCNN_Auto_Model):  # NOQA
-            """FCNN Model."""
-
-            def __init__(model, *args, **kwargs):
-                """FCNN init."""
-                super(OLCD_AutoEncoder_Model, model).__init__(*args, **kwargs)
-                model.greyscale = kwargs.get("greyscale", False)
-                model.bottleneck = kwargs.get("bottleneck", 64)
-                model.trimmed = kwargs.get("trimmed", False)
-
-            def _input_shape(model):
-                return (64, 64, 1) if model.greyscale else (64, 64, 3)
-
-            def architecture(model, batch_size, in_width, in_height,
-                             in_channels, out_classes):
-                """FCNN architecture."""
-                input_height, input_width, input_channels = model._input_shape()
-                _nonlinearity = kwcnn.tpl._lasagne.nonlinearities.LeakyRectify(
-                    leakiness=(1. / 10.)
-                )
-
-                layer_list = [
-                    kwcnn.tpl._lasagne.layers.InputLayer(
-                        shape=(None, input_channels, input_height, input_width)
-                    )
-                ]
-
-                for index in range(2):
-                    layer_list.append(
-                        kwcnn.tpl._lasagne.layers.batch_norm(
-                            kwcnn.tpl._lasagne.Conv2DLayer(
-                                layer_list[-1],
-                                num_filters=16,
-                                filter_size=(3, 3),
-                                nonlinearity=_nonlinearity,
-                                W=kwcnn.tpl._lasagne.init.Orthogonal(),
-                            )
-                        )
-                    )
-
-                layer_list.append(
-                    kwcnn.tpl._lasagne.MaxPool2DLayer(
-                        layer_list[-1],
-                        pool_size=(2, 2),
-                        stride=(2, 2),
-                    )
-                )
-
-                for index in range(3):
-                    layer_list.append(
-                        kwcnn.tpl._lasagne.layers.batch_norm(
-                            kwcnn.tpl._lasagne.Conv2DLayer(
-                                layer_list[-1],
-                                num_filters=32,
-                                filter_size=(3, 3),
-                                nonlinearity=_nonlinearity,
-                                W=kwcnn.tpl._lasagne.init.Orthogonal(),
-                            )
-                        )
-                    )
-
-                layer_list.append(
-                    kwcnn.tpl._lasagne.MaxPool2DLayer(
-                        layer_list[-1],
-                        pool_size=(2, 2),
-                        stride=(2, 2),
-                    )
-                )
-
-                for index in range(2):
-                    layer_list.append(
-                        kwcnn.tpl._lasagne.layers.batch_norm(
-                            kwcnn.tpl._lasagne.Conv2DLayer(
-                                layer_list[-1],
-                                num_filters=32,
-                                filter_size=(3, 3),
-                                nonlinearity=_nonlinearity,
-                                W=kwcnn.tpl._lasagne.init.Orthogonal(),
-                            )
-                        )
-                    )
-
-                l_reshape0 = kwcnn.tpl._lasagne.layers.ReshapeLayer(
-                    layer_list[-1],
-                    shape=([0], -1),
-                )
-
-                if model.trimmed:
-                    return l_reshape0
-
-                l_bottleneck = kwcnn.tpl._lasagne.layers.DenseLayer(
-                    l_reshape0,
-                    num_units=model.bottleneck,
-                    nonlinearity=kwcnn.tpl._lasagne.nonlinearities.tanh,
-                    W=kwcnn.tpl._lasagne.init.Orthogonal(),
-                    name="bottleneck",
-                )
-
-                return l_bottleneck
 
         # Create KWCNN Data, Model, and Network primitives
         self._log.debug("Initializing KWCNN Data")
@@ -323,9 +228,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             self.network_model_filepath = trimmed_filepath
 
         # Load model
-        self.model = OLCD_AutoEncoder_Model(self.network_model_filepath,
-                                            greyscale=self.network_is_greyscale,
-                                            trimmed=USE_TRIMMED_NETWORK)
+        self.model = AutoEncoderModel(self.network_model_filepath,
+                                      greyscale=self.network_is_greyscale,
+                                      trimmed=USE_TRIMMED_NETWORK)
 
         self._log.debug("Initializing KWCNN Network")
         self.network = kwcnn.core.KWCNN_Network(self.model, self.data)
@@ -631,7 +536,7 @@ def _process_load_img_array(data_element, network_is_greyscale, input_shape,
         # loading of those images
         img_a = numpy.array(img, dtype=numpy.float32)
         img_a = img_a.reshape(input_shape)
-    except:
+    except Exception:
         logging.getLogger(__name__).error(
             "Failed array-ifying data element. Image may be truncated: %s",
             data_element

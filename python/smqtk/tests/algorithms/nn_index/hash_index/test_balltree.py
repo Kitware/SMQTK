@@ -161,7 +161,8 @@ class TestBallTreeHashIndex (unittest.TestCase):
             i.nn, [0, 0, 0]
         )
 
-    @mock.patch('smqtk.algorithms.nn_index.hash_index.sklearn_balltree.numpy.savez')
+    @mock.patch('smqtk.algorithms.nn_index.hash_index.sklearn_balltree.numpy'
+                '.savez')
     def test_save_model_no_cache(self, m_savez):
         bt = SkLearnBallTreeHashIndex()
         m = numpy.random.randint(0, 2, 1000 * 256).reshape(1000, 256)
@@ -179,7 +180,8 @@ class TestBallTreeHashIndex (unittest.TestCase):
             bt.build_index, m
         )
 
-    @mock.patch('smqtk.algorithms.nn_index.hash_index.sklearn_balltree.numpy.savez')
+    @mock.patch('smqtk.algorithms.nn_index.hash_index.sklearn_balltree.numpy'
+                '.savez')
     def test_save_model_with_cache(self, m_savez):
         cache_element = DataMemoryElement()
         bt = SkLearnBallTreeHashIndex(cache_element, random_seed=0)

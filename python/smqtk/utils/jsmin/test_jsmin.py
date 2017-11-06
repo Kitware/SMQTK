@@ -3,7 +3,10 @@ import unittest
 # modified path since this is now being embeded in another project.
 from smqtk.utils import jsmin
 
-class JsTests(unittest.TestCase):
+
+class JsTests (unittest.TestCase):
+
+    # noinspection PyMethodMayBeStatic
     def _minify(self, js):
         return jsmin.jsmin(js)
 
@@ -14,6 +17,7 @@ class JsTests(unittest.TestCase):
             raise AssertionError
         return True
 
+    # noinspection PyMethodMayBeStatic
     def assertMinified(self, js_input, expected):
         minified = jsmin.jsmin(js_input)
         assert minified == expected, "%r != %r" % (minified, expected)
@@ -35,7 +39,9 @@ class JsTests(unittest.TestCase):
         });
 
         '''
-        expected = r"""Object.extend(String,{interpret:function(value){return value==null?'':String(value);},specialChar:{'\b':'\\b','\t':'\\t','\n':'\\n','\f':'\\f','\r':'\\r','\\':'\\\\'}});"""
+        expected = r"Object.extend(String,{interpret:function(value){return v" \
+                   r"alue==null?'':String(value);},specialChar:{'\b':'\\b','" \
+                   r"\t':'\\t','\n':'\\n','\f':'\\f','\r':'\\r','\\':'\\\\'}});"
         self.assertMinified(js, expected)
 
     def testSingleComment(self):
@@ -43,7 +49,8 @@ class JsTests(unittest.TestCase):
         if (Object.isFunction(Array.prototype.forEach))
           Array.prototype._each = Array.prototype.forEach;
 
-        if (!Array.prototype.indexOf) Array.prototype.indexOf = function(item, i) {
+        if (!Array.prototype.indexOf) Array.prototype.indexOf = function(item, 
+                                                                         i) {
 
         // hey there
         function() {// testing comment
@@ -54,9 +61,10 @@ class JsTests(unittest.TestCase):
         }
         //bye
         '''
-        expected = r"""
-if(Object.isFunction(Array.prototype.forEach))
-Array.prototype._each=Array.prototype.forEach;if(!Array.prototype.indexOf)Array.prototype.indexOf=function(item,i){ function(){ foo; location='http://foo.com;';}"""
+        expected = "\nif(Object.isFunction(Array.prototype.forEach))\nArray.p" \
+                   "rototype._each=Array.prototype.forEach;if(!Array.prototyp" \
+                   "e.indexOf)Array.prototype.indexOf=function(item,i){ funct" \
+                   "ion(){ foo; location='http://foo.com;';}"
         # print expected
         self.assertMinified(js, expected)
 
@@ -67,7 +75,6 @@ Array.prototype._each=Array.prototype.forEach;if(!Array.prototype.indexOf)Array.
         self.assertMinified('\r\n', '')
         self.assertMinified('\t', '')
 
-
     def testMultiComment(self):
         js = r"""
         function foo() {
@@ -75,14 +82,14 @@ Array.prototype._each=Array.prototype.forEach;if(!Array.prototype.indexOf)Array.
         }
         /*
         if(this.options.zindex) {
-          this.originalZ = parseInt(Element.getStyle(this.element,'z-index') || 0);
+          this.originalZ = parseInt(Element.getStyle(this.element,'z-index') || 
+                                    0);
           this.element.style.zIndex = this.options.zindex;
         }
         */
         another thing;
         """
-        expected = r"""function foo(){print('hey');}
-another thing;"""
+        expected = "function foo(){print('hey');}\nanother thing;"
         self.assertMinified(js, expected)
 
     def testLeadingComment(self):
@@ -105,7 +112,9 @@ another thing;"""
         var str = this.replace(/\\./g, '@').replace(/"[^"\\\n\r]*"/g, '');
         return (/^[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]*$/).test(str);
         });'''
-        expected = r"""var str=this.replace(/\\./g,'@').replace(/"[^"\\\n\r]*"/g,'');return(/^[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t]*$/).test(str);});"""
+        expected = "var str=this.replace(/\\\\./g,'@').replace(/\"[^\"\\\\\\n" \
+                   "\\r]*\"/g,'');return(/^[,:{}\[\]0-9.\-+Eaeflnr-u \\n\\r\\" \
+                   "t]*$/).test(str);});"
         self.assertMinified(js, expected)
 
     def testIgnoreComment(self):
@@ -128,9 +137,12 @@ another thing;"""
         // fix for gecko engine
         Element.cleanWhitespace(element);
         """
-        expected = r"""var options_for_droppable={overlap:options.overlap,containment:options.containment,tree:options.tree,hoverclass:options.hoverclass,onHover:Sortable.onHover}
-var options_for_tree={onHover:Sortable.onEmptyHover,overlap:options.overlap,containment:options.containment,hoverclass:options.hoverclass}
-Element.cleanWhitespace(element);"""
+        expected = "var options_for_droppable={overlap:options.overlap,contai" \
+                   "nment:options.containment,tree:options.tree,hoverclass:op" \
+                   "tions.hoverclass,onHover:Sortable.onHover}\nvar options_f" \
+                   "or_tree={onHover:Sortable.onEmptyHover,overlap:options.ov" \
+                   "erlap,containment:options.containment,hoverclass:options." \
+                   "hoverclass}\nElement.cleanWhitespace(element);"
         self.assertMinified(js, expected)
 
     def testHairyRe(self):
@@ -138,9 +150,12 @@ Element.cleanWhitespace(element);"""
         inspect: function(useDoubleQuotes) {
           var escapedString = this.gsub(/[\x00-\x1f\\]/, function(match) {
             var character = String.specialChar[match[0]];
-            return character ? character : '\\u00' + match[0].charCodeAt().toPaddedString(2, 16);
+            return character ? 
+                character : 
+                '\\u00' + match[0].charCodeAt().toPaddedString(2, 16);
           });
-          if (useDoubleQuotes) return '"' + escapedString.replace(/"/g, '\\"') + '"';
+          if (useDoubleQuotes) return '"' + escapedString.replace(/"/g, '\\"') +
+                                      '"';
           return "'" + escapedString.replace(/'/g, '\\\'') + "'";
         },
 
@@ -152,7 +167,15 @@ Element.cleanWhitespace(element);"""
           return this.sub(filter || Prototype.JSONFilter, '#{1}');
         },
         """
-        expected = r"""inspect:function(useDoubleQuotes){var escapedString=this.gsub(/[\x00-\x1f\\]/,function(match){var character=String.specialChar[match[0]];return character?character:'\\u00'+match[0].charCodeAt().toPaddedString(2,16);});if(useDoubleQuotes)return'"'+escapedString.replace(/"/g,'\\"')+'"';return"'"+escapedString.replace(/'/g,'\\\'')+"'";},toJSON:function(){return this.inspect(true);},unfilterJSON:function(filter){return this.sub(filter||Prototype.JSONFilter,'#{1}');},"""
+        expected = "inspect:function(useDoubleQuotes){var escapedString=this." \
+                   "gsub(/[\\x00-\\x1f\\\\]/,function(match){var character=St" \
+                   "ring.specialChar[match[0]];return character?character:'\\" \
+                   "\\u00'+match[0].charCodeAt().toPaddedString(2,16);});if(u" \
+                   "seDoubleQuotes)return'\"'+escapedString.replace(/\"/g,'\\" \
+                   "\\\"')+'\"';return\"'\"+escapedString.replace(/'/g,'\\\\" \
+                   "\\'')+\"'\";},toJSON:function(){return this.inspect(true)" \
+                   ";},unfilterJSON:function(filter){return this.sub(filter||" \
+                   "Prototype.JSONFilter,'#{1}');},"
         self.assertMinified(js, expected)
 
     def testNoBracesWithComment(self):
@@ -167,8 +190,11 @@ Element.cleanWhitespace(element);"""
           onFailure: this.onFailure
         });
         """
-        expected = r"""onSuccess:function(transport){var js=transport.responseText.strip();if(!/^\[.*\]$/.test(js))
-throw'Server returned an invalid collection representation.';this._collection=eval(js);this.checkForExternalText();}.bind(this),onFailure:this.onFailure});"""
+        expected = "onSuccess:function(transport){var js=transport.responseTe" \
+                   "xt.strip();if(!/^\[.*\]$/.test(js))\nthrow'Server returne" \
+                   "d an invalid collection representation.';this._collection" \
+                   "=eval(js);this.checkForExternalText();}.bind(this),onFail" \
+                   "ure:this.onFailure});"
         self.assertMinified(js, expected)
 
     def testSpaceInRe(self):
@@ -203,11 +229,9 @@ var  foo    =  "hey";
         js = r'// a comment\n'
         self.assertMinified(js, '')
 
+    # noinspection PyMethodMayBeStatic
     def testInputStream(self):
-        try:
-            from StringIO import StringIO
-        except ImportError:
-            from io import StringIO
+        from six.moves import StringIO
 
         ins = StringIO(r'''
             function foo('') {
@@ -247,7 +271,7 @@ var  foo    =  "hey";
 
     def testSingleComment2(self):
         self.assertMinified('x.replace(/\//, "_")// slash to underscore',
-                'x.replace(/\//,"_")')
+                            'x.replace(/\//,"_")')
 
 
 if __name__ == '__main__':

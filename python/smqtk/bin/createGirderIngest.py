@@ -29,7 +29,6 @@ TODO: Add support for searching collections
 """
 
 import collections
-from itertools import repeat
 import logging
 
 import requests
@@ -38,7 +37,6 @@ from smqtk.representation import get_data_set_impls
 from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.utils import bin_utils, plugin
 from smqtk.utils.girder import GirderTokenManager
-from smqtk.utils.parallel import parallel_map
 from smqtk.utils.url import url_join
 
 
@@ -103,7 +101,7 @@ def iterate_query(q, batch_size):
     y_total = 0
     while query_again:
         y_this_query = 0
-        for r in q(offset=y_total, limit=batch_size):
+        for r in q(y_total, batch_size):
             yield r
             y_this_query += 1
         query_again = batch_size > 0 and (y_this_query == batch_size)
@@ -257,11 +255,13 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
         log.debug("-F %s", folder_id)
 
         # Find sub-folders
-        folder_fifo.extend(get_folder_subfolders(api_root, folder_id, tm, query_batch))
+        folder_fifo.extend(get_folder_subfolders(api_root, folder_id, tm,
+                                                 query_batch))
 
         for item_id in get_folder_items(api_root, folder_id, tm, query_batch):
             log.debug('   -i %s', item_id)
-            for file_id, ct in get_item_files(api_root, item_id, tm, query_batch):
+            for file_id, ct in get_item_files(api_root, item_id, tm,
+                                              query_batch):
                 log.debug('      -f %s (%s)', file_id, ct)
                 e = GirderDataElement(file_id, api_root, api_key)
                 e._content_type = ct

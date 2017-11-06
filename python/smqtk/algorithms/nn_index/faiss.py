@@ -1,8 +1,6 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-import os.path as osp
-
 import numpy as np
 from six.moves import cPickle as pickle, zip
 
@@ -51,13 +49,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             existing index. False by default.
         :type read_only: bool
 
-        :param num_trees: The number of trees that will be generated for the
-            data structure
-        :type num_trees: int
-
-        :param depth: The depth of the trees
-        :type depth: int
-
         :param random_seed: Integer to use as the random number generator
             seed.
         :type random_seed: int
@@ -78,9 +69,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.pickle_protocol = pickle_protocol
         self.exhaustive = exhaustive
         self._descriptor_set = descriptor_set
-
-        def normpath(p):
-            return (p and osp.abspath(osp.expanduser(p))) or p
 
         self.random_seed = None
         if random_seed is not None:
@@ -255,6 +243,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Returning query result of size %g", len(uuids))
 
-        return (descriptors, tuple(dists))
+        return descriptors, tuple(dists)
+
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

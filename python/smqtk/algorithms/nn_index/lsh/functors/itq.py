@@ -230,10 +230,12 @@ class ItqFunctor (LshFunctor):
                 self.rotation_cache_elem.writable() and
                 self.mean_vec is not None and self.rotation is not None):
             b = StringIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.mean_vec)
             self.mean_vec_cache_elem.set_bytes(b.getvalue())
 
             b = StringIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.rotation)
             self.rotation_cache_elem.set_bytes(b.getvalue())
 
@@ -304,6 +306,11 @@ class ItqFunctor (LshFunctor):
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :param use_multiprocessing: If multiprocessing should be used, as
+            opposed to threading, when collecting descriptor elements from the
+            given iterable.
+        :type use_multiprocessing: bool
+
         :raises RuntimeError: There is already a model loaded
 
         :return: Matrix hash codes for provided descriptors in order.
@@ -366,8 +373,8 @@ class ItqFunctor (LshFunctor):
                             'singular value')
 
         # Same ordering method for both eig/svd sources.
-        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda p: p[0],
-                              reverse=1)
+        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda _p: _p[0],
+                              reverse=True)
 
         self._log.debug("-- top vector extraction")
         # Only keep the top ``bit_length`` vectors after ordering by descending

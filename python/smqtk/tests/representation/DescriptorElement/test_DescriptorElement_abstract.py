@@ -116,6 +116,8 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         )
 
     def test_setstate(self):
+        # Intentionally bad input types.
+        # noinspection PyTypeChecker
         e = DummyDescriptorElement(None, None)
         self.assertIsNone(e._type_label)
         self.assertIsNone(e._uuid)

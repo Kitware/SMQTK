@@ -3,11 +3,8 @@ import json
 import time
 import traceback
 import uuid
-import zipfile
 
 import flask
-import six
-from io import BytesIO
 
 # import smqtk.algorithms
 from smqtk.algorithms import (
@@ -310,7 +307,7 @@ class IqrService (SmqtkWebApp):
         """
         Get a JSON return with session state information.
 
-        Arguments:
+        URL Arguments:
             sid
                 ID of the session.
         """

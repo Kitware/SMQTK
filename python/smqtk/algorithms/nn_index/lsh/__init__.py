@@ -5,6 +5,7 @@ in the base.
 """
 import collections
 import itertools
+import multiprocessing
 
 import numpy
 
@@ -223,6 +224,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.distance_method = distance_method
         self.read_only = read_only
 
+        # Lock for model component access (combination of descriptor-set,
+        # hash_index and kvstore).  Multiprocessing because resources can be
+        # potentially modified on other processes.
+        self._model_lock = multiprocessing.RLock()
+
         self._distance_function = self._get_dist_func(self.distance_method)
 
     @staticmethod
@@ -263,6 +269,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             may be smaller of hash2uuids mapping is not complete.
         :rtype: int
         """
+        # Descriptor-set should already handle concurrency.
         return len(self.descriptor_index)
 
     def _build_index(self, descriptors):
@@ -283,39 +290,40 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self.read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
 
-        self._log.debug("Clearing and adding new descriptor elements")
-        self.descriptor_index.clear()
-        self.descriptor_index.add_many_descriptors(descriptors)
+            self._log.debug("Clearing and adding new descriptor elements")
+            self.descriptor_index.clear()
+            self.descriptor_index.add_many_descriptors(descriptors)
 
-        self._log.debug("Generating hash codes")
-        #: :type: collections.deque[numpy.ndarray[bool]]
-        hash_vectors = collections.deque()
-        self.hash2uuids_kvstore.clear()
-        prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
-        for d in self.descriptor_index:
-            h_vec = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h_vec)
+            self._log.debug("Generating hash codes")
+            #: :type: collections.deque[numpy.ndarray[bool]]
+            hash_vectors = collections.deque()
+            self.hash2uuids_kvstore.clear()
+            prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+            for d in self.descriptor_index:
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                hash_vectors.append(h_vec)
 
-            h_int = bit_vector_to_int_large(h_vec)
+                h_int = bit_vector_to_int_large(h_vec)
 
-            # Get, update and reinsert hash UUID set object
-            #: :type: set
-            hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
-            hash_uuid_set.add(d.uuid())
-            self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+                # Get, update and reinsert hash UUID set object
+                #: :type: set
+                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
+                hash_uuid_set.add(d.uuid())
+                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
 
-            prog_reporter.increment_report()
-        prog_reporter.report()
+                prog_reporter.increment_report()
+            prog_reporter.report()
 
-        if self.hash_index is not None:
-            self._log.debug("Clearing and building hash index of type %s",
-                            type(self.hash_index))
-            # a build is supposed to clear previous state.
-            self.hash_index.build_index(hash_vectors)
+            if self.hash_index is not None:
+                self._log.debug("Clearing and building hash index of type %s",
+                                type(self.hash_index))
+                # a build is supposed to clear previous state.
+                self.hash_index.build_index(hash_vectors)
 
     def _update_index(self, descriptors):
         """
@@ -334,35 +342,36 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self.read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
-        # tee out iterable for use in adding to index as well as hash code
-        # generation.
-        d_for_index, d_for_hashing = itertools.tee(descriptors, 2)
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
+            # tee out iterable for use in adding to index as well as hash code
+            # generation.
+            d_for_index, d_for_hashing = itertools.tee(descriptors, 2)
 
-        self._log.debug("Updating descriptor index.")
-        self.descriptor_index.add_many_descriptors(d_for_index)
+            self._log.debug("Updating descriptor index.")
+            self.descriptor_index.add_many_descriptors(d_for_index)
 
-        self._log.debug("Generating hash codes for new descriptors")
-        prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
-        #: :type: collections.deque[numpy.ndarray[bool]]
-        hash_vectors = collections.deque()  # for updating hash_index
-        for d in d_for_hashing:
-            h_vec = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h_vec)
-            h_int = bit_vector_to_int_large(h_vec)
-            # Get, update and reinsert hash UUID set object
-            #: :type: set
-            hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
-            hash_uuid_set.add(d.uuid())
-            self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
-            prog_reporter.increment_report()
-        prog_reporter.report()
+            self._log.debug("Generating hash codes for new descriptors")
+            prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+            #: :type: collections.deque[numpy.ndarray[bool]]
+            hash_vectors = collections.deque()  # for updating hash_index
+            for d in d_for_hashing:
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                hash_vectors.append(h_vec)
+                h_int = bit_vector_to_int_large(h_vec)
+                # Get, update and reinsert hash UUID set object
+                #: :type: set
+                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
+                hash_uuid_set.add(d.uuid())
+                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+                prog_reporter.increment_report()
+            prog_reporter.report()
 
-        if self.hash_index is not None:
-            self._log.debug("Updating hash index structure.")
-            self.hash_index.update_index(hash_vectors)
+            if self.hash_index is not None:
+                self._log.debug("Updating hash index structure.")
+                self.hash_index.update_index(hash_vectors)
 
     def _nn(self, d, n=1):
         """
@@ -390,30 +399,33 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         def comp_descr_dist(d2_v):
             return self._distance_function(d_v, d2_v)
 
-        self._log.debug("getting near hashes")
-        hi = self.hash_index
-        if hi is None:
-            # Make on-the-fly linear index
-            hi = LinearHashIndex()
-            # not calling ``build_index`` because we already have the int
-            # hashes.
-            hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
-        near_hashes, _ = hi.nn(d_h, n)
+        with self._model_lock:
+            self._log.debug("getting near hashes")
+            hi = self.hash_index
+            if hi is None:
+                # Make on-the-fly linear index
+                hi = LinearHashIndex()
+                # not calling ``build_index`` because we already have the int
+                # hashes.
+                hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
+            near_hashes, _ = hi.nn(d_h, n)
 
-        self._log.debug("getting UUIDs of descriptors for nearby hashes")
-        neighbor_uuids = []
-        for h_int in map(bit_vector_to_int_large, near_hashes):
-            # If descriptor hash not in our map, we effectively skip it.
-            # Get set of descriptor UUIDs for a hash code.
-            #: :type: set[collections.Hashable]
-            near_uuids = self.hash2uuids_kvstore.get(h_int, set())
-            # Accumulate matching descriptor UUIDs to a list.
-            neighbor_uuids.extend(near_uuids)
-        self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
+            self._log.debug("getting UUIDs of descriptors for nearby hashes")
+            neighbor_uuids = []
+            for h_int in map(bit_vector_to_int_large, near_hashes):
+                # If descriptor hash not in our map, we effectively skip it.
+                # Get set of descriptor UUIDs for a hash code.
+                #: :type: set[collections.Hashable]
+                near_uuids = self.hash2uuids_kvstore.get(h_int, set())
+                # Accumulate matching descriptor UUIDs to a list.
+                neighbor_uuids.extend(near_uuids)
+            self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
-        self._log.debug("getting descriptors for neighbor_uuids")
-        neighbors = \
-            list(self.descriptor_index.get_many_descriptors(neighbor_uuids))
+            self._log.debug("getting descriptors for neighbor_uuids")
+            neighbors = \
+                list(self.descriptor_index.get_many_descriptors(neighbor_uuids))
+
+        # Done with model parts at this point, so releasing lock.
 
         self._log.debug("ordering descriptors via distance method '%s'",
                         self.distance_method)

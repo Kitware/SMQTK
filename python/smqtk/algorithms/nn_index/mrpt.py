@@ -4,15 +4,16 @@ from __future__ import print_function, unicode_literals
 
 from itertools import chain, groupby
 from os import path as osp
+import threading
 
 import numpy as np
 from six.moves import range, cPickle as pickle, zip
 
-from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.utils import plugin, merge_dict
 from smqtk.utils.file_utils import safe_create_dir
 
 
@@ -180,6 +181,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         def normpath(p):
             return (p and osp.abspath(osp.expanduser(p))) or p
 
+        # Lock for model component access.
+        self._model_lock = threading.RLock()
+
         self._index_filepath = normpath(index_filepath)
         self._index_param_filepath = normpath(parameters_filepath)
         # Now they're either None or an absolute path
@@ -232,6 +236,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :return: Number of elements in this index.
         :rtype: int
         """
+        # Descriptor-set should already handle concurrency.
         return len(self._descriptor_set)
 
     def _build_index(self, descriptors):
@@ -249,24 +254,25 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self._read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
 
-        self._log.info("Building new MRPT index")
+            self._log.info("Building new MRPT index")
 
-        self._log.debug("Clearing and adding new descriptor elements")
-        # NOTE: It may be the case for some DescriptorIndex implementations,
-        # this clear may interfere with iteration when part of the input
-        # iterator of descriptors was this index's previous descriptor-set, as
-        # is the case with ``update_index``.
-        self._descriptor_set.clear()
-        self._descriptor_set.add_many_descriptors(descriptors)
+            self._log.debug("Clearing and adding new descriptor elements")
+            # NOTE: It may be the case for some DescriptorIndex implementations,
+            # this clear may interfere with iteration when part of the input
+            # iterator of descriptors was this index's previous descriptor-set,
+            # as is the case with ``update_index``.
+            self._descriptor_set.clear()
+            self._descriptor_set.add_many_descriptors(descriptors)
 
-        self._log.debug('Building MRPT index')
-        self._build_multiple_trees()
+            self._log.debug('Building MRPT index')
+            self._build_multiple_trees()
 
-        self._save_mrpt_model()
+            self._save_mrpt_model()
 
     def _update_index(self, descriptors):
         """
@@ -285,10 +291,11 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self._read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
-        self.build_index(chain(self._descriptor_set, descriptors))
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
+            self.build_index(chain(self._descriptor_set, descriptors))
 
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
@@ -504,17 +511,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        self._log.debug("Received query for %d nearest neighbors", n)
-
-        depth, ntrees, db_size = self._depth, self._num_trees, self.count()
-        leaf_size = db_size//(1 << depth)
-        if leaf_size * ntrees < n:
-            self._log.warning(
-                "The number of descriptors in a leaf (%d) times the number "
-                "of trees (%d) is less than the number of descriptors "
-                "requested by the query (%d). The query result will be "
-                "deficient.", leaf_size, ntrees, n)
-
         def _query_single(tree):
             # Search a single tree for the leaf that matches the query
             # NB: random_basis has shape (levels, N)
@@ -561,30 +557,42 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             return ([_uuids[idx] for idx in near_indices],
                     dists[near_indices])
 
-        # Take union of all tree hits
-        tree_hits = set()
-        for t in self._trees:
-            tree_hits.update(_query_single(t))
+        with self._model_lock:
+            self._log.debug("Received query for %d nearest neighbors", n)
 
-        hit_union = len(tree_hits)
-        self._log.debug(
-            "Query (k): %g, Hit union (h): %g, DB (N): %g, "
-            "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
-            n, hit_union, db_size, leaf_size, leaf_size * ntrees)
-        self._log.debug("k/L     = %.3f", n / leaf_size)
-        self._log.debug("h/N     = %.3f", hit_union / db_size)
-        self._log.debug("h/L     = %.3f", hit_union / leaf_size)
-        self._log.debug("h/(T*L) = %.3f", hit_union / (leaf_size * ntrees))
+            depth, ntrees, db_size = self._depth, self._num_trees, self.count()
+            leaf_size = db_size//(1 << depth)
+            if leaf_size * ntrees < n:
+                self._log.warning(
+                    "The number of descriptors in a leaf (%d) times the number "
+                    "of trees (%d) is less than the number of descriptors "
+                    "requested by the query (%d). The query result will be "
+                    "deficient.", leaf_size, ntrees, n)
 
-        uuids, distances = _exact_query(list(tree_hits))
-        order = distances.argsort()
-        uuids, distances = zip(
-            *((uuids[oidx], distances[oidx]) for oidx in order))
+            # Take union of all tree hits
+            tree_hits = set()
+            for t in self._trees:
+                tree_hits.update(_query_single(t))
 
-        self._log.debug("Returning query result of size %g", len(uuids))
+            hit_union = len(tree_hits)
+            self._log.debug(
+                "Query (k): %g, Hit union (h): %g, DB (N): %g, "
+                "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
+                n, hit_union, db_size, leaf_size, leaf_size * ntrees)
+            self._log.debug("k/L     = %.3f", n / leaf_size)
+            self._log.debug("h/N     = %.3f", hit_union / db_size)
+            self._log.debug("h/L     = %.3f", hit_union / leaf_size)
+            self._log.debug("h/(T*L) = %.3f", hit_union / (leaf_size * ntrees))
 
-        return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
-                tuple(distances))
+            uuids, distances = _exact_query(list(tree_hits))
+            order = distances.argsort()
+            uuids, distances = zip(
+                *((uuids[oidx], distances[oidx]) for oidx in order))
+
+            self._log.debug("Returning query result of size %g", len(uuids))
+
+            return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
+                    tuple(distances))
 
 
 NN_INDEX_CLASS = MRPTNearestNeighborsIndex

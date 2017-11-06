@@ -1,5 +1,6 @@
 import base64
 import json
+import multiprocessing
 import time
 import traceback
 import uuid
@@ -216,6 +217,15 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/is_ready',
                           view_func=self.is_ready,
                           methods=['GET'])
+        self.add_url_rule('/add_descriptor_from_data',
+                          view_func=self.add_descriptor_from_data,
+                          methods=['POST'])
+        # TODO: Potentially other add_descriptor_from_* variants that expect
+        #       other forms of input besides base64, like arbitrary URIs (to use
+        #       from_uri factory function).
+        self.add_url_rule('/update_nn_index',
+                          view_func=self.update_nn_index,
+                          methods=['POST'])
         self.add_url_rule('/session_ids',
                           view_func=self.get_sessions_ids,
                           methods=['GET'])
@@ -292,6 +302,103 @@ class IqrService (SmqtkWebApp):
         Simple function that returns True, indicating that the server is active.
         """
         return make_response_json("Yes, I'm alive."), 200
+
+    # POST /add_descriptor_from_data
+    def add_descriptor_from_data(self):
+        """
+        Add the description of the given base64 data with content type to the
+        descriptor set.
+
+        Accept base64 data (with content type), describe it via the configured
+        descriptor generator and add the resulting descriptor element to the
+        configured descriptor index.
+
+        Form Arguments:
+            data_b64
+                Base64-encoded input binary data to describe via
+                DescriptorGenerator.  This must be of a content type accepted by
+                the configured DescriptorGenerator.
+            content_type
+                Input data content mimetype string.
+
+        JSON return object:
+            uid
+                UID of the descriptor element generated from input data
+                description.  This should be equivalent to the SHA1 checksum of
+                the input data.
+            size
+                New size (integer) of the descriptor set that has been updated
+                (NOT the same as the nearest-neighbor index).
+
+        """
+        data_b64 = flask.request.form.get('data_b64', None)
+        content_type = flask.request.form.get('content_type', None)
+        if not data_b64:
+            return make_response_json("No or empty base64 data provided."), 400
+        if not content_type:
+            return make_response_json("No data mimetype provided."), 400
+
+        descriptor = self.describe_base64_data(data_b64, content_type)
+        # Concurrent updating of descriptor set should be handled by underlying
+        # implementation.
+        self.descriptor_index.add_descriptor(descriptor)
+        return make_response_json("Success",
+                                  uid=descriptor.uuid(),
+                                  size=self.descriptor_index.count()), 201
+
+    # POST /update_nn_index
+    def update_nn_index(self):
+        """
+        Tell the configured nearest-neighbor-index instance to update with the
+        descriptors associated with the provided list of UIDs.
+
+        This is a critical operation on the index so this method can only be
+        invoked once at a time (other concurrent will block until previous calls
+        have finished).
+
+        Form Arguments:
+            descriptor_uids
+                JSON list of UID strings.  If one or more UIDs do not match
+                descriptors in our current descriptor-set we return an error
+                message.
+
+        JSON return object:
+            message
+                Success string
+            descriptor_uids
+                List of UIDs the neighbor index was updated with.  This should
+                be congruent with the list provided.
+            index_size
+                New size of the nearest-neighbors index.
+
+        """
+        descr_uid_str = flask.request.form.get('descriptor_uids', None)
+        if not descr_uid_str:
+            return make_response_json("No descriptor UID JSON provided."), 400
+
+        descr_uid_list = flask.json.loads(descr_uid_str)
+        if not descr_uid_list:
+            return make_response_json("No descriptor UIDs provided in given "
+                                      "JSON."), 400
+
+        try:
+            descr_elems = \
+                self.descriptor_index.get_many_descriptors(descr_uid_list)
+        except KeyError:
+            # Some UIDs are not present in the current index.  Isolate which
+            # UIDs are not contained.
+            uids_not_ingested = []
+            for uid in descr_uid_list:
+                if not self.descriptor_index.has_descriptor(uid):
+                    uids_not_ingested.append(uid)
+            return make_response_json("Some provided UIDs do not exist in the"
+                                      "current index: %s")
+
+        self.neighbor_index.update_index(descr_elems)
+
+        return make_response_json("Success",
+                                  descriptor_uids=descr_uid_list,
+                                  index_size=self.neighbor_index.count()), 200
 
     # GET /session_ids
     def get_sessions_ids(self):

@@ -236,6 +236,12 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/update_nn_index',
                           view_func=self.update_nn_index,
                           methods=['POST'])
+        self.add_url_rule('/data_nearest_neighbors',
+                          view_func=self.data_nearest_neighbors,
+                          methods=['POST'])
+        self.add_url_rule('/uid_nearest_neighbors',
+                          view_func=self.uid_nearest_neighbors,
+                          methods=['POST'])
         self.add_url_rule('/session_ids',
                           view_func=self.get_sessions_ids,
                           methods=['GET'])
@@ -430,6 +436,127 @@ class IqrService (SmqtkWebApp):
         return make_response_json("Success",
                                   descriptor_uids=descr_uid_list,
                                   index_size=self.neighbor_index.count()), 200
+
+    # POST /data_nearest_neighbors
+    def data_nearest_neighbors(self):
+        """
+        Take in data in base64 encoding with a mimetype and find its 'k' nearest
+        neighbors according to the current index, including their distance
+        values (metric determined by nearest-neighbors-index algorithm
+        configuration).
+
+        This endpoint does not need a session ID due to the
+        nearest-neighbor-index being a shared resource across IQR sessions.
+
+        Form Arguments:
+            data_b64
+                Base64-encoded input binary data to describe via
+                DescriptorGenerator.  This must be of a content type accepted by
+                the configured DescriptorGenerator.
+            content_type
+                Input data content mimetype string.
+            k
+                Integer number of nearest neighbor descriptor UIDs to return
+                along with their distances.
+
+        JSON return object:
+            neighbor_uids
+                Ordered list of neighbor UID values. Index 0 represents the
+                closest neighbor while the last index represents the farthest
+                neighbor.  Parallel in relationship to `neighbor_dists`.
+            neighbor_dists
+                Ordered list of neighbor distance values. Index 0 represents the
+                closest neighbor while the last index represents the farthest
+                neighbor.  Parallel in relationship to 'neighbor_uids`.
+
+        """
+        data_b64 = flask.request.form.get('data_b64', None)
+        content_type = flask.request.form.get('content_type', None)
+        k_str = flask.request.form.get('k', None)
+        if not data_b64:
+            return make_response_json("No or empty base64 data provided."), 400
+        if not content_type:
+            return make_response_json("No data mimetype provided."), 400
+        if not k_str:
+            return make_response_json("No 'k' value provided."), 400
+
+        try:
+            k = int(k_str)
+        except ValueError as ex:
+            return make_response_json("Failed to convert 'k' argument to an "
+                                      "integer: %s" % str(ex)), 400
+
+        try:
+            descriptor = self.describe_base64_data(data_b64, content_type)
+        except TypeError as e:
+            if str(e) == "Incorrect padding":
+                return make_response_json("Failed to parse base64 data."), 400
+            # In case some other exception is raised, actually a server error.
+            raise
+
+        n_elems, n_dists = self.neighbor_index.nn(descriptor, k)
+        return make_response_json("Success",
+                                  neighbor_uids=[e.uuid() for e in n_elems],
+                                  neighbor_dists=[d for d in n_dists]), 200
+
+    # POST /uid_nearest_neighbors
+    def uid_nearest_neighbors(self):
+        """
+        Take in the UID that matches an ingested descriptor and find that
+        descriptor's 'k' nearest neighbors according to the current index,
+        including their distance values (metric determined by
+        nearest-neighbors-index algorithm configuration).
+
+        This endpoint does not need a session ID due to the
+        nearest-neighbor-index being a shared resource across IQR sessions.
+
+        This endpoint can be more advantageous compared the
+        `data_nearest_neighbors` endpoint if you know a descriptor has already
+        been ingested (via `add_descriptor_from_data` or otherwise) as a
+        potentially new descriptor does not have to be computed.
+
+        Form Arguments:
+            uid
+                UID of the descriptor to get the nearest neighbors for.  This
+                should also match the SHA1 checksum of the data being described.
+            k
+                Integer number of nearest neighbor descriptor UIDs to return
+                along with their distances.
+
+        JSON return object:
+            neighbor_uids
+                Ordered list of neighbor UID values. Index 0 represents the
+                closest neighbor while the last index represents the farthest
+                neighbor.  Parallel in relationship to `neighbor_dists`.
+            neighbor_dists
+                Ordered list of neighbor distance values. Index 0 represents the
+                closest neighbor while the last index represents the farthest
+                neighbor.  Parallel in relationship to 'neighbor_uids`.
+
+        """
+        uid = flask.request.form.get('uid', None)
+        k_str = flask.request.form.get('k', None)
+        if not uid:
+            return make_response_json("No UID provided."), 400
+        if not k_str:
+            return make_response_json("No 'k' value provided."), 400
+
+        try:
+            k = int(k_str)
+        except ValueError as ex:
+            return make_response_json("Failed to convert 'k' argument to an "
+                                      "integer: %s" % str(ex)), 400
+
+        try:
+            descriptor = self.descriptor_index.get_descriptor(uid)
+        except KeyError:
+            return make_response_json("Failed to get descriptor for UID %s"
+                                      % uid), 400
+
+        n_elems, n_dists = self.neighbor_index.nn(descriptor, k)
+        return make_response_json("Success",
+                                  neighbor_uids=[e.uuid() for e in n_elems],
+                                  neighbor_dists=[d for d in n_dists]), 200
 
     # GET /session_ids
     def get_sessions_ids(self):

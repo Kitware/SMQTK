@@ -187,6 +187,7 @@ def classifier_kfold_validation():
     #
     kfolds = sklearn.model_selection.StratifiedKFold(
         n_splits=config['cross_validation']['num_folds'],
+        shuffle=True,
         random_state=config['cross_validation']['random_seed'],
     ).split(numpy.zeros(len(truth_labels)), truth_labels)
 

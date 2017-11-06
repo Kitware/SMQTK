@@ -160,10 +160,8 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     # Randomly sample rows down to this count if what was generated exceeded the
     # limit.
     if limit_descriptors and info.shape[0] > limit_descriptors:
-        idxs = \
-            numpy.random\
-                 .permutation(numpy.arange(info.shape[0]))[:limit_descriptors]
-        idxs = sorted(idxs)
+        idxs = numpy.random.permutation(numpy.arange(info.shape[0]))
+        idxs = sorted(idxs[:limit_descriptors])
         info = info[idxs, :]
         descriptors = descriptors[idxs, :]
 

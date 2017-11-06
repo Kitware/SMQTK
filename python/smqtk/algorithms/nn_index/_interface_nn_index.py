@@ -17,6 +17,9 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
     take the necessary parameters at construction time. Persistent storage
     content should be (over)written ``build_index`` is called.
 
+    Implementations should be thread safe and appropriately protect
+    internal model components from concurrent access and modification.
+
     """
 
     def __len__(self):

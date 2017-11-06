@@ -1,4 +1,5 @@
 import heapq
+import threading
 
 from six.moves import StringIO
 import numpy
@@ -92,6 +93,7 @@ class LinearHashIndex (HashIndex):
         super(LinearHashIndex, self).__init__()
         self.cache_element = cache_element
         self.index = set()
+        self._model_lock = threading.RLock()
         self.load_cache()
 
     def get_config(self):
@@ -106,25 +108,28 @@ class LinearHashIndex (HashIndex):
         """
         Load from file cache if we have one
         """
-        if self.cache_element and not self.cache_element.is_empty():
-            buff = StringIO(self.cache_element.get_bytes())
-            self.index = set(numpy.load(buff))
+        with self._model_lock:
+            if self.cache_element and not self.cache_element.is_empty():
+                buff = StringIO(self.cache_element.get_bytes())
+                self.index = set(numpy.load(buff))
 
     def save_cache(self):
         """
         save to file cache if configures
         """
-        if self.cache_element and self.index:
-            if self.cache_element.is_read_only():
-                raise ValueError("Cache element (%s) is read-only."
-                                 % self.cache_element)
-            buff = StringIO()
-            # noinspection PyTypeChecker
-            numpy.save(buff, tuple(self.index))
-            self.cache_element.set_bytes(buff.getvalue())
+        with self._model_lock:
+            if self.cache_element and self.index:
+                if self.cache_element.is_read_only():
+                    raise ValueError("Cache element (%s) is read-only."
+                                     % self.cache_element)
+                buff = StringIO()
+                # noinspection PyTypeChecker
+                numpy.save(buff, tuple(self.index))
+                self.cache_element.set_bytes(buff.getvalue())
 
     def count(self):
-        return len(self.index)
+        with self._model_lock:
+            return len(self.index)
 
     def _build_index(self, hashes):
         """
@@ -140,9 +145,10 @@ class LinearHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        new_index = set(map(bit_vector_to_int_large, hashes))
-        self.index = new_index
-        self.save_cache()
+        with self._model_lock:
+            new_index = set(map(bit_vector_to_int_large, hashes))
+            self.index = new_index
+            self.save_cache()
 
     def _update_index(self, hashes):
         """
@@ -157,8 +163,9 @@ class LinearHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        self.index.update(set(map(bit_vector_to_int_large, hashes)))
-        self.save_cache()
+        with self._model_lock:
+            self.index.update(set(map(bit_vector_to_int_large, hashes)))
+            self.save_cache()
 
     def _nn(self, h, n=1):
         """
@@ -185,14 +192,15 @@ class LinearHashIndex (HashIndex):
         :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
-        h_int = bit_vector_to_int_large(h)
-        bits = len(h)
-        #: :type: list[int|long]
-        near_codes = \
-            heapq.nsmallest(n, self.index,
-                            lambda e: hamming_distance(h_int, e)
-                            )
-        distances = map(hamming_distance, near_codes,
-                        [h_int] * len(near_codes))
-        return [int_to_bit_vector_large(c, bits) for c in near_codes], \
-               [d / float(bits) for d in distances]
+        with self._model_lock:
+            h_int = bit_vector_to_int_large(h)
+            bits = len(h)
+            #: :type: list[int|long]
+            near_codes = \
+                heapq.nsmallest(n, self.index,
+                                lambda e: hamming_distance(h_int, e)
+                                )
+            distances = map(hamming_distance, near_codes,
+                            [h_int] * len(near_codes))
+            return [int_to_bit_vector_large(c, bits) for c in near_codes], \
+                   [d / float(bits) for d in distances]

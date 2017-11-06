@@ -1,3 +1,5 @@
+import threading
+
 import numpy
 from six.moves import StringIO
 from sklearn.neighbors import BallTree, DistanceMetric
@@ -100,6 +102,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         self.leaf_size = leaf_size
         self.random_seed = random_seed
 
+        self._model_lock = threading.RLock()
+
         # the actual index
         #: :type: sklearn.neighbors.BallTree
         self.bt = None
@@ -125,27 +129,28 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :raises ValueError: If the cache element configured is not writable.
 
         """
-        if self.cache_element and self.bt:
-            if self.cache_element.is_read_only():
-                raise ValueError("Configured cache element (%s) is read-only."
-                                 % self.cache_element)
+        with self._model_lock:
+            if self.cache_element and self.bt:
+                if self.cache_element.is_read_only():
+                    raise ValueError("Configured cache element (%s) is read-only."
+                                     % self.cache_element)
 
-            self._log.debug("Saving model: %s", self.cache_element)
-            # Saving BT component matrices separately.
-            # - Not saving distance function because its always going to be
-            #   hamming distance (see ``build_index``).
-            s = self.bt.__getstate__()
-            tail = s[4:11]
-            buff = StringIO()
-            # noinspection PyTypeChecker
-            numpy.savez(buff,
-                        data_arr=s[0],
-                        idx_array_arr=s[1],
-                        node_data_arr=s[2],
-                        node_bounds_arr=s[3],
-                        tail=tail)
-            self.cache_element.set_bytes(buff.getvalue())
-            self._log.debug("Saving model: Done")
+                self._log.debug("Saving model: %s", self.cache_element)
+                # Saving BT component matrices separately.
+                # - Not saving distance function because its always going to be
+                #   hamming distance (see ``build_index``).
+                s = self.bt.__getstate__()
+                tail = s[4:11]
+                buff = StringIO()
+                # noinspection PyTypeChecker
+                numpy.savez(buff,
+                            data_arr=s[0],
+                            idx_array_arr=s[1],
+                            node_data_arr=s[2],
+                            node_bounds_arr=s[3],
+                            tail=tail)
+                self.cache_element.set_bytes(buff.getvalue())
+                self._log.debug("Saving model: Done")
 
     def load_model(self):
         """
@@ -153,22 +158,24 @@ class SkLearnBallTreeHashIndex (HashIndex):
         if there is a cache element configured and there are bytes there to
         read.
         """
-        if self.cache_element and not self.cache_element.is_empty():
-            self._log.debug("Loading model from cache: %s", self.cache_element)
-            buff = StringIO(self.cache_element.get_bytes())
-            with numpy.load(buff) as cache:
-                tail = tuple(cache['tail'])
-                s = (cache['data_arr'], cache['idx_array_arr'],
-                     cache['node_data_arr'], cache['node_bounds_arr']) +\
-                    tail + (DistanceMetric.get_metric('hamming'),)
-            # noinspection PyTypeChecker
-            #: :type: sklearn.neighbors.BallTree
-            self.bt = BallTree.__new__(BallTree)
-            self.bt.__setstate__(s)
-            self._log.debug("Loading mode: Done")
+        with self._model_lock:
+            if self.cache_element and not self.cache_element.is_empty():
+                self._log.debug("Loading model from cache: %s", self.cache_element)
+                buff = StringIO(self.cache_element.get_bytes())
+                with numpy.load(buff) as cache:
+                    tail = tuple(cache['tail'])
+                    s = (cache['data_arr'], cache['idx_array_arr'],
+                         cache['node_data_arr'], cache['node_bounds_arr']) +\
+                        tail + (DistanceMetric.get_metric('hamming'),)
+                # noinspection PyTypeChecker
+                #: :type: sklearn.neighbors.BallTree
+                self.bt = BallTree.__new__(BallTree)
+                self.bt.__setstate__(s)
+                self._log.debug("Loading mode: Done")
 
     def count(self):
-        return self.bt.data.shape[0] if self.bt else 0
+        with self._model_lock:
+            return self.bt.data.shape[0] if self.bt else 0
 
     def _build_index(self, hashes):
         """
@@ -184,19 +191,21 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        self._log.debug("Building ball tree")
-        if self.random_seed is not None:
-            numpy.random.seed(self.random_seed)
-        # BallTree can't take iterables, so catching input in a set of tuples
-        # first in order to cull out duplicates (BT will index duplicate values
-        # happily).
-        hash_tuple_set = set(map(lambda v: tuple(v), hashes))
-        # Convert tuples back into numpy arrays for BallTree constructor.
-        hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
-        # If distance metric ever changes, need to update save/load model
-        # functions.
-        self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')
-        self.save_model()
+        with self._model_lock:
+            self._log.debug("Building ball tree")
+            if self.random_seed is not None:
+                numpy.random.seed(self.random_seed)
+            # BallTree can't take iterables, so catching input in a set of
+            # tuples first in order to cull out duplicates (BT will index
+            # duplicate values happily).
+            hash_tuple_set = set(map(lambda v: tuple(v), hashes))
+            # Convert tuples back into numpy arrays for BallTree constructor.
+            hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
+            # If distance metric ever changes, need to update save/load model
+            # functions.
+            self.bt = BallTree(hash_vector_list, self.leaf_size,
+                               metric='hamming')
+            self.save_model()
 
     def _update_index(self, hashes):
         """
@@ -216,18 +225,19 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        # Can't use iterators with numpy operations.
-        new_hashes = tuple(hashes)
-        if self.bt is None:
-            # 0-row array using bit-vector size of first new entry length.
-            # - Must have at least one new hash due to super-method check.
-            indexed_hash_vectors = numpy.ndarray((0, len(new_hashes[0])))
-        else:
-            indexed_hash_vectors = self.bt.data
-        # Build a new index as normal with the union of source data.
-        self.build_index(
-            numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
-        )
+        with self._model_lock:
+            # Can't use iterators with numpy operations.
+            new_hashes = tuple(hashes)
+            if self.bt is None:
+                # 0-row array using bit-vector size of first new entry length.
+                # - Must have at least one new hash due to super-method check.
+                indexed_hash_vectors = numpy.ndarray((0, len(new_hashes[0])))
+            else:
+                indexed_hash_vectors = self.bt.data
+            # Build a new index as normal with the union of source data.
+            self.build_index(
+                numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
+            )
 
     def _nn(self, h, n=1):
         """
@@ -254,12 +264,13 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
-        # Reselect N based on how many hashes are currently indexes
-        n = min(n, self.count())
-        # Reshaping ``h`` into an array of arrays, with just one array (ball
-        # tree deprecation warns when giving it a single array).
-        dists, idxs = self.bt.query([h], n, return_distance=True)
-        # only indexing the first entry became we're only querying with one
-        # vector
-        neighbors = numpy.asarray(self.bt.data)[idxs[0]].astype(bool)
-        return neighbors, dists[0]
+        with self._model_lock:
+            # Reselect N based on how many hashes are currently indexes
+            n = min(n, self.count())
+            # Reshaping ``h`` into an array of arrays, with just one array (ball
+            # tree deprecation warns when giving it a single array).
+            dists, idxs = self.bt.query([h], n, return_distance=True)
+            # only indexing the first entry became we're only querying with one
+            # vector
+            neighbors = numpy.asarray(self.bt.data)[idxs[0]].astype(bool)
+            return neighbors, dists[0]

@@ -128,8 +128,13 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         self._build_autotune = autotune
         self._build_target_precision = float(target_precision)
         self._build_sample_frac = float(sample_fraction)
-
         self._distance_method = str(distance_method)
+
+        # Lock for model component access.  Using a multiprocessing due to
+        # possible cases where another thread/process attempts to restore a
+        # model before its fully written.  A reordering of _build_index could
+        # lessen the requirement to a `threading.RLock`.
+        self._model_lock = multiprocessing.RLock()
 
         # In-order cache of descriptors we're indexing over.
         # - flann.nn_index will spit out indices to list
@@ -231,7 +236,11 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :return: Number of elements in this index.
         :rtype: int
         """
-        return len(self._descr_cache) if (self._descr_cache is not None) else 0
+        with self._model_lock:
+            if self._descr_cache is not None:
+                return len(self._descr_cache)
+            else:
+                return 0
 
     def _build_index(self, descriptors):
         """
@@ -255,63 +264,69 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        # Not caring about restoring the index because we're just making a new
-        # one
-        self._log.info("Building new FLANN index")
+        with self._model_lock:
+            # Not caring about restoring the index because we're just making a
+            # new one.
+            self._log.info("Building new FLANN index")
 
-        self._log.debug("Caching descriptor elements")
-        self._descr_cache = list(descriptors)
-        # Cache descriptors if we have an element
-        if self._descr_cache_elem and self._descr_cache_elem.writable():
-            self._log.debug("Caching descriptors: %s", self._descr_cache_elem)
-            self._descr_cache_elem.set_bytes(
-                cPickle.dumps(self._descr_cache, -1)
-            )
+            self._log.debug("Caching descriptor elements")
+            self._descr_cache = list(descriptors)
+            # Cache descriptors if we have an element
+            if self._descr_cache_elem and self._descr_cache_elem.writable():
+                self._log.debug("Caching descriptors: %s",
+                                self._descr_cache_elem)
+                self._descr_cache_elem.set_bytes(
+                    cPickle.dumps(self._descr_cache, -1)
+                )
 
-        params = {
-            "target_precision": self._build_target_precision,
-            "sample_fraction": self._build_sample_frac,
-            "log_level": ("info"
-                          if self._log.getEffectiveLevel() <= logging.DEBUG
-                          else "warning")
-        }
-        if self._build_autotune:
-            params['algorithm'] = "autotuned"
-        if self._rand_seed is not None:
-            params['random_seed'] = self._rand_seed
-        pyflann.set_distance_type(self._distance_method)
-
-        self._log.debug("Accumulating descriptor vectors into matrix for FLANN")
-        pts_array = elements_to_matrix(self._descr_cache, report_interval=1.0)
-
-        self._log.debug('Building FLANN index')
-        self._flann = pyflann.FLANN()
-        self._flann_build_params = self._flann.build_index(pts_array, **params)
-        del pts_array
-
-        if self._index_elem and self._index_elem.writable():
-            self._log.debug("Caching index: %s", self._index_elem)
-            # FLANN wants to write to a file, so make a temp file, then read it
-            # in, putting bytes into element.
-            fd, fp = tempfile.mkstemp()
-            try:
-                self._flann.save_index(fp)
-                self._index_elem.set_bytes(os.read(fd, os.path.getsize(fp)))
-            finally:
-                os.close(fd)
-                os.remove(fp)
-        if self._index_param_elem and self._index_param_elem.writable():
-            self._log.debug("Caching index params: %s", self._index_param_elem)
-            state = {
-                'b_autotune': self._build_autotune,
-                'b_target_precision': self._build_target_precision,
-                'b_sample_frac': self._build_sample_frac,
-                'distance_method': self._distance_method,
-                'flann_build_params': self._flann_build_params,
+            params = {
+                "target_precision": self._build_target_precision,
+                "sample_fraction": self._build_sample_frac,
+                "log_level": ("info"
+                              if self._log.getEffectiveLevel() <= logging.DEBUG
+                              else "warning")
             }
-            self._index_param_elem.set_bytes(cPickle.dumps(state, -1))
+            if self._build_autotune:
+                params['algorithm'] = "autotuned"
+            if self._rand_seed is not None:
+                params['random_seed'] = self._rand_seed
+            pyflann.set_distance_type(self._distance_method)
 
-        self._pid = multiprocessing.current_process().pid
+            self._log.debug("Accumulating descriptor vectors into matrix for "
+                            "FLANN")
+            pts_array = elements_to_matrix(self._descr_cache,
+                                           report_interval=1.0)
+
+            self._log.debug('Building FLANN index')
+            self._flann = pyflann.FLANN()
+            self._flann_build_params = self._flann.build_index(pts_array,
+                                                               **params)
+            del pts_array
+
+            if self._index_elem and self._index_elem.writable():
+                self._log.debug("Caching index: %s", self._index_elem)
+                # FLANN wants to write to a file, so make a temp file, then read
+                # it in, putting bytes into element.
+                fd, fp = tempfile.mkstemp()
+                try:
+                    self._flann.save_index(fp)
+                    self._index_elem.set_bytes(os.read(fd, os.path.getsize(fp)))
+                finally:
+                    os.close(fd)
+                    os.remove(fp)
+            if self._index_param_elem and self._index_param_elem.writable():
+                self._log.debug("Caching index params: %s",
+                                self._index_param_elem)
+                state = {
+                    'b_autotune': self._build_autotune,
+                    'b_target_precision': self._build_target_precision,
+                    'b_sample_frac': self._build_sample_frac,
+                    'distance_method': self._distance_method,
+                    'flann_build_params': self._flann_build_params,
+                }
+                self._index_param_elem.set_bytes(cPickle.dumps(state, -1))
+
+            self._pid = multiprocessing.current_process().pid
 
     def _update_index(self, descriptors):
         """
@@ -334,11 +349,12 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                                                      .DescriptorElement]
 
         """
-        self._restore_index()
-        # Build a new index that contains the union of the current descriptors
-        # and the new provided descriptors.
-        self._log.info("Rebuilding FLANN index to include new descriptors.")
-        self.build_index(itertools.chain(self._descr_cache, descriptors))
+        with self._model_lock:
+            self._restore_index()
+            # Build a new index that contains the union of the current
+            # descriptors and the new provided descriptors.
+            self._log.info("Rebuilding FLANN index to include new descriptors.")
+            self.build_index(itertools.chain(self._descr_cache, descriptors))
 
     def _nn(self, d, n=1):
         """
@@ -359,40 +375,47 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        self._restore_index()
-        vec = d.vector()
+        with self._model_lock:
+            self._restore_index()
+            vec = d.vector()
 
-        # If the distance method is HIK, we need to treat it special since that
-        # method produces a similarity score, not a distance score.
-        #
-        # FLANN asserts that we query for <= index size, thus the use of min()
-        if self._distance_method == 'hik':
-            # This call is different than the else version in that k is the size
-            # of the full data set, so that we can reverse the distances
-            #: :type: numpy.ndarray, numpy.ndarray
-            idxs, dists = self._flann.nn_index(vec, len(self._descr_cache),
-                                               **self._flann_build_params)
-        else:
-            #: :type: numpy.ndarray, numpy.ndarray
-            idxs, dists = self._flann.nn_index(vec,
-                                               min(n, len(self._descr_cache)),
-                                               **self._flann_build_params)
+            # If the distance method is HIK, we need to treat it special since
+            # that method produces a similarity score, not a distance score.
+            #
+            # FLANN asserts that we query for <= index size, thus the use of
+            # min().
+            if self._distance_method == 'hik':
+                # This call is different than the else version in that k is the
+                # size of the full data set, so that we can reverse the
+                # distances.
+                #: :type: numpy.ndarray, numpy.ndarray
+                idxs, dists = self._flann.nn_index(
+                    vec, len(self._descr_cache),
+                    **self._flann_build_params
+                )
+            else:
+                #: :type: numpy.ndarray, numpy.ndarray
+                idxs, dists = self._flann.nn_index(
+                    vec, min(n, len(self._descr_cache)),
+                    **self._flann_build_params
+                )
 
-        # When N>1, return value is a 2D array. Since this method limits query
-        #   to a single descriptor, we reduce to 1D arrays.
-        if len(idxs.shape) > 1:
-            idxs = idxs[0]
-            dists = dists[0]
+            # When N>1, return value is a 2D array. Since this method limits
+            # query to a single descriptor, we reduce to 1D arrays.
+            if len(idxs.shape) > 1:
+                idxs = idxs[0]
+                dists = dists[0]
 
-        if self._distance_method == 'hik':
-            # Invert values to stay consistent with other distance value norms
-            dists = [1.0 - d for d in dists]
-            idxs = tuple(reversed(idxs))[:n]
-            dists = tuple(reversed(dists))[:n]
-        else:
-            dists = tuple(dists)
+            if self._distance_method == 'hik':
+                # Invert values to stay consistent with other distance value
+                # norms.
+                dists = [1.0 - d for d in dists]
+                idxs = tuple(reversed(idxs))[:n]
+                dists = tuple(reversed(dists))[:n]
+            else:
+                dists = tuple(dists)
 
-        return [self._descr_cache[i] for i in idxs], dists
+            return [self._descr_cache[i] for i in idxs], dists
 
 
 NN_INDEX_CLASS = FlannNearestNeighborsIndex

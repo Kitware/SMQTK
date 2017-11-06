@@ -4,75 +4,12 @@ import mock
 import os
 import unittest
 
-from smqtk.algorithms import Classifier, DescriptorGenerator, \
-    NearestNeighborsIndex
+from smqtk.representation import DescriptorElement
 from smqtk.web.iqr_service import IqrService
 
-
-THIS_MODULE_PATH = 'smqtk.tests.web.iqr_service.test_iqr_service'
-
-
-class StubClassifier (Classifier):
-    """
-    Classifier stub for testing IqrService.
-    """
-
-    @classmethod
-    def is_usable(cls):
-        return True
-
-    def get_config(self):
-        pass
-
-    def get_labels(self):
-        pass
-
-    def _classify(self, d):
-        pass
-
-
-class StubDescrGenerator (DescriptorGenerator):
-    """
-    DescriptorGenerator stub for testing IqrService.
-    """
-
-    @classmethod
-    def is_usable(cls):
-        return True
-
-    def get_config(self):
-        pass
-
-    def valid_content_types(self):
-        pass
-
-    def _compute_descriptor(self, data):
-        pass
-
-
-class StubNearestNeighborIndex (NearestNeighborsIndex):
-    """
-    NearestNeighborIndex stub for testing IqrService.
-    """
-
-    @classmethod
-    def is_usable(cls):
-        return True
-
-    def get_config(self):
-        pass
-
-    def count(self):
-        pass
-
-    def _build_index(self, descriptors):
-        pass
-
-    def _update_index(self, descriptors):
-        pass
-
-    def _nn(self, d, n=1):
-        pass
+from smqtk.tests.web.iqr_service.stubs import \
+    STUB_MODULE_PATH, \
+    StubDescriptorIndex, StubDescrGenerator, StubNearestNeighborIndex
 
 
 class TestIqrService (unittest.TestCase):
@@ -80,9 +17,10 @@ class TestIqrService (unittest.TestCase):
     # Patch in this module for stub implementation access.
     # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
-        "CLASSIFIER_PATH": THIS_MODULE_PATH,
-        "DESCRIPTOR_GENERATOR_PATH": THIS_MODULE_PATH,
-        "NN_INDEX_PATH": THIS_MODULE_PATH,
+        "CLASSIFIER_PATH": STUB_MODULE_PATH,
+        "DESCRIPTOR_INDEX_PATH": STUB_MODULE_PATH,
+        "DESCRIPTOR_GENERATOR_PATH": STUB_MODULE_PATH,
+        "NN_INDEX_PATH": STUB_MODULE_PATH,
     })
     def setUp(self):
         """
@@ -98,7 +36,7 @@ class TestIqrService (unittest.TestCase):
             'MemoryClassificationElement'
         plugin_config['descriptor_factory']['type'] = \
             'DescriptorMemoryElement'
-        plugin_config['descriptor_index']['type'] = 'MemoryDescriptorIndex'
+        plugin_config['descriptor_index']['type'] = 'StubDescriptorIndex'
 
         # Set up dummy algorithm types
         plugin_config['classifier_config']['type'] = 'StubClassifier'
@@ -129,6 +67,203 @@ class TestIqrService (unittest.TestCase):
         r = self.app.test_client().get('/is_ready')
         self.assertStatusCode(r, 200)
         self.assertJsonMessageRegex(r, "Yes, I'm alive.")
+        self.assertIsInstance(self.app.descriptor_index, StubDescriptorIndex)
+        self.assertIsInstance(self.app.descriptor_generator, StubDescrGenerator)
+        self.assertIsInstance(self.app.neighbor_index, StubNearestNeighborIndex)
+
+    def test_add_descriptor_from_data_no_args(self):
+        """ Test that providing no arguments causes a 400 error. """
+        r = self.app.test_client().post('/add_descriptor_from_data')
+        self.assertStatusCode(r, 400)
+
+    def test_add_descriptor_from_data_no_b64(self):
+        """ Test that providing no b64 data is caught + errors. """
+        query_data = {
+            "content_type": "text/plain"
+        }
+        r = self.app.test_client().post('/add_descriptor_from_data',
+                                        data=query_data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "No or empty base64 data")
+
+    def test_add_descriptor_from_data_no_content_type(self):
+        query_data = {
+            'data_b64': base64.b64encode("some test data")
+        }
+        r = self.app.test_client().post('/add_descriptor_from_data',
+                                        data=query_data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "No data mimetype")
+
+    def test_add_descriptor_from_data_invalid_base64(self):
+        """ Test sending some bad base64 data. """
+        query_data = {
+            'data_b64': 'not valid b64',
+            'content_type': 'text/plain',
+        }
+        r = self.app.test_client().post('/add_descriptor_from_data',
+                                        data=query_data)
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Failed to parse base64 data")
+
+    def test_add_descriptor_from_data_other_exception(self):
+        """ Test handling other exception from describing input data. """
+        def test_raise(*_):
+            raise RuntimeError("Some other error [expected]")
+        self.app.describe_base64_data = mock.Mock(side_effect=test_raise)
+
+        query_data = {
+            'data_b64': base64.b64encode('some text.'),
+            'content_type': 'text/plain',
+        }
+        r = self.app.test_client().post('/add_descriptor_from_data',
+                                        data=query_data)
+        self.assertStatusCode(r, 500)  # server error
+
+    def test_add_descriptor_from_data(self):
+        expected_bytes = "some test bytes"
+        expected_base64 = base64.b64encode(expected_bytes)
+        expected_contenttype = 'text/plain'
+        expected_descriptor_uid = 'test-descr-uid'
+        expected_descriptor = mock.MagicMock(spec=DescriptorElement)
+        expected_descriptor.uuid.return_value = expected_descriptor_uid
+
+        self.app.describe_base64_data = mock.Mock(
+            return_value=expected_descriptor
+        )
+        self.app.descriptor_index.add_descriptor = mock.Mock()
+
+        query_data = {
+            "data_b64": expected_base64,
+            "content_type": expected_contenttype,
+        }
+        r = self.app.test_client().post('/add_descriptor_from_data',
+                                        data=query_data)
+
+        self.app.describe_base64_data.assert_called_once_with(
+            expected_base64, expected_contenttype
+        )
+        self.app.descriptor_index.add_descriptor.assert_called_once_with(
+            expected_descriptor
+        )
+
+        self.assertStatusCode(r, 201)
+        self.assertJsonMessageRegex(r, "Success")
+        r_json = json.loads(r.data)
+        self.assertEqual(r_json['uid'], expected_descriptor_uid)
+
+    def test_update_nn_index_no_args(self):
+        """ Test that error is returned when no arguments provided """
+        r = self.app.test_client().post('/update_nn_index')
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "No descriptor UID JSON provided")
+
+    def test_update_nn_index_bad_json_parse_error(self):
+        """ Test handling a bad json string """
+        r = self.app.test_client().post('/update_nn_index',
+                                        data=dict(
+                                            descriptor_uids='not-valid-json'
+                                        ))
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "JSON parsing error")
+
+    def test_update_nn_index_bad_json_not_a_list(self):
+        r = self.app.test_client().post('/update_nn_index',
+                                        data=dict(
+                                            descriptor_uids='6.2'
+                                        ))
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "JSON provided is not a list")
+
+    def test_update_nn_index_bad_json_empty_list(self):
+        r = self.app.test_client().post('/update_nn_index',
+                                        data=dict(
+                                            descriptor_uids='[]'
+                                        ))
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "JSON list empty")
+
+    def test_update_nn_index_bad_json_invalid_parts(self):
+        """ All UIDs provided should be hashable values. """
+        r = self.app.test_client().post('/update_nn_index',
+                                        data=dict(
+                                            descriptor_uids='["a", 4, []]'
+                                        ))
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Not all JSON list parts were possibly "
+                                       "valid UIDs")
+
+    def test_update_nn_index_uid_not_a_key(self):
+        """
+        Test that providing one or more UIDs that are not a part of the index
+        yields an error.
+        """
+        def key_error_raise(*_, **__):
+            raise KeyError('test-key')
+
+        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+            side_effect=key_error_raise
+        )
+        # Pretend any UID except 2 and "hello" are not contained.
+        self.app.descriptor_index.has_descriptor = mock.Mock(
+            side_effect=lambda k: k == 2 or k == "hello"
+        )
+
+        expected_list = [0, 1, 2, 'hello', 'foobar']
+        expected_list_json = '[0, 1, 2, "hello", "foobar"]'
+        expected_bad_uids = [0, 1, 'foobar']
+        r = self.app.test_client().post('/update_nn_index',
+                                        data=dict(
+                                            descriptor_uids=expected_list_json,
+                                        ))
+        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+            expected_list
+        )
+        self.app.descriptor_index.has_descriptor.assert_any_call(0)
+        self.app.descriptor_index.has_descriptor.assert_any_call(1)
+        self.app.descriptor_index.has_descriptor.assert_any_call(2)
+        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in the "
+                                       "current index")
+        r_json = json.loads(r.data)
+        self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
+
+    def test_update_nn_index(self):
+        expected_descriptors = [
+            mock.Mock(spec=DescriptorElement),
+            mock.Mock(spec=DescriptorElement),
+            mock.Mock(spec=DescriptorElement),
+        ]
+        expected_uid_list = [0, 1, 2]
+        expected_uid_list_json = json.dumps(expected_uid_list)
+        expected_new_index_count = 10
+
+        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+            return_value=expected_descriptors
+        )
+        self.app.neighbor_index.update_index = mock.Mock()
+        self.app.neighbor_index.count = mock.Mock(
+            return_value=expected_new_index_count
+        )
+
+        data = dict(
+            descriptor_uids=expected_uid_list_json
+        )
+        r = self.app.test_client().post('/update_nn_index', data=data)
+
+        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+            expected_uid_list
+        )
+        self.app.neighbor_index.update_index.assert_called_once_with(
+            expected_descriptors
+        )
+
+        self.assertStatusCode(r, 200)
+        r_json = json.loads(r.data)
+        self.assertListEqual(r_json['descriptor_uids'], expected_uid_list)
+        self.assertEqual(r_json['index_size'], expected_new_index_count)
 
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.

@@ -2,7 +2,7 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import numpy as np
-from multiprocessing import RLock
+import multiprocessing
 import six
 from six.moves import cPickle as pickle, zip
 
@@ -85,7 +85,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.use_multiprocessing = use_multiprocessing
         self.pickle_protocol = pickle_protocol
         self._descriptor_set = descriptor_set
-        self._lock = RLock()
+        self._model_lock = multiprocessing.RLock()
 
         self.random_seed = None
         if random_seed is not None:
@@ -183,16 +183,35 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
+            raise ReadOnlyError("Cannot modify read-only index.")
 
         self._log.info("Building new FAISS index")
 
-        self._log.debug("Clearing and adding new descriptor elements")
-        with self._lock:
+        # We need to fork the iterator, so stick the elements in a list
+        desc_list = list(descriptors)
+        data, new_uuids = self._descriptors_to_matrix(desc_list)
+        n, d = data.shape
+
+        # Build a faiss index but don't add it until we have a lock
+        faiss_index = faiss.index_factory(d, self.factory_string)
+        faiss_index.train(data)
+        assert faiss_index.d == d
+
+        faiss_index.add(data)
+        assert faiss_index.ntotal == n
+
+        with self._model_lock:
+            self._faiss_index = faiss_index
+            self._log.info("FAISS index has been constructed with %d"
+                           " vectors", n)
+
+            self._log.debug("Clearing and adding new descriptor elements")
             self._descriptor_set.clear()
-            self._descriptor_set.add_many_descriptors(descriptors)
-            self._build_faiss_model()
+            self._descriptor_set.add_many_descriptors(desc_list)
+            assert len(self._descriptor_set) == n
+
+            self._uuids = new_uuids
+            assert len(self._uuids) == n
 
     def _update_index(self, descriptors):
         """
@@ -208,43 +227,67 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        with self._lock:
-            # This experimental wrapper does not currently plug into FAISS's
-            # update capabilities.
-            raise NotImplementedError()
+        if self.read_only:
+            raise ReadOnlyError("Cannot modify read-only index.")
 
-    def _build_faiss_model(self):
-        self._log.debug('Building FAISS index')
-        with self._lock:
-            sample = next(self._descriptor_set.iterdescriptors())
-            sample_v = sample.vector()
-            n, d = self.count(), sample_v.size
+        if not hasattr(self, "_faiss_index"):
+            self._build_index(descriptors)
+            return
 
-            data = np.empty((n, d), dtype=np.float32)
-            elements_to_matrix(
-                self._descriptor_set, mat=data,
-                use_multiprocessing=self.use_multiprocessing,
-                report_interval=1.0,
-            )
-            self._uuids = list(self._descriptor_set.iterkeys())
+        self._log.debug('Updating FAISS index')
 
-            self._faiss_index = faiss.index_factory(d, self.factory_string)
+        # We need to fork the iterator, so stick the elements in a list
+        desc_list = list(descriptors)
+        data, new_uuids = self._descriptors_to_matrix(desc_list)
+        n, d = data.shape
 
-            self._log.info("data shape, type: %s, %s",
-                           data.shape, data.dtype)
-            self._log.info("# uuids: %d", len(self._uuids))
-            self._faiss_index.train(data)
+        with self._model_lock:
+            old_ntotal = self.count()
+
+            assert self._faiss_index.d == d
             self._faiss_index.add(data)
+            assert self._faiss_index.ntotal == old_ntotal + n
+            self._log.info("FAISS index has been updated with %d"
+                           " new vectors", n)
 
-            self._log.info("FAISS index has been constructed with %d"
-                           " vectors", self._faiss_index.ntotal)
+            self._log.debug("Adding new descriptor elements")
+            self._descriptor_set.add_many_descriptors(desc_list)
+            assert len(self._descriptor_set) == old_ntotal + n
+
+            self._uuids.extend(new_uuids)
+            assert len(self._uuids) == old_ntotal + n
+
+    def _descriptors_to_matrix(self, descriptors):
+        """
+
+        :param descriptors: List descriptor elements to add to this
+            index.
+        :type descriptors: List[smqtk.representation.DescriptorElement]
+
+        :return: An (n,d) array of descriptors (d-dim descriptors in n
+            rows), and the corresponding list of descriptor uuids
+        :rtype: numpy.ndarray, List[Hashable]
+        """
+        new_uuids = [desc.uuid() for desc in descriptors]
+        sample_v = descriptors[0].vector()
+        n, d = len(new_uuids), sample_v.size
+        data = np.empty((n, d), dtype=np.float32)
+        elements_to_matrix(
+            descriptors, mat=data,
+            use_multiprocessing=self.use_multiprocessing,
+            report_interval=1.0,
+        )
+        self._log.info("data shape, type: %s, %s",
+                       data.shape, data.dtype)
+        self._log.info("# uuids: %d", n)
+        return data, new_uuids
 
     def count(self):
         """
         :return: Number of elements in this index.
         :rtype: int
         """
-        with self._lock:
+        with self._model_lock:
             return len(self._descriptor_set)
 
     def _nn(self, d, n=1):
@@ -270,7 +313,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug("Received query for %d nearest neighbors", n)
 
-        with self._lock:
+        with self._model_lock:
             dists, ids = self._faiss_index.search(q, n)
             dists, ids = np.sqrt(dists[0,:]), ids[0,:]
             uuids = [self._uuids[id] for id in ids]
@@ -293,5 +336,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Returning query result of size %g", len(uuids))
 
         return descriptors, tuple(d_dists)
+
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

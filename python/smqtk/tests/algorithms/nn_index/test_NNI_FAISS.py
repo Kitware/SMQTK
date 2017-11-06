@@ -74,22 +74,20 @@ class TestFAISSIndex (unittest.TestCase):
         [d.set_vector(np.random.rand(dim)) for d in d_index]
 
         index = self._make_inst()
-        # For now, just check for the assertion
-        self.assertRaises(NotImplementedError, index.update_index, d_index)
-        # index.update_index(d_index)
-        # self.assertEqual(index.count(), 100)
-        # for d in d_index:
-        #     self.assertIn(d, index._descriptor_set)
-        #
-        # # Check that NN can return stuff from the set used.
-        # # - nearest element to the query element when the query is in the index
-        # #   should be the query element.
-        # random.seed(self.RAND_SEED)
-        # for _ in range(10):
-        #     i = random.randint(0, n-1)
-        #     q = d_index[i]
-        #     n_elems, n_dists = index.nn(q)
-        #     self.assertEqual(n_elems[0], q)
+        index.update_index(d_index)
+        self.assertEqual(index.count(), 100)
+        for d in d_index:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return stuff from the set used.
+        # - nearest element to the query element when the query is in the
+        #   index should be the query element.
+        random.seed(self.RAND_SEED)
+        for _ in range(10):
+            i = random.randint(0, n-1)
+            q = d_index[i]
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
 
     def test_update_index_additive(self):
         n1 = 100
@@ -106,21 +104,20 @@ class TestFAISSIndex (unittest.TestCase):
         for d in set1:
             self.assertIn(d, index._descriptor_set)
 
-        # For now, just check for the assertion
-        self.assertRaises(NotImplementedError, index.update_index, set2)
-        # # Update and check that all intended descriptors are present in index.
-        # index.update_index(set2)
-        # set_all = set1 | set2
-        # self.assertEqual(index.count(), len(set_all))
-        # for d in set_all:
-        #     self.assertIn(d, index._descriptor_set)
-        #
-        # # Check that NN can return something from the updated set.
-        # # - nearest element to the query element when the query is in the index
-        # #   should be the query element.
-        # for q in set2:
-        #     n_elems, n_dists = index.nn(q)
-        #     self.assertEqual(n_elems[0], q)
+        # Update and check that all intended descriptors are present in
+        # index.
+        index.update_index(set2)
+        set_all = set1 | set2
+        self.assertEqual(index.count(), len(set_all))
+        for d in set_all:
+            self.assertIn(d, index._descriptor_set)
+
+        # Check that NN can return something from the updated set.
+        # - nearest element to the query element when the query is in the
+        #   index should be the query element.
+        for q in set2:
+            n_elems, n_dists = index.nn(q)
+            self.assertEqual(n_elems[0], q)
 
     def test_many_descriptors(self):
         np.random.seed(0)
@@ -225,7 +222,7 @@ class TestFAISSIndex (unittest.TestCase):
         # query descriptor -- first point
         q = DescriptorMemoryElement('query', 0)
         q.set_vector(vectors[0])
-        r, dists = index.nn(q, n=1)
+        r, dists = index.nn(q)
         self.assertEqual(len(dists), 1)
         # Distance should be zero
         self.assertEqual(dists[0], 0.)

@@ -120,7 +120,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given uuid values.
-        :rtype: __generator[smqtk.representation.DescriptorElement]
+        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
 

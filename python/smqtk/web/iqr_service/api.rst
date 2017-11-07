@@ -39,6 +39,138 @@ No arguments.
 Returns 200.
 
 
+[POST] /add_descriptor_from_data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Add the description of the given base64 data with content type to the
+descriptor set.
+
+Accept base64 data (with content type), describe it via the configured
+descriptor generator and add the resulting descriptor element to the
+configured descriptor index.
+
+Form Arguments:
+    data_b64
+        Base64-encoded input binary data to describe via
+        DescriptorGenerator.  This must be of a content type accepted by
+        the configured DescriptorGenerator.
+    content_type
+        Input data content mimetype string.
+
+Success returns 201: {
+    ...,
+
+    // UID of the descriptor element generated from input data
+    // description.  This should be equivalent to the SHA1 checksum of
+    // the input data.
+    uid <str>
+
+    // New size (integer) of the descriptor set that has been updated
+    // (NOT the same as the nearest-neighbor index).
+    size <int>
+}
+
+
+[POST] /update_nn_index
+^^^^^^^^^^^^^^^^^^^^^^^
+Tell the configured nearest-neighbor-index instance to update with the
+descriptors associated with the provided list of UIDs.
+
+This is a critical operation on the index so this method can only be
+invoked once at a time (other concurrent will block until previous calls
+have finished).
+
+Form Arguments:
+    descriptor_uids
+        JSON list of UID strings.  If one or more UIDs do not match
+        descriptors in our current descriptor-set we return an error
+        message.
+
+Success returns 200: {
+    ...,
+
+    // List of UIDs the neighbor index was updated with.  This should
+    // be congruent with the list provided.
+    descriptor_uids=<list[str]>,
+
+    // New size of the nearest-neighbors index.
+    index_size=<int>
+}
+
+
+[POST] /data_nearest_neighbors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Take in data in base64 encoding with a mimetype and find its 'k' nearest
+neighbors according to the current index, including their distance
+values (metric determined by nearest-neighbors-index algorithm
+configuration).
+
+This endpoint does not need a session ID due to the
+nearest-neighbor-index being a shared resource across IQR sessions.
+
+Form Arguments:
+    data_b64
+        Base64-encoded input binary data to describe via
+        DescriptorGenerator.  This must be of a content type accepted by
+        the configured DescriptorGenerator.
+    content_type
+        Input data content mimetype string.
+    k
+        Integer number of nearest neighbor descriptor UIDs to return
+        along with their distances.
+
+Success returns 200: {
+    ...,
+
+    // Ordered list of neighbor UID values. Index 0 represents the
+    // closest neighbor while the last index represents the farthest
+    // neighbor.  Parallel in relationship to `neighbor_dists`.
+    neighbor_uids=<list[str]>,
+
+    // Ordered list of neighbor distance values. Index 0 represents the
+    // closest neighbor while the last index represents the farthest
+    // neighbor.  Parallel in relationship to 'neighbor_uids`.
+    neighbor_dists=<list[float]>
+}
+
+
+[POST] /uid_nearest_neighbors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Take in the UID that matches an ingested descriptor and find that
+descriptor's 'k' nearest neighbors according to the current index,
+including their distance values (metric determined by
+nearest-neighbors-index algorithm configuration).
+
+This endpoint does not need a session ID due to the
+nearest-neighbor-index being a shared resource across IQR sessions.
+
+This endpoint can be more advantageous compared the
+`data_nearest_neighbors` endpoint if you know a descriptor has already
+been ingested (via `add_descriptor_from_data` or otherwise) as a
+potentially new descriptor does not have to be computed.
+
+Form Arguments:
+    uid
+        UID of the descriptor to get the nearest neighbors for.  This
+        should also match the SHA1 checksum of the data being described.
+    k
+        Integer number of nearest neighbor descriptor UIDs to return
+        along with their distances.
+
+Success returns 200: {
+    ...,
+
+    // Ordered list of neighbor UID values. Index 0 represents the
+    // closest neighbor while the last index represents the farthest
+    // neighbor.  Parallel in relationship to `neighbor_dists`.
+    neighbor_uids=<list[str]>,
+
+    // Ordered list of neighbor distance values. Index 0 represents the
+    // closest neighbor while the last index represents the farthest
+    // neighbor.  Parallel in relationship to 'neighbor_uids`.
+    neighbor_dists=<list[float]>,
+}
+
+
 [GET] /session_ids
 ^^^^^^^^^^^^^^^^^^
 Get the list of current, active session IDs.

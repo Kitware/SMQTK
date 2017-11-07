@@ -168,8 +168,8 @@ Possible error codes:
     404
         Label does not refer to a registered classifier
 
-Returns 200 on success and the pickled and encoded classifier as the response
-content
+Returns 200 on success and base64 encoded, serialized classifier as the response
+content.
 
 
 [POST] /classifier

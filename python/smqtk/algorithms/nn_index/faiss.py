@@ -35,12 +35,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         return faiss is not None
 
     def __init__(self, descriptor_set, read_only=False,
-                 factory_string=b'Flat',
+                 factory_string='Flat',
                  use_multiprocessing=True,
                  pickle_protocol=pickle.HIGHEST_PROTOCOL,
                  random_seed=None):
         """
-        Initialize MRPT index properties. Does not contain a queryable index
+        Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
 
@@ -56,7 +56,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             see the
             [documentation](https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory)
             on this feature for more details.
-        :type factory_string: six.binary_type
+        :type factory_string: str
 
         :param use_multiprocessing: Whether or not to use discrete processes
             as the parallelization agent vs python threads.
@@ -68,7 +68,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param random_seed: Integer to use as the random number generator
             seed.
-        :type random_seed: int
+        :type random_seed: int | None
 
         """
         super(FaissNearestNeighborsIndex, self).__init__()

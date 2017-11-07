@@ -216,7 +216,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
         :param descriptor: Descriptor element to classify.
         :type descriptor: smqtk.representation.DescriptorElement
 
-        :param labels: Labels to use for classification. If None, use all
+        :param labels: One or more labels of stored classifiers to use for
+            classifying the given descriptor.  If None, use all stored
             classifiers.
         :type labels: Iterable[str]
 

@@ -2,22 +2,11 @@ import threading
 
 import six
 
-from smqtk.utils import (
-    Configurable,
-    merge_dict,
-    plugin,
-    SmqtkObject,
-)
-
+from smqtk.exceptions import MissingLabelError
+from smqtk.utils import Configurable, SmqtkObject, merge_dict, plugin
+from . import get_classifier_impls
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 from ._interface_classifier import Classifier
-from . import get_classifier_impls
-
-
-class MissingLabelException(Exception):
-    def __init__(self, labels):
-        super(MissingLabelException, self).__init__(labels)
-        self.labels = labels
 
 
 class ClassifierCollection (SmqtkObject, Configurable):
@@ -237,6 +226,9 @@ class ClassifierCollection (SmqtkObject, Configurable):
             input descriptor.
         :type overwrite: bool
 
+        :raises smqtk.exceptions.MissingLabelError: Some or all of the
+            requested labels are missing.
+
         :return: Result dictionary of classifier labels to classification
             elements.
         :rtype: dict[str, smqtk.representation.ClassificationElement]
@@ -250,7 +242,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
                 # If we're missing some of the requested labels, complain
                 missing_labels = set(labels) - self.labels()
                 if missing_labels:
-                    raise MissingLabelException(missing_labels)
+                    raise MissingLabelError(missing_labels)
 
                 for label in labels:
                     classifier = self._label_to_classifier[label]

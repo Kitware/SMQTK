@@ -2,10 +2,8 @@ import unittest
 
 import mock
 
-from smqtk.algorithms.classifier import (
-    ClassifierCollection,
-    MissingLabelException
-)
+from smqtk.algorithms.classifier import ClassifierCollection
+from smqtk.exceptions import MissingLabelError
 from smqtk.representation.classification_element.memory \
     import MemoryClassificationElement
 from smqtk.representation.descriptor_element.local_elements \
@@ -302,22 +300,22 @@ class TestClassifierCollection (unittest.TestCase):
         d = DescriptorMemoryElement('memory', '0')
         d.set_vector(d_v)
 
-        # Should throw a MissingLabelException
-        with self.assertRaises(MissingLabelException) as cm:
+        # Should throw a MissingLabelError
+        with self.assertRaises(MissingLabelError) as cm:
             ccol.classify(d, labels=['subjectC'])
         self.assertSetEqual(cm.exception.labels, {'subjectC'})
 
-        # Should throw a MissingLabelException
-        with self.assertRaises(MissingLabelException) as cm:
+        # Should throw a MissingLabelError
+        with self.assertRaises(MissingLabelError) as cm:
             ccol.classify(d, labels=['subjectA', 'subjectC'])
         self.assertSetEqual(cm.exception.labels, {'subjectC'})
 
-        # Should throw a MissingLabelException
-        with self.assertRaises(MissingLabelException) as cm:
+        # Should throw a MissingLabelError
+        with self.assertRaises(MissingLabelError) as cm:
             ccol.classify(d, labels=['subjectC', 'subjectD'])
         self.assertSetEqual(cm.exception.labels, {'subjectC', 'subjectD'})
 
-        # Should throw a MissingLabelException
-        with self.assertRaises(MissingLabelException) as cm:
+        # Should throw a MissingLabelError
+        with self.assertRaises(MissingLabelError) as cm:
             ccol.classify(d, labels=['subjectA', 'subjectC', 'subjectD'])
         self.assertSetEqual(cm.exception.labels, {'subjectC', 'subjectD'})

@@ -13,8 +13,8 @@ from smqtk.algorithms import (
 )
 from smqtk.algorithms.classifier import (
     ClassifierCollection,
-    MissingLabelException,
 )
+from smqtk.exceptions import MissingLabelError
 from smqtk.iqr import IqrSession
 from smqtk.representation import (
     ClassificationElementFactory,
@@ -356,7 +356,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             clfr_map = self.classifier_collection.classify(
                 descr_elem, labels=labels,
                 factory=self.classification_factory)
-        except MissingLabelException as ex:
+        except MissingLabelError as ex:
             return make_response_json(
                 "The following labels are not registered with any"
                 " classifiers: '%s'"

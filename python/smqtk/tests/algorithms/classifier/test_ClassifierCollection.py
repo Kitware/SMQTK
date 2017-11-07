@@ -2,7 +2,10 @@ import unittest
 
 import mock
 
-from smqtk.algorithms.classifier import ClassifierCollection
+from smqtk.algorithms.classifier import (
+    ClassifierCollection,
+    MissingLabelException
+)
 from smqtk.representation.classification_element.memory \
     import MemoryClassificationElement
 from smqtk.representation.descriptor_element.local_elements \
@@ -13,7 +16,7 @@ from smqtk.tests.algorithms.classifier.test_ClassifierAbstract \
 
 class TestClassifierCollection (unittest.TestCase):
 
-    ###########################################################################
+    ##########################################################################
     # Constructor Tests
 
     def test_new_empty(self):
@@ -66,7 +69,7 @@ class TestClassifierCollection (unittest.TestCase):
             c=c2
         )
 
-    ###########################################################################
+    ##########################################################################
     # Configuration Tests
 
     def test_get_default_config(self):
@@ -106,10 +109,11 @@ class TestClassifierCollection (unittest.TestCase):
 
     def test_from_config_skip_example_key(self):
         # If the default example is left in the config, it should be skipped.
-        # The string chosen for the example key should be unlikely to be used in
-        # reality.
+        # The string chosen for the example key should be unlikely to be used
+        # in reality.
         ccol = ClassifierCollection.from_config({
-            '__example_label__': 'this should be skipped regardless of content'
+            '__example_label__':
+                'this should be skipped regardless of content'
         })
         self.assertEqual(ccol._label_to_classifier, {})
 
@@ -132,7 +136,7 @@ class TestClassifierCollection (unittest.TestCase):
         self.assertIsInstance(ccol._label_to_classifier['a'], DummyClassifier)
         self.assertIsInstance(ccol._label_to_classifier['b'], DummyClassifier)
 
-    ###########################################################################
+    ##########################################################################
     # Accessor Method Tests
 
     def test_size_len(self):
@@ -218,7 +222,7 @@ class TestClassifierCollection (unittest.TestCase):
         ccol.remove_classifier('a')
         self.assertEqual(ccol._label_to_classifier, {})
 
-    ###########################################################################
+    ##########################################################################
     # Classification Method Tests
 
     def test_classify(self):
@@ -243,5 +247,77 @@ class TestClassifierCollection (unittest.TestCase):
         # We know the dummy classifier outputs "classifications" in a
         # deterministic way: class label is descriptor UUID and classification
         # value is its vector as a list.
-        self.assertEqual(result['subjectA'].get_classification(), {'0': d_v})
-        self.assertEqual(result['subjectB'].get_classification(), {'0': d_v})
+        self.assertDictEqual(result['subjectA'].get_classification(),
+                             {'0': d_v})
+        self.assertDictEqual(result['subjectB'].get_classification(),
+                             {'0': d_v})
+
+    def test_classify_subset(self):
+        ccol = ClassifierCollection({
+            'subjectA': DummyClassifier(),
+            'subjectB': DummyClassifier(),
+        })
+
+        d_v = [0, 1, 2, 3, 4]
+        d = DescriptorMemoryElement('memory', '0')
+        d.set_vector(d_v)
+        result = ccol.classify(d, labels=['subjectA'])
+
+        # Should contain one entry for each requested classifier.
+        self.assertEqual(len(result), 1)
+        self.assertIn('subjectA', result)
+        self.assertNotIn('subjectB', result)
+        # Each key should map to a classification element (memory in this case
+        # because we're using the default factory)
+        self.assertIsInstance(result['subjectA'], MemoryClassificationElement)
+        # We know the dummy classifier outputs "classifications" in a
+        # deterministic way: class label is descriptor UUID and classification
+        # value is its vector as a list.
+        self.assertDictEqual(result['subjectA'].get_classification(),
+                             {'0': d_v})
+
+    def test_classify_empty_subset(self):
+        ccol = ClassifierCollection({
+            'subjectA': DummyClassifier(),
+            'subjectB': DummyClassifier(),
+        })
+
+        d_v = [0, 1, 2, 3, 4]
+        d = DescriptorMemoryElement('memory', '0')
+        d.set_vector(d_v)
+        result = ccol.classify(d, labels=[])
+
+        # Should contain no entries.
+        self.assertEqual(len(result), 0)
+        self.assertNotIn('subjectA', result)
+        self.assertNotIn('subjectB', result)
+
+    def test_classify_missing_label(self):
+        ccol = ClassifierCollection({
+            'subjectA': DummyClassifier(),
+            'subjectB': DummyClassifier(),
+        })
+
+        d_v = [0, 1, 2, 3, 4]
+        d = DescriptorMemoryElement('memory', '0')
+        d.set_vector(d_v)
+
+        # Should throw a MissingLabelException
+        with self.assertRaises(MissingLabelException) as cm:
+            ccol.classify(d, labels=['subjectC'])
+        self.assertSetEqual(cm.exception.labels, {'subjectC'})
+
+        # Should throw a MissingLabelException
+        with self.assertRaises(MissingLabelException) as cm:
+            ccol.classify(d, labels=['subjectA', 'subjectC'])
+        self.assertSetEqual(cm.exception.labels, {'subjectC'})
+
+        # Should throw a MissingLabelException
+        with self.assertRaises(MissingLabelException) as cm:
+            ccol.classify(d, labels=['subjectC', 'subjectD'])
+        self.assertSetEqual(cm.exception.labels, {'subjectC', 'subjectD'})
+
+        # Should throw a MissingLabelException
+        with self.assertRaises(MissingLabelException) as cm:
+            ccol.classify(d, labels=['subjectA', 'subjectC', 'subjectD'])
+        self.assertSetEqual(cm.exception.labels, {'subjectC', 'subjectD'})

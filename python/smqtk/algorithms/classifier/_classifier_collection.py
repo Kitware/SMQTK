@@ -4,6 +4,7 @@ import six
 
 from smqtk.exceptions import MissingLabelError
 from smqtk.utils import Configurable, SmqtkObject, merge_dict, plugin
+
 from . import get_classifier_impls
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 from ._interface_classifier import Classifier
@@ -106,8 +107,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
                 raise ValueError("Found a non-Classifier instance value "
                                  "for key '%s'" % label)
             elif label in self._label_to_classifier:
-                raise ValueError("Duplicate classifier label '%s' provided"
-                                 " in key-word arguments." % label)
+                raise ValueError("Duplicate classifier label '%s' provided "
+                                 "in key-word arguments." % label)
             self._label_to_classifier[label] = classifier
 
     def __enter__(self):

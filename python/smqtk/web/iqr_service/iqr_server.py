@@ -1108,7 +1108,7 @@ class IqrService (SmqtkWebApp):
                                   results=r,
                                   sid=sid), 200
 
-    # GET
+    # GET /classify
     def classify(self):
         """
         Given a refined session ID and some number of descriptor UUIDs, create

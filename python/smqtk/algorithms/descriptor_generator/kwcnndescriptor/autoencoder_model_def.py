@@ -1,3 +1,6 @@
+"""
+Auto-encoder network model definition. Only defined if kwcnn is available.
+"""
 from .kwcnndescriptor import kwcnn
 
 

@@ -52,6 +52,8 @@ def histogram_intersection_distance(a, b):
     sum_axis = 1
     if a.ndim == 1 and b.ndim == 1:
         sum_axis = 0
+    # TODO(john.moeller): Assuming each sums to 1, this can be sped up
+    #   return np.abs(np.subtract(i, j)).sum(sum_axis) * 0.5
     return 1. - ((np.add(a, b) - np.abs(np.subtract(a, b))).sum(sum_axis) * 0.5)
 
 
@@ -88,20 +90,20 @@ def euclidean_distance(i, j):
     Compute euclidean distance between two N-dimensional point vectors.
 
     :param i: Vector i
-    :type i: numpy.core.multiarray.ndarray
+    :type i: np.ndarray
 
     :param j: Vector j
-    :type j: numpy.core.multiarray.ndarray
+    :type j: np.ndarray
 
     :return: Float distance.
-    :rtype: float
+    :rtype: float | np.ndarray
 
     """
     sum_axis = 1
     if i.ndim == 1 and j.ndim == 1:
         sum_axis = 0
     # noinspection PyTypeChecker
-    return np.sqrt(np.power(i - j, 2.0).sum(sum_axis))
+    return np.sqrt(np.square(i - j).sum(sum_axis))
 
 
 def cosine_similarity(i, j):
@@ -127,6 +129,9 @@ def cosine_similarity(i, j):
     # return numpy.dot(i, j) / (numpy.linalg.norm(i) * numpy.linalg.norm(j))
 
     # speed optimization, numpy.linalg.norm can be a bottleneck
+    # TODO(john.moeller): This can be made array-friendly
+    #   np.multiply(i, j).sum(axis) / (np.linalg.norm(i, i_axis) *
+    #       np.linalg.norm(j, j_axis))
     return np.dot(i, j) / (np.sqrt(i.dot(i)) * np.sqrt(j.dot(j)))
 
 

@@ -43,8 +43,8 @@ if FaissNearestNeighborsIndex.is_usable():
             self.assertEqual(index.factory_string, b'Flat')
             self.assertIsInstance(index.factory_string, six.binary_type)
     
-            # Test that constructing a new instance from ``index``'s config yields
-            # an index with the same configuration (idempotent).
+            # Test that constructing a new instance from ``index``'s config
+            # yields an index with the same configuration (idempotent).
             index2 = FaissNearestNeighborsIndex.from_config(index.get_config())
             self.assertEqual(index.get_config(), index2.get_config())
     
@@ -73,13 +73,13 @@ if FaissNearestNeighborsIndex.is_usable():
             dim = 8
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
-    
+
             index = self._make_inst()
             index.update_index(d_index)
             self.assertEqual(index.count(), 100)
             for d in d_index:
                 self.assertIn(d, index._descriptor_set)
-    
+
             # Check that NN can return stuff from the set used.
             # - nearest element to the query element when the query is in the
             #   index should be the query element.
@@ -95,16 +95,17 @@ if FaissNearestNeighborsIndex.is_usable():
             n2 = 10
             dim = 8
             set1 = {DescriptorMemoryElement('test', i) for i in range(n1)}
-            set2 = {DescriptorMemoryElement('test', i) for i in range(n1, n1+n2)}
-            [d.set_vector(np.random.rand(dim)) for d in set1.union(set1 | set2)]
-    
+            set2 = {DescriptorMemoryElement('test', i)
+                    for i in range(n1, n1+n2)}
+            [d.set_vector(np.random.rand(dim)) for d in (set1 | set2)]
+
             # Create and build initial index.
             index = self._make_inst()
             index.build_index(set1)
             self.assertEqual(index.count(), len(set1))
             for d in set1:
                 self.assertIn(d, index._descriptor_set)
-    
+
             # Update and check that all intended descriptors are present in
             # index.
             index.update_index(set2)
@@ -112,28 +113,28 @@ if FaissNearestNeighborsIndex.is_usable():
             self.assertEqual(index.count(), len(set_all))
             for d in set_all:
                 self.assertIn(d, index._descriptor_set)
-    
+
             # Check that NN can return something from the updated set.
             # - nearest element to the query element when the query is in the
             #   index should be the query element.
             for q in set2:
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
-    
+
         def test_many_descriptors(self):
             np.random.seed(0)
-    
+
             n = 10 ** 4
             dim = 256
-    
+
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
             q.set_vector(np.zeros((dim,)))
-    
+
             faiss_index = self._make_inst()
             faiss_index.build_index(d_index)
-    
+
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)

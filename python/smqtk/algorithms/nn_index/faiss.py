@@ -53,9 +53,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :type read_only: bool
 
         :param factory_string: String to pass to FAISS' `index_factory`;
-            see the
-            [documentation](https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory)
-            on this feature for more details.
+            see the [documentation][1] on this feature for more details.
         :type factory_string: str
 
         :param use_multiprocessing: Whether or not to use discrete processes
@@ -69,6 +67,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param random_seed: Integer to use as the random number generator
             seed.
         :type random_seed: int | None
+
+        [1]: https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory
 
         """
         super(FaissNearestNeighborsIndex, self).__init__()
@@ -163,8 +163,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def _build_index(self, descriptors):
         """
-        Internal method to be implemented by sub-classes to build the index with
-        the given descriptor data elements.
+        Internal method to be implemented by sub-classes to build the index
+        with the given descriptor data elements.
 
         Subsequent calls to this method should rebuild the current index.  This
         method shall not add to the existing index nor raise an exception to as
@@ -190,11 +190,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         faiss_index = faiss.index_factory(d, self.factory_string)
         faiss_index.train(data)
         assert faiss_index.d == d, \
-                "FAISS index dimension doesn't match data dimension"
+            "FAISS index dimension doesn't match data dimension"
 
         faiss_index.add(data)
         assert faiss_index.ntotal == n, \
-                "Number of elements in FAISS index doesn't match data"
+            "FAISS index size doesn't match data size"
 
         with self._model_lock:
             self._faiss_index = faiss_index
@@ -205,11 +205,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._descriptor_set.clear()
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == n, \
-                    "Number of elements in descriptor set doesn't match data"
+                "New descriptor set size doesn't match data size"
 
             self._uuids = new_uuids
             assert len(self._uuids) == n, \
-                    "Number of uuids doesn't match data"
+                "New uuid list size doesn't match data size"
 
     def _update_index(self, descriptors):
         """
@@ -243,21 +243,21 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             old_ntotal = self.count()
 
             assert self._faiss_index.d == d, \
-                    "FAISS index dimension doesn't match data dimension"
+                "FAISS index dimension doesn't match data dimension"
             self._faiss_index.add(data)
             assert self._faiss_index.ntotal == old_ntotal + n, \
-                    "New FAISS index size doesn't match old + data size"
+                "New FAISS index size doesn't match old + data size"
             self._log.info("FAISS index has been updated with %d"
                            " new vectors", n)
 
             self._log.debug("Adding new descriptor elements")
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == old_ntotal + n, \
-                    "New descriptor set size doesn't match old + data size"
+                "New descriptor set size doesn't match old + data size"
 
             self._uuids.extend(new_uuids)
             assert len(self._uuids) == old_ntotal + n, \
-                    "New uuid list size doesn't match old + data size"
+                "New uuid list size doesn't match old + data size"
 
     def _descriptors_to_matrix(self, descriptors):
         """

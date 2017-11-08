@@ -10,8 +10,7 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin, merge_dict
-
+from smqtk.utils import plugin, merge_dict, metrics
 
 # Requires FAISS bindings
 try:
@@ -329,7 +328,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         descriptors = tuple(descriptors)
         d_vectors = elements_to_matrix(descriptors)
-        d_dists = np.sqrt(((d_vectors - q)**2).sum(axis=1))
+        d_dists = metrics.euclidean_distance(d_vectors, q)
 
         self._log.debug("Min and max descriptor distances: %g, %g",
                         min(d_dists), max(d_dists))

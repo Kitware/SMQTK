@@ -156,12 +156,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg = config_dict
 
-        if isinstance(cfg['factory_string'], six.text_type):
-            cfg['factory_string'] = cfg['factory_string'].encode()
-        elif not isinstance(cfg['factory_string'], six.binary_type):
-            raise ValueError('The factory_string parameter must be a'
-                             ' recognized string type.')
-
         cfg['descriptor_set'] = plugin.from_plugin_config(
             cfg['descriptor_set'], get_descriptor_index_impls())
 
@@ -195,10 +189,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # Build a faiss index but don't add it until we have a lock
         faiss_index = faiss.index_factory(d, self.factory_string)
         faiss_index.train(data)
-        assert faiss_index.d == d
+        assert faiss_index.d == d, \
+                "FAISS index dimension doesn't match data dimension"
 
         faiss_index.add(data)
-        assert faiss_index.ntotal == n
+        assert faiss_index.ntotal == n, \
+                "Number of elements in FAISS index doesn't match data"
 
         with self._model_lock:
             self._faiss_index = faiss_index
@@ -208,10 +204,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.debug("Clearing and adding new descriptor elements")
             self._descriptor_set.clear()
             self._descriptor_set.add_many_descriptors(desc_list)
-            assert len(self._descriptor_set) == n
+            assert len(self._descriptor_set) == n, \
+                    "Number of elements in descriptor set doesn't match data"
 
             self._uuids = new_uuids
-            assert len(self._uuids) == n
+            assert len(self._uuids) == n, \
+                    "Number of uuids doesn't match data"
 
     def _update_index(self, descriptors):
         """
@@ -244,29 +242,35 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         with self._model_lock:
             old_ntotal = self.count()
 
-            assert self._faiss_index.d == d
+            assert self._faiss_index.d == d, \
+                    "FAISS index dimension doesn't match data dimension"
             self._faiss_index.add(data)
-            assert self._faiss_index.ntotal == old_ntotal + n
+            assert self._faiss_index.ntotal == old_ntotal + n, \
+                    "New FAISS index size doesn't match old + data size"
             self._log.info("FAISS index has been updated with %d"
                            " new vectors", n)
 
             self._log.debug("Adding new descriptor elements")
             self._descriptor_set.add_many_descriptors(desc_list)
-            assert len(self._descriptor_set) == old_ntotal + n
+            assert len(self._descriptor_set) == old_ntotal + n, \
+                    "New descriptor set size doesn't match old + data size"
 
             self._uuids.extend(new_uuids)
-            assert len(self._uuids) == old_ntotal + n
+            assert len(self._uuids) == old_ntotal + n, \
+                    "New uuid list size doesn't match old + data size"
 
     def _descriptors_to_matrix(self, descriptors):
         """
+        Extract an (n,d) array with the descriptor vectors in each row,
+        and a corresponding list of uuids from the list of descriptors.
 
         :param descriptors: List descriptor elements to add to this
             index.
-        :type descriptors: List[smqtk.representation.DescriptorElement]
+        :type descriptors: list[smqtk.representation.DescriptorElement]
 
         :return: An (n,d) array of descriptors (d-dim descriptors in n
-            rows), and the corresponding list of descriptor uuids
-        :rtype: numpy.ndarray, List[Hashable]
+            rows), and the corresponding list of descriptor uuids.
+        :rtype: (np.ndarray, list[collections.Hashable])
         """
         new_uuids = [desc.uuid() for desc in descriptors]
         sample_v = descriptors[0].vector()
@@ -309,29 +313,29 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        q = d.vector().reshape(1, -1).astype(np.float32)
+        q = d.vector()[np.newaxis, :].astype(np.float32)
 
         self._log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:
-            dists, ids = self._faiss_index.search(q, n)
-            dists, ids = np.sqrt(dists[0,:]), ids[0,:]
-            uuids = [self._uuids[id] for id in ids]
+            s_dists, s_ids = self._faiss_index.search(q, n)
+            s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
+            uuids = [self._uuids[s_id] for s_id in s_ids]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
+
+        self._log.debug("Min and max FAISS distances: %g, %g",
+                        min(s_dists), max(s_dists))
 
         descriptors = tuple(descriptors)
         d_vectors = elements_to_matrix(descriptors)
         d_dists = np.sqrt(((d_vectors - q)**2).sum(axis=1))
 
-        order = dists.argsort()
-        uuids, dists = zip(*((uuids[oidx], d_dists[oidx]) for oidx in order))
-
-        d_dists = d_dists[order]
-        self._log.debug("Min and max FAISS distances: %g, %g",
-                        min(dists), max(dists))
         self._log.debug("Min and max descriptor distances: %g, %g",
                         min(d_dists), max(d_dists))
+
+        order = d_dists.argsort()
+        uuids, d_dists = zip(*((uuids[oidx], d_dists[oidx]) for oidx in order))
 
         self._log.debug("Returning query result of size %g", len(uuids))
 

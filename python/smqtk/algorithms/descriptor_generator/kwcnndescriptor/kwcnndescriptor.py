@@ -11,27 +11,19 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 import six
-# noinspection PyUnresolvedReferences
 from six.moves import range
+from six.moves import cPickle as pickle
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
 from smqtk.utils.bin_utils import report_progress
 
-# Autoencoder network model definition class
-from .autoencoder_model_def import AutoEncoderModel
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
 try:
     import kwcnn
+    from .autoencoder_model_def import AutoEncoderModel
 except ImportError as ex:
-    logging.getLogger(__name__).warning("Failed to import KWCNN module: %s",
-                                        str(ex))
     kwcnn = None
+    AutoEncoderModel = None
 
 
 __author__ = 'jason.parham@kitware.com,paul.tunison@kitware.com'

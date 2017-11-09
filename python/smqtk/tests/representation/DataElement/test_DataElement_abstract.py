@@ -23,16 +23,24 @@ EXPECTED_UUID = EXPECTED_SHA1
 
 
 # Caches the temp directory before we start mocking things out that would
-# otherwise be required for the tempfile module to determine the temp directory.
+# otherwise be required for the tempfile module to determine the temp
+# directory.
 tempfile.gettempdir()
 
 
 # noinspection PyClassHasNoInit,PyAbstractClass
 class DummyDataElement (smqtk.representation.data_element.DataElement):
 
+    @classmethod
+    def from_uri(cls, uri):
+        return super(DummyDataElement, cls).from_uri(uri)
+
+    def __init__(self):
+        super(DummyDataElement, self).__init__()
+
     TEST_WRITABLE = True
     TEST_BYTES = EXPECTED_BYTES
-    TEST_CONTENT_TYPE = EXPECTED_CONTENT_TYPE
+    TEST_CONTENT_TYPE = None
 
     @classmethod
     def is_usable(cls):
@@ -59,6 +67,17 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
 
     def writable(self):
         return self.TEST_WRITABLE
+
+
+class DummyDataElementWithContentType (DummyDataElement):
+
+    TEST_CONTENT_TYPE = EXPECTED_CONTENT_TYPE
+
+    def __repr__(self):
+        return super(DummyDataElement, self).__repr__()
+
+    def content_type(self):
+        return self.TEST_CONTENT_TYPE
 
 
 class TestDataElementAbstract (unittest.TestCase):
@@ -108,6 +127,21 @@ class TestDataElementAbstract (unittest.TestCase):
         de = DummyDataElement()
         sha1 = de.sha512()
         self.assertEqual(sha1, EXPECTED_SHA512)
+
+    @mock.patch('smqtk.representation.data_element.file_utils.'
+                'safe_create_dir')
+    @mock.patch('fcntl.fcntl')  # global
+    @mock.patch('os.close')  # global
+    @mock.patch('os.open')  # global
+    @mock.patch('__builtin__.open')
+    def test_content_type_extension(self,
+                                    _mock_open, _mock_os_open, _mock_os_close,
+                                    _mock_fcntl, _mock_scd):
+        fname = DummyDataElement().write_temp()
+        self.assertFalse(fname.endswith('.png'))
+
+        fname = DummyDataElementWithContentType().write_temp()
+        self.assertTrue(fname.endswith('.png'))
 
     # Cases:
     #   - no existing temps, no specific dir
@@ -173,8 +207,8 @@ class TestDataElementAbstract (unittest.TestCase):
         de._temp_filepath_stack.append(prev_0)
         de._temp_filepath_stack.append(prev_1)
 
-        # Make sure os.path.isfile returns true so we think things in temp stack
-        # exist.
+        # Make sure os.path.isfile returns true so we think things in temp
+        # stack exist.
         def osp_isfile_se(path):
             if simulate and path in {prev_0, prev_1}:
                 return True
@@ -225,7 +259,8 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('__builtin__.open')
     def test_writeTemp_hasExisting_givenExistingDir(self, mock_open,
                                                     _mock_os_open,
-                                                    _mock_os_close, _mock_fcntl,
+                                                    _mock_os_close,
+                                                    _mock_fcntl,
                                                     mock_scd, mock_isfile):
         # Pretend these files already exist as written temp files.
         # We test that write_temp with a target directory yields a previously
@@ -251,8 +286,8 @@ class TestDataElementAbstract (unittest.TestCase):
 
         target_dir = "/tmp/things"
 
-        # Make sure os.path.isfile returns true so we think things in temp stack
-        # exist.
+        # Make sure os.path.isfile returns true so we think things in temp
+        # stack exist.
         mock_isfile.return_value = True
 
         fp = de.write_temp(temp_dir=target_dir)
@@ -348,7 +383,7 @@ class TestDataElementAbstract (unittest.TestCase):
         de.TEST_WRITABLE = True
         de.set_bytes(new_expected_bytes)
 
-        # Caches should have been invalidated, so UUID return should now reflect
-        # new byte content.
+        # Caches should have been invalidated, so UUID return should now
+        # reflect new byte content.
         self.assertNotEqual(de.uuid(), EXPECTED_UUID)
         self.assertEqual(de.uuid(), new_expected_uuid)

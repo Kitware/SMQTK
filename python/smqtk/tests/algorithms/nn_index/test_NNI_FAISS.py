@@ -35,13 +35,12 @@ if FaissNearestNeighborsIndex.is_usable():
             return FaissNearestNeighborsIndex(descriptor_set, **kwargs)
     
         def test_configuration(self):
-            # index_filepath = osp.abspath(osp.expanduser('index_filepath'))
-            # para_filepath = osp.abspath(osp.expanduser('param_fp'))
-    
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+            self.assertIn('DataMemoryElement', c['index_element'])
             c['index_element']['type'] = 'DataMemoryElement'
+            self.assertIn('DataMemoryElement', c['index_param_element'])
             c['index_param_element']['type'] = 'DataMemoryElement'
 
             # # Build based on configuration
@@ -54,7 +53,25 @@ if FaissNearestNeighborsIndex.is_usable():
             index2 = FaissNearestNeighborsIndex.from_config(
                 index.get_config())
             self.assertEqual(index.get_config(), index2.get_config())
-    
+
+        def test_configuration_null_persistence(self):
+            # Make configuration based on default
+            c = FaissNearestNeighborsIndex.get_default_config()
+            c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+            del c['index_element']
+            del c['index_param_element']
+
+            # # Build based on configuration
+            index = FaissNearestNeighborsIndex.from_config(c)
+            self.assertEqual(index.factory_string, b'Flat')
+            self.assertIsInstance(index.factory_string, six.binary_type)
+
+            # Test that constructing a new instance from ``index``'s config
+            # yields an index with the same configuration (idempotent).
+            index2 = FaissNearestNeighborsIndex.from_config(
+                index.get_config())
+            self.assertEqual(index.get_config(), index2.get_config())
+
         def test_read_only(self):
             v = np.zeros(5, float)
             v[0] = 1.
@@ -137,7 +154,7 @@ if FaissNearestNeighborsIndex.is_usable():
                     for i in range(n1, n1+n2)}
             [d.set_vector(np.random.rand(dim)) for d in (set1 | set2)]
 
-            # Create index with persistable entities
+            # Create index with perisistent entities
             # TODO(john.moeller): Let constructor take basestring?
             index_element = DataMemoryElement(
                 content_type=b'application/octet-stream')

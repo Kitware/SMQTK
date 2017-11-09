@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+from copy import deepcopy
 import json
 import multiprocessing
 import numpy as np
@@ -154,10 +155,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         data_element_default_config = plugin.make_config(
             get_data_element_impls())
         default['index_element'] = data_element_default_config
-
-        data_element_default_config = plugin.make_config(
-            get_data_element_impls())
-        default['index_param_element'] = data_element_default_config
+        default['index_param_element'] = deepcopy(data_element_default_config)
 
         di_default = plugin.make_config(get_descriptor_index_impls())
         default['descriptor_set'] = di_default
@@ -199,12 +197,17 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             index_element = plugin.from_plugin_config(
                 cfg['index_element'], get_data_element_impls())
             cfg['index_element'] = index_element
+        else:
+            cfg['index_element'] = None
+
 
         if (cfg['index_param_element'] and
                 cfg['index_param_element']['type']):
             index_param_element = plugin.from_plugin_config(
                 cfg['index_param_element'], get_data_element_impls())
             cfg['index_param_element'] = index_param_element
+        else:
+            cfg['index_param_element'] = None
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 

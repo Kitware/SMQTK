@@ -51,6 +51,29 @@ Returns code 200 on success and the message: {
 }
 
 
+[GET] /classifier_metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+Get metadata associated with a specific classifier instance referred to
+by label.
+
+This endpoint can return the following error codes:
+    400
+        No classifier label was provided.
+    404
+        No classifier is registered with the given label.
+
+URL Arguments:
+    label
+        Reference label for a specific classifier to query.
+
+Returns code 200 on success and the JSON return object: {
+    ...
+    // Sequence of class labels that this classifier can classify
+    // descriptors into.  This includes the negative label.
+    class_labels=<list[str]>
+}
+
+
 [POST] /classify
 ^^^^^^^^^^^^^^^^
 Given a file's bytes (standard base64-format) and content mimetype, describe

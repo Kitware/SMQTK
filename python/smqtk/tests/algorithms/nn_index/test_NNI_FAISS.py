@@ -8,12 +8,16 @@ import numpy as np
 import six
 from six.moves import range, zip
 
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.faiss import FaissNearestNeighborsIndex
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.exceptions import ReadOnlyError
+from smqtk.representation.data_element.memory_element import (
+    DataMemoryElement,
+)
+from smqtk.representation.descriptor_element.local_elements import (
+    DescriptorMemoryElement,
+)
+from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 
 if FaissNearestNeighborsIndex.is_usable():
 
@@ -21,23 +25,24 @@ if FaissNearestNeighborsIndex.is_usable():
     
         RAND_SEED = 42
     
-        def _make_inst(self, **kwargs):
+        def _make_inst(self, descriptor_set=MemoryDescriptorIndex(),
+                       **kwargs):
             """
             Make an instance of FaissNearestNeighborsIndex
             """
             if 'random_seed' not in kwargs:
                 kwargs.update(random_seed=self.RAND_SEED)
-            return FaissNearestNeighborsIndex(
-                MemoryDescriptorIndex(), **kwargs)
+            return FaissNearestNeighborsIndex(descriptor_set, **kwargs)
     
         def test_configuration(self):
-            # index_filepath = osp.abspath(osp.expanduser('index_filepath'))
-            # para_filepath = osp.abspath(osp.expanduser('param_fp'))
-    
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-    
+            self.assertIn('DataMemoryElement', c['index_element'])
+            c['index_element']['type'] = 'DataMemoryElement'
+            self.assertIn('DataMemoryElement', c['index_param_element'])
+            c['index_param_element']['type'] = 'DataMemoryElement'
+
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
             self.assertEqual(index.factory_string, b'Flat')
@@ -45,9 +50,28 @@ if FaissNearestNeighborsIndex.is_usable():
     
             # Test that constructing a new instance from ``index``'s config
             # yields an index with the same configuration (idempotent).
-            index2 = FaissNearestNeighborsIndex.from_config(index.get_config())
+            index2 = FaissNearestNeighborsIndex.from_config(
+                index.get_config())
             self.assertEqual(index.get_config(), index2.get_config())
-    
+
+        def test_configuration_null_persistence(self):
+            # Make configuration based on default
+            c = FaissNearestNeighborsIndex.get_default_config()
+            c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+            del c['index_element']
+            del c['index_param_element']
+
+            # # Build based on configuration
+            index = FaissNearestNeighborsIndex.from_config(c)
+            self.assertEqual(index.factory_string, b'Flat')
+            self.assertIsInstance(index.factory_string, six.binary_type)
+
+            # Test that constructing a new instance from ``index``'s config
+            # yields an index with the same configuration (idempotent).
+            index2 = FaissNearestNeighborsIndex.from_config(
+                index.get_config())
+            self.assertEqual(index.get_config(), index2.get_config())
+
         def test_read_only(self):
             v = np.zeros(5, float)
             v[0] = 1.
@@ -117,7 +141,54 @@ if FaissNearestNeighborsIndex.is_usable():
             # Check that NN can return something from the updated set.
             # - nearest element to the query element when the query is in the
             #   index should be the query element.
-            for q in set2:
+            for q in set_all:
+                n_elems, n_dists = index.nn(q)
+                self.assertEqual(n_elems[0], q)
+
+        def test_persistence_with_update_index(self):
+            n1 = 100
+            n2 = 10
+            dim = 8
+            set1 = {DescriptorMemoryElement('test', i) for i in range(n1)}
+            set2 = {DescriptorMemoryElement('test', i)
+                    for i in range(n1, n1+n2)}
+            [d.set_vector(np.random.rand(dim)) for d in (set1 | set2)]
+
+            # Create index with perisistent entities
+            # TODO(john.moeller): Let constructor take basestring?
+            index_element = DataMemoryElement(
+                content_type='application/octet-stream')
+            index_param_element = DataMemoryElement(
+                content_type='text/plain')
+            index = self._make_inst(
+                index_element=index_element,
+                index_param_element=index_param_element)
+            descriptor_set = index._descriptor_set
+
+            # Build initial index.
+            index.build_index(set1)
+            self.assertEqual(index.count(), len(set1))
+            for d in set1:
+                self.assertIn(d, index._descriptor_set)
+
+            # Update and check that all intended descriptors are present in
+            # index.
+            index.update_index(set2)
+            set_all = set1 | set2
+            self.assertEqual(index.count(), len(set_all))
+            for d in set_all:
+                self.assertIn(d, index._descriptor_set)
+
+            del index
+            index = self._make_inst(
+                descriptor_set=descriptor_set,
+                index_element=index_element,
+                index_param_element=index_param_element)
+
+            # Check that NN can return something from the updated set.
+            # - nearest element to the query element when the query is in the
+            #   index should be the query element.
+            for q in set_all:
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 

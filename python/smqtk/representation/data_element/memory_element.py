@@ -104,10 +104,10 @@ class DataMemoryElement (DataElement):
         type.
 
         :param bytes: Bytes to contain. May be None to represent no bytes.
-        :type bytes: None | bytes | str
+        :type bytes: None | bytes
 
         :param content_type: Content type of the bytes given.
-        :type content_type: None | str
+        :type content_type: None | basestring
 
         :param readonly: If this element should allow writing or not.
         :type readonly: bool

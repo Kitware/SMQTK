@@ -106,20 +106,6 @@ class TestIqrService (unittest.TestCase):
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to parse base64 data")
 
-    def test_add_descriptor_from_data_other_exception(self):
-        """ Test handling other exception from describing input data. """
-        def test_raise(*_):
-            raise RuntimeError("Some other error [expected]")
-        self.app.describe_base64_data = mock.Mock(side_effect=test_raise)
-
-        query_data = {
-            'data_b64': base64.b64encode('some text.'),
-            'content_type': 'text/plain',
-        }
-        r = self.app.test_client().post('/add_descriptor_from_data',
-                                        data=query_data)
-        self.assertStatusCode(r, 500)  # server error
-
     def test_add_descriptor_from_data(self):
         expected_bytes = "some test bytes"
         expected_base64 = base64.b64encode(expected_bytes)

@@ -2,22 +2,19 @@ import threading
 
 import six
 
-from smqtk.utils import (
-    Configurable,
-    merge_dict,
-    plugin,
-    SmqtkObject,
-)
+from smqtk.exceptions import MissingLabelError
+from smqtk.utils import Configurable, SmqtkObject, merge_dict, plugin
 
+from . import get_classifier_impls
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 from ._interface_classifier import Classifier
-from . import get_classifier_impls
 
 
 class ClassifierCollection (SmqtkObject, Configurable):
     """
     A collection of descriptively-labeled classifier instances for the purpose
-    of applying all stored classifiers to one or more input descriptor elements.
+    of applying all stored classifiers to one or more input descriptor
+    elements.
 
     TODO: [optionally?] map a classification element factory per classifier.
 
@@ -110,8 +107,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
                 raise ValueError("Found a non-Classifier instance value "
                                  "for key '%s'" % label)
             elif label in self._label_to_classifier:
-                raise ValueError("Duplicate classifier label '%s' provided in "
-                                 "key-word arguments." % label)
+                raise ValueError("Duplicate classifier label '%s' provided "
+                                 "in key-word arguments." % label)
             self._label_to_classifier[label] = classifier
 
     def __enter__(self):
@@ -166,8 +163,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
 
         """
         if not isinstance(classifier, Classifier):
-            raise ValueError("Not given a Classifier instance (given type %s)."
-                             % type(classifier))
+            raise ValueError("Not given a Classifier instance (given type"
+                             " %s)." % type(classifier))
         with self._label_to_classifier_lock:
             if label in self._label_to_classifier:
                 raise ValueError("Duplicate label provided: '%s'" % label)
@@ -207,8 +204,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
         with self._label_to_classifier_lock:
             del self._label_to_classifier[label]
 
-    def classify(self, descriptor, factory=DFLT_CLASSIFIER_FACTORY,
-                 overwrite=False):
+    def classify(self, descriptor, labels=None,
+                 factory=DFLT_CLASSIFIER_FACTORY, overwrite=False):
         """
         Apply all stored classifiers to the given descriptor element.
 
@@ -219,6 +216,11 @@ class ClassifierCollection (SmqtkObject, Configurable):
         :param descriptor: Descriptor element to classify.
         :type descriptor: smqtk.representation.DescriptorElement
 
+        :param labels: One or more labels of stored classifiers to use for
+            classifying the given descriptor.  If None, use all stored
+            classifiers.
+        :type labels: Iterable[str]
+
         :param factory: Classification element factory.
         :type factory: ClassificationElementFactory
 
@@ -226,17 +228,34 @@ class ClassifierCollection (SmqtkObject, Configurable):
             input descriptor.
         :type overwrite: bool
 
+        :raises smqtk.exceptions.MissingLabelError: Some or all of the
+            requested labels are missing.
+
         :return: Result dictionary of classifier labels to classification
             elements.
         :rtype: dict[str, smqtk.representation.ClassificationElement]
 
         """
+
         d_classifications = {}
         with self._label_to_classifier_lock:
             # TODO(paul.tunison): Parallelize?
-            for label, classifier in six.iteritems(self._label_to_classifier):
-                d_classifications[label] = \
-                    classifier.classify(descriptor, factory, overwrite)
+            if labels is not None:
+                # If we're missing some of the requested labels, complain
+                missing_labels = set(labels) - self.labels()
+                if missing_labels:
+                    raise MissingLabelError(missing_labels)
+
+                for label in labels:
+                    classifier = self._label_to_classifier[label]
+                    d_classifications[label] = classifier.classify(
+                        descriptor, factory=factory, overwrite=overwrite)
+            else:
+                for label, classifier in six.iteritems(
+                        self._label_to_classifier):
+                    d_classifications[label] = classifier.classify(
+                        descriptor, factory=factory, overwrite=overwrite)
         return d_classifications
 
-    # TODO(paul.tunison): Classify many descriptors method when the need arises.
+    # TODO(paul.tunison): Classify many descriptors method when the need
+    #   arises.

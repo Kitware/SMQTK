@@ -14,6 +14,7 @@ from smqtk.algorithms import (
 from smqtk.algorithms.classifier import (
     ClassifierCollection,
 )
+from smqtk.exceptions import MissingLabelError
 from smqtk.iqr import IqrSession
 from smqtk.representation import (
     ClassificationElementFactory,
@@ -36,8 +37,8 @@ else:
 
 class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     """
-    Headless web-app providing a RESTful API for classifying new data against a
-    set of statically and dynamically loaded classifier models.
+    Headless web-app providing a RESTful API for classifying new data against
+    a set of statically and dynamically loaded classifier models.
 
     The focus of this service is an endpoint where the user can send the
     base64-encoded data (with content type) they wish to be classified and get
@@ -47,8 +48,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
     Saved IQR session state bytes/files may be POST'ed to an endpoint with a
     descriptive label to add to the suite of classifiers that are run for
-    user-provided data. The supervised classifier implementation that is trained
-    from this state is part of the server configuration.
+    user-provided data. The supervised classifier implementation that is
+    trained from this state is part of the server configuration.
 
     Configuration Notes
     -------------------
@@ -59,11 +60,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
       given the configured models as well as exceptions may occur due to
       descriptor dimensionality issues.
 
-    * The classifier configuration provided for input IQR states should not have
-      model persistence parameters specified since these classifiers will be
-      ephemeral. If persistence parameters *are* specified, then subsequent
-      IQR-state-based classifier models will bash each other causing erroneously
-      labeled duplicate results.
+    * The classifier configuration provided for input IQR states should not
+      have model persistence parameters specified since these classifiers will
+      be ephemeral. If persistence parameters *are* specified, then subsequent
+      IQR-state-based classifier models will bash each other causing
+      erroneously labeled duplicate results.
 
     """
 
@@ -129,9 +130,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         #         specific classifier type is specified at state POST.
 
         # Classifier collection + factor
-        self.classification_factory = ClassificationElementFactory.from_config(
-            json_config[self.CONFIG_CLASSIFICATION_FACTORY]
-        )
+        self.classification_factory = \
+            ClassificationElementFactory.from_config(
+                json_config[self.CONFIG_CLASSIFICATION_FACTORY]
+            )
         self.classifier_collection = ClassifierCollection.from_config(
             json_config[self.CONFIG_CLASSIFIER_COLLECTION]
         )
@@ -194,8 +196,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     # GET /classifier_labels
     def get_classifier_labels(self):
         """
-        Get the descriptive labels of the classifiers currently set to classify
-        input data.
+        Get the descriptive labels of the classifiers currently set to
+        classify input data.
 
         Returns 200: {
             labels: list[str]
@@ -274,7 +276,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             400
                 No bytes provided, or provided labels are malformed
             404
-                Label or labels provided do not match any registered classifier
+                Label or labels provided do not match any registered
+                classifier
 
         Returns: {
             ...
@@ -349,28 +352,17 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 
-        if labels is not None:
-            # Get a lock on the classifier collection
-            with self.classifier_collection as coll:
-                # If we're missing some of the requested labels, complain
-                missing_labels = set(labels) - coll.labels()
-                if missing_labels:
-                    return make_response_json(
-                        "The following labels are not registered with"
-                        " any classifiers: '%s'"
-                        % "', '".join(missing_labels),
-                        404,
-                        missing_labels=list(missing_labels))
-
-                clfr_map = {}
-                for label in labels:
-                    clfr = coll.get_classifier(label)
-                    clfr_map[label] = clfr.classify(
-                        descr_elem, self.classification_factory)
-        else:
+        try:
             clfr_map = self.classifier_collection.classify(
-                descr_elem, self.classification_factory
-            )
+                descr_elem, labels=labels,
+                factory=self.classification_factory)
+        except MissingLabelError as ex:
+            return make_response_json(
+                "The following labels are not registered with any"
+                " classifiers: '%s'"
+                % "', '".join(ex.labels),
+                404,
+                missing_labels=list(ex.labels))
 
         # Transform classification result into JSON
         c_json = {}
@@ -438,13 +430,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     # POST /iqr_classifier
     def add_iqr_state_classifier(self):
         """
-        Train a classifier based on the user-provided IQR state file bytes in a
-        base64 encoding, matched with a descriptive label of that classifier's
-        topic.
+        Train a classifier based on the user-provided IQR state file bytes in
+        a base64 encoding, matched with a descriptive label of that
+        classifier's topic.
 
-        Since all IQR session classifiers end up only having two result classes
-        (positive and negative), the topic of the classifier is encoded in the
-        descriptive label the user applies to the classifier.
+        Since all IQR session classifiers end up only having two result
+        classes (positive and negative), the topic of the classifier is
+        encoded in the descriptive label the user applies to the classifier.
 
         Below is an example call to this endpoint via the ``requests`` python
         module, showing how base64 data is sent::
@@ -479,7 +471,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         Form arguments:
             iqr_state_b64
-                base64 encoding of the bytes of the IQR session state save file.
+                base64 encoding of the bytes of the IQR session state save
+                file.
             label
                 Descriptive label to apply to this classifier. This should not
                 conflict with existing classifier labels.
@@ -493,7 +486,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         """
         data_b64 = flask.request.values.get('bytes_b64', default=None)
         label = flask.request.values.get('label', default=None)
-        lock_clfr_str = flask.request.values.get('lock_label', default='false')
+        lock_clfr_str = flask.request.values.get('lock_label',
+                                                 default='false')
 
         if data_b64 is None or len(data_b64) == 0:
             return make_response_json("No state base64 data provided.", 400)
@@ -503,11 +497,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             # This can throw a ValueError if lock_clfr is malformed JSON
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
-            return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: '%s'" % lock_clfr_str,
+            return make_response_json("Invalid boolean value for"
+                                      " 'lock_label'. Was given: '%s'"
+                                      % lock_clfr_str,
                                       400)
 
-        # If the given label conflicts with one already in the collection, fail.
+        # If the given label conflicts with one already in the collection,
+        # fail.
         if label in self.classifier_collection.labels():
             return make_response_json(
                 "Label already exists in classifier collection.", 400)
@@ -617,7 +613,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         """
         clfr_b64 = flask.request.values.get('bytes_b64', default=None)
         label = flask.request.values.get('label', default=None)
-        lock_clfr_str = flask.request.values.get('lock_label', default='false')
+        lock_clfr_str = flask.request.values.get('lock_label',
+                                                 default='false')
 
         if clfr_b64 is None or len(clfr_b64) == 0:
             return make_response_json("No state base64 data provided.", 400)
@@ -627,11 +624,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             # This can throw a ValueError if lock_clfr is malformed JSON
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
         except (ValueError, flask.json.JSONDecoder):
-            return make_response_json("Invalid boolean value for 'lock_label'. "
-                                      "Was given: '%s'" % lock_clfr_str,
+            return make_response_json("Invalid boolean value for"
+                                      " 'lock_label'. Was given: '%s'"
+                                      % lock_clfr_str,
                                       400)
 
-        # If the given label conflicts with one already in the collection, fail.
+        # If the given label conflicts with one already in the collection,
+        # fail.
         if label in self.classifier_collection.labels():
             return make_response_json("Label '%s' already exists in"
                                       " classifier collection." % label,
@@ -643,8 +642,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         try:
             self.classifier_collection.add_classifier(label, clfr)
 
-            # If we're allowing deletions, get the lock flag from the form and
-            # set it for this classifier
+            # If we're allowing deletions, get the lock flag from the form
+            # and set it for this classifier
             if self.enable_classifier_removal and lock_clfr:
                 self.immutable_labels.add(label)
 

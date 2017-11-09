@@ -157,9 +157,9 @@ if FaissNearestNeighborsIndex.is_usable():
             # Create index with perisistent entities
             # TODO(john.moeller): Let constructor take basestring?
             index_element = DataMemoryElement(
-                content_type=b'application/octet-stream')
+                content_type='application/octet-stream')
             index_param_element = DataMemoryElement(
-                content_type=b'text/plain')
+                content_type='text/plain')
             index = self._make_inst(
                 index_element=index_element,
                 index_param_element=index_param_element)

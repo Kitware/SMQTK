@@ -33,7 +33,7 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
 
     TEST_WRITABLE = True
     TEST_BYTES = EXPECTED_BYTES
-    TEST_CONTENT_TYPE = None
+    TEST_CONTENT_TYPE = EXPECTED_CONTENT_TYPE
 
     @classmethod
     def is_usable(cls):
@@ -119,12 +119,12 @@ class TestDataElementAbstract (unittest.TestCase):
     def test_content_type_extension(self,
                                     _mock_open, _mock_os_open, _mock_os_close,
                                     _mock_fcntl, _mock_scd):
-        fname = DummyDataElement().write_temp()
+        de = DummyDataElement()
+        de.content_type = mock.Mock(return_value=None)
+        fname = de.write_temp()
         self.assertFalse(fname.endswith('.png'))
 
-        de = DummyDataElement()
-        de.content_type = mock.Mock(return_value=EXPECTED_CONTENT_TYPE)
-        fname = de.write_temp()
+        fname = DummyDataElement().write_temp()
         self.assertTrue(fname.endswith('.png'))
 
     # Cases:

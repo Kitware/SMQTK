@@ -200,7 +200,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg['index_element'] = None
 
-
         if (cfg['index_param_element'] and
                 cfg['index_param_element']['type']):
             index_param_element = plugin.from_plugin_config(

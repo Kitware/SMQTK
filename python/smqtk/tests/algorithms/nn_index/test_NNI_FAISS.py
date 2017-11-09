@@ -141,7 +141,7 @@ if FaissNearestNeighborsIndex.is_usable():
             # Check that NN can return something from the updated set.
             # - nearest element to the query element when the query is in the
             #   index should be the query element.
-            for q in set2:
+            for q in set_all:
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 
@@ -188,7 +188,7 @@ if FaissNearestNeighborsIndex.is_usable():
             # Check that NN can return something from the updated set.
             # - nearest element to the query element when the query is in the
             #   index should be the query element.
-            for q in set2:
+            for q in set_all:
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 

@@ -256,6 +256,9 @@ class TestClassifierCollection (unittest.TestCase):
             'subjectB': DummyClassifier(),
         })
 
+        classifierB = ccol._label_to_classifier['subjectB']
+        classifierB.classify = mock.Mock()
+
         d_v = [0, 1, 2, 3, 4]
         d = DescriptorMemoryElement('memory', '0')
         d.set_vector(d_v)
@@ -265,6 +268,7 @@ class TestClassifierCollection (unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertIn('subjectA', result)
         self.assertNotIn('subjectB', result)
+        self.assertFalse(classifierB.classify.called)
         # Each key should map to a classification element (memory in this case
         # because we're using the default factory)
         self.assertIsInstance(result['subjectA'], MemoryClassificationElement)
@@ -280,6 +284,11 @@ class TestClassifierCollection (unittest.TestCase):
             'subjectB': DummyClassifier(),
         })
 
+        classifierA = ccol._label_to_classifier['subjectA']
+        classifierA.classify = mock.Mock()
+        classifierB = ccol._label_to_classifier['subjectB']
+        classifierB.classify = mock.Mock()
+
         d_v = [0, 1, 2, 3, 4]
         d = DescriptorMemoryElement('memory', '0')
         d.set_vector(d_v)
@@ -288,7 +297,9 @@ class TestClassifierCollection (unittest.TestCase):
         # Should contain no entries.
         self.assertEqual(len(result), 0)
         self.assertNotIn('subjectA', result)
+        self.assertFalse(classifierA.classify.called)
         self.assertNotIn('subjectB', result)
+        self.assertFalse(classifierB.classify.called)
 
     def test_classify_missing_label(self):
         ccol = ClassifierCollection({

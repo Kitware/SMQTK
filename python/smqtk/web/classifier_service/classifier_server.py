@@ -168,6 +168,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.add_url_rule('/classifier_labels',
                           view_func=self.get_classifier_labels,
                           methods=['GET'])
+        self.add_url_rule('/classifier_metadata',
+                          view_func=self.get_classifier_metadata,
+                          methods=['GET'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['POST'])
@@ -207,6 +210,38 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         all_labels = self.classifier_collection.labels()
         return make_response_json("Classifier labels.",
                                   labels=list(all_labels))
+
+    # GET /classifier_metadata
+    def get_classifier_metadata(self):
+        """
+        Get metadata associated with a specific classifier instance referred to
+        by label.
+
+        URL Arguments:
+            label
+                Reference label for a specific classifier to query.
+
+        Returns code 200 on success and the JSON return object: {
+            ...
+            // Sequence of class labels that this classifier can classify
+            // descriptors into.  This includes the negative label.
+            class_labels=<list[str]>
+        }
+
+        """
+        label = flask.request.values.get('label', default=None)
+        if label is None or not label:
+            return make_response_json("No label provided.", return_code=400)
+        elif label not in self.classifier_collection.labels():
+            return make_response_json("Label '%s' does not refer to a "
+                                      "classifier currently registered."
+                                      % label,
+                                      return_code=404,
+                                      label=label)
+        class_labels = \
+            self.classifier_collection.get_classifier(label).get_labels()
+        return make_response_json("Success", return_code=200,
+                                  class_labels=class_labels)
 
     # POST /classify
     def classify(self):

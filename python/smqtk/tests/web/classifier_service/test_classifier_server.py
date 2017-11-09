@@ -6,9 +6,11 @@ import unittest
 
 from six.moves import cPickle as pickle
 
-from .dummy_classifier import DummyClassifier
+from smqtk.algorithms import Classifier
 from smqtk.web.classifier_service.classifier_server import \
     SmqtkClassifierService
+
+from .dummy_classifier import DummyClassifier
 
 
 class TestClassifierService (unittest.TestCase):
@@ -442,3 +444,68 @@ class TestClassifierService (unittest.TestCase):
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
                                 set(missing_clfrs_4))
+
+    def test_get_classifier_metadata_no_label(self):
+        with self.app.test_client() as cli:
+            #: :type: flask.wrappers.Response
+            r = cli.get('/classifier_metadata')
+            r_json = json.loads(r.data)
+            self.assertStatus(r, 400)
+            self.assertMessage(r_json, "No label provided.")
+
+    def test_get_classifier_metadata_invalid_label(self):
+        with self.app.test_client() as cli:
+            args = dict(label="no-valid-label")
+            r = cli.get('/classifier_metadata', query_string=args)
+            r_json = json.loads(r.data)
+            self.assertStatus(r, 404)
+            self.assertMessage(r_json, "Label 'no-valid-label' does not refer "
+                                       "to a classifier currently registered.")
+
+    def test_get_classifier_labels_mocked(self):
+        """
+        Test that we can request the registered dummy classifiers class labels.
+        Using mock objects to assert calls made.
+        """
+        expected_label = 'this-test-label'
+        expected_class_labels = ['foo', 'bar', 'shazam']
+
+        mock_classifier = mock.Mock(spec=Classifier)
+        mock_classifier.get_labels = \
+            mock.Mock(return_value=expected_class_labels)
+
+        self.app.classifier_collection.labels = mock.Mock(
+            return_value={expected_label}
+        )
+        self.app.classifier_collection.get_classifier = mock.Mock(
+            return_value=mock_classifier
+        )
+
+        with self.app.test_client() as cli:
+            args = dict(label=expected_label)
+            r = cli.get('/classifier_metadata', query_string=args)
+
+            self.app.classifier_collection.labels.assert_called_once_with()
+            self.app.classifier_collection.get_classifier\
+                    .assert_called_once_with(expected_label)
+            mock_classifier.get_labels.assert_called_once_with()
+
+            r_json = json.loads(r.data)
+            self.assertStatus(r, 200)
+            self.assertMessage(r_json, "Success")
+            self.assertIn('class_labels', r_json)
+            self.assertListEqual(r_json['class_labels'], expected_class_labels)
+
+    def test_get_classifier_labels(self):
+        """
+        Test that we can request the registered dummy classifiers class labels.
+        """
+        with self.app.test_client() as cli:
+            args = dict(label=self.dummy_label)
+            r = cli.get('/classifier_metadata', query_string=args)
+            r_json = json.loads(r.data)
+            self.assertStatus(r, 200)
+            self.assertMessage(r_json, "Success")
+            self.assertIn('class_labels', r_json)
+            self.assertSetEqual(set(r_json['class_labels']),
+                                {'negative', 'positive'})

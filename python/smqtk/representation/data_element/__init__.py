@@ -89,13 +89,10 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         """
         if d:
             file_utils.safe_create_dir(d)
-        content_type = self.content_type()
-        ext = ''
-        if content_type is not None:
-            ext = MIMETYPES.guess_extension(content_type)
-            # Exceptions because mimetypes is apparently REALLY OLD
-            if ext in {'.jpe', '.jfif'}:
-                ext = '.jpg'
+        ext = MIMETYPES.guess_extension(self.content_type() or '')
+        # Exceptions because mimetypes is apparently REALLY OLD
+        if ext in {'.jpe', '.jfif'}:
+            ext = '.jpg'
         fd, fp = tempfile.mkstemp(
             suffix=ext or '',
             dir=d

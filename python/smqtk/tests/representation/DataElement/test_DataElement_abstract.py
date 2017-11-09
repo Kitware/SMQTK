@@ -31,13 +31,6 @@ tempfile.gettempdir()
 # noinspection PyClassHasNoInit,PyAbstractClass
 class DummyDataElement (smqtk.representation.data_element.DataElement):
 
-    @classmethod
-    def from_uri(cls, uri):
-        return super(DummyDataElement, cls).from_uri(uri)
-
-    def __init__(self):
-        super(DummyDataElement, self).__init__()
-
     TEST_WRITABLE = True
     TEST_BYTES = EXPECTED_BYTES
     TEST_CONTENT_TYPE = None
@@ -67,17 +60,6 @@ class DummyDataElement (smqtk.representation.data_element.DataElement):
 
     def writable(self):
         return self.TEST_WRITABLE
-
-
-class DummyDataElementWithContentType (DummyDataElement):
-
-    TEST_CONTENT_TYPE = EXPECTED_CONTENT_TYPE
-
-    def __repr__(self):
-        return super(DummyDataElement, self).__repr__()
-
-    def content_type(self):
-        return self.TEST_CONTENT_TYPE
 
 
 class TestDataElementAbstract (unittest.TestCase):
@@ -140,7 +122,9 @@ class TestDataElementAbstract (unittest.TestCase):
         fname = DummyDataElement().write_temp()
         self.assertFalse(fname.endswith('.png'))
 
-        fname = DummyDataElementWithContentType().write_temp()
+        de = DummyDataElement()
+        de.content_type = mock.Mock(return_value=EXPECTED_CONTENT_TYPE)
+        fname = de.write_temp()
         self.assertTrue(fname.endswith('.png'))
 
     # Cases:

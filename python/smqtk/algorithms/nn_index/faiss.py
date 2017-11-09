@@ -2,11 +2,12 @@ from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
 import json
-import numpy as np
 import multiprocessing
+import numpy as np
+import os
 import six
-import tempfile
 from six.moves import zip
+import tempfile
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
@@ -52,10 +53,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             stored.
         :type descriptor_set: smqtk.representation.DescriptorIndex
 
-        :param index_element: Optional DataElement used to load/store the index. When None, the index will only be stored in memory.
+        :param index_element: Optional DataElement used to load/store the
+            index. When None, the index will only be stored in memory.
         :type index_element: None | smqtk.representation.DataElement
 
-        :param index_param_element: Optional DataElement used to load/store the index parameters. When None, the index will only be stored in memory.
+        :param index_param_element: Optional DataElement used to load/store
+            the index parameters. When None, the index will only be stored in
+            memory.
         :type index_param_element: None | smqtk.representation.DataElement
 
         :param read_only: If True, `build_index` will error if there is an
@@ -102,6 +106,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         if self._has_model_data():
             self._log.info("Found existing model data. Loading.")
             self._load_faiss_model()
+            self._uuids = list(self._descriptor_set.iterkeys())
+            assert len(self._uuids) == self._faiss_index.ntotal, \
+                "The number of descriptors doesn't match the number of " \
+                "items in the index."
 
     def get_config(self):
         config = {
@@ -112,9 +120,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "use_multiprocessing": self.use_multiprocessing,
         }
         if self._index_element:
-            config['index_element'] = plugin.to_plugin_config(self._index_element)
+            config['index_element'] = plugin.to_plugin_config(
+                self._index_element)
         if self._index_param_element:
-            config['index_param_element'] = plugin.to_plugin_config(self._index_param_element)
+            config['index_param_element'] = plugin.to_plugin_config(
+                self._index_param_element)
 
         return config
 
@@ -141,10 +151,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(FaissNearestNeighborsIndex, cls).get_default_config()
 
-        data_element_default_config = plugin.make_config(get_data_element_impls())
+        data_element_default_config = plugin.make_config(
+            get_data_element_impls())
         default['index_element'] = data_element_default_config
 
-        data_element_default_config = plugin.make_config(get_data_element_impls())
+        data_element_default_config = plugin.make_config(
+            get_data_element_impls())
         default['index_param_element'] = data_element_default_config
 
         di_default = plugin.make_config(get_descriptor_index_impls())
@@ -182,15 +194,17 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         cfg['descriptor_set'] = plugin.from_plugin_config(
             cfg['descriptor_set'], get_descriptor_index_impls())
 
-        index_element = None
-        if config_dict['index_element'] and config_dict['index_element']['type']:
-            index_element = plugin.from_plugin_config(config_dict['index_element'], get_data_element_impls())
-        config_dict['index_element'] = index_element
+        if (cfg['index_element'] and
+                cfg['index_element']['type']):
+            index_element = plugin.from_plugin_config(
+                cfg['index_element'], get_data_element_impls())
+            cfg['index_element'] = index_element
 
-        index_param_element = None
-        if config_dict['index_param_element'] and config_dict['index_param_element']['type']:
-            index_param_element = plugin.from_plugin_config(config_dict['index_param_element'], get_data_element_impls())
-        config_dict['index_param_element'] = index_param_element
+        if (cfg['index_param_element'] and
+                cfg['index_param_element']['type']):
+            index_param_element = plugin.from_plugin_config(
+                cfg['index_param_element'], get_data_element_impls())
+            cfg['index_param_element'] = index_param_element
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 
@@ -209,10 +223,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # Load the binary index
         if self._index_element and not self._index_element.is_empty():
             tmp_fp = self._index_element.write_temp()
-            faiss.read_index(tmp_fp)
+            self._faiss_index = faiss.read_index(tmp_fp)
             self._index_element.clean_temp()
         # Params pickle include the build params + our local state params
-        if self._index_param_element and not self._index_param_element.is_empty():
+        if (self._index_param_element and
+                not self._index_param_element.is_empty()):
             state = json.loads(self._index_param_element.get_bytes())
             self.factory_string = state["factory_string"]
             self.read_only = state["read_only"]
@@ -226,12 +241,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         if self._index_element and self._index_element.writable():
             self._log.debug("Storing index: %s", self._index_element)
             
-            # FAISS wants to write to a file, so make a temp file, then read it
-            # in, putting bytes into element.
+            # FAISS wants to write to a file, so make a temp file, then read
+            # it in, putting bytes into element.
             fd, fp = tempfile.mkstemp()
             try:
-                self._flann.save_index(fp)
-                self._index_element.set_bytes(os.read(fd, os.path.getsize(fp)))
+                faiss.write_index(self._faiss_index, fp)
+                self._index_element.set_bytes(
+                    os.read(fd, os.path.getsize(fp)))
             finally:
                 os.close(fd)
                 os.remove(fp)
@@ -249,9 +265,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         Internal method to be implemented by sub-classes to build the index
         with the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the current index.  This
-        method shall not add to the existing index nor raise an exception to as
-        to protect the current index.
+        Subsequent calls to this method should rebuild the current index.
+        This method shall not add to the existing index nor raise an exception
+        to as to protect the current index.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.

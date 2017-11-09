@@ -12,7 +12,7 @@ RUN rm /bin/sh \
         libatlas-base-dev libatlas-dev libboost-all-dev libprotobuf-dev \
         protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev \
  # Python dependencies for pycaffe
- && pip install numpy scikit-image protobuf \
+ && pip install -U pip numpy scikit-image protobuf \
  # Clean products of ``update``
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
@@ -25,7 +25,12 @@ ENV CAFFE_URL="https://github.com/BVLC/caffe.git" \
     PATH="/caffe/install/bin:${PATH}" \
     PYTHONPATH="/caffe/install/python:${PYTHONPATH}" \
     LD_LIBRARY_PATH="/caffe/install/lib:${LD_LIBRARY_PATH}"
-RUN git clone https://github.com/BVLC/caffe.git /caffe/source \
+RUN \
+    # Python part installation location
+    LOCAL_DIST_PACKAGES="$(python -c \
+        "import distutils.sysconfig; \
+         print(distutils.sysconfig.get_python_lib(prefix='/usr/local'))")" \
+ && git clone https://github.com/BVLC/caffe.git /caffe/source \
  && cd /caffe/source \
  && git checkout ${CAFFE_VERSION} \
  # Create source/build directories for Caffe
@@ -37,16 +42,18 @@ RUN git clone https://github.com/BVLC/caffe.git /caffe/source \
     -DAtlas_CBLAS_LIBRARY:PATH=/usr/lib/atlas-base/libcblas.so \
     -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/atlas-base/liblapack_atlas.so \
     -DCMAKE_BUILD_TYPE:STRING=Release \
-    -DCPU_ONLY:BOOL=ON \
-    -DPYTHON_EXECUTABLE:PATH=/usr/bin/python2.7 \
-    -DPYTHON_INCLUDE_DIR:PATH=/usr/include/python2.7 \
-    -DPYTHON_LIBRARY:PATH=/usr/lib/x86_64-linux-gnu/libpython2.7.so \
+    -DBUILD_SHARED_LIBS:BOOL=ON \
     # Turn off uneeded parts.
     -DUSE_LEVELDB:BOOL=OFF \
     -DUSE_LMDB:BOOL=OFF \
     -DUSE_OPENCV:BOOL=OFF \
-    -DCMAKE_INSTALL_PREFIX:PATH=/caffe/install \
+    # Install to the system local space
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr/local \
+    # CPU-Only build
+    -DCPU_ONLY:BOOL=ON \
     /caffe/source \
  && make install -j $(nproc) \
- && rm -rf /caffe/source \
-           /caffe/build
+ && mv "/usr/local/python/caffe" "${LOCAL_DIST_PACKAGES}/caffe" \
+ # Clean up intermediate files.
+ && rm -rf /caffe \
+           /usr/local/python

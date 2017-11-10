@@ -14,8 +14,8 @@ CONTAINER_NAME="smqtk_iqr_cpu"
 IQR_GUI_PORT_PUBLISH=5000
 IQR_REST_PORT_PUBLISH=5001
 
-IQR_CONTAINER=kitware/smqtk/iqr_playground_cpu
-IQR_CONTAINER_VERSION=latest
+IQR_CONTAINER=kitware/smqtk/iqr_playground
+IQR_CONTAINER_VERSION=0.10-LRD-cpu
 
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then

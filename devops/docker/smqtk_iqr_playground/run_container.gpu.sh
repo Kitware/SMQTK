@@ -14,8 +14,8 @@ CONTAINER_NAME="smqtk_iqr_gpu"
 IQR_GUI_PORT_PUBLISH=5000
 IQR_REST_PORT_PUBLISH=5001
 
-IQR_CONTAINER=kitware/smqtk/iqr_playground_nvidia
-IQR_CONTAINER_VERSION=latest
+IQR_CONTAINER=kitware/smqtk/iqr_playground
+IQR_CONTAINER_VERSION=0.10-LRD-gpu-cuda8-cudnn6
 
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then

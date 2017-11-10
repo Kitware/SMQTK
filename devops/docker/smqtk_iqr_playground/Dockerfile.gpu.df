@@ -48,9 +48,8 @@ RUN mkdir -p /smqtk/source \
 
 # Add ``smqtk`` user and add sudo privilege
 RUN useradd -mr -s /bin/bash smqtk \
- # The following line adds the smqtk user to sudoers giving global sudo
- # permission.
- #&& echo "smqtk ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers
+ # sudo permission for modifying permissions at runtime (see entrypoint.sh).
+ && echo "smqtk ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers \
  && mkdir /images \
  && chown smqtk:smqtk /images
 USER smqtk

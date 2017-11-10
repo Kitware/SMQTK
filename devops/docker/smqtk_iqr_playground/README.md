@@ -25,7 +25,7 @@ Default IQR web-app login:
 
 This is modifiable via a JSON file located in the container:
 
-    /home/smqtk/smqtk/source/python/smqtk/web/search_app/modules/login/users.json
+    /usr/local/lib/python2.7/dist-packages/smqtk/web/search_app/modules/login/users.json
 
 Container internal data directories for volume mounting:
 

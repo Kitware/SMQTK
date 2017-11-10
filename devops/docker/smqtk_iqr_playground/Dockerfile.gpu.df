@@ -1,102 +1,65 @@
-FROM nvidia/cuda:8.0
+FROM kitware/smqtk/caffe:1.0-gpu-cuda8.0-cudnn6
 MAINTAINER paul.tunison@kitware.com
 
 # System Package dependencies
-ENV TERM=xterm
-RUN rm /bin/sh \
- && ln -s /bin/bash /bin/sh \
- && apt-get -y update \
- && apt-get -y install git cmake curl vim less parallel
-
-
-# System Space #################################################################
-
-
-# PostgreSQL installation
-# - Adding commonly used pg_ctl and postgres command links to bin
-RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" \
+RUN apt-get -y update \
+ && apt-get -y install lsb-release git cmake curl vim less parallel sudo \
+ # PostgreSQL 9.4 Installation
+ # - Adding commonly used pg_ctl and postgres command links to bin for more
+ #   convenient access.
+ && echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -sc)-pgdg main" \
     >/etc/apt/sources.list.d/pgdg.list \
- && curl --silent https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
- && apt-get -y update && apt-get -y install postgresql-9.4 \
- && ln -s /usr/share/postgresql-common/pg_wrapper /usr/bin/pg_ctl \
- && ln -s /usr/share/postgresql-common/pg_wrapper /usr/bin/postgres
-
-
-# MongoDB installation
-# - Not using standard system install because that would cause a boost install
-#   version conflict with caffe. Caffe is more imporant here.
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10 \
- && echo "deb http://repo.mongodb.org/apt/ubuntu $(lsb_release -sc)/mongodb-org/3.0 multiverse" \
-    >/etc/apt/sources.list.d/mongodb-org-3.0.list \
+ && curl --silent https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | apt-key add - \
  && apt-get -y update \
- && apt-get -y install mongodb-org
+ && apt-get -y install postgresql-9.4 postgresql-server-dev-9.4 \
+ && ln -s /usr/share/postgresql-common/pg_wrapper /usr/bin/pg_ctl \
+ && ln -s /usr/share/postgresql-common/pg_wrapper /usr/bin/postgres \
+ # MongoDB Installation
+ && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927 \
+ && echo "deb http://repo.mongodb.org/apt/ubuntu $(lsb_release -sc)/mongodb-org/3.2 multiverse" \
+    >/etc/apt/sources.list.d/mongodb-org-3.2.list \
+ && apt-get -y update \
+ && apt-get -y install mongodb-org \
+ # Some additional system+python packages for convenience and SMQTK optional
+ # deps.
+ && pip install ipython psycopg2 file-magic \
+ # Clean up apt resources.
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
 
-# Caffe system deps
-RUN apt-get -y install \
-    libatlas-base-dev libatlas-dev libboost1.55-all-dev libprotobuf-dev \
-    protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev
-    # Optional: libopencv-dev liblmdb-dev libleveldb-dev libsnappy-dev
-    # - See USE_* variabled in Caffe CMake configuration below.
+# SMQTK Installation
+ENV SMQTK_VERSION="master" \
+    SMQTK_URL="https://github.com/Kitware/SMQTK.git"
+RUN mkdir -p /smqtk/source \
+ && git clone -b ${SMQTK_VERSION} ${SMQTK_URL} /smqtk/source \
+ && mkdir /smqtk/build \
+ && cd /smqtk/build \
+ && cmake \
+    -DCMAKE_BUILD_TYPE:STRING=Release \
+    -DCMAKE_INSTALL_PREFIX:PATH=/usr/local \
+    -DSMQTK_BUILD_FLANN:BOOL=OFF \
+    /smqtk/source \
+ && make install -j12 \
+ && cd / \
+ && rm -rf smqtk
 
-
-# User Space ###################################################################
 
 # Add ``smqtk`` user and add sudo privilege
 RUN useradd -mr -s /bin/bash smqtk \
- && echo "smqtk ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers
+ # The following line adds the smqtk user to sudoers giving global sudo
+ # permission.
+ #&& echo "smqtk ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers
+ && mkdir /images \
+ && chown smqtk:smqtk /images
 USER smqtk
 WORKDIR /home/smqtk
 
 
-# Miniconda setup
-ENV PATH="/home/smqtk/miniconda/bin:${PATH}"
-RUN curl --insecure \
-    https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh \
-    >miniconda2-latest-linux-x86_64.sh \
- && bash miniconda2-latest-linux-x86_64.sh -b -p ${HOME}/miniconda \
- && rm miniconda2-latest-linux-x86_64.sh \
- && conda update --all
-# - Some python niceties
-RUN pip install ipython
+# User Space ##################################################################
 
-
-# Caffe installation
-# - git hash is master as of 2016/10/05
-ENV CAFFE_URL="https://github.com/BVLC/caffe.git" \
-    CAFFE_VERSION=rc5
-# - Python deps
-RUN pip install numpy scikit-image protobuf
-# - Get the source code
-RUN git clone https://github.com/BVLC/caffe.git caffe/source \
- && cd caffe/source \
- && git checkout ${CAFFE_VERSION}
-# - Build, linking to deps
-RUN mkdir caffe/build \
- && cd caffe/build \
- && cmake \
-    -DAtlas_BLAS_LIBRARY:PATH=/usr/lib/libatlas.so \
-    -DAtlas_CBLAS_LIBRARY:PATH=/usr/lib/libcblas.so \
-    -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/liblapack_atlas.so \
-    -DCMAKE_BUILD_TYPE:STRING=Release \
-    -DCPU_ONLY:BOOL=OFF \
-    -DCUDA_ARCH_NAME:STRING=Manual \
-    -DCUDA_ARCH_BIN:STRING="30 32 35 37 50 52 53 60 61 62" \
-    -DCUDA_ARCH_PTX:STRING="" \
-    -DPYTHON_EXECUTABLE:PATH=${HOME}/miniconda/bin/python2.7 \
-    -DPYTHON_INCLUDE_DIR:PATH=${HOME}/miniconda/include/python2.7 \
-    -DPYTHON_INCLUDE_DIR2:PATH=${HOME}/miniconda/include/python2.7 \
-    -DPYTHON_LIBRARY:PATH=${HOME}/miniconda/lib/libpython2.7.so \
-    -DUSE_CUDNN:BOOL=OFF \
-    -DUSE_LEVELDB:BOOL=OFF \
-    -DUSE_LMDB:BOOL=OFF \
-    -DUSE_OPENCV:BOOL=OFF \
-    -DCMAKE_INSTALL_PREFIX:PATH=${HOME}/caffe/install \
-    ${HOME}/caffe/source \
- && make -j12
-# - "Install" python component with .pth file
-RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
-# - Get basic model files
+# Get MSRA ResNet-50 model files
 RUN mkdir -p caffe/msra_resnet \
  && curl https://data.kitware.com/api/v1/item/5939a7828d777f16d01e4e5d/download \
         -o caffe/msra_resnet/LICENSE.txt \
@@ -107,34 +70,12 @@ RUN mkdir -p caffe/msra_resnet \
  && curl https://data.kitware.com/api/v1/item/5939a6198d777f16d01e4e43/download \
         -o caffe/msra_resnet/ResNet-50-model.caffemodel
 
-
-# SMQTK local installation
-# - python requirements retreived when pip installing smqtk instead of from
-#   ``requirements.txt`` file.
-ENV SMQTK_VERSION="master" \
-    SMQTK_URL="https://github.com/Kitware/SMQTK.git"
-RUN git clone -b ${SMQTK_VERSION} ${SMQTK_URL} smqtk/source \
- && mkdir smqtk/build \
- && cd smqtk/build \
- && cmake \
-    -DCMAKE_INSTALL_PREFIX:PATH=${HOME}/miniconda \
-    -DSMQTK_PIP_INSTALL_FLAGS:STRING="-e" \
-    ${HOME}/smqtk/source \
- && make install -j12
-# - added optional plugin requirements
-RUN sudo apt-get -y update \
- && sudo apt-get -y install postgresql-server-dev-9.4 \
- && pip install psycopg2
-# Expected volume mount directories
+# Expected user-space directories.
 RUN mkdir -p data/{models,configs,logs,db.psql,db.mongo} \
- && sudo mkdir /images \
- && sudo chown smqtk:smqtk /images \
  && ln -s /images data/images
 
-# TODO: Remove smqtk user from sudoers
 
-ADD entrypoint.sh descr_comp_test.py /home/smqtk/
-ADD default_confs/* /home/smqtk/data/configs/
-ADD default_confs/gpu/* /home/smqtk/data/configs/
+ADD entrypoint.sh descr_comp_test.cpu.py descr_comp_test.gpu.py /home/smqtk/
+ADD default_confs/* default_confs/gpu/* /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
 EXPOSE 5000 5001

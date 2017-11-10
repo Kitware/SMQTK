@@ -20,6 +20,12 @@ IQR_CONTAINER_VERSION=latest
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then
   IMAGE_DIR="$1"
+  # Make sure image directory exists as a directory.
+  if [ ! -d "${IMAGE_DIR}" ]
+  then
+    echo "ERROR: Input image directory path was not a directory: ${IMAGE_DIR}"
+    exit 1
+  fi
   shift
   nvidia-docker run -d \
     -p ${IQR_GUI_PORT_PUBLISH}:5000 \

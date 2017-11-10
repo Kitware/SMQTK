@@ -29,6 +29,41 @@ return message content would be (:ref:`see above <standard-message-base>`).
 All endpoints return a 200 or 201 status code upon successful operation.
 
 
+Transmitting Base64 data
+^^^^^^^^^^^^^^^^^^^^^^^^
+Various PUT and POST endpoints accept base64 encoded data.  The following
+examples show how to provide base64 data to an endpoint via the python
+``requests`` module as well as curl.
+
+Python ``requests``::
+
+    import base64
+    import requests
+    data_bytes = "Load some data bytes here. Make sure you know the content "
+                 "type of the bytes. Lets pretend this is image bytes."
+    data_content_type = "image/jpeg"
+    requests.post('http://localhost:5000/some_post_endpoint',
+                  data={'base64': base64.b64encode(data_bytes),
+                        'content_type': data_content_type})
+
+With curl on the command line, we have two options.  If the bytes of the data
+being sent is not too long, we can encode the data in-line with the curl
+command::
+
+    $ curl -X POST localhost:5000/some_post_endpoint \
+        -d content_type=image/jpeg \
+        --data-urlencode "data_b64=$(base64 -w0 /path/to/file)"
+
+If the data file is too long for command-line expansion (usually the case)::
+
+    $ # Encode the target file separately.
+    $ base64 -w0 /path/to/file >/path/to/file.b64
+    $ # Tell curl to read from the file instead of expanding in-line.
+    $ curl -X POST localhost:5000/some_post_endpoint \
+        -d content_type=text/jpeg \
+        --data-urlencode data_b64@/path/to/file.b64
+
+
 [GET] /is_ready
 ^^^^^^^^^^^^^^^
 Endpoint that response with a simple JSON message and response code 200 when the

@@ -279,7 +279,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             $ base64 -w0 /path/to/file > /path/to/file.b64
             $ curl -X POST localhost:5000/classify \
                 -d "content_type=text/plain" \
-                --data-urlencode bytes_64=@/path/to/file.b64
+                --data-urlencode bytes_64@/path/to/file.b64
 
         Optionally, the `label` parameter can be provided to limit the results
         of classification to a set of classifiers::
@@ -296,7 +296,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             $ curl -X POST localhost:5000/classify \
                 -d "content_type=text/plain" \
                 -d 'label=["some_label","other_label"]' \
-                --data-urlencode bytes_64=@/path/to/file.b64
+                --data-urlencode bytes_64@/path/to/file.b64
 
         Data/Form arguments:
             bytes_b64
@@ -494,7 +494,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
             $ base64 -w0 /path/to/file > /path/to/file.b64
             $ curl -X POST localhost:5000/iqr_classifier -d label=some_label \
-                --data-urlencode bytes_64=@/path/to/file.b64
+                --data-urlencode bytes_64@/path/to/file.b64
 
         To lock this classifier and guard it against deletion, add
         "lock_label=true"::
@@ -612,7 +612,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
             $ base64 -w0 /path/to/file.pkl > /path/to/file.pkl.b64
             $ curl -X POST localhost:5000/classifier -d label=some_label \
-                --data-urlencode bytes_64=@/path/to/file.pkl.b64
+                --data-urlencode bytes_64@/path/to/file.pkl.b64
 
         To lock this classifier and guard it against deletion, add
         "lock_label=true"::

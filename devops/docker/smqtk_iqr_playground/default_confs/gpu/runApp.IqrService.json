@@ -95,7 +95,7 @@
                             "element_col": "element",
                             "multiquery_batch_size": 1000,
                             "pickle_protocol": -1,
-                            "read_only": true,
+                            "read_only": false,
                             "table_name": "descriptor_index_resnet50_pool5",
                             "uuid_col": "uid"
                         },
@@ -108,7 +108,7 @@
                                 "DataFileElement": {
                                     "explicit_mimetype": null,
                                     "filepath": "models/hash2uuids.memKvStore.pickle",
-                                    "readonly": true
+                                    "readonly": false
                                 },
                                 "type": "DataFileElement"
                             }
@@ -156,7 +156,7 @@
                         },
                         "type": "ItqFunctor"
                     },
-                    "read_only": true
+                    "read_only": false
                 },
                 "type": "LSHNearestNeighborIndex"
             },

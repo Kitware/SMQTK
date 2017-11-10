@@ -92,8 +92,12 @@ do
     # Database dirs needs limited permissions for security
     sudo chmod 700 "${DIR}"
 done
-sudo chown -R smqtk: "${LOG_DIR}"
-sudo chmod +w "${LOG_DIR}"
+for DIR in {${LOG_DIR},${MODEL_DIR}}
+do
+    echo "Owning and making user writable: ${DIR}"
+    sudo chown -R smqtk: "${DIR}"
+    sudo chmod u+w "${DIR}"
+done
 
 # Create PSQL database if no exists
 NEW_PSQL_DB=0
@@ -150,10 +154,6 @@ then
     STP_CHC="${LOG_DIR}/compute_hash_codes.stamp"
     LOG_MBT="${LOG_DIR}/make_balltree.log"
     STP_MBT="${LOG_DIR}/make_balltree.stamp"
-
-    echo "Owning model dir for writing"
-    sudo chown -R smqtk: "${MODEL_DIR}"
-    sudo chmod -R +rw "${MODEL_DIR}"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"

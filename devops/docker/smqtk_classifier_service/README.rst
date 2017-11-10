@@ -16,9 +16,9 @@ Server Configuration
 Child images extending this should add their specific configuration and
 model files in the ``/configuration`` directory inside the image. This directory
 must contain the file ``server.json`` that will be used by the entrypoint
-script as configuration file for the classification server.
+script as the configuration file for the classification server.
 
-An default example of this configuration file can be output by running::
+A default example of this configuration file can be output by running::
 
     runApplication -l SmqtkClassifierService -g /path/to/output/file.json
 

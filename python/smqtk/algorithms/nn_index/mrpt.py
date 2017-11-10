@@ -293,8 +293,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         with self._model_lock:
             if self._read_only:
-                raise ReadOnlyError("Cannot modify container attributes due to "
-                                    "being in read-only mode.")
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            self._log.debug("Updating index by rebuilding with union. ")
             self.build_index(chain(self._descriptor_set, descriptors))
 
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):

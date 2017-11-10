@@ -353,7 +353,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             self._restore_index()
             # Build a new index that contains the union of the current
             # descriptors and the new provided descriptors.
-            self._log.info("Rebuilding FLANN index to include new descriptors.")
+            self._log.info("Rebuilding FLANN index to include new "
+                           "descriptors.")
             self.build_index(itertools.chain(self._descr_cache, descriptors))
 
     def _nn(self, d, n=1):

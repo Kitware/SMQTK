@@ -235,6 +235,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             else:
                 indexed_hash_vectors = self.bt.data
             # Build a new index as normal with the union of source data.
+            self._log.debug("Updating index by rebuilding with union.")
             self.build_index(
                 numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
             )

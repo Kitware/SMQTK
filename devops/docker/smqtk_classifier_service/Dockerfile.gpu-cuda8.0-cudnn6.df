@@ -25,7 +25,9 @@ RUN apt-get update -y \
 ENV SMQTK_VERSION="master" \
     SMQTK_URL="https://github.com/Kitware/SMQTK.git"
 RUN mkdir -p /smqtk/source \
- && git clone -b ${SMQTK_VERSION} ${SMQTK_URL} /smqtk/source \
+ && git clone ${SMQTK_URL} /smqtk/source \
+ && cd /smqtk/source \
+ && git checkout ${SMQTK_VERSION} \
  && mkdir /smqtk/build \
  && cd /smqtk/build \
  && cmake \

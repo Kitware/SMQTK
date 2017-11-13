@@ -44,11 +44,11 @@ One way to use this container is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
-    docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground_cpu -b [-t]
+    docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...cpu... -b [-t]
 
     OR
 
-    nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
+    nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...gpu... -b [-t]
 
 The use of ``nvidia-docker`` is required to use the GPU computation
 capabilities (default options, can be changed and described later).
@@ -149,7 +149,7 @@ probably the simplest way of customizing things. The following is a bash
 snippet that will copy a ``configs`` directory containing the container's
 default configs:
 
-    $ docker run -dt --entrypoint bash --name ${CNAME} kitware/smqtk/iqr_playground_cpu
+    $ docker run -dt --entrypoint bash --name ${CNAME} kitware/smqtk/iqr_playground:...cpu
     $ docker cp ${CNAME}:/home/smqtk/data/configs/ ${OUTPUT_DIR}
     $ docker stop ${CNAME}
     $ docker rm ${CNAME}

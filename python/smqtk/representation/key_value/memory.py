@@ -1,15 +1,11 @@
 import threading
 
 import six
+from six.moves import cPickle as pickle
 
 from smqtk.representation.data_element import get_data_element_impls
 from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.utils.plugin import make_config, from_plugin_config, to_plugin_config
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 class MemoryKeyValueStore (KeyValueStore):
@@ -116,6 +112,8 @@ class MemoryKeyValueStore (KeyValueStore):
         If there is no cache element, this method does nothing.
         """
         if self._cache_element is not None:
+            # TODO(paul.tunison): Some other serialization than Pickle.
+            #   - pickle loading allows arbitrary code execution on host.
             self._cache_element.set_bytes(
                 pickle.dumps(self._table, self.PICKLE_PROTOCOL))
 
@@ -167,7 +165,7 @@ class MemoryKeyValueStore (KeyValueStore):
         """
         return key in self._table
 
-    def add(self, key, value, cache=True):
+    def add(self, key, value):
         """
         Add a key-value pair to this store.
 
@@ -176,11 +174,6 @@ class MemoryKeyValueStore (KeyValueStore):
 
         :param value: Python object to store.
         :type value: object
-
-        :param cache: Memory-implementation specific parameter. If the
-            successful call to this method should trigger a cache flush to a
-            set cache element.
-        :type cache: bool
 
         :raises ReadOnlyError: If this instance is marked as read-only.
 
@@ -191,11 +184,8 @@ class MemoryKeyValueStore (KeyValueStore):
         super(MemoryKeyValueStore, self).add(key, value)
         with self._table_lock:
             self._table[key] = value
-
-            # TODO(paul.tunison): Some other serialization than Pickle.
-            #   - pickle loading allows arbitrary code execution on host.
-            if cache:
-                self.cache_table()
+            self.cache_table()
+        return self
 
     def add_many(self, d):
         """
@@ -209,10 +199,63 @@ class MemoryKeyValueStore (KeyValueStore):
         :rtype: MemoryKeyValueStore
 
         """
+        super(MemoryKeyValueStore, self).add_many(d)
         with self._table_lock:
             for k, v in six.iteritems(d):
-                self.add(k, v, False)
+                self._table[k] = v
             self.cache_table()
+        return self
+
+    def remove(self, key):
+        """
+        Remove a single key-value entry.
+
+        :param key: Key to remove.
+        :type key: collections.Hashable
+
+        :raises KeyError: The given key is not present in this store and no
+            default value given.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        super(MemoryKeyValueStore, self).remove(key)
+        with self._table_lock:
+            del self._table[key]
+            self.cache_table()
+        return self
+
+    def remove_many(self, keys):
+        """
+        Remove multiple keys and associated values.
+
+        :param keys: Iterable of keys to remove.  If this is empty this method
+            does nothing.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: The given key is not present in this store and no
+            default value given.  The store is not modified if any key is
+            invalid.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        super(MemoryKeyValueStore, self).remove_many(keys)
+        with self._table_lock:
+            # Make sure all keys are represented
+            key_diff = set(keys) - set(self._table)
+            if key_diff:
+                if len(key_diff) == 1:
+                    raise KeyError(list(key_diff)[0])
+                else:
+                    raise KeyError(key_diff)
+            # Actually remove keys.
+            for k in keys:
+                del self._table[k]
+            self.cache_table()
+        return self
 
     def get(self, key, default=NO_DEFAULT_VALUE):
         """
@@ -242,7 +285,12 @@ class MemoryKeyValueStore (KeyValueStore):
     def clear(self):
         """
         Clear this key-value store.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
         """
         super(MemoryKeyValueStore, self).clear()
         with self._table_lock:
             self._table.clear()
+        return self

@@ -37,8 +37,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         """
         Return representative string for this class.
 
-        *NOTE:* **This abstract super-method returns a template string to add to
-        sub-class specific information to. The returned string should be
+        *NOTE:* **This abstract super-method returns a template string to add
+        to sub-class specific information to. The returned string should be
         formatted using the ``%`` operator and expects a single string
         argument.**
 
@@ -112,24 +112,69 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         :rtype: KeyValueStore
 
         """
-        if not isinstance(key, collections.Hashable):
-            raise ValueError("Key is not a hashable type.")
         if self.is_read_only():
             raise ReadOnlyError("Cannot add to read-only instance %s." % self)
 
     @abc.abstractmethod
     def add_many(self, d):
         """
-        Add multiple key-value pairs at a time into this store as represented in
-        the provided dictionary `d`.
+        Add multiple key-value pairs at a time into this store as represented
+        in the provided dictionary `d`.
 
         :param d: Dictionary of key-value pairs to add to this store.
         :type d: dict[collections.Hashable, object]
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
 
         :return: Self.
         :rtype: KeyValueStore
 
         """
+        # Input keys must already be hashable because they're in a dictionary.
+        if self.is_read_only():
+            raise ReadOnlyError("Cannot add to read-only instance %s." % self)
+
+    @abc.abstractmethod
+    def remove(self, key):
+        """
+        Remove a single key-value entry.
+
+        :param key: Key to remove.
+        :type key: collections.Hashable
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
+        :raises KeyError: The given key is not present in this store and no
+            default value given.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        if self.is_read_only():
+            raise ReadOnlyError("Cannot remove from read-only instance %s."
+                                % self)
+
+    @abc.abstractmethod
+    def remove_many(self, keys):
+        """
+        Remove multiple keys and associated values.
+
+        :param keys: Iterable of keys to remove.  If this is empty this method
+            does nothing.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
+        :raises KeyError: The given key is not present in this store and no
+            default value given.  The store is not modified if any key is
+            invalid.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        if self.is_read_only():
+            raise ReadOnlyError("Cannot remove from read-only instance %s."
+                                % self)
 
     @abc.abstractmethod
     def get(self, key, default=NO_DEFAULT_VALUE):
@@ -167,6 +212,9 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         safety.**
 
         :raises ReadOnlyError: If this instance is marked as read-only.
+
+        :return: Self.
+        :rtype: KeyValueStore
 
         """
         if self.is_read_only():

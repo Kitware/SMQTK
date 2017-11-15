@@ -1,6 +1,6 @@
 import threading
 
-import numpy
+import numpy as np
 from six.moves import StringIO
 from sklearn.neighbors import BallTree, DistanceMetric
 
@@ -30,14 +30,15 @@ class SkLearnBallTreeHashIndex (HashIndex):
         This will be primarily used for generating what the configuration
         dictionary would look like for this class without instantiating it.
 
-        By default, we observe what this class's constructor takes as arguments,
-        turning those argument names into configuration dictionary keys. If any
-        of those arguments have defaults, we will add those values into the
-        configuration dictionary appropriately. The dictionary returned should
-        only contain JSON compliant value types.
+        By default, we observe what this class's constructor takes as
+        arguments, turning those argument names into configuration dictionary
+        keys. If any of those arguments have defaults, we will add those values
+        into the configuration dictionary appropriately. The dictionary
+        returned should only contain JSON compliant value types.
 
         It is not be guaranteed that the configuration dictionary returned
-        from this method is valid for construction of an instance of this class.
+        from this method is valid for construction of an instance of this
+        class.
 
         :return: Default configuration dictionary for the class.
         :rtype: dict
@@ -132,8 +133,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         with self._model_lock:
             if self.cache_element and self.bt:
                 if self.cache_element.is_read_only():
-                    raise ValueError("Configured cache element (%s) is read-only."
-                                     % self.cache_element)
+                    raise ValueError("Configured cache element (%s) is read-"
+                                     "only." % self.cache_element)
 
                 self._log.debug("Saving model: %s", self.cache_element)
                 # Saving BT component matrices separately.
@@ -143,12 +144,12 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 tail = s[4:11]
                 buff = StringIO()
                 # noinspection PyTypeChecker
-                numpy.savez(buff,
-                            data_arr=s[0],
-                            idx_array_arr=s[1],
-                            node_data_arr=s[2],
-                            node_bounds_arr=s[3],
-                            tail=tail)
+                np.savez(buff,
+                         data_arr=s[0],
+                         idx_array_arr=s[1],
+                         node_data_arr=s[2],
+                         node_bounds_arr=s[3],
+                         tail=tail)
                 self.cache_element.set_bytes(buff.getvalue())
                 self._log.debug("Saving model: Done")
 
@@ -160,9 +161,10 @@ class SkLearnBallTreeHashIndex (HashIndex):
         """
         with self._model_lock:
             if self.cache_element and not self.cache_element.is_empty():
-                self._log.debug("Loading model from cache: %s", self.cache_element)
+                self._log.debug("Loading model from cache: %s",
+                                self.cache_element)
                 buff = StringIO(self.cache_element.get_bytes())
-                with numpy.load(buff) as cache:
+                with np.load(buff) as cache:
                     tail = tuple(cache['tail'])
                     s = (cache['data_arr'], cache['idx_array_arr'],
                          cache['node_data_arr'], cache['node_bounds_arr']) +\
@@ -177,10 +179,28 @@ class SkLearnBallTreeHashIndex (HashIndex):
         with self._model_lock:
             return self.bt.data.shape[0] if self.bt else 0
 
+    def _build_bt_internal(self, vec_list):
+        """
+        Internal shared BallTree build function given a list of boolean hash
+        vectors.
+
+        This is here to avoid calling `_build_index` from `_update...` and
+        `_remove...` which cuts down on redundant data consistency checking.
+
+        :param vec_list: List of bool-valued numpy arrays.
+        :type vec_list: list[np.ndarray[bool]] | np.ndarray[np.ndarray[bool]]
+
+        """
+        # If distance metric ever changes, need to update save/load model
+        # functions.
+        self.bt = BallTree(vec_list, self.leaf_size,
+                           metric='hamming')
+        self.save_model()
+
     def _build_index(self, hashes):
         """
-        Internal method to be implemented by sub-classes to build the index with
-        the given hash codes (bit-vectors).
+        Internal method to be implemented by sub-classes to build the index
+        with the given hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the current index.  This
         method shall not add to the existing index nor raise an exception to as
@@ -188,32 +208,28 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         :param hashes: Iterable of descriptor elements to build index
             over.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.Iterable[np.ndarray[bool]]
 
         """
         with self._model_lock:
             self._log.debug("Building ball tree")
             if self.random_seed is not None:
-                numpy.random.seed(self.random_seed)
+                np.random.seed(self.random_seed)
             # BallTree can't take iterables, so catching input in a set of
             # tuples first in order to cull out duplicates (BT will index
             # duplicate values happily).
             hash_tuple_set = set(map(lambda v: tuple(v), hashes))
             # Convert tuples back into numpy arrays for BallTree constructor.
-            hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
-            # If distance metric ever changes, need to update save/load model
-            # functions.
-            self.bt = BallTree(hash_vector_list, self.leaf_size,
-                               metric='hamming')
-            self.save_model()
+            hash_vector_list = map(lambda t: np.array(t), hash_tuple_set)
+            self._build_bt_internal(hash_vector_list)
 
     def _update_index(self, hashes):
         """
         Internal method to be implemented by sub-classes to additively update
         the current index with the one or more hash vectors given.
 
-        If no index exists yet, a new one should be created using the given hash
-        vectors.
+        If no index exists yet, a new one should be created using the given
+        hash vectors.
 
         *Note:* The scikit-learn ball-tree implementation does not support
         incremental updating of its model, so we need to rebuild the model from
@@ -222,7 +238,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         :param hashes: Iterable of numpy boolean hash vectors to add to this
             index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.Iterable[np.ndarray[bool]]
 
         """
         with self._model_lock:
@@ -231,14 +247,53 @@ class SkLearnBallTreeHashIndex (HashIndex):
             if self.bt is None:
                 # 0-row array using bit-vector size of first new entry length.
                 # - Must have at least one new hash due to super-method check.
-                indexed_hash_vectors = numpy.ndarray((0, len(new_hashes[0])))
+                indexed_hash_vectors = np.ndarray((0, len(new_hashes[0])))
             else:
                 indexed_hash_vectors = self.bt.data
             # Build a new index as normal with the union of source data.
             self._log.debug("Updating index by rebuilding with union.")
-            self.build_index(
-                numpy.concatenate([indexed_hash_vectors, new_hashes], 0)
+            self._build_bt_internal(
+                np.concatenate([indexed_hash_vectors, new_hashes], 0)
             )
+
+    def _remove_from_index(self, hashes):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        hashes from this index.
+
+        *Note:* The scikit-learn ball-tree implementation does not support
+        incremental removal from its model, so we need to rebuild the model
+        from scratch using the currently indexed hashes minus the ones provided
+        to this method.
+
+        :param hashes: Iterable of numpy boolean hash vectors to remove from
+            this index.
+        :type hashes: collections.Iterable[np.ndarray[bool]]
+
+        :raises KeyError: One or more hashes provided do not match any stored
+            hashes.  The index should not be modified.
+
+        """
+        with self._model_lock:
+            # Convert to a set of hashable tuples for removal
+            if self.bt:
+                tuple_matrix = set(tuple(r) for r in
+                                   np.asarray(self.bt.data).tolist())
+                hash_tuples = set()
+                for h in hashes:
+                    # this is oddly faster than tuple(h)
+                    h_t = tuple(h.tolist())
+                    if h_t not in tuple_matrix:
+                        raise KeyError(h)
+                    hash_tuples.add(h_t)
+                new_data = tuple_matrix - hash_tuples
+                self._build_bt_internal(
+                    map(lambda t: np.array(t), new_data)
+                )
+            else:
+                # No index built, so anything is a key error.
+                # We can also only be here if hashes was non-zero in size.
+                raise KeyError(np.asarray(iter(hashes).next()))
 
     def _nn(self, h, n=1):
         """
@@ -255,23 +310,23 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.
-        :type h: numpy.ndarray[bool]
+        :type h: np.ndarray[bool]
 
         :param n: Number of nearest neighbors to find.
         :type n: int
 
         :return: Tuple of nearest N hash codes and a tuple of the distance
             values to those neighbors.
-        :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
+        :rtype: (tuple[np.ndarray[bool]], tuple[float])
 
         """
         with self._model_lock:
             # Reselect N based on how many hashes are currently indexes
             n = min(n, self.count())
-            # Reshaping ``h`` into an array of arrays, with just one array (ball
-            # tree deprecation warns when giving it a single array).
+            # Reshaping ``h`` into an array of arrays, with just one array
+            # (ball tree deprecation warns when giving it a single array).
             dists, idxs = self.bt.query([h], n, return_distance=True)
             # only indexing the first entry became we're only querying with one
             # vector
-            neighbors = numpy.asarray(self.bt.data)[idxs[0]].astype(bool)
+            neighbors = np.asarray(self.bt.data)[idxs[0]].astype(bool)
             return neighbors, dists[0]

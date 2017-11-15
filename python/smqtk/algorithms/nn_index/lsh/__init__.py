@@ -157,18 +157,18 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         Initialize LSH algorithm with a hashing functor, descriptor index and
         hash nearest-neighbor index.
 
-        In order to provide out-of-the-box neighbor querying ability, all three
-        of the ``descriptor_index``, ``hash_index`` and
-        ``hash2uuids_kvstore`` must be provided. The two indices should
-        also be fully linked by the mapping provided by the key-value mapping
-        provided by the ``hash2uuids_kvstore``. If not, not all descriptors will
-        be accessible via the nearest-neighbor query (not referenced in
-        ``hash2uuids_kvstore`` map), or the requested number of neighbors might
-        not be returned (descriptors hashed in ``hash_index`` disjoint from
-        ``descriptor_index``).
+        In order to provide out-of-the-box neighbor querying ability, at least
+        the ``descriptor_index`` and ``hash2uuids_kvstore`` must be provided.
+        The UIDs of descriptors in the ``descriptor_index`` should be fully
+        mapped by the key-value mapping (``hash2uuids_kvstore``). If not, not
+        all descriptors will be accessible via the nearest-neighbor query (not
+        referenced in ``hash2uuids_kvstore`` map), or the requested number of
+        neighbors might not be returned (descriptors hashed in ``hash_index``
+        disjoint from ``descriptor_index``).
 
         An ``LSHNearestNeighborIndex`` instance is effectively read-only if any
-        of its input structures are read-only.
+        of its input structures (`descriptor_index`, `hash2uuids_kvstore`,
+        `hash_index`) are read-only.
 
         :param lsh_functor: LSH functor implementation instance.
         :type lsh_functor: smqtk.algorithms.nn_index.lsh.functors.LshFunctor
@@ -344,8 +344,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         with self._model_lock:
             if self.read_only:
-                raise ReadOnlyError("Cannot modify container attributes due to "
-                                    "being in read-only mode.")
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
             # tee out iterable for use in adding to index as well as hash code
             # generation.
             d_for_index, d_for_hashing = itertools.tee(descriptors, 2)
@@ -372,6 +372,63 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             if self.hash_index is not None:
                 self._log.debug("Updating hash index structure.")
                 self.hash_index.update_index(hash_vectors)
+
+    def _remove_from_index(self, uids):
+        """
+        Remove descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.  The index should not be modified.
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
+
+        """
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+
+            uids = list(uids)
+
+            # Remove UIDs from our hash2uid-kvs
+            # - get the hash for each input UID's descriptor, remove UID from
+            #   recorded association set.
+            # - `get_many_descriptors` fails when bad UIDs are provided.
+            self._log.debug("Removing hash2uid entries for UID's descriptors")
+            h_vectors = collections.deque()
+            h_ints = collections.deque()
+            for d in self.descriptor_index.get_many_descriptors(uids):
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                h_vectors.append(h_vec)
+                h_int = bit_vector_to_int_large(h_vec)
+                h_ints.append(h_int)
+
+            # If we're here, then all given UIDs mapped to an indexed
+            # descriptor.  Proceed with removal from hash2uids kvs.  If a hash
+            # no longer maps anything, remove that hash from the hash index if
+            # we have one.
+            hashes_for_removal = collections.deque()
+            for uid, h_int, h_vec in itertools.izip(uids, h_ints, h_vectors):
+                # noinspection PyUnresolvedReferences
+                new_uid_set = self.hash2uuids_kvstore.get(h_int) - {uid}
+                # If the resolved UID set is not empty re-add it, otherwise
+                # remove the
+                if new_uid_set:
+                    self.hash2uuids_kvstore.add(h_int, new_uid_set)
+                else:
+                    hashes_for_removal.append(h_vec)
+                    self.hash2uuids_kvstore.remove(h_int)
+
+            # call remove-from-index on hash-index if we have one and there are
+            # hashes to be removed.
+            if self.hash_index and hashes_for_removal:
+                self.hash_index.remove_from_index(hashes_for_removal)
+
+            # Remove descriptors from our set matching the given UIDs.
+            self.descriptor_index.remove_many_descriptors(uids)
 
     def _nn(self, d, n=1):
         """

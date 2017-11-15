@@ -29,6 +29,10 @@ class TestMRPTIndex (unittest.TestCase):
         return MRPTNearestNeighborsIndex(
             MemoryDescriptorIndex(), **kwargs)
 
+    def test_impl_findable(self):
+        self.assertIn(MRPTNearestNeighborsIndex.__name__,
+                      get_nn_index_impls())
+
     def test_configuration(self):
         index_filepath = osp.abspath(osp.expanduser('index_filepath'))
         para_filepath = osp.abspath(osp.expanduser('param_fp'))
@@ -120,7 +124,63 @@ class TestMRPTIndex (unittest.TestCase):
             n_elems, n_dists = index.nn(q)
             self.assertEqual(n_elems[0], q)
 
-    def test_many_descriptors(self):
+    def test_remove_from_index_readonly(self):
+        """
+        Test that remove causes an error in a readonly instance.
+        """
+        index = self._make_inst(read_only=True)
+        self.assertRaises(
+            ReadOnlyError,
+            index.remove_from_index, [0]
+        )
+
+    def test_remove_from_index_invalid_uid(self):
+        """
+        Test that error occurs when attempting to remove descriptor UID that
+        isn't indexed.
+        """
+        index = self._make_inst()
+        self.assertRaises(
+            KeyError,
+            index.remove_from_index, [0]
+        )
+
+    def test_remove_from_index(self):
+        """
+        Test expected removal from the index.
+        """
+        n = 100
+        dim = 32
+        dset = [DescriptorMemoryElement('test', i) for i in range(n)]
+        np.random.seed(self.RAND_SEED)
+        [d.set_vector(np.random.rand(dim)) for d in dset]
+
+        index = self._make_inst()
+        index.build_index(dset)
+        # Test expected initial condition.
+        # noinspection PyCompatibility
+        self.assertSetEqual(set(index._descriptor_set.iterkeys()),
+                            set(range(100)))
+
+        # Try removing some elements.
+        d_to_remove = [dset[10], dset[47], dset[82]]
+        index.remove_from_index([d.uuid() for d in d_to_remove])
+
+        # Internal descriptor-set should no longer contain the removed
+        # descriptor elements.
+        for d in d_to_remove:
+            self.assertNotIn(d, index._descriptor_set)
+        self.assertEqual(len(index._descriptor_set), 97)
+        # Make sure that when we query for elements removed, they are not the
+        # returned set of things.
+        self.assertNotIn(dset[10].uuid(),
+                         set(d.uuid() for d in index.nn(dset[10], n)[0]))
+        self.assertNotIn(dset[47].uuid(),
+                         set(d.uuid() for d in index.nn(dset[10], n)[0]))
+        self.assertNotIn(dset[82].uuid(),
+                         set(d.uuid() for d in index.nn(dset[10], n)[0]))
+
+    def test_nn_many_descriptors(self):
         np.random.seed(0)
 
         n = 10 ** 4
@@ -142,7 +202,7 @@ class TestMRPTIndex (unittest.TestCase):
         self.assertEqual(len(nbrs), len(dists))
         self.assertEqual(len(nbrs), 10)
 
-    def test_small_leaves(self):
+    def test_nn_small_leaves(self):
         np.random.seed(0)
 
         n = 10 ** 4
@@ -167,7 +227,7 @@ class TestMRPTIndex (unittest.TestCase):
         self.assertEqual(len(nbrs), len(dists))
         self.assertEqual(len(nbrs), k)
 
-    def test_pathological_example(self):
+    def test_nn_pathological_example(self):
         n = 10 ** 4
         dim = 256
         depth = 10
@@ -196,11 +256,7 @@ class TestMRPTIndex (unittest.TestCase):
         # 200
         self.assertLess(len(nbrs), 20)
 
-    def test_impl_findable(self):
-        self.assertIn(MRPTNearestNeighborsIndex.__name__,
-                      get_nn_index_impls())
-
-    def test_known_descriptors_euclidean_unit(self):
+    def test_nn_known_descriptors_euclidean_unit(self):
         dim = 5
 
         ###
@@ -226,7 +282,7 @@ class TestMRPTIndex (unittest.TestCase):
         for d in dists:
             self.assertEqual(d, 1.)
 
-    def test_known_descriptors_nearest(self):
+    def test_nn_known_descriptors_nearest(self):
         dim = 5
 
         ###
@@ -249,7 +305,7 @@ class TestMRPTIndex (unittest.TestCase):
         self.assertEqual(dists[0], 0.)
         self.assertItemsEqual(r[0].vector(), vectors[0])
 
-    def test_known_descriptors_euclidean_ordered(self):
+    def test_nn_known_descriptors_euclidean_ordered(self):
         index = self._make_inst()
 
         # make vectors to return in a known euclidean distance order

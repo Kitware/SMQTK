@@ -1,13 +1,16 @@
+import collections
+import mock
 import json
 import random
 import types
 import unittest
 
-import numpy
+import numpy as np
 
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
+from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
     SkLearnBallTreeHashIndex
@@ -33,13 +36,13 @@ class DummyHashFunctor (LshFunctor):
         vector.
 
         :param descriptor: Descriptor vector we should generate the hash of.
-        :type descriptor: numpy.ndarray[float]
+        :type descriptor: np.ndarray[float]
 
         :return: Generated bit-vector as a numpy array of booleans.
-        :rtype: numpy.ndarray[bool]
+        :rtype: np.ndarray[bool]
 
         """
-        return numpy.asarray([int(c) for c in bin(int(descriptor.sum()))[2:]],
+        return np.asarray([int(c) for c in bin(int(descriptor.sum()))[2:]],
                              bool)
 
 
@@ -104,7 +107,7 @@ class TestLshIndex (unittest.TestCase):
         f = LSHNearestNeighborIndex._get_dist_func('euclidean')
         self.assertIsInstance(f, types.FunctionType)
         self.assertAlmostEqual(
-            f(numpy.array([0, 0]), numpy.array([0, 1])),
+            f(np.array([0, 0]), np.array([0, 1])),
             1.0
         )
 
@@ -112,11 +115,11 @@ class TestLshIndex (unittest.TestCase):
         f = LSHNearestNeighborIndex._get_dist_func('cosine')
         self.assertIsInstance(f, types.FunctionType)
         self.assertAlmostEqual(
-            f(numpy.array([1, 0]), numpy.array([0, 1])),
+            f(np.array([1, 0]), np.array([0, 1])),
             1.0
         )
         self.assertAlmostEqual(
-            f(numpy.array([1, 0]), numpy.array([1, 1])),
+            f(np.array([1, 0]), np.array([1, 1])),
             0.5
         )
 
@@ -124,15 +127,15 @@ class TestLshIndex (unittest.TestCase):
         f = LSHNearestNeighborIndex._get_dist_func('hik')
         self.assertIsInstance(f, types.FunctionType)
         self.assertAlmostEqual(
-            f(numpy.array([0, 0]), numpy.array([0, 1])),
+            f(np.array([0, 0]), np.array([0, 1])),
             1.0
         )
         self.assertAlmostEqual(
-            f(numpy.array([1, 0]), numpy.array([0, 1])),
+            f(np.array([1, 0]), np.array([0, 1])),
             1.0
         )
         self.assertAlmostEqual(
-            f(numpy.array([1, 1]), numpy.array([0, 1])),
+            f(np.array([1, 1]), np.array([0, 1])),
             0.0
         )
 
@@ -167,7 +170,7 @@ class TestLshIndex (unittest.TestCase):
         ]
         # Vectors of length 1 for easy dummy hashing prediction.
         for i, d in enumerate(descriptors):
-            d.set_vector(numpy.ones(1, float) * i)
+            d.set_vector(np.ones(1, float) * i)
         index.build_index(descriptors)
 
         # Make sure descriptors are now in attached index and in key-value-store
@@ -195,7 +198,7 @@ class TestLshIndex (unittest.TestCase):
         ]
         # Vectors of length 1 for easy dummy hashing prediction.
         for i, d in enumerate(descriptors):
-            d.set_vector(numpy.ones(1, float) * i)
+            d.set_vector(np.ones(1, float) * i)
         index.build_index(descriptors)
         # Hash index should have been built with hash vectors, and linearHI
         # converts those to integers for storage.
@@ -228,7 +231,7 @@ class TestLshIndex (unittest.TestCase):
         ]
         # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors:
-            d.set_vector(numpy.ones(1, float) * d.uuid())
+            d.set_vector(np.ones(1, float) * d.uuid())
         index.update_index(descriptors)
 
         # Make sure descriptors are now in attached index and in key-value-store
@@ -260,7 +263,7 @@ class TestLshIndex (unittest.TestCase):
         ]
         # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors1 + descriptors2:
-            d.set_vector(numpy.ones(1, float) * d.uuid())
+            d.set_vector(np.ones(1, float) * d.uuid())
 
         # Build initial index.
         index.build_index(descriptors1)
@@ -306,7 +309,7 @@ class TestLshIndex (unittest.TestCase):
         ]
         # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors1 + descriptors2:
-            d.set_vector(numpy.ones(1, float) * d.uuid())
+            d.set_vector(np.ones(1, float) * d.uuid())
 
         # Build initial index.
         index.build_index(descriptors1)
@@ -318,6 +321,234 @@ class TestLshIndex (unittest.TestCase):
         index.update_index(descriptors2)
         # Now the hash index should include all descriptor hashes.
         self.assertSetEqual(linear_hi.index, {0, 1, 2, 3, 4, 5, 6})
+
+    def test_remove_from_index_read_only(self):
+        d_set = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs,
+                                      read_only=True)
+        self.assertRaises(
+            ReadOnlyError,
+            idx.remove_from_index,
+            ['uid1', 'uid2']
+        )
+
+    def test_remove_from_index_no_existing_index(self):
+        # Test that attempting to remove from an instance with no existing
+        # index (meaning empty descriptor-set and key-value-store) results in
+        # a key error.
+        d_set = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
+        self.assertRaisesRegexp(
+            KeyError,
+            'uid1',
+            idx.remove_from_index,
+            ['uid1']
+        )
+
+    def test_remove_from_index_invalid_uid(self):
+        # Test that attempting to remove a single invalid UID causes a key
+        # error and does not affect index.
+
+        # Descriptors are 1 dim, value == index.
+        descriptors = [
+            DescriptorMemoryElement('t', 0),
+            DescriptorMemoryElement('t', 1),
+            DescriptorMemoryElement('t', 2),
+            DescriptorMemoryElement('t', 3),
+            DescriptorMemoryElement('t', 4),
+        ]
+        # Vectors of length 1 for easy dummy hashing prediction.
+        for d in descriptors:
+            d.set_vector(np.ones(1, float) * d.uuid())
+        # uid -> descriptor
+        expected_dset_table = {
+            0: descriptors[0],
+            1: descriptors[1],
+            2: descriptors[2],
+            3: descriptors[3],
+            4: descriptors[4],
+        }
+        # hash int -> set[uid]
+        expected_kvs_table = {
+            0: {0},
+            1: {1},
+            2: {2},
+            3: {3},
+            4: {4},
+        }
+
+        d_set = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
+        idx.build_index(descriptors)
+        # Assert we have the correct expected values
+        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
+
+        # Attempt to remove descriptor with a UID we did not build with.
+        self.assertRaisesRegexp(
+            KeyError, '5',
+            idx.remove_from_index, [5]
+        )
+        # Index should not have been modified.
+        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
+
+        # Attempt to remove multiple UIDs, one valid and one invalid
+        self.assertRaisesRegexp(
+            KeyError, '5',
+            idx.remove_from_index, [2, 5]
+        )
+        # Index should not have been modified.
+        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
+
+    def test_remove_from_index(self):
+        # Test that removing by UIDs does the correct thing.
+        
+        # Descriptors are 1 dim, value == index.
+        descriptors = [
+            DescriptorMemoryElement('t', 0),
+            DescriptorMemoryElement('t', 1),
+            DescriptorMemoryElement('t', 2),
+            DescriptorMemoryElement('t', 3),
+            DescriptorMemoryElement('t', 4),
+        ]
+        # Vectors of length 1 for easy dummy hashing prediction.
+        for d in descriptors:
+            d.set_vector(np.ones(1, float) * d.uuid())
+        d_set = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
+        idx.build_index(descriptors)
+        
+        # Attempt removing 1 uid.
+        idx.remove_from_index([3])
+        self.assertEqual(idx.descriptor_index._table, {
+            0: descriptors[0],
+            1: descriptors[1],
+            2: descriptors[2],
+            4: descriptors[4],
+        })
+        self.assertEqual(idx.hash2uuids_kvstore._table, {
+            0: {0},
+            1: {1},
+            2: {2},
+            4: {4},
+        })
+
+    def test_remove_from_index_shared_hashes(self):
+        """
+        Test that removing a descriptor (by UID) that shares a hash with other
+        descriptors does not trigger removal of its hash.
+        """
+        # Simulate descriptors all hashing to the same hash value: 0
+        hash_func = DummyHashFunctor()
+        hash_func.get_hash = mock.Mock(return_value=np.asarray([0], bool))
+
+        d_set = MemoryDescriptorIndex()
+        hash2uids_kvs = MemoryKeyValueStore()
+        idx = LSHNearestNeighborIndex(hash_func, d_set, hash2uids_kvs)
+
+        # Descriptors are 1 dim, value == index.
+        descriptors = [
+            DescriptorMemoryElement('t', 0),
+            DescriptorMemoryElement('t', 1),
+            DescriptorMemoryElement('t', 2),
+            DescriptorMemoryElement('t', 3),
+            DescriptorMemoryElement('t', 4),
+        ]
+        # Vectors of length 1 for easy dummy hashing prediction.
+        for d in descriptors:
+            d.set_vector(np.ones(1, float) * d.uuid())
+        idx.build_index(descriptors)
+        # We expect the descriptor-set and kvs to look like the following now:
+        self.assertDictEqual(d_set._table, {
+            0: descriptors[0],
+            1: descriptors[1],
+            2: descriptors[2],
+            3: descriptors[3],
+            4: descriptors[4],
+        })
+        self.assertDictEqual(hash2uids_kvs._table, {0: {0, 1, 2, 3, 4}})
+
+        # Mock out hash index as if we had an implementation so we can check
+        # call to its remove_from_index method.
+        idx.hash_index = mock.Mock(spec=HashIndex)
+
+        idx.remove_from_index([2, 4])
+
+        # Only uid 2 and 4 descriptors should be gone from d-set, kvs should
+        # still have the 0 key and its set value should only contain uids 0, 1
+        # and 3.  `hash_index.remove_from_index` should not be called because
+        # no hashes should be marked for removal.
+        self.assertDictEqual(d_set._table, {
+            0: descriptors[0],
+            1: descriptors[1],
+            3: descriptors[3],
+        })
+        self.assertDictEqual(hash2uids_kvs._table, {0: {0, 1, 3}})
+        idx.hash_index.remove_from_index.assert_not_called()
+
+    def test_remove_from_index_shared_hashes_partial(self):
+        """
+        Test that only some hashes are removed from the hash index, but not
+        others when those hashes still refer to other descriptors.
+        """
+        # Simulate initial state with some descriptor hashed to one value and
+        # other descriptors hashed to another.
+
+        descriptors = [
+            DescriptorMemoryElement('t', 0),
+            DescriptorMemoryElement('t', 1),
+            DescriptorMemoryElement('t', 2),
+            DescriptorMemoryElement('t', 3),
+            DescriptorMemoryElement('t', 4),
+        ]
+        # Vectors of length 1 for easy dummy hashing prediction.
+        for d in descriptors:
+            d.set_vector(np.ones(1, float) * d.uuid())
+
+        # Dummy hash function to do the simulated thing
+        hash_func = DummyHashFunctor()
+        hash_func.get_hash = mock.Mock(
+            # Vectors of even sum hash to 0, odd to 1.
+            side_effect=lambda vec: [vec.sum() % 2]
+        )
+
+        d_set = MemoryDescriptorIndex()
+        d_set._table = {
+            0: descriptors[0],
+            1: descriptors[1],
+            2: descriptors[2],
+            3: descriptors[3],
+            4: descriptors[4],
+        }
+
+        hash2uid_kvs = MemoryKeyValueStore()
+        hash2uid_kvs._table = {
+            0: {0, 2, 4},
+            1: {1, 3},
+        }
+
+        idx = LSHNearestNeighborIndex(hash_func, d_set, hash2uid_kvs)
+        idx.hash_index = mock.Mock(spec=HashIndex)
+
+        idx.remove_from_index([1, 2, 3])
+        # Check that only one hash vector was passed to hash_index's removal
+        # method (deque of hash-code vectors).
+        idx.hash_index.remove_from_index.assert_called_once_with(
+            collections.deque([
+                [1],
+            ])
+        )
+        self.assertDictEqual(d_set._table, {
+            0: descriptors[0],
+            4: descriptors[4],
+        })
+        self.assertDictEqual(hash2uid_kvs._table, {0: {0, 4}})
 
 
 class TestLshIndexAlgorithms (unittest.TestCase):
@@ -357,10 +588,10 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         i = 1000
         dim = 256
         td = []
-        numpy.random.seed(self.RANDOM_SEED)
+        np.random.seed(self.RANDOM_SEED)
         for j in range(i):
             d = DescriptorMemoryElement('random', j)
-            d.set_vector(numpy.random.rand(dim))
+            d.set_vector(np.random.rand(dim))
             td.append(d)
 
         ftor_train_hook(td)
@@ -386,12 +617,12 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         v[dim-1] -= v_min
         q.set_vector(v)
         r, dists = index.nn(q, 1)
-        self.assertFalse(numpy.array_equal(q.vector(), td_q.vector()))
+        self.assertFalse(np.array_equal(q.vector(), td_q.vector()))
         self.assertEqual(r[0], td_q)
 
         # random query
         q = DescriptorMemoryElement('query', i+1)
-        q.set_vector(numpy.random.rand(dim))
+        q.set_vector(np.random.rand(dim))
 
         # for any query of size k, results should at least be in distance order
         r, dists = index.nn(q, 10)
@@ -426,7 +657,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         dim = 5
         test_descriptors = []
         for i in range(dim):
-            v = numpy.zeros(dim, float)
+            v = np.zeros(dim, float)
             v[i] = 1.
             d = DescriptorMemoryElement('unit', i)
             d.set_vector(v)
@@ -445,7 +676,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         # -> all modeled descriptors have no intersection, dists should be 1.0,
         #    or maximum distance by histogram intersection
         q = DescriptorMemoryElement('query', 0)
-        q.set_vector(numpy.zeros(dim, float))
+        q.set_vector(np.zeros(dim, float))
         r, dists = index.nn(q, dim)
         # All dists should be 1.0, r order doesn't matter
         for d in dists:
@@ -499,7 +730,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         test_descriptors = []
         for j in range(i):
             d = DescriptorMemoryElement('ordered', j)
-            d.set_vector(numpy.array([j, j*2], float))
+            d.set_vector(np.array([j, j*2], float))
             test_descriptors.append(d)
         random.shuffle(test_descriptors)
 
@@ -515,7 +746,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
         # Since descriptors were built in increasing distance from (0,0),
         # returned descriptors for a query of [0,0] should be in index order.
         q = DescriptorMemoryElement('query', i)
-        q.set_vector(numpy.array([0, 0], float))
+        q.set_vector(np.array([0, 0], float))
         # top result should have UUID == 0 (nearest to query)
         r, dists = index.nn(q, 5)
         self.assertEqual(r[0].uuid(), 0)

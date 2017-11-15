@@ -113,5 +113,8 @@ class StubNearestNeighborIndex (NearestNeighborsIndex):
     def _update_index(self, descriptors):
         pass
 
+    def _remove_from_index(self, uids):
+        pass
+
     def _nn(self, d, n=1):
         pass

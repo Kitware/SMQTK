@@ -18,6 +18,7 @@ from smqtk.representation.descriptor_element.local_elements import (
     DescriptorMemoryElement,
 )
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 if FaissNearestNeighborsIndex.is_usable():
 
@@ -25,21 +26,38 @@ if FaissNearestNeighborsIndex.is_usable():
     
         RAND_SEED = 42
     
-        def _make_inst(self, descriptor_set=MemoryDescriptorIndex(),
-                       **kwargs):
+        def _make_inst(self, descriptor_set=None, idx2uid_kvs=None,
+                       uid2idx_kvs=None, **kwargs):
             """
             Make an instance of FaissNearestNeighborsIndex
             """
             if 'random_seed' not in kwargs:
                 kwargs.update(random_seed=self.RAND_SEED)
-            return FaissNearestNeighborsIndex(descriptor_set, **kwargs)
+            if descriptor_set is None:
+                descriptor_set = MemoryDescriptorIndex()
+            if idx2uid_kvs is None:
+                idx2uid_kvs = MemoryKeyValueStore()
+            if uid2idx_kvs is None:
+                uid2idx_kvs = MemoryKeyValueStore()
+            return FaissNearestNeighborsIndex(descriptor_set, idx2uid_kvs,
+                                              uid2idx_kvs, **kwargs)
     
         def test_configuration(self):
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
+
+            self.assertIn('MemoryDescriptorIndex', c['descriptor_set'])
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+
+            self.assertIn('MemoryKeyValueStore', c['idx2uid_kvs'])
+            c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
+
+            self.assertIn('MemoryKeyValueStore', c['uid2idx_kvs'])
+            c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
+
             self.assertIn('DataMemoryElement', c['index_element'])
             c['index_element']['type'] = 'DataMemoryElement'
+
             self.assertIn('DataMemoryElement', c['index_param_element'])
             c['index_param_element']['type'] = 'DataMemoryElement'
 
@@ -58,8 +76,8 @@ if FaissNearestNeighborsIndex.is_usable():
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-            del c['index_element']
-            del c['index_param_element']
+            c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
+            c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
@@ -72,7 +90,7 @@ if FaissNearestNeighborsIndex.is_usable():
                 index.get_config())
             self.assertEqual(index.get_config(), index2.get_config())
 
-        def test_read_only(self):
+        def test_build_index_read_only(self):
             v = np.zeros(5, float)
             v[0] = 1.
             d = DescriptorMemoryElement('unit', 0)
@@ -154,8 +172,7 @@ if FaissNearestNeighborsIndex.is_usable():
                     for i in range(n1, n1+n2)}
             [d.set_vector(np.random.rand(dim)) for d in (set1 | set2)]
 
-            # Create index with perisistent entities
-            # TODO(john.moeller): Let constructor take basestring?
+            # Create index with persistent entities
             index_element = DataMemoryElement(
                 content_type='application/octet-stream')
             index_param_element = DataMemoryElement(
@@ -164,6 +181,8 @@ if FaissNearestNeighborsIndex.is_usable():
                 index_element=index_element,
                 index_param_element=index_param_element)
             descriptor_set = index._descriptor_set
+            idx2uid_kvs = index._idx2uid_kvs
+            uid2idx_kvs = index._uid2idx_kvs
 
             # Build initial index.
             index.build_index(set1)
@@ -182,6 +201,8 @@ if FaissNearestNeighborsIndex.is_usable():
             del index
             index = self._make_inst(
                 descriptor_set=descriptor_set,
+                idx2uid_kvs=idx2uid_kvs,
+                uid2idx_kvs=uid2idx_kvs,
                 index_element=index_element,
                 index_param_element=index_param_element)
 

@@ -32,6 +32,9 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     def __contains__(self, item):
         return self.has(item)
 
+    def __getitem__(self, item):
+        return self.get(item)
+
     @abc.abstractmethod
     def __repr__(self):
         """

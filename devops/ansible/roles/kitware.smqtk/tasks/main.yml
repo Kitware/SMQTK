@@ -1,0 +1,54 @@
+---
+- name: Install system requirements
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: True
+    cache_valid_time: 3600
+  with_items:
+    - git
+    - cmake
+    - g++
+    - make
+    - python-dev
+    - python-pip
+  become: yes
+  become_user: root
+
+- name: Ensure base directory exists
+  file:
+    path: "{{ smqtk_path }}"
+    state: directory
+    group: "{{ ansible_user_id }}"
+    owner: "{{ ansible_user_id }}"
+    mode: 0755
+  become: yes
+  become_user: root  # because the path specified could be anywhere on the system
+
+- name: Fetch SMQTK source tree
+  git:
+    repo: "{{ smqtk_repo }}"
+    dest: "{{ smqtk_path }}"
+    accept_hostkey: yes
+    version: "{{ smqtk_version }}"
+
+# Different configure/build/install path depending on virtualenv use
+- include: smqtk_build.yml
+  when: smqtk_virtualenv is not defined
+  become: yes
+  become_user: root
+  vars:
+    install_prefix: "/usr/local"
+    python_executable: "/usr/bin/python"
+
+- include: smqtk_build.yml
+  when: smqtk_virtualenv is defined
+  vars:
+    install_prefix: "{{ smqtk_virtualenv }}"
+    python_executable: "{{ smqtk_virtualenv }}/bin/python"
+
+# Make/Add server service via upstart script (see girder's)
+- include: daemon.yml
+
+  # Install SMQTK model files to known directory
+- include: model_install.yml

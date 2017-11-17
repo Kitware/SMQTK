@@ -15,6 +15,6 @@ numpy==1.13.0
 Pillow==4.1.1
 pymongo==3.4.0
 requests==2.18.1
-six==1.10.0
 scikit-learn==0.18.1
 scipy==0.19.0
+six==1.10.0

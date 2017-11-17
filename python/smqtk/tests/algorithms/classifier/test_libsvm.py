@@ -6,6 +6,7 @@ import multiprocessing.pool
 import nose.tools as ntools
 import numpy
 
+from smqtk.algorithms.classifier import get_classifier_impls
 from smqtk.algorithms.classifier.libsvm import LibSvmClassifier
 from smqtk.representation import \
     ClassificationElementFactory, \
@@ -19,6 +20,10 @@ from smqtk.representation.descriptor_element.local_elements import \
 if LibSvmClassifier.is_usable():
 
     class TestLibSvmClassifier (unittest.TestCase):
+
+        def test_impl_findable(self):
+            ntools.assert_in(LibSvmClassifier.__name__,
+                             get_classifier_impls())
 
         def test_no_save_model_pickle(self):
             # Test model preservation across pickling even without model cache

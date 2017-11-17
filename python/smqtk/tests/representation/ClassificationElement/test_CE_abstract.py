@@ -4,7 +4,7 @@ import mock
 import nose.tools
 
 import smqtk.representation
-import smqtk.utils.errors
+import smqtk.exceptions
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -76,7 +76,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
 
         e.get_classification = mock.Mock(return_value={})
         nose.tools.assert_raises(
-            smqtk.utils.errors.NoClassificationError,
+            smqtk.exceptions.NoClassificationError,
             e.max_label
         )
 

@@ -2,6 +2,9 @@
 *.pyc
 *.pyo
 
+# Mac OSX files
+.DS_Store
+
 # Sphinx compile files
 /docs/_build/
 

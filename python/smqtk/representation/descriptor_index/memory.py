@@ -1,11 +1,12 @@
-import cPickle
-import os.path as osp
+import six
 
-from smqtk.representation import DescriptorIndex
-from smqtk.utils import SimpleTimer
+from smqtk.representation import DescriptorIndex, get_data_element_impls
+from smqtk.utils import merge_dict, plugin, SimpleTimer
 
-
-__author__ = 'paul.tunison@kitware.com'
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 
 class MemoryDescriptorIndex (DescriptorIndex):
@@ -22,21 +23,85 @@ class MemoryDescriptorIndex (DescriptorIndex):
 
     @classmethod
     def is_usable(cls):
+        """
+        Check whether this class is available for use.
+
+        :return: Boolean determination of whether this implementation is usable.
+        :rtype: bool
+
+        """
         # no dependencies
         return True
 
-    def __init__(self, file_cache=None, pickle_protocol=-1):
+    @classmethod
+    def get_default_config(cls):
+        """
+        Generate and return a default configuration dictionary for this class.
+        This will be primarily used for generating what the configuration
+        dictionary would look like for this class without instantiating it.
+
+        By default, we observe what this class's constructor takes as arguments,
+        turning those argument names into configuration dictionary keys. If any
+        of those arguments have defaults, we will add those values into the
+        configuration dictionary appropriately. The dictionary returned should
+        only contain JSON compliant value types.
+
+        It is not be guaranteed that the configuration dictionary returned
+        from this method is valid for construction of an instance of this class.
+
+        :return: Default configuration dictionary for the class.
+        :rtype: dict
+
+        """
+        c = super(MemoryDescriptorIndex, cls).get_default_config()
+        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        return c
+
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: MemoryDescriptorIndex
+
+        """
+        if merge_default:
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
+
+        # Optionally construct cache element from sub-config.
+        if config_dict['cache_element'] \
+                and config_dict['cache_element']['type']:
+            e = plugin.from_plugin_config(config_dict['cache_element'],
+                                          get_data_element_impls())
+            config_dict['cache_element'] = e
+        else:
+            config_dict['cache_element'] = None
+
+        return super(MemoryDescriptorIndex, cls).from_config(config_dict, False)
+
+    def __init__(self, cache_element=None, pickle_protocol=-1):
         """
         Initialize a new in-memory descriptor index, or reload one from a
         cache.
 
-        :param file_cache: Optional path to a file path, loading an existing
-            index if the file already exists. Either way, providing a path to
-            this enabled file caching when descriptors are added to this index.
-        :type file_cache: None | str
+        :param cache_element: Optional data element cache, loading an existing
+            index if the element has bytes. If the given element is writable,
+             new descriptors added to this index are cached to the element.
+        :type cache_element: None | smqtk.representation.DataElement
 
-        :param pickle_protocol: Pickling protocol to use. We will use -1 by
-            default (latest version, probably binary).
+        :param pickle_protocol: Pickling protocol to use when serializing index
+            table to the optionally provided, writable cache element. We will
+            use -1 by default (latest version, probably a binary form).
         :type pickle_protocol: int
 
         """
@@ -46,28 +111,28 @@ class MemoryDescriptorIndex (DescriptorIndex):
         #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         self._table = {}
         # Record of optional file cache we're using
-        self.file_cache = file_cache
+        self.cache_element = cache_element
         self.pickle_protocol = pickle_protocol
 
-        if file_cache and osp.isfile(file_cache):
-            self._log.debug("Loading cached descriptor index table from file: "
-                            "%s", file_cache)
-
-            with open(file_cache) as f:
-                #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
-                self._table = cPickle.load(f)
-
-    def cache_table(self):
-        if self.file_cache:
-            with SimpleTimer("Caching descriptor table", self._log.debug):
-                with open(self.file_cache, 'wb') as f:
-                    cPickle.dump(self._table, f, self.pickle_protocol)
+        if cache_element and not cache_element.is_empty():
+            self._log.debug("Loading cached descriptor index table from %s "
+                            "element.", cache_element.__class__.__name__)
+            self._table = pickle.loads(cache_element.get_bytes())
 
     def get_config(self):
-        return {
-            'file_cache': self.file_cache,
+        c = merge_dict(self.get_default_config(), {
             "pickle_protocol": self.pickle_protocol,
-        }
+        })
+        if self.cache_element:
+            merge_dict(c['cache_element'],
+                       plugin.to_plugin_config(self.cache_element))
+        return c
+
+    def cache_table(self):
+        if self.cache_element and self.cache_element.writable():
+            with SimpleTimer("Caching descriptor table", self._log.debug):
+                self.cache_element.set_bytes(pickle.dumps(self._table,
+                                                          self.pickle_protocol))
 
     def count(self):
         return len(self._table)
@@ -202,13 +267,13 @@ class MemoryDescriptorIndex (DescriptorIndex):
         self.cache_table()
 
     def iterkeys(self):
-        return self._table.iterkeys()
+        return six.iterkeys(self._table)
 
     def iterdescriptors(self):
-        return self._table.itervalues()
+        return six.itervalues(self._table)
 
     def iteritems(self):
-        return self._table.iteritems()
+        return six.iteritems(self._table)
 
 
 DESCRIPTOR_INDEX_CLASS = MemoryDescriptorIndex

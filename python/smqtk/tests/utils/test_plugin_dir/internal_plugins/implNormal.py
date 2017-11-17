@@ -1,7 +1,7 @@
+"""
+Example where classes are found in module by introspecting parent classes.
+"""
 from smqtk.tests.utils.test_plugin_get import DummyInterface
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class ImplFoo (DummyInterface):

@@ -6,14 +6,15 @@ from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on
     ``DataElement`` UUID values.
+
+    This should only be used with DataElements whose byte content is expected
+    not to change. If they do, then UUID keys may no longer represent the
+    elements associated with them.
 
     """
 
@@ -47,7 +48,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: Generator over the DataElements contained in this set in no
             particular order.
         """
-        return
 
     @abc.abstractmethod
     def count(self):
@@ -55,7 +55,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: The number of data elements in this set.
         :rtype: int
         """
-        return
 
     @abc.abstractmethod
     def uuids(self):
@@ -63,7 +62,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :return: A new set of uuids represented in this data set.
         :rtype: set
         """
-        return
 
     @abc.abstractmethod
     def has_uuid(self, uuid):
@@ -78,7 +76,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :rtype: bool
 
         """
-        return
 
     @abc.abstractmethod
     def add_data(self, *elems):
@@ -89,7 +86,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :type elems: list[smqtk.representation.DataElement]
 
         """
-        return
 
     @abc.abstractmethod
     def get_data(self, uuid):
@@ -106,7 +102,6 @@ class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
         :rtype: smqtk.representation.DataElement
 
         """
-        return
 
 
 def get_data_set_impls(reload_modules=False):

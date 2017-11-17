@@ -10,9 +10,6 @@ import time
 from smqtk.utils import SmqtkObject
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 def safe_create_dir(d):
     """
     Recursively create the given directory, ignoring the already-exists
@@ -29,12 +26,65 @@ def safe_create_dir(d):
     d = os.path.abspath(os.path.expanduser(d))
     try:
         os.makedirs(d)
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == errno.EEXIST and os.path.exists(d):
             pass
         else:
             raise
     return d
+
+
+def safe_file_write(path, b, tmp_dir=None):
+    """
+    Safely write to a file in such a way that the target file is never
+    incompletely written to due to error or multiple agents attempting to
+    writes.
+
+    We leverage that most OSs have an atomic move/rename operation by first
+    writing bytes to a separate temporary file first, then renaming the
+    temporary file to the final destination path when write is complete.
+    Temporary files are written to the same directory as the target file unless
+    otherwise specified.
+
+    **NOTE:** *Windows does not have an atomic file rename and this function
+    currently does not do anything special to ensure atomic rename on Windows.*
+
+    :param path: Path to the file to write to.
+    :type path: str
+
+    :param b: Byte iterable to write to file.
+    :type b: str | bytes
+
+    :param tmp_dir: Optional custom directory to write the intermediate
+        temporary file to. This directory must already exist.
+    :type tmp_dir: None | str
+
+    """
+    file_dir = os.path.dirname(path)
+    file_name = os.path.basename(path)
+    file_base, file_ext = os.path.splitext(file_name)
+
+    # Make sure containing directory exists
+    safe_create_dir(file_dir)
+
+    # Write to a temporary file first, then OS move the temp file to the final
+    # destination. This is due to, on most OSs, a file rename/move being atomic.
+    # TODO(paul.tunison): Do something else on windows since moves there are not
+    #   guaranteed atomic.
+    tmp_dir = file_dir if tmp_dir is None else tmp_dir
+    fd, fp = tempfile.mkstemp(suffix=file_ext, prefix=file_base + '.',
+                              dir=tmp_dir)
+    try:
+        c = os.write(fd, b)
+        if c != len(b):
+            raise RuntimeError("Failed to write all bytes to file.")
+    except:
+        # Remove temporary file if something bad happens.
+        os.remove(fp)
+        raise
+    finally:
+        os.close(fd)
+    os.rename(fp, path)
 
 
 def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
@@ -54,7 +104,7 @@ def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
 
 def iter_directory_files(d, recurse=True):
     """
-    Iterates through files in the directory structure at the given directory.
+    Iterates through files in the structure under the given directory.
 
     :param d: base directory path
     :type d: str
@@ -74,8 +124,6 @@ def iter_directory_files(d, recurse=True):
     for dirpath, dirnames, filenames in os.walk(d):
         for fname in filenames:
             yield os.path.join(dirpath, fname)
-        if not recurse:
-            break
         if not recurse:
             break
         elif recurse is not True and dirpath != d:
@@ -118,7 +166,7 @@ def exclusive_touch(file_path):
         fd = os.open(file_path, os.O_CREAT | os.O_EXCL)
         os.close(fd)
         return True
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno == 17:  # File exists, could not touch.
             return False
         else:
@@ -171,7 +219,58 @@ def iter_csv_file(filepath):
             yield numpy.array(l, dtype=float)
 
 
+def file_mimetype_filemagic(filepath):
+    """
+    Determine file mimetype using the file-magic module.
+
+    The file the given path refers to must exist.
+
+    :raises ImportError: ``magic`` python module not available.
+    :raises IOError: ``filepath`` did not refer to an existing file.
+
+    :param filepath: Path to the (existing) file to determine the mimetype of.
+    :type filepath: str
+
+    :return: MIMETYPE string identifier.
+    :rtype: str
+
+    """
+    import magic
+    if os.path.isfile(filepath):
+        d = magic.detect_from_filename(filepath)
+        return d.mime_type
+    elif os.path.isdir(filepath):
+        raise IOError(21, "Is a directory: '%s'" % filepath)
+    else:
+        raise IOError(2, "No such file or directory: '%s'" % filepath)
+
+
+def file_mimetype_tika(filepath):
+    """
+    Determine file mimetype using ``tika`` module.
+
+    The file the given path refers to must exist. This function may fail under
+    multiprocessing situations.
+
+    :raises ImportError: ``tika`` python module not available.
+    :raises IOError: ``filepath`` did not refer to an existing file.
+
+    :param filepath: Path to the (existing) file to determine the mimetype of.
+    :type filepath: str
+
+    :return: MIMETYPE string identifier.
+    :rtype: str
+
+    """
+    import tika.detector
+    return tika.detector.from_file(filepath)
+
+
 class FileModificationMonitor (SmqtkObject, threading.Thread):
+    """
+    Utility object for triggering a callback function when an observed file
+    changes based on file modification times observed
+    """
 
     STATE_WAITING = 0   # Waiting for file to be modified
     STATE_WATCHING = 1  # Waiting for file to settle

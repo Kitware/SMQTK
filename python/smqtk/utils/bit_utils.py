@@ -2,22 +2,21 @@ import math
 
 import numpy
 
+# noinspection PyUnresolvedReferences
+from six.moves import range
+
 from . import ncr
 
 try:
     from numba import jit
-
 except (ImportError, TypeError):
-
+    # Create passthrough function if numba is not installed.
     def jit(func_or_sig):
         import types
         if isinstance(func_or_sig, (types.FunctionType, types.MethodType)):
             return func_or_sig
         else:
             return lambda *args, **kwds: func_or_sig
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 def next_perm(v):
@@ -59,7 +58,7 @@ def iter_perms(l, n):
     n = min(l, n)
     s = (1 << n) - 1
     yield s
-    for _ in xrange(ncr(l, n) - 1):
+    for _ in range(ncr(l, n) - 1):
         s = next_perm(s)
         yield s
 
@@ -140,6 +139,9 @@ def int_to_bit_vector(integer, bits=0):
 
     This version handles vectors of up to 64bits in size.
 
+    :raises ValueError: If ``bits`` specified is smaller than the required bits
+        to represent the given ``integer`` value.
+
     :param integer: integer to convert
     :type integer: int
 
@@ -147,24 +149,22 @@ def int_to_bit_vector(integer, bits=0):
         vector.
     :type bits: Optional specification of the size of returned vector.
 
-    :return: Bit vector as numpy array (big endian), or None if too few
-        ``bits`` were specified to contain the result.
+    :return: Bit vector as numpy array (big endian).
     :rtype: numpy.ndarray[bool]
 
     """
-    # Converting integer to array
-    if integer:
-        # Can-t use math version because floating-point precision runs out after
-        # about 2^48
-        # -2 to remove length of '0b' string prefix
-        size = len(bin(integer)) - 2
-    else:
-        size = 0
-    if bits and (bits - size) < 0:
-        return None
+    # Can't use math version because floating-point precision runs out after
+    # about 2^48
+    # -2 to remove length of '0b' string prefix
+    size = len(bin(integer)) - 2
 
+    if bits and (bits - size) < 0:
+        raise ValueError("%d bits too small to represent integer value %d."
+                         % (bits, integer))
+
+    # Converting integer to array
     v = numpy.zeros(bits or size, numpy.bool_)
-    for i in xrange(0, size):
+    for i in range(0, size):
         v[-(i+1)] = integer & 1
         integer >>= 1
 
@@ -178,6 +178,9 @@ def int_to_bit_vector_large(integer, bits=0):
     This function is the special form that can handle very large integers
     (>64bit).
 
+    :raises ValueError: If ``bits`` specified is smaller than the required bits
+        to represent the given ``integer`` value.
+
     :param integer: integer to convert
     :type integer: int
 
@@ -185,24 +188,22 @@ def int_to_bit_vector_large(integer, bits=0):
         vector.
     :type bits: Optional specification of the size of returned vector.
 
-    :return: Bit vector as numpy array (big endian), or None if too few
-        ``bits`` were specified to contain the result.
+    :return: Bit vector as numpy array (big endian).
     :rtype: numpy.ndarray[bool]
 
     """
-    # Converting integer to array'
-    if integer:
-        # Can-t use math version because floating-point precision runs out after
-        # about 2^48
-        # -2 to remove length of '0b' string prefix
-        size = len(bin(integer)) - 2
-    else:
-        size = 0
-    if bits and (bits - size) < 0:
-        return None
+    # Can't use math version because floating-point precision runs out after
+    # about 2^48
+    # -2 to remove length of '0b' string prefix
+    size = len(bin(integer)) - 2
 
+    if bits and (bits - size) < 0:
+        raise ValueError("%d bits too small to represent integer value %d."
+                         % (bits, integer))
+
+    # Converting integer to array
     v = numpy.zeros(bits or size, numpy.bool_)
-    for i in xrange(0, size):
+    for i in range(0, size):
         v[-(i+1)] = integer & 1
         integer >>= 1
 
@@ -211,19 +212,32 @@ def int_to_bit_vector_large(integer, bits=0):
 
 def popcount(v):
     """
+    Count the number of bits set (number of 1-bits, not 0-bits).
+
     Pure python popcount algorithm adapted implementation at:
     see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
 
-    This is limited to 32-bit integer representation.
+    Maximum known stable value that can be passed through this method:
+    2**256 - 2. See the ``popcount.v_max`` function property.
+
+    :param v: Integer to count the set bits of. Must be a 32-bit integer or
+        less.
+    :type v: int
+
+    :return: Number of set bits in the given integer ``v``.
+    :rtype: int
 
     """
     # TODO: C implementation of this
-    #       since this version, being in python, isn't faster than above bin
-    #       use
+    #       since this version, being in python, isn't faster than counting 1's
+    #       in result of ``bin`` function.
+
+    # Cannot take the log of 0.
     if not v:
         return 0
 
     # T is the number of bits used to represent v to the nearest power of 2
+    ceil, log = math.ceil, math.log
     tp = max(8, int(2**ceil(log(v.bit_length()) / log(2))))
     t = 2**tp-1
     b = tp // 8
@@ -242,3 +256,6 @@ def popcount(v):
     # truncation as if v were only a tp-bit integer
     # Magic 8 represents bits ina byte
     return ((v * h01) & t) >> ((b-1) * 8)
+
+# Maximum known stable value that can be passed as ``v``.
+popcount.v_max = (2**256) - 2

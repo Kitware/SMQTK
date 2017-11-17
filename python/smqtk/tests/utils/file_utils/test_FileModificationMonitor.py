@@ -10,9 +10,6 @@ import nose.tools
 import smqtk.utils.file_utils
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class TestFileModificationMonitor (unittest.TestCase):
 
     def _mk_test_fp(self):

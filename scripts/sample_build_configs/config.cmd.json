@@ -1,0 +1,54 @@
+{
+    "descriptor_factory": {
+        "DescriptorFileElement": {
+            "save_dir": "descriptors",
+            "subdir_split": 8
+        },
+        "type": "DescriptorFileElement"
+    },
+    "descriptor_generator": {
+        "CaffeDescriptorGenerator": {
+            "batch_size": 1000,
+            "data_layer": "data",
+            "gpu_device_id": 0,
+            "image_mean_uri": "models/caffe/imagenet_mean.binaryproto",
+            "input_scale": null,
+            "load_truncated_images": false,
+            "network_is_bgr": true,
+            "network_model_uri": "models/caffe/bvlc_alexnet.caffemodel",
+            "network_prototxt_uri": "models/caffe/deploy.prototxt",
+            "pixel_rescale": null,
+            "return_layer": "fc7",
+            "use_gpu": false
+        },
+        "type": "CaffeDescriptorGenerator"
+    },
+    "descriptor_index": {
+        "MemoryDescriptorIndex": {
+            "cache_element": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "cache.mdi",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
+            "pickle_protocol": -1
+        },
+        "type": "MemoryDescriptorIndex"
+    },
+    "optional_data_set": {
+        "DataMemorySet": {
+            "cache_element": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "cache.mds",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
+            "pickle_protocol": -1
+        },
+        "type": "DataMemorySet"
+    }
+}

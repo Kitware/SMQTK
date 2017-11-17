@@ -1,0 +1,11 @@
+---
+# Default variables for SMQTK
+
+smqtk_path: "{{ ansible_user_dir }}/kitware/smqtk"
+smqtk_repo: "https://github.com/Kitware/SMQTK.git"
+smqtk_version: "master"
+smqtk_app_config_path: "{{ smqtk_path }}/python/smqtk/web/search_app/config.ISD_ansible.json"
+smqtk_app_secret_key: "MySuperUltraSecret"
+smqtk_iqr_host: "0.0.0.0"
+smqtk_iqr_port: 5000
+# `smqtk_virtualenv` is optional

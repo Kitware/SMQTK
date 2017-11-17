@@ -176,7 +176,7 @@ if CaffeDescriptorGenerator.is_usable():
             lenna_elem = from_uri(self.lenna_image_fp)
             expected_descr = numpy.load(self.lenna_alexnet_fc7_descr_fp)
             descr = d.compute_descriptor(lenna_elem).vector()
-            numpy.testing.assert_allclose(descr, expected_descr)
+            numpy.testing.assert_allclose(descr, expected_descr, atol=1e-5)
 
         def test_compute_descriptor_async_no_data(self):
             # Should get a ValueError when given no descriptors to async method

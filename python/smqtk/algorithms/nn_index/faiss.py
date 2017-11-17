@@ -35,6 +35,18 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     Nearest-neighbor computation using the FAISS library.
     """
 
+    @staticmethod
+    def gpu_supported():
+        """
+        :return: If FAISS seems to have GPU support or not.
+        :rtype: bool
+        """
+        # Test if the GPU version is available
+        if hasattr(faiss, "StandardGpuResources"):
+            return True
+        else:
+            return False
+
     @classmethod
     def is_usable(cls):
         # if underlying library is not found, the import above will error
@@ -135,7 +147,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
                  read_only=False, factory_string='IVF1,Flat',
-                 use_multiprocessing=True,
+                 use_multiprocessing=True, use_gpu=False, gpu_id=0,
                  random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
@@ -178,6 +190,19 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             as the parallelization agent vs python threads.
         :type use_multiprocessing: bool
 
+        :param use_gpu: Use a GPU index if GPU support is available.  A
+            RuntimeError is thrown during instance construction if GPU support
+            is not available and this flag is true.  See the following for
+            FAISS GPU documentation and limitations:
+
+                https://github.com/facebookresearch/faiss/wiki/Faiss-on-the-GPU
+        :type use_gpu: bool
+
+        :param gpu_id: If the GPU implementation is available for FAISS
+            (automatically determined) use the GPU with this device number /
+            ID.
+        :type gpu_id: int
+
         :param random_seed: Integer to use as the random number generator
             seed.
         :type random_seed: int | None
@@ -199,11 +224,20 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.read_only = read_only
         self.factory_string = str(factory_string)
         self.use_multiprocessing = use_multiprocessing
+        self._use_gpu = use_gpu
+        self._gpu_id = gpu_id
         self.random_seed = None
         if random_seed is not None:
             self.random_seed = int(random_seed)
         # Index value for the next added element.  Reset to 0 on a build.
         self._next_index = 0
+
+        # Place-holder for option GPU resource reference. Just exist for the
+        # duration of the index converted with it.
+        self._gpu_resources = None
+        if self._use_gpu and not self.gpu_supported():
+            raise RuntimeError("Requested GPU use but FAISS does not seem to "
+                               "support GPU functionality.")
 
         # Lock for accessing FAISS model components.
         self._model_lock = multiprocessing.RLock()
@@ -222,6 +256,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "read_only": self.read_only,
             "random_seed": self.random_seed,
             "use_multiprocessing": self.use_multiprocessing,
+            "use_gpu": self._use_gpu,
+            "gpu_id": self._gpu_id,
         }
         if self._index_element:
             config['index_element'] = plugin.to_plugin_config(
@@ -231,6 +267,28 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 self._index_param_element)
 
         return config
+
+    def _convert_index(self, faiss_index):
+        """
+        Convert the given index to a GpuIndex if `use_gpu` is True, otherwise
+        return the index given (no-op).
+
+        :param faiss_index: Index to convert.
+        :type faiss_index: faiss.Index
+
+        :return: Optionally converted index.
+        :rtype: faiss.Index | faiss.GpuIndex
+
+        """
+        # If we're to use a GPU index and what we're given isn't already a GPU
+        # index.
+        if self._use_gpu and not isinstance(faiss_index, faiss.GpuIndex):
+            self._log.debug("-> GPU-enabling index")
+            # New resources
+            self._gpu_resources = faiss.StandardGpuResources()
+            faiss_index = faiss.index_cpu_to_gpu(faiss.StandardGpuResources(),
+                                                 self._gpu_id, faiss_index)
+        return faiss_index
 
     def _index_factory_wrapper(self, d, factory_string):
         """
@@ -250,7 +308,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         self._log.debug("Creating index by factory: '%s'", factory_string)
         index = faiss.index_factory(d, factory_string, faiss.METRIC_L2)
-        return index
+        return self._convert_index(index)
 
     def _has_model_data(self):
         """
@@ -270,7 +328,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             if self._has_model_data():
                 # Load the binary index
                 tmp_fp = self._index_element.write_temp()
-                self._faiss_index = faiss.read_index(tmp_fp)
+                self._faiss_index = self._convert_index(
+                    faiss.read_index(tmp_fp)
+                )
                 self._index_element.clean_temp()
 
                 # Params pickle include the build params + our local state
@@ -308,7 +368,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 # read it in, putting bytes into element.
                 fd, fp = tempfile.mkstemp()
                 try:
-                    faiss.write_index(self._faiss_index, fp)
+                    # Write function needs a CPU index instance, so bring it
+                    # down from the GPU if necessary.
+                    if self._use_gpu and isinstance(self._faiss_index,
+                                                    faiss.GpuIndex):
+                        to_write = faiss.index_gpu_to_cpu(self._faiss_index)
+                    else:
+                        to_write = self._faiss_index
+                    faiss.write_index(to_write, fp)
                     self._index_element.set_bytes(
                         os.read(fd, os.path.getsize(fp)))
                 finally:

@@ -134,7 +134,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
-                 read_only=False, factory_string='Flat',
+                 read_only=False, factory_string='IVF1,Flat',
                  use_multiprocessing=True,
                  random_seed=None):
         """
@@ -170,6 +170,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param factory_string: String to pass to FAISS' `index_factory`;
             see the documentation [1] on this feature for more details.
+            TODO(john.moeller): Flat indexes are not supported, so set the
+            default to 'IVF1,Flat', which is essentially a flat index.
         :type factory_string: str | unicode
 
         :param use_multiprocessing: Whether or not to use discrete processes
@@ -349,36 +351,17 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         idx_ids = np.arange(n)  # restart IDs from 0.
 
         # Build a faiss index but don't internalize it until we have a lock.
-        #
-        # We attempt to call `add_with_ids` created with the given factory
-        # string.  This may fail with a known error due to not all index
-        # implementations supporting this method.  If a method does not, we can
-        # wrap the specified index with an IndexIDMap instance.  However, we
-        # must do this with an additional call to the index_factory and not by
-        # explicitly constructing an IndexIDMap and wrapper the previously
-        # factory-generated index.  This is because what the index factory
-        # returns is a proxy object that seems to release its children when it
-        # goes out of scope.  We do not currently know why constructing an
-        # IndexIDMap with the proxy doesn't retain the reference appropriately.
-        try:
-            faiss_index = self._index_factory_wrapper(d, self.factory_string)
-            # noinspection PyArgumentList
-            faiss_index.train(data)
-            # noinspection PyArgumentList
-            faiss_index.add_with_ids(data, idx_ids)
-        except RuntimeError as ex:
-            if "add_with_ids not implemented for this type" in str(ex):
-                # apparently using an index without add_with_ids support, wrap
-                # in an IndexIDMap.  We need to use the index_factory since
-                # what
-                idmap_string = str("IDMap," + self.factory_string)
-                faiss_index = self._index_factory_wrapper(d, idmap_string)
-                # noinspection PyArgumentList
-                faiss_index.train(data)
-                # noinspection PyArgumentList
-                faiss_index.add_with_ids(data, idx_ids)
-            else:
-                raise
+
+        faiss_index = self._index_factory_wrapper(d, self.factory_string)
+        # noinspection PyArgumentList
+        faiss_index.train(data)
+        # TODO(john.moeller): This will raise an exception on flat indexes.
+        # There's a solution which involves wrapping the index in an
+        # IndexIDMap, but it doesn't work because of a bug in FAISS. So for
+        # now we don't support flat indexes.
+        # noinspection PyArgumentList
+        faiss_index.add_with_ids(data, idx_ids)
+
         assert faiss_index.d == d, \
             "FAISS index dimension doesn't match data dimension"
         assert faiss_index.ntotal == n, \

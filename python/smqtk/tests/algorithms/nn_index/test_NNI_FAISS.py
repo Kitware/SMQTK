@@ -67,7 +67,7 @@ if FaissNearestNeighborsIndex.is_usable():
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, 'Flat')
+            self.assertEqual(index.factory_string, 'IVF1,Flat')
             self.assertIsInstance(index.factory_string, six.string_types)
 
             # Test that constructing a new instance from ``index``'s config
@@ -85,7 +85,7 @@ if FaissNearestNeighborsIndex.is_usable():
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, 'Flat')
+            self.assertEqual(index.factory_string, 'IVF1,Flat')
             self.assertIsInstance(index.factory_string, six.string_types)
 
             # Test that constructing a new instance from ``index``'s config
@@ -364,8 +364,8 @@ if FaissNearestNeighborsIndex.is_usable():
             self.assertEqual(len(nbrs), 10)
 
         def test_nn_preprocess_index(self):
-            faiss_index = self._make_inst(factory_string='PCAR64,Flat')
-            self.assertEqual(faiss_index.factory_string, 'PCAR64,Flat')
+            faiss_index = self._make_inst(factory_string='PCAR64,IVF1,Flat')
+            self.assertEqual(faiss_index.factory_string, 'PCAR64,IVF1,Flat')
 
             np.random.seed(self.RAND_SEED)
             n = 10 ** 4

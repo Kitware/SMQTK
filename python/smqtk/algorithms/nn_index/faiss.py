@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+import collections
 from copy import deepcopy
 import itertools
 import json
@@ -425,6 +426,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :raises RuntimeError: If a given descriptor is already present in this
+            index.  Adding a duplicate descriptor would cause duplicates in
+            a nearest-neighbor return (no de-duplication).
+
         """
         if self.read_only:
             raise ReadOnlyError("Cannot modify read-only index.")
@@ -441,6 +446,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         n, d = data.shape
 
         with self._model_lock:
+            # Assert that new descriptors do not intersect with existing
+            # descriptors.
+            for uid in new_uuids:
+                if uid in self._uid2idx_kvs:
+                    raise RuntimeError("Descriptor with UID %s already "
+                                       "present in this index.")
+
             old_ntotal = self.count()
 
             next_next_index = self._next_index + n
@@ -486,7 +498,26 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             descriptors.
 
         """
-        raise NotImplementedError()
+        if self.read_only:
+            raise ReadOnlyError("Cannot modify read-only index.")
+
+        with self._model_lock:
+            # Check that provided IDs are present in uid2idx mapping.
+            uids_d = collections.deque()
+            for uid in uids:
+                if uid not in self._uid2idx_kvs:
+                    raise KeyError(uid)
+                uids_d.append(uid)
+
+            # Remove elements from structures
+            # - faiss remove_ids requires a np.ndarray of int64 type.
+            rm_idxs = np.asarray([self._uid2idx_kvs[uid] for uid in uids_d],
+                                 dtype=np.int64)
+            self._faiss_index.remove_ids(rm_idxs)
+            self._descriptor_set.remove_many_descriptors(uids_d)
+            self._uid2idx_kvs.remove_many(uids_d)
+            self._idx2uid_kvs.remove_many(rm_idxs)
+            self._save_faiss_model()
 
     def _descriptors_to_matrix(self, descriptors):
         """
@@ -554,7 +585,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         with self._model_lock:
             s_dists, s_ids = self._faiss_index.search(q, n)
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
-            uuids = [self._idx2uid_kvs.get(s_id) for s_id in s_ids]
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

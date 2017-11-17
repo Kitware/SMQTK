@@ -217,6 +217,115 @@ if FaissNearestNeighborsIndex.is_usable():
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 
+        def test_remove_from_index_readonly(self):
+            """
+            Test that we cannot call remove when the instance is read-only.
+            """
+            index = self._make_inst(read_only=True)
+            self.assertRaises(
+                ReadOnlyError,
+                index.remove_from_index, [0]
+            )
+
+        def test_remove_from_index_keyerror_empty_index(self):
+            """
+            Test that any key should cause a key error on an empty index.
+            """
+            index = self._make_inst()
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, [0]
+            )
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, ['0']
+            )
+            # Only includes the first key that's erroneous in the KeyError inst
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, [0, 'other']
+            )
+
+        def test_remove_from_index_keyerror(self):
+            """
+            Test that we do not impact the index by trying to remove an invalid
+            key.
+            """
+            n = 100
+            dim = 8
+            dset = {DescriptorMemoryElement('test', i) for i in range(n)}
+            [d.set_vector(np.random.rand(dim)) for d in dset]
+
+            index = self._make_inst()
+            index.build_index(dset)
+
+            # Try removing 2 invalid entries
+            self.assertRaises(
+                KeyError,
+                index.remove_from_index, [100, 'something']
+            )
+
+            # Make sure that all indexed descriptors correctly return
+            # themselves from an NN call.
+            for d in dset:
+                self.assertEqual(index.nn(d, 1)[0][0], d)
+
+        def test_remove_from_index(self):
+            """
+            Test that we can actually remove from the index.
+            """
+            n = 100
+            dim = 8
+            dset = {DescriptorMemoryElement('test', i) for i in range(n)}
+            [d.set_vector(np.random.rand(dim)) for d in dset]
+
+            index = self._make_inst()
+            index.build_index(dset)
+
+            # Try removing two valid descriptors
+            uids_to_remove = [10, 98]
+            index.remove_from_index(uids_to_remove)
+
+            # Check that every other element is still in the index.
+            self.assertEqual(len(index), 98)
+            for d in dset:
+                if d.uuid() not in uids_to_remove:
+                    self.assertEqual(index.nn(d, 1)[0][0], d)
+
+            # Check that descriptors matching removed uids cannot be queried
+            # out of the index.
+            for d in dset:
+                if d.uuid() in uids_to_remove:
+                    self.assertNotEqual(index.nn(d, 1)[0][0], d)
+
+        def test_remove_then_add(self):
+            """
+            Test that we can remove from the index and then add to it again.
+            """
+            n1 = 100
+            n2 = 10
+            dim = 8
+            set1 = [DescriptorMemoryElement('test', i) for i in range(n1)]
+            set2 = [DescriptorMemoryElement('test', i)
+                    for i in range(n1, n1 + n2)]
+            [d.set_vector(np.random.rand(dim)) for d in (set1 + set2)]
+            uids_to_remove = [10, 98]
+
+            index = self._make_inst()
+            index.build_index(set1)
+            index.remove_from_index(uids_to_remove)
+            index.update_index(set2)
+
+            self.assertEqual(len(index), 108)
+            # Removed descriptors should not be in return queries.
+            self.assertNotEqual(index.nn(set1[10], 1)[0][0], set1[10])
+            self.assertNotEqual(index.nn(set1[98], 1)[0][0], set1[98])
+            # Every other descriptor should be queryable
+            for d in set1 + set2:
+                if d.uuid() not in uids_to_remove:
+                    self.assertEqual(index.nn(d, 1)[0][0], d)
+            self.assertEqual(index._next_index, 110)
+
         def test_nn_many_descriptors(self):
             np.random.seed(0)
 

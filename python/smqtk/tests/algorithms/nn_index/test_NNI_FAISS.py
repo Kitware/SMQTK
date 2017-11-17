@@ -23,9 +23,9 @@ from smqtk.representation.key_value.memory import MemoryKeyValueStore
 if FaissNearestNeighborsIndex.is_usable():
 
     class TestFAISSIndex (unittest.TestCase):
-    
+
         RAND_SEED = 42
-    
+
         def _make_inst(self, descriptor_set=None, idx2uid_kvs=None,
                        uid2idx_kvs=None, **kwargs):
             """
@@ -41,7 +41,11 @@ if FaissNearestNeighborsIndex.is_usable():
                 uid2idx_kvs = MemoryKeyValueStore()
             return FaissNearestNeighborsIndex(descriptor_set, idx2uid_kvs,
                                               uid2idx_kvs, **kwargs)
-    
+
+        def test_impl_findable(self):
+            self.assertIn(FaissNearestNeighborsIndex.__name__,
+                          get_nn_index_impls())
+
         def test_configuration(self):
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
@@ -63,9 +67,9 @@ if FaissNearestNeighborsIndex.is_usable():
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, b'Flat')
-            self.assertIsInstance(index.factory_string, six.binary_type)
-    
+            self.assertEqual(index.factory_string, 'Flat')
+            self.assertIsInstance(index.factory_string, six.string_types)
+
             # Test that constructing a new instance from ``index``'s config
             # yields an index with the same configuration (idempotent).
             index2 = FaissNearestNeighborsIndex.from_config(
@@ -81,8 +85,8 @@ if FaissNearestNeighborsIndex.is_usable():
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, b'Flat')
-            self.assertIsInstance(index.factory_string, six.binary_type)
+            self.assertEqual(index.factory_string, 'Flat')
+            self.assertIsInstance(index.factory_string, six.string_types)
 
             # Test that constructing a new instance from ``index``'s config
             # yields an index with the same configuration (idempotent).
@@ -96,20 +100,20 @@ if FaissNearestNeighborsIndex.is_usable():
             d = DescriptorMemoryElement('unit', 0)
             d.set_vector(v)
             test_descriptors = [d]
-    
+
             index = self._make_inst(read_only=True)
             self.assertRaises(
                 ReadOnlyError,
                 index.build_index, test_descriptors
             )
-    
+
         def test_update_index_no_input(self):
             index = self._make_inst()
             self.assertRaises(
                 ValueError,
                 index.update_index, []
             )
-    
+
         def test_update_index_new_index(self):
             n = 100
             dim = 8
@@ -131,7 +135,7 @@ if FaissNearestNeighborsIndex.is_usable():
                 q = d_index[i]
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
-    
+
         def test_update_index_additive(self):
             n1 = 100
             n2 = 10
@@ -213,7 +217,7 @@ if FaissNearestNeighborsIndex.is_usable():
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 
-        def test_many_descriptors(self):
+        def test_nn_many_descriptors(self):
             np.random.seed(0)
 
             n = 10 ** 4
@@ -230,52 +234,48 @@ if FaissNearestNeighborsIndex.is_usable():
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_non_flat_index(self):
+
+        def test_nn_non_flat_index(self):
             faiss_index = self._make_inst(factory_string='IVF256,Flat')
-            self.assertEqual(faiss_index.factory_string, b'IVF256,Flat')
-    
+            self.assertEqual(faiss_index.factory_string, 'IVF256,Flat')
+
             np.random.seed(self.RAND_SEED)
             n = 10 ** 4
             dim = 256
-    
+
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
             q.set_vector(np.zeros((dim,)))
-    
+
             faiss_index.build_index(d_index)
-    
+
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_preprocess_index(self):
+
+        def test_nn_preprocess_index(self):
             faiss_index = self._make_inst(factory_string='PCAR64,Flat')
-            self.assertEqual(faiss_index.factory_string, b'PCAR64,Flat')
-    
+            self.assertEqual(faiss_index.factory_string, 'PCAR64,Flat')
+
             np.random.seed(self.RAND_SEED)
             n = 10 ** 4
             dim = 256
-    
+
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
             q.set_vector(np.zeros((dim,)))
-    
+
             faiss_index.build_index(d_index)
-    
+
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_impl_findable(self):
-            self.assertIn(FaissNearestNeighborsIndex.__name__,
-                          get_nn_index_impls())
-    
-        def test_known_descriptors_euclidean_unit(self):
+
+        def test_nn_known_descriptors_euclidean_unit(self):
             dim = 5
-    
+
             ###
             # Unit vectors -- Equal distance
             #
@@ -298,10 +298,10 @@ if FaissNearestNeighborsIndex.is_usable():
             # All dists should be 1.0, r order doesn't matter
             for d in dists:
                 self.assertEqual(d, 1.)
-    
-        def test_known_descriptors_nearest(self):
+
+        def test_nn_known_descriptors_nearest(self):
             dim = 5
-    
+
             ###
             # Unit vectors -- Equal distance
             #
@@ -321,10 +321,10 @@ if FaissNearestNeighborsIndex.is_usable():
             # Distance should be zero
             self.assertEqual(dists[0], 0.)
             self.assertItemsEqual(r[0].vector(), vectors[0])
-    
-        def test_known_descriptors_euclidean_ordered(self):
+
+        def test_nn_known_descriptors_euclidean_ordered(self):
             index = self._make_inst()
-    
+
             # make vectors to return in a known euclidean distance order
             i = 100
             test_descriptors = []
@@ -334,14 +334,14 @@ if FaissNearestNeighborsIndex.is_usable():
                 test_descriptors.append(d)
             random.shuffle(test_descriptors)
             index.build_index(test_descriptors)
-    
+
             # Since descriptors were built in increasing distance from (0,0),
             # returned descriptors for a query of [0,0] should be in index
             # order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(np.array([0, 0], float))
             r, dists = index.nn(q, n=i)
-    
+
             self.assertEqual(len(dists), i)
             for j, d, dist in zip(range(i), r, dists):
                 self.assertEqual(d.uuid(), j)

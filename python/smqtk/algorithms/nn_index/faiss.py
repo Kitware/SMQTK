@@ -10,7 +10,7 @@ import os
 import six
 import tempfile
 
-from six.moves import range, zip
+from six.moves import zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
@@ -169,7 +169,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param factory_string: String to pass to FAISS' `index_factory`;
             see the documentation [1] on this feature for more details.
-        :type factory_string: str
+        :type factory_string: str | unicode
 
         :param use_multiprocessing: Whether or not to use discrete processes
             as the parallelization agent vs python threads.
@@ -184,11 +184,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         super(FaissNearestNeighborsIndex, self).__init__()
 
-        if isinstance(factory_string, six.text_type):
-            self.factory_string = factory_string.encode()
-        elif isinstance(factory_string, six.binary_type):
-            self.factory_string = factory_string
-        else:
+        if not isinstance(factory_string, six.string_types):
             raise ValueError('The factory_string parameter must be a '
                              'recognized string type.')
 
@@ -198,6 +194,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._index_element = index_element
         self._index_param_element = index_param_element
         self.read_only = read_only
+        self.factory_string = str(factory_string)
         self.use_multiprocessing = use_multiprocessing
         self.random_seed = None
         if random_seed is not None:
@@ -231,6 +228,26 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 self._index_param_element)
 
         return config
+
+    def _index_factory_wrapper(self, d, factory_string):
+        """
+        Create a FAISS index for the given descriptor dimensionality and
+        factory string.
+
+        This *always* produces an index using the L2 metric.
+
+        :param d: Integer indexed vector dimensionality.
+        :type d: int
+
+        :param factory_string: Factory string to drive index generation.
+        :type factory_string: str
+
+        :return: Constructed index.
+        :rtype: faiss.Index | faiss.GpuIndex
+        """
+        self._log.debug("Creating index by factory: '%s'", factory_string)
+        index = faiss.index_factory(d, factory_string, faiss.METRIC_L2)
+        return index
 
     def _has_model_data(self):
         """
@@ -343,19 +360,21 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # goes out of scope.  We do not currently know why constructing an
         # IndexIDMap with the proxy doesn't retain the reference appropriately.
         try:
-            faiss_index = faiss.index_factory(d, self.factory_string,
-                                              faiss.METRIC_L2)
+            faiss_index = self._index_factory_wrapper(d, self.factory_string)
+            # noinspection PyArgumentList
             faiss_index.train(data)
+            # noinspection PyArgumentList
             faiss_index.add_with_ids(data, idx_ids)
         except RuntimeError as ex:
             if "add_with_ids not implemented for this type" in str(ex):
                 # apparently using an index without add_with_ids support, wrap
                 # in an IndexIDMap.  We need to use the index_factory since
                 # what
-                idmap_string = str("IDMap,") + self.factory_string
-                faiss_index = faiss.index_factory(d, idmap_string,
-                                                  faiss.METRIC_L2)
+                idmap_string = str("IDMap," + self.factory_string)
+                faiss_index = self._index_factory_wrapper(d, idmap_string)
+                # noinspection PyArgumentList
                 faiss_index.train(data)
+                # noinspection PyArgumentList
                 faiss_index.add_with_ids(data, idx_ids)
             else:
                 raise

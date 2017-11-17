@@ -1,7 +1,7 @@
 kitware.smqtk
 =============
 
-Ansible role to install [SMQTK](https://kwgitlab.kitware.com/computer-vision/SMQTK).
+Ansible role to install [SMQTK](https://github.com/Kitware/SMQTK).
 
 
 Role Variables

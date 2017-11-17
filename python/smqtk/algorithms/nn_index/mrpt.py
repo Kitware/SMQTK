@@ -13,9 +13,9 @@ from itertools import groupby
 
 from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils.errors import ReadOnlyError
 from smqtk.utils.file_utils import safe_create_dir
 
 CHUNK_SIZE = 5000

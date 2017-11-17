@@ -15,8 +15,8 @@ from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms import get_nn_index_impls
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
-from smqtk.utils.errors import ReadOnlyError
 
 
 class TestMRPTIndex (unittest.TestCase):

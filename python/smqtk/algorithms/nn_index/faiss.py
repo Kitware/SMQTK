@@ -1,20 +1,24 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
+import collections
 from copy import deepcopy
+import itertools
 import json
 import multiprocessing
 import numpy as np
 import os
 import six
-from six.moves import zip
 import tempfile
+
+from six.moves import zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import (
     get_data_element_impls,
     get_descriptor_index_impls,
+    get_key_value_store_impls,
 )
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import plugin, merge_dict, metrics
@@ -29,105 +33,12 @@ except ImportError:
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FAISS library.
-
-    SUPPORT FOR THIS FUNCTIONALITY IS EXPERIMENTAL AT THIS STAGE. THERE ARE 
-    NO TESTS AND THE IMPLEMENTATION DOES NOT COVER ALL OF THE FUNCTIONALITY 
-    OF THE FAISS LIBRARY.
     """
 
     @classmethod
     def is_usable(cls):
         # if underlying library is not found, the import above will error
         return faiss is not None
-
-    def __init__(self, descriptor_set, index_element=None,
-                 index_param_element=None,
-                 read_only=False, factory_string='Flat',
-                 use_multiprocessing=True,
-                 random_seed=None):
-        """
-        Initialize FAISS index properties. Does not contain a queryable index
-        until one is built via the ``build_index`` method, or loaded from
-        existing model files.
-
-        :param descriptor_set: Index in which DescriptorElements will be
-            stored.
-        :type descriptor_set: smqtk.representation.DescriptorIndex
-
-        :param index_element: Optional DataElement used to load/store the
-            index. When None, the index will only be stored in memory.
-        :type index_element: None | smqtk.representation.DataElement
-
-        :param index_param_element: Optional DataElement used to load/store
-            the index parameters. When None, the index will only be stored in
-            memory.
-        :type index_param_element: None | smqtk.representation.DataElement
-
-        :param read_only: If True, `build_index` will error if there is an
-            existing index. False by default.
-        :type read_only: bool
-
-        :param factory_string: String to pass to FAISS' `index_factory`;
-            see the [documentation][1] on this feature for more details.
-        :type factory_string: str
-
-        :param use_multiprocessing: Whether or not to use discrete processes
-            as the parallelization agent vs python threads.
-        :type use_multiprocessing: bool
-
-        :param random_seed: Integer to use as the random number generator
-            seed.
-        :type random_seed: int | None
-
-        [1]: https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory
-
-        """
-        super(FaissNearestNeighborsIndex, self).__init__()
-
-        if isinstance(factory_string, six.text_type):
-            self.factory_string = factory_string.encode()
-        elif isinstance(factory_string, six.binary_type):
-            self.factory_string = factory_string
-        else:
-            raise ValueError('The factory_string parameter must be a'
-                             ' recognized string type.')
-
-        self._index_element = index_element
-        self._index_param_element = index_param_element
-        self.read_only = read_only
-        self.use_multiprocessing = use_multiprocessing
-        self._descriptor_set = descriptor_set
-        self._model_lock = multiprocessing.RLock()
-
-        self.random_seed = None
-        if random_seed is not None:
-            self.random_seed = int(random_seed)
-
-        # Load the index/parameters if one exists
-        if self._has_model_data():
-            self._log.info("Found existing model data. Loading.")
-            self._load_faiss_model()
-            self._uuids = list(self._descriptor_set.iterkeys())
-            assert len(self._uuids) == self._faiss_index.ntotal, \
-                "The number of descriptors doesn't match the number of " \
-                "items in the index."
-
-    def get_config(self):
-        config = {
-            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
-            "factory_string": self.factory_string,
-            "read_only": self.read_only,
-            "random_seed": self.random_seed,
-            "use_multiprocessing": self.use_multiprocessing,
-        }
-        if self._index_element:
-            config['index_element'] = plugin.to_plugin_config(
-                self._index_element)
-        if self._index_param_element:
-            config['index_param_element'] = plugin.to_plugin_config(
-                self._index_param_element)
-
-        return config
 
     @classmethod
     def get_default_config(cls):
@@ -160,6 +71,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         di_default = plugin.make_config(get_descriptor_index_impls())
         default['descriptor_set'] = di_default
 
+        kvs_default = plugin.make_config(get_key_value_store_impls())
+        default['idx2uid_kvs'] = kvs_default
+        default['uid2idx_kvs'] = deepcopy(kvs_default)
+
         return default
 
     @classmethod
@@ -190,7 +105,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             cfg = config_dict
 
         cfg['descriptor_set'] = plugin.from_plugin_config(
-            cfg['descriptor_set'], get_descriptor_index_impls())
+            cfg['descriptor_set'], get_descriptor_index_impls()
+        )
+        cfg['uid2idx_kvs'] = plugin.from_plugin_config(
+            cfg['uid2idx_kvs'], get_key_value_store_impls()
+        )
+        cfg['idx2uid_kvs'] = plugin.from_plugin_config(
+            cfg['idx2uid_kvs'], get_key_value_store_impls()
+        )
 
         if (cfg['index_element'] and
                 cfg['index_element']['type']):
@@ -210,57 +132,197 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 
+    def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
+                 index_element=None, index_param_element=None,
+                 read_only=False, factory_string='IVF1,Flat',
+                 use_multiprocessing=True,
+                 random_seed=None):
+        """
+        Initialize FAISS index properties. Does not contain a queryable index
+        until one is built via the ``build_index`` method, or loaded from
+        existing model files.
+
+        :param descriptor_set: Index in which DescriptorElements will be
+            stored.
+        :type descriptor_set: smqtk.representation.DescriptorIndex
+
+        :param idx2uid_kvs: Key-value storage mapping FAISS indexed vector
+            index to descriptor UID.  This should be the inverse of
+            `uid2idx_kvs`.
+        :type idx2uid_kvs: smqtk.representation.KeyValueStore
+
+        :param uid2idx_kvs: Key-value storage mapping descriptor UIDs to FAISS
+            indexed vector index.  This should be the inverse of `idx2uid_kvs`.
+        :type uid2idx_kvs: smqtk.representation.KeyValueStore
+
+        :param index_element: Optional DataElement used to load/store the
+            index. When None, the index will only be stored in memory.
+        :type index_element: None | smqtk.representation.DataElement
+
+        :param index_param_element: Optional DataElement used to load/store
+            the index parameters. When None, the index will only be stored in
+            memory.
+        :type index_param_element: None | smqtk.representation.DataElement
+
+        :param read_only: If True, `build_index` will error if there is an
+            existing index. False by default.
+        :type read_only: bool
+
+        :param factory_string: String to pass to FAISS' `index_factory`;
+            see the documentation [1] on this feature for more details.
+            TODO(john.moeller): Flat indexes are not supported, so set the
+            default to 'IVF1,Flat', which is essentially a flat index.
+        :type factory_string: str | unicode
+
+        :param use_multiprocessing: Whether or not to use discrete processes
+            as the parallelization agent vs python threads.
+        :type use_multiprocessing: bool
+
+        :param random_seed: Integer to use as the random number generator
+            seed.
+        :type random_seed: int | None
+
+        [1]: https://github.com/facebookresearch/faiss/wiki/High-level-interface-and-auto-tuning#index-factory
+
+        """
+        super(FaissNearestNeighborsIndex, self).__init__()
+
+        if not isinstance(factory_string, six.string_types):
+            raise ValueError('The factory_string parameter must be a '
+                             'recognized string type.')
+
+        self._descriptor_set = descriptor_set
+        self._idx2uid_kvs = idx2uid_kvs
+        self._uid2idx_kvs = uid2idx_kvs
+        self._index_element = index_element
+        self._index_param_element = index_param_element
+        self.read_only = read_only
+        self.factory_string = str(factory_string)
+        self.use_multiprocessing = use_multiprocessing
+        self.random_seed = None
+        if random_seed is not None:
+            self.random_seed = int(random_seed)
+        # Index value for the next added element.  Reset to 0 on a build.
+        self._next_index = 0
+
+        # Lock for accessing FAISS model components.
+        self._model_lock = multiprocessing.RLock()
+        # Placeholder for FAISS model instance.
+        self._faiss_index = None
+
+        # Load the index/parameters if one exists
+        self._load_faiss_model()
+
+    def get_config(self):
+        config = {
+            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
+            "uid2idx_kvs": plugin.to_plugin_config(self._uid2idx_kvs),
+            "idx2uid_kvs": plugin.to_plugin_config(self._idx2uid_kvs),
+            "factory_string": self.factory_string,
+            "read_only": self.read_only,
+            "random_seed": self.random_seed,
+            "use_multiprocessing": self.use_multiprocessing,
+        }
+        if self._index_element:
+            config['index_element'] = plugin.to_plugin_config(
+                self._index_element)
+        if self._index_param_element:
+            config['index_param_element'] = plugin.to_plugin_config(
+                self._index_param_element)
+
+        return config
+
+    def _index_factory_wrapper(self, d, factory_string):
+        """
+        Create a FAISS index for the given descriptor dimensionality and
+        factory string.
+
+        This *always* produces an index using the L2 metric.
+
+        :param d: Integer indexed vector dimensionality.
+        :type d: int
+
+        :param factory_string: Factory string to drive index generation.
+        :type factory_string: str
+
+        :return: Constructed index.
+        :rtype: faiss.Index | faiss.GpuIndex
+        """
+        self._log.debug("Creating index by factory: '%s'", factory_string)
+        index = faiss.index_factory(d, factory_string, faiss.METRIC_L2)
+        return index
+
     def _has_model_data(self):
         """
-        check if configured model files are configured and not empty
+        Check if configured model files are configured and not empty.
         """
-        return (self._index_element and not self._index_element.is_empty() and
-                self._index_param_element and
-                not self._index_param_element.is_empty())
+        with self._model_lock:
+            return (self._index_element and
+                    self._index_param_element and
+                    not self._index_element.is_empty() and
+                    not self._index_param_element.is_empty())
 
     def _load_faiss_model(self):
         """
         Load the FAISS model from the configured DataElement
         """
-        # Load the binary index
-        if self._index_element and not self._index_element.is_empty():
-            tmp_fp = self._index_element.write_temp()
-            self._faiss_index = faiss.read_index(tmp_fp)
-            self._index_element.clean_temp()
-        # Params pickle include the build params + our local state params
-        if (self._index_param_element and
-                not self._index_param_element.is_empty()):
-            state = json.loads(self._index_param_element.get_bytes())
-            self.factory_string = state["factory_string"]
-            self.read_only = state["read_only"]
-            self.random_seed = state["random_seed"]
-            self.use_multiprocessing = state["use_multiprocessing"]
+        with self._model_lock:
+            if self._has_model_data():
+                # Load the binary index
+                tmp_fp = self._index_element.write_temp()
+                self._faiss_index = faiss.read_index(tmp_fp)
+                self._index_element.clean_temp()
+
+                # Params pickle include the build params + our local state
+                # params.
+                state = json.loads(self._index_param_element.get_bytes())
+                self.factory_string = state["factory_string"]
+                self.read_only = state["read_only"]
+                self.random_seed = state["random_seed"]
+                self.use_multiprocessing = state["use_multiprocessing"]
+                self._next_index = state["next_index"]
+
+                # Check that descriptor-set and kvstore instances match up in
+                # size.
+                assert len(self._descriptor_set) == len(self._uid2idx_kvs) == \
+                    len(self._idx2uid_kvs) == self._faiss_index.ntotal, \
+                    "Not all of our storage elements agree on size: " \
+                    "len(dset, uid2idx, idx2uid, faiss_idx) = " \
+                    "(%d, %d, %d, %d)" \
+                    % (len(self._descriptor_set), len(self._uid2idx_kvs),
+                       len(self._idx2uid_kvs), self._faiss_index.ntotal)
 
     def _save_faiss_model(self):
         """
-        Save the index to the configured DataElement.
+        Save the index and parameters to the configured DataElements.
         """
-        if self._index_element and self._index_element.writable():
-            self._log.debug("Storing index: %s", self._index_element)
-            
-            # FAISS wants to write to a file, so make a temp file, then read
-            # it in, putting bytes into element.
-            fd, fp = tempfile.mkstemp()
-            try:
-                faiss.write_index(self._faiss_index, fp)
-                self._index_element.set_bytes(
-                    os.read(fd, os.path.getsize(fp)))
-            finally:
-                os.close(fd)
-                os.remove(fp)
-        if self._index_param_element and self._index_param_element.writable():
-            params = {
-                "factory_string": self.factory_string,
-                "read_only": self.read_only,
-                "random_seed": self.random_seed,
-                "use_multiprocessing": self.use_multiprocessing,
-            }
-            self._index_param_element.set_bytes(json.dumps(params))
+        with self._model_lock:
+            # Only write to cache elements if they are both writable.
+            writable = (self._index_element and
+                        self._index_element.writable() and
+                        self._index_param_element and
+                        self._index_param_element.writable())
+            if writable:
+                self._log.debug("Storing index: %s", self._index_element)
+                # FAISS wants to write to a file, so make a temp file, then
+                # read it in, putting bytes into element.
+                fd, fp = tempfile.mkstemp()
+                try:
+                    faiss.write_index(self._faiss_index, fp)
+                    self._index_element.set_bytes(
+                        os.read(fd, os.path.getsize(fp)))
+                finally:
+                    os.close(fd)
+                    os.remove(fp)
+                # Store index parameters used.
+                params = {
+                    "factory_string": self.factory_string,
+                    "read_only": self.read_only,
+                    "random_seed": self.random_seed,
+                    "use_multiprocessing": self.use_multiprocessing,
+                    "next_index": self._next_index,
+                }
+                self._index_param_element.set_bytes(json.dumps(params))
 
     def _build_index(self, descriptors):
         """
@@ -286,21 +348,29 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         desc_list = list(descriptors)
         data, new_uuids = self._descriptors_to_matrix(desc_list)
         n, d = data.shape
+        idx_ids = np.arange(n)  # restart IDs from 0.
 
-        # Build a faiss index but don't add it until we have a lock
-        faiss_index = faiss.index_factory(d, self.factory_string)
+        # Build a faiss index but don't internalize it until we have a lock.
+
+        faiss_index = self._index_factory_wrapper(d, self.factory_string)
+        # noinspection PyArgumentList
         faiss_index.train(data)
+        # TODO(john.moeller): This will raise an exception on flat indexes.
+        # There's a solution which involves wrapping the index in an
+        # IndexIDMap, but it doesn't work because of a bug in FAISS. So for
+        # now we don't support flat indexes.
+        # noinspection PyArgumentList
+        faiss_index.add_with_ids(data, idx_ids)
+
         assert faiss_index.d == d, \
             "FAISS index dimension doesn't match data dimension"
-
-        faiss_index.add(data)
         assert faiss_index.ntotal == n, \
             "FAISS index size doesn't match data size"
 
         with self._model_lock:
             self._faiss_index = faiss_index
-            self._log.info("FAISS index has been constructed with %d"
-                           " vectors", n)
+            self._log.info("FAISS index has been constructed with %d "
+                           "vectors", n)
 
             self._log.debug("Clearing and adding new descriptor elements")
             self._descriptor_set.clear()
@@ -308,9 +378,21 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             assert len(self._descriptor_set) == n, \
                 "New descriptor set size doesn't match data size"
 
-            self._uuids = new_uuids
-            assert len(self._uuids) == n, \
-                "New uuid list size doesn't match data size"
+            self._uid2idx_kvs.clear()
+            self._uid2idx_kvs.add_many(
+                dict(itertools.izip(new_uuids, idx_ids))
+            )
+            assert len(self._uid2idx_kvs) == n, \
+                "New uid2idx map size doesn't match data size."
+
+            self._idx2uid_kvs.clear()
+            self._idx2uid_kvs.add_many(
+                dict(itertools.izip(idx_ids, new_uuids))
+            )
+            assert len(self._idx2uid_kvs) == n, \
+                "New idx2uid map size doesn't match data size."
+
+            self._next_index = n
 
             self._save_faiss_model()
 
@@ -327,11 +409,15 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :raises RuntimeError: If a given descriptor is already present in this
+            index.  Adding a duplicate descriptor would cause duplicates in
+            a nearest-neighbor return (no de-duplication).
+
         """
         if self.read_only:
             raise ReadOnlyError("Cannot modify read-only index.")
 
-        if not hasattr(self, "_faiss_index"):
+        if self._faiss_index is None:
             self._build_index(descriptors)
             return
 
@@ -343,11 +429,22 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         n, d = data.shape
 
         with self._model_lock:
+            # Assert that new descriptors do not intersect with existing
+            # descriptors.
+            for uid in new_uuids:
+                if uid in self._uid2idx_kvs:
+                    raise RuntimeError("Descriptor with UID %s already "
+                                       "present in this index.")
+
             old_ntotal = self.count()
+
+            next_next_index = self._next_index + n
+            new_ids = np.arange(self._next_index, next_next_index)
+            self._next_index = next_next_index
 
             assert self._faiss_index.d == d, \
                 "FAISS index dimension doesn't match data dimension"
-            self._faiss_index.add(data)
+            self._faiss_index.add_with_ids(data, new_ids)
             assert self._faiss_index.ntotal == old_ntotal + n, \
                 "New FAISS index size doesn't match old + data size"
             self._log.info("FAISS index has been updated with %d"
@@ -358,10 +455,51 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             assert len(self._descriptor_set) == old_ntotal + n, \
                 "New descriptor set size doesn't match old + data size"
 
-            self._uuids.extend(new_uuids)
-            assert len(self._uuids) == old_ntotal + n, \
-                "New uuid list size doesn't match old + data size"
-            
+            self._uid2idx_kvs.add_many(
+                dict(itertools.izip(new_uuids, new_ids))
+            )
+            assert len(self._uid2idx_kvs) == old_ntotal + n, \
+                "New uid2idx kvs size doesn't match old + new data size."
+
+            self._idx2uid_kvs.add_many(
+                dict(itertools.izip(new_ids, new_uuids))
+            )
+            assert len(self._idx2uid_kvs) == old_ntotal + n, \
+                "New idx2uid kvs size doesn't match old + new data size."
+
+            self._save_faiss_model()
+
+    def _remove_from_index(self, uids):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.
+
+        """
+        if self.read_only:
+            raise ReadOnlyError("Cannot modify read-only index.")
+
+        with self._model_lock:
+            # Check that provided IDs are present in uid2idx mapping.
+            uids_d = collections.deque()
+            for uid in uids:
+                if uid not in self._uid2idx_kvs:
+                    raise KeyError(uid)
+                uids_d.append(uid)
+
+            # Remove elements from structures
+            # - faiss remove_ids requires a np.ndarray of int64 type.
+            rm_idxs = np.asarray([self._uid2idx_kvs[uid] for uid in uids_d],
+                                 dtype=np.int64)
+            self._faiss_index.remove_ids(rm_idxs)
+            self._descriptor_set.remove_many_descriptors(uids_d)
+            self._uid2idx_kvs.remove_many(uids_d)
+            self._idx2uid_kvs.remove_many(rm_idxs)
             self._save_faiss_model()
 
     def _descriptors_to_matrix(self, descriptors):
@@ -397,7 +535,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: int
         """
         with self._model_lock:
-            return len(self._descriptor_set)
+            # If we don't have a searchable index we don't actually have
+            # anything.
+            if self._faiss_index:
+                return self._faiss_index.ntotal
+            else:
+                return 0
 
     def _nn(self, d, n=1):
         """
@@ -425,7 +568,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         with self._model_lock:
             s_dists, s_ids = self._faiss_index.search(q, n)
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
-            uuids = [self._uuids[s_id] for s_id in s_ids]
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

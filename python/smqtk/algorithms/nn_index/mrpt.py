@@ -231,73 +231,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 self._index_param_filepath and
                 osp.isfile(self._index_param_filepath))
 
-    def count(self):
-        """
-        :return: Number of elements in this index.
-        :rtype: int
-        """
-        # Descriptor-set should already handle concurrency.
-        return len(self._descriptor_set)
-
-    def _build_index(self, descriptors):
-        """
-        Internal method to be implemented by sub-classes to build the index with
-        the given descriptor data elements.
-
-        Subsequent calls to this method should rebuild the current index.  This
-        method shall not add to the existing index nor raise an exception to as
-        to protect the current index.
-
-        :param descriptors: Iterable of descriptor elements to build index
-            over.
-        :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-        with self._model_lock:
-            if self._read_only:
-                raise ReadOnlyError("Cannot modify container attributes due to "
-                                    "being in read-only mode.")
-
-            self._log.info("Building new MRPT index")
-
-            self._log.debug("Clearing and adding new descriptor elements")
-            # NOTE: It may be the case for some DescriptorIndex implementations,
-            # this clear may interfere with iteration when part of the input
-            # iterator of descriptors was this index's previous descriptor-set,
-            # as is the case with ``update_index``.
-            self._descriptor_set.clear()
-            self._descriptor_set.add_many_descriptors(descriptors)
-
-            self._log.debug('Building MRPT index')
-            self._build_multiple_trees()
-
-            self._save_mrpt_model()
-
-    def _update_index(self, descriptors):
-        """
-        Internal method to be implemented by sub-classes to additively update
-        the current index with the one or more descriptor elements given.
-
-        If no index exists yet, a new one should be created using the given
-        descriptors.
-
-        *NOTE:* This implementation fully rebuilds the index using the current
-        index contents merged with the provided new descriptor elements.
-
-        :param descriptors: Iterable of descriptor elements to add to this
-            index.
-        :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-        with self._model_lock:
-            if self._read_only:
-                raise ReadOnlyError("Cannot modify container attributes due "
-                                    "to being in read-only mode.")
-            self._log.debug("Updating index by rebuilding with union. ")
-            self.build_index(chain(self._descriptor_set, descriptors))
-
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
         Build an MRPT structure
@@ -493,6 +426,92 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             with open(self._index_filepath, "rb") as f:
                 self._trees = pickle.load(f)
 
+    def count(self):
+        """
+        :return: Number of elements in this index.
+        :rtype: int
+        """
+        # Descriptor-set should already handle concurrency.
+        return len(self._descriptor_set)
+
+    def _build_index(self, descriptors):
+        """
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
+
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
+
+        :param descriptors: Iterable of descriptor elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
+
+            self._log.info("Building new MRPT index")
+
+            self._log.debug("Clearing and adding new descriptor elements")
+            # NOTE: It may be the case for some DescriptorIndex implementations,
+            # this clear may interfere with iteration when part of the input
+            # iterator of descriptors was this index's previous descriptor-set,
+            # as is the case with ``update_index``.
+            self._descriptor_set.clear()
+            self._descriptor_set.add_many_descriptors(descriptors)
+
+            self._log.debug('Building MRPT index')
+            self._build_multiple_trees()
+
+            self._save_mrpt_model()
+
+    def _update_index(self, descriptors):
+        """
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        *NOTE:* This implementation fully rebuilds the index using the current
+        index contents merged with the provided new descriptor elements.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            self._log.debug("Updating index by rebuilding with union. ")
+            self.build_index(chain(self._descriptor_set, descriptors))
+
+    def _remove_from_index(self, uids):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            self._descriptor_set.remove_many_descriptors(uids)
+            self.build_index(self._descriptor_set)
+
     def _nn(self, d, n=1):
         """
         Internal method to be implemented by sub-classes to return the nearest
@@ -565,10 +584,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             leaf_size = db_size//(1 << depth)
             if leaf_size * ntrees < n:
                 self._log.warning(
-                    "The number of descriptors in a leaf (%d) times the number "
-                    "of trees (%d) is less than the number of descriptors "
-                    "requested by the query (%d). The query result will be "
-                    "deficient.", leaf_size, ntrees, n)
+                    "The number of descriptors in a leaf (%d) times the "
+                    "number of trees (%d) is less than the number of "
+                    "descriptors requested by the query (%d). The query "
+                    "result will be deficient.", leaf_size, ntrees, n)
 
             # Take union of all tree hits
             tree_hits = set()

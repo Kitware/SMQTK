@@ -50,50 +50,20 @@ class DummyKVStore (KeyValueStore):
     def get(self, key, default=NO_DEFAULT_VALUE):
         pass
 
+    def remove(self, key):
+        super(DummyKVStore, self).remove(key)
+        return self
+
+    def remove_many(self, keys):
+        super(DummyKVStore, self).remove_many(keys)
+        return self
+
     def clear(self):
         super(DummyKVStore, self).clear()
+        return self
 
 
 class TestKeyValueStoreAbstract (unittest.TestCase):
-
-    def test_repr(self):
-        # Should return expected template string
-        expected_repr = "<DummyKVStore %s>"
-        actual_repr = repr(DummyKVStore())
-        self.assertEqual(actual_repr, expected_repr)
-
-    def test_add_when_read_only(self):
-        s = DummyKVStore()
-        s.TEST_READ_ONLY = True
-
-        self.assertRaises(
-            ReadOnlyError,
-            s.add, 'k', 'v'
-        )
-
-    def test_add_when_not_read_only(self):
-        s = DummyKVStore()
-        s.TEST_READ_ONLY = False
-        s.add('k', 'v')
-        # Integer
-        s.add(0, 'some value')
-        # type
-        s.add(object, 'some value')
-        # some object instance
-        s.add(object(), 'some value')
-
-    def test_add_not_hashable(self):
-        s = DummyKVStore()
-        # list
-        self.assertRaises(
-            ValueError,
-            s.add, [1, 2], 'some value'
-        )
-        # set
-        self.assertRaises(
-            ValueError,
-            s.add, {1, 2}, 'some value'
-        )
 
     def test_len(self):
         s = DummyKVStore()
@@ -103,6 +73,12 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
 
         s.TEST_COUNT = 23456
         assert len(s) == 23456
+
+    def test_repr(self):
+        # Should return expected template string
+        expected_repr = "<DummyKVStore %s>"
+        actual_repr = repr(DummyKVStore())
+        self.assertEqual(actual_repr, expected_repr)
 
     # noinspection PyUnresolvedReferences
     def test_value_iterator(self):
@@ -148,10 +124,71 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         self.assertFalse('other item' in s)
         s.has.assert_called_once_with('other item')
 
-    def test_clear_base(self):
+    def test_get_item(self):
+        s = DummyKVStore()
+        s.get = mock.Mock(return_value='expected-value')
+        ev = s['some-key']
+        s.get.assert_called_once_with('some-key')
+        self.assertEqual(ev, 'expected-value')
+
+    def test_add_when_read_only(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = True
+
+        self.assertRaises(
+            ReadOnlyError,
+            s.add, 'k', 'v'
+        )
+
+    def test_add_when_not_read_only(self):
         s = DummyKVStore()
         s.TEST_READ_ONLY = False
-        s.clear()
+        s.add('k', 'v')
+        # Integer
+        s.add(0, 'some value')
+        # type
+        s.add(object, 'some value')
+        # some object instance
+        s.add(object(), 'some value')
+
+    def test_add_many_read_only(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = True
+        self.assertRaises(
+            ReadOnlyError,
+            s.add_many, {0: 1}
+        )
+
+    def test_add_many(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = False
+        s.add_many({0: 1})
+
+    def test_remove_read_only(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = True
+        self.assertRaises(
+            ReadOnlyError,
+            s.remove, 0
+        )
+
+    def test_remove(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = False
+        s.remove(0)
+
+    def test_remove_many_read_only(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = True
+        self.assertRaises(
+            ReadOnlyError,
+            s.remove_many, [0, 1]
+        )
+
+    def test_remove_many(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = False
+        s.remove_many([0, 1])
 
     def test_clear_readonly(self):
         s = DummyKVStore()
@@ -161,6 +198,11 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
             "Cannot clear a read-only DummyKVStore instance.",
             s.clear
         )
+
+    def test_clear(self):
+        s = DummyKVStore()
+        s.TEST_READ_ONLY = False
+        s.clear()
 
 
 def test_kvstore_impl_getter():

@@ -92,6 +92,8 @@ class LinearHashIndex (HashIndex):
         """
         super(LinearHashIndex, self).__init__()
         self.cache_element = cache_element
+        # Our index is the set of bit-vectors as an integers/longs.
+        #: :type: set[int]
         self.index = set()
         self._model_lock = threading.RLock()
         self.load_cache()
@@ -165,6 +167,28 @@ class LinearHashIndex (HashIndex):
         """
         with self._model_lock:
             self.index.update(set(map(bit_vector_to_int_large, hashes)))
+            self.save_cache()
+
+    def _remove_from_index(self, hashes):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        hashes from this index.
+
+        :param hashes: Iterable of numpy boolean hash vectors to remove from
+            this index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        :raises KeyError: One or more hashes provided do not match any stored
+            hashes.  The index should not be modified.
+
+        """
+        with self._model_lock:
+            h_int_set = set(map(bit_vector_to_int_large, hashes))
+            # KeyError if any hash ints are not in our index map.
+            for h in h_int_set:
+                if h not in self.index:
+                    raise KeyError(h)
+            self.index = self.index - h_int_set
             self.save_cache()
 
     def _nn(self, h, n=1):

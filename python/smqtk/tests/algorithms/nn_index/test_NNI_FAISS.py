@@ -18,36 +18,58 @@ from smqtk.representation.descriptor_element.local_elements import (
     DescriptorMemoryElement,
 )
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 if FaissNearestNeighborsIndex.is_usable():
 
     class TestFAISSIndex (unittest.TestCase):
-    
+
         RAND_SEED = 42
-    
-        def _make_inst(self, descriptor_set=MemoryDescriptorIndex(),
-                       **kwargs):
+
+        def _make_inst(self, descriptor_set=None, idx2uid_kvs=None,
+                       uid2idx_kvs=None, **kwargs):
             """
             Make an instance of FaissNearestNeighborsIndex
             """
             if 'random_seed' not in kwargs:
                 kwargs.update(random_seed=self.RAND_SEED)
-            return FaissNearestNeighborsIndex(descriptor_set, **kwargs)
-    
+            if descriptor_set is None:
+                descriptor_set = MemoryDescriptorIndex()
+            if idx2uid_kvs is None:
+                idx2uid_kvs = MemoryKeyValueStore()
+            if uid2idx_kvs is None:
+                uid2idx_kvs = MemoryKeyValueStore()
+            return FaissNearestNeighborsIndex(descriptor_set, idx2uid_kvs,
+                                              uid2idx_kvs, **kwargs)
+
+        def test_impl_findable(self):
+            self.assertIn(FaissNearestNeighborsIndex.__name__,
+                          get_nn_index_impls())
+
         def test_configuration(self):
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
+
+            self.assertIn('MemoryDescriptorIndex', c['descriptor_set'])
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+
+            self.assertIn('MemoryKeyValueStore', c['idx2uid_kvs'])
+            c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
+
+            self.assertIn('MemoryKeyValueStore', c['uid2idx_kvs'])
+            c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
+
             self.assertIn('DataMemoryElement', c['index_element'])
             c['index_element']['type'] = 'DataMemoryElement'
+
             self.assertIn('DataMemoryElement', c['index_param_element'])
             c['index_param_element']['type'] = 'DataMemoryElement'
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, b'Flat')
-            self.assertIsInstance(index.factory_string, six.binary_type)
-    
+            self.assertEqual(index.factory_string, 'IVF1,Flat')
+            self.assertIsInstance(index.factory_string, six.string_types)
+
             # Test that constructing a new instance from ``index``'s config
             # yields an index with the same configuration (idempotent).
             index2 = FaissNearestNeighborsIndex.from_config(
@@ -58,13 +80,13 @@ if FaissNearestNeighborsIndex.is_usable():
             # Make configuration based on default
             c = FaissNearestNeighborsIndex.get_default_config()
             c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-            del c['index_element']
-            del c['index_param_element']
+            c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
+            c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
 
             # # Build based on configuration
             index = FaissNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index.factory_string, b'Flat')
-            self.assertIsInstance(index.factory_string, six.binary_type)
+            self.assertEqual(index.factory_string, 'IVF1,Flat')
+            self.assertIsInstance(index.factory_string, six.string_types)
 
             # Test that constructing a new instance from ``index``'s config
             # yields an index with the same configuration (idempotent).
@@ -72,26 +94,26 @@ if FaissNearestNeighborsIndex.is_usable():
                 index.get_config())
             self.assertEqual(index.get_config(), index2.get_config())
 
-        def test_read_only(self):
+        def test_build_index_read_only(self):
             v = np.zeros(5, float)
             v[0] = 1.
             d = DescriptorMemoryElement('unit', 0)
             d.set_vector(v)
             test_descriptors = [d]
-    
+
             index = self._make_inst(read_only=True)
             self.assertRaises(
                 ReadOnlyError,
                 index.build_index, test_descriptors
             )
-    
+
         def test_update_index_no_input(self):
             index = self._make_inst()
             self.assertRaises(
                 ValueError,
                 index.update_index, []
             )
-    
+
         def test_update_index_new_index(self):
             n = 100
             dim = 8
@@ -113,7 +135,7 @@ if FaissNearestNeighborsIndex.is_usable():
                 q = d_index[i]
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
-    
+
         def test_update_index_additive(self):
             n1 = 100
             n2 = 10
@@ -154,8 +176,7 @@ if FaissNearestNeighborsIndex.is_usable():
                     for i in range(n1, n1+n2)}
             [d.set_vector(np.random.rand(dim)) for d in (set1 | set2)]
 
-            # Create index with perisistent entities
-            # TODO(john.moeller): Let constructor take basestring?
+            # Create index with persistent entities
             index_element = DataMemoryElement(
                 content_type='application/octet-stream')
             index_param_element = DataMemoryElement(
@@ -164,6 +185,8 @@ if FaissNearestNeighborsIndex.is_usable():
                 index_element=index_element,
                 index_param_element=index_param_element)
             descriptor_set = index._descriptor_set
+            idx2uid_kvs = index._idx2uid_kvs
+            uid2idx_kvs = index._uid2idx_kvs
 
             # Build initial index.
             index.build_index(set1)
@@ -182,6 +205,8 @@ if FaissNearestNeighborsIndex.is_usable():
             del index
             index = self._make_inst(
                 descriptor_set=descriptor_set,
+                idx2uid_kvs=idx2uid_kvs,
+                uid2idx_kvs=uid2idx_kvs,
                 index_element=index_element,
                 index_param_element=index_param_element)
 
@@ -192,7 +217,116 @@ if FaissNearestNeighborsIndex.is_usable():
                 n_elems, n_dists = index.nn(q)
                 self.assertEqual(n_elems[0], q)
 
-        def test_many_descriptors(self):
+        def test_remove_from_index_readonly(self):
+            """
+            Test that we cannot call remove when the instance is read-only.
+            """
+            index = self._make_inst(read_only=True)
+            self.assertRaises(
+                ReadOnlyError,
+                index.remove_from_index, [0]
+            )
+
+        def test_remove_from_index_keyerror_empty_index(self):
+            """
+            Test that any key should cause a key error on an empty index.
+            """
+            index = self._make_inst()
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, [0]
+            )
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, ['0']
+            )
+            # Only includes the first key that's erroneous in the KeyError inst
+            self.assertRaisesRegexp(
+                KeyError, '0',
+                index.remove_from_index, [0, 'other']
+            )
+
+        def test_remove_from_index_keyerror(self):
+            """
+            Test that we do not impact the index by trying to remove an invalid
+            key.
+            """
+            n = 100
+            dim = 8
+            dset = {DescriptorMemoryElement('test', i) for i in range(n)}
+            [d.set_vector(np.random.rand(dim)) for d in dset]
+
+            index = self._make_inst()
+            index.build_index(dset)
+
+            # Try removing 2 invalid entries
+            self.assertRaises(
+                KeyError,
+                index.remove_from_index, [100, 'something']
+            )
+
+            # Make sure that all indexed descriptors correctly return
+            # themselves from an NN call.
+            for d in dset:
+                self.assertEqual(index.nn(d, 1)[0][0], d)
+
+        def test_remove_from_index(self):
+            """
+            Test that we can actually remove from the index.
+            """
+            n = 100
+            dim = 8
+            dset = {DescriptorMemoryElement('test', i) for i in range(n)}
+            [d.set_vector(np.random.rand(dim)) for d in dset]
+
+            index = self._make_inst()
+            index.build_index(dset)
+
+            # Try removing two valid descriptors
+            uids_to_remove = [10, 98]
+            index.remove_from_index(uids_to_remove)
+
+            # Check that every other element is still in the index.
+            self.assertEqual(len(index), 98)
+            for d in dset:
+                if d.uuid() not in uids_to_remove:
+                    self.assertEqual(index.nn(d, 1)[0][0], d)
+
+            # Check that descriptors matching removed uids cannot be queried
+            # out of the index.
+            for d in dset:
+                if d.uuid() in uids_to_remove:
+                    self.assertNotEqual(index.nn(d, 1)[0][0], d)
+
+        def test_remove_then_add(self):
+            """
+            Test that we can remove from the index and then add to it again.
+            """
+            n1 = 100
+            n2 = 10
+            dim = 8
+            set1 = [DescriptorMemoryElement('test', i) for i in range(n1)]
+            set2 = [DescriptorMemoryElement('test', i)
+                    for i in range(n1, n1 + n2)]
+            [d.set_vector(np.random.rand(dim)) for d in (set1 + set2)]
+            uids_to_remove = [10, 98]
+
+            index = self._make_inst()
+            index.build_index(set1)
+            index.remove_from_index(uids_to_remove)
+            index.update_index(set2)
+
+            self.assertEqual(len(index), 108)
+            # Removed descriptors should not be in return queries.
+            self.assertNotEqual(index.nn(set1[10], 1)[0][0], set1[10])
+            self.assertNotEqual(index.nn(set1[98], 1)[0][0], set1[98])
+            # Every other descriptor should be queryable
+            for d in set1 + set2:
+                if d.uuid() not in uids_to_remove:
+                    self.assertEqual(index.nn(d, 1)[0][0], d)
+            self.assertEqual(index._next_index, 110)
+
+        def test_nn_many_descriptors(self):
             np.random.seed(0)
 
             n = 10 ** 4
@@ -209,52 +343,48 @@ if FaissNearestNeighborsIndex.is_usable():
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_non_flat_index(self):
+
+        def test_nn_non_flat_index(self):
             faiss_index = self._make_inst(factory_string='IVF256,Flat')
-            self.assertEqual(faiss_index.factory_string, b'IVF256,Flat')
-    
+            self.assertEqual(faiss_index.factory_string, 'IVF256,Flat')
+
             np.random.seed(self.RAND_SEED)
             n = 10 ** 4
             dim = 256
-    
+
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
             q.set_vector(np.zeros((dim,)))
-    
+
             faiss_index.build_index(d_index)
-    
+
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_preprocess_index(self):
-            faiss_index = self._make_inst(factory_string='PCAR64,Flat')
-            self.assertEqual(faiss_index.factory_string, b'PCAR64,Flat')
-    
+
+        def test_nn_preprocess_index(self):
+            faiss_index = self._make_inst(factory_string='PCAR64,IVF1,Flat')
+            self.assertEqual(faiss_index.factory_string, 'PCAR64,IVF1,Flat')
+
             np.random.seed(self.RAND_SEED)
             n = 10 ** 4
             dim = 256
-    
+
             d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
             [d.set_vector(np.random.rand(dim)) for d in d_index]
             q = DescriptorMemoryElement('q', -1)
             q.set_vector(np.zeros((dim,)))
-    
+
             faiss_index.build_index(d_index)
-    
+
             nbrs, dists = faiss_index.nn(q, 10)
             self.assertEqual(len(nbrs), len(dists))
             self.assertEqual(len(nbrs), 10)
-    
-        def test_impl_findable(self):
-            self.assertIn(FaissNearestNeighborsIndex.__name__,
-                          get_nn_index_impls())
-    
-        def test_known_descriptors_euclidean_unit(self):
+
+        def test_nn_known_descriptors_euclidean_unit(self):
             dim = 5
-    
+
             ###
             # Unit vectors -- Equal distance
             #
@@ -277,10 +407,10 @@ if FaissNearestNeighborsIndex.is_usable():
             # All dists should be 1.0, r order doesn't matter
             for d in dists:
                 self.assertEqual(d, 1.)
-    
-        def test_known_descriptors_nearest(self):
+
+        def test_nn_known_descriptors_nearest(self):
             dim = 5
-    
+
             ###
             # Unit vectors -- Equal distance
             #
@@ -300,10 +430,10 @@ if FaissNearestNeighborsIndex.is_usable():
             # Distance should be zero
             self.assertEqual(dists[0], 0.)
             self.assertItemsEqual(r[0].vector(), vectors[0])
-    
-        def test_known_descriptors_euclidean_ordered(self):
+
+        def test_nn_known_descriptors_euclidean_ordered(self):
             index = self._make_inst()
-    
+
             # make vectors to return in a known euclidean distance order
             i = 100
             test_descriptors = []
@@ -313,14 +443,14 @@ if FaissNearestNeighborsIndex.is_usable():
                 test_descriptors.append(d)
             random.shuffle(test_descriptors)
             index.build_index(test_descriptors)
-    
+
             # Since descriptors were built in increasing distance from (0,0),
             # returned descriptors for a query of [0,0] should be in index
             # order.
             q = DescriptorMemoryElement('query', 99)
             q.set_vector(np.array([0, 0], float))
             r, dists = index.nn(q, n=i)
-    
+
             self.assertEqual(len(dists), i)
             for j, d, dist in zip(range(i), r, dists):
                 self.assertEqual(d.uuid(), j)

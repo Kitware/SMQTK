@@ -76,6 +76,22 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         check_empty_iterable(descriptors, self._update_index,
                              self._empty_iterable_exception())
 
+    def remove_from_index(self, uids):
+        """
+        Partially remove descriptors from this index associated with the given
+        UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises ValueError: No data available in the given iterable.
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.  The index should not be modified.
+
+        """
+        check_empty_iterable(uids, self._remove_from_index,
+                             self._empty_iterable_exception())
+
     def nn(self, d, n=1):
         """
         Return the nearest `N` neighbors to the given descriptor element.
@@ -137,6 +153,20 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
             index.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+
+    @abc.abstractmethod
+    def _remove_from_index(self, uids):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.
 
         """
 

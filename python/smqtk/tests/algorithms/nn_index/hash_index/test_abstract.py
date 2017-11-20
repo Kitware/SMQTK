@@ -13,19 +13,22 @@ class DummyHI (HashIndex):
         return True
 
     def get_config(self):
-        return {}
+        """ stub """
 
     def count(self):
         return 0
 
     def _build_index(self, hashes):
-        return
+        """ stub """
 
     def _update_index(self, hashes):
-        return
+        """ stub """
+
+    def _remove_from_index(self, hashes):
+        """ stub """
 
     def _nn(self, h, n=1):
-        return
+        """ stub """
 
 
 class TestHashIndex (unittest.TestCase):
@@ -84,6 +87,29 @@ class TestHashIndex (unittest.TestCase):
         idx.update_index([0, 1, 2])
         self.assertSetEqual(
             set(idx._update_index.call_args[0][0]),
+            {0, 1, 2}
+        )
+
+    def test_remove_from_index_empty_iter(self):
+        idx = DummyHI()
+        idx._remove_from_index = mock.MagicMock()
+        self.assertRaisesRegexp(
+            ValueError,
+            "No hash vectors.*",
+            idx.update_index, []
+        )
+        # Internal method should not have been called.
+        idx._remove_from_index.assert_not_called()
+
+    def test_remove_from_index_with_values(self):
+        idx = DummyHI()
+        idx._remove_from_index = mock.MagicMock()
+        # No error should be returned. Returned iterable contents should match
+        # input values.
+        # noinspection PyTypeChecker
+        idx._remove_from_index([0, 1, 2])
+        self.assertSetEqual(
+            set(idx._remove_from_index.call_args[0][0]),
             {0, 1, 2}
         )
 

@@ -30,8 +30,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         Normally, FLANN indices don't play well when multiprocessing due to
         the underlying index being a C structure, which doesn't auto-magically
         transfer to forked processes like python structure data does. The
-        serialized FLANN index file is used to restore a built index in separate
-        processes, assuming one has been built.
+        serialized FLANN index file is used to restore a built index in
+        separate processes, assuming one has been built.
 
     """
 
@@ -52,8 +52,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
         When using this algorithm in a multiprocessing environment, the model
         file path parameters must be specified due to needing to reload the
-        FLANN index on separate processes. This is because FLANN is in C and its
-        instances are not copied into processes.
+        FLANN index on separate processes. This is because FLANN is in C and
+        its instances are not copied into processes.
 
         Documentation on index building parameters and their meaning can be
         found in the FLANN documentation PDF:
@@ -100,10 +100,10 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         :type sample_fraction: float
 
         :param distance_method: Method label of the distance function to use.
-            See FLANN documentation manual for available methods. Common methods
-            include "hik", "chi_square" (default), and "euclidean". When loading
-            and existing index, this value is ignored in preference for the
-            distance method used to build the loaded index.
+            See FLANN documentation manual for available methods. Common
+            methods include "hik", "chi_square" (default), and "euclidean".
+            When loading and existing index, this value is ignored in
+            preference for the distance method used to build the loaded index.
         :type distance_method: str
 
         :param random_seed: Integer to use as the random number generator seed.
@@ -223,8 +223,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         If we think we're suppose to have an index, check the recorded PID with
         the current PID, reloading the index from cache if they differ.
 
-        If there is a loaded index and we're on the same process that created it
-        this does nothing.
+        If there is a loaded index and we're on the same process that created
+        it this does nothing.
         """
         if bool(self._flann) \
                 and self._has_model_data() \
@@ -244,8 +244,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
     def _build_index(self, descriptors):
         """
-        Internal method to be implemented by sub-classes to build the index with
-        the given descriptor data elements.
+        Internal method to be implemented by sub-classes to build the index
+        with the given descriptor data elements.
 
         Subsequent calls to this method should rebuild the current index.  This
         method shall not add to the existing index nor raise an exception to as
@@ -255,8 +255,8 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             - We keep a cache file serialization around for our index in case
                 sub-processing occurs so as to be able to recover from the
                 underlying C data not being there. This could cause issues if
-                a main or child process rebuild's the index, as we clear the old
-                cache away.
+                a main or child process rebuild's the index, as we clear the
+                old cache away.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -305,12 +305,13 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
             if self._index_elem and self._index_elem.writable():
                 self._log.debug("Caching index: %s", self._index_elem)
-                # FLANN wants to write to a file, so make a temp file, then read
-                # it in, putting bytes into element.
+                # FLANN wants to write to a file, so make a temp file, then
+                # read it in, putting bytes into element.
                 fd, fp = tempfile.mkstemp()
                 try:
                     self._flann.save_index(fp)
-                    self._index_elem.set_bytes(os.read(fd, os.path.getsize(fp)))
+                    self._index_elem.set_bytes(os.read(fd,
+                                                       os.path.getsize(fp)))
                 finally:
                     os.close(fd)
                     os.remove(fp)
@@ -356,6 +357,34 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.info("Rebuilding FLANN index to include new "
                            "descriptors.")
             self.build_index(itertools.chain(self._descr_cache, descriptors))
+
+    def _remove_from_index(self, uids):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.
+
+        """
+        with self._model_lock:
+            self._restore_index()
+            uidset = set(uids)
+            # Make sure provided UIDs are part of our current index.
+            uid_diff = uidset - set(map(lambda d: d.uuid(), self._descr_cache))
+            if uid_diff:
+                if len(uid_diff) == 1:
+                    raise KeyError(list(uid_diff)[0])
+                else:
+                    raise KeyError(uid_diff)
+            # Filter descriptors NOT matching UIDs of current descriptor
+            # cache.
+            self._descr_cache = \
+                [d for d in self._descr_cache if d.uuid() in uidset]
+            self.build_index(self._descr_cache)
 
     def _nn(self, d, n=1):
         """

@@ -104,6 +104,40 @@ class TestLinearHashIndex (unittest.TestCase):
                         [1, 1]])
         self.assertSetEqual(i.index, {0, 1, 2, 3})
 
+    def test_remove_from_index_single_not_in_index(self):
+        # Test attempting to remove single hash not in the index.
+        i = LinearHashIndex()
+        i.index = {0, 1, 2}
+        self.assertRaises(
+            KeyError,
+            i.remove_from_index,
+            [[1, 0, 0]]  # 4
+        )
+        self.assertSetEqual(i.index, {0, 1, 2})
+
+    def test_remove_from_index_one_of_many_not_in_index(self):
+        # Test attempting to remove hashes where one of them is not in the
+        # index.
+        i = LinearHashIndex()
+        i.index = {0, 1, 2}
+        self.assertRaises(
+            KeyError,
+            i.remove_from_index, [[0, 0],  # 0
+                                  [0, 1],  # 1
+                                  [1, 1]]  # 3
+        )
+        # Check that the index has not been modified.
+        self.assertSetEqual(i.index, {0, 1, 2})
+
+    def test_remove_from_index(self):
+        # Test that actual removal occurs.
+        i = LinearHashIndex()
+        i.index = {0, 1, 2}
+        # noinspection PyTypeChecker
+        i.remove_from_index([[0, 0],
+                             [1, 0]])
+        self.assertSetEqual(i.index, {1})
+
     def test_nn(self):
         i = LinearHashIndex()
         # noinspection PyTypeChecker
@@ -142,16 +176,42 @@ class TestLinearHashIndex (unittest.TestCase):
 
         i = LinearHashIndex(cache_element)
         # noinspection PyTypeChecker
-        i.build_index([[0, 1, 0],
-                       [1, 0, 0]])
+        i.build_index([[0, 1, 0],   # 2
+                       [1, 0, 0]])  # 4
         # noinspection PyTypeChecker
-        i.update_index([[0, 1, 1],
-                        [0, 0, 1]])
+        i.update_index([[0, 1, 1],   # 3
+                        [0, 0, 1]])  # 1
         self.assertFalse(cache_element.is_empty())
         # Check byte content
         expected_cache = {1, 2, 3, 4}
         actual_cache = set(numpy.load(cStringIO(cache_element.get_bytes())))
         self.assertSetEqual(expected_cache, actual_cache)
+
+    def test_save_cache_remove_from_index(self):
+        # Test that the cache is updated appropriately on a removal.
+        cache_element = DataMemoryElement()
+        self.assertTrue(cache_element.is_empty())
+
+        i = LinearHashIndex(cache_element)
+        # noinspection PyTypeChecker
+        i.build_index([[0, 1, 0],   # 2
+                       [0, 1, 1],   # 3
+                       [1, 0, 0],   # 4
+                       [1, 1, 0]])  # 6
+        self.assertFalse(cache_element.is_empty())
+        self.assertSetEqual(
+            set(numpy.load(cStringIO(cache_element.get_bytes()))),
+            {2, 3, 4, 6}
+        )
+
+        # noinspection PyTypeChecker
+        i.remove_from_index([[0, 1, 1],   # 3
+                             [1, 0, 0]])  # 4
+        self.assertFalse(cache_element.is_empty())
+        self.assertSetEqual(
+            set(numpy.load(cStringIO(cache_element.get_bytes()))),
+            {2, 6}
+        )
 
     def test_save_cache_readonly_build_index(self):
         ro_cache = DataMemoryElement(readonly=True)

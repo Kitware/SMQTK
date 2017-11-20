@@ -14,25 +14,29 @@ class DummySI (NearestNeighborsIndex):
 
     @classmethod
     def is_usable(cls):
+        """ stub """
         return True
 
     def get_config(self):
-        return {}
+        """ stub """
 
     def _build_index(self, descriptors):
-        return
+        """ stub """
 
     def _update_index(self, descriptors):
-        return
+        """ stub """
+
+    def _remove_from_index(self, uids):
+        """ stub """
 
     def _nn(self, d, n=1):
-        return
+        """ stub """
 
     def count(self):
         return 0
 
 
-class TestSimilarityIndexAbstract (unittest.TestCase):
+class TestNNIndexAbstract (unittest.TestCase):
 
     def test_get_impls(self):
         # Some implementations should be returned
@@ -193,6 +197,44 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         index._update_index.assert_called_once()
         self.assertSetEqual(
             set(index._update_index.call_args[0][0]),
+            d_set,
+        )
+
+    def test_remove_from_index_no_uids(self):
+        # Test that the method errors when no UIDs are provided
+        index = DummySI()
+        index._remove_from_index = mock.Mock()
+        self.assertRaises(
+            ValueError,
+            index.remove_from_index, []
+        )
+        index._remove_from_index.assert_not_called()
+
+    def test_remove_from_index_nonzero_descriptors(self):
+        # Test removing a non-zero amount of descriptors
+        index = DummySI()
+        index._remove_from_index = mock.MagicMock()
+
+        # Testing with dummy input data.
+        uid_set = {0, 1, 2, 3}
+        index.remove_from_index(uid_set)
+        index._remove_from_index.assert_called_once()
+        self.assertSetEqual(
+            set(index._remove_from_index.call_args[0][0]),
+            uid_set
+        )
+
+    def test_remove_from_index_nonzero_iterable(self):
+        # Test removing a non-zero amount of descriptors via an iterable.
+        index = DummySI()
+        index._remove_from_index = mock.MagicMock()
+        d_set = {0, 1, 2, 3}
+        it = iter(d_set)
+        index.remove_from_index(it)
+
+        index._remove_from_index.assert_called_once()
+        self.assertSetEqual(
+            set(index._remove_from_index.call_args[0][0]),
             d_set,
         )
 

@@ -138,6 +138,21 @@ class TestIqrService (unittest.TestCase):
         r_json = json.loads(r.data)
         self.assertEqual(r_json['uid'], expected_descriptor_uid)
 
+    def test_get_nn_index_status(self):
+        self.app.neighbor_index.count = mock.Mock(return_value=0)
+        with self.app.test_client() as tc:
+            r = tc.get('/nn_index')
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Success")
+            self.assertEqual(json.loads(r.data)['index_size'], 0)
+
+        self.app.neighbor_index.count = mock.Mock(return_value=89756234876)
+        with self.app.test_client() as tc:
+            r = tc.get('/nn_index')
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Success")
+            self.assertEqual(json.loads(r.data)['index_size'], 89756234876)
+
     def test_update_nn_index_no_args(self):
         """ Test that error is returned when no arguments provided """
         r = self.app.test_client().post('/nn_index')

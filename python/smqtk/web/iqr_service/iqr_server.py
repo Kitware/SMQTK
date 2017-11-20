@@ -426,7 +426,7 @@ class IqrService (SmqtkWebApp):
         with self.neighbor_index_lock:
             return (
                 make_response_json("Success",
-                                   index_size=self.neighbor_index.count),
+                                   index_size=self.neighbor_index.count()),
                 200
             )
 

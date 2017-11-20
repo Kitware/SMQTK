@@ -50,13 +50,47 @@ def make_response_json(message, **params):
     return flask.jsonify(**r)
 
 
-# Get expected JSON decode exception
+# Get expected JSON decode exception.
+#
+# Flask can use one of two potential JSON parsing libraries: simplejson or
+# json.  simplejson has a specific exception for decoding errors while json
+# just raises a ValueError.
+#
 # noinspection PyProtectedMember
 if hasattr(flask.json._json, 'JSONDecodeError'):
     # noinspection PyProtectedMember
     JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
 else:
     JSON_DECODE_EXCEPTION = ValueError
+
+
+def parse_hashable_json_list(json_str):
+    """
+    Parse and check input string, looking for a JSON list of hashable values.
+
+    :param json_str: String to parse and check.
+    :type json_str: str
+
+    :raises ValueError: Expected value check failed.
+
+    :return: List of hashable-type values.
+    :rtype: list[collections.Hashable]
+
+    """
+    try:
+        v_list = flask.json.loads(json_str)
+    except JSON_DECODE_EXCEPTION as ex:
+        raise ValueError("JSON parsing error: %s" % str(ex))
+    if not isinstance(v_list, list):
+        raise ValueError("JSON provided is not a list.")
+    # Should not be an empty list.
+    elif not v_list:
+        raise ValueError("JSON list is empty.")
+    # Contents of list should be numeric or string values.
+    elif not all(isinstance(el, collections.Hashable)
+                 for el in v_list):
+        raise ValueError("Not all JSON list parts were hashable values.")
+    return v_list
 
 
 class IqrService (SmqtkWebApp):
@@ -104,8 +138,8 @@ class IqrService (SmqtkWebApp):
                         "What descriptor element factory to use when asked to "
                         "compute a descriptor on data.",
                     "descriptor_generator":
-                        "Descriptor generation algorithm to use when requested "
-                        "to describe data.",
+                        "Descriptor generation algorithm to use when "
+                        "requested to describe data.",
                     "descriptor_index":
                         "This is the index from which given positive and "
                         "negative example descriptors are retrieved from. "
@@ -187,6 +221,7 @@ class IqrService (SmqtkWebApp):
             json_config['iqr_service']['plugins']['neighbor_index'],
             get_nn_index_impls(),
         )
+        self.neighbor_index_lock = multiprocessing.RLock()
 
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
@@ -231,11 +266,17 @@ class IqrService (SmqtkWebApp):
                           view_func=self.add_descriptor_from_data,
                           methods=['POST'])
         # TODO: Potentially other add_descriptor_from_* variants that expect
-        #       other forms of input besides base64, like arbitrary URIs (to use
-        #       from_uri factory function).
-        self.add_url_rule('/update_nn_index',
+        #       other forms of input besides base64, like arbitrary URIs (to
+        #       use from_uri factory function).
+        self.add_url_rule('/nn_index',
+                          view_func=self.get_nn_index_status,
+                          methods=['GET'])
+        self.add_url_rule('/nn_index',
                           view_func=self.update_nn_index,
                           methods=['POST'])
+        self.add_url_rule('/nn_index',
+                          view_func=self.remove_from_nn_index,
+                          methods=['DELETE'])
         self.add_url_rule('/data_nearest_neighbors',
                           view_func=self.data_nearest_neighbors,
                           methods=['POST'])
@@ -317,7 +358,8 @@ class IqrService (SmqtkWebApp):
     # noinspection PyMethodMayBeStatic
     def is_ready(self):
         """
-        Simple function that returns True, indicating that the server is active.
+        Simple function that returns True, indicating that the server is
+        active.
         """
         return make_response_json("Yes, I'm alive."), 200
 
@@ -334,8 +376,8 @@ class IqrService (SmqtkWebApp):
         Form Arguments:
             data_b64
                 Base64-encoded input binary data to describe via
-                DescriptorGenerator.  This must be of a content type accepted by
-                the configured DescriptorGenerator.
+                DescriptorGenerator.  This must be of a content type accepted
+                by the configured DescriptorGenerator.
             content_type
                 Input data content mimetype string.
 
@@ -370,15 +412,33 @@ class IqrService (SmqtkWebApp):
                                   uid=descriptor.uuid(),
                                   size=self.descriptor_index.count()), 201
 
-    # POST /update_nn_index
+    # GET /nn_index
+    def get_nn_index_status(self):
+        """
+        Get status/state information about the nearest-neighbor index.
+
+        Status code 200 on success, JSON return object: {
+            ...,
+            // Size of the nearest-neighbor index.
+            index_size=<int>
+        }
+        """
+        with self.neighbor_index_lock:
+            return (
+                make_response_json("Success",
+                                   index_size=self.neighbor_index.count()),
+                200
+            )
+
+    # POST /nn_index
     def update_nn_index(self):
         """
         Tell the configured nearest-neighbor-index instance to update with the
         descriptors associated with the provided list of UIDs.
 
         This is a critical operation on the index so this method can only be
-        invoked once at a time (other concurrent will block until previous calls
-        have finished).
+        invoked once at a time (other concurrent will block until previous
+        calls have finished).
 
         Form Arguments:
             descriptor_uids
@@ -397,52 +457,102 @@ class IqrService (SmqtkWebApp):
 
         """
         descr_uid_str = flask.request.form.get('descriptor_uids', None)
-        if not descr_uid_str:
+        if not descr_uid_str:  # empty string or None
             return make_response_json("No descriptor UID JSON provided."), 400
 
         # Load and check JSON input.
-        # noinspection PyBroadException
         try:
-            descr_uid_list = flask.json.loads(descr_uid_str)
-            if not isinstance(descr_uid_list, list):
-                return make_response_json("JSON provided is not a list."), 400
-            # Should not be an empty list.
-            elif not descr_uid_list:
-                return make_response_json("JSON list empty."), 400
-            # Contents of list should be numeric or string values.
-            elif not all(isinstance(el, collections.Hashable)
-                         for el in descr_uid_list):
-                return make_response_json("Not all JSON list parts were "
-                                          "possibly valid UIDs."), 400
-        except JSON_DECODE_EXCEPTION as ex:
-            return make_response_json("JSON parsing error: %s" % str(ex)), 400
+            descr_uid_list = parse_hashable_json_list(descr_uid_str)
+        except ValueError as ex:
+            return make_response_json("%s" % str(ex)), 400
 
+        with self.neighbor_index_lock:
+            try:
+                descr_elems = \
+                    self.descriptor_index.get_many_descriptors(descr_uid_list)
+            except KeyError:
+                # Some UIDs are not present in the current index.  Isolate
+                # which UIDs are not contained.
+                uids_not_ingested = []
+                for uid in descr_uid_list:
+                    if not self.descriptor_index.has_descriptor(uid):
+                        uids_not_ingested.append(uid)
+                return make_response_json("Some provided UIDs do not exist in "
+                                          "the current index.",
+                                          bad_uids=uids_not_ingested), 400
+
+            self.neighbor_index.update_index(descr_elems)
+
+            return (
+                make_response_json("Success",
+                                   descriptor_uids=descr_uid_list,
+                                   index_size=self.neighbor_index.count()),
+                200
+            )
+
+    # DELETE /nn_index
+    def remove_from_nn_index(self):
+        """
+        Remove descriptors from the nearest-neighbors index given their UIDs.
+
+        Receive one or more descriptor UIDs, that exist in the NN-index, that
+        are to be removed from the NN-index.  This DOES NOT remove elements
+        from the global descriptor set.
+
+        This is a critical operation on the index so this method can only be
+        invoked once at a time (other concurrent will block until previous
+        calls have finished).
+
+        Form Arguments:
+            descriptor_uids
+                JSON list of descriptor UIDs to remove from the nearest-
+                neighbor index.  These UIDs must be present in the index,
+                otherwise an 404 error is returned.
+
+        Status code 200 on success, JSON return object: {
+            ...,
+
+            // List of UID values removed from the index.
+            descriptor_uids=<list[str]>,
+
+            // New size of the nearest-neighbors index.
+            index_size=<int>
+        }
+
+        """
+        descr_uid_str = flask.request.values.get('descriptor_uids', None)
+        if not descr_uid_str:  # empty string or None
+            return make_response_json("No descriptor UID JSON provided."), 400
+
+        # Load and check JSON input
         try:
-            descr_elems = \
-                self.descriptor_index.get_many_descriptors(descr_uid_list)
-        except KeyError:
-            # Some UIDs are not present in the current index.  Isolate which
-            # UIDs are not contained.
-            uids_not_ingested = []
-            for uid in descr_uid_list:
-                if not self.descriptor_index.has_descriptor(uid):
-                    uids_not_ingested.append(uid)
-            return make_response_json("Some provided UIDs do not exist in the "
-                                      "current index.",
-                                      bad_uids=uids_not_ingested), 400
+            descr_uid_list = parse_hashable_json_list(descr_uid_str)
+        except ValueError as ex:
+            return make_response_json("%s" % str(ex)), 400
 
-        self.neighbor_index.update_index(descr_elems)
+        with self.neighbor_index_lock:
+            try:
+                # empty list already checked for in above try-catch, so we
+                # should never see a ValueError here.  KeyError still possible.
+                self.neighbor_index.remove_from_index(descr_uid_list)
+            except KeyError as ex:
+                return make_response_json("Some provided UIDs do not exist in "
+                                          "the current index.",
+                                          bad_uids=ex.args), 400
 
-        return make_response_json("Success",
-                                  descriptor_uids=descr_uid_list,
-                                  index_size=self.neighbor_index.count()), 200
+            return (
+                make_response_json("Success",
+                                   descriptor_uids=descr_uid_list,
+                                   index_size=self.neighbor_index.count()),
+                200
+            )
 
     # POST /data_nearest_neighbors
     def data_nearest_neighbors(self):
         """
-        Take in data in base64 encoding with a mimetype and find its 'k' nearest
-        neighbors according to the current index, including their distance
-        values (metric determined by nearest-neighbors-index algorithm
+        Take in data in base64 encoding with a mimetype and find its 'k'
+        nearest neighbors according to the current index, including their
+        distance values (metric determined by nearest-neighbors-index algorithm
         configuration).
 
         This endpoint does not need a session ID due to the
@@ -451,8 +561,8 @@ class IqrService (SmqtkWebApp):
         Form Arguments:
             data_b64
                 Base64-encoded input binary data to describe via
-                DescriptorGenerator.  This must be of a content type accepted by
-                the configured DescriptorGenerator.
+                DescriptorGenerator.  This must be of a content type accepted
+                by the configured DescriptorGenerator.
             content_type
                 Input data content mimetype string.
             k
@@ -465,9 +575,10 @@ class IqrService (SmqtkWebApp):
                 closest neighbor while the last index represents the farthest
                 neighbor.  Parallel in relationship to `neighbor_dists`.
             neighbor_dists
-                Ordered list of neighbor distance values. Index 0 represents the
-                closest neighbor while the last index represents the farthest
-                neighbor.  Parallel in relationship to 'neighbor_uids`.
+                Ordered list of neighbor distance values. Index 0 represents
+                the closest neighbor while the last index represents the
+                farthest neighbor.  Parallel in relationship to
+                'neighbor_uids`.
 
         """
         data_b64 = flask.request.form.get('data_b64', None)
@@ -518,7 +629,8 @@ class IqrService (SmqtkWebApp):
         Form Arguments:
             uid
                 UID of the descriptor to get the nearest neighbors for.  This
-                should also match the SHA1 checksum of the data being described.
+                should also match the SHA1 checksum of the data being
+                described.
             k
                 Integer number of nearest neighbor descriptor UIDs to return
                 along with their distances.
@@ -529,9 +641,10 @@ class IqrService (SmqtkWebApp):
                 closest neighbor while the last index represents the farthest
                 neighbor.  Parallel in relationship to `neighbor_dists`.
             neighbor_dists
-                Ordered list of neighbor distance values. Index 0 represents the
-                closest neighbor while the last index represents the farthest
-                neighbor.  Parallel in relationship to 'neighbor_uids`.
+                Ordered list of neighbor distance values. Index 0 represents
+                the closest neighbor while the last index represents the
+                farthest neighbor.  Parallel in relationship to
+                'neighbor_uids`.
 
         """
         uid = flask.request.form.get('uid', None)
@@ -909,6 +1022,8 @@ class IqrService (SmqtkWebApp):
                 self.descriptor_index.get_many_descriptors(neu_uuids)
             )
 
+            # Record previous pos/neg descriptors for determining if an
+            # existing classifier is dirty after this adjudication.
             orig_pos = set(iqrs.positive_descriptors)
             orig_neg = set(iqrs.negative_descriptors)
 
@@ -1239,8 +1354,8 @@ class IqrService (SmqtkWebApp):
         state.
 
         An IQR state is composed of the descriptor vectors, and their UUIDs,
-        that were added from external sources, or were adjudicated, positive and
-        negative.
+        that were added from external sources, or were adjudicated, positive
+        and negative.
 
         URL Arguments:
             sid
@@ -1324,8 +1439,8 @@ class IqrService (SmqtkWebApp):
         elif state_base64 is None or len(state_base64) == 0:
             return make_response_json("No state package base64 provided."), 400
 
-        # TODO: Limit the size of input state object? Is this already handled by
-        #       other security measures?
+        # TODO: Limit the size of input state object? Is this already handled
+        #       by other security measures?
 
         # Encoding is required because the b64decode does not handle being
         # given unicode (python2) or str (python3): needs bytes.
@@ -1333,9 +1448,11 @@ class IqrService (SmqtkWebApp):
         try:
             # Using urlsafe version because it handles both regular and urlsafe
             # alphabets.
-            state_bytes = base64.urlsafe_b64decode(state_base64.encode('utf-8'))
+            state_bytes = \
+                base64.urlsafe_b64decode(state_base64.encode('utf-8'))
         except TypeError as ex:
-            return make_response_json("Invalid base64 input: %s" % str(ex)), 400
+            return make_response_json("Invalid base64 input: %s" % str(ex)), \
+                   400
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):

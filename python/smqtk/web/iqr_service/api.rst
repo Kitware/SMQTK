@@ -105,8 +105,19 @@ Success returns 201: {
 }
 
 
-[POST] /update_nn_index
-^^^^^^^^^^^^^^^^^^^^^^^
+[GET] /nn_index
+^^^^^^^^^^^^^^^
+Get status/state information about the nearest-neighbor index.
+
+Status code 200 on success, JSON return object: {
+    ...,
+    // Size of the nearest-neighbor index.
+    index_size=<int>
+}
+
+
+[POST] /nn_index
+^^^^^^^^^^^^^^^^
 Tell the configured nearest-neighbor-index instance to update with the
 descriptors associated with the provided list of UIDs.
 
@@ -125,6 +136,35 @@ Success returns 200: {
 
     // List of UIDs the neighbor index was updated with.  This should
     // be congruent with the list provided.
+    descriptor_uids=<list[str]>,
+
+    // New size of the nearest-neighbors index.
+    index_size=<int>
+}
+
+
+[DELETE] /nn_index
+^^^^^^^^^^^^^^^^^^
+Remove descriptors from the nearest-neighbors index given their UIDs.
+
+Receive one or more descriptor UIDs, that exist in the NN-index, that
+are to be removed from the NN-index.  This DOES NOT remove elements
+from the global descriptor set.
+
+This is a critical operation on the index so this method can only be
+invoked once at a time (other concurrent will block until previous
+calls have finished).
+
+Form Arguments:
+    descriptor_uids
+        JSON list of descriptor UIDs to remove from the nearest-
+        neighbor index.  These UIDs must be present in the index,
+        otherwise an 404 error is returned.
+
+Status code 200 on success, JSON return object: {
+    ...,
+
+    // List of UID values removed from the index.
     descriptor_uids=<list[str]>,
 
     // New size of the nearest-neighbors index.

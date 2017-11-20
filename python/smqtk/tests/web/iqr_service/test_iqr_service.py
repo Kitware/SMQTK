@@ -59,7 +59,7 @@ class TestIqrService (unittest.TestCase):
         """
         self.assertRegexpMatches(json.loads(r.data)['message'], regex)
 
-    # Test Methods #############################################################
+    # Test Methods ############################################################
 
     def test_is_ready(self):
         # Test that the is_ready endpoint returns the expected values.
@@ -140,13 +140,13 @@ class TestIqrService (unittest.TestCase):
 
     def test_update_nn_index_no_args(self):
         """ Test that error is returned when no arguments provided """
-        r = self.app.test_client().post('/update_nn_index')
+        r = self.app.test_client().post('/nn_index')
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "No descriptor UID JSON provided")
 
     def test_update_nn_index_bad_json_parse_error(self):
         """ Test handling a bad json string """
-        r = self.app.test_client().post('/update_nn_index',
+        r = self.app.test_client().post('/nn_index',
                                         data=dict(
                                             descriptor_uids='not-valid-json'
                                         ))
@@ -154,7 +154,7 @@ class TestIqrService (unittest.TestCase):
         self.assertJsonMessageRegex(r, "JSON parsing error")
 
     def test_update_nn_index_bad_json_not_a_list(self):
-        r = self.app.test_client().post('/update_nn_index',
+        r = self.app.test_client().post('/nn_index',
                                         data=dict(
                                             descriptor_uids='6.2'
                                         ))
@@ -162,22 +162,22 @@ class TestIqrService (unittest.TestCase):
         self.assertJsonMessageRegex(r, "JSON provided is not a list")
 
     def test_update_nn_index_bad_json_empty_list(self):
-        r = self.app.test_client().post('/update_nn_index',
+        r = self.app.test_client().post('/nn_index',
                                         data=dict(
                                             descriptor_uids='[]'
                                         ))
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "JSON list empty")
+        self.assertJsonMessageRegex(r, "JSON list is empty")
 
     def test_update_nn_index_bad_json_invalid_parts(self):
         """ All UIDs provided should be hashable values. """
-        r = self.app.test_client().post('/update_nn_index',
+        r = self.app.test_client().post('/nn_index',
                                         data=dict(
                                             descriptor_uids='["a", 4, []]'
                                         ))
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "Not all JSON list parts were possibly "
-                                       "valid UIDs")
+        self.assertJsonMessageRegex(r, "Not all JSON list parts were hashable "
+                                       "values.")
 
     def test_update_nn_index_uid_not_a_key(self):
         """
@@ -198,7 +198,7 @@ class TestIqrService (unittest.TestCase):
         expected_list = [0, 1, 2, 'hello', 'foobar']
         expected_list_json = '[0, 1, 2, "hello", "foobar"]'
         expected_bad_uids = [0, 1, 'foobar']
-        r = self.app.test_client().post('/update_nn_index',
+        r = self.app.test_client().post('/nn_index',
                                         data=dict(
                                             descriptor_uids=expected_list_json,
                                         ))
@@ -211,8 +211,8 @@ class TestIqrService (unittest.TestCase):
         self.app.descriptor_index.has_descriptor.assert_any_call("hello")
         self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in the "
-                                       "current index")
+        self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
+                                       "the current index")
         r_json = json.loads(r.data)
         self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
 
@@ -237,7 +237,7 @@ class TestIqrService (unittest.TestCase):
         data = dict(
             descriptor_uids=expected_uid_list_json
         )
-        r = self.app.test_client().post('/update_nn_index', data=data)
+        r = self.app.test_client().post('/nn_index', data=data)
 
         self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
             expected_uid_list

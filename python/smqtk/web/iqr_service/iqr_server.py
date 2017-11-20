@@ -468,8 +468,10 @@ class IqrService (SmqtkWebApp):
 
         with self.neighbor_index_lock:
             try:
+                # KeyError may not occur until returned iterator is iterated.
                 descr_elems = \
                     self.descriptor_index.get_many_descriptors(descr_uid_list)
+                self.neighbor_index.update_index(descr_elems)
             except KeyError:
                 # Some UIDs are not present in the current index.  Isolate
                 # which UIDs are not contained.
@@ -480,8 +482,6 @@ class IqrService (SmqtkWebApp):
                 return make_response_json("Some provided UIDs do not exist in "
                                           "the current index.",
                                           bad_uids=uids_not_ingested), 400
-
-            self.neighbor_index.update_index(descr_elems)
 
             return (
                 make_response_json("Success",

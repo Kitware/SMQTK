@@ -231,6 +231,50 @@ class TestIqrService (unittest.TestCase):
         r_json = json.loads(r.data)
         self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
 
+    def test_update_nn_index_delayed_key_error(self):
+        """
+        Some DescriptorIndex implementations of get_many_descriptors use the
+        yield statement and thus won't potentially generate key errors until
+        actually iterated within the update call.  Test that this is correctly
+        caught.
+        """
+        expected_error_key = 'expected-error-key'
+
+        def generator_key_error(*_, **__):
+            raise KeyError(expected_error_key)
+            # make a generator
+            # noinspection PyUnreachableCode
+            yield
+
+        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+            side_effect=generator_key_error
+        )
+        # Pretend any UID except 2 and "hello" are not contained.
+        self.app.descriptor_index.has_descriptor = mock.Mock(
+            side_effect=lambda k: k == 2 or k == "hello"
+        )
+
+        expected_list = [0, 1, 2, 'hello', 'foobar']
+        expected_list_json = '[0, 1, 2, "hello", "foobar"]'
+        expected_bad_uids = [0, 1, 'foobar']
+        r = self.app.test_client().post('/nn_index',
+                                        data=dict(
+                                            descriptor_uids=expected_list_json,
+                                        ))
+        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+            expected_list
+        )
+        self.app.descriptor_index.has_descriptor.assert_any_call(0)
+        self.app.descriptor_index.has_descriptor.assert_any_call(1)
+        self.app.descriptor_index.has_descriptor.assert_any_call(2)
+        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.assertStatusCode(r, 400)
+        self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
+                                       "the current index")
+        r_json = json.loads(r.data)
+        self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
+
     def test_update_nn_index(self):
         expected_descriptors = [
             mock.Mock(spec=DescriptorElement),

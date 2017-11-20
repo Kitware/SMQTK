@@ -216,6 +216,61 @@ class TestBallTreeHashIndex (unittest.TestCase):
         self.assertNotIn(tuple(int_to_bit_vector_large(998, 256)),
                          new_data_set)
 
+    def test_remove_from_index_last_element(self):
+        """
+        Test removing the final the only element / final elements from the
+        index.
+        """
+        # Add one hash, remove one hash.
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        index = np.ndarray((1, 256), bool)
+        index[0] = int_to_bit_vector_large(1, 256)
+        bt.build_index(index)
+        self.assertEqual(bt.count(), 1)
+        bt.remove_from_index(index)
+        self.assertEqual(bt.count(), 0)
+        self.assertIsNone(bt.bt)
+
+        # Add many hashes, remove many hashes in batches until zero
+        bt = SkLearnBallTreeHashIndex(random_seed=0)
+        index = np.ndarray((1000, 256), bool)
+        for i in range(1000):
+            index[i] = int_to_bit_vector_large(i, 256)
+        bt.build_index(index)
+        # Remove first 250
+        bt.remove_from_index(index[:250])
+        self.assertEqual(bt.count(), 750)
+        self.assertIsNotNone(bt.bt)
+        # Remove second 250
+        bt.remove_from_index(index[250:500])
+        self.assertEqual(bt.count(), 500)
+        self.assertIsNotNone(bt.bt)
+        # Remove third 250
+        bt.remove_from_index(index[500:750])
+        self.assertEqual(bt.count(), 250)
+        self.assertIsNotNone(bt.bt)
+        # Remove final 250
+        bt.remove_from_index(index[750:])
+        self.assertEqual(bt.count(), 0)
+        self.assertIsNone(bt.bt)
+
+    def test_remove_from_index_last_element_with_cache(self):
+        """
+        Test removing final element also clears the cache element.
+        """
+        c = DataMemoryElement()
+        bt = SkLearnBallTreeHashIndex(cache_element=c, random_seed=0)
+        index = np.ndarray((1, 256), bool)
+        index[0] = int_to_bit_vector_large(1, 256)
+
+        bt.build_index(index)
+        self.assertEqual(bt.count(), 1)
+        self.assertFalse(c.is_empty())
+
+        bt.remove_from_index(index)
+        self.assertEqual(bt.count(), 0)
+        self.assertTrue(c.is_empty())
+
     def test_count_empty(self):
         bt = SkLearnBallTreeHashIndex()
         self.assertEqual(bt.count(), 0)

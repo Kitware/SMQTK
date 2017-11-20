@@ -146,6 +146,42 @@ class TestLshIndex (unittest.TestCase):
             'not-valid-string'
         )
 
+    def test_count_empty_hash2uid(self):
+        """
+        Test that an empty hash-to-uid mapping results in a 0 return regardless
+        of descriptor-set state.
+        """
+        descr_set = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        self.assertEqual(descr_set.count(), 0)
+        self.assertEqual(hash_kvs.count(), 0)
+
+        lsh = LSHNearestNeighborIndex(DummyHashFunctor(), descr_set, hash_kvs)
+        self.assertEqual(lsh.count(), 0)
+
+        # Additions to the descriptor-set should not impact LSH index "size"
+        lsh.descriptor_index.add_descriptor(DescriptorMemoryElement('t', 0))
+        self.assertEqual(lsh.descriptor_index.count(), 1)
+        self.assertEqual(lsh.hash2uuids_kvstore.count(), 0)
+        self.assertEqual(lsh.count(), 0)
+
+        lsh.descriptor_index.add_descriptor(DescriptorMemoryElement('t', 1))
+        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.hash2uuids_kvstore.count(), 0)
+        self.assertEqual(lsh.count(), 0)
+
+        lsh.hash2uuids_kvstore.add(0, {0})
+        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.count(), 1)
+
+        lsh.hash2uuids_kvstore.add(0, {0, 1})
+        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.count(), 2)
+
+        lsh.hash2uuids_kvstore.add(0, {0, 1, 2})
+        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.count(), 3)
+
     def test_build_index_read_only(self):
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
                                         MemoryDescriptorIndex(),

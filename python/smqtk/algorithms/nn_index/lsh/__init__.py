@@ -269,8 +269,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             may be smaller of hash2uuids mapping is not complete.
         :rtype: int
         """
-        # Descriptor-set should already handle concurrency.
-        return len(self.descriptor_index)
+        with self._model_lock:
+            c = 0
+            for set_v in self.hash2uuids_kvstore.values():
+                c += len(set_v)
+            return c
 
     def _build_index(self, descriptors):
         """

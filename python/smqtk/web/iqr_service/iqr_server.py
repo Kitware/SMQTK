@@ -535,16 +535,10 @@ class IqrService (SmqtkWebApp):
                 # empty list already checked for in above try-catch, so we
                 # should never see a ValueError here.  KeyError still possible.
                 self.neighbor_index.remove_from_index(descr_uid_list)
-            except KeyError:
-                # Some UIDs are not present in the current index.  Isolate
-                # which UIDs are not contained.
-                uids_not_ingested = []
-                for uid in descr_uid_list:
-                    if not self.descriptor_index.has_descriptor(uid):
-                        uids_not_ingested.append(uid)
+            except KeyError as ex:
                 return make_response_json("Some provided UIDs do not exist in "
                                           "the current index.",
-                                          bad_uids=uids_not_ingested), 400
+                                          bad_uids=ex.args), 400
 
             return (
                 make_response_json("Success",

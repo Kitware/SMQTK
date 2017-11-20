@@ -251,6 +251,107 @@ class TestIqrService (unittest.TestCase):
         self.assertListEqual(r_json['descriptor_uids'], expected_uid_list)
         self.assertEqual(r_json['index_size'], expected_new_index_count)
 
+    def test_remove_from_nn_index_no_uids(self):
+        """
+        Test that error is properly returned when failing to pass any UIDs to
+        the endpoint.
+        """
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index')
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, "No descriptor UID JSON provided")
+
+    def test_remove_from_nn_index_bad_json_parse_error(self):
+        """
+        Test expected error from had JSON input.
+        """
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index',
+                          data={'descriptor_uids': 'not-valid-json'})
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, "JSON parsing error: ")
+
+    def test_remove_from_nn_index_bad_json_not_a_list(self):
+        """
+        Test expected error from not sending a list.
+        """
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index', data={'descriptor_uids': 6.2})
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, 'JSON provided is not a list.')
+
+    def test_remove_from_nn_index_bad_json_list_empty(self):
+        """
+        Test expected error when passed an empty JSON list.
+        """
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index',
+                          data={'descriptor_uids': '[]'})
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, "JSON list is empty")
+
+    def test_remove_from_nn_index_bad_json_invalid_parts(self):
+        """
+        Test expected error when input JSON contains non-hashable values.
+        """
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index',
+                          data=dict(
+                              descriptor_uids='["a", 1, []]'
+                          ))
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, 'Not all JSON list parts were '
+                                           'hashable values\.')
+
+    def test_remove_from_nn_index_uid_not_a_key(self):
+        """
+        Test expected error when providing one or more descriptor UIDs not
+        currently indexed.
+        """
+        expected_exception_msg = 'expected KeyError value'
+
+        def raiseKeyError(*_, **__):
+            raise KeyError(expected_exception_msg)
+
+        # Simulate a KeyError being raised by nn-index remove call.
+        self.app.neighbor_index.remove_from_index = mock.Mock(
+            side_effect=raiseKeyError
+        )
+
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index',
+                          data={
+                              'descriptor_uids': '[0, 1, 2]'
+                          })
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, "Some provided UIDs do not exist "
+                                           "in the current index")
+            r_json = json.loads(r.data)
+            self.assertListEqual(r_json['bad_uids'], [expected_exception_msg])
+
+    def test_remove_from_nn_index(self):
+        """
+        Test we can remove from the nn-index via the endpoint.
+        """
+        self.app.neighbor_index.remove_from_index = mock.Mock()
+        self.app.neighbor_index.count = mock.Mock(return_value=3)
+
+        with self.app.test_client() as tc:
+            r = tc.delete('/nn_index',
+                          data=dict(
+                              descriptor_uids='[1, 2, 3]'
+                          ))
+
+            self.app.neighbor_index.remove_from_index.assert_called_once_with(
+                [1, 2, 3]
+            )
+
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Success")
+            r_json = json.loads(r.data)
+            self.assertListEqual(r_json['descriptor_uids'], [1, 2, 3])
+            self.assertEqual(r_json['index_size'], 3)
+
     def test_data_nearest_neighbors_no_base64(self):
         """ Test not providing base64 """
         data = dict(
@@ -507,7 +608,10 @@ class TestIqrService (unittest.TestCase):
         self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
 
     def test_set_iqr_state_no_b64(self):
-        # Test that calling set_iqr_state with no base_64 data returns an error.
+        """
+        Test that calling set_iqr_state with no base_64 data returns an
+        error.
+        """
         r = self.app.test_client().put('/state',
                                        data=dict(
                                            sid='dummy'

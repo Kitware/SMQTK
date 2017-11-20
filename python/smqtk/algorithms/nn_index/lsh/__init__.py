@@ -396,7 +396,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # Remove UIDs from our hash2uid-kvs
             # - get the hash for each input UID's descriptor, remove UID from
             #   recorded association set.
-            # - `get_many_descriptors` fails when bad UIDs are provided.
+            # - `get_many_descriptors` fails when bad UIDs are provided
+            #   (KeyError).
             self._log.debug("Removing hash2uid entries for UID's descriptors")
             h_vectors = collections.deque()
             h_ints = collections.deque()

@@ -131,27 +131,30 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         with self._model_lock:
-            if self.cache_element and self.bt:
+            if self.cache_element:
                 if self.cache_element.is_read_only():
                     raise ValueError("Configured cache element (%s) is read-"
                                      "only." % self.cache_element)
-
-                self._log.debug("Saving model: %s", self.cache_element)
-                # Saving BT component matrices separately.
-                # - Not saving distance function because its always going to be
-                #   hamming distance (see ``build_index``).
-                s = self.bt.__getstate__()
-                tail = s[4:11]
-                buff = StringIO()
-                # noinspection PyTypeChecker
-                np.savez(buff,
-                         data_arr=s[0],
-                         idx_array_arr=s[1],
-                         node_data_arr=s[2],
-                         node_bounds_arr=s[3],
-                         tail=tail)
-                self.cache_element.set_bytes(buff.getvalue())
-                self._log.debug("Saving model: Done")
+                if self.bt is not None:
+                    self._log.debug("Saving model: %s", self.cache_element)
+                    # Saving BT component matrices separately.
+                    # - Not saving distance function because its always going
+                    #   to be hamming distance (see ``build_index``).
+                    s = self.bt.__getstate__()
+                    tail = s[4:11]
+                    buff = StringIO()
+                    # noinspection PyTypeChecker
+                    np.savez(buff,
+                             data_arr=s[0],
+                             idx_array_arr=s[1],
+                             node_data_arr=s[2],
+                             node_bounds_arr=s[3],
+                             tail=tail)
+                    self.cache_element.set_bytes(buff.getvalue())
+                    self._log.debug("Saving model: Done")
+                else:
+                    # No ball tree, empty cache.
+                    self.cache_element.set_bytes('')
 
     def load_model(self):
         """
@@ -191,10 +194,13 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :type vec_list: list[np.ndarray[bool]] | np.ndarray[np.ndarray[bool]]
 
         """
-        # If distance metric ever changes, need to update save/load model
-        # functions.
-        self.bt = BallTree(vec_list, self.leaf_size,
-                           metric='hamming')
+        if len(vec_list) > 0:
+            # If distance metric ever changes, need to update save/load model
+            # functions.
+            self.bt = BallTree(vec_list, self.leaf_size,
+                               metric='hamming')
+        else:
+            self.bt = None
         self.save_model()
 
     def _build_index(self, hashes):

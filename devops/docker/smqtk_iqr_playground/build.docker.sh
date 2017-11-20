@@ -11,6 +11,6 @@ if [ -x "$(which nvidia-docker 2>/dev/null)" ]
 then
   nvidia-docker build \
     -t kitware/smqtk/iqr_playground:0.10-LRD-gpu-cuda8-cudnn6 \
-    -f "${SCRIPT_DIR}/Dockerfile.gpu.df" \
+    -f "${SCRIPT_DIR}/Dockerfile.gpu-cuda8.0-cudnn6.df" \
     "${SCRIPT_DIR}"
 fi

@@ -401,6 +401,11 @@ class ItqFunctor (LshFunctor):
         :rtype: numpy.ndarray[bool]
 
         """
+        if self.mean_vec is None:
+            raise Exception("Can't compute hash code: mean vector is none.")
+        elif self.rotation is None:
+            raise Exception("Can't compute hash code: rotation matrix is none.")
+
         z = numpy.dot(self._norm_vector(descriptor) - self.mean_vec,
                       self.rotation)
         b = numpy.zeros(z.shape, dtype=bool)

@@ -159,10 +159,10 @@ def process_images(task, folderId, dataElementUris, **kwargs):
     # https://www.postgresql.org/message-id/4B967376.7050300%40opinioni.net
     # To work around it, create the table before mapping the jobs.
     index = descriptorIndexFromFolderId(task.girder_client, folderId)
-    conn = index._get_psql_connection()
-    with conn:
-        with conn.cursor() as cur:
-            index._ensure_table(cur)
+
+    with index.psql_helper.get_psql_connection() as conn:
+        with conn.cursor() as cursor:
+            index.psql_helper.ensure_table(cursor)
 
     batch_size = int(getSetting(task.girder_client, 'image_batch_size'))
     batches = [dataElementUris[x:x+batch_size]

@@ -7,6 +7,7 @@ setuptools.setup(
     author='Kitware, Inc.',
     author_email='kitware@kitware.com',
     license='Apache 2.0',
+    packages=['smqtk_worker'],
     entry_points={
         'girder_worker_plugins': [
             'smqtk_worker = smqtk_worker:GirderWorkerPlugin'

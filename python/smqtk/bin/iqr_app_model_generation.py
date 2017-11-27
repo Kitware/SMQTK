@@ -1,5 +1,11 @@
 """
 Train and generate models for the SMQTK IQR Application.
+
+This application takes the same configuration file as the IqrService REST
+service.  To generate a default configuration, please refer to the
+``runApplication`` tool for the ``IqrService`` application:
+
+    runApplication -a IqrService -g config.IqrService.json
 """
 import argparse
 import glob
@@ -11,27 +17,41 @@ import six
 
 from smqtk import algorithms
 from smqtk import representation
+from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import bin_utils, jsmin, plugin
+from smqtk.web.iqr_service import IqrService
 
 
 __author__ = 'paul.tunison@kitware.com'
 
 
 def cli_parser():
-    parser = argparse.ArgumentParser(description=__doc__)
+    # Forgoing the ``bin_utils.basic_cli_parser`` due to our use of dual
+    # configuration files for this utility.
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
 
-    parser.add_argument("-c", "--config",
-                        required=True,
-                        help="IQR application configuration file.")
-    parser.add_argument("-t", "--tab",
-                        type=int, default=0,
-                        help="The configuration tab to generate the model for.")
     parser.add_argument('-v', '--verbose',
-                        action='store_true', default=False,
-                        help='Show debug logging.')
+                        default=False, action='store_true',
+                        help='Output additional debug logging.')
+    parser.add_argument('-c', '--config',
+                        metavar="PATH", nargs=2, required=True,
+                        help='Path to the JSON configuration files. The first '
+                             'file provided should be the configuration file '
+                             'for the ``IqrSearchDispatcher`` web-application '
+                             'and the second should be the configuration file '
+                             'for the ``IqrService`` web-application.')
 
+    parser.add_argument("-t", "--tab",
+                        default=None, required=True,
+                        help="The configuration \"tab\" of the "
+                             "``IqrSearchDispatcher`` configuration to use. "
+                             "This informs what dataset to add the input data "
+                             "files to.")
     parser.add_argument("input_files",
-                        metavar='GLOB', nargs="*",
+                        metavar='GLOB', nargs="+",
                         help="Shell glob to files to add to the configured "
                              "data set.")
 
@@ -39,65 +59,58 @@ def cli_parser():
 
 
 def main():
-    parser = cli_parser()
-    args = parser.parse_args()
+    args = cli_parser().parse_args()
 
-    #
-    # Setup logging
-    #
-    if not logging.getLogger().handlers:
-        if args.verbose:
-            bin_utils.initialize_logging(logging.getLogger(), logging.DEBUG)
-        else:
-            bin_utils.initialize_logging(logging.getLogger(), logging.INFO)
-    log = logging.getLogger("smqtk.scripts.iqr_app_model_generation")
+    ui_config_filepath, iqr_config_filepath = args.config
+    llevel = logging.DEBUG if args.verbose else logging.INFO
+    tab = args.tab
+    input_files_globs = args.input_files
 
-    search_app_config = json.loads(jsmin.jsmin(open(args.config).read()))
+    # Not using `bin_utils.utility_main_helper`` due to deviating from single-
+    # config-with-default usage.
+    bin_utils.initialize_logging(logging.getLogger('smqtk'), llevel)
+    bin_utils.initialize_logging(logging.getLogger('__main__'), llevel)
+    log = logging.getLogger(__name__)
 
-    #
-    # Input parameters
-    #
-    # The following dictionaries are JSON configurations that are used to
-    # configure the various data structures and algorithms needed for the IQR
-    # demo application. Values here can be changed to suit your specific data
-    # and algorithm needs.
-    #
-    # See algorithm implementation doc-strings for more information on
-    # configuration parameters (see implementation class ``__init__`` method).
-    #
+    log.info("Loading UI config: '{}'".format(ui_config_filepath))
+    ui_config, ui_config_loaded = bin_utils.load_config(ui_config_filepath)
+    log.info("Loading IQR config: '{}'".format(iqr_config_filepath))
+    iqr_config, iqr_config_loaded = bin_utils.load_config(iqr_config_filepath)
+    if not (ui_config_loaded and iqr_config_loaded):
+        raise RuntimeError("One or both configuration files failed to load.")
 
-    # base actions on a specific IQR tab configuration (choose index here)
-    if args.tab < 0 or args.tab > (len(search_app_config["iqr_tabs"]) - 1):
-        log.error("Invalid tab number provided.")
+    # Ensure the given "tab" exists in UI configuration.
+    if tab is None:
+        log.error("No configuration tab provided to drive model generation.")
+        exit(1)
+    if tab not in ui_config["iqr_tabs"]:
+        log.error("Invalid tab provided: '{}'. Available tags: {}"
+                  .format(tab, list(ui_config["iqr_tabs"])))
         exit(1)
 
-    search_app_iqr_config = search_app_config["iqr_tabs"][args.tab]
+    #
+    # Gather Configurations
+    #
+    log.info("Extracting plugin configurations")
+
+    ui_tab_config = ui_config["iqr_tabs"][tab]
+    iqr_plugins_config = iqr_config['iqr_service']['plugins']
 
     # Configure DataSet implementation and parameters
-    data_set_config = search_app_iqr_config['data_set']
-
-    # Configure DescriptorGenerator algorithm implementation, parameters and
-    # persistent model component locations (if implementation has any).
-    descriptor_generator_config = search_app_iqr_config['descr_generator']
-
-    # Configure NearestNeighborIndex algorithm implementation, parameters and
-    # persistent model component locations (if implementation has any).
-    nn_index_config = search_app_iqr_config['nn_index']
-
-    # Configure RelevancyIndex algorithm implementation, parameters and
-    # persistent model component locations (if implementation has any).
-    #
-    # The LibSvmHikRelevancyIndex implementation doesn't actually build a
-    # persistent model (or doesn't have to that is), but we're leaving this
-    # block here in anticipation of other potential implementations in the
-    # future.
-    #
-    rel_index_config = search_app_iqr_config['rel_index_config']
+    data_set_config = ui_tab_config['data_set']
 
     # Configure DescriptorElementFactory instance, which defines what
     # implementation of DescriptorElement to use for storing generated
     # descriptor vectors below.
-    descriptor_elem_factory_config = search_app_iqr_config['descriptor_factory']
+    descriptor_elem_factory_config = iqr_plugins_config['descriptor_factory']
+
+    # Configure DescriptorGenerator algorithm implementation, parameters and
+    # persistent model component locations (if implementation has any).
+    descriptor_generator_config = iqr_plugins_config['descriptor_generator']
+
+    # Configure NearestNeighborIndex algorithm implementation, parameters and
+    # persistent model component locations (if implementation has any).
+    nn_index_config = iqr_plugins_config['neighbor_index']
 
     #
     # Initialize data/algorithms
@@ -105,66 +118,61 @@ def main():
     # Constructing appropriate data structures and algorithms, needed for the
     # IQR demo application, in preparation for model training.
     #
-
-    descriptor_elem_factory = \
-        representation.DescriptorElementFactory \
-        .from_config(descriptor_elem_factory_config)
-
+    log.info("Instantiating plugins")
     #: :type: representation.DataSet
     data_set = \
         plugin.from_plugin_config(data_set_config,
                                   representation.get_data_set_impls())
+    descriptor_elem_factory = \
+        representation.DescriptorElementFactory \
+        .from_config(descriptor_elem_factory_config)
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
                                   algorithms.get_descriptor_generator_impls())
-
     #: :type: algorithms.NearestNeighborsIndex
     nn_index = \
         plugin.from_plugin_config(nn_index_config,
                                   algorithms.get_nn_index_impls())
 
-    #: :type: algorithms.RelevancyIndex
-    rel_index = \
-        plugin.from_plugin_config(rel_index_config,
-                                  algorithms.get_relevancy_index_impls())
-
     #
     # Build models
     #
-    # Perform the actual building of the models.
-    #
-
-    # Add data files to DataSet
-    DataFileElement = representation.get_data_element_impls()["DataFileElement"]
-
-    for fp in args.input_files:
-        fp = osp.expanduser(fp)
-        if osp.isfile(fp):
-            data_set.add_data(DataFileElement(fp))
+    log.info("Adding files to dataset '{}'".format(data_set))
+    for g in input_files_globs:
+        g = osp.expanduser(g)
+        if osp.isfile(g):
+            data_set.add_data(DataFileElement(g, readonly=True))
         else:
-            log.debug("Expanding glob: %s" % fp)
-            for g in glob.iglob(fp):
-                data_set.add_data(DataFileElement(g))
+            log.debug("Expanding glob: %s" % g)
+            for fp in glob.iglob(g):
+                data_set.add_data(DataFileElement(fp, readonly=True))
 
-    # Generate a mode if the generator defines a known generation method.
-    if hasattr(descriptor_generator, "generate_model"):
+    # Generate a model if the generator defines a known generation method.
+    try:
+        log.debug("descriptor generator as model to generate?")
         descriptor_generator.generate_model(data_set)
-    # Add other if-else cases for other known implementation-specific generation
-    # methods stubs
+    except AttributeError as ex:
+        log.debug("descriptor generator as model to generate - Nope: {}"
+                  .format(str(ex)))
 
     # Generate descriptors of data for building NN index.
+    log.info("Computing descriptors for data set with {}"
+             .format(descriptor_generator))
     data2descriptor = descriptor_generator.compute_descriptor_async(
         data_set, descriptor_elem_factory
     )
 
+    # Possible additional support steps before building NNIndex
     try:
-        nn_index.build_index(six.itervalues(data2descriptor))
-    except RuntimeError:
-        # Already built model, so skipping this step
-        pass
+        # Fit the LSH index functor
+        log.debug("Has LSH Functor to fit?")
+        nn_index.lsh_functor.fit(six.itervalues(data2descriptor))
+    except AttributeError as ex:
+        log.debug("Has LSH Functor to fit - Nope: {}".format(str(ex)))
 
-    rel_index.build_index(six.itervalues(data2descriptor))
+    log.info("Building nearest neighbors index {}".format(nn_index))
+    nn_index.build_index(six.itervalues(data2descriptor))
 
 
 if __name__ == "__main__":

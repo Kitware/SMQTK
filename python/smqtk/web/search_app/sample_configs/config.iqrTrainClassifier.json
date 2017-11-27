@@ -1,9 +1,9 @@
 {
     "classifier": {
         "LibSvmClassifier": {
-            "normalize": false, 
-            "svm_label_map_fp": "classifier_workdir/label_map", 
-            "svm_model_fp": "classifier_workdir/model", 
+            "normalize": 2,
+            "svm_label_map_uri": "workdir/iqr_classifier/label_map",
+            "svm_model_uri": "workdir/iqr_classifier/model",
             "train_params": {
                 "-b": 1, 
                 "-c": 2, 

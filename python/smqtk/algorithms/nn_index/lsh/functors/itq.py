@@ -8,7 +8,6 @@ References/Resources:
 from collections import Sequence
 from copy import deepcopy
 import logging
-import math
 
 import numpy
 from six import BytesIO

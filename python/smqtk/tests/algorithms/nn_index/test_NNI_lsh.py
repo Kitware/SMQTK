@@ -325,8 +325,145 @@ class TestLshIndex (unittest.TestCase):
         for i in range(7):
             self.assertSetEqual(hash_kvs.get(i), {i})
 
+    def test_update_index_duplicate_descriptors(self):
+        """
+        Test that updating a built index with the same descriptors results in
+        idempotent behavior.
+        """
+        descr_index = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        index = LSHNearestNeighborIndex(DummyHashFunctor(),
+                                        descr_index, hash_kvs)
+
+        # Identical Descriptors to build and update on (different instances)
+        descriptors1 = [
+            DescriptorMemoryElement('t', 0).set_vector([0]),
+            DescriptorMemoryElement('t', 1).set_vector([1]),
+            DescriptorMemoryElement('t', 2).set_vector([2]),
+            DescriptorMemoryElement('t', 3).set_vector([3]),
+            DescriptorMemoryElement('t', 4).set_vector([4]),
+        ]
+        descriptors2 = [
+            DescriptorMemoryElement('t', 0).set_vector([0]),
+            DescriptorMemoryElement('t', 1).set_vector([1]),
+            DescriptorMemoryElement('t', 2).set_vector([2]),
+            DescriptorMemoryElement('t', 3).set_vector([3]),
+            DescriptorMemoryElement('t', 4).set_vector([4]),
+        ]
+
+        index.build_index(descriptors1)
+        index.update_index(descriptors2)
+
+        assert descr_index.count() == 5
+        # Above descriptors should be considered "in" the descriptor set now.
+        for d in descriptors1:
+            assert d in descr_index
+        for d in descriptors2:
+            assert d in descr_index
+        # Known hashes of the above descriptors should be in the KVS
+        assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
+        assert hash_kvs.get(0) == {0}
+        assert hash_kvs.get(1) == {1}
+        assert hash_kvs.get(2) == {2}
+        assert hash_kvs.get(3) == {3}
+        assert hash_kvs.get(4) == {4}
+
+    def test_update_index_similar_descriptors(self):
+        """
+        Test that updating a built index with similar descriptors (same
+        vectors, different UUIDs) results in contained structures having an
+        expected state.
+        """
+        descr_index = MemoryDescriptorIndex()
+        hash_kvs = MemoryKeyValueStore()
+        index = LSHNearestNeighborIndex(DummyHashFunctor(),
+                                        descr_index, hash_kvs)
+
+        # Similar Descriptors to build and update on (different instances)
+        descriptors1 = [
+            DescriptorMemoryElement('t', 0).set_vector([0]),
+            DescriptorMemoryElement('t', 1).set_vector([1]),
+            DescriptorMemoryElement('t', 2).set_vector([2]),
+            DescriptorMemoryElement('t', 3).set_vector([3]),
+            DescriptorMemoryElement('t', 4).set_vector([4]),
+        ]
+        descriptors2 = [
+            DescriptorMemoryElement('t', 5).set_vector([0]),
+            DescriptorMemoryElement('t', 6).set_vector([1]),
+            DescriptorMemoryElement('t', 7).set_vector([2]),
+            DescriptorMemoryElement('t', 8).set_vector([3]),
+            DescriptorMemoryElement('t', 9).set_vector([4]),
+        ]
+
+        index.build_index(descriptors1)
+        index.update_index(descriptors2)
+
+        assert descr_index.count() == 10
+        # Above descriptors should be considered "in" the descriptor set now.
+        for d in descriptors1:
+            assert d in descr_index
+        for d in descriptors2:
+            assert d in descr_index
+        # Known hashes of the above descriptors should be in the KVS
+        assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
+        assert hash_kvs.get(0) == {0, 5}
+        assert hash_kvs.get(1) == {1, 6}
+        assert hash_kvs.get(2) == {2, 7}
+        assert hash_kvs.get(3) == {3, 8}
+        assert hash_kvs.get(4) == {4, 9}
+
+    def test_update_index_existing_descriptors_frozenset(self):
+        """
+        Same as ``test_update_index_similar_descriptors`` but testing that
+        we can update the index when seeded with structures with existing
+        values.
+        """
+        # Similar Descriptors to build and update on (different instances)
+        descriptors1 = [
+            DescriptorMemoryElement('t', 0).set_vector([0]),
+            DescriptorMemoryElement('t', 1).set_vector([1]),
+            DescriptorMemoryElement('t', 2).set_vector([2]),
+            DescriptorMemoryElement('t', 3).set_vector([3]),
+            DescriptorMemoryElement('t', 4).set_vector([4]),
+        ]
+        descriptors2 = [
+            DescriptorMemoryElement('t', 5).set_vector([0]),
+            DescriptorMemoryElement('t', 6).set_vector([1]),
+            DescriptorMemoryElement('t', 7).set_vector([2]),
+            DescriptorMemoryElement('t', 8).set_vector([3]),
+            DescriptorMemoryElement('t', 9).set_vector([4]),
+        ]
+
+        descr_index = MemoryDescriptorIndex()
+        descr_index.add_many_descriptors(descriptors1)
+
+        hash_kvs = MemoryKeyValueStore()
+        hash_kvs.add(0, frozenset({0}))
+        hash_kvs.add(1, frozenset({1}))
+        hash_kvs.add(2, frozenset({2}))
+        hash_kvs.add(3, frozenset({3}))
+        hash_kvs.add(4, frozenset({4}))
+
+        index = LSHNearestNeighborIndex(DummyHashFunctor(),
+                                        descr_index, hash_kvs)
+        index.update_index(descriptors2)
+
+        assert descr_index.count() == 10
+        # Above descriptors should be considered "in" the descriptor set now.
+        for d in descriptors1:
+            assert d in descr_index
+        for d in descriptors2:
+            assert d in descr_index
+        # Known hashes of the above descriptors should be in the KVS
+        assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
+        assert hash_kvs.get(0) == {0, 5}
+        assert hash_kvs.get(1) == {1, 6}
+        assert hash_kvs.get(2) == {2, 7}
+        assert hash_kvs.get(3) == {3, 8}
+        assert hash_kvs.get(4) == {4, 9}
+
     def test_update_index_with_hash_index(self):
-        # Simiar test to `test_update_index_add_new_descriptors` but with a
+        # Similar test to `test_update_index_add_new_descriptors` but with a
         # linear hash index.
         descr_index = MemoryDescriptorIndex()
         hash_kvs = MemoryKeyValueStore()
@@ -538,16 +675,14 @@ class TestLshIndex (unittest.TestCase):
         # Simulate initial state with some descriptor hashed to one value and
         # other descriptors hashed to another.
 
-        descriptors = [
-            DescriptorMemoryElement('t', 0),
-            DescriptorMemoryElement('t', 1),
-            DescriptorMemoryElement('t', 2),
-            DescriptorMemoryElement('t', 3),
-            DescriptorMemoryElement('t', 4),
-        ]
         # Vectors of length 1 for easy dummy hashing prediction.
-        for d in descriptors:
-            d.set_vector(np.ones(1, float) * d.uuid())
+        descriptors = [
+            DescriptorMemoryElement('t', 0).set_vector([0]),
+            DescriptorMemoryElement('t', 1).set_vector([1]),
+            DescriptorMemoryElement('t', 2).set_vector([2]),
+            DescriptorMemoryElement('t', 3).set_vector([3]),
+            DescriptorMemoryElement('t', 4).set_vector([4]),
+        ]
 
         # Dummy hash function to do the simulated thing
         hash_func = DummyHashFunctor()

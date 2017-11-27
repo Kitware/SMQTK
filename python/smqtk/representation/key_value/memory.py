@@ -114,6 +114,7 @@ class MemoryKeyValueStore (KeyValueStore):
         if self._cache_element is not None:
             # TODO(paul.tunison): Some other serialization than Pickle.
             #   - pickle loading allows arbitrary code execution on host.
+            self._log.debug("Caching table to {}".format(self._cache_element))
             self._cache_element.set_bytes(
                 pickle.dumps(self._table, self.PICKLE_PROTOCOL))
 

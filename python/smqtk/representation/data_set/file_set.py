@@ -2,10 +2,7 @@ import os
 import os.path as osp
 import re
 
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
+from six.moves import cPickle as pickle
 
 from smqtk.representation import DataElement, DataSet
 from smqtk.utils import file_utils

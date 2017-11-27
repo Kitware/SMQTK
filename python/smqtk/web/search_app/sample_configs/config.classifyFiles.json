@@ -1,17 +1,13 @@
 {
     "classification_factory": {
-        "FileClassificationElement": {
-            "save_dir": "classifier_workdir/classification_element" ,
-            "subdir_split": true
-        },
         "MemoryClassificationElement": {},
         "type": "MemoryClassificationElement"
     },
     "classifier": {
         "LibSvmClassifier": {
-            "normalize": false,
-            "svm_label_map_fp": "classifier_workdir/label_map",
-            "svm_model_fp": "classifier_workdir/model",
+            "normalize": 2,
+            "svm_label_map_uri": "workdir/iqr_classifier/label_map",
+            "svm_model_uri": "workdir/iqr_classifier/model",
             "train_params": {
                 "-b": 1,
                 "-c": 2,
@@ -22,34 +18,24 @@
         "type": "LibSvmClassifier"
     },
     "descriptor_factory": {
-        "DescriptorFileElement": {
-            "save_dir": null,
-            "subdir_split": null
-        },
         "DescriptorMemoryElement": {},
-        "SolrDescriptorElement": {
-            "commit_on_set": true,
-            "persistent_connection": false,
-            "solr_conn_addr": null,
-            "timeout": 10,
-            "timestamp_field": null,
-            "type_field": null,
-            "uuid_field": null,
-            "vector_field": null
-        },
         "type": "DescriptorMemoryElement"
     },
     "descriptor_generator": {
-        "ColorDescriptor_Image_csift": {
-            "flann_autotune": false,
-            "flann_sample_fraction": 0.75,
-            "flann_target_precision": 0.95,
-            "kmeans_k": 1024,
-            "model_directory": "workdir/csift",
-            "random_seed": 42,
-            "use_spatial_pyramid": false,
-            "work_directory": "workdir/csift"
+        "CaffeDescriptorGenerator": {
+            "batch_size": 128,
+            "data_layer": "data",
+            "gpu_device_id": 0,
+            "image_mean_uri": "~/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+            "input_scale": null,
+            "load_truncated_images": false,
+            "network_is_bgr": true,
+            "network_model_uri": "~/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+            "network_prototxt_uri": "~/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+            "pixel_rescale": null,
+            "return_layer": "fc7",
+            "use_gpu": true
         },
-        "type": "ColorDescriptor_Image_csift"
+        "type": "CaffeDescriptorGenerator"
     }
 }

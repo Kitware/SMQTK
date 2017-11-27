@@ -2,7 +2,9 @@
 Top level flask application
 """
 
+import base64
 import json
+import os
 import os.path
 import threading
 
@@ -22,6 +24,17 @@ from .modules.iqr import IqrSearch
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def generate_csrf_token():
+    """
+    Create a random string token for CSRF protection.
+
+    Uses ``os.urandom`` so this should be sufficient for cryptographic uses.
+
+    """
+    BYTES = 64
+    return base64.b64encode(os.urandom(BYTES)).decode('utf-8')
 
 
 class IqrSearchDispatcher (SmqtkWebApp):
@@ -150,6 +163,47 @@ class IqrSearchDispatcher (SmqtkWebApp):
                 'url': new_url,
             })
 
+    @staticmethod
+    def _apply_csrf_protect(app):
+        # Establish CSRF protection
+
+        # Synchronized keys also defined in ``/static/js/smqtk.vars.js``.
+        # - Session key is also what's used in forms
+        CSRF_FORM_KEY = CSRF_SESSION_TOKEN_KEY = "_csrf_token"
+        CSRF_HEADER_KEY = "X-Csrf-Token"
+
+        # CSRF Protection
+        @app.before_request
+        def csrf_protect():
+            if flask.request.method in ["POST", "PUT", "DELETE"]:
+                session_token = flask.session.get(CSRF_SESSION_TOKEN_KEY, None)
+
+                # CSRF token will either be in header or form, but must be
+                # present in one of them.
+                req_header_token = flask.request.headers.get(CSRF_HEADER_KEY,
+                                                             None)
+                req_form_token = flask.request.form.get(CSRF_FORM_KEY, None)
+
+                if not session_token or session_token != (req_header_token or
+                                                          req_form_token):
+                    flask.abort(400)
+
+        def get_csrf_session_token():
+            """
+            Initialize and return a specific, secure token for CSRF mitigation
+            per session.
+            """
+            # Initialize CSRF protection token in session if not there.
+            if CSRF_SESSION_TOKEN_KEY not in flask.session:
+                flask.session[CSRF_SESSION_TOKEN_KEY] = generate_csrf_token()
+            return flask.session['_csrf_token']
+
+        # Add CSRF templating helper token generator
+        app.jinja_env.globals['csrf_form_key'] = CSRF_FORM_KEY
+        app.jinja_env.globals['csrf_token_gen'] = get_csrf_session_token
+
+        return app
+
     def init_iqr_app(self, config, prefix):
         """
         Initialize IQR sub-application given a configuration for it and a prefix
@@ -181,6 +235,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
                 a.secret_key = self.secret_key
                 a.session_interface = self.session_interface
                 a.jinja_env.add_extension('jinja2.ext.do')
+                self._apply_csrf_protect(a)
 
                 self.instances[prefix] = a
             else:
@@ -225,6 +280,12 @@ class IqrSearchDispatcher (SmqtkWebApp):
             app = self.wsgi_app
 
         return app(environ, start_response)
+
+    def run(self, host=None, port=None, debug=False, **options):
+        # Establish CSRF protection
+        self._apply_csrf_protect(self)
+
+        super(IqrSearchDispatcher, self).run(host, port, debug, **options)
 
 
 APPLICATION_CLASS = IqrSearchDispatcher

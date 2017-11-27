@@ -24,11 +24,6 @@ from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils.bin_utils import ProgressReporter
 from smqtk.utils import merge_dict
 
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
-
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
     """
@@ -308,20 +303,18 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             hash_vectors = collections.deque()
             self.hash2uuids_kvstore.clear()
             prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+            # We just cleared the previous store, so aggregate new kv-mapping
+            # in ``kvstore_update`` for single update after loop.
+            kvstore_update = collections.defaultdict(set)
             for d in self.descriptor_index:
                 h_vec = self.lsh_functor.get_hash(d.vector())
                 hash_vectors.append(h_vec)
-
                 h_int = bit_vector_to_int_large(h_vec)
-
-                # Get, update and reinsert hash UUID set object
-                #: :type: set
-                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
-                hash_uuid_set.add(d.uuid())
-                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
-
+                kvstore_update[h_int] |= {d.uuid()}
                 prog_reporter.increment_report()
             prog_reporter.report()
+            self.hash2uuids_kvstore.add_many(kvstore_update)
+            del kvstore_update
 
             if self.hash_index is not None:
                 self._log.debug("Clearing and building hash index of type %s",
@@ -361,17 +354,24 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
             #: :type: collections.deque[numpy.ndarray[bool]]
             hash_vectors = collections.deque()  # for updating hash_index
+            # for updating kv-store after collecting new hash codes
+            kvstore_update = {}
             for d in d_for_hashing:
                 h_vec = self.lsh_functor.get_hash(d.vector())
                 hash_vectors.append(h_vec)
                 h_int = bit_vector_to_int_large(h_vec)
-                # Get, update and reinsert hash UUID set object
-                #: :type: set
-                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
-                hash_uuid_set.add(d.uuid())
-                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+                # Get, update and reinsert hash UUID set object.
+                if h_int not in kvstore_update:
+                    #: :type: set
+                    kvstore_update[h_int] = \
+                        self.hash2uuids_kvstore.get(h_int, set())
+                kvstore_update[h_int] |= {d.uuid()}
                 prog_reporter.increment_report()
             prog_reporter.report()
+
+            self._log.debug("Updating kv-store with new hash codes")
+            self.hash2uuids_kvstore.add_many(kvstore_update)
+            del kvstore_update
 
             if self.hash_index is not None:
                 self._log.debug("Updating hash index structure.")
@@ -413,19 +413,28 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
             # If we're here, then all given UIDs mapped to an indexed
             # descriptor.  Proceed with removal from hash2uids kvs.  If a hash
-            # no longer maps anything, remove that hash from the hash index if
-            # we have one.
+            # no longer maps anything, remove that key from the KVS.
             hashes_for_removal = collections.deque()
+            # store key-value pairs to update after loop in batch call
+            kvs_update = {}
+            # store keys to remove after loop in batch-call
+            kvs_remove = set()
             for uid, h_int, h_vec in zip(uids, h_ints, h_vectors):
-                # noinspection PyUnresolvedReferences
-                new_uid_set = self.hash2uuids_kvstore.get(h_int) - {uid}
-                # If the resolved UID set is not empty re-add it, otherwise
-                # remove the
-                if new_uid_set:
-                    self.hash2uuids_kvstore.add(h_int, new_uid_set)
-                else:
+                if h_int not in kvs_update:
+                    # First time seeing key, cache current value
+                    kvs_update[h_int] = \
+                        self.hash2uuids_kvstore.get(h_int, set())
+                kvs_update[h_int] -= {uid}
+                # If the resolves UID set is empty, flag the key for removal.
+                if not kvs_update[h_int]:
+                    del kvs_update[h_int]
+                    kvs_remove.add(h_int)
                     hashes_for_removal.append(h_vec)
-                    self.hash2uuids_kvstore.remove(h_int)
+            self._log.debug("Updating hash2uuids: modified relations")
+            self.hash2uuids_kvstore.add_many(kvs_update)
+            self._log.debug("Updating hash2uuids: removing empty hash keys")
+            self.hash2uuids_kvstore.remove_many(kvs_remove)
+            del kvs_update, kvs_remove
 
             # call remove-from-index on hash-index if we have one and there are
             # hashes to be removed.
@@ -469,7 +478,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 hi = LinearHashIndex()
                 # not calling ``build_index`` because we already have the int
                 # hashes.
-                hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
+                hi.index = set(self.hash2uuids_kvstore.keys())
             near_hashes, _ = hi.nn(d_h, n)
 
             self._log.debug("getting UUIDs of descriptors for nearby hashes")

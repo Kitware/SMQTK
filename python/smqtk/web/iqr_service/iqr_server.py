@@ -601,10 +601,8 @@ class IqrService (SmqtkWebApp):
         try:
             descriptor = self.describe_base64_data(data_b64, content_type)
         except (TypeError, binascii.Error) as e:
-            if str(e) == "Incorrect padding":
-                return make_response_json("Failed to parse base64 data."), 400
-            # In case some other exception is raised, actually a server error.
-            raise
+            return make_response_json("Failed to parse base64 data: {}"
+                                      .format(str(e))), 400
 
         n_elems, n_dists = self.neighbor_index.nn(descriptor, k)
         return make_response_json("Success",

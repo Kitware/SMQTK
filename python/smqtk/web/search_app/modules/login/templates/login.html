@@ -11,7 +11,7 @@
               action="/login.passwd" method="post">
             <div class="control-group">
                 <label for="login_field">Username</label>
-                <input autocapitolize="off" autofocus="autofocus"
+                <input autocapitalize="off" autofocus="autofocus"
                        id="login_field" name="login" tabindex="1" type="text"
                        value="{{username}}"/>
             </div>
@@ -26,6 +26,8 @@
                 <input class="btn" name="commit" tabindex="3" type="submit"
                        value="Sign in"/>
             </div>
+            {# csrf_token_gen() function defined in base dispatcher app -#}
+            <input name="{{ csrf_form_key }}" type="hidden" value="{{ csrf_token_gen() }}"/>
         </form>
     </div>
 {% endblock body_content %}

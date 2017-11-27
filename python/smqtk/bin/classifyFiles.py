@@ -80,7 +80,7 @@ def main():
     label = args.label
     file_globs = args.file_globs
 
-    initialize_logging(logging.getLogger(__name__),
+    initialize_logging(logging.getLogger('__main__'),
                        is_debug and logging.DEBUG or logging.INFO)
     initialize_logging(logging.getLogger('smqtk'),
                        is_debug and logging.DEBUG or logging.INFO)
@@ -164,8 +164,12 @@ def classify_files(config, label, file_globs):
     # map of UUID to filepath:
     uuid2c = dict((c.uuid, c) for c in six.itervalues(classification_map))
     for data in data_elements:
-        if uuid2c[data.uuid()].max_label() == label:
-            print(uuid2filepath[data.uuid()])
+        d_uuid = data.uuid()
+        log.debug("'{}' classification map: {}".format(
+            uuid2filepath[d_uuid], uuid2c[d_uuid].get_classification()
+        ))
+        if uuid2c[d_uuid].max_label() == label:
+            print(uuid2filepath[d_uuid])
 
 
 if __name__ == '__main__':

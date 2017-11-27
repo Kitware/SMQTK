@@ -73,8 +73,8 @@ class TestCheckImageCli(unittest.TestCase):
         try:
             sys.stdout, sys.stderr = out, err
             check_images_main()
-        except SystemExit:
-            pass
+        except SystemExit as ex:
+            print("Encountered SystemExit exception, code {}".format(ex.code))
         finally:
             stdout, stderr = out.getvalue().strip(), err.getvalue().strip()
             sys.stdout, sys.stderr = saved_stdout, saved_stderr

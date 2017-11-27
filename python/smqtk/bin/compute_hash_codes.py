@@ -28,11 +28,6 @@ from smqtk.utils import (
     plugin,
 )
 
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
-
 
 def uuids_for_processing(uuids, hash2uuids):
     """
@@ -152,15 +147,15 @@ def main():
     log.info("Starting hash code computation")
     kv_update = {}
     for uuid, hash_int in \
-        compute_hash_codes(uuids_for_processing(iter_uuids(),
-                                                hash2uuids_kvstore),
-                           descriptor_index, lsh_functor,
-                           report_interval,
-                           use_multiprocessing, True):
+            compute_hash_codes(uuids_for_processing(iter_uuids(),
+                                                    hash2uuids_kvstore),
+                               descriptor_index, lsh_functor,
+                               report_interval,
+                               use_multiprocessing, True):
         # Get original value in KV-store if not in update dict.
         if hash_int not in kv_update:
-            kv_update[hash_int] = hash2uuids_kvstore.get(hash_int, frozenset())
-        kv_update[hash_int] |= frozenset([uuid])
+            kv_update[hash_int] = hash2uuids_kvstore.get(hash_int, set())
+        kv_update[hash_int] |= {uuid}
 
     if kv_update:
         log.info("Updating KV store... (%d keys)" % len(kv_update))

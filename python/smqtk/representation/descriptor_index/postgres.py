@@ -9,11 +9,7 @@ import logging
 import multiprocessing
 
 from six.moves import zip
-
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
+from six.moves import cPickle as pickle
 
 from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError

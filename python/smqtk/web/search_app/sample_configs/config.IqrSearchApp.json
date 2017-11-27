@@ -4,16 +4,24 @@
         "BASIC_AUTH_USERNAME": "demo",
         "SECRET_KEY": "MySuperUltraSecret"
     },
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5000
+    },
+    "mongo": {
+        "database": "smqtk",
+        "server": "127.0.0.1:27017"
+    },
     "iqr_tabs": {
-        "alexnet_fc7": {
+        "LEEDS Butterflies": {
             "working_directory": "workdir",
             "data_set": {
                 "DataMemorySet": {
                     "cache_element": {
                         "DataFileElement": {
                             "explicit_mimetype": null,
-                            "filepath": "workdir/alexnet_fc7/data.memorySet.cache",
-                            "readonly": true
+                            "filepath": "workdir/butterflies_alexnet_fc7/data.memorySet.cache",
+                            "readonly": false
                         },
                         "type": "DataFileElement"
                     },
@@ -23,13 +31,5 @@
             },
             "iqr_service_url": "http://localhost:5001"
         }
-    },
-    "mongo": {
-        "database": "smqtk",
-        "server": "127.0.0.1:27017"
-    },
-    "server": {
-        "host": "127.0.0.1",
-        "port": 5000
     }
 }

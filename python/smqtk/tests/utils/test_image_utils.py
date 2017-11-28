@@ -9,7 +9,7 @@ from six.moves import StringIO
 from smqtk.bin.check_images import main as check_images_main
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
-from smqtk.utils.image_utils import is_loadable_image, is_valid_element
+from smqtk.utils.image import is_loadable_image, is_valid_element
 
 
 class TestIsLoadableImage(unittest.TestCase):

@@ -2,7 +2,7 @@ import itertools
 import json
 import os
 
-from smqtk.utils.image_utils import is_valid_element
+from smqtk.utils.image import is_valid_element
 from smqtk.utils import parallel
 from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
 from smqtk.representation.data_element.girder import GirderDataElement

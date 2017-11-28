@@ -22,7 +22,7 @@ from smqtk.utils.bin_utils import (
     report_progress,
     basic_cli_parser,
 )
-from smqtk.utils.image_utils import is_valid_element
+from smqtk.utils.image import is_valid_element
 from smqtk.utils import plugin, parallel
 
 

@@ -14,7 +14,7 @@ from smqtk.utils.bin_utils import (
     initialize_logging,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.image_utils import is_valid_element
+from smqtk.utils.image import is_valid_element
 from smqtk.utils import parallel
 
 

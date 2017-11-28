@@ -55,7 +55,7 @@ Scripts
     file format that libSVM likes: ``descriptors_to_svmtrainfile.py``
 
   * Added script to distort a given image in multiple configurable ways
-    including cropping and brigntness/contrast transformations.
+    including cropping and brightness/contrast transformations.
 
   * Added custom scripts resulting from MEMEX April 2016 hackathon.
 

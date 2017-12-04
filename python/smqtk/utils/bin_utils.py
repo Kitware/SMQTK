@@ -290,9 +290,15 @@ def report_progress(log, state, interval):
         state[2] = state[1] - state[0]
         # TODO: Could possibly to something with ncurses
         #       - to maintain a single line.
+        try:
+            loops_per_second = state[2] / state[5]
+            avg_loops_per_second = state[1] / (state[4] - state[6])
+        except ZeroDivisionError:
+            loops_per_second = 0
+            avg_loops_per_second = 0
         log("Loops per second %f (avg %f) (%d this interval / %d total)"
-            % (state[2] / state[5],
-               state[1] / (state[4] - state[6]),
+            % (loops_per_second,
+               avg_loops_per_second,
                state[2], state[1]))
         state[3] = state[4]
         state[0] = state[1]

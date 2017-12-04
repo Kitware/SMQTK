@@ -279,6 +279,10 @@ def report_progress(log, state, interval):
     #   [last_c, c, delta_c, last_t, t, delta_t, starting_t]
     #   [  0,    1,    2,       3,   4,    5,         6    ]
 
+    warnings.warn(
+        'report_progress is deprecated, use ProgressReporter instead.',
+        DeprecationWarning)
+
     # Starting time
     if not state[6]:
         state[3] = state[6] = time.time()

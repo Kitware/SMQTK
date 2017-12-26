@@ -1103,9 +1103,14 @@ class IqrService (SmqtkWebApp):
         Form args:
             sid
                 Id of the session to use.
+            pr_bias
+                Float bias term for precision-recall balance. This may be 0.5
+                to effectively no "nothing" (this is the default if not
+                provided).
 
         """
         sid = flask.request.form.get('sid', None)
+        pr_bias = flask.request.form.get('pr_bias', 0.5)
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
@@ -1119,7 +1124,7 @@ class IqrService (SmqtkWebApp):
 
         try:
             self._log.info("[%s] Refining", sid)
-            iqrs.refine()
+            iqrs.refine(pr_bias=pr_bias)
 
         finally:
             iqrs.lock.release()

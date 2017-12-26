@@ -45,7 +45,7 @@ class RelevancyIndex (SmqtkAlgorithm):
         """
 
     @abc.abstractmethod
-    def rank(self, pos, neg):
+    def rank(self, pos, neg, pr_bias=0.5):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
         negative exemplar descriptor elements.
@@ -57,6 +57,11 @@ class RelevancyIndex (SmqtkAlgorithm):
         :param neg: Iterable of negative exemplar DescriptorElement instances.
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param pr_bias: A floating point number between 0 and 1 (exclusive) to
+            use to balance precision and recall. Close to 1 for more precision,
+            close to 0 for more recall. 0.5 to balance both.
+        :type pr_bias: float
 
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0

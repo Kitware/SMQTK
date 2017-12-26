@@ -507,6 +507,11 @@ This sets or updated the results list for the given session.
 Form Args:
     sid
         Session ID.
+    pr_bias
+        [OPTIONAL]
+        Float bias term for precision-recall balance. This may be 0.5
+        to effectively no "nothing" (this is the default if not
+        provided).
 
 Possible error code returns:
     400

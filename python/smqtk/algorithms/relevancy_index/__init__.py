@@ -58,9 +58,15 @@ class RelevancyIndex (SmqtkAlgorithm):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param pr_bias: A floating point number between 0 and 1 (exclusive) to
-            use to balance precision and recall. Close to 1 for more precision,
-            close to 0 for more recall. 0.5 to balance both.
+        :param pr_bias: Bias for precision-recall balance. A value closer to
+            1.0 means that more precision is required (fewer false positives),
+            while a value closer to 0.0 means that more recall is required
+            (fewer false negatives). If precision is required, then the
+            negative examples are weighted higher, and if recall is required,
+            then the positive examples are weighted higher.
+
+            This must be a floating-point number between 0 and 1, exclusive.
+            Default value of 0.5.
         :type pr_bias: float
 
         :return: Map of indexed descriptor elements to a rank value between

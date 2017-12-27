@@ -1274,13 +1274,17 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            if not iqrs.positive_descriptors:
+            all_pos = (iqrs.external_positive_descriptors |
+                       iqrs.positive_descriptors)
+            if not all_pos:
                 return make_response_json(
                     "No positive labels in current session. Required for a "
                     "supervised classifier.",
                     sid=sid
                 ), 400
-            if not iqrs.negative_descriptors:
+            all_neg = (iqrs.external_negative_descriptors |
+                       iqrs.negative_descriptors)
+            if not all_neg:
                 return make_response_json(
                     "No negative labels in current session. Required for a "
                     "supervised classifier.",
@@ -1306,8 +1310,8 @@ class IqrService (SmqtkWebApp):
                     get_classifier_impls(sub_interface=SupervisedClassifier)
                 )
                 classifier.train(
-                    {pos_label: iqrs.positive_descriptors,
-                     neg_label: iqrs.negative_descriptors}
+                    {pos_label: all_pos,
+                     neg_label: all_neg}
                 )
 
                 self.session_classifiers[sid] = classifier

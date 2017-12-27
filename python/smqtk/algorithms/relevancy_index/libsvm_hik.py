@@ -1,3 +1,4 @@
+import collections
 import copy
 import os.path as osp
 
@@ -247,15 +248,21 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             num_pos += 1
         self._log.debug("Positives given: %d", num_pos)
 
-        # When no negative examples are given, naively pick most distant example
-        # in our dataset, using HI metric, for each positive example
+        # When no negative examples are given, naively pick most distant
+        # example in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
+        # Copy neg descriptors into a set for testing size.
+        if not isinstance(neg, collections.Sized):
+            #: :type: set[smqtk.representation.DescriptorElement]
+            neg = set(neg)
         if not neg:
             self._log.info("Auto-selecting negative examples. (%d per "
                            "positive)", self.autoneg_select_ratio)
-            # ``train_vectors`` only composed of positive examples at this point
+            # ``train_vectors`` only composed of positive examples at this
+            # point.
             for p in pos:
-                # where d is the distance vector to descriptor elements in cache
+                # Where d is the distance vector to descriptor elements in
+                # cache.
                 d = histogram_intersection_distance(p.vector(),
                                                     self._descr_matrix)
                 # Scan vector for max distance index
@@ -280,11 +287,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             len(neg_autoselect), neg_autoselect)
 
         num_neg = 0
-        for d in neg:
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
-        for d in neg_autoselect:
+        for d in (neg | neg_autoselect):
             train_labels.append(-1)
             train_vectors.append(d.vector().tolist())
             num_neg += 1

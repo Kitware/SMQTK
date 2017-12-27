@@ -39,8 +39,8 @@ watch -n1 "
 docker exec ${CONTAINER_NAME} bash -c '[ -d data/image_tiles ] && echo && echo \"Image tiles generated: \$(ls data/image_tiles | wc -l)\"'
 echo
 docker exec ${CONTAINER_NAME} tail \
-    data/logs/compute_many_descriptors.log \
-    data/logs/train_itq.log data/logs/compute_hash_codes.log \
     data/logs/runApp.IqrSearchDispatcher.log \
-    data/logs/runApp.IqrService.log
+    data/logs/runApp.IqrService.log \
+    data/logs/train_itq.log data/logs/compute_hash_codes.log \
+    data/logs/compute_many_descriptors.log
 "

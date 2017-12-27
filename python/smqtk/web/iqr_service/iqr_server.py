@@ -1123,7 +1123,7 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            self._log.info("[%s] Refining", sid)
+            self._log.info("[%s] Refining (with pr_bias=%f)", sid, pr_bias)
             iqrs.refine(pr_bias=pr_bias)
 
         finally:

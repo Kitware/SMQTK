@@ -287,10 +287,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             len(neg_autoselect), neg_autoselect)
 
         num_neg = 0
-        for d in (neg | neg_autoselect):
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
+        for n_iterable in (neg, neg_autoselect):
+            for d in n_iterable:
+                train_labels.append(-1)
+                train_vectors.append(d.vector().tolist())
+                num_neg += 1
 
         if not num_pos:
             raise ValueError("No positive examples provided.")

@@ -24,10 +24,8 @@ class DummySupervisedClassifier (SupervisedClassifier):
     def has_model(self):
         return self.EXPECTED_HAS_MODEL
 
-    def train(self, class_examples=None, **kwds):
+    def _train(self, class_examples=None):
         # Return super-method result in its attempt to unify mappings
-        class_examples = \
-            super(DummySupervisedClassifier, self).train(class_examples, **kwds)
         return class_examples
 
 
@@ -39,8 +37,8 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
 
     def test_train_hasModel(self):
         # Calling the train method should fail the class also reports that it
-        # already has a model. Shouldn't matter what is passed to the method (or
-        # lack of things passed to the method).
+        # already has a model. Shouldn't matter what is passed to the method
+        # (or lack of things passed to the method).
         self.test_classifier.EXPECTED_HAS_MODEL = True
         self.assertRaises(
             RuntimeError,
@@ -82,7 +80,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             'label_1': [0, 1, 2, 3],
             'label_2': [3, 4, 5, 6],
         }
-        m = self.test_classifier.train(input_class_examples)
+        m = self.test_classifier.train(class_examples=input_class_examples)
         self.assertEqual(m, input_class_examples)
 
     def test_train_noModel_kwargs_only(self):
@@ -113,6 +111,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         }
         label_2 = expected['label_2']
         label_3 = expected['label_3']
-        m = self.test_classifier.train(class_examples, label_2=label_2,
+        m = self.test_classifier.train(class_examples=class_examples,
+                                       label_2=label_2,
                                        label_3=label_3)
         self.assertEqual(m, expected)

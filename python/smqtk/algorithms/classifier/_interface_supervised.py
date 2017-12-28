@@ -20,7 +20,6 @@ class SupervisedClassifier (Classifier):
         :rtype: bool
         """
 
-    @abc.abstractmethod
     def train(self, class_examples=None, **kwds):
         """
         Train the supervised classifier model.
@@ -31,10 +30,6 @@ class SupervisedClassifier (Classifier):
         If the same label is provided to both ``class_examples`` and ``kwds``,
         the examples given to the reference in ``kwds`` will prevail.
 
-        *NOTE:* **This abstract method provides generalized error checking and
-        combines input mappings into a single dictionary which we return. Thus,
-        this should be called via ``super`` in implementing methods.**
-
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
         :type class_examples: dict[collections.Hashable,
@@ -44,8 +39,8 @@ class SupervisedClassifier (Classifier):
             DescriptorElement training examples. Keyword provided iterables
             are used in place of class iterables provided in ``class_examples``
             when there are conflicting keys.
-        :type kwds: dict[str,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
+        :type kwds:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :raises ValueError: There were no class examples provided.
         :raises ValueError: Less than 2 classes were given.
@@ -75,4 +70,23 @@ class SupervisedClassifier (Classifier):
         # TODO(paul.tunison): Check that the same values/descriptors are not
         #   assigned to multiple labels?
 
-        return merged
+        return self._train(merged)
+
+    @abc.abstractmethod
+    def _train(self, class_examples):
+        """
+        Internal method that trains the classifier implementation.
+
+        This method is called after checking that there is not already a model
+        trained, thus it can be assumed that no model currently exists.
+
+        The class labels will have already been checked before entering this
+        method, so it can be assumed that the ``class_examples`` will container
+        at least two classes.
+
+        :param class_examples: Dictionary mapping class labels to iterables of
+            DescriptorElement training examples.
+        :type class_examples: dict[collections.Hashable,
+                 collections.Iterable[smqtk.representation.DescriptorElement]]
+
+        """

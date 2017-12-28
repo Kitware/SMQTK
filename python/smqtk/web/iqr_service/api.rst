@@ -60,7 +60,7 @@ If the data file is too long for command-line expansion (usually the case)::
     $ base64 -w0 /path/to/file >/path/to/file.b64
     $ # Tell curl to read from the file instead of expanding in-line.
     $ curl -X POST localhost:5000/some_post_endpoint \
-        -d content_type=text/jpeg \
+        -d content_type=image/jpeg \
         --data-urlencode data_b64@/path/to/file.b64
 
 

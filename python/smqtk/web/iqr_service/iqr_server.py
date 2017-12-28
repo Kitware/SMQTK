@@ -1110,10 +1110,15 @@ class IqrService (SmqtkWebApp):
 
         """
         sid = flask.request.form.get('sid', None)
-        pr_bias = flask.request.form.get('pr_bias', 0.5)
+        pr_bias = flask.request.form.get('pr_bias', None)
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
+            
+        if pr_bias is None:
+            pr_bias = 0.5
+        else:
+            pr_bias = float(pr_bias)
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):

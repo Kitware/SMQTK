@@ -303,6 +303,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         svm_model = svmutil.svm_train(
             svm_problem, self._gen_svm_parameter_string(
                 num_pos, num_neg, wgt_pos, wgt_neg))
+        self._log.debug("SVM model parsed parameters: %s",
+            str(getattr(svm_model, "param", None)))
         if svm_model.l == 0:
             raise RuntimeError("SVM Model learning failed")
 

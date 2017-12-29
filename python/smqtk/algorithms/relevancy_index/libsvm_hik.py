@@ -301,11 +301,21 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Training SVM model
         self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
-        svm_model = svmutil.svm_train(
-            svm_problem, self._gen_svm_parameter_string(
-                num_pos, num_neg, wgt_pos, wgt_neg))
-        self._log.debug("SVM model parsed parameters: %s",
-            str(getattr(svm_model, "param", None)))
+        param_str = self._gen_svm_parameter_string(
+            num_pos, num_neg, wgt_pos, wgt_neg)
+        svm_param = svm.svm_parameter(param_str)
+        svm_model = svmutil.svm_train(svm_problem, svm_param)
+
+        if hasattr(svm_model, "param"):
+            self._log.debug("SVM input parameters: %s", param_str)
+            self._log.debug("SVM model parsed parameters: %s",
+                            str(svm_model.param))
+            param = svm_model.param
+            wgt_pairs = [(param.weight_label[i], param.weight[i]) 
+                         for i in range(param.nr_weight)]
+            wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
+            self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
+
         if svm_model.l == 0:
             raise RuntimeError("SVM Model learning failed")
 

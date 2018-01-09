@@ -507,11 +507,11 @@ This sets or updated the results list for the given session.
 Form Args:
     sid
         Session ID.
-    pr_bias
+    pr_adj
         [OPTIONAL]
-        Float bias term for precision-recall balance. This may be 0.5
-        to effectively no "nothing" (this is the default if not
-        provided).
+        Adjustment term for precision-recall balance. This is a float and may
+        be 0.0 to effectively do "nothing" (this is the default if not
+        provided). Positive for more precision, negative for more recall.
 
 Possible error code returns:
     400

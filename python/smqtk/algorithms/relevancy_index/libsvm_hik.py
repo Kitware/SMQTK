@@ -50,7 +50,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         Required valid presence of svm and svmutil modules
 
-        :return: Boolean determination of whether this implementation is usable.
+        :return:
+            Boolean determination of whether this implementation is usable.
         :rtype: bool
 
         """
@@ -115,22 +116,24 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 self.descr_cache_fp = descr_cache_filepath
 
     @staticmethod
-    def _gen_pos_weight(num_pos, num_neg, wgt_pos, wgt_neg):
+    def _gen_pos_weight(num_pos, num_neg, wgt_pos):
         """
         Return w1 weight parameter based on pos and neg exemplars
 
         Balance the weight based on incidence of positive and negative
         weights, and apply precision/recall weighting
         """
-        return numpy.sqrt((wgt_pos/num_pos) / (wgt_neg/num_neg))
+        # We apply the inverse of the return to the negative examples, so use
+        # the square root of the desired ratio
+        return numpy.sqrt(wgt_pos * num_neg / num_pos)
 
     @classmethod
-    def _gen_svm_parameter_string(cls, num_pos, num_neg, wgt_pos, wgt_neg):
+    def _gen_svm_parameter_string(cls, num_pos, num_neg, wgt_pos):
         params = copy.copy(cls.SVM_TRAIN_PARAMS)
-        w1_wgt = cls._gen_pos_weight(num_pos, num_neg, wgt_pos, wgt_neg)
+        w1_wgt = cls._gen_pos_weight(num_pos, num_neg, wgt_pos)
         params['-w1'] = w1_wgt
         params['-w-1'] = 1/w1_wgt
-        return ' '.join((' '.join((str(k), str(v))) for k, v in params.items()))
+        return ' '.join('%s %s' % pair for pair in six.iteritems(params))
 
     def get_config(self):
         return {
@@ -147,11 +150,13 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         Build the index based on the given iterable of descriptor elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the index, not add to
+        it.
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptor elements to build index over.
+        :param descriptors:
+            Iterable of descriptor elements to build index over.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
@@ -192,7 +197,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             with open(self.descr_cache_fp, 'wb') as f:
                 pickle.dump(self._descr_cache, f, -1)
 
-    def rank(self, pos, neg, pr_bias=0.5):
+    def rank(self, pos, neg, pr_adj=0.0):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
         negative exemplar descriptor elements.
@@ -205,16 +210,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param pr_bias: Bias for precision-recall balance. A value closer to
-            1.0 means that more precision is required (fewer false positives),
-            while a value closer to 0.0 means that more recall is required
-            (fewer false negatives). If precision is required, then the
-            negative examples are weighted higher, and if recall is required,
-            then the positive examples are weighted higher.
+        :param pr_adj: Adjustment for precision-recall balance. A positive
+            value means that more precision is required (fewer false
+            positives), while a negative value means that more recall is
+            required (fewer false negatives). If precision is required, then
+            the negative examples are weighted higher, and if recall is
+            required, then the positive examples are weighted higher.
 
-            This must be a floating-point number between 0 and 1, exclusive.
-            Default value of 0.5.
-        :type pr_bias: float
+            Default value of 0.0.
+        :type pr_adj: float
 
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
@@ -225,12 +229,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Notes:
         # - Pos and neg exemplars may be in our index.
 
-        # Check for range between 0 and 1, exclusive
-        if not (0.0 < pr_bias < 1.0):
-            raise ValueError("pr_bias must be greater than 0 and less than 1")
-
-        wgt_neg = pr_bias
-        wgt_pos = 1.0 - pr_bias
+        # Adjust for precision and recall: high positive weight means that the
+        # training is stricter about allowing positive examples across the
+        # decision boundary, so there will be fewer false negatives, and thus
+        # higher recall.
+        wgt_pos = numpy.exp(-pr_adj)
 
         #
         # SVM model training
@@ -302,7 +305,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
         param_str = self._gen_svm_parameter_string(
-            num_pos, num_neg, wgt_pos, wgt_neg)
+            num_pos, num_neg, wgt_pos)
         svm_param = svm.svm_parameter(param_str)
         svm_model = svmutil.svm_train(svm_problem, svm_param)
 
@@ -311,7 +314,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             self._log.debug("SVM model parsed parameters: %s",
                             str(svm_model.param))
             param = svm_model.param
-            wgt_pairs = [(param.weight_label[i], param.weight[i]) 
+            wgt_pairs = [(param.weight_label[i], param.weight[i])
                          for i in range(param.nr_weight)]
             wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
             self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
@@ -346,6 +349,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)
+
+        # TODO(john.moeller): None of the Platt scaling should be necessary.
+        # svmutil.svm_predict will apply the Platt scaling directly. See
+        # https://github.com/cjlin1/libsvm/tree/master/python
 
         self._log.debug("Platt scaling")
         # the actual platt scaling stuff

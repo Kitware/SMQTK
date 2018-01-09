@@ -306,13 +306,13 @@ class IqrSession (SmqtkObject):
             )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 
-    def refine(self, pr_bias=0.5):
+    def refine(self, pr_adj=0.0):
         """ Refine current model results based on current adjudication state
 
-        :param pr_bias: A floating point number between 0 and 1 (exclusive) to
-            use to balance precision and recall. Close to 1 for more precision,
-            close to 0 for more recall. 0.5 to balance both.
-        :type pr_bias: float
+        :param pr_adj: A floating point number to use to balance precision and
+            recall. Positive for more precision, negative for more recall.
+            0.0 to balance both.
+        :type pr_adj: float
 
         :raises RuntimeError: No working index has been initialized.
             :meth:`update_working_index` should have been called after
@@ -337,7 +337,7 @@ class IqrSession (SmqtkObject):
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
             element_probability_map = self.rel_index.rank(pos, neg,
-                                                          pr_bias=pr_bias)
+                                                          pr_adj=pr_adj)
 
             if self.results is None:
                 self.results = IqrResultsDict()

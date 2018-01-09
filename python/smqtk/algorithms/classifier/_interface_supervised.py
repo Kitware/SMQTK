@@ -20,7 +20,7 @@ class SupervisedClassifier (Classifier):
         :rtype: bool
         """
 
-    def train(self, class_examples=None, **kwds):
+    def train(self, class_examples=None, **extra_params):
         """
         Train the supervised classifier model.
 
@@ -35,12 +35,8 @@ class SupervisedClassifier (Classifier):
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param kwds: Keyword assignment of labels to iterables of
-            DescriptorElement training examples. Keyword provided iterables
-            are used in place of class iterables provided in ``class_examples``
-            when there are conflicting keys.
-        :type kwds:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+        :param extra_params: Dictionary with extra parameters for training.
+        :type extra_params: dict[basestring, object]
 
         :raises ValueError: There were no class examples provided.
         :raises ValueError: Less than 2 classes were given.
@@ -59,7 +55,6 @@ class SupervisedClassifier (Classifier):
 
         merged = {}
         merge_dict(merged, class_examples)
-        merge_dict(merged, kwds)
 
         if not merged:
             raise ValueError("No class examples were provided.")
@@ -70,10 +65,10 @@ class SupervisedClassifier (Classifier):
         # TODO(paul.tunison): Check that the same values/descriptors are not
         #   assigned to multiple labels?
 
-        return self._train(merged)
+        return self._train(merged, **extra_params)
 
     @abc.abstractmethod
-    def _train(self, class_examples):
+    def _train(self, class_examples, **extra_params):
         """
         Internal method that trains the classifier implementation.
 
@@ -88,5 +83,8 @@ class SupervisedClassifier (Classifier):
             DescriptorElement training examples.
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
+
+        :param extra_params: Dictionary with extra parameters for training.
+        :type extra_params: None | dict[basestring, object]
 
         """

@@ -64,7 +64,7 @@ def train_classifier_iqr(config, iqr_state_fp):
     # external and internal sets. Same for negative descriptor examples.
     pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
     neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
-    classifier.train(positive=pos, negative=neg)
+    classifier.train(class_examples={'positive': pos, 'negative': neg})
 
 
 def main():

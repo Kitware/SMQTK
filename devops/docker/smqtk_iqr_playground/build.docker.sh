@@ -2,7 +2,7 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-IMAGE_VERSION=0.12
+IMAGE_VERSION="$(date +%Y%m%d)"
 CPU_SUFFIX=-cpu
 GPU_SUFFIX=-gpu-cuda8-cudnn6
 

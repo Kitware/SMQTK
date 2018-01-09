@@ -1103,12 +1103,23 @@ class IqrService (SmqtkWebApp):
         Form args:
             sid
                 Id of the session to use.
+            pr_adj
+                Adjustment term for precision-recall balance. This is a float
+                and may be 0.0 to effectively do "nothing" (this is the
+                default if not provided). Positive for more precision,
+                negative for more recall.
 
         """
         sid = flask.request.form.get('sid', None)
+        pr_adj = flask.request.form.get('pr_adj', None)
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
+
+        if pr_adj is None:
+            pr_adj = 0.0
+        else:
+            pr_adj = float(pr_adj)
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -1118,8 +1129,8 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            self._log.info("[%s] Refining", sid)
-            iqrs.refine()
+            self._log.info("[%s] Refining (with pr_adj=%f)", sid, pr_adj)
+            iqrs.refine(pr_adj=pr_adj)
 
         finally:
             iqrs.lock.release()
@@ -1269,13 +1280,17 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            if not iqrs.positive_descriptors:
+            all_pos = (iqrs.external_positive_descriptors |
+                       iqrs.positive_descriptors)
+            if not all_pos:
                 return make_response_json(
                     "No positive labels in current session. Required for a "
                     "supervised classifier.",
                     sid=sid
                 ), 400
-            if not iqrs.negative_descriptors:
+            all_neg = (iqrs.external_negative_descriptors |
+                       iqrs.negative_descriptors)
+            if not all_neg:
                 return make_response_json(
                     "No negative labels in current session. Required for a "
                     "supervised classifier.",
@@ -1301,8 +1316,8 @@ class IqrService (SmqtkWebApp):
                     get_classifier_impls(sub_interface=SupervisedClassifier)
                 )
                 classifier.train(
-                    {pos_label: iqrs.positive_descriptors,
-                     neg_label: iqrs.negative_descriptors}
+                    {pos_label: all_pos,
+                     neg_label: all_neg}
                 )
 
                 self.session_classifiers[sid] = classifier

@@ -283,9 +283,14 @@ class IqrSession (SmqtkObject):
         updated = False
 
         # adding to working index
+        self._log.info("Building working index using %d positive examples "
+                       "(%d external, %d adjudicated)",
+                       len(pos_examples),
+                       len(self.external_positive_descriptors),
+                       len(self.positive_descriptors))
         for p in pos_examples:
             if p.uuid() not in self._wi_seeds_used:
-                self._log.info("Querying neighbors to: %s", p)
+                self._log.debug("Querying neighbors to: %s", p)
                 self.working_index.add_many_descriptors(
                     nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
@@ -301,8 +306,13 @@ class IqrSession (SmqtkObject):
             )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 
-    def refine(self):
+    def refine(self, pr_adj=0.0):
         """ Refine current model results based on current adjudication state
+
+        :param pr_adj: A floating point number to use to balance precision and
+            recall. Positive for more precision, negative for more recall.
+            0.0 to balance both.
+        :type pr_adj: float
 
         :raises RuntimeError: No working index has been initialized.
             :meth:`update_working_index` should have been called after
@@ -324,7 +334,10 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
-            element_probability_map = self.rel_index.rank(pos, neg)
+            self._log.debug("Ranking working set with %d pos and %d neg total "
+                            "examples.", len(pos), len(neg))
+            element_probability_map = self.rel_index.rank(pos, neg,
+                                                          pr_adj=pr_adj)
 
             if self.results is None:
                 self.results = IqrResultsDict()

@@ -1,3 +1,4 @@
+import collections
 import copy
 import os.path as osp
 
@@ -49,7 +50,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         Required valid presence of svm and svmutil modules
 
-        :return: Boolean determination of whether this implementation is usable.
+        :return:
+            Boolean determination of whether this implementation is usable.
         :rtype: bool
 
         """
@@ -114,17 +116,24 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 self.descr_cache_fp = descr_cache_filepath
 
     @staticmethod
-    def _gen_w1_weight(num_pos, num_neg):
+    def _gen_pos_weight(num_pos, num_neg, wgt_pos):
         """
         Return w1 weight parameter based on pos and neg exemplars
+
+        Balance the weight based on incidence of positive and negative
+        weights, and apply precision/recall weighting
         """
-        return max(1.0, num_neg/float(num_pos))
+        # We apply the inverse of the return to the negative examples, so use
+        # the square root of the desired ratio
+        return numpy.sqrt(wgt_pos * num_neg / num_pos)
 
     @classmethod
-    def _gen_svm_parameter_string(cls, num_pos, num_neg):
+    def _gen_svm_parameter_string(cls, num_pos, num_neg, wgt_pos):
         params = copy.copy(cls.SVM_TRAIN_PARAMS)
-        params['-w1'] = cls._gen_w1_weight(num_pos, num_neg)
-        return ' '.join((' '.join((str(k), str(v))) for k, v in params.items()))
+        w1_wgt = cls._gen_pos_weight(num_pos, num_neg, wgt_pos)
+        params['-w1'] = w1_wgt
+        params['-w-1'] = 1/w1_wgt
+        return ' '.join('%s %s' % pair for pair in six.iteritems(params))
 
     def get_config(self):
         return {
@@ -141,11 +150,13 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         Build the index based on the given iterable of descriptor elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the index, not add to
+        it.
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptor elements to build index over.
+        :param descriptors:
+            Iterable of descriptor elements to build index over.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
@@ -186,7 +197,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             with open(self.descr_cache_fp, 'wb') as f:
                 pickle.dump(self._descr_cache, f, -1)
 
-    def rank(self, pos, neg):
+    def rank(self, pos, neg, pr_adj=0.0):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
         negative exemplar descriptor elements.
@@ -199,6 +210,16 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :param pr_adj: Adjustment for precision-recall balance. A positive
+            value means that more precision is required (fewer false
+            positives), while a negative value means that more recall is
+            required (fewer false negatives). If precision is required, then
+            the negative examples are weighted higher, and if recall is
+            required, then the positive examples are weighted higher.
+
+            Default value of 0.0.
+        :type pr_adj: float
+
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
             meaning least relevant.
@@ -207,6 +228,12 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         # Notes:
         # - Pos and neg exemplars may be in our index.
+
+        # Adjust for precision and recall: high positive weight means that the
+        # training is stricter about allowing positive examples across the
+        # decision boundary, so there will be fewer false negatives, and thus
+        # higher recall.
+        wgt_pos = numpy.exp(-pr_adj)
 
         #
         # SVM model training
@@ -224,15 +251,21 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             num_pos += 1
         self._log.debug("Positives given: %d", num_pos)
 
-        # When no negative examples are given, naively pick most distant example
-        # in our dataset, using HI metric, for each positive example
+        # When no negative examples are given, naively pick most distant
+        # example in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
+        # Copy neg descriptors into a set for testing size.
+        if not isinstance(neg, collections.Sized):
+            #: :type: set[smqtk.representation.DescriptorElement]
+            neg = set(neg)
         if not neg:
             self._log.info("Auto-selecting negative examples. (%d per "
                            "positive)", self.autoneg_select_ratio)
-            # ``train_vectors`` only composed of positive examples at this point
+            # ``train_vectors`` only composed of positive examples at this
+            # point.
             for p in pos:
-                # where d is the distance vector to descriptor elements in cache
+                # Where d is the distance vector to descriptor elements in
+                # cache.
                 d = histogram_intersection_distance(p.vector(),
                                                     self._descr_matrix)
                 # Scan vector for max distance index
@@ -257,14 +290,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             len(neg_autoselect), neg_autoselect)
 
         num_neg = 0
-        for d in neg:
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
-        for d in neg_autoselect:
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
+        for n_iterable in (neg, neg_autoselect):
+            for d in n_iterable:
+                train_labels.append(-1)
+                train_vectors.append(d.vector().tolist())
+                num_neg += 1
 
         if not num_pos:
             raise ValueError("No positive examples provided.")
@@ -274,9 +304,21 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Training SVM model
         self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
-        svm_model = svmutil.svm_train(svm_problem,
-                                      self._gen_svm_parameter_string(num_pos,
-                                                                     num_neg))
+        param_str = self._gen_svm_parameter_string(
+            num_pos, num_neg, wgt_pos)
+        svm_param = svm.svm_parameter(param_str)
+        svm_model = svmutil.svm_train(svm_problem, svm_param)
+
+        if hasattr(svm_model, "param"):
+            self._log.debug("SVM input parameters: %s", param_str)
+            self._log.debug("SVM model parsed parameters: %s",
+                            str(svm_model.param))
+            param = svm_model.param
+            wgt_pairs = [(param.weight_label[i], param.weight[i])
+                         for i in range(param.nr_weight)]
+            wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
+            self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
+
         if svm_model.l == 0:
             raise RuntimeError("SVM Model learning failed")
 
@@ -307,6 +349,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)
+
+        # TODO(john.moeller): None of the Platt scaling should be necessary.
+        # svmutil.svm_predict will apply the Platt scaling directly. See
+        # https://github.com/cjlin1/libsvm/tree/master/python
 
         self._log.debug("Platt scaling")
         # the actual platt scaling stuff

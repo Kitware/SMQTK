@@ -151,8 +151,7 @@ if LibSvmClassifier.is_usable():
             d_pos_sync = {}  # for comparing to async
             for d in d_pos:
                 c = classifier.classify(d, c_factory)
-                self.assertEqual(c.max_label(),
-                                 POS_LABEL,
+                self.assertEqual(POS_LABEL, c.max_label(),
                                  "Found False positive: %s :: %s" %
                                  (d.vector(), c.get_classification()))
                 d_pos_sync[d] = c
@@ -160,7 +159,7 @@ if LibSvmClassifier.is_usable():
             d_neg_sync = {}
             for d in d_neg:
                 c = classifier.classify(d, c_factory)
-                self.assertEqual(c.max_label(), NEG_LABEL,
+                self.assertEqual(NEG_LABEL, c.max_label(),
                                  "Found False negative: %s :: %s" %
                                  (d.vector(), c.get_classification()))
                 d_neg_sync[d] = c
@@ -168,13 +167,13 @@ if LibSvmClassifier.is_usable():
             # test that async classify produces the same results
             # -- d_pos
             m_pos = classifier.classify_async(d_pos, c_factory)
-            self.assertEqual(m_pos, d_pos_sync,
+            self.assertEqual(d_pos_sync, m_pos,
                              "Async computation of pos set did not yield "
                              "the same results as synchronous "
                              "classification.")
             # -- d_neg
             m_neg = classifier.classify_async(d_neg, c_factory)
-            self.assertEqual(m_neg, d_neg_sync,
+            self.assertEqual(d_neg_sync, m_neg,
                              "Async computation of neg set did not yield "
                              "the same results as synchronous "
                              "classification.")
@@ -185,7 +184,7 @@ if LibSvmClassifier.is_usable():
                 d_pos + d_neg, c_factory,
                 use_multiprocessing=False,
             )
-            self.assertEqual(m_combined, combined_truth,
+            self.assertEqual(combined_truth, m_combined,
                              "Async computation of all test descriptors "
                              "did not yield the same results as "
                              "synchronous classification.")
@@ -194,7 +193,7 @@ if LibSvmClassifier.is_usable():
                 d_pos + d_neg, c_factory,
                 use_multiprocessing=True,
             )
-            self.assertEqual(m_combined, combined_truth,
+            self.assertEqual(combined_truth, m_combined,
                              "Async computation of all test descriptors "
                              "(mixed order) did not yield the same results "
                              "as synchronous classification.")
@@ -245,7 +244,13 @@ if LibSvmClassifier.is_usable():
             classifier.train(class_examples={
                 POS_LABEL: d_pos,
                 NEG_LABEL: d_neg
-            }, class_adjustment_dict={})
+            }, class_adjustment_dict={
+                POS_LABEL: -10,
+            })
+            self.assertNotAlmostEqual(1, classifier.class_weights[POS_LABEL])
+            self.assertNotAlmostEqual(1, classifier.class_weights[NEG_LABEL])
+            self.assertAlmostEqual(
+                1, numpy.prod(classifier.class_weights.values()))
 
         def test_simple_multiclass_classification(self):
             """

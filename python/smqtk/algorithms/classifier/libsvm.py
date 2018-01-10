@@ -336,8 +336,10 @@ class LibSvmClassifier (SupervisedClassifier):
             # their geometric mean, the group sizes' product will be 1.
             sizes_geom_mean = numpy.exp(numpy.log(train_group_sizes).mean())
 
-            for i, (n, a) in enumerate((train_group_sizes, class_adjustments),
-                                       CLASS_LABEL_OFFSET):
+            self.class_weights = {}
+            for i, (n, a) in enumerate(
+                    zip(train_group_sizes, class_adjustments),
+                    CLASS_LABEL_OFFSET):
                 # Start with the adjustment for class size. This adjustment
                 # scales each class so that they have the same power in the
                 # loss function. I.e., each class is scaled so that it acts as
@@ -352,6 +354,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 # must be higher (prevent false positives).
                 w *= numpy.exp(adj_mean - a)
 
+                self.class_weights[self.svm_label_map[i]] = w
                 # Ignore weights in the range (0.9, 1.1). Weights must be
                 # orders of magnitude apart to have different effects, so be
                 # lax about the default and don't clutter the command line.

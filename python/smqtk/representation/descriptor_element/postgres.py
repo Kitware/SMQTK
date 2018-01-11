@@ -340,6 +340,9 @@ class PostgresDescriptorElement (DescriptorElement):
         :param new_vec: New vector to contain. This must be a numpy array.
         :type new_vec: numpy.ndarray
 
+        :returns: Self.
+        :rtype: PostgresDescriptorElement
+
         """
         if not isinstance(new_vec, numpy.ndarray):
             new_vec = numpy.copy(new_vec)
@@ -372,3 +375,4 @@ class PostgresDescriptorElement (DescriptorElement):
         # No return but need to force iteration.
         psql_helper = self._get_psql_helper()
         list(psql_helper.single_execute(cb))
+        return self

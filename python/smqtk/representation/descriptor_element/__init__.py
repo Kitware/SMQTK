@@ -176,6 +176,9 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.ndarray
 
+        :returns: Self.
+        :rtype: DescriptorMemoryElement
+
         """
 
 

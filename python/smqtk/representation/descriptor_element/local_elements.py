@@ -97,12 +97,16 @@ class DescriptorMemoryElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray | tuple | list | None
 
+        :returns: Self.
+        :rtype: DescriptorMemoryElement
+
         """
         # Copy a non-None value given, otherwise stay None
         if new_vec is not None:
             self.__v = numpy.copy(new_vec)
         else:
             self.__v = None
+        return self
 
 
 class DescriptorFileElement (DescriptorElement):
@@ -220,9 +224,13 @@ class DescriptorFileElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray
 
+        :returns: Self.
+        :rtype: DescriptorFileElement
+
         """
         file_utils.safe_create_dir(osp.dirname(self._vec_filepath))
         numpy.save(self._vec_filepath, new_vec)
+        return self
 
 
 DESCRIPTOR_ELEMENT_CLASS = [

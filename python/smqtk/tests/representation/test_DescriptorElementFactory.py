@@ -19,7 +19,7 @@ class DummyElementImpl (DescriptorElement):
         self.kwds = kwds
 
     def set_vector(self, new_vec):
-        pass
+        return self
 
     def has_vector(self):
         pass

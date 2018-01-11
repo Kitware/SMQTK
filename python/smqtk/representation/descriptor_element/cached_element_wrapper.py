@@ -245,6 +245,9 @@ class CachingDescriptorElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray
 
+        :returns: Self.
+        :rtype: CachingDescriptorElement
+
         """
         # set source vector and set as current cache
         with self.cache_lock:
@@ -274,6 +277,7 @@ class CachingDescriptorElement (DescriptorElement):
             # Update cache vector and access time
             self.cache_v = new_vec
             self.cache_last_access = time.time()
+        return self
 
     @staticmethod
     def thread_monitor_cache_expiration(elem):

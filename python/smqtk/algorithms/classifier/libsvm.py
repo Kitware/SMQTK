@@ -416,3 +416,8 @@ class LibSvmClassifier (SupervisedClassifier):
 
         assert len(c) == len(self.svm_label_map)
         return c
+
+
+# Explicitly declare to avoid silly warning about ignoring parent abstract
+# class.
+CLASSIFIER_CLASS = LibSvmClassifier

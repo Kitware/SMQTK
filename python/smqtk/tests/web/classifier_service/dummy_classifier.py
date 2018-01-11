@@ -1,4 +1,7 @@
-from smqtk.algorithms.classifier import Classifier
+from smqtk.algorithms.classifier import Classifier, SupervisedClassifier
+
+
+STUB_CLASSIFIER_MOD_PATH = __name__
 
 
 class DummyClassifier (Classifier):
@@ -80,3 +83,28 @@ class DummyClassifier (Classifier):
 
         """
         return ['negative', 'positive']
+
+
+class DummySupervisedClassifier (SupervisedClassifier):
+    """
+    Supervise classifier stub implementation.
+    """
+
+    @classmethod
+    def is_usable(cls):
+        return True
+
+    def get_config(self):
+        pass
+
+    def has_model(self):
+        pass
+
+    def _train(self, class_examples):
+        pass
+
+    def get_labels(self):
+        pass
+
+    def _classify(self, d):
+        pass

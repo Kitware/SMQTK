@@ -7,18 +7,21 @@ import unittest
 from six.moves import cPickle as pickle
 
 from smqtk.algorithms import Classifier
+from smqtk.iqr import IqrSession
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorMemoryElement
 from smqtk.web.classifier_service.classifier_server import \
     SmqtkClassifierService
 
-from .dummy_classifier import DummyClassifier
+from .dummy_classifier import DummyClassifier, DummySupervisedClassifier, \
+    STUB_CLASSIFIER_MOD_PATH
 
 
 class TestClassifierService (unittest.TestCase):
 
     # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
-        'CLASSIFIER_PATH':
-            'smqtk.tests.web.classifier_service.dummy_classifier',
+        'CLASSIFIER_PATH': STUB_CLASSIFIER_MOD_PATH,
         'DESCRIPTOR_GENERATOR_PATH':
             'smqtk.tests.web.classifier_service.dummy_descriptor_generator'
     })
@@ -47,7 +50,7 @@ class TestClassifierService (unittest.TestCase):
         }
 
         self.config['iqr_state_classifier_config']['type'] = \
-            'LibSvmClassifier'
+            'DummySupervisedClassifier'
 
         self.config['enable_classifier_removal'] = True
 
@@ -55,10 +58,13 @@ class TestClassifierService (unittest.TestCase):
         del self.config['server']
 
         self.app = SmqtkClassifierService(json_config=self.config)
-        
+
     def assertStatus(self, rv, code):
         self.assertEqual(rv.status_code, code)
-        
+
+    def assertResponseMessageRegex(self, rv, regex):
+        self.assertRegexpMatches(json.loads(rv.data)['message'], regex)
+
     def assertMessage(self, resp_data, message):
         self.assertEqual(resp_data['message'], message)
 
@@ -81,7 +87,7 @@ class TestClassifierService (unittest.TestCase):
         results_exp = dict(positive=0.5, negative=0.5)
         label = 'dummy'
         content_type = 'text/plain'
-        element = base64.b64encode('TEST ELEMENT')
+        element = base64.b64encode(b'TEST ELEMENT')
 
         with self.app.test_client() as cli:
             rv = cli.post('/classify', data={
@@ -118,7 +124,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_multiple_classify(self):
         content_type = 'text/plain'
-        element = base64.b64encode('TEST ELEMENT')
+        element = base64.b64encode(b'TEST ELEMENT')
         results_exp = dict(positive=0.5, negative=0.5)
         pickle_data = pickle.dumps(DummyClassifier.from_config({}))
         enc_data = base64.b64encode(pickle_data)
@@ -340,7 +346,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_classify_failures(self):
         content_type = 'text/plain'
-        bytes_b64 = base64.b64encode('TEST ELEMENT')
+        bytes_b64 = base64.b64encode(b'TEST ELEMENT')
         label_invalid_json_failure = '['
         label_valid_json_failure = '{}'
         label_valid_json_list_failure = '["test", {}]'
@@ -509,3 +515,95 @@ class TestClassifierService (unittest.TestCase):
             self.assertIn('class_labels', r_json)
             self.assertSetEqual(set(r_json['class_labels']),
                                 {'negative', 'positive'})
+
+    def test_add_iqr_state_classifier_param_failures(self):
+        test_bytes = b"some not used bytes"
+        test_bytes_b64 = base64.b64encode(test_bytes)
+        test_label = "classifier-test-label"
+
+        with self.app.test_client() as cli:
+            # Missing Bytes
+            rv = cli.post('/iqr_classifier')
+            self.assertStatus(rv, 400)
+            self.assertResponseMessageRegex(
+                rv, "No state base64 data provided."
+            )
+
+            # Missing label for classifier
+            rv = cli.post('/iqr_classifier', data={
+                "bytes_b64": test_bytes_b64,
+            })
+            self.assertStatus(rv, 400)
+            self.assertResponseMessageRegex(
+                rv, "No descriptive label provided."
+            )
+
+            # Invalid lock flag value (not a boolean)
+            rv = cli.post('/iqr_classifier', data={
+                'bytes_b64': test_bytes_b64,
+                'label': test_label,
+                'lock_label': 'not-bool-convertible'
+            })
+            self.assertStatus(rv, 400)
+            self.assertResponseMessageRegex(
+                rv, "Invalid boolean value for 'lock_label'. Was given: "
+            )
+
+    def test_add_iqr_state_classifier_existing_label(self):
+        test_label = 'duplicate-label'
+        test_new_cfier_b64 = base64.b64encode(
+            b"some not used bytes"
+        )
+
+        self.app.classifier_collection.add_classifier(
+            test_label, DummySupervisedClassifier()
+        )
+
+        with self.app.test_client() as cli:
+            rv = cli.post('/iqr_classifier', data={
+                'bytes_b64': test_new_cfier_b64,
+                'label': test_label,
+            })
+            self.assertStatus(rv, 400)
+            self.assertResponseMessageRegex(
+                rv, "Label already exists in classifier collection."
+            )
+
+    @mock.patch.dict(os.environ, {"CLASSIFIER_PATH": STUB_CLASSIFIER_MOD_PATH})
+    def test_add_iqr_state_classifier_simple(self):
+        """
+        Test calling IQR classifier add endpoint with a simple IQR Session
+        serialization.
+        """
+        # Make a simple session with dummy adjudication descriptor elements
+        iqrs = IqrSession(session_uid="0")
+        iqr_p1 = DescriptorMemoryElement('test', 0).set_vector([0])
+        iqr_n1 = DescriptorMemoryElement('test', 1).set_vector([1])
+        iqrs.adjudicate(
+            new_positives=[iqr_p1], new_negatives=[iqr_n1]
+        )
+
+        test_iqrs_b64 = base64.b64encode(iqrs.get_state_bytes())
+        test_label = 'test-label-08976azsdv'
+
+        with mock.patch(STUB_CLASSIFIER_MOD_PATH+".DummySupervisedClassifier._train") \
+                as m_cfier_train:
+
+            with self.app.test_client() as cli:
+                rv = cli.post('/iqr_classifier', data={
+                    'bytes_b64': test_iqrs_b64,
+                    'label': test_label,
+                })
+                self.assertStatus(rv, 201)
+                self.assertResponseMessageRegex(rv, "Finished training "
+                                                    "IQR-session-based "
+                                                    "classifier for label "
+                                                    "'%s'." % test_label)
+
+            m_cfier_train.assert_called_once_with(
+                {'positive': {iqr_p1}, 'negative': {iqr_n1}}
+            )
+            # Collection should include initial dummy classifier and new iqr
+            # classifier.
+            self.assertEqual(len(self.app.classifier_collection.labels()), 2)
+            self.assertIn(test_label, self.app.classifier_collection.labels())

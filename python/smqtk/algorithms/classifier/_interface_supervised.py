@@ -44,9 +44,9 @@ class SupervisedClassifier (Classifier):
 
         :raises ValueError: There were no class examples provided.
         :raises ValueError: Less than 2 classes were given.
-        :raises RuntimeError: A model already exists in this instance.Following
-            through with training would overwrite this model. Throwing an
-            exception for information protection.
+        :raises RuntimeError: A model already exists in this instance.
+            Following through with training would overwrite this model.
+            Throwing an exception for information protection.
 
         """
         if self.has_model():

@@ -181,11 +181,15 @@ class SolrDescriptorElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray
 
+        :returns: Self.
+        :rtype: SolrDescriptorElement
+
         """
         doc = self._base_doc()
         doc[self.vector_field] = new_vec.tolist()
         doc[self.timestamp_field] = time.time()
         self.solr.add(doc, commit=self.solr_commit_on_set)
+        return self
 
     def vector(self):
         doc = self._get_existing_doc()

@@ -17,5 +17,12 @@ Docker
 - Versioning changes to, by default, encode date built instead of arbitrary
   separate versioning.
 
+Representation
+
+- Descriptor Element
+
+  - Added a return of self to vector setting method.
+
+
 Fixes
 -----

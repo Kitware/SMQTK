@@ -236,36 +236,23 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         return None not in (self.svm_model, self.svm_label_map)
 
-    def train(self, class_examples=None, **kwds):
+    def _train(self, class_examples=None):
         """
-        Train the supervised classifier model.
+        Internal method that trains the classifier implementation.
 
-        If a model is already loaded, we will raise an exception in order to
-        prevent accidental overwrite.
+        This method is called after checking that there is not already a model
+        trained, thus it can be assumed that no model currently exists.
 
-        If the same label is provided to both ``class_examples`` and ``kwds``,
-        the examples given to the reference in ``kwds`` will prevail.
+        The class labels will have already been checked before entering this
+        method, so it can be assumed that the ``class_examples`` will container
+        at least two classes.
 
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param kwds: Keyword assignment of labels to iterables of
-            DescriptorElement training examples.
-        :type kwds: dict[str,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
-
-        :raises ValueError: There were no class examples provided.
-        :raises ValueError: Less than 2 classes were given.
-        :raises RuntimeError: A model already exists in this instance.Following
-            through with training would overwrite this model. Throwing an
-            exception for information protection.
-
         """
-        class_examples = \
-            super(LibSvmClassifier, self).train(class_examples, **kwds)
-
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
         CLASS_LABEL_OFFSET = 1

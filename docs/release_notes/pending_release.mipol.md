@@ -17,5 +17,20 @@ Docker
 - Versioning changes to, by default, encode date built instead of arbitrary
   separate versioning.
 
+Representation
+
+- Descriptor Element
+
+  - Added a return of self to vector setting method.
+
+Testing
+
+- Added more tests for Flask-based web services.
+
+
 Fixes
 -----
+
+Misc
+
+- Various typo fixes in in-code documentation.

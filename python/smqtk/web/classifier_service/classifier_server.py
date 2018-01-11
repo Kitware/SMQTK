@@ -558,7 +558,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             self.iqr_state_classifier_config,
             get_classifier_impls(sub_interface=SupervisedClassifier)
         )
-        classifier.train(positive=pos, negative=neg)
+        classifier.train(class_examples={'positive': pos, 'negative': neg})
 
         try:
             self.classifier_collection.add_classifier(label, classifier)

@@ -588,6 +588,21 @@ class TestIqrService (unittest.TestCase):
         self.assertListEqual(r_json['neighbor_uids'], expected_uids)
         self.assertListEqual(r_json['neighbor_dists'], expected_dists)
 
+    def test_refine_no_session_id(self):
+        with self.app.test_client() as tc:
+            r = tc.post('/refine')
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
+
+    def test_refine_invalid_session_id(self):
+        with self.app.test_client() as tc:
+            r = tc.post('/refine',
+                        data={
+                            'sid': 'invalid-sid'
+                        })
+            self.assertStatusCode(r, 404)
+            self.assertJsonMessageRegex(r, "session id invalid-sid not found")
+
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.
         r = self.app.test_client().get('/state')

@@ -105,7 +105,7 @@ class IqrSession (SmqtkObject):
         :type rel_index_config: dict
 
         :param session_uid: Optional manual specification of session UUID.
-        :type session_uid: str or uuid.UUID
+        :type session_uid: str | uuid.UUID
 
         """
         self.uuid = session_uid or str(uuid.uuid1()).replace('-', '')
@@ -288,6 +288,7 @@ class IqrSession (SmqtkObject):
                        len(pos_examples),
                        len(self.external_positive_descriptors),
                        len(self.positive_descriptors))
+        # TODO: parallel_map and reduce with merge-dict
         for p in pos_examples:
             if p.uuid() not in self._wi_seeds_used:
                 self._log.debug("Querying neighbors to: %s", p)

@@ -23,6 +23,14 @@ Representation
 
   - Added a return of self to vector setting method.
 
+Testing
+
+- Added more tests for Flask-based web services.
+
 
 Fixes
 -----
+
+Misc
+
+- Various typo fixes in in-code documentation.

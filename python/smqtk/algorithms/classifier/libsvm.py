@@ -1,3 +1,6 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
 import collections
 from copy import deepcopy
 import ctypes
@@ -75,7 +78,7 @@ class LibSvmClassifier (SupervisedClassifier):
 
         :param train_params: SVM parameters used for training. See libSVM
             documentation for parameter flags and values.
-        :type train_params: dict[str, int|float]
+        :type train_params: dict[basestring, int|float]
 
         :param normalize: Normalize input vectors to training and
             classification methods using ``numpy.linalg.norm``. This may either
@@ -355,10 +358,10 @@ class LibSvmClassifier (SupervisedClassifier):
                 w *= numpy.exp(adj_mean - a)
 
                 self.class_weights[self.svm_label_map[i]] = w
-                # Ignore weights in the range (0.9, 1.1). Weights must be
-                # orders of magnitude apart to have different effects, so be
-                # lax about the default and don't clutter the command line.
-                if numpy.abs(w-1) > 0.1:
+                # Ignore weights close to 1. Weights must be orders of
+                # magnitude apart to have different effects, so be lax about
+                # the default and don't clutter the command line.
+                if numpy.abs(numpy.log(w)) > 0.5:
                     params['-w%s' % i] = w
                     self._log.debug("-- class '%s' weight: %s",
                                     self.svm_label_map[i], w)

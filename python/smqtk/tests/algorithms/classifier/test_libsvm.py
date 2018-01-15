@@ -1,3 +1,6 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
 import unittest
 
 import multiprocessing
@@ -53,7 +56,7 @@ if LibSvmClassifier.is_usable():
             )
 
             def make_element((i, v)):
-                d = d_factory.new_descriptor('test', i)
+                d = d_factory.new_descriptor(str('test'), i)
                 d.set_vector(v)
                 return d
 
@@ -72,7 +75,7 @@ if LibSvmClassifier.is_usable():
 
             # Test original classifier
             t_v = numpy.random.rand(DIM)
-            t = d_factory.new_descriptor('query', 0)
+            t = d_factory.new_descriptor(str('query'), 0)
             t.set_vector(t_v)
             c_expected = classifier.classify(t, c_factory)
 
@@ -116,7 +119,7 @@ if LibSvmClassifier.is_usable():
             )
 
             def make_element((i, v)):
-                elem = d_factory.new_descriptor('test', i)
+                elem = d_factory.new_descriptor(str('test'), i)
                 elem.set_vector(v)
                 return elem
 
@@ -210,7 +213,7 @@ if LibSvmClassifier.is_usable():
             data, training the y=0.5 split
             """
             DIM = 2
-            N = 100
+            N = 1000
             POS_LABEL = 'positive'
             NEG_LABEL = 'negative'
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
@@ -251,6 +254,8 @@ if LibSvmClassifier.is_usable():
             self.assertNotAlmostEqual(1, classifier.class_weights[NEG_LABEL])
             self.assertAlmostEqual(
                 1, numpy.prod(classifier.class_weights.values()))
+            self.assertGreater(classifier.class_weights[POS_LABEL],
+                               classifier.class_weights[NEG_LABEL])
 
         def test_simple_multiclass_classification(self):
             """

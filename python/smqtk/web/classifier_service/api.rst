@@ -122,6 +122,27 @@ classification to a set of classifiers::
         -d 'label=["some_label","other_label"]' \
         --data-urlencode bytes_64@/path/to/file.b64
 
+Also optionally, the `adjustment` parameter may be provided to boost the
+precision (higher) or recall (lower) for a class's label::
+
+    $ curl -X POST localhost:5000/classify -d "content_type=text/plain" \
+        -d 'adjustment={"positive": 1.0}' \
+        --data-urlencode "bytes_b64=$(base64 -w0 /path/to/file)"
+
+Boosting precision for one class necessarily means that precision will be
+lowered for other classes. Adding the same adjustment to all classes will
+therefore have no effect. The same adjustment can therefore be applied in
+multiple ways. For example, if there are two classes, "positive" and
+"negative," then `{"positive": 1.0}`, `{"negative": -1.0}`, and
+`{"positive": 0.5, "negative": -0.5}` all have the same effect, which is to
+boost the precision of the "positive" class and the recall of the "negative"
+class.
+
+Note that attempting to boost the precision (or other classes' recall) too
+much can result in the class's probability being lowered so far that it is no
+longer the majority class for any example. Precision in this case is useless
+as a concept, because there are no positive examples left for the class.
+
 Data/Form arguments:
     bytes_b64
         Bytes in the standard base64 encoding to be described and classified.
@@ -130,6 +151,11 @@ Data/Form arguments:
     label
         (Optional) Label of the requested classifier, or JSON list of
         requested classifiers
+    adjustment
+        (Optional) JSON-encoded dictionary of labels to floats. Higher values
+        lower the gain on the class and therefore correspond to higher
+        precision (and lower recall) for the class (and higher recall/lower
+        precision for other classes)
 
 Possible error codes:
     400

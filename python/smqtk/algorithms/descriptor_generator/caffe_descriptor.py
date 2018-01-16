@@ -46,8 +46,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
-    def __init__(self, network_prototxt_uri, network_model_uri, image_mean_uri,
-                 return_layer='fc7',
+    def __init__(self, network_prototxt_uri, network_model_uri,
+                 image_mean_uri=None, return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
                  load_truncated_images=False, pixel_rescale=None,
@@ -63,8 +63,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             file to use.
         :type network_model_uri: str
 
-        :param image_mean_uri: URI to the image mean ``.binaryproto`` or
-            ``.npy`` file.
+        :param image_mean_uri: Optional URI to the image mean ``.binaryproto``
+            or ``.npy`` file.
         :type image_mean_uri: str | file | StringIO.StringIO
 
         :param return_layer: The label of the layer we take data from to compose
@@ -192,33 +192,35 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Initializing data transformer -> %s",
                         self.transformer.inputs)
 
-        self._log.debug("Loading image mean")
-        image_mean_elem = from_uri(self.image_mean_uri)
-        image_mean_bytes = image_mean_elem.get_bytes()
-        try:
-            a = numpy.load(io.BytesIO(image_mean_bytes))
-            self._log.info("Loaded image mean from numpy bytes")
-        except IOError:
-            self._log.debug("Image mean file not a numpy array, assuming "
-                            "URI to protobuf binary.")
-            # noinspection PyUnresolvedReferences
-            blob = caffe.proto.caffe_pb2.BlobProto()
-            blob.ParseFromString(image_mean_bytes)
-            a = numpy.array(caffe.io.blobproto_to_array(blob))
-            assert a.shape[0] == 1, \
-                "Input image mean blob protobuf consisted of more than one " \
-                "image. Not sure how to handle this yet."
-            a = a.reshape(a.shape[1:])
-            self._log.info("Loaded image mean from protobuf bytes")
-        assert a.shape[0] in [1, 3], \
-            "Currently asserting that we either get 1 or 3 channel images. " \
-            "Got a %d channel image." % a[0]
-        # TODO: Instead of always using pixel mean, try to use image-mean if
-        #       given. Might have to rescale if image/data layer shape is
-        #       different.
-        a_mean = a.mean(1).mean(1)
-        self._log.debug("Initializing data transformer -- mean")
-        self.transformer.set_mean(self.data_layer, a_mean)
+        if self.image_mean_uri is not None:
+            self._log.debug("Loading image mean (reducing to single pixel "
+                            "mean)")
+            image_mean_elem = from_uri(self.image_mean_uri)
+            image_mean_bytes = image_mean_elem.get_bytes()
+            try:
+                a = numpy.load(io.BytesIO(image_mean_bytes))
+                self._log.info("Loaded image mean from numpy bytes")
+            except IOError:
+                self._log.debug("Image mean file not a numpy array, assuming "
+                                "URI to protobuf binary.")
+                # noinspection PyUnresolvedReferences
+                blob = caffe.proto.caffe_pb2.BlobProto()
+                blob.ParseFromString(image_mean_bytes)
+                a = numpy.array(caffe.io.blobproto_to_array(blob))
+                assert a.shape[0] == 1, \
+                    "Input image mean blob protobuf consisted of more than " \
+                    "one image. Not sure how to handle this yet."
+                a = a.reshape(a.shape[1:])
+                self._log.info("Loaded image mean from protobuf bytes")
+            assert a.shape[0] in [1, 3], \
+                "Currently asserting that we either get 1 or 3 channel " \
+                "images. Got a %d channel image." % a[0]
+            # TODO: Instead of always using pixel mean, try to use image-mean
+            #       if given. Might have to rescale if image/data layer shape
+            #       is different.
+            a_mean = a.mean(1).mean(1)
+            self._log.debug("Initializing data transformer -- mean")
+            self.transformer.set_mean(self.data_layer, a_mean)
 
         self._log.debug("Initializing data transformer -- transpose")
         self.transformer.set_transpose(self.data_layer, (2, 0, 1))

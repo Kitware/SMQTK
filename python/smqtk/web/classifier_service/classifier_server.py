@@ -5,6 +5,7 @@ import base64
 import flask
 import six
 from six.moves import cPickle as pickle
+from six.moves import zip
 
 from smqtk.algorithms import (
     get_classifier_impls,
@@ -22,6 +23,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 import smqtk.utils.plugin
+from smqtk.utils import prob_utils
 from smqtk.utils.web import make_response_json
 import smqtk.web
 
@@ -306,6 +308,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 The mimetype of the sent data.
             label
                 (Optional) JSON-encoded label or list of labels
+            adjustment
+                (Optional) JSON-encoded dictionary of labels to floats. Higher
+                values lower the gain on the class and therefore correspond to
+                higher precision (and lower recall) for the class (and higher
+                recall/lower precision for other classes)
 
         Possible error codes:
             400
@@ -329,6 +336,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         data_b64 = flask.request.values.get('bytes_b64', default=None)
         content_type = flask.request.values.get('content_type', default=None)
         label_str = flask.request.values.get('label', default=None)
+        adjustment_str = flask.request.values.get('adjustment', default=None)
 
         labels = None
         if label_str is not None:
@@ -373,6 +381,28 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                     return make_response_json(
                         "Label(s) are not properly formatted JSON.", 400)
 
+        #: :type: dict[collections.Hashable, float]
+        adjustments = {}
+        if adjustment_str is not None:
+            try:
+                #: :type: dict[collections.Hashable, float]
+                adjustments = flask.json.loads(adjustment_str)
+
+                for label, val in six.iteritems(adjustments):
+                    if not isinstance(label, six.string_types):
+                        return make_response_json(
+                            "Adjustment label %s is not a string type."
+                            % label,
+                            400)
+                    if not isinstance(val, (int, float)):
+                        return make_response_json(
+                            "Adjustment value %s for label %s is not an int "
+                            "or float" % (val, label),
+                            400)
+            except JSON_DECODE_EXCEPTION:
+                return make_response_json(
+                    "Adjustment(s) are not properly formatted JSON.", 400)
+
         if data_b64 is None:
             return make_response_json("No base-64 bytes provided.", 400)
         elif content_type is None:
@@ -402,7 +432,15 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Transform classification result into JSON
         c_json = {}
         for classifier_label, c_elem in six.iteritems(clfr_map):
-            c_json[classifier_label] = c_elem.get_classification()
+            prediction = c_elem.get_classification()
+            if adjustments:
+                proba = list(prediction.values())
+                # Use opposite of adjustments, because we already set the
+                # convention of "higher: precision, lower: recall"
+                adj = [-adjustments.get(label, 0.0) for label in prediction]
+                adj_proba = prob_utils.adjust_proba(proba, adj)
+                prediction = dict(zip(prediction, adj_proba[0]))
+            c_json[classifier_label] = prediction
 
         return make_response_json('Finished classification.',
                                   result=c_json)

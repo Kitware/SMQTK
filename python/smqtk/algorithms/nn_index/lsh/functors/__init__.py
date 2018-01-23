@@ -8,9 +8,6 @@ from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import plugin
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class LshFunctor (SmqtkAlgorithm):
     """
     Locality-sensitive hashing functor interface.
@@ -28,6 +25,9 @@ class LshFunctor (SmqtkAlgorithm):
     information on whether model training is needed and how it is accomplished.
 
     """
+
+    def __call__(self, descriptor):
+        return self.get_hash(descriptor)
 
     @abc.abstractmethod
     def get_hash(self, descriptor):

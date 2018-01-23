@@ -1,0 +1,39 @@
+{
+    "descriptor_index": {
+        "MemoryDescriptorIndex": {
+            "cache_element": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "cache.mdi",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
+            "pickle_protocol": -1
+        },
+        "type": "MemoryDescriptorIndex"
+    },
+    "itq_config": {
+        "bit_length": 256,
+        "itq_iterations": 50,
+        "mean_vec_cache": {
+            "DataFileElement": {
+                "explicit_mimetype": null,
+                "filepath": "models/smqtk/itq.alexnet_fc7.256bit.mean_vec.npy",
+                "readonly": false
+            },
+            "type": "DataFileElement"
+        },
+        "normalize": null,
+        "random_seed": 0,
+        "rotation_cache": {
+            "DataFileElement": {
+                "explicit_mimetype": null,
+                "filepath": "models/smqtk/itq.alexnet_fc7.256bit.rotation.npy",
+                "readonly": false
+            },
+            "type": "DataFileElement"
+        }
+    },
+    "uuids_list_filepath": null
+}

@@ -21,7 +21,7 @@ def is_loadable_image(data_element):
     try:
         PIL.Image.open(io.BytesIO(data_element.get_bytes()))
         return True
-    except IOError, ex:
+    except IOError as ex:
         # noinspection PyProtectedMember
         log.debug("Failed to convert '%s' bytes into an image "
                   "(error: %s). Skipping", data_element, str(ex))
@@ -33,7 +33,7 @@ def is_valid_element(data_element, valid_content_types=None, check_image=False):
     Determines if a given data element is valid.
 
     :param data_element: Data element
-    :type data_element: str
+    :type data_element: DataElement
 
     :param valid_content_types: List of valid content types, or None to skip
         content type checking.
@@ -50,7 +50,7 @@ def is_valid_element(data_element, valid_content_types=None, check_image=False):
     log = logging.getLogger(__name__)
 
     if (valid_content_types is not None and
-        data_element.content_type() not in valid_content_types):
+            data_element.content_type() not in valid_content_types):
         log.debug("Skipping file (invalid content) type for "
                   "descriptor generator (data_element='%s', ct=%s)",
                   data_element, data_element.content_type())

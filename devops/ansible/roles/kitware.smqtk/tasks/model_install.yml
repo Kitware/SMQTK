@@ -1,0 +1,32 @@
+# Install any model files inside ``model_files/*``
+---
+- name: Ensure model directory
+  file:
+    path: "{{ smqtk_path }}/models"
+    state: directory
+    mode: 0755
+
+- name: Download model files from zoo
+  get_url:
+    url: "https://data.kitware.com/api/v1/file/{{ item.fid }}/download"
+    dest: "{{ smqtk_path }}/models/{{ item.filename }}"
+    checksum: "sha512:{{ item.sha512 }}"
+  with_items:
+    # AlexNet Caffe models
+    - {filename: "bvlc_alexnet.caffemodel", fid: "57dae22f8d777f10f26a2a86",
+       sha512: "7a4e37edbd5ca3e218e1c2eb539034ff784aa5c6deed555aa34d02d6bb8b4a88f62d3b6d2bb8b46ea8ef9ccfa19590c5abe8da7df9967c2a1524aaf394e0b16f"}
+    - {filename: "deploy.prototxt", fid: "57e2f3fd8d777f10f26e532c",
+       sha512: "600e61fbff45e8a294c9fcb78ef98ea7762b7b3c5d6d6b88f89d79dd96186a1d5b39e895c93b4df5207ba653c84ded7a79d19089ba63e9edf1c883339217d09b"}
+    - {filename: "imagenet_mean.binaryproto", fid: "57dae0a88d777f10f26a2a82",
+       sha512: "1ffc7f49932a9700d8fde422cf1fcb26dd0212f082d877782c2495342c6baf92d5361150e588186c09c7fc45068f6a7ac2c7a2f4ee647011b1893bf265a45d0e"}
+    # MIR Flikr 25k dataset models
+    - {filename: "itq_mirflikr_fc7_96bit.mean_vec.npy", fid: "57dae29b8d777f10f26a2a8a",
+       sha512: "8bc9551c81190e91e09d03c8d88161a487868bb69394f888cf4ac864e3b2338284bc21b8bdeb62cdf69c587ad72a35f1a5ed1669a071814bef7d8bb55609f679"}
+    - {filename: "itq_mirflikr_fc7_96bit.rotation.npy", fid: "57dae29c8d777f10f26a2a8d",
+       sha512: "f4c7051c0e6139c13d270676e24b9443819a889324224963189a4df0cc93152a34dbf99efa016924a98f204e2c75c52e4fce24d3a6646d9399f49c42a5863c4d"}
+    - {filename: "lsh.hash2uuids.pickle", fid: "57dae29c8d777f10f26a2a90",
+       sha512: "e24b73854fe3e181ac07b9741457be9a7952664d81c2a7279a591e05aae5c4131d900641e9a43cb3fe47db61143ec6effa8cf830d273a4cec7a66c77166113fe"}
+    - {filename: "lsh.hi.balltree.npz", fid: "57dae29c8d777f10f26a2a93",
+       sha512: "d2f182dbcf0d60f2b718e3e70043d367d34f16382496fbd335a4a1990e00c698fa8bed74472e25a3c190a140c8ad9524919a34b6331bc11f7f8fe49b02325dda"}
+    - {filename: "mirflikr.public.mem_dataset.girder_elements", fid: "57e178e48d777f10f26e4daf",
+       sha512: "5bc597b03b2cf1cdbb57905fc786f74286d6df34baabf4439a2222311bcaafd15fe2b58df492c947e6bf8cffd5514a9cf86817a5a1f27072e2509f984ba4aeb1"}

@@ -140,14 +140,6 @@
                     <a class="navbar-brand" href="/">SMQTK</a>
                 </div>
                 <div id="smqtk-nav-collapse" class="collapse navbar-collapse">
-                    <ul class="nav navbar-nav">
-                        {%- for name, href in nav_content %}
-                        <li{%- if name == active_page %} class="active"{%- endif %}>
-                            <a href="{{  href|escape }}">{{ name|escape }}</a>
-                        </li>
-                        {%- endfor %}
-                    </ul>
-
                     {%- if not 'user' in session %}
                         {%- set login_url = url_for('login.login') %}
                         {%- set login_text = 'login' %}
@@ -172,12 +164,15 @@
         {%- endblock body_content %}
 
         <footer>
-            {#- DEBUG #}
+            {#- DEBUG
+            {%- if debug %}
             <div class="container-fluid">
                 <hr>
                 <h2>Session contents</h2>
                 <h4>{{ session }}</h4>
             </div>
+            {%- endif %}
+            #}
 
             <hr>
             <center>

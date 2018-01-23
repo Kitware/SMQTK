@@ -3,12 +3,11 @@ import unittest
 import mock
 import nose.tools as ntools
 import numpy
+import six
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class DummySI (NearestNeighborsIndex):
@@ -36,7 +35,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         # Some implementations should be returned
         m = get_nn_index_impls()
         ntools.assert_true(m)
-        for cls in m.itervalues():
+        for cls in six.itervalues(m):
             ntools.assert_true(issubclass(cls, NearestNeighborsIndex))
 
     def test_count(self):
@@ -49,6 +48,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         index.count.return_value = 5
         ntools.assert_equal(len(index), 5)
 
+    # noinspection PyUnresolvedReferences
     @mock.patch.object(DummySI, 'count')
     def test_normal_conditions(self, mock_dsi_count):
         index = DummySI()
@@ -58,6 +58,7 @@ class TestSimilarityIndexAbstract (unittest.TestCase):
         q.set_vector(numpy.random.rand(4))
         index.nn(q)
 
+    # noinspection PyUnresolvedReferences
     @mock.patch.object(DummySI, 'count')
     def test_query_empty_value(self, mock_dsi_count):
         # distance method doesn't matter

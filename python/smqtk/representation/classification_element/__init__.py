@@ -1,10 +1,10 @@
 import abc
 import os
 
+from smqtk.exceptions import NoClassificationError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
 from smqtk.utils import merge_dict
-from smqtk.utils.errors import NoClassificationError
 
 
 __author__ = "paul.tunison@kitware.com"

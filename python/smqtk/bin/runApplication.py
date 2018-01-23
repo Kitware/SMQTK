@@ -104,12 +104,14 @@ def main():
     use_basic_auth = args.use_basic_auth
 
     # noinspection PyUnresolvedReferences
+    #: :type: smqtk.web.SmqtkWebApp
     app = app_class.from_config(config)
     if use_basic_auth:
         app.config["BASIC_AUTH_FORCE"] = True
         BasicAuth(app)
     app.config['DEBUG'] = debug_server
 
+    log.info("Starting application")
     app.run(host=host, port=port, debug=debug_server, use_reloader=use_reloader,
             threaded=use_threading)
 

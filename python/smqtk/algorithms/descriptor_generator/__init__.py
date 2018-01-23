@@ -1,20 +1,13 @@
 import abc
-import logging
-import multiprocessing.pool
 import numpy
 import os
-import traceback
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.utils import SimpleTimer
-import smqtk.utils.parallel
+from smqtk.utils.parallel import parallel_map
 from smqtk.utils.plugin import get_plugins
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 DFLT_DESCRIPTOR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})
@@ -36,10 +29,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
                            overwrite=False):
         """
-        Given some kind of data, return a descriptor element containing a
-        descriptor vector.
-
-        This abstract super method should be invoked for common error checking.
+        Given some data, return a descriptor element containing a descriptor
+        vector.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
         :raises ValueError: Given data element content was not of a valid type
@@ -49,7 +40,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :type data: smqtk.representation.DataElement
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -68,10 +60,10 @@ class DescriptorGenerator (SmqtkAlgorithm):
         # Check content type against listed valid types
         ct = data.content_type()
         if ct not in self.valid_content_types():
-            self._log.error("Cannot compute descriptor of content type '%s'",
-                            ct)
-            raise ValueError("Cannot compute descriptor of content type '%s'"
-                             % ct)
+            self._log.error("Cannot compute descriptor from content type '%s' "
+                            "data: %s)" % (ct, data))
+            raise ValueError("Cannot compute descriptor from content type '%s' "
+                             "data: %s)" % (ct, data))
 
         # Produce the descriptor element container via the provided factory
         # - If the generated element already contains a vector, because the
@@ -83,7 +75,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
             vec = self._compute_descriptor(data)
             descr_elem.set_vector(vec)
         else:
-            self._log.debug("Found existing vector in generated element.")
+            self._log.debug("Found existing vector in generated element: %s",
+                            descr_elem)
 
         return descr_elem
 
@@ -93,7 +86,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
         """
         Asynchronously compute feature data for multiple data items.
 
-        Additional keyword arguments:
+        Base implementation additional keyword arguments:
             use_mp [= False]
                 If multi-processing should be used vs. multi-threading.
 
@@ -103,7 +96,8 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :type data_iter: collections.Iterable[smqtk.representation.DataElement]
 
         :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instances.
+            descriptor element instance. The default factory produces
+            ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
         :param overwrite: Whether or not to force re-computation of a descriptor
@@ -119,10 +113,12 @@ class DescriptorGenerator (SmqtkAlgorithm):
             cores.
         :type procs: int | None
 
-        :return: Mapping of input DataElement instances to the computed
-            descriptor element.
-            DescriptorElement UUID's are congruent with the UUID of the data
-            element it is the descriptor of.
+        :raises ValueError: An input DataElement was of a content type that we
+            cannot handle.
+
+        :return: Mapping of input DataElement UUIDs to the computed descriptor
+            element for that data. DescriptorElement UUID's are congruent with
+            the UUID of the data element it is the descriptor of.
         :rtype: dict[smqtk.representation.DataElement,
                      smqtk.representation.DescriptorElement]
 
@@ -134,14 +130,12 @@ class DescriptorGenerator (SmqtkAlgorithm):
         def work(d):
             return d, self.compute_descriptor(d, descr_factory, overwrite)
 
-        results = smqtk.utils.parallel.parallel_map(work, data_iter,
-                                                    cores=procs,
-                                                    ordered=False,
-                                                    use_multiprocessing=use_mp)
+        results = parallel_map(work, data_iter, cores=procs, ordered=False,
+                               use_multiprocessing=use_mp)
 
         de_map = {}
         for data, descriptor in results:
-            de_map[data] = descriptor
+            de_map[data.uuid()] = descriptor
 
         return de_map
 

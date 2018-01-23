@@ -1,0 +1,7 @@
+---
+- name: smqtk_iqr_app restart
+  service:
+    name: smqtk_iqr_app
+    state: restarted
+  become: yes
+  become_user: root

@@ -1,0 +1,6 @@
+---
+caffe_path: "{{ ansible_user_dir }}/caffe"
+caffe_repo: "https://github.com/BVLC/caffe.git"
+caffe_version: "master"
+caffe_install_prefix: "{{ caffe_path }}/install"
+# No virtual env value by default

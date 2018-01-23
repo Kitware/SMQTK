@@ -9,9 +9,6 @@ from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils.plugin import get_plugins
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class NearestNeighborsIndex (SmqtkAlgorithm):
     """
     Common interface for descriptor-based nearest-neighbor computation over a

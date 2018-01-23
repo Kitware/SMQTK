@@ -1,0 +1,6 @@
+---
+# Install system and python dependencies
+- include: dep_install.yml
+
+# Checkout/Build/Install Caffe
+- include: caffe.yml

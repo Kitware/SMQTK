@@ -5,17 +5,17 @@ from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.utils.plugin import get_plugins
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
 class HashIndex (NearestNeighborsIndex):
     """
-    Specialized ``NearestNeighborsIndex`` for indexing hash codes
-    bit-vectors) in memory (numpy arrays) using hamming distance.
+    Specialized ``NearestNeighborsIndex`` for indexing unique hash codes
+    bit-vectors) in memory (numpy arrays) using the hamming distance metric.
 
     Implementations of this interface cannot be used in place of something
     requiring a ``NearestNeighborsIndex`` implementation due to the speciality
     of this interface.
+
+    Only unique bit vectors should be indexed. The ``nn`` method should not
+    return the same bit vector more than once for any query.
     """
 
     @abc.abstractmethod
@@ -24,7 +24,8 @@ class HashIndex (NearestNeighborsIndex):
         Build the index with the give hash codes (bit-vectors).
 
         Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
+        it. If an exception is raised, the current index, if there is one, will
+        not be modified.
 
         :raises ValueError: No data available in the given iterable.
 
@@ -37,11 +38,12 @@ class HashIndex (NearestNeighborsIndex):
     @abc.abstractmethod
     def nn(self, h, n=1):
         """
-        Return the nearest `N` neighbors to the given hash code.
+        Return the nearest `N` neighbor hash codes as bit-vectors to the given
+        hash code bit-vector.
 
         Distances are in the range [0,1] and are the percent different each
         neighbor hash is from the query, based on the number of bits contained
-        in the query.
+        in the query (normalized hamming distance).
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.

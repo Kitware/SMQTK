@@ -239,8 +239,7 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         return None not in (self.svm_model, self.svm_label_map)
 
-    def _train(self, class_examples, class_adjustment_dict=None,
-               **extra_params):
+    def _train(self, class_examples, **extra_params):
         """
         Internal method that trains the classifier implementation.
 
@@ -256,26 +255,10 @@ class LibSvmClassifier (SupervisedClassifier):
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param class_adjustment_dict: Dictionary with keys matching those from
-            `class_examples`, mapping to a floating point value. A higher
-            value for a class specifies that that class should be given more
-            precision, while a lower value means that the class should be
-            given more recall. If not specified for a class, the value is
-            assumed to be zero, which means that the class is to be given the
-            default weighting.
-        :type class_adjustment_dict: None | dict[collections.Hashable, float]
-
         :param extra_params: Dictionary with extra parameters for training.
         :type extra_params: None | dict[basestring, object]
 
         """
-        if class_adjustment_dict is not None:
-            if set(class_adjustment_dict) - set(class_examples):
-                raise KeyError("There are class adjustments for labels not "
-                               "represented in the example set.")
-        else:
-            #: :type: dict[collections.Hashable, float]
-            class_adjustment_dict = {}
 
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
@@ -293,15 +276,11 @@ class LibSvmClassifier (SupervisedClassifier):
         train_labels = []
         train_vectors = []
         train_group_sizes = []  # number of examples per class
-        class_adjustments = []
         self.svm_label_map = {}
         # Making SVM label assignment deterministic to alphabetic order
         for i, l in enumerate(sorted(class_examples), CLASS_LABEL_OFFSET):
             # Map integer SVM label to semantic label
             self.svm_label_map[i] = l
-
-            adj = class_adjustment_dict.get(l, 0.0)
-            class_adjustments.append(float(adj))
 
             self._log.debug('-- class %d (%s)', i, l)
             # requires a sequence, so making the iterable ``g`` a tuple
@@ -328,43 +307,20 @@ class LibSvmClassifier (SupervisedClassifier):
         params.update(param_debug)
         # Calculating class weights for C-SVC SVM
         if '-s' not in params or int(params['-s']) == 0:
-            # We want the product of all the classes' weights to be 1 so that
-            # the weights don't have a net effect on the loss multiplier C.
-
-            # Compute mean of class adjustments so that we can center them on
-            # 0. When we take their exponentials, their product will be 1.
-            adj_mean = numpy.array(class_adjustments).mean()
-
-            # Compute geometric mean of training class sizes. When divided by
-            # their geometric mean, the group sizes' product will be 1.
-            sizes_geom_mean = numpy.exp(numpy.log(train_group_sizes).mean())
-
-            self.class_weights = {}
-            for i, (n, a) in enumerate(
-                    zip(train_group_sizes, class_adjustments),
-                    CLASS_LABEL_OFFSET):
-                # Start with the adjustment for class size. This adjustment
-                # scales each class so that they have the same power in the
-                # loss function. I.e., each class is scaled so that it acts as
-                # though it has `sizes_geom_mean` examples.
-                w = sizes_geom_mean / n
-
-                # Scale the class so that higher values of `a` *decrease* the
-                # weight. The adjustment `a` is higher for higher precision,
-                # which means we want fewer false positives, but can tolerate
-                # more false negatives. This means that this class' weight may
-                # be lower (allow false negatives), but other classes' weights
-                # must be higher (prevent false positives).
-                w *= numpy.exp(adj_mean - a)
-
-                self.class_weights[self.svm_label_map[i]] = w
-                # Ignore weights close to 1. Weights must be orders of
-                # magnitude apart to have different effects, so be lax about
-                # the default and don't clutter the command line.
-                if numpy.abs(numpy.log(w)) > 0.5:
-                    params['-w%s' % i] = w
-                    self._log.debug("-- class '%s' weight: %s",
-                                    self.svm_label_map[i], w)
+            total_examples = sum(train_group_sizes)
+            for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
+                # weight is the ratio of between number of other-class
+                # examples to the number of examples in this class.
+                # TODO(john.moeller): The weighting should probably be the
+                # TODO(john.moeller): geometric mean of the number of
+                # TODO(john.moeller): examples over the classes divided by
+                # TODO(john.moeller): the number of examples for the
+                # TODO(john.moeller): current class.
+                other_class_examples = total_examples - n
+                w = max(1.0, other_class_examples / float(n))
+                params['-w' + str(i)] = w
+                self._log.debug("-- class '%s' weight: %s",
+                                self.svm_label_map[i], w)
 
         self._log.debug("Making parameters obj")
         svm_params = svmutil.svm_parameter(self._gen_param_string(params))

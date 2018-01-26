@@ -205,58 +205,6 @@ if LibSvmClassifier.is_usable():
             p.close()
             p.join()
 
-        def test_train_with_adjustment(self):
-            """
-            simple LibSvmClassifier test - 2-class
-
-            Test libSVM classification functionality using random constructed
-            data, training the y=0.5 split
-            """
-            DIM = 2
-            N = 1000
-            POS_LABEL = 'positive'
-            NEG_LABEL = 'negative'
-            d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-            c_factory = ClassificationElementFactory(
-                MemoryClassificationElement, {}
-            )
-
-            def make_element((i, v)):
-                elem = d_factory.new_descriptor('test', i)
-                elem.set_vector(v)
-                return elem
-
-            # Constructing artificial descriptors
-            x = numpy.random.rand(N, DIM)
-            x_pos = x[x[:, 1] <= 0.45]
-            x_neg = x[x[:, 1] >= 0.55]
-
-            d_pos = map(make_element, enumerate(x_pos))
-            d_neg = map(make_element, enumerate(x_neg, start=N//2))
-
-            # Create/Train test classifier
-            classifier = LibSvmClassifier(
-                train_params={
-                    '-t': 0,  # linear kernel
-                    '-b': 1,  # enable probability estimates
-                    '-c': 2,  # SVM-C parameter C
-                    '-q': '',  # quite mode
-                },
-                normalize=None,  # DO NOT normalize descriptors
-            )
-            classifier.train(class_examples={
-                POS_LABEL: d_pos,
-                NEG_LABEL: d_neg
-            }, class_adjustment_dict={
-                POS_LABEL: -10,
-            })
-            self.assertNotAlmostEqual(1, classifier.class_weights[POS_LABEL])
-            self.assertNotAlmostEqual(1, classifier.class_weights[NEG_LABEL])
-            self.assertAlmostEqual(
-                1, numpy.prod(classifier.class_weights.values()))
-            self.assertGreater(classifier.class_weights[POS_LABEL],
-                               classifier.class_weights[NEG_LABEL])
-
         def test_simple_multiclass_classification(self):
             """
             simple LibSvmClassifier test - 3-class

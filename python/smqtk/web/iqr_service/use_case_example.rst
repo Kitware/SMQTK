@@ -192,10 +192,8 @@ New command flow since API overhaul (2017, Nov-Dec)::
     # Initialize working index
     curl -X POST localhost:5001/initialize -d sid=0
 
-    # Refine with no custom PR-bias.
-    curl -X POST localhost:5001/refine -d sid=0 -d pr_adj=0.0
-    #curl -X POST localhost:5001/refine -d sid=0 -d pr_adj=-10.0
-    #curl -X POST localhost:5001/refine -d sid=0 -d pr_adj=10.0
+    # Refine
+    curl -X POST localhost:5001/refine -d sid=0
 
     # Get results for confirmation of similarity.
     curl -sGX GET localhost:5001/get_results -d sid=0

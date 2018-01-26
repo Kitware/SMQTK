@@ -116,24 +116,17 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 self.descr_cache_fp = descr_cache_filepath
 
     @staticmethod
-    def _gen_pos_weight(num_pos, num_neg, wgt_pos):
+    def _gen_w1_weight(num_pos, num_neg):
         """
         Return w1 weight parameter based on pos and neg exemplars
-
-        Balance the weight based on incidence of positive and negative
-        weights, and apply precision/recall weighting
         """
-        # We apply the inverse of the return to the negative examples, so use
-        # the square root of the desired ratio
-        return numpy.sqrt(wgt_pos * num_neg / num_pos)
+        return max(1.0, num_neg/float(num_pos))
 
     @classmethod
-    def _gen_svm_parameter_string(cls, num_pos, num_neg, wgt_pos):
+    def _gen_svm_parameter_string(cls, num_pos, num_neg):
         params = copy.copy(cls.SVM_TRAIN_PARAMS)
-        w1_wgt = cls._gen_pos_weight(num_pos, num_neg, wgt_pos)
-        params['-w1'] = w1_wgt
-        params['-w-1'] = 1/w1_wgt
-        return ' '.join('%s %s' % pair for pair in six.iteritems(params))
+        params['-w1'] = cls._gen_w1_weight(num_pos, num_neg)
+        return ' '.join(('%s %s' % (k, v) for k, v in params.items()))
 
     def get_config(self):
         return {
@@ -197,7 +190,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             with open(self.descr_cache_fp, 'wb') as f:
                 pickle.dump(self._descr_cache, f, -1)
 
-    def rank(self, pos, neg, pr_adj=0.0):
+    def rank(self, pos, neg):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
         negative exemplar descriptor elements.
@@ -210,16 +203,6 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param pr_adj: Adjustment for precision-recall balance. A positive
-            value means that more precision is required (fewer false
-            positives), while a negative value means that more recall is
-            required (fewer false negatives). If precision is required, then
-            the negative examples are weighted higher, and if recall is
-            required, then the positive examples are weighted higher.
-
-            Default value of 0.0.
-        :type pr_adj: float
-
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
             meaning least relevant.
@@ -228,12 +211,6 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         # Notes:
         # - Pos and neg exemplars may be in our index.
-
-        # Adjust for precision and recall: high positive weight means that the
-        # training is stricter about allowing positive examples across the
-        # decision boundary, so there will be fewer false negatives, and thus
-        # higher recall.
-        wgt_pos = numpy.exp(-pr_adj)
 
         #
         # SVM model training
@@ -304,8 +281,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Training SVM model
         self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
-        param_str = self._gen_svm_parameter_string(
-            num_pos, num_neg, wgt_pos)
+        param_str = self._gen_svm_parameter_string(num_pos, num_neg)
         svm_param = svm.svm_parameter(param_str)
         svm_model = svmutil.svm_train(svm_problem, svm_param)
 

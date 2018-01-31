@@ -317,6 +317,8 @@ class ItqFunctor (LshFunctor):
                 descriptors_l.append(d)
                 report_progress(self._log.debug, rs, dbg_report_interval)
             descriptors = descriptors_l
+        if len(descriptors) == 0:
+            raise ValueError("Descriptor input count is 0")
         if len(descriptors[0].vector()) < self.bit_length:
             raise ValueError("Input descriptors have fewer features than "
                              "requested bit encoding. Hash codes will be "

@@ -1,0 +1,67 @@
+.g-config-breadcrumb-container
+
+p.
+  Configure how Girder should communicate with SMQTK resources.
+
+p.
+  Note, these settings are available to all consumers of jobs produced by this plugin. Do not store data here that shouldn't be available to your workers.
+
+form#smqtk-girder-settings-form(role="form")
+  .g-settings-form-container
+    h4
+      | Descriptor Backend
+    .form-group
+      label.control-label(for="smqtk-girder-db-host") Database Host
+      input.input-sm.form-control#smqtk-girder-db-host(
+        type="text", placeholder="localhost")
+
+    .form-group
+      label.control-label(for="smqtk-girder-db-name") Database Name
+      input.input-sm.form-control#smqtk-girder-db-name(
+        type="text", placeholder="smqtk")
+
+    .form-group
+      label.control-label(for="smqtk-girder-db-user") Database User
+      input.input-sm.form-control#smqtk-girder-db-user(
+        type="text", placeholder="smqtk")
+
+    .form-group
+      label.control-label(for="smqtk-girder-db-pass") Database Password
+      input.input-sm.form-control#smqtk-girder-db-pass(
+        type="text", placeholder="")
+
+    .form-group
+      label.control-label(for="smqtk-girder-db-descriptors-table") Descriptors Table
+      input.input-sm.form-control#smqtk-girder-db-descriptors-table(
+        type="text", placeholder="descriptors")
+
+  .g-settings-form-container
+    h4
+      | Processing Options
+
+    .form-group
+      label.control-label(for="smqtk-girder-image-batch-size") Image Batch Size
+      input.input-sm.form-control#smqtk-girder-image-batch-size(
+        type="text", placeholder="100")
+
+  .g-settings-form-container
+    h4
+      | Caffe Files
+
+    .form-group
+      label.control-label(for="smqtk-girder-caffe-network-model") Caffe Network Model
+      input.input-sm.form-control#smqtk-girder-caffe-network-model(
+        type="text", placeholder="Needs a fileId")
+
+    .form-group
+      label.control-label(for="smqtk-girder-caffe-network-prototxt") Caffe Network Prototxt
+      input.input-sm.form-control#smqtk-girder-caffe-network-prototxt(
+        type="text", placeholder="Needs a fileId")
+
+    .form-group
+      label.control-label(for="smqtk-girder-caffe-image-mean") Caffe Image Mean
+      input.input-sm.form-control#smqtk-girder-caffe-image-mean(
+        type="text", placeholder="Needs a fileId")
+
+  p#smqtk-girder-settings-error-message.g-validation-failed-message
+  input.btn.btn-sm.btn-primary(type="submit", value="Save")

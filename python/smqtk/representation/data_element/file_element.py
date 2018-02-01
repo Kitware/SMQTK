@@ -148,7 +148,7 @@ class DataFileElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return open(self._filepath, 'rb').read()
+        return (not self.is_empty() and open(self._filepath, 'rb').read()) or ""
 
     def writable(self):
         """

@@ -5,6 +5,7 @@ References/Resources:
 - GitHub with matlab implementation:
   https://github.com/willard-yuan/hashing-baseline-for-image-retrieval
 """
+from collections import Sequence
 from copy import deepcopy
 import logging
 
@@ -134,9 +135,15 @@ class ItqFunctor (LshFunctor):
 
         :param normalize: Normalize input vectors when fitting and generation
             hash vectors using ``numpy.linalg.norm``. This may either
-            be  ``None``, disabling normalization, or any valid value that
+            be ``None``, disabling normalization, or any valid value that
             could be passed to the ``ord`` parameter in ``numpy.linalg.norm``
             for 1D arrays. This is ``None`` by default (no normalization).
+
+            Normalization affects the value of the mean vector and rotation
+            matrix. This means that model products produced reflect the
+            normalization value use when training and the same normalization
+            value, like the bit_length value, must be used when loading cached
+            models again for later use.
         :type normalize: None | int | float | str
 
         :param random_seed: Integer to use as the random number generator seed.
@@ -309,7 +316,7 @@ class ItqFunctor (LshFunctor):
         dbg_report_interval = None
         if self.get_logger().getEffectiveLevel() <= logging.DEBUG:
             dbg_report_interval = 1.0  # seconds
-        if not hasattr(descriptors, "__len__"):
+        if not isinstance(descriptors, Sequence):
             self._log.info("Creating sequence from iterable")
             descriptors_l = []
             rs = [0]*7

@@ -1,0 +1,4 @@
+.im-image-area.col-xs-6.col-md-3
+  .im-details(im-id=item.get('id'))
+    .im-thumbnail
+      img.im-image-thumbnail(src=item.downloadUrl({'contentDisposition': 'inline'}))

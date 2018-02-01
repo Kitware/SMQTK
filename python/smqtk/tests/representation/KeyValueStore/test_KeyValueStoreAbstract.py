@@ -42,6 +42,10 @@ class DummyKVStore (KeyValueStore):
         super(DummyKVStore, self).add(key, value)
         return self
 
+    def add_many(self, d):
+        super(DummyKVStore, self).add_many(d)
+        return self
+
     def has(self, key):
         pass
 

@@ -1,0 +1,36 @@
+.g-user-header
+  .btn-group.pull-right
+    button.g-user-actions-button.btn.btn-default.dropdown-toggle(
+          data-toggle="dropdown", title="Gallery actions")
+          i.icon-picture
+          |  Actions
+          i.icon-down-dir
+    ul.g-item-actions-menu.dropdown-menu.pull-right(role="menu")
+      if iqrEnabled
+        li(role="presentation")
+          a.smqtk-iqr-refine(role="menuitem")
+            i.icon-edit
+            | Refine results
+        li(role="presentation")
+          a.smqtk-iqr-save-adjudications(role="menuitem")
+            i.icon-edit
+            | Save adjudications
+        li(role="presentation")
+          a.smqtk-iqr-quit(role="menuitem")
+            i.icon-edit
+            | Quit IQR session
+      else
+        li(role="presentation")
+          a.smqtk-start-iqr(role="menuitem")
+            i.icon-edit
+            | Start IQR session
+      li.divider(role="presentation")
+      li(role="presentation")
+        a.smqtk-manage-iqr-sessions(role="menuitem")
+          i.icon-ok-squared
+          | Manage IQR sessions
+  .g-body-subtitle(style='height:45px;')
+    | Folder Name
+
+#gallery-images
+a.show-more-items Show more items

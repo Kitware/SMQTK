@@ -16,6 +16,10 @@ class DataFileSet (DataSet):
     """
     File-based data set
 
+    This implementation serializes each stored DataElement to a single file on
+    disk. The only memory overhead for this implementation is the mapping of
+    data element original UUID to the file path on disk.
+
     File sets are initialized with a root directory, under which it finds and
     serializes DataElement instances. DataElement implementations are required
     to be picklable, so this is a valid assumption.

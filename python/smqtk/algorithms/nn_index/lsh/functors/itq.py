@@ -319,11 +319,11 @@ class ItqFunctor (LshFunctor):
             descriptors = descriptors_l
         if len(descriptors) == 0:
             raise ValueError("Descriptor input count is 0")
-        if len(descriptors[0].vector()) < self.bit_length:
-            raise ValueError("Input descriptors have fewer features than "
-                             "requested bit encoding. Hash codes will be "
-                             "smaller than requested due to PCA decomposition "
-                             "result being bound by number of features.")
+#        if len(descriptors[0].vector()) < self.bit_length:
+#            raise ValueError("Input descriptors have fewer features than "
+#                             "requested bit encoding. Hash codes will be "
+#                             "smaller than requested due to PCA decomposition "
+#                             "result being bound by number of features.")
 
         self._log.info("Creating matrix of descriptors for fitting")
         x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,

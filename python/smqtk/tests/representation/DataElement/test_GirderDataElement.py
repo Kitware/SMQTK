@@ -8,7 +8,7 @@ import requests
 from smqtk.exceptions import InvalidUriError
 from smqtk.representation.data_element.girder import (
     GirderDataElement,
-    girder_client
+    girder_client  # None when not available
 )
 from smqtk.tests import TEST_DATA_DIR
 from smqtk.exceptions import ReadOnlyError
@@ -187,7 +187,7 @@ if GirderDataElement.is_usable():
         @mock.patch('girder_client.GirderClient.getFile')
         def test_get_file_model_item_no_exists(self, m_getFile):
             def raise_http_error(*args, **kwargs):
-                raise HttpError(None, None, None, None)
+                raise girder_client.HttpError(None, None, None, None)
             m_getFile.side_effect = raise_http_error
 
             e = GirderDataElement('foo', self.EXAMPLE_GIRDER_API_ROOT)
@@ -246,12 +246,12 @@ if GirderDataElement.is_usable():
             gde.writable = mock.MagicMock(return_value=True)
 
             # Test access denied throws ReadOnlyError
-            gde.gc.uploadFileContents = mock.MagicMock(side_effect=HttpError(401, '', None, None))
+            gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(401, '', None, None))
             nose.tools.assert_raises(ReadOnlyError, gde.set_bytes, b=b'foo')
 
             # Test any other error (like a 500) re-raises the HttpError
-            gde.gc.uploadFileContents = mock.MagicMock(side_effect=HttpError(500, '', None, None))
-            nose.tools.assert_raises(HttpError, gde.set_bytes, b=b'foo')
+            gde.gc.uploadFileContents = mock.MagicMock(side_effect=girder_client.HttpError(500, '', None, None))
+            nose.tools.assert_raises(girder_client.HttpError, gde.set_bytes, b=b'foo')
 
         @mock.patch('girder_client.GirderClient.downloadFile')
         @mock.patch('six.BytesIO.getvalue')

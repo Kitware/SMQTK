@@ -344,9 +344,11 @@ class PsqlConnectionHelper (SmqtkObject):
                             for r in cur:
                                 yield r
 
-            conn.commit()
+            if conn is not None:
+                conn.commit()
         except:
-            conn.rollback()
+            if conn is not None:
+                conn.rollback()
             raise
         finally:
             # conn.__exit__ doesn't close connection, just the transaction

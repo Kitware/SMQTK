@@ -23,6 +23,12 @@ Algorithms
             - Fixed broken large model saving in Python 2, creating
               parity with Python 3.
 
+Descriptor Generator Plugins
+
+    - Fix issue with ``CaffeDescriptorGenerator`` where the GPU would not be
+      appropriately used on a separate thread/process after initialization occurs on
+      the main (or some other) thread.
+
 Utilities
     - Fixed broken large file writing in Python 2, creating parity
       with Python 3.

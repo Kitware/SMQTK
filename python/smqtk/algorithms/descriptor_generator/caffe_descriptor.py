@@ -151,9 +151,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self.__dict__.update(state)
         self._setup_network()
 
-    def _setup_network(self):
+    def _set_caffe_mode(self):
         """
-        Initialize Caffe and the network
+        Set the appropriate Caffe mode on the current thread/process.
         """
         if self.use_gpu:
             self._log.debug("Using GPU")
@@ -162,6 +162,12 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         else:
             self._log.debug("using CPU")
             caffe.set_mode_cpu()
+
+    def _setup_network(self):
+        """
+        Initialize Caffe and the network
+        """
+        self._set_caffe_mode()
 
         # Questions:
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
@@ -343,6 +349,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                      smqtk.representation.DescriptorElement]
 
         """
+        self._set_caffe_mode()
+
         # Create DescriptorElement instances for each data elem.
         #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}

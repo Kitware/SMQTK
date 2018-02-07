@@ -381,6 +381,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                     return make_response_json(
                         "Label(s) are not properly formatted JSON.", 400)
 
+        # Collect optional result probability adjustment values
         #: :type: dict[collections.Hashable, float]
         adjustments = {}
         if adjustment_str is not None:
@@ -391,12 +392,12 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 for label, val in six.iteritems(adjustments):
                     if not isinstance(label, six.string_types):
                         return make_response_json(
-                            "Adjustment label %s is not a string type."
+                            "Adjustment label '%s' is not a string type."
                             % label,
                             400)
                     if not isinstance(val, (int, float)):
                         return make_response_json(
-                            "Adjustment value %s for label %s is not an int "
+                            "Adjustment value %s for label '%s' is not an int "
                             "or float" % (val, label),
                             400)
             except JSON_DECODE_EXCEPTION:
@@ -434,12 +435,13 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         for classifier_label, c_elem in six.iteritems(clfr_map):
             prediction = c_elem.get_classification()
             if adjustments:
-                proba = list(prediction.values())
+                proba_labels = list(prediction.keys())
+                proba = [prediction[k] for k in proba_labels]
                 # Use opposite of adjustments, because we already set the
                 # convention of "higher: precision, lower: recall"
-                adj = [-adjustments.get(label, 0.0) for label in prediction]
+                adj = [-adjustments.get(label, 0.0) for label in proba_labels]
                 adj_proba = prob_utils.adjust_proba(proba, adj)
-                prediction = dict(zip(prediction, adj_proba[0]))
+                prediction = dict(zip(proba_labels, adj_proba[0]))
             c_json[classifier_label] = prediction
 
         return make_response_json('Finished classification.',

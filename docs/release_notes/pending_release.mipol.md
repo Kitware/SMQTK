@@ -29,6 +29,15 @@ Testing
 
 - Added more tests for Flask-based web services.
 
+Utilities
+
+- Added probability utils submodule and initial probability adjustment function.
+
+Web Apps
+
+- Update classifier service to optionally take a new parameter on the classify
+  endpoint to adjust the precision/recall balance of results.
+
 
 Fixes
 -----

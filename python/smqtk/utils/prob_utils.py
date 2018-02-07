@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+from __future__ import (absolute_import, division, print_function)
 
 import numpy as np
 
@@ -57,20 +56,18 @@ def adjust_proba(proba, adj):
     :return: A numpy array with the same shape as `proba` containing the
         adjusted probabilities per-class. The output will sum to one on the
         second axis.
-
     :rtype: np.ndarray
 
     [1] Note: If `proba` is a set of probabilistic predictions of a calibrated
     classifier, it is likely that applying adjustments to the predictions will
     affect accuracy negatively.
     """
-
     adj_proba, adj_vals = np.atleast_2d(proba, adj)
 
     if adj_proba.shape[1] != adj_vals.shape[1]:
         raise ValueError(
             "The dimensions of probabilities and adjustments must be "
-            "compatible.")
+            "compatible (number of columns must be equal).")
 
     if np.any(adj_proba < 0):
         raise ValueError("Probabilities must be at least 0.")

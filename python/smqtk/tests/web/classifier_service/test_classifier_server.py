@@ -1,5 +1,9 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
 import base64
 import json
+import math
 import mock
 import os
 import unittest
@@ -87,7 +91,7 @@ class TestClassifierService (unittest.TestCase):
         results_exp = dict(positive=0.5, negative=0.5)
         label = 'dummy'
         content_type = 'text/plain'
-        element = base64.b64encode(b'TEST ELEMENT')
+        element = base64.b64encode('TEST ELEMENT')
 
         with self.app.test_client() as cli:
             rv = cli.post('/classify', data={
@@ -122,9 +126,56 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 200)
 
+    def test_adjusted_classify(self):
+        results_exp = dict(positive=0.5, negative=0.5)
+        label = 'dummy'
+        content_type = 'text/plain'
+        element = base64.b64encode('TEST ELEMENT')
+
+        with self.app.test_client() as cli:
+            rv = cli.post('/classify', data={
+                'content_type': content_type,
+                'bytes_b64': element,
+                'adjustment': json.dumps({
+                    'positive': 0,
+                }),
+            })
+            self.assertStatus(rv, 200)
+            resp_data = json.loads(rv.data)
+            self.assertMessage(resp_data, "Finished classification.")
+            self.assertDictEqual(resp_data['result'][label], results_exp)
+
+            rv = cli.post('/classify', data={
+                'content_type': content_type,
+                'bytes_b64': element,
+                'adjustment': json.dumps({
+                    'positive': -1,
+                }),
+            })
+            self.assertStatus(rv, 200)
+            resp_data = json.loads(rv.data)
+            self.assertMessage(resp_data, "Finished classification.")
+            result = resp_data['result'][label]
+            self.assertAlmostEqual(result['positive'], 1/(1+math.exp(-1)))
+            self.assertAlmostEqual(result['negative'], 1/(1+math.exp(1)))
+
+            rv = cli.post('/classify', data={
+                'content_type': content_type,
+                'bytes_b64': element,
+                'adjustment': json.dumps({
+                    'positive': 1,
+                }),
+            })
+            self.assertStatus(rv, 200)
+            resp_data = json.loads(rv.data)
+            self.assertMessage(resp_data, "Finished classification.")
+            result = resp_data['result'][label]
+            self.assertAlmostEqual(result['positive'], 1/(1+math.exp(1)))
+            self.assertAlmostEqual(result['negative'], 1/(1+math.exp(-1)))
+
     def test_multiple_classify(self):
         content_type = 'text/plain'
-        element = base64.b64encode(b'TEST ELEMENT')
+        element = base64.b64encode('TEST ELEMENT')
         results_exp = dict(positive=0.5, negative=0.5)
         pickle_data = pickle.dumps(DummyClassifier.from_config({}))
         enc_data = base64.b64encode(pickle_data)
@@ -346,7 +397,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_classify_failures(self):
         content_type = 'text/plain'
-        bytes_b64 = base64.b64encode(b'TEST ELEMENT')
+        bytes_b64 = base64.b64encode('TEST ELEMENT')
         label_invalid_json_failure = '['
         label_valid_json_failure = '{}'
         label_valid_json_list_failure = '["test", {}]'
@@ -576,7 +627,7 @@ class TestClassifierService (unittest.TestCase):
         serialization.
         """
         # Make a simple session with dummy adjudication descriptor elements
-        iqrs = IqrSession(session_uid="0")
+        iqrs = IqrSession(session_uid=str("0"))
         iqr_p1 = DescriptorMemoryElement('test', 0).set_vector([0])
         iqr_n1 = DescriptorMemoryElement('test', 1).set_vector([1])
         iqrs.adjudicate(
@@ -586,8 +637,8 @@ class TestClassifierService (unittest.TestCase):
         test_iqrs_b64 = base64.b64encode(iqrs.get_state_bytes())
         test_label = 'test-label-08976azsdv'
 
-        with mock.patch(STUB_CLASSIFIER_MOD_PATH+".DummySupervisedClassifier._train") \
-                as m_cfier_train:
+        with mock.patch(STUB_CLASSIFIER_MOD_PATH +
+                        ".DummySupervisedClassifier._train") as m_cfier_train:
 
             with self.app.test_client() as cli:
                 rv = cli.post('/iqr_classifier', data={

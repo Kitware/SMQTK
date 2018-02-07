@@ -507,11 +507,6 @@ This sets or updated the results list for the given session.
 Form Args:
     sid
         Session ID.
-    pr_adj
-        [OPTIONAL]
-        Adjustment term for precision-recall balance. This is a float and may
-        be 0.0 to effectively do "nothing" (this is the default if not
-        provided). Positive for more precision, negative for more recall.
 
 Possible error code returns:
     400

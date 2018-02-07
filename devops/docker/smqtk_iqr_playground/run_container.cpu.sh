@@ -14,8 +14,12 @@ CONTAINER_NAME="smqtk_iqr_cpu"
 IQR_GUI_PORT_PUBLISH=5000
 IQR_REST_PORT_PUBLISH=5001
 
+# Replace SOMETHING_HERE by the real version (probably a date)
+IMAGE_VERSION=SOMETHING_HERE
+CPU_SUFFIX=-cpu
+
 IQR_CONTAINER=kitware/smqtk/iqr_playground
-IQR_CONTAINER_VERSION=0.12-cpu
+IQR_CONTAINER_VERSION="${IMAGE_VERSION}${CPU_SUFFIX}"
 
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then
@@ -39,8 +43,8 @@ watch -n1 "
 docker exec ${CONTAINER_NAME} bash -c '[ -d data/image_tiles ] && echo && echo \"Image tiles generated: \$(ls data/image_tiles | wc -l)\"'
 echo
 docker exec ${CONTAINER_NAME} tail \
-    data/logs/runApp.IqrSearchDispatcher.log \
-    data/logs/runApp.IqrService.log \
+    data/logs/compute_many_descriptors.log \
     data/logs/train_itq.log data/logs/compute_hash_codes.log \
-    data/logs/compute_many_descriptors.log
+    data/logs/runApp.IqrSearchDispatcher.log \
+    data/logs/runApp.IqrService.log
 "

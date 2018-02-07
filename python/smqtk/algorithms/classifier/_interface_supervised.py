@@ -1,7 +1,5 @@
 import abc
 
-from smqtk.utils import merge_dict
-
 from ._interface_classifier import Classifier
 
 
@@ -20,7 +18,7 @@ class SupervisedClassifier (Classifier):
         :rtype: bool
         """
 
-    def train(self, class_examples=None, **extra_params):
+    def train(self, class_examples, **extra_params):
         """
         Train the supervised classifier model.
 
@@ -50,22 +48,13 @@ class SupervisedClassifier (Classifier):
                                "training to prevent overwrite of existing "
                                "trained model.")
 
-        if class_examples is None:
-            class_examples = {}
-
-        merged = {}
-        merge_dict(merged, class_examples)
-
-        if not merged:
+        if not class_examples:
             raise ValueError("No class examples were provided.")
-        elif len(merged) < 2:
+        elif len(class_examples) < 2:
             raise ValueError("Need 2 or more classes for training. Given %d."
-                             % len(merged))
+                             % len(class_examples))
 
-        # TODO(paul.tunison): Check that the same values/descriptors are not
-        #   assigned to multiple labels?
-
-        return self._train(merged, **extra_params)
+        return self._train(class_examples, **extra_params)
 
     @abc.abstractmethod
     def _train(self, class_examples, **extra_params):

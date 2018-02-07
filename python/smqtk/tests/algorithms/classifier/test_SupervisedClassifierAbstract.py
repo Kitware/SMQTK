@@ -42,7 +42,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         self.test_classifier.EXPECTED_HAS_MODEL = True
         self.assertRaises(
             RuntimeError,
-            self.test_classifier.train
+            self.test_classifier.train, {}
         )
 
     #
@@ -54,7 +54,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         self.test_classifier.EXPECTED_HAS_MODEL = False
         self.assertRaises(
             ValueError,
-            self.test_classifier.train
+            self.test_classifier.train, {}
         )
 
     def test_train_noModel_oneExample_classExamples(self):
@@ -67,13 +67,6 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             self.test_classifier.train, input_class_examples
         )
 
-    def test_train_noModel_oneExample_kwargs(self):
-        self.test_classifier.EXPECTED_HAS_MODEL = False
-        self.assertRaises(
-            ValueError,
-            self.test_classifier.train, label_1=[0, 1]
-        )
-
     def test_train_noModel_classExamples_only(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
         input_class_examples = {
@@ -82,5 +75,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             'label_3': [8, 9, 10, 11],
             'special symbolLabel +here': [5, 1, 76, 8, 9, 2, 5],
         }
+        # Intentionally not passing DescriptorElements here.
+        # noinspection PyTypeChecker
         m = self.test_classifier.train(class_examples=input_class_examples)
         self.assertEqual(m, input_class_examples)

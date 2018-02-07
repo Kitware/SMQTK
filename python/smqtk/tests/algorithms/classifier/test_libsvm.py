@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+from __future__ import (absolute_import, division, print_function)
 
 import unittest
 
@@ -56,7 +55,7 @@ if LibSvmClassifier.is_usable():
             )
 
             def make_element((i, v)):
-                d = d_factory.new_descriptor(str('test'), i)
+                d = d_factory.new_descriptor('test', i)
                 d.set_vector(v)
                 return d
 
@@ -75,7 +74,7 @@ if LibSvmClassifier.is_usable():
 
             # Test original classifier
             t_v = numpy.random.rand(DIM)
-            t = d_factory.new_descriptor(str('query'), 0)
+            t = d_factory.new_descriptor('query', 0)
             t.set_vector(t_v)
             c_expected = classifier.classify(t, c_factory)
 
@@ -119,7 +118,7 @@ if LibSvmClassifier.is_usable():
             )
 
             def make_element((i, v)):
-                elem = d_factory.new_descriptor(str('test'), i)
+                elem = d_factory.new_descriptor('test', i)
                 elem.set_vector(v)
                 return elem
 

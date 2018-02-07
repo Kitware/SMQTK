@@ -10,6 +10,7 @@ import tempfile
 
 import numpy
 import numpy.linalg
+import scipy.stats
 import six
 from six.moves import cPickle
 
@@ -305,19 +306,14 @@ class LibSvmClassifier (SupervisedClassifier):
         #: :type: dict
         params = deepcopy(self.train_params)
         params.update(param_debug)
-        # Calculating class weights for C-SVC SVM
+        # Calculating class weights if set to C-SVC type SVM
         if '-s' not in params or int(params['-s']) == 0:
-            total_examples = sum(train_group_sizes)
+            # (john.moeller): The weighting should probably be the geometric
+            # mean of the number of examples over the classes divided by the
+            # number of examples for the current class.
+            gmean = scipy.stats.gmean(train_group_sizes)
             for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
-                # weight is the ratio of between number of other-class
-                # examples to the number of examples in this class.
-                # TODO(john.moeller): The weighting should probably be the
-                # TODO(john.moeller): geometric mean of the number of
-                # TODO(john.moeller): examples over the classes divided by
-                # TODO(john.moeller): the number of examples for the
-                # TODO(john.moeller): current class.
-                other_class_examples = total_examples - n
-                w = max(1.0, other_class_examples / float(n))
+                w = gmean / n
                 params['-w' + str(i)] = w
                 self._log.debug("-- class '%s' weight: %s",
                                 self.svm_label_map[i], w)

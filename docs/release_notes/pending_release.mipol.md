@@ -14,6 +14,10 @@ Algorithms
 
 - Update API of classifier to support use of generic extra training parameters.
 
+- Updated libSVM classifier algorithm to weight classes based on the geometric
+  mean of class counts divided by specific class count to more properly handle
+  weighting even if there is class imbalance.
+
 Docker
 
 - Versioning changes to, by default, encode date built instead of arbitrary

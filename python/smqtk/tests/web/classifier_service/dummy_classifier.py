@@ -100,7 +100,7 @@ class DummySupervisedClassifier (SupervisedClassifier):
     def has_model(self):
         pass
 
-    def _train(self, class_examples):
+    def _train(self, class_examples, **extra_params):
         pass
 
     def get_labels(self):

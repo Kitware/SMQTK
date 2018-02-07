@@ -1,3 +1,6 @@
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
 import collections
 from copy import deepcopy
 import ctypes
@@ -75,7 +78,7 @@ class LibSvmClassifier (SupervisedClassifier):
 
         :param train_params: SVM parameters used for training. See libSVM
             documentation for parameter flags and values.
-        :type train_params: dict[str, int|float]
+        :type train_params: dict[basestring, int|float]
 
         :param normalize: Normalize input vectors to training and
             classification methods using ``numpy.linalg.norm``. This may either
@@ -236,7 +239,7 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         return None not in (self.svm_model, self.svm_label_map)
 
-    def _train(self, class_examples=None):
+    def _train(self, class_examples, **extra_params):
         """
         Internal method that trains the classifier implementation.
 
@@ -252,7 +255,11 @@ class LibSvmClassifier (SupervisedClassifier):
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
+        :param extra_params: Dictionary with extra parameters for training.
+        :type extra_params: None | dict[basestring, object]
+
         """
+
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
         CLASS_LABEL_OFFSET = 1
@@ -290,7 +297,7 @@ class LibSvmClassifier (SupervisedClassifier):
             del g, x
 
         assert len(train_labels) == len(train_vectors), \
-            "Count miss-match between parallel labels and descriptor vectors" \
+            "Count mismatch between parallel labels and descriptor vectors" \
             "being sent to libSVM (%d != %d)" \
             % (len(train_labels), len(train_vectors))
 
@@ -302,8 +309,13 @@ class LibSvmClassifier (SupervisedClassifier):
         if '-s' not in params or int(params['-s']) == 0:
             total_examples = sum(train_group_sizes)
             for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
-                # weight is the ratio of between number of other-class examples
-                # to the number of examples in this class.
+                # weight is the ratio of between number of other-class
+                # examples to the number of examples in this class.
+                # TODO(john.moeller): The weighting should probably be the
+                # TODO(john.moeller): geometric mean of the number of
+                # TODO(john.moeller): examples over the classes divided by
+                # TODO(john.moeller): the number of examples for the
+                # TODO(john.moeller): current class.
                 other_class_examples = total_examples - n
                 w = max(1.0, other_class_examples / float(n))
                 params['-w' + str(i)] = w
@@ -326,7 +338,8 @@ class LibSvmClassifier (SupervisedClassifier):
                 cPickle.dumps(self.svm_label_map, -1)
             )
         if self.svm_model_elem and self.svm_model_elem.writable():
-            self._log.debug("saving model to element (%s)", self.svm_model_elem)
+            self._log.debug("saving model to element (%s)",
+                            self.svm_model_elem)
             # LibSvm I/O only works with filepaths, thus the need for an
             # intermediate temporary file.
             fd, fp = tempfile.mkstemp()
@@ -359,10 +372,10 @@ class LibSvmClassifier (SupervisedClassifier):
         Internal method that constructs the label-to-confidence map (dict) for
         a given DescriptorElement.
 
-        The passed descriptor element is guaranteed to have a vector to extract.
-        It is not extracted yet due to the philosophy of waiting until the
-        vector is immediately needed. This moment is thus determined by the
-        implementing algorithm.
+        The passed descriptor element is guaranteed to have a vector to
+        extract. It is not extracted yet due to the philosophy of waiting
+        until the vector is immediately needed. This moment is thus determined
+        by the implementing algorithm.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement

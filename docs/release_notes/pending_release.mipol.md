@@ -12,6 +12,8 @@ Algorithms
   ``_train``. The ``train`` method is not abstract anymore and calls the
   ``_train`` method after the input data consolidation.
 
+- Update API of classifier to support use of generic extra training parameters.
+
 Docker
 
 - Versioning changes to, by default, encode date built instead of arbitrary

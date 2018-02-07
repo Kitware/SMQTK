@@ -24,7 +24,7 @@ class DummySupervisedClassifier (SupervisedClassifier):
     def has_model(self):
         return self.EXPECTED_HAS_MODEL
 
-    def _train(self, class_examples=None):
+    def _train(self, class_examples, **extra_params):
         # Return super-method result in its attempt to unify mappings
         return class_examples
 
@@ -42,7 +42,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         self.test_classifier.EXPECTED_HAS_MODEL = True
         self.assertRaises(
             RuntimeError,
-            self.test_classifier.train
+            self.test_classifier.train, {}
         )
 
     #
@@ -54,7 +54,7 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
         self.test_classifier.EXPECTED_HAS_MODEL = False
         self.assertRaises(
             ValueError,
-            self.test_classifier.train
+            self.test_classifier.train, {}
         )
 
     def test_train_noModel_oneExample_classExamples(self):
@@ -67,51 +67,15 @@ class TestSupervisedClassifierAbstractClass (unittest.TestCase):
             self.test_classifier.train, input_class_examples
         )
 
-    def test_train_noModel_oneExample_kwargs(self):
-        self.test_classifier.EXPECTED_HAS_MODEL = False
-        self.assertRaises(
-            ValueError,
-            self.test_classifier.train, label_1=[0, 1]
-        )
-
     def test_train_noModel_classExamples_only(self):
         self.test_classifier.EXPECTED_HAS_MODEL = False
         input_class_examples = {
             'label_1': [0, 1, 2, 3],
             'label_2': [3, 4, 5, 6],
-        }
-        m = self.test_classifier.train(class_examples=input_class_examples)
-        self.assertEqual(m, input_class_examples)
-
-    def test_train_noModel_kwargs_only(self):
-        self.test_classifier.EXPECTED_HAS_MODEL = False
-
-        e = {
-            'label_1': [0, 1, 2, 3, 4],
-            'label_2': [3, 4, 5, 6, 7],
-        }
-
-        m = self.test_classifier.train(label_1=e['label_1'],
-                                       label_2=e['label_2'])
-        self.assertEqual(m, e)
-
-    def test_train_noModel_combined(self):
-        self.test_classifier.EXPECTED_HAS_MODEL = False
-
-        expected = {
-            'label_1': [0, 1, 2, 3, 4],
-            'label_2': [3, 4, 5, 6, 7],
             'label_3': [8, 9, 10, 11],
             'special symbolLabel +here': [5, 1, 76, 8, 9, 2, 5],
         }
-
-        class_examples = {
-            'label_1': expected['label_1'],
-            'special symbolLabel +here': expected['special symbolLabel +here'],
-        }
-        label_2 = expected['label_2']
-        label_3 = expected['label_3']
-        m = self.test_classifier.train(class_examples=class_examples,
-                                       label_2=label_2,
-                                       label_3=label_3)
-        self.assertEqual(m, expected)
+        # Intentionally not passing DescriptorElements here.
+        # noinspection PyTypeChecker
+        m = self.test_classifier.train(class_examples=input_class_examples)
+        self.assertEqual(m, input_class_examples)

@@ -110,6 +110,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 self.build_index(descriptors)
                 self.descr_cache_fp = descr_cache_filepath
 
+        self.svm_model = None
+
     @staticmethod
     def _gen_w1_weight(num_pos, num_neg):
         """
@@ -331,7 +333,12 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             probs = 1. - probs
 
         rank_pool = dict(zip(self._descr_cache, probs))
+        self.svm_model = svm_model
         return rank_pool
+
+    def get_model(self):
+        return self.svm_model
+
 
 
 RELEVANCY_INDEX_CLASS = LibSvmHikRelevancyIndex

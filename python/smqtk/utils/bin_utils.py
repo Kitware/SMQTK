@@ -4,12 +4,10 @@ import logging
 import logging.handlers
 import os
 import sys
+import threading
 import time
 
-from smqtk.utils import merge_dict
-
-
-__author__ = "paul.tunison@kitware.com"
+from smqtk.utils import merge_dict, SmqtkObject
 
 
 def initialize_logging(logger, stream_level=logging.WARNING,
@@ -138,6 +136,75 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
             sys.exit(0)
 
 
+class ProgressReporter (SmqtkObject):
+
+    def __init__(self, log_func, interval):
+        """
+        Initialize this reporter.
+
+        :param log_func: Logging function to use.
+        :type log_func: (str, *args, **kwds) -> None
+
+        :param interval: Time interval to perform reporting in seconds.
+        :type interval: float
+
+        """
+        self.log_func = log_func
+        self.interval = float(interval)
+
+        self.lock = threading.RLock()
+        self.c_last = self.c = self.c_delta = 0
+        self.t_last = self.t = self.t_delta = self.t_start = 0.0
+
+        self.started = False
+
+    def start(self):
+        """ Start the timing state of this reporter.
+
+        Repeated calls to this method resets the state of the reporting for
+        multiple uses.
+        """
+        with self.lock:
+            self.started = True
+            self.c_last = self.c = self.c_delta = 0
+            self.t_last = self.t = self.t_start = time.time()
+            self.t_delta = 0.0
+
+    def increment_report(self):
+        """
+        Increment counter and time period, starting a new "interval" then
+        reporting the state.
+        """
+        with self.lock:
+            if not self.started:
+                raise RuntimeError("Reporter needs to be started first.")
+            self.c += 1
+            self.t = time.time()
+            self.t_delta = self.t - self.t_last
+            if self.t_delta >= self.interval:
+                self.c_delta = self.c - self.c_last
+                self.report()
+                self.t_last = self.t
+                self.c_last = self.c
+
+    def report(self):
+        """
+        Report the current state.
+
+        Does nothing if no increments have occurred yet.
+        """
+        with self.lock:
+            if not self.started:
+                raise RuntimeError("Reporter needs to be started first.")
+            if self.t_delta > 0 and (self.t - self.t_start) > 0:
+                self.log_func("Loops per second %f (avg %f) "
+                              "(%d current interval / %d total)"
+                              % (self.c_delta / self.t_delta,
+                                 self.c / (self.t - self.t_start),
+                                 self.c_delta,
+                                 self.c))
+
+
 def report_progress(log, state, interval):
     """
     Loop progress reporting function that logs (when in debug) loops per
@@ -199,7 +266,7 @@ def basic_cli_parser(description=None, configuration_group=True):
     :type description: str
 
     :param configuration_group: Whether or not to include the configuration
-        options.
+        group options.
     :type configuration_group: bool
 
     :return: Argument parser instance with basic options.

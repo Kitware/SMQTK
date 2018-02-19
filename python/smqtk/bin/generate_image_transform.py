@@ -256,7 +256,8 @@ def generate_image_transformations(image_path,
             save_image(c, [tag, str(l), "q_{:d}_{:d}".format(i, j)])
 
     if crop_tile_shape and crop_tile_shape[0] > 0 and crop_tile_shape[1] > 0:
-        log.info("Cropping %dx%d pixel tiles from images")
+        log.info("Cropping %dx%d pixel tiles from images"
+                 % tuple(crop_tile_shape))
         tag = "crop_tiles"
         t_width = crop_tile_shape[0]
         t_height = crop_tile_shape[1]

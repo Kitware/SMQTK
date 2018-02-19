@@ -214,7 +214,7 @@ class DataElement (SmqtkRepresentation, plugin.Pluggable):
         :rtype: collections.Hashable
 
         """
-        # TODO{paul.tunison): Change to SHA512.
+        # TODO(paul.tunison): Change to SHA512.
         return self.sha1()
 
     def to_buffered_reader(self):

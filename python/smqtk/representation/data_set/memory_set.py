@@ -20,6 +20,14 @@ from smqtk.utils import merge_dict, plugin, SimpleTimer
 class DataMemorySet (DataSet):
     """
     In-memory DataSet implementation.
+
+    This implementation maintains an in-memory mapping of stored DataElement
+    original UUID to the DataElement instance.
+
+    An optional writable DataElement may be provided to which the current set's
+    map state is cached. This cache is updated every time new data elements are
+    added to this set..
+
     """
 
     @classmethod
@@ -150,7 +158,8 @@ class DataMemorySet (DataSet):
                                     % self.cache_element)
 
             with self._element_map_lock:
-                with SimpleTimer("Caching memory data-set table", self._log.debug):
+                with SimpleTimer("Caching memory data-set table",
+                                 self._log.debug):
                     self.cache_element.set_bytes(
                         pickle.dumps(self._element_map, self.pickle_protocol)
                     )

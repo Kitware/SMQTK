@@ -59,14 +59,14 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: __generator[collections.Hashable]
+        :rtype: collections.Iterator[collections.Hashable]
         """
 
     def values(self):
         """
-        :return: Iterator over values in this store. Values are not guarenteed
+        :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: __generator[object]
+        :rtype: collections.Iterator[object]
         """
         for k in self.keys():
             yield self.get(k)
@@ -98,7 +98,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         *NOTE:* **Implementing sub-classes should call this super-method. This
         super method should not be considered a critical section for thread
-        safety.**
+        safety unless ``is_read_only`` is not thread-safe.**
 
         :param key: Key for the value. Must be hashable.
         :type key: collections.Hashable
@@ -116,6 +116,20 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
             raise ValueError("Key is not a hashable type.")
         if self.is_read_only():
             raise ReadOnlyError("Cannot add to read-only instance %s." % self)
+
+    @abc.abstractmethod
+    def add_many(self, d):
+        """
+        Add multiple key-value pairs at a time into this store as represented in
+        the provided dictionary `d`.
+
+        :param d: Dictionary of key-value pairs to add to this store.
+        :type d: dict[collections.Hashable, object]
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
 
     @abc.abstractmethod
     def get(self, key, default=NO_DEFAULT_VALUE):
@@ -140,6 +154,8 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         :rtype: object
 
         """
+
+    # TODO: get_many(self, keys, default=NO_DEFAULT_VALUE)
 
     @abc.abstractmethod
     def clear(self):

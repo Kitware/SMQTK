@@ -1,0 +1,28 @@
+{
+    "hash2uuid_kv_store": {
+        "MemoryKeyValueStore": {
+            "cache_element": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "models/lsh_hash2uuids_kvstore.pickle",
+                    "readonly": true
+                },
+                "type": "DataFileElement"
+            }
+        },
+        "type": "MemoryKeyValueStore"
+    },
+    "itq_bit_length": 256,
+    "sklearn_balltree": {
+        "cache_element": {
+            "DataFileElement": {
+                "explicit_mimetype": null,
+                "filepath": "models/hash_index_btree",
+                "readonly": false
+            },
+            "type": "DataFileElement"
+        },
+        "leaf_size": 1000,
+        "random_seed": 0
+    }
+}

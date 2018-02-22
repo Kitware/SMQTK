@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import os
 import tempfile
 import unittest
@@ -308,5 +309,5 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         i = MemoryDescriptorIndex()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
-        ntools.assert_equal(set(i.iteritems()),
+        ntools.assert_equal(set(i.items()),
                             set((d.uuid(), d) for d in descrs))

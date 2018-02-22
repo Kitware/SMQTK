@@ -6,13 +6,13 @@ import multiprocessing
 import multiprocessing.process
 import multiprocessing.queues
 import multiprocessing.synchronize
-import Queue
 import sys
 import threading
 import traceback
 
 from smqtk.utils import SmqtkObject
-from six.moves import range
+from six.moves import range, zip
+from six.moves import queue
 
 
 def parallel_map(work_func, *sequences, **kwargs):
@@ -147,7 +147,7 @@ def parallel_map(work_func, *sequences, **kwargs):
         queue_t = multiprocessing.queues.Queue
         worker_t = _WorkerProcess
     else:
-        queue_t = Queue.Queue
+        queue_t = queue.Queue
         worker_t = _WorkerThread
 
     queue_work = queue_t(int(cores * buffer_factor))
@@ -247,7 +247,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
             "address": hex(id(self)),
         }
 
-    def next(self):
+    def __next__(self):
         try:
             if not self.has_started_workers:
                 self.start_workers()
@@ -286,9 +286,11 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
             raise StopIteration()
 
-        except:
+        except Exception:
             self.stop()
             raise
+
+    next = __next__
 
     def start_workers(self):
         """
@@ -353,7 +355,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
         while not self.stopped():
             try:
                 return self.results_queue.get(timeout=self.heart_beat)
-            except Queue.Empty:
+            except queue.Empty:
                 pass
         raise StopIteration()
 
@@ -426,15 +428,15 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self._log.log(1, "Starting")
 
         if self.do_fill:
-            izip = itertools.izip_longest
-            izip_kwds = {'fillvalue': self.fill_value}
+            _zip = itertools.izip_longest
+            _zip_kwds = {'fillvalue': self.fill_value}
         else:
-            izip = itertools.izip
-            izip_kwds = {}
+            _zip = zip
+            _zip_kwds = {}
 
         try:
             r = 0
-            for args in izip(*self.arg_sequences, **izip_kwds):
+            for args in _zip(*self.arg_sequences, **_zip_kwds):
                 self.q_put((r, args))
                 r += 1
 
@@ -472,7 +474,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
             try:
                 self.q.put(val, timeout=self.heart_beat)
                 put = True
-            except Queue.Full:
+            except queue.Full:
                 pass
 
 
@@ -534,7 +536,7 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        except Exception, ex:
+        except Exception as ex:
             self._log.warn("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
@@ -552,7 +554,7 @@ class _Worker (SmqtkObject):
         while not self.stopped():
             try:
                 return self.in_q.get(timeout=self.heart_beat)
-            except Queue.Empty:
+            except queue.Empty:
                 pass
 
     def q_put(self, val):
@@ -568,7 +570,7 @@ class _Worker (SmqtkObject):
             try:
                 self.out_q.put(val, timeout=self.heart_beat)
                 put = True
-            except Queue.Full:
+            except queue.Full:
                 pass
 
 

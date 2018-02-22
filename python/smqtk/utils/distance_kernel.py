@@ -8,6 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import logging
 import numpy as np
+import six
 from numpy.core.multiarray import ndarray  # for shortening doc strings
 
 from smqtk.utils import ReadWriteLock
@@ -44,21 +45,41 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     :rtype: numpy.core.multiarray.ndarray
 
     """
-    if hasattr(dist_func, 'im_func'):
+    modname = getattr(dist_func, '__module__', None)
+
+    def get_funcname(func):
+        if six.PY2:
+            return getattr(func, 'func_name', None)
+        else:
+            return getattr(func, '__name__', None)
+
+    def get_func(method):
+        if six.PY2:
+            return getattr(method, 'im_func', None)
+        else:
+            return getattr(method, '__func__', None)
+
+    def get_classname(method):
+        if six.PY2:
+            return method.im_class.__name__
+        else:
+            return method.__class__.__name__
+
+    if get_func(dist_func):
         # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.im_class.__name__,
-                                  dist_func.im_func.func_name])
-    elif hasattr(dist_func, 'func_name'):
+        # Case where the input is a method
+        distance_name = '.'.join([modname,
+                                  get_classname(dist_func),
+                                  get_funcname(get_func(dist_func))])
+    elif get_funcname(dist_func):
         # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.func_name])
-    elif hasattr(dist_func, 'py_func') \
-            and hasattr(dist_func.py_func, 'func_name'):
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.py_func.func_name])
+        # Case where the input is a regular function
+        distance_name = '.'.join([modname, get_funcname(dist_func)])
+    elif hasattr(dist_func, 'py_func') and get_funcname(dist_func.py_func):
+        distance_name = '.'.join([modname, get_funcname(dist_func.py_func)])
     else:
-        distance_name = "<unknown>"
+        distance_name = "<unknown>"  # NOQA
+
     log = logging.getLogger(__name__)
 
     if m.ndim == 1:
@@ -486,7 +507,7 @@ class DistanceKernel (object):
             with SimpleTimer("Checking inputs", self._log.debug):
                 try:
                     clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
-                except Exception, ex:
+                except Exception as ex:
                     raise ValueError("Not all clip IDs could be used as ints: "
                                      "%s" % str(ex))
 

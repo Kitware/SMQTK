@@ -5,6 +5,7 @@ import glob
 import json
 import logging
 import argparse
+import six
 import os.path as osp
 
 from smqtk import algorithms
@@ -154,12 +155,12 @@ def main():
     )
 
     try:
-        nn_index.build_index(data2descriptor.itervalues())
+        nn_index.build_index(six.itervalues(data2descriptor))
     except RuntimeError:
         # Already built model, so skipping this step
         pass
 
-    rel_index.build_index(data2descriptor.itervalues())
+    rel_index.build_index(six.itervalues(data2descriptor))
 
 
 if __name__ == "__main__":

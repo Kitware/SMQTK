@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import mock
 import nose.tools as ntools
 import random

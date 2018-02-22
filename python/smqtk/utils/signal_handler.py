@@ -164,7 +164,7 @@ class SignalHandler(object):
         :rtype: list of int
 
         """
-        return self.__prev_handlers.keys()
+        return list(self.__prev_handlers.keys())
 
     def reset_signal(self, signum):
         """

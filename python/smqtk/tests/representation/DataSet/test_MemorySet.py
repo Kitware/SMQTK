@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import nose.tools as ntools
 import pickle
 import unittest

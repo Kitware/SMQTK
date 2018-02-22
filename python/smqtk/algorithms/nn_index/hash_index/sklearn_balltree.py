@@ -189,11 +189,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
         # BallTree can't take iterables, so catching input in a set of tuples
         # first in order to cull out duplicates (BT will index duplicate values
         # happily).
-        hash_tuple_set = set(map(lambda v: tuple(v), hashes))
+        hash_tuple_set = set([tuple(v) for v in hashes])
         if not hash_tuple_set:
             raise ValueError("No hashes given.")
         # Convert tuples back into numpy arrays for BallTree constructor.
-        hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
+        hash_vector_list = list([numpy.array(t) for t in hash_tuple_set])
         # If distance metric ever changes, need to update save/load model
         # functions.
         self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')

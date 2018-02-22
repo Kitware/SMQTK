@@ -12,7 +12,7 @@ import PIL.Image
 import PIL.ImageFile
 import six
 # noinspection PyUnresolvedReferences
-from six.moves import range
+from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)

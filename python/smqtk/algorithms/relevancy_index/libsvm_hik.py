@@ -11,6 +11,7 @@ from smqtk.utils.distance_kernel import (
 from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
 from six.moves import range, zip
+import six
 
 try:
     import svm
@@ -241,7 +242,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             if m_val in m_set:
                                 del m_set[m_val]
                         m_val = min(m_set)
-                for i in m_set.itervalues():
+                for i in six.itervalues(m_set):
                     neg_autoselect.add(self._descr_cache[i])
             # Remove any positive examples from auto-selected results
             neg_autoselect.difference_update(pos)

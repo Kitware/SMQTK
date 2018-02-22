@@ -169,6 +169,14 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
                                       smqtk.representation.DescriptorElement)]
         """
 
+    def keys(self):
+        """ alias for iterkeys """
+        return self.iterkeys()
+
+    def items(self):
+        """ alias for iteritems """
+        return self.iteritems()
+
 
 def get_descriptor_index_impls(reload_modules=False):
     """

@@ -155,7 +155,7 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
 
         """
         m = (None, 0.)
-        for i in self.get_classification().iteritems():
+        for i in self.get_classification().items():
             if i[1] > m[1]:
                 m = i
         if m[0] is None:

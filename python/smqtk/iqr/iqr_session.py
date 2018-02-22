@@ -166,7 +166,7 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             if self.results:
-                return tuple(sorted(self.results.iteritems(),
+                return tuple(sorted(self.results.items(),
                                     key=lambda p: p[1],
                                     reverse=True))
             return None

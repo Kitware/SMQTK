@@ -4,7 +4,7 @@ from smqtk.representation import DescriptorIndex, get_data_element_impls
 from smqtk.utils import merge_dict, plugin, SimpleTimer
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

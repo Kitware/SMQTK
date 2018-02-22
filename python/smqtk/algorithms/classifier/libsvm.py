@@ -1,4 +1,4 @@
-import cPickle
+from six.moves import cPickle
 import collections
 from copy import deepcopy
 import ctypes

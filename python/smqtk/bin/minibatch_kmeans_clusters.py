@@ -7,7 +7,7 @@ By the nature of Scikit-learn's MiniBatchKMeans implementation, euclidean
 distance is used to measure distance between descriptors.
 """
 
-import cPickle
+from six.moves import cPickle
 import logging
 import os
 

@@ -14,6 +14,7 @@ from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
 from smqtk.utils.parallel import parallel_map
 from smqtk.utils.bin_utils import report_progress
+from six.moves import range
 
 
 def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
@@ -80,11 +81,11 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                                                                 m[i + 1:, :])
             # Using threading for in-place modification
             s = [0] * 7
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 # Compute col/row wise distances
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side-1):
@@ -96,17 +97,17 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
             # Using threading for in-place modification
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
                 report_progress(log.debug, s, 1.)
 
@@ -125,11 +126,11 @@ def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
     k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
     if row_wise:
         # row wise
-        for i in xrange(m1.shape[0]):
+        for i in range(m1.shape[0]):
             k[i, :] = dist_func(m1[i], m2)
     else:
-        for i in xrange(m1.shape[0]):
-            for j in xrange(m2.shape[0]):
+        for i in range(m1.shape[0]):
+            for j in range(m2.shape[0]):
                 k[i, j] = dist_func(m1[i], m2[j])
     return k
 

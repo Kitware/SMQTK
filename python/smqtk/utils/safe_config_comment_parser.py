@@ -13,7 +13,8 @@ from ConfigParser import (
     NoSectionError,
     NoOptionError,
 )
-from StringIO import StringIO
+
+from six.moves import StringIO
 
 
 class SafeConfigCommentParser (SafeConfigParser, object):

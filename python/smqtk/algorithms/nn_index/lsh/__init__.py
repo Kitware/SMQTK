@@ -22,7 +22,7 @@ from smqtk.utils.bin_utils import report_progress
 from smqtk.utils import merge_dict
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

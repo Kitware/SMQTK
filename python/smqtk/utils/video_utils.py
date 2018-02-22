@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import time
+import six
 
 from smqtk.utils import file_utils, string_utils
 
@@ -259,7 +260,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         # Mapping of frame to (result, output_filepath)
         #: :type: dict of (int, (AsyncResult, str))
         rmap = {}
-        for f, ofp in frames_to_process.iteritems():
+        for f, ofp in six.iteritems(frames_to_process):
             tfp = os.path.join(tmp_extraction_dir,
                                filename_for_frame(f, output_image_ext))
             t = f / video_md.fps
@@ -271,7 +272,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         p.close()
         # Check for failures
         extracted_frames = []
-        for f, ofp in frames_to_process.iteritems():
+        for f, ofp in six.iteritems(frames_to_process):
             r, tfp = rmap[f]
             r.get()  # wait for finish
             if not os.path.isfile(tfp):

@@ -1,16 +1,17 @@
 import abc
 import inspect
 import types
+import six
 
 from smqtk.utils import merge_dict
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Configurable (object):
     """
     Interface for objects that should be configurable via a configuration
     dictionary consisting of JSON types.
     """
-    __metaclass__ = abc.ABCMeta
 
     @classmethod
     def get_default_config(cls):

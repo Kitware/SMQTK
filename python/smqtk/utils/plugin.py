@@ -53,11 +53,11 @@ class NotUsableError (Exception):
     """
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Pluggable (object):
     """
     Interface for classes that have plugin implementations
     """
-    __metaclass__ = abc.ABCMeta
 
     @classmethod
     @abc.abstractmethod

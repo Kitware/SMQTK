@@ -2,7 +2,7 @@ import logging
 import multiprocessing
 
 import six
-from six.moves import cPickle as pickle
+from six.moves from six.moves import cPickle as pickle
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE

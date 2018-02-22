@@ -4,11 +4,7 @@ import unittest
 import nose.tools as NT
 import numpy
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six.moves import StringIO
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation.data_element.memory_element import DataMemoryElement

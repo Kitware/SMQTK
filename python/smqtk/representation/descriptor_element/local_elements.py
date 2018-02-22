@@ -5,11 +5,7 @@ from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six.moves import StringIO
 
 
 class DescriptorMemoryElement (DescriptorElement):

@@ -7,7 +7,7 @@ from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.utils.plugin import make_config, from_plugin_config, to_plugin_config
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

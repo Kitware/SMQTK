@@ -116,6 +116,13 @@ def parallel_map(work_func, *sequences, **kwargs):
         iterable when iterated.
     :rtype: ParallelResultsIterator
 
+
+    Example
+    -------
+    >>> import math
+    >>> result_iter = parallel_map(math.factorial, range(10), use_multiprocessing=True)
+    >>> sorted(result_iter)
+    [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
     """
     # kwargs
     cores = kwargs.get('cores', None)
@@ -143,7 +150,7 @@ def parallel_map(work_func, *sequences, **kwargs):
 
     # Choose parallel types
     if use_multiprocessing:
-        queue_t = multiprocessing.queues.Queue
+        queue_t = multiprocessing.Queue
         worker_t = _WorkerProcess
     else:
         queue_t = queue.Queue
@@ -259,8 +266,10 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
                     self._log.log(1, 'Found terminal')
                     self.found_terminals += 1
                 elif isinstance(packet[0], Exception):
-                    self._log.warn('Received exception: %s\n%s', *packet)
-                    raise packet
+                    ex, formatted_exc = packet
+                    self._log.warn('Received exception: {}\n{}'.format(
+                            ex, formatted_exc))
+                    raise ex
                 else:
                     i, result = packet
                     if self.ordered:
@@ -406,7 +415,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self.do_fill = do_fill
         self.fill_value = fill_value
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
         # self.daemon = True
 
@@ -418,10 +427,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         )
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         self._log.log(1, "Starting")
@@ -500,7 +509,7 @@ class _Worker (SmqtkObject):
         self.heart_beat = heart_beat
         self._log.log(1, "Making process worker (%d, %s, %s)", i, in_q, out_q)
 
-        self._stop = self._make_event()
+        self._stop_event = self._make_event()
 
     @property
     def _log(self):
@@ -512,10 +521,10 @@ class _Worker (SmqtkObject):
         raise NotImplementedError()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.is_set()
+        return self._stop_event.is_set()
 
     def run(self):
         try:

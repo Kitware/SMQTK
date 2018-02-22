@@ -1,4 +1,4 @@
-from six.moves import StringIO
+from six import BytesIO
 
 import numpy
 from sklearn.neighbors import BallTree, DistanceMetric
@@ -136,7 +136,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             #   hamming distance (see ``build_index``).
             s = self.bt.__getstate__()
             tail = s[4:11]
-            buff = StringIO()
+            buff = BytesIO()
             numpy.savez(buff,
                         data_arr=s[0],
                         idx_array_arr=s[1],
@@ -154,7 +154,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
         """
         if self.cache_element and not self.cache_element.is_empty():
             self._log.debug("Loading model from cache: %s", self.cache_element)
-            buff = StringIO(self.cache_element.get_bytes())
+            buff = BytesIO(self.cache_element.get_bytes())
             with numpy.load(buff) as cache:
                 tail = tuple(cache['tail'])
                 s = (cache['data_arr'], cache['idx_array_arr'],

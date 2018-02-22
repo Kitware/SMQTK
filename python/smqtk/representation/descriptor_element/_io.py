@@ -206,13 +206,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self.q = q
         self.descr_elements = descr_elements
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         try:
@@ -307,13 +307,13 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         self.out_q = out_q
         self.q_put_interval = q_put_interval
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         try:

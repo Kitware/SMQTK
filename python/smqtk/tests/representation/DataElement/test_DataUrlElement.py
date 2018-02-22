@@ -39,14 +39,14 @@ class TestDataUrlElement (unittest.TestCase):
     @unittest.skipUnless(internet_available, "Internet not accessible")
     def test_new_from_internet(self):
         e = DataUrlElement(self.EXAMPLE_URL)
-        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH).read())
+        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH, 'rb').read())
 
     @unittest.skipUnless(internet_available, "Internet not accessible")
     def test_new_add_missing_scheme(self):
         # Construct without scheme header, should add http://
         e = DataUrlElement(self.EXAMPLE_URL[8:])
         ntools.assert_equal(e._url, 'http://' + self.EXAMPLE_URL[8:])
-        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH).read())
+        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH, 'rb').read())
 
     def test_new_invalid_url(self):
         ntools.assert_raises(
@@ -69,7 +69,8 @@ class TestDataUrlElement (unittest.TestCase):
         inst1 = DataUrlElement.from_config(default_config)
         ntools.assert_equal(default_config, inst1.get_config())
         ntools.assert_equal(inst1._url, self.EXAMPLE_URL)
-        ntools.assert_equal(inst1.get_bytes(), open(self.EXAMPLE_PTH).read())
+        ntools.assert_equal(inst1.get_bytes(),
+                            open(self.EXAMPLE_PTH, 'rb').read())
 
         inst2 = DataUrlElement.from_config(inst1.get_config())
         ntools.assert_equal(inst1, inst2)
@@ -77,7 +78,7 @@ class TestDataUrlElement (unittest.TestCase):
     @unittest.skipUnless(internet_available, "Internet not accessible")
     def test_from_uri(self):
         e = DataUrlElement.from_uri(self.EXAMPLE_URL)
-        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH).read())
+        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH, 'rb').read())
         ntools.assert_equal(e.content_type(), 'image/png')
 
     def test_from_uri_no_scheme(self):
@@ -111,7 +112,7 @@ class TestDataUrlElement (unittest.TestCase):
     @unittest.skipUnless(internet_available, "Internet not accessible")
     def test_get_bytes_from_url(self):
         e = DataUrlElement(self.EXAMPLE_URL)
-        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH).read())
+        ntools.assert_equal(e.get_bytes(), open(self.EXAMPLE_PTH, 'rb').read())
         ntools.assert_equal(e.content_type(), 'image/png')
 
     @mock.patch('smqtk.representation.data_element.url_element.requests.get')

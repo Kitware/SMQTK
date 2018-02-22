@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import pickle
 import unittest
+import six
 
 import mock
 import nose.tools
@@ -52,7 +53,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
     def test_from_config_with_cache_element(self):
         # Pickled dictionary with a known entry
         expected_table = {'some_key': 'some_value'}
-        empty_dict_pickle = "(dp1\nS'some_key'\np2\nS'some_value'\np3\ns."
+        empty_dict_pickle = six.b("(dp1\nS'some_key'\np2\nS'some_value'\np3\ns.")
 
         # Test construction with memory data element.
         config = {'cache_element': {
@@ -126,10 +127,10 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
     def test_get_config_mem_cache_elem(self):
         s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement('someBytes', 'text/plain', False)
+        s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain', False)
         expected_config = {'cache_element': {
             "DataMemoryElement": {
-                'bytes': 'someBytes',
+                'bytes': six.b('someBytes'),
                 'content_type': 'text/plain',
                 'readonly': False,
             },
@@ -245,7 +246,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         # No caching means there should be nothign there yet
         nose.tools.assert_equal(
             c.get_bytes(),
-            ""
+            six.b("")
         )
 
         s.add('foo', None, True)
@@ -287,7 +288,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         s = MemoryKeyValueStore(c)
         self.assertEqual(s._table, {})
-        self.assertEqual(c.get_bytes(), "")
+        self.assertEqual(c.get_bytes(), six.b(""))
 
         s.add_many(d)
         self.assertEqual(s._table, d)

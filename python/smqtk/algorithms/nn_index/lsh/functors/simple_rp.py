@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 
 import numpy as np
@@ -9,11 +10,11 @@ from smqtk.utils.bin_utils import report_progress
 
 class SimpleRPFunctor (LshFunctor):
     '''
-    This class is meant purely as a baseline comparison for other 
-    LshFunctors and NNIndex plugins. It is not meant to be used in 
+    This class is meant purely as a baseline comparison for other
+    LshFunctors and NNIndex plugins. It is not meant to be used in
     production, as it is unlikely to produce a quality index.
     '''
-    
+
     @classmethod
     def is_usable(cls):
         return True

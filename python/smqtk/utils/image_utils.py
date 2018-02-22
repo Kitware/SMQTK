@@ -15,6 +15,9 @@ def is_loadable_image(data_element):
     :return: Whether or not the image is loadable
     :rtype: bool
 
+    Example:
+    >>>
+
     """
     log = logging.getLogger(__name__)
 

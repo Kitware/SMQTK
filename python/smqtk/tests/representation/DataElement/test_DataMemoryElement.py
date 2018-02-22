@@ -1,6 +1,7 @@
 import nose.tools as ntools
 import random
 import unittest
+import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -15,7 +16,7 @@ class TestDataMemoryElement (unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.EXPECTED_BYTES = 'hello world'
+        cls.EXPECTED_BYTES = six.b('hello world')
         cls.EXPECTED_CT = 'text/plain'
 
         cls.VALID_BASE64 = 'aGVsbG8gd29ybGQ='
@@ -64,9 +65,9 @@ class TestDataMemoryElement (unittest.TestCase):
 
     def test_from_base64_empty_string(self):
         # Should translate to empty byte string
-        e = DataMemoryElement.from_base64('', None)
+        e = DataMemoryElement.from_base64(six.b(''), None)
         ntools.assert_is_instance(e, DataMemoryElement)
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
 
     #
     # From URI tests
@@ -84,7 +85,7 @@ class TestDataMemoryElement (unittest.TestCase):
         e = DataMemoryElement.from_uri('')
         ntools.assert_is_instance(e, DataMemoryElement)
         # no base64 data, which should decode to no bytes
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
 
     def test_from_uri_random_string(self):
         rs = random_string(32)
@@ -98,7 +99,7 @@ class TestDataMemoryElement (unittest.TestCase):
         e = DataMemoryElement.from_uri('base64://')
         ntools.assert_is_instance(e, DataMemoryElement)
         # no base64 data, which should decode to no bytes
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
 
     def test_from_uri_base64_header_invalid_base64(self):
         # URI base64 data contains invalid alphabet characters
@@ -136,7 +137,7 @@ class TestDataMemoryElement (unittest.TestCase):
         e = DataMemoryElement.from_uri('data:text/plain;base64,')
         ntools.assert_is_instance(e, DataMemoryElement)
         # no base64 data, which should decode to no bytes
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
         ntools.assert_equal(e.content_type(), 'text/plain')
 
     def test_from_uri_data_format_invalid_base64(self):
@@ -165,11 +166,11 @@ class TestDataMemoryElement (unittest.TestCase):
 
     def test_get_bytes_none_bytes(self):
         e = DataMemoryElement()
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
 
     def test_get_bytes_empty_bytes(self):
         e = DataMemoryElement('')
-        ntools.assert_equal(e.get_bytes(), '')
+        ntools.assert_equal(e.get_bytes(), six.b(''))
 
     def test_get_bytes_some_bytes(self):
         expected_bytes = 'some bytes'
@@ -190,16 +191,16 @@ class TestDataMemoryElement (unittest.TestCase):
         ntools.assert_true(e.writable())
 
     def test_set_bytes(self):
-        bytes_a = 'test bytes first set'
-        bytes_b = 'the second set of bytes'
+        bytes_a = six.b('test bytes first set')
+        bytes_b = six.b('the second set of bytes')
         e = DataMemoryElement(bytes_a)
         ntools.assert_equal(e.get_bytes(), bytes_a)
         e.set_bytes(bytes_b)
         ntools.assert_equal(e.get_bytes(), bytes_b)
 
     def test_set_bytes_when_readonly(self):
-        bytes_a = 'test bytes first set'
-        bytes_b = 'the second set of bytes'
+        bytes_a = six.b('test bytes first set')
+        bytes_b = six.b('the second set of bytes')
         e = DataMemoryElement(bytes_a, readonly=True)
         ntools.assert_equal(e.get_bytes(), bytes_a)
         ntools.assert_raises(

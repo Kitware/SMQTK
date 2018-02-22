@@ -1,6 +1,4 @@
 from __future__ import division, print_function
-import os
-import tempfile
 import unittest
 
 import nose.tools as ntools
@@ -11,11 +9,7 @@ from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import merge_dict
-
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
+from six.moves import cPickle as pickle
 
 
 RAND_UUID = 0
@@ -265,7 +259,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         ntools.assert_equal(pickle.loads(i.cache_element.get_bytes()),
                             expected_table)
 
-        rm_d = expected_table.values()[0]
+        rm_d = list(expected_table.values())[0]
         del expected_table[rm_d.uuid()]
         i.remove_descriptor(rm_d.uuid())
         ntools.assert_equal(pickle.loads(i.cache_element.get_bytes()),

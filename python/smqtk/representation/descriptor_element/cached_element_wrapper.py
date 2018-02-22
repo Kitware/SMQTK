@@ -1,5 +1,6 @@
 import threading
 import time
+import six
 
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
@@ -54,7 +55,7 @@ class CachingDescriptorElement (DescriptorElement):
 
             # Construct config block DescriptorElementFactory wants
             c_def = {"type": None}
-            for label, de_cls in de_impls.iteritems():
+            for label, de_cls in six.iteritems(de_impls):
                 # noinspection PyUnresolvedReferences
                 c_def[label] = de_cls.get_default_config()
             c['wrapped_element_factory'] = c_def

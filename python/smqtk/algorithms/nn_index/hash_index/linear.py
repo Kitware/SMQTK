@@ -1,6 +1,7 @@
 import heapq
 
 from six.moves import StringIO
+from six.moves import map
 
 import numpy
 
@@ -178,7 +179,7 @@ class LinearHashIndex (HashIndex):
             heapq.nsmallest(n, self.index,
                             lambda e: hamming_distance(h_int, e)
                             )
-        distances = map(hamming_distance, near_codes,
-                        [h_int] * len(near_codes))
+        distances = list(map(hamming_distance, near_codes,
+                             [h_int] * len(near_codes)))
         return [int_to_bit_vector_large(c, bits) for c in near_codes], \
                [d / float(bits) for d in distances]

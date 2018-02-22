@@ -399,7 +399,7 @@ class FeatureMemoryMap (object):
 
         """
         with self._map_lock:
-            return self._feature2memory.keys()
+            return list(self._feature2memory.keys())
 
     def initialize(self, feature_type, id_vector, bg_clip_ids_vector,
                    feature_mat, kernel_mat, rw_lock=None):

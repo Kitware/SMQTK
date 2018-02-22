@@ -256,7 +256,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     d_fitted = 0
 
     log.info("Getting index keys (shuffled)")
-    index_keys = sorted(index.iterkeys())
+    index_keys = sorted(six.iterkeys(index))
     numpy.random.seed(mbkm.random_state)
     numpy.random.shuffle(index_keys)
 
@@ -320,7 +320,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
                                       name="uv-collector")
     # TODO: Batch predict call inputs to something larger than one at a time.
     d_uc_iter = parallel.parallel_map(
-        lambda (u, v): (u, mbkm.predict(v[numpy.newaxis, :])[0]),
+        lambda u_v: (u_v[0], mbkm.predict(u_v[1][numpy.newaxis, :])[0]),
         d_uv_iter,
         use_multiprocessing=False,
         name="uc-collector")

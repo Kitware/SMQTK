@@ -48,7 +48,7 @@ class PreviewCache (object):
         """
         Cleanup after ourselves.
         """
-        for fp in self._preview_cache.itervalues():
+        for fp in self._preview_cache.values():
             os.remove(fp)
 
     def get_preview_image(self, elem):

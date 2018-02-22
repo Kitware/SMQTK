@@ -1,10 +1,12 @@
 import logging
 import multiprocessing
 import multiprocessing.queues
-import Queue
 import sys
 import threading
 import time
+
+from six.moves import queue
+from six.moves import next
 
 import numpy
 
@@ -82,7 +84,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     # Create/check matrix
     if mat is None:
-        sample = descr_elements.__iter__().next()
+        sample = next(iter(descr_elements))
         sample_v = sample.vector()
         shp = (len(descr_elements),
                sample_v.size)
@@ -98,7 +100,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         queue_t = multiprocessing.Queue
         worker_t = _ElemVectorExtractorProcess
     else:
-        queue_t = Queue.Queue
+        queue_t = queue.Queue
         worker_t = _ElemVectorExtractorThread
 
         assert thread_q_put_interval >= 0, \
@@ -343,6 +345,6 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
             try:
                 self.out_q.put(val, timeout=self.q_put_interval)
                 put = True
-            except Queue.Full:
+            except queue.Full:
                 # self._log.debug("Skipping q.put Full error")
                 pass

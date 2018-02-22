@@ -1,5 +1,5 @@
 import copy
-import cPickle
+from six.moves import cPickle
 import os.path as osp
 
 import numpy
@@ -10,6 +10,7 @@ from smqtk.utils.distance_kernel import (
 )
 from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
+from six.moves import range, zip
 
 try:
     import svm
@@ -233,7 +234,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 #   be picked per positive.
                 m_set = {}  # track most distance neighbors
                 m_val = -float('inf')  # track smallest distance of most distant neighbors
-                for i in xrange(d.size):
+                for i in range(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i
                         if len(m_set) > self.autoneg_select_ratio:

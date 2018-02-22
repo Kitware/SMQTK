@@ -50,7 +50,7 @@ class SignalHandler(object):
         Callback method to be registered to signal.signal for a particular
         signal to catch.
         """
-        # print "Caught signal:", signum
+        # print("Caught signal:", signum)
         with self.__s_lock:
             self._log.debug("'%s' caught", self._sig_map[signum])
             self.__signal_caught[signum] = True

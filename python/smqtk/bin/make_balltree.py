@@ -12,7 +12,7 @@ import smqtk.utils.bit_utils
 import smqtk.utils.plugin
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

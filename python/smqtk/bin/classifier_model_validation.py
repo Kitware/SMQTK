@@ -60,6 +60,7 @@ from smqtk.utils import (
     parallel,
     plugin,
 )
+from six.moves import range
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -274,7 +275,7 @@ def log_cm(p_func, conf_mat, labels):
 
     # get col max widths
     col_max_lens = []
-    for x in xrange(print_mat.shape[1]):
+    for x in range(print_mat.shape[1]):
         col_max_lens.append(max(map(len, print_mat[:, x].flatten().tolist())))
 
     # Construct printed rows based on column max width
@@ -318,8 +319,8 @@ def plot_cm(conf_mat, labels, output_path):
     fig.colorbar(cax)
 
     # Annotate cells with count values
-    for y in xrange(cm.shape[0]):
-        for x in xrange(cm.shape[1]):
+    for y in range(cm.shape[0]):
+        for x in range(cm.shape[1]):
             ax.annotate(s=str(cm[y, x]), xy=(x, y), xycoords='data')
 
     ax.set_xticklabels([''] + labels)

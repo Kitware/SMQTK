@@ -62,7 +62,7 @@ class DatabaseInfo (object):
     def __repr__(self):
         """
         >>> dbi = DatabaseInfo('localhost', 12345, 'foobar')
-        >>> print dbi
+        >>> print(dbi)
         DatabaseInfo{host: localhost, port: 12345, name: foobar}
 
         """

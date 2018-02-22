@@ -21,7 +21,7 @@ from smqtk.utils.bin_utils import report_progress
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

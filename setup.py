@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os
 import re
 import setuptools
@@ -70,7 +71,7 @@ def list_directory_files(dirpath, exclude_dirs=(), exclude_files=()):
         # Filter out directories to be excluded
         for dn in dnames:
             if os.path.join(dirpath, dn) in exclude_dirs:
-                print "skipping:", os.path.join(dirpath, dn)
+                print("skipping:", os.path.join(dirpath, dn))
                 del dnames[dnames.index(dn)]
         # filter out excluded files
         fnames = set(fnames).difference(exclude_files)

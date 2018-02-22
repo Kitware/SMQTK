@@ -7,7 +7,7 @@ import os
 import os.path as osp
 import random
 import shutil
-from StringIO import StringIO
+from six.moves import StringIO
 import zipfile
 
 import flask

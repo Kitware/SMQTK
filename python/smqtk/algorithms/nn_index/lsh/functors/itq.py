@@ -17,11 +17,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import merge_dict, plugin
 from smqtk.utils.bin_utils import report_progress
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six.moves import StringIO
 
 
 class ItqFunctor (LshFunctor):

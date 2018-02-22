@@ -12,7 +12,7 @@ from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import merge_dict
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 

@@ -6,6 +6,7 @@ KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 from multiprocessing import current_process
 from multiprocessing.managers import (
     all_methods,
@@ -14,6 +15,7 @@ from multiprocessing.managers import (
 )
 import multiprocessing
 import multiprocessing.util
+import six
 
 import numpy as np
 from numpy.core.multiarray import ndarray
@@ -183,46 +185,46 @@ class ExposedAutoGenMeta (type):
             if '__getattribute__' in to_expose:
                 to_expose.remove('__getattribute__')
             if '__getattribute__' in dct:
-                print ("WARNING: ExposedAutoGenMeta overwriting custom "
+                print("WARNING: ExposedAutoGenMeta overwriting custom "
                        "``__getattribute__`` in class '%s' in favor of "
                        "property proxy supporting version."
                        % clsname)
-            exec """def __getattr__(self, key):
+            exec("""def __getattr__(self, key):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')
                     return callmethod('__getattribute__', (key,))
-                return object.__getattribute__(self, key)""" in dct
+                return object.__getattribute__(self, key)""", dct)
 
             if '__setattr__' in to_expose:
                 to_expose.remove('__setattr__')
             if '__setattr__' in dct:
-                print ("WARNING: ExposedAutoGenMeta overwriting custom "
+                print("WARNING: ExposedAutoGenMeta overwriting custom "
                        "``__setattr__`` in class '%s' in favor of "
                        "property proxy supporting version."
                        % clsname)
-            exec """def __setattr__(self, key, value):
+            exec("""def __setattr__(self, key, value):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')
                     return callmethod('__setattr__', (key,))
-                return object.__setattr__(self, key, value)""" in dct
+                return object.__setattr__(self, key, value)""", dct)
 
             if '__delattr__' in to_expose:
                 to_expose.remove('__delattr__')
             if '__delattr__' in dct:
-                print ("WARNING: ExposedAutoGenMeta overwriting custom "
+                print("WARNING: ExposedAutoGenMeta overwriting custom "
                        "``__delattr__`` in class '%s' in favor of "
                        "property proxy supporting version."
                        % clsname)
-            exec """def __delattr__(self, key):
+            exec("""def __delattr__(self, key):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')
                     return callmethod('__delattr__', (key,))
-                return object.__delattr__(self, key)""" in dct
+                return object.__delattr__(self, key)""", dct)
 
         # Create default method stamps for remaining methods.
         for method in to_expose:
-            exec '''def %s(self, *args, **kwds):
-            return self._callmethod(%r, args, kwds)''' % (method, method) in dct
+            exec('''def %s(self, *args, **kwds):
+            return self._callmethod(%r, args, kwds)''' % (method, method), dct)
             exposed.add(method)
 
         # Refresh class var with those methods that have been exposed
@@ -234,8 +236,8 @@ class ExposedAutoGenMeta (type):
 # Wrapper around numpy ndarray class, providing pass-through functions for class
 # functions as of numpy 1.8.0
 # TODO: Add``method_to_typeid`` for numpy.array functions that return copies of data
+@six.add_metaclass(ExposedAutoGenMeta)
 class ArrayProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(ndarray)
     _exposed_properties_ = all_safe_properties(ndarray)
     _method_to_typeid_ = {
@@ -246,8 +248,8 @@ class ArrayProxy (BaseProxy2):
 # Wrapper around numpy matrix class, providing pass-through functions for class
 # functions as of numpy 1.8.0.
 # TODO: Add``method_to_typeid`` for numpy.matrix functions that return copies of data
+@six.add_metaclass(ExposedAutoGenMeta)
 class MatrixProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(matrix)
     _exposed_properties_ = all_safe_properties(matrix)
     _method_to_typeid_ = {
@@ -255,14 +257,14 @@ class MatrixProxy (BaseProxy2):
     }
 
 
+@six.add_metaclass(ExposedAutoGenMeta)
 class RWLockWithProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = ('__enter__', '__exit__')
 
 
 # noinspection PyPep8Naming
+@six.add_metaclass(ExposedAutoGenMeta)
 class ReadWriteLockProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(ReadWriteLock)
     _method_to_typeid_ = {
         'read_lock':    'rRWLockWith',
@@ -297,12 +299,13 @@ class ReadWriteLockProxy (BaseProxy2):
         me = _id or (current_process().ident, current_thread().ident)
         return self._callmethod('write_lock', (timeout, me))
 
+
 # Return types can't seem to be the same as a type that is creatable, so we use
 # a standard 'r' character prefix on return types. This required a manager
 # register call below with that name with the option ``create_method=False``.
 
+@six.add_metaclass(ExposedAutoGenMeta)
 class DistanceKernelProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(DistanceKernel)
     _method_to_typeid_ = {
         'get_lock':             'rReadWriteLock',
@@ -313,8 +316,8 @@ class DistanceKernelProxy (BaseProxy2):
     }
 
 
+@six.add_metaclass(ExposedAutoGenMeta)
 class FeatureMemoryProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(FeatureMemory)
     _method_to_typeid_ = {
         '_generate_distance_kernel_matrix': 'rmatrix',
@@ -330,8 +333,8 @@ class FeatureMemoryProxy (BaseProxy2):
     }
 
 
+@six.add_metaclass(ExposedAutoGenMeta)
 class FeatureMemoryMapProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(FeatureMemoryMap)
     _method_to_typeid_ = {
         'get_feature_memory':   "rFeatureMemory",
@@ -340,8 +343,8 @@ class FeatureMemoryMapProxy (BaseProxy2):
     }
 
 
+@six.add_metaclass(ExposedAutoGenMeta)
 class TimedCacheProxy (BaseProxy2):
-    __metaclass__ = ExposedAutoGenMeta
     _exposed_ = all_safe_methods(TimedCache)
     _method_to_typeid_ = {
         'get_rlock':    'RLock',

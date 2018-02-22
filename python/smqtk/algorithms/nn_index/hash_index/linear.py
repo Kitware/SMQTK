@@ -1,10 +1,6 @@
 import heapq
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six.moves import StringIO
 
 import numpy
 

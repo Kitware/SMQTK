@@ -1,9 +1,7 @@
 import collections
 import heapq
-import itertools
 import logging
 import multiprocessing
-import multiprocessing.process
 import multiprocessing.queues
 import multiprocessing.synchronize
 import sys
@@ -12,6 +10,7 @@ import traceback
 
 from smqtk.utils import SmqtkObject
 from six.moves import range, zip
+from six.moves import zip_longest
 from six.moves import queue
 
 
@@ -25,7 +24,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     By default, we act like ``itertools.izip`` in regards to input sequences,
     whereby we stop performing work as soon as one of the input sequences is
     exhausted. The optional keyword argument ``fill_void`` may be specified to
-    enable sequence handling like ``itertools.izip_longest`` where the longest
+    enable sequence handling like ``itertools.zip_longest`` where the longest
     sequence determines what is iterated, and the value given to ``fill_void``
     is used as the fill value.
 
@@ -428,7 +427,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self._log.log(1, "Starting")
 
         if self.do_fill:
-            _zip = itertools.izip_longest
+            _zip = zip_longest
             _zip_kwds = {'fillvalue': self.fill_value}
         else:
             _zip = zip
@@ -574,7 +573,7 @@ class _Worker (SmqtkObject):
                 pass
 
 
-class _WorkerProcess (_Worker, multiprocessing.process.Process):
+class _WorkerProcess (_Worker, multiprocessing.Process):
 
     def __init__(self, name, i, work_function, in_q, out_q, heart_beat):
         multiprocessing.Process.__init__(self)

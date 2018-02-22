@@ -6,13 +6,22 @@ KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 """
+import six
 
-from ConfigParser import (
-    SafeConfigParser,
-    DEFAULTSECT,
-    NoSectionError,
-    NoOptionError,
-)
+if six.PY2:
+    from ConfigParser import (
+        SafeConfigParser,
+        DEFAULTSECT,
+        NoSectionError,
+        NoOptionError,
+    )
+else:
+    from configparser import (
+        SafeConfigParser,
+        DEFAULTSECT,
+        NoSectionError,
+        NoOptionError,
+    )
 
 from six.moves import StringIO
 

@@ -25,7 +25,7 @@ from smqtk.utils.video_utils import get_metadata_info
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
 
-from six.moves import next
+from six import next
 
 
 # Requires FLANN bindings

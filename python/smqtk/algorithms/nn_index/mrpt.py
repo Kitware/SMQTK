@@ -4,7 +4,7 @@ from __future__ import print_function, unicode_literals
 
 # noinspection PyPep8Naming
 from six.moves import range, cPickle as pickle, zip
-from six.moves import next
+from six import next
 
 from os import path as osp
 

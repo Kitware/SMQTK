@@ -6,7 +6,7 @@ import threading
 import time
 
 from six.moves import queue
-from six.moves import next
+from six import next
 
 import numpy
 

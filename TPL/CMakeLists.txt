@@ -10,42 +10,61 @@ option(SMQTK_BUILD_FLANN "Enable building of FLANN." ON)
 #   TPL_PYTHON_SP     - relative path of standarad Python site-packages dir
 
 
-# Pick "make" executable based on generator chosen or environment variable
-# set.
-if (CMAKE_GENERATOR MATCHES ".*Makefiles")
-  set(MAKE_EXECUTABLE "$(MAKE)")
-elseif(NOT "#@$ENV{MAKE}" STREQUAL "#@")
-  set(MAKE_EXECUTABLE $ENV{MAKE})
-else()
-  find_program(MAKE_EXECUTABLE make)
-endif()
-
-
 ###
 # libSVM
 #
 if (SMQTK_BUILD_LIBSVM)
-  # Required a make command to build. Required its existance.
-  if( NOT MAKE_EXECUTABLE )
-    message( FATAL_ERROR "Could not find 'make', required to build libsvm." )
-  endif()
 
   set(libSVM_DIR "${CMAKE_CURRENT_LIST_DIR}/libsvm-3.1-custom")
-  ExternalProject_Add(libSVM
-    PREFIX            "${TPL_BUILD_PREFIX}"
-    SOURCE_DIR        "${libSVM_DIR}"
-    CONFIGURE_COMMAND ""
-    BUILD_IN_SOURCE   1
-    BUILD_COMMAND     ${MAKE_EXECUTABLE} lib
-    INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
-    INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
-            COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
-            COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
-            COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
-            COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
-            COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
-            COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
+  if(WIN32)
+    ExternalProject_Add(libSVM
+      PREFIX            "${TPL_BUILD_PREFIX}"
+      SOURCE_DIR        "${libSVM_DIR}"
+      CONFIGURE_COMMAND ""
+      BUILD_IN_SOURCE   1
+      BUILD_COMMAND     make -f Makefile.win lib
+      INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
+      INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
+              COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
+              COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
+              COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.lib "${TPL_LOCAL_INSTALL}/lib"
+              COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
+              COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
+              COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
     )
+  else()
+    # Required a make command to build. Required its existance.
+    # Pick "make" executable based on generator chosen or environment variable
+    # set.
+    if (CMAKE_GENERATOR MATCHES ".*Makefiles")
+      set(MAKE_EXECUTABLE "$(MAKE)")
+    elseif(NOT "#@$ENV{MAKE}" STREQUAL "#@")
+      set(MAKE_EXECUTABLE $ENV{MAKE})
+    else()
+      find_program(MAKE_EXECUTABLE make)
+    endif()
+
+
+    if( NOT MAKE_EXECUTABLE )
+      message( FATAL_ERROR "Could not find 'make', required to build libsvm." )
+    endif()
+
+    ExternalProject_Add(libSVM
+      PREFIX            "${TPL_BUILD_PREFIX}"
+      SOURCE_DIR        "${libSVM_DIR}"
+      CONFIGURE_COMMAND ""
+      BUILD_IN_SOURCE   1
+      BUILD_COMMAND     ${MAKE_EXECUTABLE} lib
+      INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
+      INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
+              COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
+              COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
+              COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
+              COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
+              COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
+              COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
+    )
+  endif()
 endif()
 
 

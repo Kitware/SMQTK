@@ -54,6 +54,7 @@ option(BUILD_C_BINDINGS "Build C bindings" ON)
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
 option(BUILD_MATLAB_BINDINGS "Build Matlab bindings" ON)
 option(BUILD_CUDA_LIB "Build CUDA library" OFF)
+option(BUILD_EXAMPLES "Build examples" ON)
 option(USE_OPENMP "Use OpenMP multi-threading" ON)
 option(USE_MPI "Use MPI" OFF)
 
@@ -155,7 +156,11 @@ endif(WIN32)
 
 add_subdirectory( cmake )
 add_subdirectory( src )
-add_subdirectory( examples )
+
+if(BUILD_EXAMPLES)
+  add_subdirectory( examples )
+endif()
+
 add_subdirectory( test )
 add_subdirectory( doc )
 

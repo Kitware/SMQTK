@@ -10,22 +10,32 @@ option(SMQTK_BUILD_FLANN "Enable building of FLANN." ON)
 #   TPL_PYTHON_SP     - relative path of standarad Python site-packages dir
 
 
-# Pick "make" executable based on generator chosen or environment variable
-# set.
-if (CMAKE_GENERATOR MATCHES ".*Makefiles")
-  set(MAKE_EXECUTABLE "$(MAKE)")
-elseif(NOT "#@$ENV{MAKE}" STREQUAL "#@")
-  set(MAKE_EXECUTABLE $ENV{MAKE})
-else()
-  find_program(MAKE_EXECUTABLE make)
-endif()
-
-
 ###
 # libSVM
 #
 if (SMQTK_BUILD_LIBSVM)
+
   # Required a make command to build. Required its existance.
+  # Pick "make" executable based on generator chosen or environment variable
+  # set.
+  if (CMAKE_GENERATOR MATCHES ".*Makefiles")
+    set(MAKE_EXECUTABLE "$(MAKE)")
+  elseif(WIN32)
+    set(MAKE_EXECUTABLE nmake -f Makefile.win)
+  elseif(NOT "#@$ENV{MAKE}" STREQUAL "#@")
+    set(MAKE_EXECUTABLE $ENV{MAKE})
+  else()
+    find_program(MAKE_EXECUTABLE make)
+  endif()
+
+  # Set the libsvm we want. Can't just use a suffix, since linux uses *.so.2
+  if(WIN32)
+    set(LIBSVM_NAME libsvm.lib)
+  else()
+    set(LIBSVM_NAME libsvm.so.2)
+  endif()
+
+
   if( NOT MAKE_EXECUTABLE )
     message( FATAL_ERROR "Could not find 'make', required to build libsvm." )
   endif()
@@ -41,11 +51,11 @@ if (SMQTK_BUILD_LIBSVM)
     INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
             COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
             COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
-            COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
+            COMMAND   "${CMAKE_COMMAND}" -E copy ${LIBSVM_NAME} "${TPL_LOCAL_INSTALL}/lib"
             COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
             COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
             COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
-    )
+  )
 endif()
 
 
@@ -71,6 +81,7 @@ if (SMQTK_BUILD_FLANN)
       -DBUILD_MATLAB_BINDINGS:BOOL=OFF
       -DBUILD_CUDA_LIB:BOOL=OFF
       -DBUILD_PYTHON_BINDINGS:BOOL=OFF
+      -DBUILD_EXAMPLES:BOOL=${SMQTK_BUILD_EXAMPLES}
       #-DLATEX_OUTPUT_PATH:PATH=${CMAKE_CURRENT_LIST_DIR}/flann-1.8.4
       -DLATEX_OUTPUT_PATH:PATH=build
       "-DCMAKE_INSTALL_PREFIX:PATH=${TPL_LOCAL_INSTALL}"

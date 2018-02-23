@@ -18,6 +18,12 @@ set(SMQTK_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(SMQTK_VERSION_MINOR ${CMAKE_MATCH_3})
 set(SMQTK_VERSION_PATCH ${CMAKE_MATCH_5})
 
+###
+# Options
+#
+option(SMQTK_BUILD_EXAMPLES "Enable building examples." ON)
+option(SMQTK_INSTALL_SETUP_SCRIPT "Enable building examples." ON)
+mark_as_advanced(SMQTK_INSTALL_SETUP_SCRIPT)
 
 ###
 # Determine where to install python things in our install tree
@@ -58,14 +64,16 @@ add_subdirectory( src )
 # File configuration
 #
 # Environment setup scripts
-configure_file("${SMQTK_SOURCE_DIR}/setup_env.build.sh.in"
-               "${SMQTK_BINARY_DIR}/setup_env.build.sh"
-               @ONLY
-               )
-configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
-               "${SMQTK_BINARY_DIR}/setup_env.install.sh"
-               @ONLY
-               )
+if(SMQTK_INSTALL_SETUP_SCRIPT)
+  configure_file("${SMQTK_SOURCE_DIR}/setup_env.build.sh.in"
+                 "${SMQTK_BINARY_DIR}/setup_env.build.sh"
+                 @ONLY
+                 )
+  configure_file("${SMQTK_SOURCE_DIR}/setup_env.install.sh.in"
+                 "${SMQTK_BINARY_DIR}/setup_env.install.sh"
+                 @ONLY
+                 )
+endif()
 
 
 ###
@@ -76,10 +84,12 @@ install(DIRECTORY   docs/
         )
 
 # Should only be required for users installing to a non-standard location
-install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
-        DESTINATION .
-        RENAME setup_smqtk.sh
-        )
+if(SMQTK_INSTALL_SETUP_SCRIPT)
+  install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
+          DESTINATION .
+          RENAME setup_smqtk.sh
+          )
+endif()
 
 # This is probably not the correct way to be doing this, but when using CPack,
 # make sure the CMAKE_INSTALL_PREFIX is clean before constructing packages. If

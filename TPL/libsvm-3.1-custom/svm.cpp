@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <vector>
+#include <fstream>
 #include "svm.h"
 int libsvm_version = LIBSVM_VERSION;
 typedef float Qfloat;
@@ -2835,6 +2836,26 @@ static char* readline(FILE *input)
       break;
   }
   return line;
+}
+
+// TODO May need to remove this.  Ask Matt.
+svm_model *svm_load_model_from_bytes_vector(std::vector<unsigned char>& model_bytes) {
+  const char* tmp_file_name = "tmp_svm_cpp.model";
+  std::ofstream out(tmp_file_name, std::ios::binary);
+  out.write(reinterpret_cast<const char*>(model_bytes.data()), model_bytes.size());
+  svm_model* m = svm_load_model(tmp_file_name);
+  std::remove(tmp_file_name);
+  return m;
+}
+
+svm_model *svm_load_model_from_bytes(const unsigned char *model_bytes, int size) {
+  const char* tmp_file_name = "tmp_svm_cpp.model";
+  std::ofstream out(tmp_file_name, std::ios::binary);
+  out.write(reinterpret_cast<const char*>(model_bytes),
+            size);
+  svm_model* m = svm_load_model(tmp_file_name);
+  std::remove(tmp_file_name);
+  return m;
 }
 
 svm_model *svm_load_model(const char *model_file_name)

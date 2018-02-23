@@ -37,6 +37,14 @@ def svm_load_model(model_file_name):
 	model = toPyModel(model)
 	return model
 
+def svm_load_model_from_bytes(bytes):
+	model = libsvm.svm_load_model_from_bytes(bytes, len(bytes))
+	if not model:
+		print("can't load model from the bytes")
+		return None
+	model = toPyModel(model)
+	return model
+
 def svm_save_model(model_file_name, model):
 	"""
 	svm_save_model(model_file_name, model) -> None

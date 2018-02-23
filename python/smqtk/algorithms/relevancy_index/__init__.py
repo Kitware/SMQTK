@@ -64,6 +64,12 @@ class RelevancyIndex (SmqtkAlgorithm):
 
         """
 
+    def get_model(self):
+        """
+        :return:
+        Gets the model that is used.
+        """
+
 
 def get_relevancy_index_impls(reload_modules=False):
     """

@@ -17,3 +17,4 @@ EXPORTS
 	svm_check_parameter	@15
 	svm_check_probability_model	@16
 	svm_set_print_string_function	@17
+	svm_load_model_from_bytes	@18

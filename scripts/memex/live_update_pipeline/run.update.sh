@@ -154,9 +154,9 @@ function error() {
 now="$(python -c "
 import time
 t=time.gmtime()
-print '{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
+print('{Y:d}-{m:02d}-{d:02d}T{H:02d}:{M:02d}:{S:02d}Z'.format(
     Y=t.tm_year, m=t.tm_mon, d=t.tm_mday, H=t.tm_hour, M=t.tm_min, S=t.tm_sec
-)")"
+))")"
 set +u
 if [ -n "$1" ]
 then
@@ -347,7 +347,7 @@ with open('${remote_file_list}') as pth_f:
         pth = l.strip().lstrip('/')
         local = os.path.join(base, pth)
         if os.path.isfile(local):
-            print local
+            print(local)
         " >"${local_file_list}"
 
         if [ ! -s "${local_file_list}" ]; then
@@ -418,7 +418,7 @@ fi
 log Re-symlink base with new index
 rel_path="$(python -c "
 import os
-print os.path.relpath('${hash2uuids_index}', '$(dirname "${base_hash2uuids}")')
+print(os.path.relpath('${hash2uuids_index}', '$(dirname "${base_hash2uuids}")'))
 ")"
 ln -sf "${rel_path}" "${base_hash2uuids}"
 

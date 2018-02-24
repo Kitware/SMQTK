@@ -3,6 +3,7 @@ from __future__ import print_function, unicode_literals
 
 # noinspection PyPep8Naming
 from six.moves import range, cPickle as pickle, zip
+from six import next
 
 import logging
 import multiprocessing
@@ -29,8 +30,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FAISS library.
 
-    SUPPORT FOR THIS FUNCTIONALITY IS EXPERIMENTAL AT THIS STAGE. THERE ARE 
-    NO TESTS AND THE IMPLEMENTATION DOES NOT COVER ALL OF THE FUNCTIONALITY 
+    SUPPORT FOR THIS FUNCTIONALITY IS EXPERIMENTAL AT THIS STAGE. THERE ARE
+    NO TESTS AND THE IMPLEMENTATION DOES NOT COVER ALL OF THE FUNCTIONALITY
     OF THE FAISS LIBRARY.
     """
 
@@ -165,7 +166,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._build_faiss_model()
 
     def _build_faiss_model(self):
-        sample = self._descriptor_set.iterdescriptors().next()
+        sample = next(self._descriptor_set.iterdescriptors())
         sample_v = sample.vector()
         n, d = self.count(), sample_v.size
 
@@ -175,7 +176,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             use_multiprocessing=self.use_multiprocessing,
             report_interval=1.0,
         )
-        self._uuids = np.array(list(self._descriptor_set.iterkeys()))
+        self._uuids = np.array(list(self._descriptor_set.keys()))
         self.faiss_flat = faiss.IndexFlatL2(d)
 
         if self.exhaustive:
@@ -216,9 +217,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         descriptors = tuple(self._descriptor_set.get_many_descriptors(uuids))
         d_vectors = elements_to_matrix(descriptors)
         d_dists = np.sqrt(((d_vectors - q)**2).sum(axis=1))
-        
+
         order = dists.argsort()
-        uuids, dists = zip(*((uuids[oidx], d_dists[oidx]) for oidx in order))
+        uuids, dists = list(zip(*((uuids[oidx], d_dists[oidx])
+                                  for oidx in order)))
 
         d_dists = d_dists[order]
         self._log.debug("Min and max FAISS distances: %g, %g",

@@ -101,7 +101,8 @@ class KVSDataSet (DataSet):
         :return: Generator over the DataElements contained in this set in no
             particular order.
         """
-        return self._kvstore.keys()
+        for key in self._kvstore.keys():
+            yield key
 
     def count(self):
         """

@@ -5,17 +5,17 @@ from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six import BytesIO
 
 
 class DescriptorMemoryElement (DescriptorElement):
     """
     In-memory representation of descriptor elements. Stored vectors are
     effectively immutable.
+
+    Example
+    -------
+    >>> self = DescriptorMemoryElement('random', 0)
     """
 
     @classmethod
@@ -28,14 +28,14 @@ class DescriptorMemoryElement (DescriptorElement):
 
     def __getstate__(self):
         # save vector as binary string
-        b = StringIO()
+        b = BytesIO()
         numpy.save(b, self.vector())
-        return self.type(), self.uuid(), b.getvalue(),
+        return (self.type(), self.uuid(), b.getvalue())
 
     def __setstate__(self, state):
         self._type_label = state[0]
         self._uuid = state[1]
-        b = StringIO(state[2])
+        b = BytesIO(state[2])
         self.__v = numpy.load(b)
 
     def _get_cache_index(self):

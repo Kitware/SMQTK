@@ -31,7 +31,7 @@ mark_as_advanced(SMQTK_INSTALL_SETUP_SCRIPT)
 find_package(PythonInterp REQUIRED)
 
 execute_process(
-  COMMAND "${PYTHON_EXECUTABLE}" -c "import distutils.sysconfig; print distutils.sysconfig.get_python_lib(prefix='')"
+  COMMAND "${PYTHON_EXECUTABLE}" -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(prefix=''))"
   RESULT_VARIABLE proc_success
   OUTPUT_VARIABLE python_site_packages
   )

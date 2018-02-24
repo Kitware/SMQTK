@@ -1,4 +1,5 @@
-import cPickle
+from six.moves import cPickle
+from six.moves import range
 import time
 
 from smqtk.representation.descriptor_index import DescriptorIndex
@@ -261,7 +262,7 @@ class SolrDescriptorIndex (DescriptorIndex):
             # result batches come in chunks of 10
             for doc in r.results:
                 yield cPickle.loads(doc[self.descriptor_field])
-            for j in xrange(r.numFound // 10):
+            for j in range(r.numFound // 10):
                 r = r.next_batch()
                 for doc in r.results:
                     yield cPickle.loads(doc[self.descriptor_field])
@@ -340,7 +341,7 @@ class SolrDescriptorIndex (DescriptorIndex):
                                 self.d_uid_field))
         for doc in r.results:
             yield doc[self.d_uid_field]
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 yield doc[self.d_uid_field]
@@ -354,7 +355,7 @@ class SolrDescriptorIndex (DescriptorIndex):
                                 self.descriptor_field))
         for doc in r.results:
             yield cPickle.loads(doc[self.descriptor_field])
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 yield cPickle.loads(doc[self.descriptor_field])
@@ -369,7 +370,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         for doc in r.results:
             d = cPickle.loads(doc[self.descriptor_field])
             yield d.uuid(), d
-        for _ in xrange(r.numFound // 10):
+        for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
                 d = cPickle.loads(doc[self.descriptor_field])

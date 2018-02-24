@@ -1,4 +1,4 @@
-import cPickle
+from six.moves import cPickle
 import logging
 import multiprocessing
 import os

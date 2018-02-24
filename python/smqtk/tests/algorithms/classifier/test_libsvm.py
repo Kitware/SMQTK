@@ -1,4 +1,5 @@
-import cPickle
+from __future__ import division, print_function
+from six.moves import cPickle
 import unittest
 
 import multiprocessing
@@ -50,7 +51,8 @@ if LibSvmClassifier.is_usable():
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
 
-            def make_element((i, v)):
+            def make_element(argtup):
+                (i, v) = argtup
                 d = d_factory.new_descriptor('test', i)
                 d.set_vector(v)
                 return d
@@ -111,7 +113,8 @@ if LibSvmClassifier.is_usable():
             d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
 
-            def make_element((i, v)):
+            def make_element(argtup):
+                (i, v) = argtup
                 d = d_factory.new_descriptor('test', i)
                 d.set_vector(v)
                 return d
@@ -175,7 +178,7 @@ if LibSvmClassifier.is_usable():
                                 "the same results as synchronous "
                                 "classification.")
             # -- combined -- threaded
-            combined_truth = dict(d_pos_sync.iteritems())
+            combined_truth = dict(d_pos_sync.items())
             combined_truth.update(d_neg_sync)
             m_combined = classifier.classify_async(
                 d_pos + d_neg, c_factory,
@@ -216,7 +219,8 @@ if LibSvmClassifier.is_usable():
             c_factory = ClassificationElementFactory(MemoryClassificationElement, {})
             di = 0
 
-            def make_element((i, v)):
+            def make_element(argtup):
+                (i, v) = argtup
                 d = d_factory.new_descriptor('test', i)
                 d.set_vector(v)
                 return d
@@ -306,7 +310,7 @@ if LibSvmClassifier.is_usable():
                                 "Async computation of neg set did not yield "
                                 "the same results as synchronous computation.")
             # -- combined -- threaded
-            sync_combined = dict(d_p1_sync.iteritems())
+            sync_combined = dict(d_p1_sync.items())
             sync_combined.update(d_p2_sync)
             sync_combined.update(d_neg_sync)
             async_combined = classifier.classify_async(

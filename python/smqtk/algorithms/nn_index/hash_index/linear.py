@@ -1,10 +1,7 @@
 import heapq
 
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six import BytesIO
+from six.moves import map
 
 import numpy
 
@@ -112,7 +109,7 @@ class LinearHashIndex (HashIndex):
         Load from file cache if we have one
         """
         if self.cache_element and not self.cache_element.is_empty():
-            buff = StringIO(self.cache_element.get_bytes())
+            buff = BytesIO(self.cache_element.get_bytes())
             self.index = set(numpy.load(buff))
 
     def save_cache(self):
@@ -123,7 +120,7 @@ class LinearHashIndex (HashIndex):
             if self.cache_element.is_read_only():
                 raise ValueError("Cache element (%s) is read-only."
                                  % self.cache_element)
-            buff = StringIO()
+            buff = BytesIO()
             numpy.save(buff, tuple(self.index))
             self.cache_element.set_bytes(buff.getvalue())
 
@@ -182,7 +179,7 @@ class LinearHashIndex (HashIndex):
             heapq.nsmallest(n, self.index,
                             lambda e: hamming_distance(h_int, e)
                             )
-        distances = map(hamming_distance, near_codes,
-                        [h_int] * len(near_codes))
+        distances = list(map(hamming_distance, near_codes,
+                             [h_int] * len(near_codes)))
         return [int_to_bit_vector_large(c, bits) for c in near_codes], \
                [d / float(bits) for d in distances]

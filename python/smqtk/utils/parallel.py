@@ -1,17 +1,17 @@
 import collections
 import heapq
-import itertools
 import logging
 import multiprocessing
-import multiprocessing.process
 import multiprocessing.queues
 import multiprocessing.synchronize
-import Queue
 import sys
 import threading
 import traceback
 
 from smqtk.utils import SmqtkObject
+from six.moves import range, zip
+from six.moves import zip_longest
+from six.moves import queue
 
 
 def parallel_map(work_func, *sequences, **kwargs):
@@ -24,7 +24,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     By default, we act like ``itertools.izip`` in regards to input sequences,
     whereby we stop performing work as soon as one of the input sequences is
     exhausted. The optional keyword argument ``fill_void`` may be specified to
-    enable sequence handling like ``itertools.izip_longest`` where the longest
+    enable sequence handling like ``itertools.zip_longest`` where the longest
     sequence determines what is iterated, and the value given to ``fill_void``
     is used as the fill value.
 
@@ -116,6 +116,13 @@ def parallel_map(work_func, *sequences, **kwargs):
         iterable when iterated.
     :rtype: ParallelResultsIterator
 
+
+    Example
+    -------
+    >>> import math
+    >>> result_iter = parallel_map(math.factorial, range(10), use_multiprocessing=True)
+    >>> sorted(result_iter)
+    [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
     """
     # kwargs
     cores = kwargs.get('cores', None)
@@ -143,10 +150,10 @@ def parallel_map(work_func, *sequences, **kwargs):
 
     # Choose parallel types
     if use_multiprocessing:
-        queue_t = multiprocessing.queues.Queue
+        queue_t = multiprocessing.Queue
         worker_t = _WorkerProcess
     else:
-        queue_t = Queue.Queue
+        queue_t = queue.Queue
         worker_t = _WorkerThread
 
     queue_work = queue_t(int(cores * buffer_factor))
@@ -246,7 +253,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
             "address": hex(id(self)),
         }
 
-    def next(self):
+    def __next__(self):
         try:
             if not self.has_started_workers:
                 self.start_workers()
@@ -259,8 +266,10 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
                     self._log.log(1, 'Found terminal')
                     self.found_terminals += 1
                 elif isinstance(packet[0], Exception):
-                    self._log.warn('Received exception: %s\n%s', *packet)
-                    raise packet
+                    ex, formatted_exc = packet
+                    self._log.warn('Received exception: {}\n{}'.format(
+                            ex, formatted_exc))
+                    raise ex
                 else:
                     i, result = packet
                     if self.ordered:
@@ -285,9 +294,11 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
             raise StopIteration()
 
-        except:
+        except Exception:
             self.stop()
             raise
+
+    next = __next__
 
     def start_workers(self):
         """
@@ -352,7 +363,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
         while not self.stopped():
             try:
                 return self.results_queue.get(timeout=self.heart_beat)
-            except Queue.Empty:
+            except queue.Empty:
                 pass
         raise StopIteration()
 
@@ -404,7 +415,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self.do_fill = do_fill
         self.fill_value = fill_value
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
         # self.daemon = True
 
@@ -416,24 +427,24 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         )
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         self._log.log(1, "Starting")
 
         if self.do_fill:
-            izip = itertools.izip_longest
-            izip_kwds = {'fillvalue': self.fill_value}
+            _zip = zip_longest
+            _zip_kwds = {'fillvalue': self.fill_value}
         else:
-            izip = itertools.izip
-            izip_kwds = {}
+            _zip = zip
+            _zip_kwds = {}
 
         try:
             r = 0
-            for args in izip(*self.arg_sequences, **izip_kwds):
+            for args in _zip(*self.arg_sequences, **_zip_kwds):
                 self.q_put((r, args))
                 r += 1
 
@@ -441,13 +452,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 if self.stopped():
                     self._log.log(1, "Told to stop prematurely")
                     break
-        except Exception, ex:
+        except Exception as ex:
             self._log.warn("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
         else:
             self._log.log(1, "Sending in-queue terminal packets")
-            for _ in xrange(self.num_terminal_packets):
+            for _ in range(self.num_terminal_packets):
                 self.q_put(_TerminalPacket())
         finally:
             # Explicitly stop any nested parallel maps
@@ -471,7 +482,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
             try:
                 self.q.put(val, timeout=self.heart_beat)
                 put = True
-            except Queue.Full:
+            except queue.Full:
                 pass
 
 
@@ -498,7 +509,7 @@ class _Worker (SmqtkObject):
         self.heart_beat = heart_beat
         self._log.log(1, "Making process worker (%d, %s, %s)", i, in_q, out_q)
 
-        self._stop = self._make_event()
+        self._stop_event = self._make_event()
 
     @property
     def _log(self):
@@ -510,10 +521,10 @@ class _Worker (SmqtkObject):
         raise NotImplementedError()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.is_set()
+        return self._stop_event.is_set()
 
     def run(self):
         try:
@@ -533,7 +544,7 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        except Exception, ex:
+        except Exception as ex:
             self._log.warn("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
@@ -551,7 +562,7 @@ class _Worker (SmqtkObject):
         while not self.stopped():
             try:
                 return self.in_q.get(timeout=self.heart_beat)
-            except Queue.Empty:
+            except queue.Empty:
                 pass
 
     def q_put(self, val):
@@ -567,11 +578,11 @@ class _Worker (SmqtkObject):
             try:
                 self.out_q.put(val, timeout=self.heart_beat)
                 put = True
-            except Queue.Full:
+            except queue.Full:
                 pass
 
 
-class _WorkerProcess (_Worker, multiprocessing.process.Process):
+class _WorkerProcess (_Worker, multiprocessing.Process):
 
     def __init__(self, name, i, work_function, in_q, out_q, heart_beat):
         multiprocessing.Process.__init__(self)

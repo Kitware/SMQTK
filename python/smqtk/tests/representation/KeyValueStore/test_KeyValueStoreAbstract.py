@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import collections
 import mock
 import unittest
@@ -115,7 +116,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.get = mock.MagicMock(side_effect=lambda v: v)
 
         # Make sure keys now returns expected list.
-        nose.tools.assert_equal(s.keys(), expected_keys_values)
+        nose.tools.assert_equal(set(s.keys()), expected_keys_values)
 
         # Get initial iterator. ``keys`` should have only been called once so
         # far, and ``get`` method should not have been called yet.

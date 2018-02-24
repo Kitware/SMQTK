@@ -1,5 +1,6 @@
 import base64
 import re
+import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
@@ -149,7 +150,7 @@ class DataMemoryElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return self._bytes or ''
+        return self._bytes or six.b('')
 
     def writable(self):
         """

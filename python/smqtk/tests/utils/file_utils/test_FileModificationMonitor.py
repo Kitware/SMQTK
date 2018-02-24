@@ -49,7 +49,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             nose.tools.assert_false(monitor.is_alive())
         finally:
             if monitor.is_alive():
-                print "WARNING :: Forcing thread stop by removing filepath var"
+                print("WARNING :: Forcing thread stop by removing filepath var")
                 monitor.filepath = None
 
     def test_short_file_copy(self):

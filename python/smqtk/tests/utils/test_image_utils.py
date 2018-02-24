@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import mock
 import os
 import sys
@@ -5,7 +6,7 @@ import tempfile
 import unittest
 
 import nose.tools as ntools
-from StringIO import StringIO
+from six.moves import StringIO
 
 from smqtk.bin.check_images import main as check_images_main
 from smqtk.representation.data_element.file_element import DataFileElement

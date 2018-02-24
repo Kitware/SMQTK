@@ -54,6 +54,8 @@ import numpy
 import smqtk.utils.bin_utils
 import smqtk.utils.file_utils
 
+from six.moves import range, zip
+
 
 __author__ = "paul.tunison@kitware.com"
 
@@ -87,9 +89,9 @@ def image_crop_center_levels(image, n_crops):
     y_points = numpy.linspace(0, image.height, 2 + n_crops * 2, dtype=int)
 
     # Outside edges of generated points in the original image size
-    for i in xrange(1, n_crops + 1):
+    for i in range(1, n_crops + 1):
         # crop wants: [xmin, ymin, xmax, ymax]
-        t = zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]])
+        t = list(zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]]))
         yield i, image.crop(t[0] + t[1])
 
 
@@ -120,12 +122,12 @@ def image_crop_quadrant_pyramid(image, n_levels):
     if n_crops <= 0:
         raise ValueError("Can't produce 0 or negative levels")
 
-    for l in xrange(1, n_levels + 1):
+    for l in range(1, n_levels + 1):
         l_sq = 2**l
         xs = numpy.linspace(0, image.width, l_sq + 1, endpoint=True, dtype=int)
         ys = numpy.linspace(0, image.height, l_sq + 1, endpoint=True, dtype=int)
-        for j in xrange(l_sq):
-            for i in xrange(l_sq):
+        for j in range(l_sq):
+            for i in range(l_sq):
                 yield (
                     l,
                     (i, j),

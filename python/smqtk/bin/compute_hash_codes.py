@@ -29,7 +29,7 @@ from smqtk.utils import (
 )
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 
@@ -141,7 +141,7 @@ def main():
                     yield l.strip()
         else:
             log.info("Using all UUIDs resent in descriptor index")
-            for k in descriptor_index.iterkeys():
+            for k in descriptor_index.keys():
                 yield k
 
     #

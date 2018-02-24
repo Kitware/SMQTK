@@ -158,7 +158,7 @@ def classify_files(config, label, file_globs):
     classification_factory = ClassificationElementFactory \
         .from_config(config['classification_factory'])
     classification_map = classifier\
-        .classify_async(descr_map.values(), classification_factory)
+        .classify_async(list(descr_map.values()), classification_factory)
 
     log.info("Printing input file paths that classified as the given label.")
     # map of UUID to filepath:

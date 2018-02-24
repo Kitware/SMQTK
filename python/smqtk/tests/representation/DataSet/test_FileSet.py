@@ -1,6 +1,8 @@
+from __future__ import division, print_function
 import mock
 import nose.tools
 import os
+import six
 import unittest
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -147,14 +149,14 @@ class TestDataFileSet (unittest.TestCase):
     def test_uuids(self):
         # mocking self iteration results
         expected_data_elements = [
-            DataMemoryElement('a'),
-            DataMemoryElement('b'),
-            DataMemoryElement('v'),
+            DataMemoryElement(six.b('a')),
+            DataMemoryElement(six.b('b')),
+            DataMemoryElement(six.b('v')),
         ]
         expected_uuid_set = {
-            DataMemoryElement('a').uuid(),
-            DataMemoryElement('b').uuid(),
-            DataMemoryElement('v').uuid(),
+            DataMemoryElement(six.b('a')).uuid(),
+            DataMemoryElement(six.b('b')).uuid(),
+            DataMemoryElement(six.b('v')).uuid(),
         }
 
         # Replacement iterator for DataFileSet to yield expected test values.

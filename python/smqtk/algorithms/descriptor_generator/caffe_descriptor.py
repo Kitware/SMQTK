@@ -10,7 +10,7 @@ import PIL.Image
 import PIL.ImageFile
 import six
 # noinspection PyUnresolvedReferences
-from six.moves import range
+from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
@@ -463,13 +463,13 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         img_arrays = p.map(
             _process_load_img_array,
-            zip(
+            list(zip(
                 (data_elements[uid] for uid in uuids4proc),
                 itertools.repeat(self.transformer, uid_num),
                 itertools.repeat(self.data_layer, uid_num),
                 itertools.repeat(self.load_truncated_images, uid_num),
                 itertools.repeat(self.pixel_rescale, uid_num),
-            )
+            ))
         )
         p.close()
         p.join()
@@ -492,9 +492,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                 descr_elements[uid].set_vector(v)
 
 
-def _process_load_img_array((data_element, transformer,
-                             data_layer, load_truncated_images,
-                             pixel_rescale)):
+def _process_load_img_array(input_tuple):
     """
     Helper function for multiprocessing image data loading
 
@@ -511,6 +509,8 @@ def _process_load_img_array((data_element, transformer,
     :return: Pre-processed numpy array.
 
     """
+    (data_element, transformer, data_layer, load_truncated_images,
+     pixel_rescale) = input_tuple
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
     img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
     if img.mode != "RGB":

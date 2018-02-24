@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import abc
 import logging
 import json
@@ -11,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 
+import six
 import numpy
 import sklearn.cluster
 
@@ -22,6 +24,8 @@ from smqtk.utils.video_utils import get_metadata_info
 
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
+
+from six import next
 
 
 # Requires FLANN bindings
@@ -770,7 +774,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
         if len(data_set) == 1:
             # because an iterable doesn't necessarily have a next() method
-            di = iter(data_set).next()
+            di = next(iter(data_set))
             # Check for checkpoint files
             info_fp, desc_fp = \
                 self._get_standard_info_descriptors_filepath(di)
@@ -823,7 +827,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                 # descriptor generation may have failed for this ingest UID
                 try:
                     i_shape, d_shape = r.get()
-                except RuntimeError, ex:
+                except RuntimeError as ex:
                     self._log.warning("Descriptor generation failed for "
                                       "UID[%s], skipping its inclusion in "
                                       "model: %s", uid, str(ex))
@@ -964,7 +968,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 )
 
                 # Compute descriptors for extracted frames.
-                for frame, imgPath in fm.iteritems():
+                for frame, imgPath in six.iteritems(fm):
                     info_fp, desc_fp = \
                         self._get_standard_info_descriptors_filepath(di, frame)
                     r = pool.apply_async(
@@ -1002,7 +1006,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     # Descriptor generation may have failed for this UID
                     try:
                         i_shape, d_shape = r.get()
-                    except RuntimeError, ex:
+                    except RuntimeError as ex:
                         self._log.warning('Descriptor generation failed for '
                                           'frame %d in video UID[%s]: %s',
                                           frame, uid, str(ex))

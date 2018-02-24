@@ -1,4 +1,5 @@
 import math
+import six
 
 import numpy
 
@@ -17,6 +18,9 @@ except (ImportError, TypeError):
             return func_or_sig
         else:
             return lambda *args, **kwds: func_or_sig
+
+if not six.PY2:
+    long = int
 
 
 def next_perm(v):
@@ -105,9 +109,9 @@ def bit_vector_to_int(v):
     :rtype: int
 
     """
-    c = 0L
+    c = long(0)
     for b in v:
-        c = (c * 2L) + int(b)
+        c = (c * long(2)) + int(b)
     return c
 
 
@@ -126,9 +130,9 @@ def bit_vector_to_int_large(v):
     :rtype: int
 
     """
-    c = 0L
+    c = long(0)
     for b in v:
-        c = (c * 2L) + int(b)
+        c = (c * long(2)) + int(b)
     return c
 
 

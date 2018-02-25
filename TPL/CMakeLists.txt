@@ -30,7 +30,7 @@ if (SMQTK_BUILD_LIBSVM)
 
   # Set the libsvm we want. Can't just use a suffix, since linux uses *.so.2
   if(WIN32)
-    set(LIBSVM_NAME libsvm.lib)
+    set(LIBSVM_NAME libsvm.dll)
   else()
     set(LIBSVM_NAME libsvm.so.2)
   endif()

@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import unittest
 
 import nose.tools
@@ -17,7 +18,7 @@ class TestMBKMClustering (unittest.TestCase):
     def test_clustering_equal_descriptors(self):
         # Test that clusters of descriptor of size  n-features are correctly
         # clustered together.
-        print "Creating dummy descriptors"
+        print("Creating dummy descriptors")
         n_features = 8
         n_descriptors = 20
 
@@ -33,7 +34,7 @@ class TestMBKMClustering (unittest.TestCase):
                 index.add_descriptor(d)
                 c += 1
 
-        print "Creating test MBKM"
+        print("Creating test MBKM")
         mbkm = MiniBatchKMeans(n_features, batch_size=12, verbose=True,
                                compute_labels=False, random_state=0)
 

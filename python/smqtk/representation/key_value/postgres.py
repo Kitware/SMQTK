@@ -234,7 +234,7 @@ class PostgresKeyValueStore (KeyValueStore):
             "read_only": self._read_only,
             "create_table": self._create_table,
         }
-        
+
     def __repr__(self):
         """
         Return representative string for this class.
@@ -253,7 +253,7 @@ class PostgresKeyValueStore (KeyValueStore):
                   self._psql_helper.db_port, self._psql_helper.db_user,
                   self._psql_helper.db_pass, self._batch_size,
                   self._pickle_protocol, self._read_only, self._create_table))
-        
+
     def count(self):
         """
         :return: The number of key-value relationships in this store.

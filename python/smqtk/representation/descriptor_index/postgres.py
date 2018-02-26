@@ -5,13 +5,11 @@ References:
         answer from "a_horse_with_no_name"
 
 """
-import itertools
 import logging
 import multiprocessing
-import uuid
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 
@@ -19,6 +17,7 @@ from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.utils.postgres \
     import norm_psql_cmd_string, PsqlConnectionHelper
+from six.moves import zip
 
 try:
     import psycopg2
@@ -448,7 +447,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         g = self.psql_helper.batch_execute(iterelems(), exec_hook,
                                            self.multiquery_batch_size, True)
         i = 0
-        for r, expected_uuid in itertools.izip(g, uuid_order):
+        for r, expected_uuid in zip(g, uuid_order):
             d = pickle.loads(str(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)

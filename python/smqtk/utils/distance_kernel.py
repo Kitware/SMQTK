@@ -8,12 +8,14 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import logging
 import numpy as np
+import six
 from numpy.core.multiarray import ndarray  # for shortening doc strings
 
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
 from smqtk.utils.parallel import parallel_map
 from smqtk.utils.bin_utils import report_progress
+from six.moves import range
 
 
 def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
@@ -43,21 +45,41 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     :rtype: numpy.core.multiarray.ndarray
 
     """
-    if hasattr(dist_func, 'im_func'):
+    modname = getattr(dist_func, '__module__', None)
+
+    def get_funcname(func):
+        if six.PY2:
+            return getattr(func, 'func_name', None)
+        else:
+            return getattr(func, '__name__', None)
+
+    def get_func(method):
+        if six.PY2:
+            return getattr(method, 'im_func', None)
+        else:
+            return getattr(method, '__func__', None)
+
+    def get_classname(method):
+        if six.PY2:
+            return method.im_class.__name__
+        else:
+            return method.__class__.__name__
+
+    if get_func(dist_func):
         # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.im_class.__name__,
-                                  dist_func.im_func.func_name])
-    elif hasattr(dist_func, 'func_name'):
+        # Case where the input is a method
+        distance_name = '.'.join([modname,
+                                  get_classname(dist_func),
+                                  get_funcname(get_func(dist_func))])
+    elif get_funcname(dist_func):
         # noinspection PyUnresolvedReferences
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.func_name])
-    elif hasattr(dist_func, 'py_func') \
-            and hasattr(dist_func.py_func, 'func_name'):
-        distance_name = '.'.join([dist_func.__module__,
-                                  dist_func.py_func.func_name])
+        # Case where the input is a regular function
+        distance_name = '.'.join([modname, get_funcname(dist_func)])
+    elif hasattr(dist_func, 'py_func') and get_funcname(dist_func.py_func):
+        distance_name = '.'.join([modname, get_funcname(dist_func.py_func)])
     else:
-        distance_name = "<unknown>"
+        distance_name = "<unknown>"  # NOQA
+
     log = logging.getLogger(__name__)
 
     if m.ndim == 1:
@@ -80,11 +102,11 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                                                                 m[i + 1:, :])
             # Using threading for in-place modification
             s = [0] * 7
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 # Compute col/row wise distances
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side-1):
@@ -96,17 +118,17 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
             def work_func(i):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
             # Using threading for in-place modification
-            for _ in parallel_map(work_func, xrange(side),
+            for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
                 report_progress(log.debug, s, 1.)
         else:
-            for i in xrange(side):
+            for i in range(side):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
-                for j in xrange(i):
+                for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
                 report_progress(log.debug, s, 1.)
 
@@ -125,11 +147,11 @@ def compute_distance_matrix(m1, m2, dist_func, row_wise=False):
     k = np.ndarray((m1.shape[0], m2.shape[0]), dtype=float)
     if row_wise:
         # row wise
-        for i in xrange(m1.shape[0]):
+        for i in range(m1.shape[0]):
             k[i, :] = dist_func(m1[i], m2)
     else:
-        for i in xrange(m1.shape[0]):
-            for j in xrange(m2.shape[0]):
+        for i in range(m1.shape[0]):
+            for j in range(m2.shape[0]):
                 k[i, j] = dist_func(m1[i], m2[j])
     return k
 
@@ -485,7 +507,7 @@ class DistanceKernel (object):
             with SimpleTimer("Checking inputs", self._log.debug):
                 try:
                     clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
-                except Exception, ex:
+                except Exception as ex:
                     raise ValueError("Not all clip IDs could be used as ints: "
                                      "%s" % str(ex))
 

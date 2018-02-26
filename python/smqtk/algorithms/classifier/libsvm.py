@@ -1,10 +1,12 @@
-import cPickle
+from six.moves import cPickle
 import collections
 from copy import deepcopy
 import ctypes
 import logging
 import os
 import tempfile
+
+import six
 
 import numpy
 import numpy.linalg
@@ -128,7 +130,8 @@ class LibSvmClassifier (SupervisedClassifier):
                 state['__LOCAL__'] = True
                 state['__LOCAL_LABELS__'] = self.svm_label_map
 
-                svmutil.svm_save_model(fp, self.svm_model)
+                fp_bytes = fp.encode('utf8')
+                svmutil.svm_save_model(fp_bytes, self.svm_model)
                 with open(fp, 'rb') as model_f:
                     state['__LOCAL_MODEL__'] = model_f.read()
 
@@ -159,7 +162,8 @@ class LibSvmClassifier (SupervisedClassifier):
                 with open(fp, 'wb') as model_f:
                     model_f.write(state['__LOCAL_MODEL__'])
 
-                self.svm_model = svmutil.svm_load_model(fp)
+                fp_bytes = fp.encode('utf8')
+                self.svm_model = svmutil.svm_load_model(fp_bytes)
 
             finally:
                 os.remove(fp)
@@ -186,7 +190,7 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         Make a single string out of a parameters dictionary
         """
-        return ' '.join((str(k) + ' ' + str(v) for k, v in params.iteritems()))
+        return ' '.join((str(k) + ' ' + str(v) for k, v in six.iteritems(params)))
 
     def _norm_vector(self, v):
         """
@@ -364,7 +368,7 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         if not self.has_model():
             raise RuntimeError("No model loaded")
-        return self.svm_label_map.values()
+        return list(self.svm_label_map.values())
 
     def _classify(self, d):
         """

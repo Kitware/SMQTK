@@ -72,6 +72,7 @@ import matplotlib.pyplot as plt
 import numpy
 import sklearn.cross_validation
 import sklearn.metrics
+import six
 
 from smqtk.algorithms import get_classifier_impls
 from smqtk.algorithms.classifier import SupervisedClassifier
@@ -239,7 +240,7 @@ def classifier_kfold_validation():
             use_multiprocessing=use_mp, ri=1.0
         )
         uuid2c = dict((d.uuid(), c.get_classification())
-                      for d, c in m.iteritems())
+                      for d, c in six.iteritems(m))
 
         log.info("-- Pairing truth and computed probabilities")
         # Only considering positive labels

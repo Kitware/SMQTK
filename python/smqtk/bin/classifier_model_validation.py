@@ -36,6 +36,7 @@ See Scikit-Learn PR and ROC curve explanations and examples:
     - http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
 
 """
+from __future__ import division, print_function
 
 import collections
 import csv
@@ -60,6 +61,7 @@ from smqtk.utils import (
     parallel,
     plugin,
 )
+from six.moves import range
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -179,7 +181,7 @@ def main():
     # Truth label to predicted classification results
     #: :type: dict[str, set[smqtk.representation.ClassificationElement]]
     tlabel2classifications = {}
-    for tlabel, descriptors in tlabel2descriptors.iteritems():
+    for tlabel, descriptors in tlabel2descriptors.items():
         tlabel2classifications[tlabel] = \
             set(classifier.classify_async(
                 descriptors, classification_factory,
@@ -274,8 +276,8 @@ def log_cm(p_func, conf_mat, labels):
 
     # get col max widths
     col_max_lens = []
-    for x in xrange(print_mat.shape[1]):
-        col_max_lens.append(max(map(len, print_mat[:, x].flatten().tolist())))
+    for x in range(print_mat.shape[1]):
+        col_max_lens.append(max(list(map(len, print_mat[:, x].flatten().tolist()))))
 
     # Construct printed rows based on column max width
     p_func("Confusion Matrix (Counts)")
@@ -318,8 +320,8 @@ def plot_cm(conf_mat, labels, output_path):
     fig.colorbar(cax)
 
     # Annotate cells with count values
-    for y in xrange(cm.shape[0]):
-        for x in xrange(cm.shape[1]):
+    for y in range(cm.shape[0]):
+        for x in range(cm.shape[1]):
             ax.annotate(s=str(cm[y, x]), xy=(x, y), xycoords='data')
 
     ax.set_xticklabels([''] + labels)
@@ -394,7 +396,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
             # Confidence interval calculation using Wilson's score interval
             x_u, x_l = curve_wilson_ci(x, len(l_proba))
             y_u, y_l = curve_wilson_ci(y, len(l_proba))
-            ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
+            ci_poly = plt.Polygon(list(zip(x_l, y_l)) + list(zip(reversed(x_u), reversed(y_u))),
                                   facecolor=m[0], edgecolor=m[0],
                                   alpha=plot_ci_alpha)
             plt.gca().add_patch(ci_poly)
@@ -421,7 +423,7 @@ def make_curve(log, skl_curve_func, title, xlabel, ylabel, output_filepath,
         # Confidence interval generation
         x_u, x_l = curve_wilson_ci(x, len(g_proba))
         y_u, y_l = curve_wilson_ci(y, len(g_proba))
-        ci_poly = plt.Polygon(zip(x_l, y_l) + zip(reversed(x_u), reversed(y_u)),
+        ci_poly = plt.Polygon(list(zip(x_l, y_l)) + list(zip(reversed(x_u), reversed(y_u))),
                               facecolor=m[0], edgecolor=m[0],
                               alpha=plot_ci_alpha)
         plt.gca().add_patch(ci_poly)

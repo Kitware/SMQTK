@@ -19,6 +19,8 @@ from smqtk.utils import plugin
 from smqtk.utils import merge_dict
 from smqtk.web import SmqtkWebApp
 
+from six.moves import map
+
 MIMETYPES = mimetypes.MimeTypes()
 
 
@@ -149,7 +151,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             try:
                 descriptor = self.generate_descriptor_for_uri(uri)
                 message = "Descriptor generated"
-                descriptor = map(float, descriptor.vector())
+                descriptor = list(map(float, descriptor.vector()))
             except ValueError as ex:
                 message = "Input value issue: %s" % str(ex)
             except RuntimeError as ex:

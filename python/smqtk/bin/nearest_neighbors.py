@@ -4,6 +4,7 @@ Retrieve the nearest neighbors of a set of UUIDs.
 import logging
 import os
 import sys
+from six.moves import zip
 
 from smqtk.utils.bin_utils import (
     basic_cli_parser,
@@ -63,7 +64,7 @@ def main():
 
         uuids, descriptors = nearest_neighbor_index.nn(descriptor, n)
         # Strip first result (itself) and create list of (uuid, distance)
-        return zip([x.uuid() for x in uuids[1:]], descriptors[1:])
+        return list(zip([x.uuid() for x in uuids[1:]], descriptors[1:]))
 
     if args.uuid_list is not None and not os.path.exists(args.uuid_list):
         log.error('Invalid file list path: %s', args.uuid_list)

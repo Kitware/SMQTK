@@ -1,9 +1,11 @@
+from __future__ import division, print_function
 import random
 import unittest
 
 import nose.tools
 
 from smqtk.utils.parallel import parallel_map
+from six.moves import range
 
 
 class TestParallelMap (unittest.TestCase):
@@ -13,11 +15,11 @@ class TestParallelMap (unittest.TestCase):
         n = 10000
 
         # Random characters in range [a, z]
-        cls.test_string = [chr(random.randint(97, 122)) for _ in xrange(n)]
+        cls.test_string = [chr(random.randint(97, 122)) for _ in range(n)]
         cls.test_func = ord
         # Since this parallel function is intended to perform similar to the
         # built-in map function.
-        cls.expected = map(cls.test_func, cls.test_string)
+        cls.expected = list(map(cls.test_func, cls.test_string))
 
     def test_simple_ordered_threaded(self):
         # Make sure results are still in order as requested
@@ -121,7 +123,7 @@ class TestParallelMap (unittest.TestCase):
                           use_multiprocessing=True,
                           cores=2)
 
-        expected = map(ord, self.test_string)
+        expected = list(map(ord, self.test_string))
         nose.tools.assert_equal(
             list(g4),
             expected
@@ -150,7 +152,7 @@ class TestParallelMap (unittest.TestCase):
                           cores=2,
                           name='g4')
 
-        expected = map(ord, self.test_string)
+        expected = list(map(ord, self.test_string))
         nose.tools.assert_equal(
             list(g4),
             expected

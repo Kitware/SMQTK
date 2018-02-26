@@ -1,8 +1,4 @@
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six import BytesIO
 
 import numpy
 from sklearn.neighbors import BallTree, DistanceMetric
@@ -140,7 +136,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             #   hamming distance (see ``build_index``).
             s = self.bt.__getstate__()
             tail = s[4:11]
-            buff = StringIO()
+            buff = BytesIO()
             numpy.savez(buff,
                         data_arr=s[0],
                         idx_array_arr=s[1],
@@ -158,7 +154,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
         """
         if self.cache_element and not self.cache_element.is_empty():
             self._log.debug("Loading model from cache: %s", self.cache_element)
-            buff = StringIO(self.cache_element.get_bytes())
+            buff = BytesIO(self.cache_element.get_bytes())
             with numpy.load(buff) as cache:
                 tail = tuple(cache['tail'])
                 s = (cache['data_arr'], cache['idx_array_arr'],
@@ -193,11 +189,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
         # BallTree can't take iterables, so catching input in a set of tuples
         # first in order to cull out duplicates (BT will index duplicate values
         # happily).
-        hash_tuple_set = set(map(lambda v: tuple(v), hashes))
+        hash_tuple_set = set([tuple(v) for v in hashes])
         if not hash_tuple_set:
             raise ValueError("No hashes given.")
         # Convert tuples back into numpy arrays for BallTree constructor.
-        hash_vector_list = map(lambda t: numpy.array(t), hash_tuple_set)
+        hash_vector_list = list([numpy.array(t) for t in hash_tuple_set])
         # If distance metric ever changes, need to update save/load model
         # functions.
         self.bt = BallTree(hash_vector_list, self.leaf_size, metric='hamming')

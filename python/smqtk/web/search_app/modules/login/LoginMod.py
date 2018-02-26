@@ -1,4 +1,5 @@
 
+import six
 import flask
 import functools
 import json
@@ -142,8 +143,8 @@ class LoginMod (SmqtkObject, flask.Blueprint):
         def deco(*args, **kwds):
             # Combine to handle both GET arguments and form data
             c = {}
-            c.update(dict(flask.request.form.iteritems()))
-            c.update(dict(flask.request.args.iteritems()))
+            c.update(dict(six.iteritems(flask.request.form)))
+            c.update(dict(six.iteritems(flask.request.args)))
             log.debug("Combined arguments: %s", c)
 
             if not {'girder_token', 'girder_origin', 'girder_apiRoot'} \

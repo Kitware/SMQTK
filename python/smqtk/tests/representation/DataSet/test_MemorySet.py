@@ -1,6 +1,8 @@
+from __future__ import division, print_function
 import nose.tools as ntools
 import pickle
 import unittest
+import six
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -38,7 +40,7 @@ class TestDataFileSet (unittest.TestCase):
         i = DataMemorySet.from_config(c)
         ntools.assert_is_not_none(i.cache_element)
         ntools.assert_is_instance(i.cache_element, DataMemoryElement)
-        ntools.assert_equal(i.cache_element.get_bytes(), '')
+        ntools.assert_equal(i.cache_element.get_bytes(), six.b(''))
         ntools.assert_equal(i.pickle_protocol, -1)
         ntools.assert_equal(i._element_map, {})
 
@@ -191,7 +193,7 @@ class TestDataFileSet (unittest.TestCase):
         )
 
     def test_add_data(self):
-        de = DataMemoryElement('some bytes', 'text/plain', True)
+        de = DataMemoryElement(six.b('some bytes'), 'text/plain', True)
         expected_map = {de.uuid(): de}
 
         dms = DataMemorySet()

@@ -7,8 +7,9 @@ import os
 import os.path as osp
 import random
 import shutil
-from StringIO import StringIO
+from six.moves import StringIO
 import zipfile
+import six
 
 import flask
 import PIL.Image
@@ -444,7 +445,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                             self._descriptor_generator.compute_descriptor(
                                 upload_data, self._descr_elem_factory
                             )
-                    except ValueError, ex:
+                    except ValueError as ex:
                         return "Input Error: %s" % str(ex), 400
 
                     self._iqr_example_pos_descr[iqrs.uuid][uuid] = upload_descr
@@ -466,7 +467,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         "success": True,
                         "message": "Completed initialization",
                     })
-                except Exception, ex:
+                except Exception as ex:
                     return flask.jsonify({
                         "success": False,
                         "message": "ERROR: (%s) %s" % (type(ex).__name__,
@@ -593,7 +594,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         "success": True,
                         "message": "Completed refinement"
                     })
-                except Exception, ex:
+                except Exception as ex:
                     return flask.jsonify({
                         "success": False,
                         "message": "ERROR: (%s) %s" % (type(ex).__name__,
@@ -661,7 +662,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 }
             """
             with self.get_current_iqr_session() as iqrs:
-                all_ids = list(iqrs.working_index.iterkeys())
+                all_ids = list(iqrs.working_index.keys())
             random.shuffle(all_ids)
             return flask.jsonify({
                 "uids": all_ids

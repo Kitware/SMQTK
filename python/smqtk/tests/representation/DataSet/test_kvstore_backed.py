@@ -1,15 +1,12 @@
+from __future__ import division, print_function
 import unittest
-
-import mock
+import six
 
 from smqtk.representation.data_element.memory_element \
     import DataMemoryElement
 from smqtk.representation.data_set.kvstore_backed \
     import KVSDataSet, DFLT_KVSTORE
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
-# Get the dummy kvstore for mocking.
-from smqtk.tests.representation.KeyValueStore.test_KeyValueStoreAbstract \
-    import DummyKVStore
 
 
 class TestKeyValueDataSet (unittest.TestCase):
@@ -84,8 +81,8 @@ class TestKeyValueDataSet (unittest.TestCase):
         mem_kv = MemoryKeyValueStore()
         kvds = KVSDataSet(mem_kv)
 
-        de1 = DataMemoryElement('bytes1')
-        de2 = DataMemoryElement('bytes2')
+        de1 = DataMemoryElement(six.b('bytes1'))
+        de2 = DataMemoryElement(six.b('bytes2'))
         kvds.add_data(de1, de2)
 
         # Check that appropriate keys and values are retrievable and located in

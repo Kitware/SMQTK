@@ -169,7 +169,9 @@ class TestMRPTIndex (unittest.TestCase):
         ntools.assert_equal(len(dists), 1)
         # Distance should be zero
         ntools.assert_equal(dists[0], 0.)
-        ntools.assert_items_equal(r[0].vector(), vectors[0])
+        # ntools.assert_items_equal(r[0].vector(), vectors[0])
+        for item1, item2 in zip(r[0].vector(), vectors[0]):
+            ntools.assert_equal(item1, item2)
 
     def test_known_descriptors_euclidean_ordered(self):
         index = self._make_inst()

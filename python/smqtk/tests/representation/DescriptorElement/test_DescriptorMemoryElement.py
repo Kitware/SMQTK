@@ -1,4 +1,5 @@
-import cPickle
+from __future__ import division, print_function
+from six.moves import cPickle
 import unittest
 
 import nose.tools as ntools

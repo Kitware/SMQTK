@@ -204,10 +204,7 @@ var  foo    =  "hey";
         self.assertMinified(js, '')
 
     def testInputStream(self):
-        try:
-            from StringIO import StringIO
-        except ImportError:
-            from io import StringIO
+        from six.moves import StringIO
 
         ins = StringIO(r'''
             function foo('') {

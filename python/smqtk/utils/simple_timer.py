@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
 import time
 
 
@@ -26,7 +26,7 @@ class SimpleTimer (object):
         if self._log_func:
             self._log_func(self._msg, *self._msg_args)
         else:
-            print "[SimpleTimer]", self._msg % self._msg_args
+            print("[SimpleTimer]", self._msg % self._msg_args)
         self._s = time.time()
 
     def __exit__(self, *_):
@@ -34,5 +34,5 @@ class SimpleTimer (object):
             self._log_func("%s -> %f s", self._msg % self._msg_args,
                            time.time() - self._s)
         else:
-            print "[SimpleTimer] %s -> %f s" % (self._msg % self._msg_args,
-                                                time.time() - self._s)
+            print("[SimpleTimer] %s -> %f s" % (self._msg % self._msg_args,
+                                                time.time() - self._s))

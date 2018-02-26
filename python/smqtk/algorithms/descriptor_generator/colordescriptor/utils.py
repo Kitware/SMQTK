@@ -106,7 +106,7 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     # distance between sample points.
     try:
         w, h = PIL.Image.open(img_filepath).size
-    except IOError, ex:
+    except IOError as ex:
         raise RuntimeError("Could not open image at filepath '%s': %s"
                            % (img_filepath, str(ex)))
     ds_spacing = max(int(min(w, h) / 50.0), 6)
@@ -135,7 +135,7 @@ def generate_descriptors(cd_exe, img_filepath, descriptor_type,
     try:
         log.debug("Reading descriptors output")
         info, descriptors = DescriptorIO.readDescriptors(tmp_path)
-    except IOError, ex:
+    except IOError as ex:
         raise RuntimeError("ColorDescriptor failed to generate proper output "
                            "file. See error log for details. (error: %s"
                            % str(ex))

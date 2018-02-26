@@ -22,9 +22,11 @@ from smqtk.utils.bin_utils import report_progress
 from smqtk.utils import merge_dict
 
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
+
+from six.moves import map, zip
 
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
@@ -371,12 +373,12 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         neighbor_vectors = elements_to_matrix(neighbors,
                                               report_interval=1.0)
         self._log.debug('-- calculating distances')
-        distances = map(comp_descr_dist, neighbor_vectors)
+        distances = list(map(comp_descr_dist, neighbor_vectors))
         self._log.debug('-- ordering')
         ordered = sorted(zip(neighbors, distances),
                          key=lambda p: p[1])
         self._log.debug('-- slicing top n=%d', n)
-        return zip(*(ordered[:n]))
+        return list(zip(*(ordered[:n])))
 
 
 # Marking only LSH as the valid impl, otherwise the hash index default would

@@ -1,5 +1,8 @@
+from __future__ import division, print_function
 import os
 import unittest
+import six
+from six.moves import map
 
 import nose.tools
 
@@ -12,14 +15,14 @@ from smqtk.tests import TEST_DATA_DIR
 
 class TestIndexLabelClassifier (unittest.TestCase):
 
-    EXPECTED_LABEL_VEC = [
+    EXPECTED_LABEL_VEC = list(map(six.b, [
         'label_1',
         'label_2',
         'negative',
         'label_3',
         'Kitware',
         'label_4',
-    ]
+    ]))
 
     FILEPATH_TEST_LABELS = os.path.join(TEST_DATA_DIR, 'test_labels.txt')
 
@@ -50,12 +53,12 @@ class TestIndexLabelClassifier (unittest.TestCase):
     def test_classify(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)
         m_expected = {
-            'label_1': 1,
-            'label_2': 2,
-            'negative': 3,
-            'label_3': 4,
-            'Kitware': 5,
-            'label_4': 6,
+            six.b('label_1'): 1,
+            six.b('label_2'): 2,
+            six.b('negative'): 3,
+            six.b('label_3'): 4,
+            six.b('Kitware'): 5,
+            six.b('label_4'): 6,
         }
 
         d = DescriptorMemoryElement('test', 0)

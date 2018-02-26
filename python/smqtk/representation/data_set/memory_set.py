@@ -2,16 +2,7 @@ import threading
 
 from smqtk.exceptions import ReadOnlyError
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from six.moves import cPickle as pickle
 
 from smqtk.representation import DataElement, DataSet, get_data_element_impls
 from smqtk.utils import merge_dict, plugin, SimpleTimer

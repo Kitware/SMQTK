@@ -93,17 +93,17 @@ class svm_node(Structure):
 
 def gen_svm_nodearray(xi, feature_max=None, issparse=None):
 	if isinstance(xi, dict):
-		index_range = xi.keys()
+		index_range = list(xi.keys())
 	elif isinstance(xi, (list, tuple)):
-		index_range = range(len(xi))
+		index_range = list(range(len(xi)))
 	else:
 		raise TypeError('xi should be a dictionary, list or tuple')
 
 	if feature_max:
 		assert(isinstance(feature_max, int))
-		index_range = filter(lambda j: j <= feature_max, index_range)
+		index_range = [j for j in index_range if j <= feature_max]
 	if issparse:
-		index_range = filter(lambda j:xi[j] != 0, index_range)
+		index_range = [j for j in index_range if xi[j] != 0]
 
 	index_range = sorted(index_range)
 	ret = (svm_node * (len(index_range)+1))()
@@ -155,8 +155,8 @@ class svm_parameter(Structure):
 		self.parse_options(options)
 
 	def show(self):
-		attrs = svm_parameter._names + self.__dict__.keys()
-		values = map(lambda attr: getattr(self, attr), attrs)
+		attrs = svm_parameter._names + list(self.__dict__.keys())
+		values = list([getattr(self, attr) for attr in attrs])
 		for attr, val in zip(attrs, values):
 			print(' %s: %s' % (attr, val))
 
@@ -286,8 +286,8 @@ class svm_model(Structure):
 		return (libsvm.svm_check_probability_model(self) == 1)
 
 	def get_sv_coef(self):
-		return [tuple(self.sv_coef[j][i] for j in xrange(self.nr_class - 1))
-				for i in xrange(self.l)]
+		return [tuple(self.sv_coef[j][i] for j in range(self.nr_class - 1))
+				for i in range(self.l)]
 
 	def get_SV(self):
 		result = []

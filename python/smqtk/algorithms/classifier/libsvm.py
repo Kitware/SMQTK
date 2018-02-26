@@ -130,7 +130,11 @@ class LibSvmClassifier (SupervisedClassifier):
                 state['__LOCAL__'] = True
                 state['__LOCAL_LABELS__'] = self.svm_label_map
 
-                svmutil.svm_save_model(fp, self.svm_model)
+                if six.PY2:
+                    fp_bytes = fp
+                else:
+                    fp_bytes = fp.encode('utf8')
+                svmutil.svm_save_model(fp_bytes, self.svm_model)
                 with open(fp, 'rb') as model_f:
                     state['__LOCAL_MODEL__'] = model_f.read()
 
@@ -161,7 +165,11 @@ class LibSvmClassifier (SupervisedClassifier):
                 with open(fp, 'wb') as model_f:
                     model_f.write(state['__LOCAL_MODEL__'])
 
-                self.svm_model = svmutil.svm_load_model(fp)
+                if six.PY2:
+                    fp_bytes = fp
+                else:
+                    fp_bytes = fp.encode('utf8')
+                self.svm_model = svmutil.svm_load_model(fp_bytes)
 
             finally:
                 os.remove(fp)

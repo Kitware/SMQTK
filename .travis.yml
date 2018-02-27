@@ -15,18 +15,6 @@ addons:
       # For building things
       - cmake
 
-# Environment setup
-before_install:
-  # Setup local conda python environment
-  - wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda2.sh
-  - bash miniconda2.sh -b -p $HOME/miniconda2
-  - export PATH="$HOME/miniconda2/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q --all
-  # Useful for debugging any issues with conda
-  - conda info -a
-
 # "Install" of SMQTK + immediate deps
 install:
   # install python dependencies to environment

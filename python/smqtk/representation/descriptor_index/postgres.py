@@ -400,7 +400,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    % (uuid, c.rowcount))
 
         r = list(self.psql_helper.single_execute(eh, True))
-        return pickle.loads(str(r[0][0]))
+        return pickle.loads(r[0][0])
 
     def get_many_descriptors(self, uuids):
         """
@@ -448,7 +448,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                            self.multiquery_batch_size, True)
         i = 0
         for r, expected_uuid in zip(g, uuid_order):
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(r[0])
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)
             yield d

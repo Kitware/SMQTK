@@ -544,7 +544,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         #: :type: __generator
         execution_results = self.psql_helper.single_execute(execute, True, named=True)
         for r in execution_results:
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(r[0])
             yield d
 
     def iteritems(self):

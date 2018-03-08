@@ -6,8 +6,8 @@ import multiprocessing
 import multiprocessing.pool
 
 import numpy
-import PIL.Image
-import PIL.ImageFile
+from  PIL import Image, ImageFile
+
 import six
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
@@ -511,8 +511,8 @@ def _process_load_img_array(input_tuple):
     """
     (data_element, transformer, data_layer, load_truncated_images,
      pixel_rescale) = input_tuple
-    PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
-    img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
+    ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
+    img = Image.open(io.BytesIO(data_element.get_bytes()))
     if img.mode != "RGB":
         img = img.convert("RGB")
     # Caffe natively uses float types (32-bit)

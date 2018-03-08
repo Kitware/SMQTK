@@ -65,3 +65,6 @@ errors.log
 /bin/memex/hackathon_2016_07/scripts/es_config.json
 /bin/memex/hackathon_2016_07/notebooks/.ipynb_checkpoints/
 /bin/memex/hackathon_2016_07/data/
+
+# pycharm project
+.idea

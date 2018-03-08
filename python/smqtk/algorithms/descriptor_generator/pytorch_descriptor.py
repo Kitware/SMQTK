@@ -1,12 +1,11 @@
 from collections import deque
 import io
-import itertools
 import logging
 import multiprocessing
 import multiprocessing.pool
 
 import numpy
-from PIL import Image, ImageFile
+from PIL import Image
 import six
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
@@ -14,7 +13,7 @@ from six.moves import range, zip
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
-from smqtk.representation.data_element import from_uri
+
 from smqtk.utils.bin_utils import report_progress
 
 try:
@@ -87,7 +86,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         :type model_cls: str
 
         :param model_uri: URI to the trained ``.pt`` file to use.
-        :type model_uri: str
+        :type model_uri: None | str
 
         :param transform: torchvision transform module for preprocess the image.
         :type transform: torchvision.transform
@@ -111,7 +110,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         super(PytorchDescriptorGenerator, self).__init__()
 
         self._model_cls = model_cls
-        self._model_uri = str(model_uri)
+        self._model_uri = model_uri
         self._transform = transform
         self._resize_val = resize_val
         self._batch_size = int(batch_size)
@@ -130,7 +129,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                 self._gpu_device_id = int(self._gpu_device_id)
                 assert self._gpu_device_id in GPU_list, \
                     "GPU Device ID must be in GPU_list {} (got {})".format(GPU_list, self._gpu_device_id)
-                self._gpu_device_id = list(self._gpu_device_id)
+                self._gpu_device_id = [self._gpu_device_id]
 
         self._setup_network()
 
@@ -151,13 +150,15 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         if self._use_gpu:
             self._log.debug("Using GPU")
-            self._model_cls = torch.nn.DataParallel(self._model_cls, device_ids=self._gpu_device_id).cuda()
+            self._model_cls.cuda(self._gpu_device_id[0])
+            self._model_cls = torch.nn.DataParallel(self._model_cls, device_ids=self._gpu_device_id)
         else:
             self._log.debug("using CPU")
 
-        self._log.debug("load the trained model: {}".format(self._model_uri))
-        snapshot = torch.load(self._model_uri)
-        self._model_cls.load_state_dict(snapshot['state_dict'])
+        if self._model_uri is not None:
+            self._log.debug("load the trained model: {}".format(self._model_uri))
+            snapshot = torch.load(self._model_uri)
+            self._model_cls.load_state_dict(snapshot['state_dict'])
 
     def get_config(self):
         """
@@ -331,7 +332,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                     data = data.cuda()
 
                 input = Variable(data)
-                pytorch_f, _, _ = self._model_cls(input, input)
+                pytorch_f = self._model_cls(input)
 
                 for idx, uuid in enumerate(uuids):
                     descr_elements[uuid] = pytorch_f.data.cpu().numpy()[idx]

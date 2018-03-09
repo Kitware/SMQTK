@@ -4,7 +4,6 @@ import logging
 import multiprocessing
 import multiprocessing.pool
 
-import numpy
 from PIL import Image
 import six
 # noinspection PyUnresolvedReferences
@@ -14,7 +13,7 @@ from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import report_progress, initialize_logging
 
 try:
     import torch
@@ -44,7 +43,6 @@ __all__ = [
 
 class PytorchDataLoader(data.Dataset):
     def __init__(self, file_list, resize_val, uuid4proc, transform=None):
-
         self._file_list = file_list
         self._resize_val = resize_val
         self._uuid4proc = uuid4proc
@@ -77,7 +75,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls, model_uri, transform, resize_val,
+    def __init__(self, model_cls, model_uri, transform, resize_val=224,
                  batch_size=1, use_gpu=False, gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator
@@ -109,27 +107,33 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         """
         super(PytorchDescriptorGenerator, self).__init__()
 
-        self._model_cls = model_cls
-        self._model_uri = model_uri
-        self._transform = transform
-        self._resize_val = resize_val
-        self._batch_size = int(batch_size)
-        self._use_gpu = bool(use_gpu)
-        self._gpu_device_id = gpu_device_id
+        self.model_cls = model_cls
+        self.model_uri = model_uri
+        self.transform = transform
+        self.resize_val = resize_val
+        self.batch_size = int(batch_size)
+        self.use_gpu = bool(use_gpu)
+        self.gpu_device_id = gpu_device_id
+        # initialize_logging(self._log, logging.DEBUG)
 
-        assert self._batch_size > 0, \
-            "Batch size must be greater than 0 (got {})".format(\
-                self._batch_size)
+        if self.model_cls is None:
+            raise ValueError("Model class cannot be None!!!")
 
-        if self._use_gpu:
-            GPU_list = [x for x in range(torch.cuda.device_count())]
-            if self._gpu_device_id is None:
-                self._gpu_device_id = GPU_list
+        if self.transform is None:
+            raise ValueError("Transform cannot be None!!!")
+
+        assert self.batch_size > 0, \
+            "Batch size must be greater than 0 (got {})".format(self.batch_size)
+
+        if self.use_gpu:
+            gpu_list = [x for x in range(torch.cuda.device_count())]
+            if self.gpu_device_id is None:
+                self.gpu_device_id = gpu_list
             else:
-                self._gpu_device_id = int(self._gpu_device_id)
-                assert self._gpu_device_id in GPU_list, \
-                    "GPU Device ID must be in GPU_list {} (got {})".format(GPU_list, self._gpu_device_id)
-                self._gpu_device_id = [self._gpu_device_id]
+                self.gpu_device_id = int(self.gpu_device_id)
+                assert self.gpu_device_id in gpu_list, \
+                    "GPU Device ID must be in gpu_list {} (got {})".format(gpu_list, self.gpu_device_id)
+                self.gpu_device_id = [self.gpu_device_id]
 
         self._setup_network()
 
@@ -146,19 +150,19 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         """
         Initialize pytorch network
         """
-        self._model_cls.eval()
+        self.model_cls.eval()
 
-        if self._use_gpu:
+        if self.use_gpu:
             self._log.debug("Using GPU")
-            self._model_cls.cuda(self._gpu_device_id[0])
-            self._model_cls = torch.nn.DataParallel(self._model_cls, device_ids=self._gpu_device_id)
+            self.model_cls.cuda(self.gpu_device_id[0])
+            self.model_cls = torch.nn.DataParallel(self.model_cls, device_ids=self.gpu_device_id)
         else:
             self._log.debug("using CPU")
 
-        if self._model_uri is not None:
-            self._log.debug("load the trained model: {}".format(self._model_uri))
-            snapshot = torch.load(self._model_uri)
-            self._model_cls.load_state_dict(snapshot['state_dict'])
+        if self.model_uri is not None:
+            self._log.debug("load the trained model: {}".format(self.model_uri))
+            snapshot = torch.load(self.model_uri)
+            self.model_cls.load_state_dict(snapshot['state_dict'])
 
     def get_config(self):
         """
@@ -175,13 +179,13 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         """
         return {
-            "model_cls": self._model_cls,
-            "model_uri": self._model_uri,
-            "transform": self._transform,
-            "resize_val": self._resize_val,
-            "batch_size": self._batch_size,
-            "use_gpu": self._use_gpu,
-            "gpu_device_id": self._gpu_device_id,
+            'model_cls': self.model_cls,
+            'model_uri': self.model_uri,
+            'transform': self.transform,
+            'resize_val': self.resize_val,
+            'batch_size': self.batch_size,
+            'use_gpu': self.use_gpu,
+            'gpu_device_id': self.gpu_device_id,
         }
 
     def valid_content_types(self):
@@ -283,16 +287,15 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
         prog_rep_state = [0] * 7
-        for data in data_iter:
-            ct = data.content_type()
+        for d in data_iter:
+            ct = d.content_type()
             if ct not in self.valid_content_types():
                 self._log.error("Cannot compute descriptor from content type "
-                                "'%s' data: %s)" % (ct, data))
+                                "'%s' data: %s)" % (ct, d))
                 raise ValueError("Cannot compute descriptor from content type "
-                                 "'%s' data: %s)" % (ct, data))
-            data_elements[data.uuid()] = data
-            descr_elements[data.uuid()] = \
-                descr_factory.new_descriptor(self.name, data.uuid())
+                                 "'%s' data: %s)" % (ct, d))
+            data_elements[d.uuid()] = d
+            descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
             report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
@@ -320,22 +323,23 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         if uuid4proc:
             self._log.debug("Converting deque to tuple for segmentation")
-            kwargs = {'num_workers': procs if procs is not None else multiprocessing.cpu_count(), 'pin_memory': True}
-            data_loader_cls = PytorchDataLoader(file_list=data_elements,resize_val=self._resize_val,\
-                                                  uuid4proc=uuid4proc, transform=self._transform)
-            data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self._batch_size,\
+            kwargs = {'num_workers': procs if procs is not None
+                        else multiprocessing.cpu_count(), 'pin_memory': True}
+            data_loader_cls = PytorchDataLoader(file_list=data_elements, resize_val=self.resize_val,
+                                                uuid4proc=uuid4proc, transform=self.transform)
+            data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self.batch_size,
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (data, uuids) in data_loader:
-                if self._use_gpu:
-                    data = data.cuda()
+            for (d, uuids) in data_loader:
+                if self.use_gpu:
+                    d = d.cuda()
 
-                input = Variable(data)
-                pytorch_f = self._model_cls(input)
+                input = Variable(d)
+                pytorch_f = self.model_cls(input)
 
                 for idx, uuid in enumerate(uuids):
-                    descr_elements[uuid] = pytorch_f.data.cpu().numpy()[idx]
+                    descr_elements[uuid].set_vector(pytorch_f.data.cpu().numpy()[idx])
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

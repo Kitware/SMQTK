@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 from svm import *
+import numpy as np
 
 import sys
 
@@ -40,13 +41,23 @@ def svm_load_model(model_file_name):
 	model = toPyModel(model)
 	return model
 
-def svm_load_model_from_bytes(bytes):
-	model = libsvm.svm_load_model_from_bytes(bytes, len(bytes))
+def svm_load_model_from_bytes(bytes_list):
+	bytes_list_pointer = bytes_list.ctypes.data_as(POINTER(c_ubyte))
+	model = libsvm.load_model_from_bytes(bytes_list_pointer, len(bytes_list))
 	if not model:
 		print("can't load model from the bytes")
 		return None
 	model = toPyModel(model)
 	return model
+
+def svm_conv_model_to_bytes(model):
+	bytes_list = POINTER(c_ubyte)()
+	bytes_list_len = c_size_t()
+	libsvm.convert_model_to_bytes(model, byref(bytes_list), byref(bytes_list_len))
+	array_type = c_ubyte * bytes_list_len.value
+	array_pointer = cast(bytes_list, POINTER(array_type))
+	py_bytes_list = np.frombuffer(array_pointer.contents, dtype=np.uint8)
+	return py_bytes_list
 
 def svm_save_model(model_file_name, model):
 	"""

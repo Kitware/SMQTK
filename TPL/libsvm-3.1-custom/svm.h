@@ -99,6 +99,10 @@ const char *svm_check_parameter(const struct svm_problem *prob, const struct svm
 int svm_check_probability_model(const struct svm_model *model);
 
 void svm_set_print_string_function(void (*print_func)(const char *));
+void convert_model_to_bytes(svm_model *model, unsigned char* &buffer, size_t &size);
+std::vector<unsigned char>* convert_model_to_bytes_vector(svm_model *model);
+struct svm_model *load_model_from_bytes(unsigned char* buffer, size_t size);
+struct svm_model *load_model_from_bytes_vector(std::vector<unsigned char> *v);
 
 #ifdef __cplusplus
 }

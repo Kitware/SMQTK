@@ -110,7 +110,7 @@ setuptools.setup(
         'Linux',
         'Max OS-X',
         'Unix',
-        # 'Windows',  # Not tested yet
+        'Windows',  # Not tested yet
     ],
 
     package_dir={'': PYTHON_SRC},

@@ -113,7 +113,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         self.resize_val = resize_val
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
-        self.gpu_device_id = gpu_device_id
+        self.in_gpu_device_id = gpu_device_id
         # initialize_logging(self._log, logging.DEBUG)
 
         if self.model_cls is None:
@@ -127,10 +127,10 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         if self.use_gpu:
             gpu_list = [x for x in range(torch.cuda.device_count())]
-            if self.gpu_device_id is None:
+            if self.in_gpu_device_id is None:
                 self.gpu_device_id = gpu_list
             else:
-                self.gpu_device_id = int(self.gpu_device_id)
+                self.gpu_device_id = int(self.in_gpu_device_id)
                 assert self.gpu_device_id in gpu_list, \
                     "GPU Device ID must be in gpu_list {} (got {})".format(gpu_list, self.gpu_device_id)
                 self.gpu_device_id = [self.gpu_device_id]
@@ -185,7 +185,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
-            'gpu_device_id': self.gpu_device_id,
+            'gpu_device_id': self.in_gpu_device_id,
         }
 
     def valid_content_types(self):

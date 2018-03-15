@@ -7,6 +7,7 @@ References:
 """
 import logging
 import multiprocessing
+import sys
 
 try:
     from six.moves import cPickle as pickle
@@ -400,7 +401,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    % (uuid, c.rowcount))
 
         r = list(self.psql_helper.single_execute(eh, True))
-        return pickle.loads(r[0][0])
+        if sys.version_info >= (3, 0):
+            return pickle.loads(r[0][0])
+        else:
+            return pickle.loads(str(r[0][0]))
 
     def get_many_descriptors(self, uuids):
         """
@@ -448,7 +452,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                            self.multiquery_batch_size, True)
         i = 0
         for r, expected_uuid in zip(g, uuid_order):
-            d = pickle.loads(r[0])
+            if sys.version_info >= (3, 0):
+                d = pickle.loads(r[0])
+            else:
+                d = pickle.loads(str(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)
             yield d
@@ -544,7 +551,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
         #: :type: __generator
         execution_results = self.psql_helper.single_execute(execute, True, named=True)
         for r in execution_results:
-            d = pickle.loads(r[0])
+            if sys.version_info >= (3, 0):
+                d = pickle.loads(r[0])
+            else:
+                d = pickle.loads(str(r[0]))
             yield d
 
     def iteritems(self):

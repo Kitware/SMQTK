@@ -24,28 +24,6 @@ if PytorchDescriptorGenerator.is_usable():
     class TestPytorchDesctriptorGenerator (unittest.TestCase):
 
         lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
-
-        # lenna_alexnet_fc7_descr_fp = \
-        #     os.path.join(TEST_DATA_DIR, 'Lenna.alexnet_fc7_output.npy')
-        #
-        # # Dummy Caffe configuration files + weights
-        # # - weights is actually an empty file (0 bytes), which caffe treats
-        # #   as random/zero values (not sure exactly what's happening, but
-        # #   always results in a zero-vector).
-        # dummy_net_topo_fp = \
-        #     os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
-        # dummy_caffe_model_fp = \
-        #     os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
-        # dummy_img_mean_fp = \
-        #     os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
-        #
-        # www_uri_alexnet_prototxt = \
-        #     'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c/download'
-        # www_uri_alexnet_caffemodel = \
-        #     'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86/download'
-        # www_uri_image_mean_proto = \
-        #     'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82/download'
-
         def setUp(self):
             normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                              std=[0.229, 0.224, 0.225])
@@ -105,7 +83,7 @@ if PytorchDescriptorGenerator.is_usable():
 
 
         def test_copied_descriptorGenerator(self):
-            # When use_GPU is True, the  
+            # When use_GPU is True, the
             if self.use_GPU is False:
                 g = PytorchDescriptorGenerator(**self.expected_params)
                 g_pickled = pickle.dumps(g, -1)

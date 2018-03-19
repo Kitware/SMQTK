@@ -50,6 +50,29 @@ if PytorchDescriptorGenerator.is_usable():
             self.assertIn(PytorchDescriptorGenerator.__name__,
                                  get_descriptor_generator_impls())
 
+
+
+        @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
+                    '.CaffeDescriptorGenerator._setup_network')
+        def test_pickle_save_restore(self, m_cdg_setupNetwork):
+            # Mocking set_network so we don't have to worry about actually
+            # initializing any caffe things for this test.
+
+            g = PytorchDescriptorGenerator(**self.expected_params)
+            # Initialization sets up the network on construction.
+            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 1)
+
+            g_pickled = pickle.dumps(g, -1)
+            g2 = pickle.loads(g_pickled)
+            # Network should be setup for second class class just like in
+            # initial construction.
+            self.assertEqual(m_cdg_setupNetwork.call_count, 2)
+
+            self.assertIsInstance(g2, PytorchDescriptorGenerator)
+            self.assertEqual(g.get_config(), g2.get_config())
+
+
+
         @mock.patch('smqtk.algorithms.descriptor_generator.pytorch_descriptor'
                     '.PytorchDescriptorGenerator._setup_network')
         def test_get_config(self, m_cdg_setupNetwork):

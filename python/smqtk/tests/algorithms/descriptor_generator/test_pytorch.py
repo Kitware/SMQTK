@@ -1,23 +1,18 @@
-from __future__ import division, print_function
 import inspect
 import os
 import pickle
 import unittest
 
-import PIL.Image
 import mock
-import nose.tools
 import numpy
 
 from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 from smqtk.algorithms.descriptor_generator.pytorch_descriptor import \
      PytorchDescriptorGenerator
 from smqtk.representation.data_element import from_uri
-from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR
 
 from torchvision import models, transforms
-
 
 if PytorchDescriptorGenerator.is_usable():
 
@@ -43,34 +38,12 @@ if PytorchDescriptorGenerator.is_usable():
                 'resize_val': 256,
                 'batch_size': 8,
                 'use_gpu': self.use_GPU,
-                'gpu_device_id': 0,
+                'in_gpu_device_id': 0,
             }
 
         def test_impl_findable(self):
             self.assertIn(PytorchDescriptorGenerator.__name__,
                                  get_descriptor_generator_impls())
-
-
-
-        @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
-                    '.CaffeDescriptorGenerator._setup_network')
-        def test_pickle_save_restore(self, m_cdg_setupNetwork):
-            # Mocking set_network so we don't have to worry about actually
-            # initializing any caffe things for this test.
-
-            g = PytorchDescriptorGenerator(**self.expected_params)
-            # Initialization sets up the network on construction.
-            nose.tools.assert_equal(m_cdg_setupNetwork.call_count, 1)
-
-            g_pickled = pickle.dumps(g, -1)
-            g2 = pickle.loads(g_pickled)
-            # Network should be setup for second class class just like in
-            # initial construction.
-            self.assertEqual(m_cdg_setupNetwork.call_count, 2)
-
-            self.assertIsInstance(g2, PytorchDescriptorGenerator)
-            self.assertEqual(g.get_config(), g2.get_config())
-
 
 
         @mock.patch('smqtk.algorithms.descriptor_generator.pytorch_descriptor'

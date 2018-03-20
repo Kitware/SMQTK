@@ -76,7 +76,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         return valid
 
     def __init__(self, model_cls, model_uri, transform, resize_val=224,
-                 batch_size=1, use_gpu=False, gpu_device_id=0):
+                 batch_size=1, use_gpu=False, in_gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator
 
@@ -113,7 +113,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         self.resize_val = resize_val
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
-        self.in_gpu_device_id = gpu_device_id
+        self.in_gpu_device_id = in_gpu_device_id
         # initialize_logging(self._log, logging.DEBUG)
 
         if self.model_cls is None:
@@ -185,7 +185,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
-            'gpu_device_id': self.in_gpu_device_id,
+            'in_gpu_device_id': self.in_gpu_device_id,
         }
 
     def valid_content_types(self):

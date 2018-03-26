@@ -23,6 +23,15 @@ mock_DescriptorFactory = mock.Mock(
 mock_DescriptorIndex = mock.Mock(spec=smqtk.representation.descriptor_index)
 
 
+def dummy_transform(data_element):
+    """Transform function for testing augmented descriptor computation"""
+    new_elements = [mock.Mock(spec=smqtk.representation.DataElement)
+                    for i in range(data_element.uuid() + 1)]
+    for index, de in enumerate(new_elements):
+        de.uuid.return_value = data_element.uuid()**2 + index
+    return new_elements
+
+
 @pytest.fixture
 def data_elements():
     """Mock data elements"""
@@ -116,3 +125,22 @@ def test_compute_many_descriptors_batched(data_elements, descr_generator,
         bool(NUM_BASE_ELEMENTS % batch_size)]
     assert descr_generator.compute_descriptor_async.call_count == num_calls
     assert descr_index.add_many_descriptors.call_count == num_calls
+
+
+def test_compute_transformed_descriptors(data_elements, descr_generator,
+                                         mock_de, descr_factory, descr_index):
+    descriptors = compute_transformed_descriptors(data_elements,
+                                                  descr_generator,
+                                                  descr_factory, descr_index,
+                                                  dummy_transform,
+                                                  batch_size=None)
+
+    # Make sure order is preserved
+    for desc, uuids in zip(descriptors, [[0], [1, 2], [4, 5, 6]]):
+        for i, uuid_ in enumerate(uuids):
+            assert desc[0].uuid()**2 + i == uuid_
+            collections.deque(desc[1], maxlen=0)  # Run through iterator
+
+    # Since batch_size is None, these should only be called once
+    assert descr_generator.compute_descriptor_async.call_count == 1
+    assert descr_index.add_many_descriptors.call_count == 1

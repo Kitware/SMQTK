@@ -11,6 +11,7 @@ import os.path as osp
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.utils import bin_utils, jsmin, plugin
+from smqtk.utils.bin_utils import initialize_logging
 
 __author__ = 'paul.tunison@kitware.com'
 
@@ -71,12 +72,13 @@ def main():
 
     search_app_iqr_config = search_app_config["iqr_tabs"][args.tab]
 
+
     # Configure DataSet implementation and parameters
     data_set_config = search_app_iqr_config['data_set']
 
     # Configure DescriptorGenerator algorithm implementation, parameters and
     # persistant model component locations (if implementation has any).
-    descriptor_generator_config = search_app_iqr_config['descr_generator']
+    descriptor_generator_config = search_app_iqr_config['descriptor_generator']
 
     # Configure NearestNeighborIndex algorithm implementation, parameters and
     # persistant model component locations (if implementation has any).
@@ -111,6 +113,7 @@ def main():
         plugin.from_plugin_config(data_set_config,
                                   representation.get_data_set_impls())
     #: :type: algorithms.DescriptorGenerator
+    print(algorithms.get_descriptor_generator_impls())
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
                                   algorithms.get_descriptor_generator_impls())
@@ -165,3 +168,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    print('Done')

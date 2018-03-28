@@ -78,7 +78,7 @@ def main():
 
     # Configure DescriptorGenerator algorithm implementation, parameters and
     # persistant model component locations (if implementation has any).
-    descriptor_generator_config = search_app_iqr_config['descriptor_generator']
+    descriptor_generator_config = search_app_iqr_config['descr_generator']
 
     # Configure NearestNeighborIndex algorithm implementation, parameters and
     # persistant model component locations (if implementation has any).
@@ -113,7 +113,6 @@ def main():
         plugin.from_plugin_config(data_set_config,
                                   representation.get_data_set_impls())
     #: :type: algorithms.DescriptorGenerator
-    print(algorithms.get_descriptor_generator_impls())
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
                                   algorithms.get_descriptor_generator_impls())

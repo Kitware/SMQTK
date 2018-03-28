@@ -49,8 +49,8 @@ class SmqtkWebApp (SmqtkObject, flask.Flask,
                 "BASIC_AUTH_PASSWORD": "demo"
             },
             "server": {
-                'host': "127.0.0.1",
-                'port': 5000
+                "host": "127.0.0.1",
+                "port": 5000
             }
         }
 

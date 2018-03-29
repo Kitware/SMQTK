@@ -44,7 +44,7 @@ cd = get_descriptor_generator_impls()['PytorchDescriptorGenerator'](
         resize_val = 224,
         batch_size = 10,
         use_gpu = True,
-        gpu_device_id = None)
+        in_gpu_device_id = None)
 
 # Set up a factory for our vector (here in-memory storage)
 from smqtk.representation.descriptor_element_factory import DescriptorElementFactory

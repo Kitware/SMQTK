@@ -10,13 +10,14 @@
  *                    data, in contrast to data in the IQR working index.
  *
  */
-function DataView(container, rank, uid, probability, is_example) {
+function DataView(container, rank, uid, probability, saliency_flag, is_example) {
     Object.call(this);
 
     var inst = this;
     this.rank = rank;
     this.uid = uid;
     this.probability = probability;
+    this.saliency_flag = saliency_flag;
     this.is_example = is_example === undefined ? false : is_example;
 
     // image ``src`` reference to use for display in an <img>.
@@ -78,6 +79,10 @@ function DataView(container, rank, uid, probability, is_example) {
     // ajax call.
     this.image_data_view.attr('src', this.loading_gif);
 
+    //display saliency map
+    this.saliency_data_view = $('<img>');
+    this.saliency_data_view.attr('src', this.loading_gif);
+
     // Assemble result box
     if (! this.is_example) {
         this.result.append(this.header);
@@ -86,6 +91,9 @@ function DataView(container, rank, uid, probability, is_example) {
     this.result.append(this.image_container);
 
     this.image_container.append(this.image_data_view);
+    if (this.saliency_flag) {
+        this.image_container.append(this.saliency_data_view);
+    }
 
     //
     // Control
@@ -103,6 +111,11 @@ function DataView(container, rank, uid, probability, is_example) {
 
     // link click controls
     this.image_data_view.click(function () {
+        inst.display_full_image();
+    });
+
+    // link click controls
+    this.saliency_data_view.click(function () {
         inst.display_full_image();
     });
 
@@ -156,14 +169,27 @@ DataView.prototype.update_view = function (server_update) {
     function update_image()
     {
         inst.image_data_view.attr('src', inst.image_preview_data);
+        inst.saliency_data_view.attr('src', inst.image_preview_data);
+
+        var data_veiw_len = 192;
+        if (inst.saliency_flag) {
+            data_veiw_len = Math.floor(data_veiw_len / 2);
+        }
+        var data_veiw_len_str = data_veiw_len.toString() + 'px';
+
         // balance side scaling.
-        if (inst.img_long_side)
-        {
-            inst.image_data_view.css('height', '192px');
+        if (inst.img_long_side) {
+            inst.image_data_view.css('height', data_veiw_len_str);
+            if (inst.saliency_flag) {
+                inst.saliency_data_view.css('height', data_veiw_len_str);
+            }
         }
         else
         {
-            inst.image_data_view.css('width', '192px');
+            inst.image_data_view.css('width', data_veiw_len_str);
+            if (inst.saliency_flag) {
+                inst.saliency_data_view.css('width', data_veiw_len_str);
+            }
         }
     }
 

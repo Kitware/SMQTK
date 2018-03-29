@@ -33,8 +33,11 @@ function IqrView(container, upload_post_url) {
     this.results_zone = $('<div>');
 
     this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
+    this.button_saliency_index_initialize = $('<button class="btn btn-primary" type="button"/>');
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     this.button_state_save = $('<button class="btn" type="button"/>');
+
+    this.saliency_flag = false;
 
     //
     // Setup
@@ -64,15 +67,17 @@ IqrView.prototype.construct_view = function (container) {
 
     this.control_zone.append(
         this.button_index_initialize,
+        this.button_saliency_index_initialize,
         this.button_reset_session,
         this.button_state_save
     );
 
     this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
     this.status_inst = new IqrStatusView(this.status_zone);
-    this.results_view_inst = new IqrRefineView(this.results_zone);
+    this.results_view_inst = new IqrRefineView(this.results_zone, self.saliency_flag);
 
     this.button_index_initialize.text("Initialize Index");
+    this.button_saliency_index_initialize.text("Initialize Index with Saliency");
     this.button_reset_session.text("Reset IQR Session");
     this.button_state_save.text("Save IQR state");
     this.button_state_save.addClass('pull-right');
@@ -114,10 +119,17 @@ IqrView.prototype.construct_view = function (container) {
     });
 
     this.button_index_initialize.click(function () {
+        self.saliency_flag = false;
         self.initialize_index();
     });
 
+    this.button_saliency_index_initialize.click(function () {
+        self.saliency_flag = true;
+        self.initialize_saliency_index();
+    });
+
     this.button_reset_session.click(function () {
+        this.saliency_flag = false;
         self.reset_session();
     });
 
@@ -138,9 +150,9 @@ IqrView.prototype.reset_session = function() {
         success: function (data) {
             if ( data.success ) {
                 self.status_inst.update_view();
-                self.results_view_inst.update_refine_pane();
+                self.results_view_inst.update_refine_pane(this.saliency_flag);
                 if (self.results_view_inst.random_enabled) {
-                    self.results_view_inst.toggle_random_pane();
+                    self.results_view_inst.toggle_random_pane(this.saliency_flag);
                 }
                 alert_success("IQR Session Reset");
             }
@@ -175,7 +187,44 @@ IqrView.prototype.initialize_index = function () {
         success: function (data) {
             if (data.success) {
                 remove_prog_bar("Initialization Complete", "success");
-                self.results_view_inst.iqr_refine();
+                self.results_view_inst.iqr_refine(self.saliency_flag);
+            }
+            else {
+                remove_prog_bar("Initialization Failure", "danger");
+                alert_error("Error occurred initializing new index: "+data.message);
+            }
+        }
+    })
+};
+
+/**
+ * Initialize new IQR index.
+ *
+ * - clears existing results view
+ * - query server for initialization
+ * - call IqrRefineView.refine for initial view
+ *
+ */
+IqrView.prototype.initialize_saliency_index = function () {
+    var prog_bar = new ActivityBar(this.control_zone, "Initializing IQR Index");
+    prog_bar.on();
+
+    function remove_prog_bar(message, color_class) {
+        prog_bar.on(message);
+        prog_bar.stop_active(color_class);
+        prog_bar.progress_div.fadeOut('slow', function () {
+            prog_bar.remove();
+        });
+    }
+
+    var self = this;
+    $.ajax({
+        url: "iqr_initialize",
+        method: "POST",
+        success: function (data) {
+            if (data.success) {
+                remove_prog_bar("Initialization Complete", "success");
+                self.results_view_inst.iqr_refine(self.saliency_flag);
             }
             else {
                 remove_prog_bar("Initialization Failure", "danger");

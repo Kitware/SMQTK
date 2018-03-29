@@ -3,7 +3,7 @@
  *
  * @constructor
  */
-function IqrRefineView(container) {
+function IqrRefineView(container, saliency_flag) {
     Object.call(this);
 
     //
@@ -67,6 +67,8 @@ function IqrRefineView(container) {
     this.results_container_refine = $('<div/>');
     this.results_container_random = $('<div/>');
 
+    this.saliency_flag = saliency_flag;
+
     //
     // Construct layout
     //
@@ -74,7 +76,7 @@ function IqrRefineView(container) {
     // functions.
     //
     $(container).append(this.iqr_view_container);
-    this.construct_view(); // Everything lives underneath iqr_view_container
+    this.construct_view(this.saliency_flag); // Everything lives underneath iqr_view_container
 
     return this;
 }
@@ -82,8 +84,8 @@ function IqrRefineView(container) {
 /**
  * Global view construction
  */
-IqrRefineView.prototype.construct_view = function () {
-    this.construct_refine_pane();
+IqrRefineView.prototype.construct_view = function (saliency_flag) {
+    this.construct_refine_pane(saliency_flag);
     // construct random pane on request
 };
 
@@ -97,8 +99,9 @@ IqrRefineView.prototype.update_view = function () {
 /**
  * Construct the IQR Search pane
  */
-IqrRefineView.prototype.construct_refine_pane = function () {
+IqrRefineView.prototype.construct_refine_pane = function (saliency_flag) {
     var inst = this;
+    inst.saliency_flag = saliency_flag;
 
     // remove the main container in case its already there
     this.refine_container.remove();
@@ -127,27 +130,27 @@ IqrRefineView.prototype.construct_refine_pane = function () {
      * Event handling
      */
     this.button_refine_top.click(function () {
-        inst.iqr_refine();
+        inst.iqr_refine(inst.saliency_flag);
     });
     this.button_refine_bot.click(function () {
-        inst.iqr_refine();
+        inst.iqr_refine(inst.saliency_flag);
     });
     this.button_refine_showMore.click(function () {
-        inst.show_more_refine_results();
+        inst.show_more_refine_results(inst.saliency_flag);
     });
     this.button_toggle_random.click(function () {
-        inst.toggle_random_pane();
+        inst.toggle_random_pane(inst.saliency_flag);
     });
 
     // sets element initial visible/hidden status
-    this.update_refine_pane();
+    this.update_refine_pane(inst.saliency_flag);
 };
 
 /**
  * Refresh the view of the refine pane based on server-side model
  *
  */
-IqrRefineView.prototype.update_refine_pane = function () {
+IqrRefineView.prototype.update_refine_pane = function (saliency_flag) {
     // clear children of results container
     // get ordered results information
     // display first X results
@@ -157,6 +160,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
     this.refine_results_displayed = 0;
 
     var self = this;
+    self.saliency_flag = saliency_flag;
     // Check initialization status of session
     // - When not initialized, disable buttons + don't try to show results
     //   (there aren't going to be any)
@@ -187,7 +191,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
                             );
                         }
                         else {
-                            self.show_more_refine_results();
+                            self.show_more_refine_results(self.saliency_flag);
                         }
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
@@ -210,7 +214,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
  *
  * If we have shown all results possible, we hide the "Show More" button.
  */
-IqrRefineView.prototype.show_more_refine_results = function () {
+IqrRefineView.prototype.show_more_refine_results = function (saliency_flag) {
     var to_display = Math.min(
         this.refine_result_uuids.length,
         this.refine_results_displayed + this.show_more_step
@@ -220,7 +224,8 @@ IqrRefineView.prototype.show_more_refine_results = function () {
         new DataView(this.results_container_refine,
                       this.refine_results_displayed+1,  // show 1-indexed rank value
                       this.refine_result_uuids[this.refine_results_displayed],
-                      this.refine_result_score[this.refine_results_displayed]);
+                      this.refine_result_score[this.refine_results_displayed],
+                      saliency_flag);
         this.refine_results_displayed++;
     }
 
@@ -244,8 +249,9 @@ IqrRefineView.prototype.show_more_refine_results = function () {
  * Trigger an index refine action server-size, updating view when complete.
  * Requires that there be positive
  */
-IqrRefineView.prototype.iqr_refine = function() {
+IqrRefineView.prototype.iqr_refine = function(saliency_flag) {
     var self = this;
+    self.saliency_flag = saliency_flag;
 
     // helper methods for display stuff
     function disable_buttons() {
@@ -274,7 +280,7 @@ IqrRefineView.prototype.iqr_refine = function() {
             else {
                 alert_error("IQR Refine error: " + data['message']);
             }
-            self.update_refine_pane();
+            self.update_refine_pane(self.saliency_flag);
             restore();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -309,11 +315,11 @@ IqrRefineView.prototype.construct_random_pane = function () {
     // Random pane events
     var inst = this;
     this.button_random_refresh.click(function () {
-        inst.refresh_random_ids();
+        inst.refresh_random_ids(inst.saliency_flag);
     });
 
     this.button_random_showMore.click(function () {
-        inst.iterate_more_random_results();
+        inst.iterate_more_random_results(inst.saliency_flag);
     });
 
     // sets element initial visible/hidden status
@@ -362,8 +368,9 @@ IqrRefineView.prototype.clear_random_results = function () {
  * currently stored random ID ordering. This will add nothing if we don't
  * currently have any stored random IDs.
  */
-IqrRefineView.prototype.display_random_results_range = function (s, e) {
+IqrRefineView.prototype.display_random_results_range = function (s, e, saliency_flag) {
     var inst = this;
+    inst.saliency_flag = saliency_flag;
 
     // bound the start and end indices to prevent overflow
     s = Math.min(Math.max(0, s), this.random_ids.length);
@@ -372,7 +379,7 @@ IqrRefineView.prototype.display_random_results_range = function (s, e) {
     var r = null;
     for (; s < e; s++) {
         r = new DataView(this.results_container_random, s,
-                         this.random_ids[s], 'rand');
+                         this.random_ids[s], 'rand', inst.saliency_flag);
         this.random_results_displayed++;
     }
 
@@ -388,12 +395,13 @@ IqrRefineView.prototype.display_random_results_range = function (s, e) {
 /**
  * Query from the server the list of data element IDs in a random order.
  */
-IqrRefineView.prototype.refresh_random_ids = function () {
+IqrRefineView.prototype.refresh_random_ids = function (saliency_flag) {
     this.hide_random_functionals();
     this.clear_random_results();
     this.progress_bar_random.on("Refreshing random list");
 
     var inst = this;
+    inst.saliency_flag = saliency_flag;
     var restore = function () {
         inst.progress_bar_random.off();
         inst.show_random_functionals();
@@ -405,7 +413,7 @@ IqrRefineView.prototype.refresh_random_ids = function () {
             inst.random_ids = data['uids'];
             //alert_info("Random UIDs received: " + inst.random_ids);
             // If there are any IDs recorded, display an initial batch.
-            inst.display_random_results_range(0, inst.show_more_step);
+            inst.display_random_results_range(0, inst.show_more_step, inst.saliency_flag);
             restore();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -422,12 +430,12 @@ IqrRefineView.prototype.refresh_random_ids = function () {
  * results to show, this function does nothing (plus associated button is
  * hidden).
  */
-IqrRefineView.prototype.iterate_more_random_results = function () {
+IqrRefineView.prototype.iterate_more_random_results = function (saliency_flag) {
     var N = this.show_more_step;
     var s = this.random_results_displayed;
     var e = s + N;
     //alert_info("Showing more randoms in range ("+s+", "+e+"]");
-    this.display_random_results_range(s, e);
+    this.display_random_results_range(s, e, saliency_flag);
 };
 
 /**
@@ -435,7 +443,7 @@ IqrRefineView.prototype.iterate_more_random_results = function () {
  *
  * When enabling, performs an initial query to display initial results.
  */
-IqrRefineView.prototype.toggle_random_pane = function () {
+IqrRefineView.prototype.toggle_random_pane = function (saliency_flag) {
     if (this.random_enabled)
     {
         // moving button first to avoid detaching handler attachments
@@ -451,7 +459,7 @@ IqrRefineView.prototype.toggle_random_pane = function () {
         this.random_container.css('width', '49%');
 
         // Show initial random results
-        this.refresh_random_ids();
+        this.refresh_random_ids(saliency_flag);
     }
 
     // flip

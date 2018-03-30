@@ -14,6 +14,7 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 
 from smqtk.utils.bin_utils import report_progress, initialize_logging
+from smqtk.pytorch_model import get_pytorchmodel_element_impls
 
 try:
     import torch
@@ -75,19 +76,16 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls, model_uri, transform, resize_val=224,
+    def __init__(self, model_cls_name, model_uri, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator
 
-        :param model_cls: model definition class.
-        :type model_cls: str
+        :param model_cls_name: model definition name.
+        :type model_cls_name: str
 
         :param model_uri: URI to the trained ``.pt`` file to use.
         :type model_uri: None | str
-
-        :param transform: torchvision transform module for preprocess the image.
-        :type transform: torchvision.transform
 
         :param resize_val: Resize the input image to the resize_val x resize_val.
         :type resize-val: int
@@ -107,20 +105,14 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         """
         super(PytorchDescriptorGenerator, self).__init__()
 
-        self.model_cls = model_cls
+
+        self.model_cls_name = model_cls_name
         self.model_uri = model_uri
-        self.transform = transform
         self.resize_val = resize_val
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
         self.in_gpu_device_id = in_gpu_device_id
         # initialize_logging(self._log, logging.DEBUG)
-
-        if self.model_cls is None:
-            raise ValueError("Model class cannot be None!!!")
-
-        if self.transform is None:
-            raise ValueError("Transform cannot be None!!!")
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got {})".format(self.batch_size)
@@ -150,6 +142,16 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         """
         Initialize pytorch network
         """
+        pt_model = get_pytorchmodel_element_impls()[self.model_cls_name]()
+
+        self.model_cls = pt_model.model_def()
+        if self.model_cls is None:
+            raise ValueError("Model class cannot be None!!!")
+
+        self.transform = pt_model.transforms()
+        if self.transform is None:
+            raise ValueError("Transform cannot be None!!!")
+
         self.model_cls.eval()
 
         if self.use_gpu:
@@ -179,9 +181,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         """
         return {
-            'model_cls': self.model_cls,
+            'model_cls_name': self.model_cls_name,
             'model_uri': self.model_uri,
-            'transform': self.transform,
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,

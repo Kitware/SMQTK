@@ -23,8 +23,8 @@ def cli_parser():
                         required=True,
                         help="IQR application configuration file.")
     parser.add_argument("-t", "--tab",
-                        type=int, default=0,
-                        help="The configuration tab to generate the model for.")
+                        type=str, default=0,
+                        help="The configuration tab name to generate the model for.")
     parser.add_argument('-v', '--verbose',
                         action='store_true', default=False,
                         help='Show debug logging.')
@@ -66,8 +66,8 @@ def main():
     #
 
     # base actions on a specific IQR tab configuration (choose index here)
-    if args.tab <  0 or args.tab > (len(search_app_config["iqr_tabs"]) - 1):
-        log.error("Invalid tab number provided.")
+    if args.tab not in search_app_config["iqr_tabs"]:
+        log.error("Invalid tab name provided.")
         exit(1)
 
     search_app_iqr_config = search_app_config["iqr_tabs"][args.tab]

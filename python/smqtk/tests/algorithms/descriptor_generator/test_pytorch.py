@@ -20,21 +20,11 @@ if PytorchDescriptorGenerator.is_usable():
 
         lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
         def setUp(self):
-            normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                             std=[0.229, 0.224, 0.225])
-            self.transform = transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                normalize
-            ])
-            self.model_cls = models.resnet50(pretrained=True)
+            self.model_cls_name = 'ImageNet_ResNet50'
             self.use_GPU = False
             self.expected_params = {
-                'model_cls': self.model_cls,
-                # 'model_cls': None,
+                'model_cls_name': self.model_cls_name,
                 'model_uri': None,
-                'transform': self.transform,
                 'resize_val': 256,
                 'batch_size': 8,
                 'use_gpu': self.use_GPU,
@@ -79,7 +69,6 @@ if PytorchDescriptorGenerator.is_usable():
 
 
         def test_copied_descriptorGenerator(self):
-            # When use_GPU is True, the
             if self.use_GPU is False:
                 g = PytorchDescriptorGenerator(**self.expected_params)
                 g_pickled = pickle.dumps(g, -1)
@@ -96,13 +85,12 @@ if PytorchDescriptorGenerator.is_usable():
                 pass
 
 
-        @mock.patch('smqtk.algorithms.descriptor_generator.pytorch_descriptor'
-                    '.PytorchDescriptorGenerator._setup_network')
-        def test_invalid_datatype(self, m_cdg_setupNetwork):
+        def test_invalid_datatype(self):
+            kwargs = {'model_cls_name': 'test', 'model_uri':None}
             self.assertRaises(
-                ValueError,
+                KeyError,
                 PytorchDescriptorGenerator,
-                None, None, None
+                **kwargs
             )
 
 
@@ -132,7 +120,14 @@ if PytorchDescriptorGenerator.is_usable():
             from PIL import Image
             from torch.autograd import Variable
             img = Image.open(self.lenna_image_fp)
-            img = img.resize((256, 256), Image.BILINEAR).convert('RGB')
+
+            from smqtk.pytorch_model import get_pytorchmodel_element_impls
+            pt_model = get_pytorchmodel_element_impls()[self.model_cls_name]()
+
+            self.model_cls = pt_model.model_def()
+            self.transform = pt_model.transforms()
+            self.model_cls.eval()
+
             img = self.transform(img)
             if self.use_GPU:
                 img = img.cuda()

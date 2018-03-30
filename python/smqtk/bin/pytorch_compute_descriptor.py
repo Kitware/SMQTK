@@ -15,11 +15,8 @@ initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
 # Create a model.  This assumes that you have properly set up a proper Caffe environment for SMQTK
 
 cd = get_descriptor_generator_impls()['PytorchDescriptorGenerator'](
-        # model_cls = Siamese(),
-        model_cls_name = 'Siamese',
-        model_uri = "/home/bdong/HiDive_project/tracking_the_untrackable/snapshot/non_itar_siamese/snapshot_epoch_10.pt",
-        # model_cls = models.resnet50(pretrained=True),
-        # model_uri = None,
+        model_cls_name = 'AlexNet',
+        model_uri = None,
         resize_val = 224,
         batch_size = 10,
         use_gpu = True,

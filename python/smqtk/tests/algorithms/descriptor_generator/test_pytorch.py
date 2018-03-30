@@ -21,7 +21,7 @@ if PytorchDescriptorGenerator.is_usable():
         lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
         def setUp(self):
             self.model_cls_name = 'ImageNet_ResNet50'
-            self.use_GPU = False
+            self.use_GPU = True
             self.expected_params = {
                 'model_cls_name': self.model_cls_name,
                 'model_uri': None,
@@ -120,6 +120,7 @@ if PytorchDescriptorGenerator.is_usable():
             from PIL import Image
             from torch.autograd import Variable
             img = Image.open(self.lenna_image_fp)
+            img = img.resize((256, 256), Image.BILINEAR).convert('RGB')
 
             from smqtk.pytorch_model import get_pytorchmodel_element_impls
             pt_model = get_pytorchmodel_element_impls()[self.model_cls_name]()
@@ -131,7 +132,10 @@ if PytorchDescriptorGenerator.is_usable():
             img = self.transform(img)
             if self.use_GPU:
                 img = img.cuda()
+                self.model_cls = self.model_cls.cuda()
+
             expected_descr = self.model_cls(Variable(img.unsqueeze(0)))
+
             if self.use_GPU:
                 expected_descr = expected_descr.data.cpu().squeeze().numpy()
             else:

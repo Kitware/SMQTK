@@ -2,6 +2,14 @@ import logging
 from smqtk.pytorch_model import PyTorchModelElement
 
 try:
+    import torch
+except ImportError as ex:
+    logging.getLogger(__name__).warning("Failed to import pytorch module: %s",
+                                        str(ex))
+else:
+    from torch import nn
+
+try:
     import torchvision
 except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import pytorch module: %s",
@@ -9,6 +17,29 @@ except ImportError as ex:
 else:
     from torchvision import models
     from torchvision import transforms
+
+
+# The model structure class
+class ImageNet_ResNet50_def(nn.Module):
+    def __init__(self):
+        super(ImageNet_ResNet50_def, self).__init__()
+        self.resnet = models.resnet50(pretrained=True)
+
+    def forward(self, x):
+        x = self.resnet.conv1(x)
+        x = self.resnet.bn1(x)
+        x = self.resnet.relu(x)
+        x = self.resnet.maxpool(x)
+
+        x = self.resnet.layer1(x)
+        x = self.resnet.layer2(x)
+        x = self.resnet.layer3(x)
+        x = self.resnet.layer4(x)
+
+        x = self.resnet.avgpool(x)
+        x = x.view(x.size(0), -1)
+
+        return x
 
 
 class ImageNet_ResNet50(PyTorchModelElement):
@@ -21,7 +52,7 @@ class ImageNet_ResNet50(PyTorchModelElement):
         return valid
 
     def model_def(self):
-        return models.resnet50(pretrained=True)
+        return ImageNet_ResNet50_def()
 
     def transforms(self):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],

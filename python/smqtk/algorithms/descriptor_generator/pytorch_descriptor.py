@@ -76,7 +76,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls_name, model_uri, resize_val=224,
+    def __init__(self, model_cls_name, model_uri=None, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator

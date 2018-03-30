@@ -18,37 +18,42 @@ else:
     from torchvision import models
     from torchvision import transforms
 
+
 # The model structure class
-class Siamese_def(nn.Module):
+class AlexNet_def(nn.Module):
     def __init__(self):
-        super(Siamese_def, self).__init__()
-        self.resnet = models.resnet50(pretrained=False)
-        self.num_fcin = self.resnet.fc.in_features
-        self.resnet.fc = nn.Linear(self.num_fcin, 500)
-        self.pdist = nn.PairwiseDistance(1)
+        super(AlexNet_def, self).__init__()
+        self.alexnet = models.alexnet(pretrained=True)
+        # remove the last FC layer
+        self.classifier = nn.Sequential(*list(self.alexnet.classifier.children())[:-1])
 
     def forward(self, x):
-        x = self.resnet(x)
+        x = self.alexnet.features(x)
+        x = x.view(x.size(0), 256 * 6 * 6)
+        x = self.classifier(x)
+
         return x
 
-# Transforms for pre-processing
-transform = transforms.Compose([
-        transforms.Resize(224),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
 
-class Siamese(PyTorchModelElement):
+class AlexNet(PyTorchModelElement):
     @classmethod
     def is_usable(cls):
-        valid = torch is not None and torchvision is not None
+        valid = torchvision is not None
         if not valid:
             cls.get_logger().debug("Pytorch or torchvision (or both) python \
                 module cannot be imported")
         return valid
 
     def model_def(self):
-        return Siamese_def()
+        return AlexNet_def()
 
     def transforms(self):
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+        transform = transforms.Compose([
+            transforms.Resize(224),
+            transforms.ToTensor(),
+            normalize
+        ])
+
         return transform

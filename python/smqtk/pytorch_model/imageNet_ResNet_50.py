@@ -18,6 +18,9 @@ else:
     from torchvision import models
     from torchvision import transforms
 
+__author__ = 'bo.dong@kitware.com'
+
+__all__ = ["ImageNet_ResNet50",]
 
 # The model structure class
 class ImageNet_ResNet50_def(nn.Module):

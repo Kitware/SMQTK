@@ -11,6 +11,8 @@ except ImportError as ex:
 else:
     from torch import nn
 
+__author__ = 'bo.dong@kitware.com'
+
 class PyTorchModelElement(plugin.Pluggable):
     """
     Parent class for all PyTorch model interfaces.
@@ -55,7 +57,7 @@ def get_pytorchmodel_element_impls(reload_modules=False):
               character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
-    ``DESCRIPTOR_ELEMENT_CLASS``, which can either be a single class object or
+    ``PYTORCHMODEL_ELEMENT_CLASS``, which can either be a single class object or
     an iterable of class objects, to be specifically exported. If the variable
     is set to None, we skip that module and do not import anything. If the
     variable is not present, we look at attributes defined in that module for
@@ -65,7 +67,7 @@ def get_pytorchmodel_element_impls(reload_modules=False):
     :param reload_modules: Explicitly reload discovered modules from source.
     :type reload_modules: bool
 
-    :return: Map of discovered class object of type ``DescriptorElement``
+    :return: Map of discovered class object of type ``PyTorchModelElement``
         whose keys are the string names of the classes.
     :rtype: dict[str, type]
 

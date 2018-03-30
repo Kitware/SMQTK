@@ -18,6 +18,9 @@ else:
     from torchvision import models
     from torchvision import transforms
 
+__author__ = 'bo.dong@kitware.com'
+
+__all__ = [ "AlexNet", ]
 
 # The model structure class
 class AlexNet_def(nn.Module):

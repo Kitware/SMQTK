@@ -18,6 +18,10 @@ else:
     from torchvision import models
     from torchvision import transforms
 
+__author__ = 'bo.dong@kitware.com'
+
+__all__ = [ "Siamese", ]
+
 # The model structure class
 class Siamese_def(nn.Module):
     def __init__(self):

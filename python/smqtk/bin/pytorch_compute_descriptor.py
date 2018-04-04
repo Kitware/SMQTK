@@ -6,7 +6,7 @@ sys.path.extend(['/home/bdong/XAI/caffe-1.0/python'])
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
 
 # Import some butterfly data
-files = ["/home/bdong/XAI/leedsbutterfly/images/001{:04d}.png".format(i) for i in range(4,10)]
+files = ["/home/bdong/XAI/leedsbutterfly/images/001{:04d}.png".format(i) for i in range(4,6)]
 from smqtk.representation.data_element.file_element import DataFileElement
 el = [DataFileElement(d) for d in files]
 
@@ -14,11 +14,11 @@ initialize_logging(logging.getLogger('__main__'), logging.DEBUG)
 
 # Create a model.  This assumes that you have properly set up a proper Caffe environment for SMQTK
 
-cd = get_descriptor_generator_impls()['PytorchDescriptorGenerator'](
-        model_cls_name = 'AlexNet',
+cd = get_descriptor_generator_impls()['PytorchSaliencyDescriptorGenerator'](
+        model_cls_name = 'ImageNet_ResNet50',
         model_uri = None,
         resize_val = 224,
-        batch_size = 10,
+        batch_size = 500,
         use_gpu = True,
         in_gpu_device_id = None)
 

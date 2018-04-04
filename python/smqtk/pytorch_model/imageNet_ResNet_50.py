@@ -40,9 +40,10 @@ class ImageNet_ResNet50_def(nn.Module):
         x = self.resnet.layer4(x)
 
         x = self.resnet.avgpool(x)
-        x = x.view(x.size(0), -1)
+        features = x.view(x.size(0), -1)
+        out = self.resnet.fc(features)
 
-        return x
+        return (features, out)
 
 
 class ImageNet_ResNet50(PyTorchModelElement):

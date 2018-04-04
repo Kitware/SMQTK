@@ -1,10 +1,12 @@
 from collections import deque
-import io
+import os
 import logging
 import multiprocessing
 import multiprocessing.pool
+import numpy as np
+from tqdm import tqdm
+from skimage.transform import resize
 
-from PIL import Image
 import six
 # noinspection PyUnresolvedReferences
 from six.moves import range, zip
@@ -15,6 +17,7 @@ from smqtk.algorithms.descriptor_generator import \
 
 from smqtk.utils.bin_utils import report_progress, initialize_logging
 from smqtk.pytorch_model import get_pytorchmodel_element_impls
+from smqtk.algorithms.descriptor_generator.pytorch_descriptor import PytorchDataLoader
 
 try:
     import torch
@@ -25,7 +28,8 @@ except ImportError as ex:
 else:
     import torch.utils.data as data
     from torch.autograd import Variable
-    
+    import torch.nn as nn
+
 try:
     import torchvision
 except ImportError as ex:
@@ -35,34 +39,150 @@ except ImportError as ex:
 else:
     from torchvision import transforms
 
-
 __author__ = 'bo.dong@kitware.com'
 
 __all__ = [
-    "PytorchDescriptorGenerator",
+    "PytorchSaliencyDescriptorGenerator",
+    "MaskSaliencyDataset",
 ]
 
-class PytorchDataLoader(data.Dataset):
-    def __init__(self, file_list, resize_val, uuid4proc, transform=None):
-        self._file_list = file_list
-        self._resize_val = resize_val
-        self._uuid4proc = uuid4proc
-        self._transform = transform
+def generate_masks(mask_num, grid_num, image_size=(224, 224)):
+    if not os.path.isfile('masks_{}_{}.npy'.format(mask_num, grid_num)):
+        cell_size = np.ceil(224 / grid_num)
+        up_size = (grid_num + 1) * cell_size
+
+        grid = np.random.randint(0, 2, (mask_num, grid_num, grid_num)).astype('float32')
+
+        masks = np.empty((mask_num, 224, 224))
+        for i in tqdm(range(mask_num), desc='Generating masks'):
+            x, y = np.random.randint(0, cell_size, 2)
+            masks[i, :, :] = resize(grid[i], (up_size, up_size), order=3,
+                                      mode='reflect')[x:x + image_size[0], y:y + image_size[1]]
+        masks = masks.reshape(-1, 1, *image_size)
+        masks.tofile('masks_{}_{}.npy'.format(mask_num, grid_num))
+    else:
+        masks = np.fromfile('masks_{}_{}.npy'.format(mask_num, grid_num)).reshape(-1, 1, *image_size)
+
+    masks = torch.from_numpy(masks).float().cuda()
+    return masks
+
+def generate_vec(f_vec, sa_map, topk_label):
+    if sa_map.shape[0] != len(topk_label):
+        raise ValueError("The number of saliency map is not equal to topK label size!")
+
+    res = np.array([f_vec])
+
+    sa_dict = {}
+    for i in range(len(topk_label)):
+        sa_dict[topk_label[i]] = sa_map[i]
+
+    res = np.append(res, sa_dict)
+
+    return res
+
+
+class TensorDataset(data.Dataset):
+    def __init__(self, tensor):
+        self._tensor = tensor
 
     def __getitem__(self, index):
-        img = Image.open(io.BytesIO(self._file_list[self._uuid4proc[index]].get_bytes()))
-        img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
-
-        if self._transform is not None:
-            img = self._transform(img)
-
-        return img, self._uuid4proc[index]
+        return self._tensor[index]
 
     def __len__(self):
-        return len(self._uuid4proc)
+        return self._tensor.size(0)
+
+class MaskSaliencyDataset(data.Dataset):
+    def __init__(self, masks, classifier, batch_size, topk=3, topk_idx_list=None):
+
+        self._filters = masks
+        self._img_set = None
+        self._process_img = None
+        self._process_imgbatch = None
+        self._classifier = classifier
+        self._batch_size = batch_size
+        self._topk = topk
+        self._filters_num = masks.size(0)
+        self._topk_list_flag = False
+
+        if topk_idx_list is not None:
+            self._topk = len(topk_idx_list)
+            self._tc_list = topk_idx_list
+            self._topk_list_flag = True
+
+    @property
+    def image_set(self):
+        return self._img_set
+
+    @image_set.setter
+    def image_set(self, val):
+        self._img_set = val
+
+    @property
+    def process_img(self):
+        return self._process_img
+
+    @process_img.setter
+    def process_img(self, val):
+        if not isinstance(val, torch.Tensor):
+            raise TypeError("{} has to be torch.Tensor!".format(val))
+        if val.dim() != 3:
+            raise ValueError("{} has to be 3 dimensions!".format(val))
+
+        self._process_img = val
+        self._img_set = [(self._process_img, -1)]
+
+    @property
+    def process_imgbatch(self):
+        return self._process_imgbatch
+
+    @process_imgbatch.setter
+    def process_imgbatch(self,val):
+        if not isinstance(val, torch.Tensor):
+            raise TypeError("{} has to be torch.Tensor!".format(val))
+        if val.dim() != 4:
+            raise ValueError("{} has to be 4 dimensions!".format(val))
+
+        self._process_imgbatch = val
+        self._img_set = [(val[i], -1) for i in range(val.size(0))]
 
 
-class PytorchDescriptorGenerator (DescriptorGenerator):
+    def __getitem__(self, index):
+        cur_img, _ = self._img_set[index]
+
+        #top k class labels of current image
+        if self._topk_list_flag is False:
+            _, self._tc_list = torch.topk(nn.Softmax(1)(self._classifier(Variable(cur_img.unsqueeze(0)).cuda())[1]), k=self._topk)
+            self._tc_list = self._tc_list.squeeze().cpu().data.numpy()
+
+        def obtain_masked_img_targetP(img):
+            masked_imgs = torch.mul(self._filters.cuda(), img.cuda())
+
+            # masked_image loader
+            kwargs = {'shuffle': False}
+            masked_imgs_loader = torch.utils.data.DataLoader(
+                    TensorDataset(masked_imgs), batch_size=self._batch_size, **kwargs)
+
+            #obtain masked image's probability of the target classes (i.e., self._tc_list)
+            p_list = []
+            for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
+                p_list.append(nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])[:, self._tc_list])
+
+            p_list = torch.cat(p_list)
+
+            return p_list.squeeze(1)
+
+        tc_p = obtain_masked_img_targetP(cur_img)
+
+        res_sa = torch.matmul(tc_p.data.transpose(0, 1), self._filters.view(self._filters_num, -1)).view(
+            (len(self._tc_list), cur_img.size(1), cur_img.size(2)))
+
+        return res_sa.cpu().numpy(), self._tc_list
+
+    def __len__(self):
+        return len(self._img_set)
+
+
+class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
     """
     Compute images against a pytorch model. The pytorch model
     outputs the desired features for the input images.
@@ -76,7 +196,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls_name, model_uri=None, resize_val=224,
+    def __init__(self, model_cls_name, model_uri=None, mask_num=4000, grid_num=13, topk=3, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator
@@ -103,11 +223,14 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         :type gpu_device_id: None | int
 
         """
-        super(PytorchDescriptorGenerator, self).__init__()
+        super(PytorchSaliencyDescriptorGenerator, self).__init__()
 
 
         self.model_cls_name = model_cls_name
         self.model_uri = model_uri
+        self.mask_num = mask_num
+        self.grid_num = grid_num
+        self.topk = topk
         self.resize_val = resize_val
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
@@ -153,6 +276,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             raise ValueError("Transform cannot be None!!!")
 
         self.model_cls.eval()
+        for p in self.model_cls.parameters():
+            p.requires_grad = False
 
         if self.use_gpu:
             self._log.debug("Using GPU")
@@ -165,6 +290,9 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             self._log.debug("load the trained model: {}".format(self.model_uri))
             snapshot = torch.load(self.model_uri)
             self.model_cls.load_state_dict(snapshot['state_dict'])
+
+        masks = generate_masks(self.mask_num, self.grid_num, image_size=(self.resize_val, self.resize_val))
+        self.saliency_generator = MaskSaliencyDataset(masks, self.model_cls, self.batch_size, self.topk)
 
     def get_config(self):
         """
@@ -183,6 +311,9 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         return {
             'model_cls_name': self.model_cls_name,
             'model_uri': self.model_uri,
+            'mask_num' : self.mask_num,
+            'grid_num' : self.grid_num,
+            'topk' : self.topk,
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
@@ -297,6 +428,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                                  "'%s' data: %s)" % (ct, d))
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
+            descr_elements[d.uuid()].saliency_flag = True
             report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
@@ -333,6 +465,9 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
             self._log.debug("Extract pytorch features")
             for (d, uuids) in data_loader:
+                # estimated topK saliency maps
+                self.saliency_generator.process_imgbatch = d
+
                 if self.use_gpu:
                     d = d.cuda()
 
@@ -340,7 +475,10 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                 pytorch_f = self.model_cls(input)[0]
 
                 for idx, uuid in enumerate(uuids):
-                    descr_elements[uuid].set_vector(pytorch_f.data.cpu().numpy()[idx])
+                    f_vec = pytorch_f.data.cpu().numpy()[idx]
+                    sa_map, topk_labels = self.saliency_generator[idx]
+                    final_vec = generate_vec(f_vec, sa_map, topk_labels)
+                    descr_elements[uuid].set_vector(final_vec)
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

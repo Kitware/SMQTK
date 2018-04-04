@@ -25,6 +25,15 @@ class DescriptorMemoryElement (DescriptorElement):
     def __init__(self, type_str, uuid):
         super(DescriptorMemoryElement, self).__init__(type_str, uuid)
         self.__v = None
+        self._saliency_flag = False
+
+    @property
+    def saliency_flag(self):
+        return self._saliency_flag
+
+    @saliency_flag.setter
+    def saliency_flag(self, val):
+        self._saliency_flag = val
 
     def __getstate__(self):
         # save vector as binary string
@@ -73,7 +82,10 @@ class DescriptorMemoryElement (DescriptorElement):
         """
         # Copy if storing an array, otherwise return the None value
         if self.__v is not None:
-            return numpy.copy(self.__v)
+            if self._saliency_flag is False:
+                return numpy.copy(self.__v)
+            else:
+                return numpy.copy(self.__v[:-1]).astype(numpy.float32)
         return None
 
     def set_vector(self, new_vec):
@@ -100,6 +112,15 @@ class DescriptorMemoryElement (DescriptorElement):
             self.__v = numpy.copy(new_vec)
         else:
             self.__v = None
+
+    def obtain_saliency_map(self):
+        if self.__v is not None and self._saliency_flag is True:
+            sa_dict = self.__v[-1]
+            if not isinstance(sa_dict, dict):
+                raise TypeError("The last element is {}, which should be a dict".format(type(sa_dict)))
+            return numpy.copy(sa_dict)
+
+        return None
 
 
 class DescriptorFileElement (DescriptorElement):

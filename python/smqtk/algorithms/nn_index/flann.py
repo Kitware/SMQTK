@@ -327,6 +327,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         self._restore_index()
         super(FlannNearestNeighborsIndex, self).nn(d, n)
         vec = d.vector()
+        self._log.debug("vec shape {}".format(vec.shape))
 
         # If the distance method is HIK, we need to treat it special since that
         # method produces a similarity score, not a distance score.

@@ -4,6 +4,7 @@ import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
+import os.path as osp
 
 
 class DataMemoryElement (DataElement):

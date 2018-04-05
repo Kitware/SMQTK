@@ -3,3 +3,6 @@ from . import (
     representation,
     iqr
 )
+
+import matplotlib
+matplotlib.use('Agg')

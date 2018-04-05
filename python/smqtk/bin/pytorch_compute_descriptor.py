@@ -4,6 +4,10 @@ from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 import sys
 sys.path.extend(['/home/bdong/XAI/caffe-1.0/python'])
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
+from smqtk.representation.data_set.file_set import DataFileSet
+import os.path as osp
+from smqtk.utils.preview_cache import PreviewCache
+import PIL.Image
 
 # Import some butterfly data
 files = ["/home/bdong/XAI/leedsbutterfly/images/001{:04d}.png".format(i) for i in range(4,6)]
@@ -31,8 +35,16 @@ factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 descriptors = []
 for item in el:
     d = cd.compute_descriptor(item, factory)
+    print(d.saliency_map())
     descriptors.append(d)
 
+data_set = DataFileSet(root_directory='./sa_map')
+de = data_set.get_data(descriptors[0].saliency_map()[323])
+
+preview_cache = PreviewCache(osp.join('./', "previews"))
+preview_path = preview_cache.get_preview_image(de)
+img = PIL.Image.open(preview_path)
+img.save('test.png')
 
 index = FlannNearestNeighborsIndex(distance_method="euclidean",
                                    random_seed=42, index_uri="nn.index",

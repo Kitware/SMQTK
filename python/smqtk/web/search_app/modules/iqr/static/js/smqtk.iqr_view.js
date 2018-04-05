@@ -125,7 +125,7 @@ IqrView.prototype.construct_view = function (container) {
 
     this.button_saliency_index_initialize.click(function () {
         self.saliency_flag = true;
-        self.initialize_saliency_index();
+        self.initialize_index();
     });
 
     this.button_reset_session.click(function () {
@@ -169,43 +169,6 @@ IqrView.prototype.reset_session = function() {
  *
  */
 IqrView.prototype.initialize_index = function () {
-    var prog_bar = new ActivityBar(this.control_zone, "Initializing IQR Index");
-    prog_bar.on();
-
-    function remove_prog_bar(message, color_class) {
-        prog_bar.on(message);
-        prog_bar.stop_active(color_class);
-        prog_bar.progress_div.fadeOut('slow', function () {
-            prog_bar.remove();
-        });
-    }
-
-    var self = this;
-    $.ajax({
-        url: "iqr_initialize",
-        method: "POST",
-        success: function (data) {
-            if (data.success) {
-                remove_prog_bar("Initialization Complete", "success");
-                self.results_view_inst.iqr_refine(self.saliency_flag);
-            }
-            else {
-                remove_prog_bar("Initialization Failure", "danger");
-                alert_error("Error occurred initializing new index: "+data.message);
-            }
-        }
-    })
-};
-
-/**
- * Initialize new IQR index.
- *
- * - clears existing results view
- * - query server for initialization
- * - call IqrRefineView.refine for initial view
- *
- */
-IqrView.prototype.initialize_saliency_index = function () {
     var prog_bar = new ActivityBar(this.control_zone, "Initializing IQR Index");
     prog_bar.on();
 

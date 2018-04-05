@@ -1,6 +1,10 @@
 import io
 import logging
+from io import BytesIO
+
 import PIL.Image
+import numpy as np
+from matplotlib import pyplot as plt
 
 from smqtk.representation.data_element.file_element import DataElement
 
@@ -63,3 +67,42 @@ def is_valid_element(data_element, valid_content_types=None, check_image=False):
         return False
 
     return isinstance(data_element, DataElement)
+
+
+def overlay_saliency_map(sa_map, org_img_bytes):
+    """
+        overlay the saliency map on top of original image
+
+        :param sa_map: saliency map
+        :type sa_map: numpy.array
+
+        :param org_img_bytes: Original image
+        :type org_img_bytes: bytes
+
+        :return: Overlayed image
+        :rtype: bytes
+
+        """
+    sizes = np.shape(sa_map)
+    height = float(sizes[0])
+    width = float(sizes[1])
+
+    fig = plt.figure(dpi=int(height))
+    fig.set_size_inches((width / height), 1, forward=False)
+
+    ax = plt.Axes(fig, [0., 0., 1., 1.])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+    ax.imshow(PIL.Image.open(BytesIO(org_img_bytes)))
+    ax.imshow(sa_map, cmap='jet', alpha=0.5)
+
+    fig.canvas.draw()
+    np_data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    np_data = np_data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    im = PIL.Image.fromarray(np_data)
+    plt.close()
+
+    b = BytesIO()
+    im.save(b, format='PNG')
+
+    return b.getvalue()

@@ -9,7 +9,6 @@ import random
 import shutil
 from six.moves import StringIO
 import zipfile
-import six
 
 import flask
 import PIL.Image
@@ -70,6 +69,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         # fill in plugin configs
         d['data_set'] = plugin.make_config(get_data_set_impls())
+        d['smap_set'] = plugin.make_config(get_data_set_impls())
 
         d['descr_generator'] = \
             plugin.make_config(get_descriptor_generator_impls())
@@ -113,6 +113,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         merged['data_set'] = \
             plugin.from_plugin_config(merged['data_set'],
                                       get_data_set_impls())
+        merged['smap_set'] = \
+            plugin.from_plugin_config(merged['smap_set'],
+                                      get_data_set_impls())
+
         merged['descr_generator'] = \
             plugin.from_plugin_config(merged['descr_generator'],
                                       get_descriptor_generator_impls())
@@ -125,7 +129,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         return cls(parent_app, **merged)
 
-    def __init__(self, parent_app, data_set, descr_generator, nn_index,
+    def __init__(self, parent_app, data_set, smap_set, descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,
                  descriptor_factory=DFLT_DESCRIPTOR_FACTORY,
                  pos_seed_neighbors=500):
@@ -141,6 +145,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         :param data_set: DataSet instance that references indexed data.
         :type data_set: SMQTK.representation.DataSet
+
+        :param smap_set: DataSet instance that saliency map of references indexed data.
+        :type smap_set: SMQTK.representation.DataSet
 
         :param descr_generator: DescriptorGenerator instance to use in IQR
             sessions for generating descriptors on new data.
@@ -190,6 +197,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         self._parent_app = parent_app
         self._data_set = data_set
+        self._smap_set = smap_set
         self._descriptor_generator = descr_generator
         self._nn_index = nn_index
         self._rel_index_config = rel_index_config
@@ -362,6 +370,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 "shape": None,  # (width, height)
                 "static_file_link": None,
                 "static_preview_link": None,
+                "smap_preview_link": None,
+                "smap_static_file_link": None,
             }
 
             # Try to find a DataElement by the given UUID in our indexed data
@@ -400,6 +410,32 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     self._static_data_prefix + '/' + \
                     os.path.relpath(self._static_cache[de.uuid()],
                                     self._static_data_dir)
+
+            # obtain saliency map images
+            with self.get_current_iqr_session() as iqrs:
+                if iqrs.working_index.has_descriptor(uid):
+                    desr = iqrs.working_index.get_descriptor(uid)
+
+                    # for testing only: get the saliency map's UUID of the top 1 label
+                    #[0] get the top 1 label
+                    sm_d = list(desr.saliency_map().items())[0]
+
+                    sm_uuid = sm_d[1]
+                    sm = self._smap_set.get_data(sm_uuid)
+
+                    if sm_uuid not in self._static_cache:
+                        self._static_cache[sm_uuid] = \
+                            PreviewCache.gen_image_preview(sm, self._static_data_dir)
+                        self._static_cache_element[sm_uuid] = sm
+
+                    sm_path = self._preview_cache.get_preview_image(sm)
+                    info["smap_preview_link"] = \
+                        self._static_data_prefix + '/' + \
+                        os.path.relpath(sm_path, self._static_data_dir)
+                    info['smap_static_file_link'] = \
+                        self._static_data_prefix + '/' + \
+                        os.path.relpath(self._static_cache[sm_uuid],
+                                        self._static_data_dir)
 
             return flask.jsonify(info)
 
@@ -679,6 +715,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             'url_prefix': self.url_prefix,
             'working_directory': self._working_dir,
             'data_set': plugin.to_plugin_config(self._data_set),
+            'smap_set': plugin.to_plugin_config(self._smap_set),
             'descr_generator':
                 plugin.to_plugin_config(self._descriptor_generator),
             'nn_index': plugin.to_plugin_config(self._nn_index),

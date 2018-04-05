@@ -22,8 +22,12 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
+    // saliency map ``src`` reference to use for display in an <img>.
+    this.sm_preview_data = null;
     // link to statically hosted file for full view
     this.static_view_link = null;
+    // link to statically hosted file for full saliency map
+    this.sm_static_view_link = null;
     // If we have received image preview data yet
     this.image_loaded = false;
     // Used for image view size clamping
@@ -116,7 +120,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
 
     // link click controls
     this.saliency_data_view.click(function () {
-        inst.display_full_image();
+        inst.display_full_saliencyMap();
     });
 
     // Update to initial view from the server's state
@@ -169,7 +173,7 @@ DataView.prototype.update_view = function (server_update) {
     function update_image()
     {
         inst.image_data_view.attr('src', inst.image_preview_data);
-        inst.saliency_data_view.attr('src', inst.image_preview_data);
+        inst.saliency_data_view.attr('src', inst.sm_preview_data);
 
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
@@ -240,7 +244,9 @@ DataView.prototype.update_view = function (server_update) {
                 }
                 else {
                     inst.image_preview_data = data.static_preview_link;
+                    inst.sm_preview_data = data.smap_preview_link;
                     inst.static_view_link = data.static_file_link;
+                    inst.sm_static_view_link = data.smap_static_file_link;
                     inst.image_loaded = true;
 
                     inst.img_long_side =
@@ -341,5 +347,16 @@ DataView.prototype.display_full_image = function () {
         // TODO: Should make this better...
         //       like open a webpage instead of just opening static data...
         window.open(this.static_view_link);
+    }
+};
+
+/**
+ * Open this image up in a new window
+ */
+DataView.prototype.display_full_saliencyMap = function () {
+    if (this.image_loaded) {
+        // TODO: Should make this better...
+        //       like open a webpage instead of just opening static data...
+        window.open(this.sm_static_view_link);
     }
 };

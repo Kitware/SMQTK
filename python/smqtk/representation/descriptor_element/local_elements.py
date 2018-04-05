@@ -6,6 +6,7 @@ from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
 
 from six import BytesIO
+from copy import deepcopy
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -25,27 +26,24 @@ class DescriptorMemoryElement (DescriptorElement):
     def __init__(self, type_str, uuid):
         super(DescriptorMemoryElement, self).__init__(type_str, uuid)
         self.__v = None
-        self._saliency_flag = False
-
-    @property
-    def saliency_flag(self):
-        return self._saliency_flag
-
-    @saliency_flag.setter
-    def saliency_flag(self, val):
-        self._saliency_flag = val
+        self.__sa_dict = None
 
     def __getstate__(self):
         # save vector as binary string
         b = BytesIO()
+        sb = BytesIO()
         numpy.save(b, self.vector())
-        return (self.type(), self.uuid(), b.getvalue())
+        numpy.save(sb, self.saliency_map())
+        return (self.type(), self.uuid(), b.getvalue(), sb.getvalue())
 
     def __setstate__(self, state):
         self._type_label = state[0]
         self._uuid = state[1]
         b = BytesIO(state[2])
         self.__v = numpy.load(b)
+
+        sb = BytesIO(state[3])
+        self.__sa_dict = numpy.load(sb).item()
 
     def _get_cache_index(self):
         """
@@ -82,10 +80,7 @@ class DescriptorMemoryElement (DescriptorElement):
         """
         # Copy if storing an array, otherwise return the None value
         if self.__v is not None:
-            if self._saliency_flag is False:
-                return numpy.copy(self.__v)
-            else:
-                return numpy.copy(self.__v[:-1]).astype(numpy.float32)
+            return numpy.copy(self.__v)
         return None
 
     def set_vector(self, new_vec):
@@ -113,14 +108,19 @@ class DescriptorMemoryElement (DescriptorElement):
         else:
             self.__v = None
 
-    def obtain_saliency_map(self):
-        if self.__v is not None and self._saliency_flag is True:
-            sa_dict = self.__v[-1]
-            if not isinstance(sa_dict, dict):
-                raise TypeError("The last element is {}, which should be a dict".format(type(sa_dict)))
-            return numpy.copy(sa_dict)
+    def saliency_map(self):
+        if self.__sa_dict is not None:
+            return deepcopy(self.__sa_dict)
 
         return None
+
+    def set_saliency_map(self, new_sa_dict):
+        if new_sa_dict is not None:
+            self.__sa_dict = deepcopy(new_sa_dict)
+        else:
+            self.__sa_dict = None
+
+
 
 
 class DescriptorFileElement (DescriptorElement):

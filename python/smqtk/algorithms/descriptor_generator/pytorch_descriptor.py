@@ -51,12 +51,16 @@ class PytorchDataLoader(data.Dataset):
 
     def __getitem__(self, index):
         img = Image.open(io.BytesIO(self._file_list[self._uuid4proc[index]].get_bytes()))
-        img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
+        resized_org_img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
 
         if self._transform is not None:
-            img = self._transform(img)
+            img = self._transform(resized_org_img)
+        else:
+            img = resized_org_img
 
-        return img, self._uuid4proc[index]
+        b = io.BytesIO()
+        resized_org_img.save(b, format='PNG')
+        return img, self._uuid4proc[index], b.getvalue()
 
     def __len__(self):
         return len(self._uuid4proc)
@@ -332,7 +336,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids) in data_loader:
+            for (d, uuids, _) in data_loader:
                 if self.use_gpu:
                     d = d.cuda()
 

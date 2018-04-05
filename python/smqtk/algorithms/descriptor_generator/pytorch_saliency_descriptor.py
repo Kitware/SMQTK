@@ -6,6 +6,7 @@ import multiprocessing.pool
 import numpy as np
 from tqdm import tqdm
 from skimage.transform import resize
+from collections import OrderedDict
 
 import six
 # noinspection PyUnresolvedReferences
@@ -18,6 +19,9 @@ from smqtk.algorithms.descriptor_generator import \
 from smqtk.utils.bin_utils import report_progress, initialize_logging
 from smqtk.pytorch_model import get_pytorchmodel_element_impls
 from smqtk.algorithms.descriptor_generator.pytorch_descriptor import PytorchDataLoader
+from smqtk.utils.image_utils import overlay_saliency_map
+from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_set.file_set import DataFileSet
 
 try:
     import torch
@@ -66,20 +70,14 @@ def generate_masks(mask_num, grid_num, image_size=(224, 224)):
     masks = torch.from_numpy(masks).float().cuda()
     return masks
 
-def generate_vec(f_vec, sa_map, topk_label):
-    if sa_map.shape[0] != len(topk_label):
+def generate_sa_dict(topk_labels, sm_uuid_list):
+    if len(sm_uuid_list) != len(topk_labels):
         raise ValueError("The number of saliency map is not equal to topK label size!")
 
-    res = np.array([f_vec])
-
-    sa_dict = {}
-    for i in range(len(topk_label)):
-        sa_dict[topk_label[i]] = sa_map[i]
-
-    res = np.append(res, sa_dict)
-
-    return res
-
+    sa_dict = OrderedDict()
+    for i in range(len(topk_labels)):
+        sa_dict[topk_labels[i]] = sm_uuid_list[i]
+    return sa_dict
 
 class TensorDataset(data.Dataset):
     def __init__(self, tensor):
@@ -197,7 +195,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
         return valid
 
     def __init__(self, model_cls_name, model_uri=None, mask_num=4000, grid_num=13, topk=3, resize_val=224,
-                 batch_size=1, use_gpu=False, in_gpu_device_id=0):
+                 batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map'):
         """
         Create a pytorch CNN descriptor generator
 
@@ -235,6 +233,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
         self.in_gpu_device_id = in_gpu_device_id
+        self.saliency_store_uri = saliency_store_uri
         # initialize_logging(self._log, logging.DEBUG)
 
         assert self.batch_size > 0, \
@@ -293,6 +292,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
 
         masks = generate_masks(self.mask_num, self.grid_num, image_size=(self.resize_val, self.resize_val))
         self.saliency_generator = MaskSaliencyDataset(masks, self.model_cls, self.batch_size, self.topk)
+        self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
     def get_config(self):
         """
@@ -318,6 +318,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
             'in_gpu_device_id': self.in_gpu_device_id,
+            'saliency_store_uri': self.saliency_store_uri
         }
 
     def valid_content_types(self):
@@ -428,7 +429,6 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                                  "'%s' data: %s)" % (ct, d))
             data_elements[d.uuid()] = d
             descr_elements[d.uuid()] = descr_factory.new_descriptor(self.name, d.uuid())
-            descr_elements[d.uuid()].saliency_flag = True
             report_progress(self._log.debug, prog_rep_state, 1.0)
         self._log.debug("Given %d unique data elements", len(data_elements))
 
@@ -464,7 +464,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids) in data_loader:
+            for (d, uuids, resized_org_img) in data_loader:
                 # estimated topK saliency maps
                 self.saliency_generator.process_imgbatch = d
 
@@ -476,9 +476,19 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
 
                 for idx, uuid in enumerate(uuids):
                     f_vec = pytorch_f.data.cpu().numpy()[idx]
+                    descr_elements[uuid].set_vector(f_vec)
+
                     sa_map, topk_labels = self.saliency_generator[idx]
-                    final_vec = generate_vec(f_vec, sa_map, topk_labels)
-                    descr_elements[uuid].set_vector(final_vec)
+
+                    # write out the top K saliency maps
+                    cur_uuid_list = []
+                    for i in range(len(topk_labels)):
+                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx]), content_type='image')
+                        cur_uuid_list.append(dme.uuid())
+                        self.data_set.add_data(dme)
+
+                    sa_dict = generate_sa_dict(topk_labels, cur_uuid_list)
+                    descr_elements[uuid].set_saliency_map(sa_dict)
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

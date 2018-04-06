@@ -8,6 +8,7 @@ from smqtk.representation.data_set.file_set import DataFileSet
 import os.path as osp
 from smqtk.utils.preview_cache import PreviewCache
 import PIL.Image
+from collections import OrderedDict
 
 # Import some butterfly data
 files = ["/home/bdong/XAI/leedsbutterfly/images/001{:04d}.png".format(i) for i in range(4,6)]
@@ -34,12 +35,13 @@ factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 # Compute features on the first image
 descriptors = []
 for item in el:
-    d = cd.compute_descriptor(item, factory)
+    d = cd.compute_descriptor(item, factory, topk_label_list=[1,2])
     print(d.saliency_map())
     descriptors.append(d)
 
+
 data_set = DataFileSet(root_directory='./sa_map')
-de = data_set.get_data(descriptors[0].saliency_map()[323])
+de = data_set.get_data(descriptors[0].saliency_map()[1])
 
 preview_cache = PreviewCache(osp.join('./', "previews"))
 preview_path = preview_cache.get_preview_image(de)

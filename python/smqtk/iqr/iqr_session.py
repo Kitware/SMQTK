@@ -132,6 +132,10 @@ class IqrSession (SmqtkObject):
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results = None
 
+        # target label for showing saliency map
+        #: : Type: None | int
+        self.target_label = None
+
         #
         # Algorithm Instances [+Config]
         #

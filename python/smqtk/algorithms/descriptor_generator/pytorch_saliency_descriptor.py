@@ -107,6 +107,22 @@ class MaskSaliencyDataset(data.Dataset):
             self._tc_list = topk_idx_list
             self._topk_list_flag = True
 
+    @classmethod
+    def get_logger(cls):
+        """
+        :return: logging object for this class
+        :rtype: logging.Logger
+        """
+        return logging.getLogger('.'.join((cls.__module__, cls.__name__)))
+
+    @property
+    def _log(self):
+        """
+        :return: logging object for this class as a property
+        :rtype: logging.Logger
+        """
+        return self.get_logger()
+
     @property
     def image_set(self):
         return self._img_set
@@ -143,6 +159,18 @@ class MaskSaliencyDataset(data.Dataset):
         self._process_imgbatch = val
         self._img_set = [(val[i], -1) for i in range(val.size(0))]
 
+    @property
+    def topk_idx_list(self):
+        return self._tc_list
+
+    @topk_idx_list.setter
+    def topk_idx_list(self, val):
+        if not isinstance(val, list):
+            raise TypeError("{} has to be a list!".format(val))
+
+        self._topk = len(val)
+        self._tc_list = torch.LongTensor(val).cuda()
+        self._topk_list_flag = True
 
     def __getitem__(self, index):
         cur_img, _ = self._img_set[index]
@@ -339,7 +367,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                                   "overridden")
 
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                           overwrite=False):
+                           overwrite=False, topk_label_list=None):
         """
         Given some data, return a descriptor element containing a descriptor
         vector.
@@ -370,12 +398,13 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
 
         """
         m = self.compute_descriptor_async([data], descr_factory, overwrite,
-                                          procs=1)
+                                          procs=1, topk_label_list=topk_label_list)
         return m[data.uuid()]
 
     def compute_descriptor_async(self, data_iter,
                                  descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                                 overwrite=False, procs=None, **kwds):
+                                 overwrite=False, procs=None, topk_label_list=None,
+                                 **kwds):
         """
         Asynchronously compute feature data for multiple data items.
 
@@ -467,6 +496,8 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
             for (d, uuids, resized_org_img, (w, h)) in data_loader:
                 # estimated topK saliency maps
                 self.saliency_generator.process_imgbatch = d
+                if topk_label_list is not None:
+                    self.saliency_generator.topk_idx_list = topk_label_list
 
                 if self.use_gpu:
                     d = d.cuda()

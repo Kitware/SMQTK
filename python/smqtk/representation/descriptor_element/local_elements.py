@@ -120,7 +120,12 @@ class DescriptorMemoryElement (DescriptorElement):
         else:
             self.__sa_dict = None
 
+    def update_saliency_map(self, update):
+        if not isinstance(update, type(self.__sa_dict)):
+            raise ValueError('{} has to be type of {} instead of {}'.
+                             format(update, type(self.__sa_dict), type(update)))
 
+        self.__sa_dict.update(update)
 
 
 class DescriptorFileElement (DescriptorElement):

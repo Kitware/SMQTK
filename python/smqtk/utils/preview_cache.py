@@ -141,7 +141,7 @@ class PreviewCache (object):
 
 PreviewCache.PREVIEW_GEN_METHOD = {
     "image/png": PreviewCache.gen_image_preview,
-    "imgge/jpg": PreviewCache.gen_image_preview,
+    "imgge/jpeg": PreviewCache.gen_image_preview,
     "image": PreviewCache.gen_image_preview,
     "video": PreviewCache.gen_video_preview,
 }

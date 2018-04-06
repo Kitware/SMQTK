@@ -69,7 +69,7 @@ def is_valid_element(data_element, valid_content_types=None, check_image=False):
     return isinstance(data_element, DataElement)
 
 
-def overlay_saliency_map(sa_map, org_img_bytes):
+def overlay_saliency_map(sa_map, org_img_bytes, org_w, org_h):
     """
         overlay the saliency map on top of original image
 
@@ -100,6 +100,7 @@ def overlay_saliency_map(sa_map, org_img_bytes):
     np_data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
     np_data = np_data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     im = PIL.Image.fromarray(np_data)
+    im = im.resize((org_w, org_h), PIL.Image.BILINEAR)
     plt.close()
 
     b = BytesIO()

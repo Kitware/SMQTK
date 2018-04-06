@@ -43,14 +43,16 @@ __all__ = [
 ]
 
 class PytorchDataLoader(data.Dataset):
-    def __init__(self, file_list, resize_val, uuid4proc, transform=None):
+    def __init__(self, file_list, resize_val, uuid4proc, transform=None, saliency_info=False):
         self._file_list = file_list
         self._resize_val = resize_val
         self._uuid4proc = uuid4proc
         self._transform = transform
+        self._saliency_info = saliency_info
 
     def __getitem__(self, index):
         img = Image.open(io.BytesIO(self._file_list[self._uuid4proc[index]].get_bytes()))
+        (org_w, org_h) = img.size
         resized_org_img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
 
         if self._transform is not None:
@@ -60,7 +62,11 @@ class PytorchDataLoader(data.Dataset):
 
         b = io.BytesIO()
         resized_org_img.save(b, format='PNG')
-        return img, self._uuid4proc[index], b.getvalue()
+
+        if self._saliency_info is False:
+            return img, self._uuid4proc[index]
+        else:
+            return img, self._uuid4proc[index], b.getvalue(), (org_w, org_h)
 
     def __len__(self):
         return len(self._uuid4proc)
@@ -336,7 +342,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids, _) in data_loader:
+            for (d, uuids) in data_loader:
                 if self.use_gpu:
                     d = d.cuda()
 

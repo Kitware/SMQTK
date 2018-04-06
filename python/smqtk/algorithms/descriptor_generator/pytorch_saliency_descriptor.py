@@ -459,12 +459,12 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
             kwargs = {'num_workers': procs if procs is not None
                         else multiprocessing.cpu_count(), 'pin_memory': True}
             data_loader_cls = PytorchDataLoader(file_list=data_elements, resize_val=self.resize_val,
-                                                uuid4proc=uuid4proc, transform=self.transform)
+                                                uuid4proc=uuid4proc, transform=self.transform, saliency_info=True)
             data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self.batch_size,
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids, resized_org_img) in data_loader:
+            for (d, uuids, resized_org_img, (w, h)) in data_loader:
                 # estimated topK saliency maps
                 self.saliency_generator.process_imgbatch = d
 
@@ -483,7 +483,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                     # write out the top K saliency maps
                     cur_uuid_list = []
                     for i in range(len(topk_labels)):
-                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx]), content_type='image/png')
+                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
                         cur_uuid_list.append(dme.uuid())
                         self.data_set.add_data(dme)
 

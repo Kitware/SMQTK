@@ -141,16 +141,6 @@ class DataFileSet (DataSet):
         return osp.join(self._containing_dir(uuid),
                         self.SERIAL_FILE_TEMPLATE % uuid)
 
-    def _saliency_fp_for_uuid(self, uuid, label):
-        """
-        Return the filepath to where an element with the given UUID would be
-        saved.
-        """
-        return osp.join(self._containing_dir(uuid),
-                        self.SAMAP_SERIAL_FILE_TEMPLATE.format(
-                            uuid=uuid, label=label))
-
-
     def __iter__(self):
         """
         :return: Generator over the DataElements contained in this set in no

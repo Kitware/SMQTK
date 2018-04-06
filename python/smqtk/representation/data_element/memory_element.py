@@ -178,5 +178,34 @@ class DataMemoryElement (DataElement):
         else:
             raise ReadOnlyError("This memory element cannot be written to.")
 
+    # def write_temp(self, temp_dir=None):
+    #     """
+    #     Write this data's bytes to a temporary file on disk, returning the path
+    #     to the written file, whose extension is guessed based on this data's
+    #     content type.
+    #
+    #     NOTE:
+    #         The file path returned should not be explicitly removed by the user.
+    #         Instead, the ``clean_temp()`` method should be called on this
+    #         object.
+    #
+    #     For FileElement instances, this returns the original data file's path
+    #     unless a `temp_dir` is specified that is not the directory that contains
+    #     the original file.
+    #
+    #     :param temp_dir: Optional directory to write temporary file in,
+    #         otherwise we use the platform default temporary files directory.
+    #     :type temp_dir: None or str
+    #
+    #     :return: Path to the temporary file
+    #     :rtype: str
+    #
+    #     """
+    #     if temp_dir is None:
+    #         raise ValueError("Has to provide the dir!")
+    #
+    #     return super(DataMemoryElement, self).write_temp(temp_dir)
+
+
 
 DATA_ELEMENT_CLASS = DataMemoryElement

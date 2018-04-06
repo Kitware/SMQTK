@@ -483,7 +483,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                     # write out the top K saliency maps
                     cur_uuid_list = []
                     for i in range(len(topk_labels)):
-                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx]), content_type='image')
+                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx]), content_type='image/png')
                         cur_uuid_list.append(dme.uuid())
                         self.data_set.add_data(dme)
 

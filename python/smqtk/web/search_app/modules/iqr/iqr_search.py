@@ -425,7 +425,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                     if sm_uuid not in self._static_cache:
                         self._static_cache[sm_uuid] = \
-                            PreviewCache.gen_image_preview(sm, self._static_data_dir)
+                            sm.write_temp(self._static_data_dir)
                         self._static_cache_element[sm_uuid] = sm
 
                     sm_path = self._preview_cache.get_preview_image(sm)

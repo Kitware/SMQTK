@@ -23,8 +23,11 @@ cd = get_descriptor_generator_impls()['PytorchSaliencyDescriptorGenerator'](
         model_cls_name = 'ImageNet_ResNet50',
         model_uri = None,
         resize_val = 224,
-        batch_size = 500,
+        batch_size = 800,
         use_gpu = True,
+        mask_num = 4000,
+        grid_num = 13,
+        topk=10,
         in_gpu_device_id = None)
 
 # Set up a factory for our vector (here in-memory storage)
@@ -35,13 +38,13 @@ factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 # Compute features on the first image
 descriptors = []
 for item in el:
-    d = cd.compute_descriptor(item, factory, topk_label_list=[1,2])
+    d = cd.compute_descriptor(item, factory)
     print(d.saliency_map())
     descriptors.append(d)
 
 
 data_set = DataFileSet(root_directory='./sa_map')
-de = data_set.get_data(descriptors[0].saliency_map()[1])
+de = data_set.get_data(descriptors[0].saliency_map()[323])
 
 preview_cache = PreviewCache(osp.join('./', "previews"))
 preview_path = preview_cache.get_preview_image(de)

@@ -90,7 +90,7 @@ class TensorDataset(data.Dataset):
         return self._tensor.size(0)
 
 class MaskSaliencyDataset(data.Dataset):
-    def __init__(self, masks, classifier, batch_size, topk=3, topk_idx_list=None):
+    def __init__(self, masks, classifier, batch_size, topk=10, topk_idx_list=None):
 
         self._filters = masks
         self._img_set = None

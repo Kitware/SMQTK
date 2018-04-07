@@ -11,6 +11,7 @@ import os.path as osp
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.utils import bin_utils, jsmin, plugin
+from tqdm import tqdm
 from smqtk.utils.bin_utils import initialize_logging
 
 __author__ = 'paul.tunison@kitware.com'
@@ -29,10 +30,12 @@ def cli_parser():
                         action='store_true', default=False,
                         help='Show debug logging.')
 
-    parser.add_argument("input_files",
-                        metavar='GLOB', nargs="*",
-                        help="Shell glob to files to add to the configured "
-                             "data set.")
+    # parser.add_argument("input_files",
+    #                     metavar='GLOB', nargs="*",
+    #                     help="Shell glob to files to add to the configured "
+    #                          "data set.")
+    parser.add_argument('--input_files', type=str,
+                        help="Input file list")
 
     return parser
 
@@ -136,14 +139,26 @@ def main():
     # Add data files to DataSet
     DataFileElement = representation.get_data_element_impls()["DataFileElement"]
 
-    for fp in args.input_files:
-        fp = osp.expanduser(fp)
-        if osp.isfile(fp):
-            data_set.add_data(DataFileElement(fp))
-        else:
-            log.debug("Expanding glob: %s" % fp)
-            for g in glob.iglob(fp):
-                data_set.add_data(DataFileElement(g))
+    # for fp in args.input_files:
+    #     fp = osp.expanduser(fp)
+    #     if osp.isfile(fp):
+    #         data_set.add_data(DataFileElement(fp))
+    #     else:
+    #         log.debug("Expanding glob: %s" % fp)
+    #         for g in glob.iglob(fp):
+    #             data_set.add_data(DataFileElement(g))
+
+    with open(args.input_files, 'r') as f:
+        for line in tqdm(f, total=50000, desc='add image to dataset'):
+            cur_line = line.rstrip('\n')
+
+            fp = osp.expanduser(cur_line)
+            if osp.isfile(fp):
+                data_set.add_data(DataFileElement(fp))
+            else:
+                log.debug("Expanding glob: %s" % fp)
+                for g in glob.iglob(fp):
+                    data_set.add_data(DataFileElement(g))
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

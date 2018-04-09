@@ -312,7 +312,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 (Optional) JSON-encoded dictionary of labels to floats. Higher
                 values lower the gain on the class and therefore correspond to
                 higher precision (and lower recall) for the class (and higher
-                recall/lower precision for other classes)
+                recall/lower precision for other classes). This translates git to
+                calling ``smqtk.utils.prob_utils.adjust_proba``.
 
         Possible error codes:
             400

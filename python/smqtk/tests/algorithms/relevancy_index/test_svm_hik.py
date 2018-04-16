@@ -91,6 +91,10 @@ if LibSvmHikRelevancyIndex.is_usable():
             rank = iqr_index.rank([self.q_pos], [self.q_neg])
             rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
 
+            print("rank_ordered:")
+            for i, r in enumerate(rank_ordered):
+                print("..{}: {}".format(i, r))
+
             # Check expected ordering
             # 0-5-1-2-6-3-4
             # - 2 should end up coming before 6, because 6 has more intersection

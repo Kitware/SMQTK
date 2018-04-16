@@ -16,3 +16,8 @@ Travis CI
 
 Fixes since v0.8.1
 ------------------
+
+Tests
+
+- Fixed ambiguous ordering check in libsvm-hik implementation of
+  RelevancyIndex algorithm.

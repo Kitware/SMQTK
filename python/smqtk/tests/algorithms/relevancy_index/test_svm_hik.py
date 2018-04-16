@@ -36,7 +36,7 @@ if LibSvmHikRelevancyIndex.is_usable():
                                      cls.d5, cls.d6]
 
             cls.q_pos = DescriptorMemoryElement('query', 0)
-            cls.q_pos.set_vector(np.array([.75, .25, 0, 0,  0], float))
+            cls.q_pos.set_vector(np.array([.75, .25, 0, 0, 0], float))
             cls.q_neg = DescriptorMemoryElement('query', 1)
             cls.q_neg.set_vector(np.array([0,   0,   0, .5, .5], float))
 
@@ -100,5 +100,8 @@ if LibSvmHikRelevancyIndex.is_usable():
             ntools.assert_equal(rank_ordered[2][0], self.d1)
             ntools.assert_equal(rank_ordered[3][0], self.d2)
             ntools.assert_equal(rank_ordered[4][0], self.d6)
-            ntools.assert_equal(rank_ordered[5][0], self.d3)
-            ntools.assert_equal(rank_ordered[6][0], self.d4)
+            # d3 and d4 evaluate to the same rank based on query (no
+            # intersection with positive, equal intersection with negative).
+            assert rank_ordered[5][0] in (self.d3, self.d4)
+            assert rank_ordered[6][0] in (self.d3, self.d4)
+            assert rank_ordered[5][0] != rank_ordered[6][0]

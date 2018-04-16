@@ -102,8 +102,11 @@ if LibSvmHikRelevancyIndex.is_usable():
             ntools.assert_equal(rank_ordered[0][0], self.d0)
             ntools.assert_equal(rank_ordered[1][0], self.d5)
             ntools.assert_equal(rank_ordered[2][0], self.d1)
-            ntools.assert_equal(rank_ordered[3][0], self.d2)
-            ntools.assert_equal(rank_ordered[4][0], self.d6)
+            # Results show that d2 and d6 have the same rank, so their position
+            # in interchangeable.
+            assert rank_ordered[3][0] in (self.d2, self.d6)
+            assert rank_ordered[4][0] in (self.d2, self.d6)
+            assert rank_ordered[3][0] != rank_ordered[4][0]
             # d3 and d4 evaluate to the same rank based on query (no
             # intersection with positive, equal intersection with negative).
             assert rank_ordered[5][0] in (self.d3, self.d4)

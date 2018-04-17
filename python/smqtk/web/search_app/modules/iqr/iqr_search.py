@@ -768,12 +768,12 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         with self._iqr_controller:
             sid = flask.session.sid
             if not self._iqr_controller.has_session_uuid(sid):
-                # iqr_sess = IqrSession(self._pos_seed_neighbors,
-                #                       self._rel_index_config,
-                #                       sid)
-                iqr_sess = IqrSession(min(self._pos_seed_neighbors, 20),
+                iqr_sess = IqrSession(self._pos_seed_neighbors,
                                       self._rel_index_config,
                                       sid)
+                # iqr_sess = IqrSession(min(self._pos_seed_neighbors, 20),
+                #                       self._rel_index_config,
+                #                       sid)
                 self._iqr_controller.add_session(iqr_sess)
                 self._iqr_work_dirs[iqr_sess.uuid] = \
                     osp.join(self.work_dir, sid)

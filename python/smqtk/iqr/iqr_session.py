@@ -134,7 +134,7 @@ class IqrSession (SmqtkObject):
 
         # target label for showing saliency map
         #: : Type: None | int
-        self.target_label = None
+        self._target_label = None
 
         #
         # Algorithm Instances [+Config]
@@ -158,6 +158,14 @@ class IqrSession (SmqtkObject):
     # noinspection PyUnusedLocal
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
+
+    @property
+    def target_label(self):
+        return self._target_label
+
+    @target_label.setter
+    def target_label(self, val):
+        self._target_label = val
 
     def ordered_results(self):
         """
@@ -310,3 +318,4 @@ class IqrSession (SmqtkObject):
 
             self.rel_index = None
             self.results = None
+            self.target_label = None

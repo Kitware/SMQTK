@@ -22,4 +22,5 @@ then
     rm ${PYCO_FILES}
 fi
 
-pytest "$@"
+# --cov :: Measure coverage data for this module.
+pytest --cov=smqtk --cov-config pytest.coveragerc "$@"

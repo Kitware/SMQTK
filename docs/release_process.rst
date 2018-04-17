@@ -22,7 +22,7 @@ Patch Release
     - Rename the ``docs/release_notes/pending_patch.md`` file to
       ``docs/release_notes/v{VERSION}.md``, matching the value in the
       ``VERSION`` file.
-2. Merge version bump branch into ``release`` and ``master`` branches
+2. Merge version bump branch into ``release`` and ``master`` branches.
 
 Major and Minor Releases
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -32,13 +32,15 @@ Major and Minor Releases
     - Rename the ``docs/release_notes/pending_release.md`` file to
       ``docs/release_notes/v{VERSION}.md``, matching the value in the
       ``VERSION`` file.
+2. Merge version bump branch into the ``master`` branch.
+3. Reset the release branch (--hard) to point to the new master.
 
 Tag new version
 ---------------
 Create a new git tag using the new version number (format:
 ``v<MAJOR.<MINOR>.<PATCH>``) on the merge commit for the version update branch
 merger::
-    $ git tag -a -m "[Major|Minor|Patch] release v#.#.#
+    $ git tag -a -m "[Major|Minor|Patch]" release v#.#.#
 
 Push this new tag to GitHub (assuming origin remote points to `SMQTK on
 GitHub`_::

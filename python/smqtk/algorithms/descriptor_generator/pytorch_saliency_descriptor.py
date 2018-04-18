@@ -150,7 +150,7 @@ class MaskSaliencyDataset(data.Dataset):
         return self._process_imgbatch
 
     @process_imgbatch.setter
-    def process_imgbatch(self,val):
+    def process_imgbatch(self, val):
         if not isinstance(val, torch.Tensor):
             raise TypeError("{} has to be torch.Tensor!".format(val))
         if val.dim() != 4:

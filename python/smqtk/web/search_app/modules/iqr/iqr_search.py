@@ -32,7 +32,7 @@ from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 from smqtk.algorithms.descriptor_generator.pytorch_saliency_descriptor import PytorchSaliencyDescriptorGenerator
 
 
-__author__ = 'paul.tunison@kitware.com'
+__author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

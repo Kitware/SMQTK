@@ -24,6 +24,7 @@ except ImportError as ex:
     torch = None
 else:
     import torch.utils.data as data
+    import torch.nn as nn
     from torch.autograd import Variable
     
 try:
@@ -347,7 +348,12 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                     d = d.cuda()
 
                 input = Variable(d)
-                pytorch_f = self.model_cls(input)[0]
+
+                # use the avgPool layer output as feature
+                # pytorch_f = self.model_cls(input)[0]
+
+                #use the probability as feature
+                pytorch_f = nn.Softmax(1)(self.model_cls(input)[1])
 
                 for idx, uuid in enumerate(uuids):
                     descr_elements[uuid].set_vector(pytorch_f.data.cpu().numpy()[idx])

@@ -125,6 +125,7 @@ enum flann_distance_t
     FLANN_DIST_HAMMING_LUT			= 10,
     FLANN_DIST_HAMMING_POPCNT   	= 11,
     FLANN_DIST_L2_SIMPLE	   		= 12,
+    FLANN_DIST_COS                              = 13,
 };
 
 enum flann_datatype_t

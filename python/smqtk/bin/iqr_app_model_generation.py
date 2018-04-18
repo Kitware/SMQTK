@@ -149,7 +149,7 @@ def main():
     #             data_set.add_data(DataFileElement(g))
 
     with open(args.input_files, 'r') as f:
-        for line in tqdm(f, total=50000, desc='add image to dataset'):
+        for line in tqdm(f, total=832, desc='add image to dataset'):
             cur_line = line.rstrip('\n')
 
             fp = osp.expanduser(cur_line)

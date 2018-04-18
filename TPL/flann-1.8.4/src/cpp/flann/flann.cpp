@@ -248,6 +248,9 @@ flann_index_t _flann_build_index(T* dataset, int rows, int cols, float* speedup,
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_build_index<KL_Divergence<T> >(dataset, rows, cols, speedup, flann_params);
     }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_build_index<COS<T> >(dataset, rows, cols, speedup, flann_params);
+    }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
         return NULL;
@@ -322,6 +325,9 @@ int _flann_save_index(flann_index_t index_ptr, char* filename)
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_save_index<KL_Divergence<T> >(index_ptr, filename);
     }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_save_index<COS<T> >(index_ptr, filename);
+    }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
         return -1;
@@ -391,6 +397,9 @@ flann_index_t _flann_load_index(char* filename, T* dataset, int rows, int cols)
     }
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_load_index<KL_Divergence<T> >(filename, dataset, rows, cols);
+    }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_load_index<COS<T> >(filename, dataset, rows, cols);
     }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
@@ -480,6 +489,9 @@ int _flann_find_nearest_neighbors(T* dataset,  int rows, int cols, T* testset, i
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_find_nearest_neighbors<KL_Divergence<T> >(dataset, rows, cols, testset, tcount, result, dists, nn, flann_params);
     }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_find_nearest_neighbors<COS<T> >(dataset, rows, cols, testset, tcount, result, dists, nn, flann_params);
+    }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
         return -1;
@@ -568,6 +580,9 @@ int _flann_find_nearest_neighbors_index(flann_index_t index_ptr, T* testset, int
     }
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_find_nearest_neighbors_index<KL_Divergence<T> >(index_ptr, testset, tcount, result, dists, nn, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_find_nearest_neighbors_index<COS<T> >(index_ptr, testset, tcount, result, dists, nn, flann_params);
     }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
@@ -666,6 +681,9 @@ int _flann_radius_search(flann_index_t index_ptr,
     }
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_radius_search<KL_Divergence<T> >(index_ptr, query, indices, dists, max_nn, radius, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_radius_search<COS<T> >(index_ptr, query, indices, dists, max_nn, radius, flann_params);
     }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
@@ -772,6 +790,9 @@ int _flann_free_index(flann_index_t index_ptr, FLANNParameters* flann_params)
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_free_index<KL_Divergence<T> >(index_ptr, flann_params);
     }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_free_index<COS<T> >(index_ptr, flann_params);
+    }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");
         return -1;
@@ -851,6 +872,9 @@ int _flann_compute_cluster_centers(T* dataset, int rows, int cols, int clusters,
     }
     else if (flann_distance_type==FLANN_DIST_KULLBACK_LEIBLER) {
         return __flann_compute_cluster_centers<KL_Divergence<T> >(dataset, rows, cols, clusters, result, flann_params);
+    }
+    else if (flann_distance_type==FLANN_DIST_COS) {
+        return __flann_compute_cluster_centers<COS<T> >(dataset, rows, cols, clusters, result, flann_params);
     }
     else {
         Logger::error( "Distance type unsupported in the C bindings, use the C++ bindings instead\n");

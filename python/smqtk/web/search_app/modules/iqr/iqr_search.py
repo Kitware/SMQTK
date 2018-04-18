@@ -430,16 +430,16 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         # sm_d = list(desr.saliency_map().items())[0]
                         # sm_uuid = sm_d[1]
 
-                        if iqrs.target_label not in desr.saliency_map():
+                        if iqrs.query_uuid not in desr.saliency_map():
                             self._log.debug('desr original dict: {}'.format(desr.saliency_map()))
-                            self._log.debug('generate new saliency map for label {}'.format(iqrs.target_label))
+                            self._log.debug('generate new saliency map for label {}'.format(iqrs.query_uuid))
                             temp_descr = \
                                 self._descriptor_generator.compute_descriptor(
-                                    de, self._descr_elem_factory, topk_label_list=[int(iqrs.target_label), 0]
+                                    de, self._descr_elem_factory, query_f=iqrs.query_f, query_uuid=iqrs.query_uuid
                                 )
                             desr.update_saliency_map(temp_descr.saliency_map())
 
-                        sm_uuid = desr.saliency_map()[iqrs.target_label]
+                        sm_uuid = desr.saliency_map()[iqrs.query_uuid]
                         sm = self._smap_set.get_data(sm_uuid)
 
                         # has to put before sm.write_temp(...) since it will
@@ -510,8 +510,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     self._iqr_example_pos_descr[iqrs.uuid][uuid] = upload_descr
                     self._log.debug('saliency_descr_flag is {}'.format(self._saliency_descr_flag))
                     if self._saliency_descr_flag:
-                        iqrs.target_label = int(list(upload_descr.saliency_map().items())[0][0])
-                        self._log.debug('target_label {}'.format(iqrs.target_label))
+                        iqrs.query_f = upload_descr.vector()
+                        iqrs.query_uuid = uuid
+                        self._log.debug('query uuid {}'.format(uuid))
+
                     iqrs.adjudicate((upload_descr,))
 
                     return str(uuid)

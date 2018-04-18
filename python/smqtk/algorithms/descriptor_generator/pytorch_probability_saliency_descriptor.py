@@ -6,17 +6,16 @@ import multiprocessing.pool
 import numpy as np
 from tqdm import tqdm
 from skimage.transform import resize
-from collections import OrderedDict
+
 
 import six
-# noinspection PyUnresolvedReferences
-from six.moves import range, zip
+from six.moves import range
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 
-from smqtk.utils.bin_utils import report_progress, initialize_logging
+from smqtk.utils.bin_utils import report_progress
 from smqtk.pytorch_model import get_pytorchmodel_element_impls
 from smqtk.algorithms.descriptor_generator.pytorch_descriptor import PytorchDataLoader
 from smqtk.utils.image_utils import overlay_saliency_map
@@ -70,15 +69,6 @@ def generate_masks(mask_num, grid_num, image_size=(224, 224)):
     masks = torch.from_numpy(masks).float().cuda()
     return masks
 
-def generate_sa_dict(topk_labels, sm_uuid_list):
-    if len(sm_uuid_list) != len(topk_labels):
-        raise ValueError("The number of saliency map is not equal to topK label size!")
-
-    sa_dict = OrderedDict()
-    for i in range(len(topk_labels)):
-        sa_dict[topk_labels[i]] = sm_uuid_list[i]
-    return sa_dict
-
 class TensorDataset(data.Dataset):
     def __init__(self, tensor):
         self._tensor = tensor
@@ -93,7 +83,6 @@ class ProMaskSaliencyDataset(data.Dataset):
     def __init__(self, masks, classifier, batch_size):
 
         self._filters = masks
-        self._query_img = None
         self._query_f = None
         self._img_set = None
         self._process_img = None
@@ -120,14 +109,12 @@ class ProMaskSaliencyDataset(data.Dataset):
         return self.get_logger()
 
     @property
-    def query_img(self):
-        return self._query_img
+    def query_f(self):
+        return self._query_f
 
-    @query_img.setter
-    def query_img(self, val):
-        self._query_img = val
-        self._query_f = nn.Softmax(dim=1)(self._classifier(Variable(val.unsqueeze(0))))
-        # self._query_f = self._classifier(Variable(val.unsqueeze(0)))
+    @query_f.setter
+    def query_f(self, val):
+        self._query_f = val
 
     @property
     def image_set(self):
@@ -358,7 +345,7 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
                                   "overridden")
 
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                           overwrite=False, topk_label_list=None):
+                           overwrite=False, query_f=None, query_uuid=None):
         """
         Given some data, return a descriptor element containing a descriptor
         vector.
@@ -389,12 +376,12 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
 
         """
         m = self.compute_descriptor_async([data], descr_factory, overwrite,
-                                          procs=1, topk_label_list=topk_label_list)
+                                          procs=1, query_f=query_f, query_uuid=query_uuid)
         return m[data.uuid()]
 
     def compute_descriptor_async(self, data_iter,
                                  descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                                 overwrite=False, procs=None, topk_label_list=None,
+                                 overwrite=False, procs=None, query_f=None, query_uuid=None,
                                  **kwds):
         """
         Asynchronously compute feature data for multiple data items.
@@ -474,7 +461,15 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
         self._log.debug("%d descriptors already computed",
                         len(data_elements) - len(uuid4proc))
 
+
         if uuid4proc:
+            # set the query flag accordingly
+            saliency_flag = False
+            if query_f is not None:
+                if query_uuid is None:
+                    raise ValueError('Query uuid has to be provided!')
+                saliency_flag = True
+
             self._log.debug("Converting deque to tuple for segmentation")
             kwargs = {'num_workers': procs if procs is not None
                         else multiprocessing.cpu_count(), 'pin_memory': True}
@@ -485,37 +480,34 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
 
             self._log.debug("Extract pytorch features")
             for (d, uuids, resized_org_img, (w, h)) in data_loader:
-                # estimated topK saliency maps
-                self.saliency_generator.process_imgbatch = d
-                if topk_label_list is not None:
-                    self.saliency_generator.topk_idx_list = topk_label_list
-
-                if self.use_gpu:
-                    d = d.cuda()
-
-                input = Variable(d)
-
                 # use output probability as the feature vector
-                pytorch_f = nn.Softmax(1)(self.model_cls(input)[1])
+                if self.use_gpu:
+                    pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d.cuda()))[1])
+                else:
+                    pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d))[1])
+
+                # estimated topK saliency maps
+                if saliency_flag:
+                    self.saliency_generator.query_f = query_f
+                    q_uuid = query_uuid
+
+                    self.saliency_generator.process_imgbatch = d
 
                 for idx, uuid in enumerate(uuids):
                     f_vec = pytorch_f.data.cpu().numpy()[idx]
                     descr_elements[uuid].set_vector(f_vec)
 
-                    ### generate the saliency map
-                    ##-------------------------------------------------------
-                    # sa_map, topk_labels = self.saliency_generator[idx]
-                    #
-                    # # write out the top K saliency maps
-                    # cur_uuid_list = []
-                    # for i in range(len(topk_labels)):
-                    #     dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map[i], resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
-                    #     cur_uuid_list.append(dme.uuid())
-                    #     self.data_set.add_data(dme)
-                    #
-                    # sa_dict = generate_sa_dict(topk_labels, cur_uuid_list)
-                    # descr_elements[uuid].set_saliency_map(sa_dict)
-                    ##-------------------------------------------------------
+                    if saliency_flag:
+                        ## generate the saliency map
+                        #-------------------------------------------------------
+                        sa_map = self.saliency_generator[idx]
+
+                        # write out the top K saliency maps
+                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
+                        self.data_set.add_data(dme)
+
+                        descr_elements[uuid].update_saliency_map({q_uuid : dme.uuid()})
+                        #-------------------------------------------------------
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

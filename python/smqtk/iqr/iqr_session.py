@@ -132,9 +132,10 @@ class IqrSession (SmqtkObject):
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results = None
 
-        # target label for showing saliency map
+        # query image feature and uuid for showing saliency map
         #: : Type: None | int
-        self._target_label = None
+        self._query_f = None
+        self._query_uuid = None
 
         #
         # Algorithm Instances [+Config]
@@ -160,12 +161,20 @@ class IqrSession (SmqtkObject):
         self.lock.release()
 
     @property
-    def target_label(self):
-        return self._target_label
+    def query_f(self):
+        return self._query_f
 
-    @target_label.setter
-    def target_label(self, val):
-        self._target_label = val
+    @query_f.setter
+    def query_f(self, val):
+        self._query_f = val
+
+    @property
+    def query_uuid(self):
+        return self._query_uuid
+
+    @query_uuid.setter
+    def query_uuid(self, val):
+        self._query_uuid = val
 
     def ordered_results(self):
         """
@@ -318,4 +327,5 @@ class IqrSession (SmqtkObject):
 
             self.rel_index = None
             self.results = None
-            self.target_label = None
+            self.query_f = None
+            self.query_uuid = None

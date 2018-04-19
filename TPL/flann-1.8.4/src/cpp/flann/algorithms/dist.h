@@ -823,7 +823,7 @@ struct COS
             diff0 = (ResultType)(*a++ * *b++);
             result += diff0;
         }
-        return result;
+        return -result;
     }
 
     /**

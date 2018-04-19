@@ -33,6 +33,7 @@ else:
     import torch.utils.data as data
     from torch.autograd import Variable
     import torch.nn as nn
+    import torch.nn.functional as F
 
 try:
     import torchvision
@@ -169,8 +170,9 @@ class ProMaskSaliencyDataset(data.Dataset):
             sim = []
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
                 #matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])
-                matched_f = self._classifier(Variable(m_img))[1]
-                #matched_f = self._classifier(Variable(m_img))[0]
+                matched_f = self._classifier(Variable(m_img))[0]
+                # matched_f = F.normalize(matched_f, p=2, dim=1)
+                # matched_f = self._classifier(Variable(m_img))[0]
                 query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
                 sim.append((query_f * matched_f).sum(1))
 
@@ -493,7 +495,8 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
                 # use output probability as the feature vector
                 if self.use_gpu:
                     # pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d.cuda()))[1])
-                    pytorch_f = self.model_cls(Variable(d.cuda()))[1]
+                    pytorch_f = self.model_cls(Variable(d.cuda()))[0]
+                    # pytorch_f = F.normalize(pytorch_f, p=2, dim=1)
                 else:
                     pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d))[1])
                     raise ValueError('Need to use GPU')

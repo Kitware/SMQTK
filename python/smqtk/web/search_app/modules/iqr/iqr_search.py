@@ -30,6 +30,7 @@ from smqtk.web.search_app.modules.file_upload import FileUploadMod
 from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
 from smqtk.algorithms.descriptor_generator.pytorch_saliency_descriptor import PytorchSaliencyDescriptorGenerator
+from smqtk.algorithms.descriptor_generator.pytorch_probability_saliency_descriptor import PytorchProSaliencyDescriptorGenerator
 
 
 __author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
@@ -207,7 +208,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         self._pos_seed_neighbors = int(pos_seed_neighbors)
 
-        if isinstance(self._descriptor_generator, PytorchSaliencyDescriptorGenerator):
+        if isinstance(self._descriptor_generator, PytorchSaliencyDescriptorGenerator) or \
+                isinstance(self._descriptor_generator, PytorchProSaliencyDescriptorGenerator):
             self._saliency_descr_flag = True
         else:
             self._saliency_descr_flag = False

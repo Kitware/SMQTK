@@ -112,7 +112,7 @@ class DescriptorMemoryElement (DescriptorElement):
         if self.__sa_dict is not None:
             return deepcopy(self.__sa_dict)
 
-        return None
+        return dict()
 
     def set_saliency_map(self, new_sa_dict):
         if new_sa_dict is not None:
@@ -121,6 +121,9 @@ class DescriptorMemoryElement (DescriptorElement):
             self.__sa_dict = None
 
     def update_saliency_map(self, update):
+        if self.__sa_dict is None:
+            self.__sa_dict = dict()
+
         if not isinstance(update, type(self.__sa_dict)):
             raise ValueError('{} has to be type of {} instead of {}'.
                              format(update, type(self.__sa_dict), type(update)))

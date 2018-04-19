@@ -167,9 +167,10 @@ class ProMaskSaliencyDataset(data.Dataset):
             #obtain masked image's probability of the query image
             sim = []
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
-                matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img)))
+                matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])
                 # matched_f = self._classifier(Variable(m_img))
-                sim.append((self._query_f * matched_f).sum(1))
+                query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
+                sim.append((query_f * matched_f).sum(1))
 
             sim = torch.cat(sim)
 
@@ -200,7 +201,7 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls_name, model_uri=None, mask_num=4000, grid_num=13, topk=3, resize_val=224,
+    def __init__(self, model_cls_name, model_uri=None, mask_num=4000, grid_num=13, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map'):
         """
         Create a pytorch CNN descriptor generator
@@ -234,7 +235,6 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
         self.model_uri = model_uri
         self.mask_num = mask_num
         self.grid_num = grid_num
-        self.topk = topk
         self.resize_val = resize_val
         self.batch_size = int(batch_size)
         self.use_gpu = bool(use_gpu)
@@ -319,7 +319,6 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
             'model_uri': self.model_uri,
             'mask_num' : self.mask_num,
             'grid_num' : self.grid_num,
-            'topk' : self.topk,
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
@@ -486,7 +485,7 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
                 else:
                     pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d))[1])
 
-                # estimated topK saliency maps
+                # estimated probablity saliency maps
                 if saliency_flag:
                     self.saliency_generator.query_f = query_f
                     q_uuid = query_uuid

@@ -6,6 +6,7 @@ import multiprocessing.pool
 import numpy as np
 from tqdm import tqdm
 from skimage.transform import resize
+import _pickle as pickle
 
 
 import six
@@ -167,8 +168,9 @@ class ProMaskSaliencyDataset(data.Dataset):
             #obtain masked image's probability of the query image
             sim = []
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
-                matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])
-                # matched_f = self._classifier(Variable(m_img))
+                #matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])
+                matched_f = self._classifier(Variable(m_img))[1]
+                #matched_f = self._classifier(Variable(m_img))[0]
                 query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
                 sim.append((query_f * matched_f).sum(1))
 
@@ -202,7 +204,8 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
         return valid
 
     def __init__(self, model_cls_name, model_uri=None, mask_num=4000, grid_num=13, resize_val=224,
-                 batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map'):
+                 batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map',
+                 saliency_uuid_dict_file=None):
         """
         Create a pytorch CNN descriptor generator
 
@@ -240,6 +243,7 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
         self.use_gpu = bool(use_gpu)
         self.in_gpu_device_id = in_gpu_device_id
         self.saliency_store_uri = saliency_store_uri
+        self.saliency_uuid_dict_file = saliency_uuid_dict_file
         # initialize_logging(self._log, logging.DEBUG)
 
         assert self.batch_size > 0, \
@@ -300,6 +304,11 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
         self.saliency_generator = ProMaskSaliencyDataset(masks, self.model_cls, self.batch_size)
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
+        self._sm_uuid_dict = {}
+        if os.path.isfile(self.saliency_uuid_dict_file):
+            with open(self.saliency_uuid_dict_file, 'rb') as f:
+                self._sm_uuid_dict = pickle.load(f)
+
     def get_config(self):
         """
         Return a JSON-compliant dictionary that could be passed to this class's
@@ -323,7 +332,8 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
             'in_gpu_device_id': self.in_gpu_device_id,
-            'saliency_store_uri': self.saliency_store_uri
+            'saliency_store_uri': self.saliency_store_uri,
+            'saliency_uuid_dict_file': self.saliency_uuid_dict_file
         }
 
     def valid_content_types(self):
@@ -478,12 +488,15 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids, resized_org_img, (w, h)) in data_loader:
+
+            for (d, uuids, resized_org_img, (w, h)) in tqdm(data_loader, total=len(data_loader), desc='extracting feature'):
                 # use output probability as the feature vector
                 if self.use_gpu:
-                    pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d.cuda()))[1])
+                    # pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d.cuda()))[1])
+                    pytorch_f = self.model_cls(Variable(d.cuda()))[1]
                 else:
                     pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d))[1])
+                    raise ValueError('Need to use GPU')
 
                 # estimated probablity saliency maps
                 if saliency_flag:
@@ -497,16 +510,26 @@ class PytorchProSaliencyDescriptorGenerator (DescriptorGenerator):
                     descr_elements[uuid].set_vector(f_vec)
 
                     if saliency_flag:
-                        ## generate the saliency map
-                        #-------------------------------------------------------
-                        sa_map = self.saliency_generator[idx]
+                        if (uuid, q_uuid) in self._sm_uuid_dict and \
+                                self.data_set.has_uuid(self._sm_uuid_dict[(uuid, q_uuid)]):
+                            descr_elements[uuid].update_saliency_map({q_uuid : self._sm_uuid_dict[(uuid, q_uuid)]})
+                        else:
+                            ## generate the saliency map
+                            #-------------------------------------------------------
+                            sa_map = self.saliency_generator[idx]
 
-                        # write out the top K saliency maps
-                        dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
-                        self.data_set.add_data(dme)
+                            # write out the top K saliency maps
+                            dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
+                            self.data_set.add_data(dme)
 
-                        descr_elements[uuid].update_saliency_map({q_uuid : dme.uuid()})
-                        #-------------------------------------------------------
+                            descr_elements[uuid].update_saliency_map({q_uuid : dme.uuid()})
+                            self._sm_uuid_dict[(uuid, q_uuid)] = dme.uuid()
+                            #-------------------------------------------------------
+
+        self._log.debug('write out saliency uuid dict')
+        with open(self.saliency_uuid_dict_file, 'wb') as f:
+            pickle.dump(self._sm_uuid_dict, f)
+
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

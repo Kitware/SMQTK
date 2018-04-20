@@ -172,16 +172,22 @@ class ProMaskSaliencyDataset(data.Dataset):
                 #matched_f = nn.Softmax(dim=1)(self._classifier(Variable(m_img))[1])
                 matched_f = self._classifier(Variable(m_img))[0]
                 # matched_f = F.normalize(matched_f, p=2, dim=1)
-                # matched_f = self._classifier(Variable(m_img))[0]
+
                 query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
-                sim.append((query_f * matched_f).sum(1))
+
+                # cos distance
+                #sim.append((query_f * matched_f).sum(1))
+
+                # L2 distance
+                sim.append((query_f - matched_f).norm(p=2, dim=1))
 
             sim = torch.cat(sim)
 
-            return sim
+            return -sim
 
         tc_p = obtain_masked_img_targetP(cur_img)
 
+        # cos distance saliency map
         res_sa = torch.matmul(tc_p.data, self._filters.view(self._filters_num, -1)).view(
             (cur_img.size(1), cur_img.size(2)))
 

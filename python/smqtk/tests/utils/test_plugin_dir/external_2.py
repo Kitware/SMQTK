@@ -1,7 +1,4 @@
-from smqtk.tests.utils.test_plugin_get import DummyInterface
-
-
-__author__ = 'paul.tunison@kitware.com'
+from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
 
 
 class ImplExternal3 (DummyInterface):

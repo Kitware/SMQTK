@@ -1,184 +1,155 @@
 from __future__ import division, print_function
-import abc
+
 import os
-import unittest
 
-from smqtk.utils.plugin import Pluggable, get_plugins, OS_ENV_PATH_SEP
+from six.moves import mock
 
-
-class DummyInterface (Pluggable):
-
-    @abc.abstractmethod
-    def inst_method(self, val):
-        """
-        dummy abstract function
-        """
+from smqtk.utils.plugin import get_plugins, OS_ENV_PATH_SEP
+from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
 
 
-class TestGetPluginGeneric (unittest.TestCase):
+###############################################################################
+# Test constants
 
-    INTERNAL_PLUGIN_DIR = os.path.join(os.path.dirname(__file__),
-                                       "test_plugin_dir",
-                                       "internal_plugins")
+INTERNAL_PLUGIN_DIR = os.path.join(os.path.dirname(__file__),
+                                   "test_plugin_dir",
+                                   "internal_plugins")
 
-    INTERNAL_PLUGIN_MOD_PATH = \
-        'smqtk.tests.utils.test_plugin_dir.internal_plugins'
+INTERNAL_PLUGIN_MOD_PATH = \
+    'smqtk.tests.utils.test_plugin_dir.internal_plugins'
 
-    ENV_VAR = "TEST_PLUGIN_MODULE_PATH"
-    HELP_VAR = "TEST_PLUGIN_CLASS"
+ENV_VAR = "TEST_PLUGIN_MODULE_PATH"
+HELP_VAR = "TEST_PLUGIN_CLASS"
 
-    EXT_MOD_1 = 'smqtk.tests.utils.test_plugin_dir.external_1'
-    EXT_MOD_2 = 'smqtk.tests.utils.test_plugin_dir.external_2'
+EXT_MOD_1 = 'smqtk.tests.utils.test_plugin_dir.external_1'
+EXT_MOD_2 = 'smqtk.tests.utils.test_plugin_dir.external_2'
 
-    @classmethod
-    def get_dummy_plugins(cls):
-        return get_plugins(cls.INTERNAL_PLUGIN_MOD_PATH,
-                           cls.INTERNAL_PLUGIN_DIR, cls.ENV_VAR,
-                           cls.HELP_VAR, DummyInterface)
 
-    def test_get_internal_modules(self, do_return=False):
-        m = self.get_dummy_plugins()
-        self.assertIn('ImplFoo', m)
-        self.assertIn('ImplBar', m)
-        self.assertIn('ImplDoExport', m)
+def get_plugins_wrapper():
+    """
+    Test standard wrapper on get_plugins call using test constants.
+    This is not a fixture due to environment variable mocking.
+    """
+    return get_plugins(INTERNAL_PLUGIN_MOD_PATH, INTERNAL_PLUGIN_DIR, ENV_VAR,
+                       HELP_VAR, DummyInterface)
 
-        self.assertEqual(m['ImplFoo']().inst_method('a'), 'fooa')
-        self.assertEqual(m['ImplBar']().inst_method('b'), 'barb')
-        self.assertEqual(m['ImplDoExport']().inst_method('c'), 'doExportc')
 
-        self.assertNotIn('ImplNotUsable', m)
-        self.assertNotIn('SomethingElse', m)
-        self.assertNotIn('ImplNoExport', m)
-        self.assertNotIn('ImplSkipModule', m)
+###############################################################################
+# Tests
 
-        if do_return:
-            return m
+def test_get_internal_modules():
+    m = get_plugins_wrapper()
 
-    def test_external_1_only(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+    assert 'ImplFoo' in m
+    assert 'ImplBar' in m
+    assert 'ImplDoExport' in m
 
-        os.environ[self.ENV_VAR] = self.EXT_MOD_1
-        m = self.test_get_internal_modules(True)
+    assert m['ImplFoo']().inst_method('a') == 'fooa'
+    assert m['ImplBar']().inst_method('b') == 'barb'
+    assert m['ImplDoExport']().inst_method('c') == 'doExportc'
 
-        self.assertIn('ImplExternal1', m)
-        self.assertIn('ImplExternal2', m)
-        self.assertNotIn('ImplExternal3', m)
+    assert 'ImplNotUsable' not in m
+    assert 'SomethingElse' not in m
+    assert 'ImplNoExport' not in m
+    assert 'ImplSkipModule' not in m
 
-        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
-        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
+@mock.patch.dict(os.environ, {ENV_VAR: EXT_MOD_1})
+def test_external_1_only():
+    m = get_plugins_wrapper()
 
-    def test_external_1_with_trailing_sep(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+    assert 'ImplExternal1' in m
+    assert 'ImplExternal2' in m
+    assert 'ImplExternal3' not in m
 
-        os.environ[self.ENV_VAR] = self.EXT_MOD_1+OS_ENV_PATH_SEP
-        m = self.test_get_internal_modules(True)
+    assert m['ImplExternal1']().inst_method('d') == "external1d"
+    assert m['ImplExternal2']().inst_method('e') == "external2e"
 
-        self.assertIn('ImplExternal1', m)
-        self.assertIn('ImplExternal2', m)
-        self.assertNotIn('ImplExternal3', m)
 
-        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
-        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
+@mock.patch.dict(os.environ, {ENV_VAR: EXT_MOD_1+OS_ENV_PATH_SEP})
+def test_external_1_with_trailing_sep():
+    m = get_plugins_wrapper()
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
+    assert 'ImplExternal1' in m
+    assert 'ImplExternal2' in m
+    assert 'ImplExternal3' not in m
 
-    def test_external_1_with_leading_sep(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+    assert m['ImplExternal1']().inst_method('d') == "external1d"
+    assert m['ImplExternal2']().inst_method('e') == "external2e"
 
-        os.environ[self.ENV_VAR] = OS_ENV_PATH_SEP+self.EXT_MOD_1
-        m = self.test_get_internal_modules(True)
 
-        self.assertIn('ImplExternal1', m)
-        self.assertIn('ImplExternal2', m)
-        self.assertNotIn('ImplExternal3', m)
+@mock.patch.dict(os.environ, {ENV_VAR: OS_ENV_PATH_SEP+EXT_MOD_1})
+def test_external_1_with_leading_sep():
+    m = get_plugins_wrapper()
 
-        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
-        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
+    assert 'ImplExternal1' in m
+    assert 'ImplExternal2' in m
+    assert 'ImplExternal3' not in m
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
+    assert m['ImplExternal1']().inst_method('d') == "external1d"
+    assert m['ImplExternal2']().inst_method('e') == "external2e"
 
-    def test_external_2_only(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
 
-        os.environ[self.ENV_VAR] = self.EXT_MOD_2
-        m = self.test_get_internal_modules(True)
+@mock.patch.dict(os.environ, {ENV_VAR: EXT_MOD_2})
+def test_external_2_only():
+    m = get_plugins_wrapper()
 
-        self.assertNotIn('ImplExternal1', m)
-        self.assertNotIn('ImplExternal2', m)
-        self.assertIn('ImplExternal3', m)
+    assert 'ImplExternal1' not in m
+    assert 'ImplExternal2' not in m
+    assert 'ImplExternal3' in m
 
-        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
+    assert m['ImplExternal3']().inst_method('f') == 'external3f'
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
 
-    def test_external_1_and_2(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+@mock.patch.dict(os.environ, {ENV_VAR: OS_ENV_PATH_SEP.join([EXT_MOD_1,
+                                                             EXT_MOD_2])})
+def test_external_1_and_2():
+    m = get_plugins_wrapper()
 
-        os.environ[self.ENV_VAR] = OS_ENV_PATH_SEP.join([self.EXT_MOD_1,
-                                                         self.EXT_MOD_2])
-        m = self.test_get_internal_modules(True)
+    assert 'ImplExternal1' in m
+    assert 'ImplExternal2' in m
+    assert 'ImplExternal3' in m
 
-        self.assertIn('ImplExternal1', m)
-        self.assertIn('ImplExternal2', m)
-        self.assertIn('ImplExternal3', m)
+    assert m['ImplExternal1']().inst_method('d') == "external1d"
+    assert m['ImplExternal2']().inst_method('e') == "external2e"
+    assert m['ImplExternal3']().inst_method('f') == "external3f"
 
-        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
-        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
-        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
+@mock.patch.dict(os.environ, {ENV_VAR: "This is a junk string"})
+def test_junk_external_mod():
+    # This should skip module it can't find. In this case, the junk string
+    # is treated as a python module path, which is invalid. A warning is
+    # emitted but the plugin query succeeds as if the invalid chunk didn't
+    # exist.
+    m = get_plugins_wrapper()
 
-    def test_junk_external_mod(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+    assert 'ImplFoo' in m
+    assert 'ImplBar' in m
+    assert 'ImplDoExport' in m
 
-        os.environ[self.ENV_VAR] = "This is a junk string"
-        # This should skip module it can't find. In this case, the junk string
-        # is treated as a python module path, which is invalid. A warning is
-        # emitted but the plugin query succeeds as if the invalid chunk didn't
-        # exist.
-        self.test_get_internal_modules()
+    assert 'ImplExternal1' not in m
+    assert 'ImplExternal2' not in m
+    assert 'ImplExternal3' not in m
 
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
 
-    def test_external_1_and_2_and_garbage(self):
-        env_orig_value = os.environ.get(self.ENV_VAR, None)
+@mock.patch.dict(os.environ, {ENV_VAR: OS_ENV_PATH_SEP.join([EXT_MOD_1,
+                                                             EXT_MOD_2,
+                                                             'asdgasfhsadf',
+                                                             'some thing weird',
+                                                             'but still uses sep'])})
+def test_external_1_and_2_and_garbage():
+    m = get_plugins_wrapper()
 
-        os.environ[self.ENV_VAR] = OS_ENV_PATH_SEP.join([self.EXT_MOD_1,
-                                                         self.EXT_MOD_2,
-                                                         'asdgasfhsadf',
-                                                         'some thing weird',
-                                                         'but still uses sep'])
-        m = self.test_get_internal_modules(True)
+    assert 'ImplFoo' in m
+    assert 'ImplBar' in m
+    assert 'ImplDoExport' in m
+    assert 'ImplExternal1' in m
+    assert 'ImplExternal2' in m
+    assert 'ImplExternal3' in m
 
-        self.assertIn('ImplExternal1', m)
-        self.assertIn('ImplExternal2', m)
-        self.assertIn('ImplExternal3', m)
-
-        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
-        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
-        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
-
-        if env_orig_value:
-            os.environ[self.ENV_VAR] = env_orig_value
-        else:
-            del os.environ[self.ENV_VAR]
+    assert m['ImplFoo']().inst_method('a') == 'fooa'
+    assert m['ImplBar']().inst_method('b') == 'barb'
+    assert m['ImplDoExport']().inst_method('c') == 'doExportc'
+    assert m['ImplExternal1']().inst_method('d') == "external1d"
+    assert m['ImplExternal2']().inst_method('e') == "external2e"
+    assert m['ImplExternal3']().inst_method('f') == "external3f"

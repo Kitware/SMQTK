@@ -102,6 +102,8 @@ class Pluggable (object):
         # is in an ``__init__.py`` file or "normal" python module file.
         module_path = inspect.getmodule(cls).__package__
         cls_dir = os.path.abspath(os.path.dirname(inspect.getfile(cls)))
+        # TODO: If reload is False, cache result or use cache
+        # TODO: If True, re-cache new result.
         return get_plugins(module_path, cls_dir,
                            cls.PLUGIN_ENV_VAR, cls.PLUGIN_HELPER_VAR,
                            cls, reload_modules=reload_modules)

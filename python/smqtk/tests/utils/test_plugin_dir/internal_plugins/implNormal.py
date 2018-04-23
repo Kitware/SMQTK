@@ -1,7 +1,7 @@
 """
 Example where classes are found in module by introspecting parent classes.
 """
-from smqtk.tests.utils.test_plugin_get import DummyInterface
+from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
 
 
 class ImplFoo (DummyInterface):

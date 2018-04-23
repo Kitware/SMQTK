@@ -275,6 +275,7 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
+            self.rel_index.use_libsvm = True
             element_probability_map = self.rel_index.rank(pos, neg)
 
             if self.results is None:

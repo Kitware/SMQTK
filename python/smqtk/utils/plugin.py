@@ -270,7 +270,9 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",
                           module_path, len(classes))
-            elif issubclass(classes, baseclass_type):
+            # Thus, non-iterable value.
+            elif isinstance(classes, type) \
+                    and issubclass(classes, baseclass_type):
                 log.debug("[%s] Loaded class type: %s",
                           module_path, classes.__name__)
                 classes = [classes]

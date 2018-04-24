@@ -53,6 +53,10 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     // View Layout
     //
 
+    // float view container
+    this.float_div = $('<div id="float_div" style="display:none; vertical-align: top"/>');
+    this.float_div.appendTo($(container));
+
     // top-level container
     this.result = $('<div class="iqr-result"/>');
     this.result.appendTo($(container));
@@ -86,6 +90,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     //display saliency map
     this.saliency_data_view = $('<img>');
     this.saliency_data_view.attr('src', this.loading_gif);
+
 
     // Assemble result box
     if (! this.is_example) {
@@ -122,6 +127,8 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     this.saliency_data_view.click(function () {
         inst.display_full_saliencyMap();
     });
+
+
 
     // Update to initial view from the server's state
     this.update_view(true);
@@ -174,6 +181,15 @@ DataView.prototype.update_view = function (server_update) {
     {
         inst.image_data_view.attr('src', inst.image_preview_data);
         inst.saliency_data_view.attr('src', inst.sm_preview_data);
+
+        inst.saliency_data_view.mouseover(function () {
+            console.log('input image: ' + inst.sm_static_view_link);
+            inst.showtrail(inst.sm_static_view_link, 'sm', 192, 192);
+        });
+
+        inst.saliency_data_view.mouseout(function () {
+            inst.hidetrail();
+        });
 
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
@@ -359,4 +375,107 @@ DataView.prototype.display_full_saliencyMap = function () {
         //       like open a webpage instead of just opening static data...
         window.open(this.sm_static_view_link);
     }
+};
+
+
+var timer;
+
+DataView.prototype.hidetrail = function (){
+    var inst = this;
+    inst.float_div.attr('style', "display: none");
+    // inst.float_div.html("");
+    // $(document).mousemove(function(e) {});
+    // inst.float_div.css('left', -500);
+    // clearTimeout(timer);
+};
+
+DataView.prototype.showtrail = function (imagename, title, width, height) {
+    var inst = this;
+    var offsetfrommouse=[0, 0];    //image x,y offsets from cursor position in pixels. Enter 0,0 for no offset
+    var defaultimageheight = 40;	// maximum image size.
+    var defaultimagewidth = 40;	    // maximum image size.
+
+    function truebody(){
+        return (!window.opera && document.compatMode && document.compatMode != "BackCompat")? document.documentElement : document.body
+    }
+
+    function followmouse(e) {
+        var xcoord=offsetfrommouse[0];
+        var ycoord=offsetfrommouse[1];
+
+        var docwidth=document.all? truebody().scrollLeft+ truebody().clientWidth : pageXOffset+window.innerWidth-15;
+        var docheight=document.all? Math.min(truebody().scrollHeight, truebody().clientHeight) : Math.min(window.innerHeight);
+
+        if (typeof e != "undefined"){
+            if (docwidth - e.pageX < defaultimagewidth + 2*offsetfrommouse[0]){
+                xcoord = e.pageX - xcoord - defaultimagewidth; // Move to the left side of the cursor
+            } else {
+                xcoord += e.pageX;
+            }
+            if (docheight - e.pageY < defaultimageheight + 2*offsetfrommouse[1]){
+                ycoord += e.pageY - Math.max(0,(2*offsetfrommouse[1] + defaultimageheight + e.pageY - docheight - truebody().scrollTop));
+            } else {
+                ycoord += e.pageY;
+            }
+
+        } else if (typeof window.event != "undefined"){
+            if (docwidth - event.clientX < defaultimagewidth + 2*offsetfrommouse[0]){
+                xcoord = event.clientX + truebody().scrollLeft - xcoord - defaultimagewidth; // Move to the left side of the cursor
+            } else {
+                xcoord += truebody().scrollLeft+event.clientX
+            }
+            if (docheight - event.clientY < (defaultimageheight + 2*offsetfrommouse[1])){
+                ycoord += event.clientY + truebody().scrollTop - Math.max(0,(2*offsetfrommouse[1] + defaultimageheight + event.clientY - docheight));
+            } else {
+                ycoord += truebody().scrollTop + event.clientY;
+            }
+        }
+        inst.float_div.css('left', xcoord+"px");
+        inst.float_div.css('top', ycoord+"px");
+    }
+
+    function show(imagename, title, width, height) {
+        console.log('[inside show] imagename: ' + imagename);
+        var docwidth=document.all? truebody().scrollLeft+truebody().clientWidth : pageXOffset+window.innerWidth - offsetfrommouse[0]
+        var docheight=document.all? Math.min(truebody().scrollHeight, truebody().clientHeight) : Math.min(window.innerHeight)
+
+        if( (navigator.userAgent.indexOf("Konqueror")==-1  || navigator.userAgent.indexOf("Firefox")!=-1 || (navigator.userAgent.indexOf("Opera")==-1 && navigator.appVersion.indexOf("MSIE")!=-1)) && (docwidth>650 && docheight>500)) {
+            ( width == 0 ) ? width = defaultimagewidth: '';
+            ( height == 0 ) ? height = defaultimageheight: '';
+
+            width+=30;
+            height+=55;
+            defaultimageheight = height;
+            defaultimagewidth = width;
+
+            $(document).mousemove(function(e) {
+                followmouse(e);
+            });
+
+            newHTML = '<div class="border_preview">';
+
+            newHTML = newHTML + '<div class="preview_temp_load"><img style="width:'+  width +'px; height:'+ height +'px" src="' + imagename + '" border="0"></div>';
+            newHTML = newHTML + '</div>';
+
+            if(navigator.userAgent.indexOf("MSIE") != -1 && navigator.userAgent.indexOf("Opera") == -1 ){
+                newHTML = newHTML+ $('<iframe src="about:blank" scrolling="no" frameborder="0" width="'+width+'" height="'+height+'"></iframe>');
+            }
+
+            inst.float_div.html(newHTML);
+            inst.float_div.attr('style', "display: block");
+            inst.float_div.css('z-index', 110);
+            inst.float_div.css('position', "absolute");
+            // inst.float_div.css('width', 300);
+            inst.float_div.css('vertical-align', top);
+
+        }
+    }
+
+    console.log('image_name: ' + imagename);
+    console.log('title: ' + title);
+    i = imagename;
+    t = title;
+    w = width;
+    h = height;
+    timer = setTimeout(show(i, t, w, h), 20000);
 };

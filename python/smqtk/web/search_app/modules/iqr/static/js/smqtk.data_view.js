@@ -54,7 +54,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     //
 
     // float view container
-    this.float_div = $('<div id="float_div" style="display:none; vertical-align: top"/>');
+    this.float_div = $('<div id="float_div_'+this.rank+'" style="display:none; vertical-align: top"/>');
     this.float_div.appendTo($(container));
 
     // top-level container
@@ -182,14 +182,25 @@ DataView.prototype.update_view = function (server_update) {
         inst.image_data_view.attr('src', inst.image_preview_data);
         inst.saliency_data_view.attr('src', inst.sm_preview_data);
 
-        inst.saliency_data_view.mouseover(function () {
+        inst.image_data_view.mouseenter(function () {
             console.log('input image: ' + inst.sm_static_view_link);
-            inst.showtrail(inst.sm_static_view_link, 'sm', 192, 192);
+            inst.showtrail(inst.static_view_link, 192, 192);
         });
 
-        inst.saliency_data_view.mouseout(function () {
+        inst.image_data_view.mouseleave(function () {
             inst.hidetrail();
         });
+
+
+        inst.saliency_data_view.mouseenter(function () {
+            console.log('input image: ' + inst.sm_static_view_link);
+            inst.showtrail(inst.sm_static_view_link, 192, 192);
+        });
+
+        inst.saliency_data_view.mouseleave(function () {
+            inst.hidetrail();
+        });
+
 
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
@@ -382,16 +393,14 @@ var timer;
 
 DataView.prototype.hidetrail = function (){
     var inst = this;
-    inst.float_div.attr('style', "display: none");
-    // inst.float_div.html("");
-    // $(document).mousemove(function(e) {});
-    // inst.float_div.css('left', -500);
-    // clearTimeout(timer);
+    inst.float_div.html("");
+    $(document).unbind('mousemove');
+    clearTimeout(timer);
 };
 
 DataView.prototype.showtrail = function (imagename, title, width, height) {
     var inst = this;
-    var offsetfrommouse=[0, 0];    //image x,y offsets from cursor position in pixels. Enter 0,0 for no offset
+    var offsetfrommouse=[15, 15];    //image x,y offsets from cursor position in pixels. Enter 0,0 for no offset
     var defaultimageheight = 40;	// maximum image size.
     var defaultimagewidth = 40;	    // maximum image size.
 
@@ -434,7 +443,7 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
         inst.float_div.css('top', ycoord+"px");
     }
 
-    function show(imagename, title, width, height) {
+    function show(imagename, width, height) {
         console.log('[inside show] imagename: ' + imagename);
         var docwidth=document.all? truebody().scrollLeft+truebody().clientWidth : pageXOffset+window.innerWidth - offsetfrommouse[0]
         var docheight=document.all? Math.min(truebody().scrollHeight, truebody().clientHeight) : Math.min(window.innerHeight)
@@ -453,8 +462,13 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
             });
 
             newHTML = '<div class="border_preview">';
-
-            newHTML = newHTML + '<div class="preview_temp_load"><img style="width:'+  width +'px; height:'+ height +'px" src="' + imagename + '" border="0"></div>';
+            if(inst.img_long_side) {
+                newHTML = newHTML + '<div class="preview_temp_load">' +
+                    '<img style="height:' + height + 'px" src="' + imagename + '" border="0"></div>';
+            } else {
+                newHTML = newHTML + '<div class="preview_temp_load">' +
+                    '<img style="width:' + width + 'px" src="' + imagename + '" border="0"></div>';
+            }
             newHTML = newHTML + '</div>';
 
             if(navigator.userAgent.indexOf("MSIE") != -1 && navigator.userAgent.indexOf("Opera") == -1 ){
@@ -465,7 +479,6 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
             inst.float_div.attr('style', "display: block");
             inst.float_div.css('z-index', 110);
             inst.float_div.css('position', "absolute");
-            // inst.float_div.css('width', 300);
             inst.float_div.css('vertical-align', top);
 
         }
@@ -474,8 +487,7 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
     console.log('image_name: ' + imagename);
     console.log('title: ' + title);
     i = imagename;
-    t = title;
     w = width;
     h = height;
-    timer = setTimeout(show(i, t, w, h), 20000);
+    timer = setTimeout(show(i, w, h), 2000);
 };

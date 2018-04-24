@@ -398,7 +398,7 @@ DataView.prototype.hidetrail = function (){
     clearTimeout(timer);
 };
 
-DataView.prototype.showtrail = function (imagename, title, width, height) {
+DataView.prototype.showtrail = function (imagename, width, height) {
     var inst = this;
     var offsetfrommouse=[15, 15];    //image x,y offsets from cursor position in pixels. Enter 0,0 for no offset
     var defaultimageheight = 40;	// maximum image size.
@@ -462,10 +462,13 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
             });
 
             newHTML = '<div class="border_preview">';
+            console.log('inst.img_long_side' + inst.img_long_side);
             if(inst.img_long_side) {
+                console.log('height: ' + height);
                 newHTML = newHTML + '<div class="preview_temp_load">' +
                     '<img style="height:' + height + 'px" src="' + imagename + '" border="0"></div>';
             } else {
+                console.log('width: ' + width);
                 newHTML = newHTML + '<div class="preview_temp_load">' +
                     '<img style="width:' + width + 'px" src="' + imagename + '" border="0"></div>';
             }
@@ -485,7 +488,6 @@ DataView.prototype.showtrail = function (imagename, title, width, height) {
     }
 
     console.log('image_name: ' + imagename);
-    console.log('title: ' + title);
     i = imagename;
     w = width;
     h = height;

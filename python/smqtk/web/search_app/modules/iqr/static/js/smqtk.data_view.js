@@ -182,6 +182,7 @@ DataView.prototype.update_view = function (server_update) {
         inst.image_data_view.attr('src', inst.image_preview_data);
         inst.saliency_data_view.attr('src', inst.sm_preview_data);
 
+        // floating window for original image
         inst.image_data_view.mouseenter(function () {
             console.log('input image: ' + inst.sm_static_view_link);
             inst.showtrail(inst.static_view_link, 192, 192);
@@ -191,7 +192,7 @@ DataView.prototype.update_view = function (server_update) {
             inst.hidetrail();
         });
 
-
+        // floating window for saliency image
         inst.saliency_data_view.mouseenter(function () {
             console.log('input image: ' + inst.sm_static_view_link);
             inst.showtrail(inst.sm_static_view_link, 192, 192);
@@ -200,8 +201,7 @@ DataView.prototype.update_view = function (server_update) {
         inst.saliency_data_view.mouseleave(function () {
             inst.hidetrail();
         });
-
-
+        
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
             data_veiw_len = Math.floor(data_veiw_len / 2);
@@ -388,16 +388,10 @@ DataView.prototype.display_full_saliencyMap = function () {
     }
 };
 
-
+/**
+ * Open this image in a floating window if the mouse  enters the image
+ */
 var timer;
-
-DataView.prototype.hidetrail = function (){
-    var inst = this;
-    inst.float_div.html("");
-    $(document).unbind('mousemove');
-    clearTimeout(timer);
-};
-
 DataView.prototype.showtrail = function (imagename, width, height) {
     var inst = this;
     var offsetfrommouse=[15, 15];    //image x,y offsets from cursor position in pixels. Enter 0,0 for no offset
@@ -457,6 +451,8 @@ DataView.prototype.showtrail = function (imagename, width, height) {
             defaultimageheight = height;
             defaultimagewidth = width;
 
+            // setup the floating window's left and top
+            // based on the mouse position
             $(document).mousemove(function(e) {
                 followmouse(e);
             });
@@ -492,4 +488,14 @@ DataView.prototype.showtrail = function (imagename, width, height) {
     w = width;
     h = height;
     timer = setTimeout(show(i, w, h), 2000);
+};
+
+/**
+ * Clear the opened floating window is the mouse is outside of the image
+ */
+DataView.prototype.hidetrail = function (){
+    var inst = this;
+    inst.float_div.html("");
+    $(document).unbind('mousemove');
+    clearTimeout(timer);
 };

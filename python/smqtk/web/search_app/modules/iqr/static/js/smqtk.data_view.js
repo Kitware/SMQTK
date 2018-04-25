@@ -201,7 +201,7 @@ DataView.prototype.update_view = function (server_update) {
         inst.saliency_data_view.mouseleave(function () {
             inst.hidetrail();
         });
-        
+
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
             data_veiw_len = Math.floor(data_veiw_len / 2);

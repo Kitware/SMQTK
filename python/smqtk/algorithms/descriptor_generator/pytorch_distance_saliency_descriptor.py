@@ -5,7 +5,6 @@ import multiprocessing
 import multiprocessing.pool
 import numpy as np
 from tqdm import tqdm
-from skimage.transform import resize
 import _pickle as pickle
 
 
@@ -22,6 +21,7 @@ from smqtk.algorithms.descriptor_generator.pytorch_descriptor import PytorchData
 from smqtk.utils.image_utils import overlay_saliency_map
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_set.file_set import DataFileSet
+from smqtk.utils.pytorch_metrics import DIS_TYPE, L2_dis, his_intersection_dis
 
 try:
     import torch
@@ -84,7 +84,24 @@ class TensorDataset(data.Dataset):
         return self._filters.size(0)
 
 class DisMaskSaliencyDataset(data.Dataset):
-    def __init__(self, masks, classifier, batch_size):
+    def __init__(self, masks, classifier, batch_size, dis_type=DIS_TYPE.L2):
+        """
+        We generate the saliency map by leveraging pytorch Dataset
+        class which allows us to generate saliency maps in batch style
+        easily
+
+        :param masks: The masks that are applied to the input image for
+            generating a saliency map for the input image.
+        :type masks: torch.cuda.FloatTensor
+
+        :param classifier: The feature extractor .
+        :type classifier: torch.nn.model
+
+        :param batch_size: The batch size for processing the masked input
+            image.
+        :type batch_size: int
+
+        """
 
         self._filters = masks
         self._query_f = None
@@ -94,6 +111,7 @@ class DisMaskSaliencyDataset(data.Dataset):
         self._classifier = classifier
         self._batch_size = batch_size
         self._filters_num = masks.size(0)
+        self._dis_type = dis_type
 
 
     @classmethod
@@ -114,26 +132,61 @@ class DisMaskSaliencyDataset(data.Dataset):
 
     @property
     def query_f(self):
+        """
+        :return: query image's feature
+        :rtype: numpy.ndarray
+        """
         return self._query_f
 
     @query_f.setter
     def query_f(self, val):
+        """
+        set the query image feature
+
+        :param val: the query feature .
+        :type val: numpy.ndarray
+        """
         self._query_f = val
 
     @property
     def image_set(self):
+        """
+        :return: images needed to process in order to obtain
+                 the corresponding saliency maps
+        :rtype: list(dict(torch.Tensor (i.e., input image) : int (i.e., label)))
+        """
         return self._img_set
 
     @image_set.setter
     def image_set(self, val):
+        """
+        set image set
+
+        :param val: the image set
+        :type val: list(dict(torch.Tensor (i.e., input image) : int (i.e., label)))
+        """
         self._img_set = val
 
     @property
     def process_img(self):
+        """
+        :return: a single image needs to be processed
+        :rtype: torch.Tensor
+        """
         return self._process_img
 
     @process_img.setter
     def process_img(self, val):
+        """
+        set a single image to be processed and update the
+        self._image_set accordingly
+
+        :param val: the image needs to be processed
+        :type val: torch.Tensor
+
+        :raises TypeError: the input image has to be torch.Tensor type.
+        :raises ValueError: the input image needs to have exactly 3 dims
+        """
         if not isinstance(val, torch.Tensor):
             raise TypeError("{} has to be torch.Tensor!".format(val))
         if val.dim() != 3:
@@ -144,10 +197,24 @@ class DisMaskSaliencyDataset(data.Dataset):
 
     @property
     def process_imgbatch(self):
+        """
+        :return: a batch images need to be processed
+        :rtype: torch.Tensor
+        """
         return self._process_imgbatch
 
     @process_imgbatch.setter
     def process_imgbatch(self, val):
+        """
+        set a batch images to be processed and update the
+        self._image_set accordingly
+
+        :param val: the image needs to be processed
+        :type val: torch.Tensor
+
+        :raises TypeError: the input image batch has to be torch.Tensor type.
+        :raises ValueError: the input image batch needs to have exactly 4 dims
+        """
         if not isinstance(val, torch.Tensor):
             raise TypeError("{} has to be torch.Tensor!".format(val))
         if val.dim() != 4:
@@ -162,23 +229,38 @@ class DisMaskSaliencyDataset(data.Dataset):
 
         unmasked_img_f = self._classifier(Variable(cur_img.unsqueeze(0).cuda()))[0]
         query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
-        org_dis = (query_f - unmasked_img_f).norm(p=2, dim=1)
+
+        # distance estimation
+        if self._dis_type == DIS_TYPE.L2:
+            org_dis = L2_dis(query_f, unmasked_img_f, dim=1)
+        elif self._dis_type == DIS_TYPE.hik:
+            org_dis = his_intersection_dis(query_f, unmasked_img_f, dim=1)
+        else:
+            raise TypeError("Unsupport distance type {}".format(self._dis_type))
+
 
         def obtain_masked_img_targetP(img):
-            masked_imgs = torch.mul(self._filters.cuda(), img.cuda())
-
+            '''
+            obtain the distance diff for corresponding masks
+            :param img: input image
+            :return: distance diff for corresponding masks
+            '''
             # masked_image loader
             kwargs = {'shuffle': False}
             masked_imgs_loader = torch.utils.data.DataLoader(
                     TensorDataset(self._filters.cuda(), img.cuda()), batch_size=self._batch_size, **kwargs)
 
-            #obtain masked image's probability of the query image
             sim = []
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
                 matched_f = self._classifier(Variable(m_img))[0]
 
-                # L2 distance
-                sim.append((query_f - matched_f).norm(p=2, dim=1) - org_dis)
+                # distance estimation
+                if self._dis_type == DIS_TYPE.L2:
+                    dis_diff = L2_dis(query_f, matched_f, dim=1) - org_dis
+                elif self._dis_type == DIS_TYPE.hik:
+                    dis_diff = his_intersection_dis(query_f, matched_f, dim=1) - org_dis
+
+                sim.append(dis_diff)
 
             sim = torch.cat(sim)
 
@@ -189,8 +271,10 @@ class DisMaskSaliencyDataset(data.Dataset):
         cur_filters = self._filters.view(-1, cur_img.size(1), cur_img.size(2)).clone()
         count = self._filters_num - torch.sum(cur_filters, dim=0)
 
+        # apply the dis diff onto the corresponding masks
         for i in range(len(tc_p)):
             cur_filters[i] = (1.0 - cur_filters[i]) * torch.clamp(tc_p[i].data, min=0.0)
+            # cur_filters[i] = (1.0 - cur_filters[i]) * -torch.clamp(tc_p[i].data, max=0.0)
 
         res_sa = torch.sum(cur_filters, dim=0) / count
 
@@ -216,7 +300,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
     def __init__(self, model_cls_name, model_uri=None, grid_size=20, stride=4, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map',
-                 saliency_uuid_dict_file=None):
+                 saliency_uuid_dict_file=None, dis_type=DIS_TYPE.L2):
         """
         Create a pytorch CNN descriptor generator
 
@@ -255,6 +339,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         self.in_gpu_device_id = in_gpu_device_id
         self.saliency_store_uri = saliency_store_uri
         self.saliency_uuid_dict_file = saliency_uuid_dict_file
+        self.dis_type = dis_type
         # initialize_logging(self._log, logging.DEBUG)
 
         assert self.batch_size > 0, \
@@ -312,7 +397,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self.model_cls.load_state_dict(snapshot['state_dict'])
 
         masks = generate_block_masks(self.grid_size, self.stride, image_size=(self.resize_val, self.resize_val))
-        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size)
+        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size, self.dis_type)
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
         self._sm_uuid_dict = {}
@@ -344,7 +429,8 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             'use_gpu': self.use_gpu,
             'in_gpu_device_id': self.in_gpu_device_id,
             'saliency_store_uri': self.saliency_store_uri,
-            'saliency_uuid_dict_file': self.saliency_uuid_dict_file
+            'saliency_uuid_dict_file': self.saliency_uuid_dict_file,
+            'dis_type' : self.dis_type
         }
 
     def valid_content_types(self):
@@ -502,13 +588,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
             for (d, uuids, resized_org_img, (w, h)) in tqdm(data_loader, total=len(data_loader), desc='extracting feature'):
                 # use output probability as the feature vector
-                if self.use_gpu:
-                    # pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d.cuda()))[1])
-                    pytorch_f = self.model_cls(Variable(d.cuda()))[0]
-                    # pytorch_f = F.normalize(pytorch_f, p=2, dim=1)
-                else:
-                    pytorch_f = nn.Softmax(1)(self.model_cls(Variable(d))[1])
-                    raise ValueError('Need to use GPU')
+                pytorch_f = self.model_cls(Variable(d.cuda()))[0]
 
                 # estimated probablity saliency maps
                 if saliency_flag:

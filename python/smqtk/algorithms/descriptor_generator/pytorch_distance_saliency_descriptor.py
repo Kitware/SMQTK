@@ -231,9 +231,9 @@ class DisMaskSaliencyDataset(data.Dataset):
         query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
 
         # distance estimation
-        if self._dis_type == DIS_TYPE.L2:
+        if self._dis_type is DIS_TYPE.L2:
             org_dis = L2_dis(query_f, unmasked_img_f, dim=1)
-        elif self._dis_type == DIS_TYPE.hik:
+        elif self._dis_type is DIS_TYPE.hik:
             org_dis = his_intersection_dis(query_f, unmasked_img_f, dim=1)
         else:
             raise TypeError("Unsupport distance type {}".format(self._dis_type))
@@ -255,9 +255,9 @@ class DisMaskSaliencyDataset(data.Dataset):
                 matched_f = self._classifier(Variable(m_img))[0]
 
                 # distance estimation
-                if self._dis_type == DIS_TYPE.L2:
+                if self._dis_type is DIS_TYPE.L2:
                     dis_diff = L2_dis(query_f, matched_f, dim=1) - org_dis
-                elif self._dis_type == DIS_TYPE.hik:
+                elif self._dis_type is DIS_TYPE.hik:
                     dis_diff = his_intersection_dis(query_f, matched_f, dim=1) - org_dis
 
                 sim.append(dis_diff)
@@ -300,30 +300,47 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
     def __init__(self, model_cls_name, model_uri=None, grid_size=20, stride=4, resize_val=224,
                  batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map',
-                 saliency_uuid_dict_file=None, dis_type=DIS_TYPE.L2):
+                 saliency_uuid_dict_file=None, dis_type_str='L2'):
         """
-        Create a pytorch CNN descriptor generator
+        Create a pytorch CNN descriptor generator with distance-based saliency map generator
 
         :param model_cls_name: model definition name.
         :type model_cls_name: str
 
         :param model_uri: URI to the trained ``.pt`` file to use.
-        :type model_uri: None | str
+        :type model_uri: None | str (default None)
+
+        :param grid_size: the grid size of mask block for generating saliency map
+        :type grid_size: int (default 20)
+
+        :param stride: the mask block shift stride
+        :type stride: int (default 4)
 
         :param resize_val: Resize the input image to the resize_val x resize_val.
-        :type resize-val: int
+        :type resize-val: int (default 224)
 
         :param batch_size: The maximum number of images to process in one feed
             forward of the network. This is especially important for GPUs since
             they can only process a batch that will fit in the GPU memory space.
-        :type batch_size: int
+        :type batch_size: int (default 1)
 
         :param use_gpu: If pytorch should try to use the GPU
-        :type use_gpu: bool
+        :type use_gpu: bool (default False)
 
         :param gpu_device_id: Integer ID of the GPU device to use. Only used if
             ``use_gpu`` is True.
-        :type gpu_device_id: None | int
+        :type gpu_device_id: None | int (default None)
+
+        :param saliency_store_uri: where to store the generated saliency maps
+        :type saliency_store_uri: str (default ./sa_map)
+
+        :param saliency_uuid_dict_file: the file stores the existed saliency maps
+            to avoid generate the same saliency map again
+        :type saliency_uuid_dict_file: None | str (default None)
+
+        :param dis_type: distance type for generating the saliency maps, which
+            should be the same as the one used for indexing and refinement
+        :type dis_type: str (L2)
 
         """
         super(PytorchDisSaliencyDescriptorGenerator, self).__init__()
@@ -339,7 +356,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         self.in_gpu_device_id = in_gpu_device_id
         self.saliency_store_uri = saliency_store_uri
         self.saliency_uuid_dict_file = saliency_uuid_dict_file
-        self.dis_type = dis_type
+        self.dis_type_str = dis_type_str
         # initialize_logging(self._log, logging.DEBUG)
 
         assert self.batch_size > 0, \
@@ -397,13 +414,15 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self.model_cls.load_state_dict(snapshot['state_dict'])
 
         masks = generate_block_masks(self.grid_size, self.stride, image_size=(self.resize_val, self.resize_val))
-        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size, self.dis_type)
+        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size, DIS_TYPE[self.dis_type_str])
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
         self._sm_uuid_dict = {}
         if os.path.isfile(self.saliency_uuid_dict_file):
             with open(self.saliency_uuid_dict_file, 'rb') as f:
                 self._sm_uuid_dict = pickle.load(f)
+
+
 
     def get_config(self):
         """
@@ -430,7 +449,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             'in_gpu_device_id': self.in_gpu_device_id,
             'saliency_store_uri': self.saliency_store_uri,
             'saliency_uuid_dict_file': self.saliency_uuid_dict_file,
-            'dis_type' : self.dis_type
+            'dis_type_str' : self.dis_type_str
         }
 
     def valid_content_types(self):

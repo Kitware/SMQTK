@@ -1,5 +1,5 @@
 import logging
-from enum import IntEnum
+from enum import Enum
 
 try:
     import torch
@@ -8,7 +8,7 @@ except ImportError as ex:
                                         str(ex))
     torch = None
 
-class DIS_TYPE(IntEnum):
+class DIS_TYPE(Enum):
     L2 = 1
     hik = 2
 

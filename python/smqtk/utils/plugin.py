@@ -38,6 +38,7 @@ VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
 # Template for checking validity of module attributes
 VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
 
+# Environment variable *PATH separator for the current platform.
 OS_ENV_PATH_SEP = (sys.platform == "win32" and ';') or ':'
 
 

@@ -3,8 +3,8 @@ import threading
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation import DataElement
-from smqtk.representation import KeyValueStore
+from smqtk.representation import DataElement, KeyValueStore
+from smqtk.representation.key_value import NO_DEFAULT_VALUE
 from smqtk.utils.plugin import make_config, from_plugin_config, to_plugin_config
 
 

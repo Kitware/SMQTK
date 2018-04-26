@@ -23,7 +23,7 @@ RUN curl --insecure https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-
  && bash /miniconda2-latest-linux-x86_64.sh -b -p /miniconda \
  && rm /miniconda2-latest-linux-x86_64.sh \
  && conda update --all \
- && pip install numpy scipy matplotlib scikit-image protobuf \
+ && pip install numpy scipy matplotlib scikit-image protobuf pyyaml pymongo \
  && conda install psycopg2
 
 # Caffe installation
@@ -54,23 +54,25 @@ RUN cd /caffe/build \
     -DUSE_CUDNN:BOOL=OFF \
     -DCMAKE_INSTALL_PREFIX:PATH=/caffe/install \
     /caffe/source \
- && make install -j12 \
+ && make install -j2 \
  && cd \
  && rm -r /caffe/source /caffe/build
 ENV PATH="/caffe/install/bin:${PATH}" \
     PYTHONPATH="/caffe/install/python:${PYTHONPATH}"
 
 # SMQTK
-ENV SMQTK_VERSION "master"
+ENV SMQTK_VERSION "v0.6.2"
+ENV SMQTK_SRC_ARCHIVE_VERSION "0.6.2"
+
 RUN mkdir -p /smqtk/build \
  && curl -L https://github.com/Kitware/SMQTK/archive/${SMQTK_VERSION}.tar.gz >SMQTK-${SMQTK_VERSION}.tar.gz \
  && tar xf SMQTK-${SMQTK_VERSION}.tar.gz \
- && mv /SMQTK-${SMQTK_VERSION} /smqtk/source \
+ && mv /SMQTK-${SMQTK_SRC_ARCHIVE_VERSION} /smqtk/source \
  && rm SMQTK-${SMQTK_VERSION}.tar.gz
-RUN pip install -r /smqtk/source/requirements.txt \
+RUN pip install -r /smqtk/source/requirements.pip.txt \
  && cd /smqtk/build \
  && cmake -DCMAKE_INSTALL_PREFIX:PATH=/smqtk/install /smqtk/source \
- && make install -j12 \
+ && make install -j14\
  && rm -r /smqtk/source /smqtk/build
 
 # Application setup

@@ -48,10 +48,17 @@ __author__ = 'bo.dong@kitware.com'
 
 __all__ = [
     "PytorchDisSaliencyDescriptorGenerator",
-    "DisMaskSaliencyDataset",
 ]
 
 def generate_block_masks(grid_size, stride, image_size=(224, 224)):
+    '''
+    Generating the sliding window style masks
+
+    :param grid_size: the block window size (with value 0, other areas with value 1)
+    :param stride: the sliding step
+    :param image_size: the mask size which should be the same to the image size
+    :return: the sliding window style masks
+    '''
     if not os.path.isfile('block_mask_{}_{}.npy'.format(grid_size, stride)):
         grid_num = image_size[0] // stride
         mask_num = int(grid_num * grid_num)
@@ -73,11 +80,21 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
     return masks
 
 class TensorDataset(data.Dataset):
+    '''
+    Apply the N filters/masks onto one input image
+    '''
     def __init__(self, filters, img):
         self._filters = filters
         self._img = img
 
     def __getitem__(self, index):
+        '''
+        Generate the masked image on the fly in order to save
+        GPU memory
+
+        :param index: mask index
+        :return: masked image by applying the idxth mask
+        '''
         return torch.mul(self._filters[index], self._img)
 
     def __len__(self):

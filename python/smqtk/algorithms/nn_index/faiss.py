@@ -1,38 +1,24 @@
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
-
-# noinspection PyPep8Naming
-from six.moves import range, cPickle as pickle, zip
+from six.moves import cPickle as pickle, zip
 from six import next
-
-import logging
-import multiprocessing
-import os.path as osp
 
 import numpy as np
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin, merge_dict
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils import plugin
 
+__author__ = 'bo.dong@kitware.com'
 
-# Requires FAISS bindings
 try:
     import faiss
 except ImportError:
     faiss = None
 
-
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FAISS library.
-
-    SUPPORT FOR THIS FUNCTIONALITY IS EXPERIMENTAL AT THIS STAGE. THERE ARE
-    NO TESTS AND THE IMPLEMENTATION DOES NOT COVER ALL OF THE FUNCTIONALITY
-    OF THE FAISS LIBRARY.
+    webpage: https://github.com/facebookresearch/faiss
     """
 
     @classmethod
@@ -40,18 +26,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # if underlying library is not found, the import above will error
         return faiss is not None
 
-    def __init__(self, descriptor_set, read_only=False, exhaustive=False,
-                 use_multiprocessing=True,
+    def __init__(self, read_only=False, exhaustive=False, use_multiprocessing=True,
                  pickle_protocol=pickle.HIGHEST_PROTOCOL,
-                 random_seed=None):
+                 index_type="IVF"):
         """
         Initialize MRPT index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
-
-        :param descriptor_set: Index in which DescriptorElements will be
-            stored.
-        :type descriptor_set: smqtk.representation.DescriptorIndex
 
         :param read_only: If True, `build_index` will error if there is an
             existing index. False by default.
@@ -64,10 +45,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param depth: The depth of the trees
         :type depth: int
 
-        :param random_seed: Integer to use as the random number generator
-            seed.
-        :type random_seed: int
-
         :param pickle_protocol: The protocol version to be used by the pickle
             module to serialize class information
         :type pickle_protocol: int
@@ -76,6 +53,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             as the parallelization agent vs python threads.
         :type use_multiprocessing: bool
 
+        :param index_type: index type used for index_factory. (NOTE, we need to give the
+            feature dimension in order to use the index factory.)
+        :type index_type: str (default: IVF)
+
         """
         super(FaissNearestNeighborsIndex, self).__init__()
 
@@ -83,57 +64,18 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self.use_multiprocessing = use_multiprocessing
         self.pickle_protocol = pickle_protocol
         self.exhaustive = exhaustive
-        self._descriptor_set = descriptor_set
+        self.index_type = index_type
 
-        def normpath(p):
-            return (p and osp.abspath(osp.expanduser(p))) or p
-
-        self.random_seed = None
-        if random_seed is not None:
-            self.random_seed = int(random_seed)
 
     def get_config(self):
         return {
             "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
             "exhaustive": self.exhaustive,
             "read_only": self.read_only,
-            "random_seed": self.random_seed,
             "pickle_protocol": self.pickle_protocol,
             "use_multiprocessing": self.use_multiprocessing,
+            "index_type": self.index_type
         }
-
-    @classmethod
-    def from_config(cls, config_dict, merge_default=True):
-        """
-        Instantiate a new instance of this class given the configuration
-        JSON-compliant dictionary encapsulating initialization arguments.
-
-        This method should not be called via super unless and instance of the
-        class is desired.
-
-        :param config_dict: JSON compliant dictionary encapsulating
-            a configuration.
-        :type config_dict: dict
-
-        :param merge_default: Merge the given configuration on top of the
-            default provided by ``get_default_config``.
-        :type merge_default: bool
-
-        :return: Constructed instance from the provided config.
-        :rtype: LSHNearestNeighborIndex
-
-        """
-        if merge_default:
-            cfg = cls.get_default_config()
-            merge_dict(cfg, config_dict)
-        else:
-            cfg = config_dict
-
-        cfg['_descriptor_set'] = \
-            plugin.from_plugin_config(cfg['_descriptor_set'],
-                                      get_descriptor_index_impls())
-
-        return super(FaissNearestNeighborsIndex, cls).from_config(cfg, False)
 
     def build_index(self, descriptors):
         """
@@ -196,13 +138,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.info("FAISS index has been constructed with %d vectors",
                        self._faiss_index.ntotal)
 
-    def count(self):
-        """
-        :return: Number of elements in this index.
-        :rtype: int
-        """
-        return len(self._descriptor_set)
-
     def nn(self, d, n=1):
         super(FaissNearestNeighborsIndex, self).nn(d, n)
 
@@ -231,5 +166,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Returning query result of size %g", len(uuids))
 
         return (descriptors, tuple(dists))
+
+    def count(self):
+        """
+        :return: Number of elements in this index.
+        :rtype: int
+        """
+        return len(self._descriptor_set)
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

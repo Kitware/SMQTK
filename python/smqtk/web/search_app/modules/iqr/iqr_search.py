@@ -29,7 +29,7 @@ from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
-from smqtk.algorithms.descriptor_generator.pytorch_saliency_descriptor import PytorchSaliencyDescriptorGenerator
+from smqtk.algorithms.descriptor_generator.pytorch_classlabel_saliency_descriptor import PytorchSaliencyDescriptorGenerator
 from smqtk.algorithms.descriptor_generator.pytorch_distance_saliency_descriptor import PytorchDisSaliencyDescriptorGenerator
 
 

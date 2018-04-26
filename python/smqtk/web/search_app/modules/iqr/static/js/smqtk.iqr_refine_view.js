@@ -51,6 +51,10 @@ function IqrRefineView(container, saliency_flag) {
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
 
+    this.button_saliency_top = $('<button class="btn btn-primary" type="button"/>');
+    this.button_saliency_top.text("Saliency On");
+    this.button_saliency_bot = this.button_saliency_top.clone();
+
     // To be put in top button container
     this.button_toggle_random = $('<button class="btn" type="button"/>');
     this.button_toggle_random.text('Toggle Random Results');
@@ -116,11 +120,13 @@ IqrRefineView.prototype.construct_refine_pane = function (saliency_flag) {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
+        this.button_saliency_top,
         this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
+        this.button_saliency_bot,
         this.button_refine_showMore
     );
     // initially hide bottom buttons

@@ -9,7 +9,7 @@ from six.moves import range, zip
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms import get_nn_index_impls
+from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
@@ -30,7 +30,7 @@ class TestMRPTIndex (unittest.TestCase):
 
     def test_impl_findable(self):
         self.assertIn(MRPTNearestNeighborsIndex.__name__,
-                      get_nn_index_impls())
+                      NearestNeighborsIndex.get_impls())
 
     def test_configuration(self):
         index_filepath = osp.abspath(osp.expanduser('index_filepath'))

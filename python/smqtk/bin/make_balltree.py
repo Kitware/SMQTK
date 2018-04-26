@@ -15,7 +15,7 @@ import smqtk.utils.plugin
 def default_config():
     return {
         "hash2uuid_kv_store": smqtk.utils.plugin.make_config(
-            smqtk.representation.get_key_value_store_impls()
+            smqtk.representation.KeyValueStore.get_impls()
         ),
         "sklearn_balltree": SkLearnBallTreeHashIndex.get_default_config(),
         "itq_bit_length": 256,
@@ -38,7 +38,7 @@ def main():
     #: :type: smqtk.representation.KeyValueStore
     hash2uuid_kv_store = smqtk.utils.plugin.from_plugin_config(
         config['hash2uuid_kv_store'],
-        smqtk.representation.get_key_value_store_impls()
+        smqtk.representation.KeyValueStore.get_impls()
     )
     log.info("Initializing ball tree")
     btree = SkLearnBallTreeHashIndex.from_config(config['sklearn_balltree'])

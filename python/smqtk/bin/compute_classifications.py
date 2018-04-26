@@ -19,12 +19,12 @@ import logging
 import os
 
 from smqtk.algorithms import (
-    get_classifier_impls
+    Classifier
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_classification_element_impls,
-    get_descriptor_index_impls,
+    ClassificationElement,
+    DescriptorIndex,
 )
 from smqtk.utils import (
     bin_utils,
@@ -48,12 +48,12 @@ def default_config():
             }
         },
         "plugins": {
-            "classifier": plugin.make_config(get_classifier_impls()),
+            "classifier": plugin.make_config(Classifier.get_impls()),
             "classification_factory": plugin.make_config(
-                get_classification_element_impls()
+                ClassificationElement.get_impls()
             ),
             "descriptor_index": plugin.make_config(
-                get_descriptor_index_impls()
+                DescriptorIndex.get_impls()
             ),
         }
     }
@@ -109,7 +109,7 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     log.info("Initializing classification factory")
@@ -120,7 +120,7 @@ def main():
     log.info("Initializing classifier")
     #: :type: smqtk.algorithms.Classifier
     classifier = plugin.from_plugin_config(
-        config['plugins']['classifier'], get_classifier_impls()
+        config['plugins']['classifier'], Classifier.get_impls()
     )
 
     #

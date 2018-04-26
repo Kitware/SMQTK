@@ -51,12 +51,11 @@ from six.moves import range
 import sklearn.metrics
 
 from smqtk.algorithms import (
-    get_classifier_impls,
     SupervisedClassifier,
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.utils import (
     bin_utils,
@@ -72,11 +71,11 @@ def default_config():
     return {
         'plugins': {
             'classifier':
-                plugin.make_config(get_classifier_impls()),
+                plugin.make_config(SupervisedClassifier.get_impls()),
             'classification_factory':
                 ClassificationElementFactory.get_default_config(),
             'descriptor_index':
-                plugin.make_config(get_descriptor_index_impls())
+                plugin.make_config(DescriptorIndex.get_impls())
         },
         'utility': {
             'train': False,
@@ -110,7 +109,7 @@ def main():
     #: :type: smqtk.algorithms.Classifier
     classifier = plugin.from_plugin_config(
         config['plugins']['classifier'],
-        get_classifier_impls()
+        SupervisedClassifier.get_impls()
     )
     #: :type: ClassificationElementFactory
     classification_factory = ClassificationElementFactory.from_config(
@@ -119,7 +118,7 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     uuid2label_filepath = config['utility']['csv_filepath']
@@ -167,13 +166,9 @@ def main():
     # Train classifier if the one given has a ``train`` method and training
     # was turned enabled.
     if do_train:
-        if isinstance(classifier, SupervisedClassifier):
-            log.info("Training classifier model")
-            classifier.train(tlabel2descriptors)
-            exit(0)
-        else:
-            ValueError("Configured classifier is not a SupervisedClassifier "
-                       "type and does not support training.")
+        log.info("Training supervised classifier model")
+        classifier.train(tlabel2descriptors)
+        exit(0)
 
     #
     # Apply classifier to descriptors for predictions

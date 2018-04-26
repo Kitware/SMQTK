@@ -8,7 +8,7 @@ import numpy as np
 import six
 from six.moves import range, zip
 
-from smqtk.algorithms import get_nn_index_impls
+from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.faiss import FaissNearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import (
@@ -44,7 +44,7 @@ if FaissNearestNeighborsIndex.is_usable():
 
         def test_impl_findable(self):
             self.assertIn(FaissNearestNeighborsIndex.__name__,
-                          get_nn_index_impls())
+                          NearestNeighborsIndex.get_impls())
 
         def test_configuration(self):
             # Make configuration based on default

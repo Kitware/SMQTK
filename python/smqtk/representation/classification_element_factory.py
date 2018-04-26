@@ -1,6 +1,6 @@
 from smqtk.representation import (
     SmqtkRepresentation,
-    get_classification_element_impls
+    ClassificationElement
 )
 from smqtk.utils.plugin import make_config
 from smqtk.utils import merge_dict
@@ -52,7 +52,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(get_classification_element_impls())
+        return make_config(ClassificationElement.get_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
@@ -81,7 +81,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
             config_dict = mc
 
         return ClassificationElementFactory(
-            get_classification_element_impls()[config_dict['type']],
+            ClassificationElement.get_impls()[config_dict['type']],
             config_dict[config_dict['type']]
         )
 

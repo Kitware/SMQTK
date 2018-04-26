@@ -115,8 +115,7 @@ class TestClassifierCollection (unittest.TestCase):
         })
         self.assertEqual(ccol._label_to_classifier, {})
 
-    @mock.patch('smqtk.algorithms.classifier._classifier_collection'
-                '.get_classifier_impls')
+    @mock.patch('smqtk.algorithms.classifier.Classifier.get_impls')
     def test_from_config_with_content(self, m_get_impls):
         # Mocking implementation getter to only return the dummy
         # implementation.

@@ -6,14 +6,13 @@ import multiprocessing.pool
 
 from PIL import Image
 import six
-# noinspection PyUnresolvedReferences
-from six.moves import range, zip
+from six.moves import range
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 
-from smqtk.utils.bin_utils import report_progress, initialize_logging
+from smqtk.utils.bin_utils import report_progress
 from smqtk.pytorch_model import get_pytorchmodel_element_impls
 
 try:
@@ -41,7 +40,9 @@ __author__ = 'bo.dong@kitware.com'
 
 __all__ = [
     "PytorchDescriptorGenerator",
+    "PytorchDataLoader",
 ]
+
 
 class PytorchDataLoader(data.Dataset):
     def __init__(self, file_list, resize_val, uuid4proc, transform=None, saliency_info=False):
@@ -109,13 +110,12 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         :param use_gpu: If pytorch should try to use the GPU
         :type use_gpu: bool
 
-        :param gpu_device_id: Integer ID of the GPU device to use. Only used if
+        :param in_gpu_device_id: Integer ID of the GPU device to use. Only used if
             ``use_gpu`` is True.
-        :type gpu_device_id: None | int
+        :type in_gpu_device_id: None | int
 
         """
         super(PytorchDescriptorGenerator, self).__init__()
-
 
         self.model_cls_name = model_cls_name
         self.model_uri = model_uri
@@ -335,8 +335,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         if uuid4proc:
             self._log.debug("Converting deque to tuple for segmentation")
-            kwargs = {'num_workers': procs if procs is not None
-                        else multiprocessing.cpu_count(), 'pin_memory': True}
+            kwargs = {'num_workers': procs if procs is not None else multiprocessing.cpu_count(), 'pin_memory': True}
             data_loader_cls = PytorchDataLoader(file_list=data_elements, resize_val=self.resize_val,
                                                 uuid4proc=uuid4proc, transform=self.transform)
             data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self.batch_size,
@@ -347,13 +346,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
                 if self.use_gpu:
                     d = d.cuda()
 
-                input = Variable(d)
-
                 # use the avgPool layer output as feature
-                # pytorch_f = self.model_cls(input)[0]
-
-                #use the probability as feature
-                pytorch_f = nn.Softmax(1)(self.model_cls(input)[1])
+                pytorch_f = self.model_cls(Variable(d))[0]
 
                 for idx, uuid in enumerate(uuids):
                     descr_elements[uuid].set_vector(pytorch_f.data.cpu().numpy()[idx])

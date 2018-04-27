@@ -20,3 +20,4 @@ scikit-learn==0.18.1
 scipy==0.19.0
 six==1.10.0
 jsonpickle==0.9.6
+tqdm==4.20.0

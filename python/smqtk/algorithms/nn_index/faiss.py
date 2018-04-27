@@ -1,12 +1,13 @@
-from six.moves import cPickle as pickle, zip
-from six import next
+from six.moves import cPickle
+import multiprocessing
+import tempfile
+import os
 
 import numpy as np
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
-from smqtk.exceptions import ReadOnlyError
+from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin
 
 __author__ = 'bo.dong@kitware.com'
 
@@ -14,6 +15,7 @@ try:
     import faiss
 except ImportError:
     faiss = None
+
 
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
@@ -26,32 +28,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # if underlying library is not found, the import above will error
         return faiss is not None
 
-    def __init__(self, read_only=False, exhaustive=False, use_multiprocessing=True,
-                 pickle_protocol=pickle.HIGHEST_PROTOCOL,
-                 index_type="IVF"):
+    def __init__(self, index_uri=None, parameters_uri=None, descriptor_cache_uri=None,
+                 exhaustive=False, index_type="IVF100,Flat", nprob=3):
         """
         Initialize MRPT index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
 
-        :param read_only: If True, `build_index` will error if there is an
-            existing index. False by default.
-        :type read_only: bool
 
-        :param num_trees: The number of trees that will be generated for the
-            data structure
-        :type num_trees: int
-
-        :param depth: The depth of the trees
-        :type depth: int
-
-        :param pickle_protocol: The protocol version to be used by the pickle
-            module to serialize class information
-        :type pickle_protocol: int
-
-        :param use_multiprocessing: Whether or not to use discrete processes
-            as the parallelization agent vs python threads.
-        :type use_multiprocessing: bool
 
         :param index_type: index type used for index_factory. (NOTE, we need to give the
             feature dimension in order to use the index factory.)
@@ -60,22 +44,81 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         super(FaissNearestNeighborsIndex, self).__init__()
 
-        self.read_only = read_only
-        self.use_multiprocessing = use_multiprocessing
-        self.pickle_protocol = pickle_protocol
-        self.exhaustive = exhaustive
-        self.index_type = index_type
+        self._index_uri = index_uri
+        self._index_param_uri = parameters_uri
+        self._descr_cache_uri = descriptor_cache_uri
 
+        # Elements will be None if input URI is None
+        self._index_elem = \
+            self._index_uri and from_uri(self._index_uri)
+        self._index_param_elem = \
+            self._index_param_uri and from_uri(self._index_param_uri)
+        self._descr_cache_elem = \
+            self._descr_cache_uri and from_uri(self._descr_cache_uri)
+
+        self._exhaustive = exhaustive
+        self._index_type = index_type
+        self._nprob = nprob
+
+        # In-order cache of descriptors we're indexing over.
+        # - flann.nn_index will spit out indices to list
+        #: :type: list[smqtk.representation.DescriptorElement] | None
+        self._descr_cache = None
+
+        # feature's dimension
+        self._feature_dim = None
+
+        self._faiss_index = None
+
+        self._pid = None
 
     def get_config(self):
         return {
-            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
+            "index_uri": self._index_uri,
+            "parameters_uri": self._index_param_uri,
+            "descriptor_cache_uri": self._descr_cache_uri,
             "exhaustive": self.exhaustive,
-            "read_only": self.read_only,
-            "pickle_protocol": self.pickle_protocol,
-            "use_multiprocessing": self.use_multiprocessing,
-            "index_type": self.index_type
+            "index_type": self.index_type,
+            "nprob": self._nprob,
         }
+
+    def _has_model_data(self):
+        """
+        check if configured model files are configured and not empty
+        """
+        return (self._index_elem and not self._index_elem.is_empty() and
+                self._index_param_elem and not self._index_param_elem.is_empty() and
+                self._descr_cache_elem and not self._descr_cache_elem.is_empty())
+
+    def _load_flann_model(self):
+        if not self._descr_cache and not self._descr_cache_elem.is_empty():
+            # Load descriptor cache
+            # - is copied on fork, so only need to load here.
+            self._log.debug("Loading cached descriptors")
+            self._descr_cache = cPickle.loads(self._descr_cache_elem.get_bytes())
+
+        # Load the binary index
+        if self._index_elem and not self._index_elem.is_empty():
+            tmp_fp = self._index_elem.write_temp()
+            self._faiss_index = faiss.read_index(tmp_fp)
+            self._index_elem.clean_temp()
+            del tmp_fp
+
+        # Set current PID to the current
+        self._pid = multiprocessing.current_process().pid
+
+    def _restore_index(self):
+        """
+        If we think we're suppose to have an index, check the recorded PID with
+        the current PID, reloading the index from cache if they differ.
+
+        If there is a loaded index and we're on the same process that created it
+        this does nothing.
+        """
+        if bool(self._flann) \
+                and self._has_model_data() \
+                and self._pid != multiprocessing.current_process().pid:
+            self._load_flann_model()
 
     def build_index(self, descriptors):
         """
@@ -92,86 +135,69 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self.read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
-
-        super(FaissNearestNeighborsIndex, self).build_index(descriptors)
-
         self._log.info("Building new FAISS index")
 
-        self._log.debug("Clearing and adding new descriptor elements")
-        self._descriptor_set.clear()
-        self._descriptor_set.add_many_descriptors(descriptors)
+        self._log.debug("Storing descriptors")
+        self._descr_cache = list(descriptors)
+        if not self._descr_cache:
+            raise ValueError("No data provided in given iterable.")
 
-        self._log.debug('Building FAISS index')
-        self._build_faiss_model()
+        # Cache descriptors if we have an element
+        if self._descr_cache_elem and self._descr_cache_elem.writable():
+            self._log.debug("Caching descriptors: %s", self._descr_cache_elem)
+            self._descr_cache_elem.set_bytes(
+                cPickle.dumps(self._descr_cache, -1)
+            )
 
-    def _build_faiss_model(self):
-        sample = next(self._descriptor_set.iterdescriptors())
-        sample_v = sample.vector()
-        n, d = self.count(), sample_v.size
+        n = len(self._descr_cache)
+        self._feature_dim = self._descr_cache[0].vector().size
 
-        data = np.empty((n, d), dtype=np.float32)
-        elements_to_matrix(
-            self._descriptor_set, mat=data,
-            use_multiprocessing=self.use_multiprocessing,
-            report_interval=1.0,
-        )
-        self._uuids = np.array(list(self._descriptor_set.keys()))
-        self.faiss_flat = faiss.IndexFlatL2(d)
+        data = np.empty((n, self._feature_dim), dtype=np.float32)
+        elements_to_matrix(self._descr_cache, mat=data, report_interval=1.0)
 
-        if self.exhaustive:
-            self._faiss_index = faiss.IndexIDMap(self.faiss_flat)
+        if self._exhaustive:
+            self._faiss_index = faiss.IndexFlatL2(self._feature_dim)
         else:
-            nlist = 10000
-            self._faiss_index = faiss.IndexIVFFlat(
-                self.faiss_flat, d, nlist, faiss.METRIC_L2)
+            self._faiss_index = faiss.index_factory(self._feature_dim, self._index_type)
             self._faiss_index.train(data)
-            self._faiss_index.nprobe = 5000
 
-        self._log.info("data shape, type: %s, %s", data.shape, data.dtype)
-        self._log.info("uuid shape, type: %s, %s",
-                       self._uuids.shape, self._uuids.dtype)
-        self._faiss_index.add_with_ids(data, self._uuids)
+        if self._index_elem and self._index_elem.writable():
+            self._log.debug("Caching index: %s", self._index_elem)
+            # FAISS wants to write to a file, so make a temp file, then read it
+            # in, putting bytes into element.
+            fd, fp = tempfile.mkstemp()
+            try:
+                faiss.write_index(self._faiss_index, fp)
+                self._index_elem.set_bytes(os.read(fd, os.path.getsize(fp)))
+            finally:
+                os.close(fd)
+                os.remove(fp)
 
-        self._log.info("FAISS index has been constructed with %d vectors",
-                       self._faiss_index.ntotal)
+        self._pid = multiprocessing.current_process().pid
 
     def nn(self, d, n=1):
+        if self._exhaustive and not self._faiss_index.is_trained:
+            raise RuntimeError('The Faiss index is not trained!')
+
+        self._restore_index()
         super(FaissNearestNeighborsIndex, self).nn(d, n)
 
-        q = d.vector().reshape(1, -1).astype(np.float32)
+        # TODO: d can be multiple query descrptors. Currently, we only consider single query.
+        query_descr = d.vector()
+        query = np.empty((1, self._feature_dim), dtype=np.float32)
+        elements_to_matrix([query_descr], mat=query, report_interval=1.0)
 
-        self._log.debug("Received query for %d nearest neighbors", n)
+        dists, ids = self._faiss_index.search(query, n)
+        dists, ids = dists.squeeze(), ids.squeeze()
 
-        dists, ids = self._faiss_index.search(q, n)
-        dists, ids = np.sqrt(dists).squeeze(), ids.squeeze()
-        uuids = ids
-
-        descriptors = tuple(self._descriptor_set.get_many_descriptors(uuids))
-        d_vectors = elements_to_matrix(descriptors)
-        d_dists = np.sqrt(((d_vectors - q)**2).sum(axis=1))
-
-        order = dists.argsort()
-        uuids, dists = list(zip(*((uuids[oidx], d_dists[oidx])
-                                  for oidx in order)))
-
-        d_dists = d_dists[order]
-        self._log.debug("Min and max FAISS distances: %g, %g",
-                        min(dists), max(dists))
-        self._log.debug("Min and max descriptor distances: %g, %g",
-                        min(d_dists), max(d_dists))
-
-        self._log.debug("Returning query result of size %g", len(uuids))
-
-        return (descriptors, tuple(dists))
+        return [self._descr_cache[i] for i in ids], dists
 
     def count(self):
         """
         :return: Number of elements in this index.
         :rtype: int
         """
-        return len(self._descriptor_set)
+        return len(self._descr_cache) if self._descr_cache else 0
+
 
 NN_INDEX_CLASS = FaissNearestNeighborsIndex

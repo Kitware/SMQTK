@@ -50,15 +50,16 @@ __all__ = [
     "PytorchDisSaliencyDescriptorGenerator",
 ]
 
+
 def generate_block_masks(grid_size, stride, image_size=(224, 224)):
-    '''
+    """
     Generating the sliding window style masks
 
     :param grid_size: the block window size (with value 0, other areas with value 1)
     :param stride: the sliding step
     :param image_size: the mask size which should be the same to the image size
     :return: the sliding window style masks
-    '''
+    """
     if not os.path.isfile('block_mask_{}_{}.npy'.format(grid_size, stride)):
         grid_num = image_size[0] // stride
         mask_num = int(grid_num * grid_num)
@@ -74,31 +75,34 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
         masks = masks.reshape(-1, 1, *image_size)
         masks.tofile('block_mask_{}_{}.npy'.format(grid_size, stride))
     else:
-        masks = np.fromfile('block_mask_{}_{}.npy'.format(grid_size, stride), dtype=np.float32).reshape(-1, 1, *image_size)
+        masks = np.fromfile('block_mask_{}_{}.npy'.format(grid_size, stride),
+                            dtype=np.float32).reshape(-1, 1, *image_size)
 
     masks = torch.from_numpy(masks).float().cuda()
     return masks
 
+
 class TensorDataset(data.Dataset):
-    '''
+    """
     Apply the N filters/masks onto one input image
-    '''
+    """
     def __init__(self, filters, img):
         self._filters = filters
         self._img = img
 
     def __getitem__(self, index):
-        '''
+        """
         Generate the masked image on the fly in order to save
         GPU memory
 
         :param index: mask index
         :return: masked image by applying the idxth mask
-        '''
+        """
         return torch.mul(self._filters[index], self._img)
 
     def __len__(self):
         return self._filters.size(0)
+
 
 class DisMaskSaliencyDataset(data.Dataset):
     def __init__(self, masks, classifier, batch_size, dis_type=DIS_TYPE.L2):
@@ -119,7 +123,6 @@ class DisMaskSaliencyDataset(data.Dataset):
         :type batch_size: int
 
         """
-
         self._filters = masks
         self._query_f = None
         self._img_set = None
@@ -129,7 +132,6 @@ class DisMaskSaliencyDataset(data.Dataset):
         self._batch_size = batch_size
         self._filters_num = masks.size(0)
         self._dis_type = dis_type
-
 
     @classmethod
     def get_logger(cls):
@@ -240,7 +242,6 @@ class DisMaskSaliencyDataset(data.Dataset):
         self._process_imgbatch = val
         self._img_set = [(val[i], -1) for i in range(val.size(0))]
 
-
     def __getitem__(self, index):
         cur_img, _ = self._img_set[index]
 
@@ -255,13 +256,12 @@ class DisMaskSaliencyDataset(data.Dataset):
         else:
             raise TypeError("Unsupport distance type {}".format(self._dis_type))
 
-
         def obtain_masked_img_targetP(img):
-            '''
+            """
             obtain the distance diff for corresponding masks
             :param img: input image
             :return: distance diff for corresponding masks
-            '''
+            """
             # masked_image loader
             kwargs = {'shuffle': False}
             masked_imgs_loader = torch.utils.data.DataLoader(
@@ -344,9 +344,9 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         :param use_gpu: If pytorch should try to use the GPU
         :type use_gpu: bool (default False)
 
-        :param gpu_device_id: Integer ID of the GPU device to use. Only used if
+        :param in_gpu_device_id: Integer ID of the GPU device to use. Only used if
             ``use_gpu`` is True.
-        :type gpu_device_id: None | int (default None)
+        :type in_gpu_device_id: None | int (default None)
 
         :param saliency_store_uri: where to store the generated saliency maps
         :type saliency_store_uri: str (default ./sa_map)
@@ -355,13 +355,12 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             to avoid generate the same saliency map again
         :type saliency_uuid_dict_file: None | str (default None)
 
-        :param dis_type: distance type for generating the saliency maps, which
+        :param dis_type_str: distance type for generating the saliency maps, which
             should be the same as the one used for indexing and refinement
-        :type dis_type: str (L2)
+        :type dis_type_str: str (L2)
 
         """
         super(PytorchDisSaliencyDescriptorGenerator, self).__init__()
-
 
         self.model_cls_name = model_cls_name
         self.model_uri = model_uri
@@ -431,15 +430,14 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self.model_cls.load_state_dict(snapshot['state_dict'])
 
         masks = generate_block_masks(self.grid_size, self.stride, image_size=(self.resize_val, self.resize_val))
-        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size, DIS_TYPE[self.dis_type_str])
+        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size,
+                                                         DIS_TYPE[self.dis_type_str])
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
         self._sm_uuid_dict = {}
         if os.path.isfile(self.saliency_uuid_dict_file):
             with open(self.saliency_uuid_dict_file, 'rb') as f:
                 self._sm_uuid_dict = pickle.load(f)
-
-
 
     def get_config(self):
         """
@@ -458,15 +456,15 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         return {
             'model_cls_name': self.model_cls_name,
             'model_uri': self.model_uri,
-            'grid_size' : self.grid_size,
-            'stride' : self.stride,
+            'grid_size': self.grid_size,
+            'stride': self.stride,
             'resize_val': self.resize_val,
             'batch_size': self.batch_size,
             'use_gpu': self.use_gpu,
             'in_gpu_device_id': self.in_gpu_device_id,
             'saliency_store_uri': self.saliency_store_uri,
             'saliency_uuid_dict_file': self.saliency_uuid_dict_file,
-            'dis_type_str' : self.dis_type_str
+            'dis_type_str': self.dis_type_str
         }
 
     def valid_content_types(self):
@@ -512,6 +510,12 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             with such storage.
         :type overwrite: bool
 
+        :param query_f: the query image feature
+        :type query_f: numpy.ndarray (default: None)
+
+        :param query_uuid: the query image's uuid
+        :type query_uuid: collections.Hashable (default: None)
+
         :return: Result descriptor element. UUID of this output descriptor is
             the same as the UUID of the input data element.
         :rtype: smqtk.representation.DescriptorElement
@@ -550,6 +554,12 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             when pooling sub-tasks. If None, we attempt to use all available
             cores.
         :type procs: int | None
+
+        :param query_f: the query image feature
+        :type query_f: numpy.ndarray (default: None)
+
+        :param query_uuid: the query image's uuid
+        :type query_uuid: collections.Hashable (default: None)
 
         :raises ValueError: An input DataElement was of a content type that we
             cannot handle.
@@ -603,7 +613,6 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         self._log.debug("%d descriptors already computed",
                         len(data_elements) - len(uuid4proc))
 
-
         if uuid4proc:
             # set the query flag accordingly
             saliency_flag = False
@@ -613,8 +622,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                 saliency_flag = True
 
             self._log.debug("Converting deque to tuple for segmentation")
-            kwargs = {'num_workers': procs if procs is not None
-                        else multiprocessing.cpu_count(), 'pin_memory': True}
+            kwargs = {'num_workers': procs if procs is not None else multiprocessing.cpu_count(), 'pin_memory': True}
             data_loader_cls = PytorchDataLoader(file_list=data_elements, resize_val=self.resize_val,
                                                 uuid4proc=uuid4proc, transform=self.transform, saliency_info=True)
             data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self.batch_size,
@@ -622,7 +630,8 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
             self._log.debug("Extract pytorch features")
 
-            for (d, uuids, resized_org_img, (w, h)) in tqdm(data_loader, total=len(data_loader), desc='extracting feature'):
+            for (d, uuids, resized_org_img, (w, h)) in tqdm(data_loader, total=len(data_loader),
+                                                            desc='extracting feature'):
                 # use output probability as the feature vector
                 pytorch_f = self.model_cls(Variable(d.cuda()))[0]
 
@@ -640,24 +649,21 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                     if saliency_flag:
                         if (uuid, q_uuid) in self._sm_uuid_dict and \
                                 self.data_set.has_uuid(self._sm_uuid_dict[(uuid, q_uuid)]):
-                            descr_elements[uuid].update_saliency_map({q_uuid : self._sm_uuid_dict[(uuid, q_uuid)]})
+                            descr_elements[uuid].update_saliency_map({q_uuid: self._sm_uuid_dict[(uuid, q_uuid)]})
                         else:
-                            ## generate the saliency map
-                            #-------------------------------------------------------
+                            # generate the saliency map
                             sa_map = self.saliency_generator[idx]
-
                             # write out the top K saliency maps
-                            dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx], h[idx]), content_type='image/png')
-                            self.data_set.add_data(dme)
+                            dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx],
+                                                                               h[idx]), content_type='image/png')
+                            self.data_set.add_data([dme])
 
-                            descr_elements[uuid].update_saliency_map({q_uuid : dme.uuid()})
+                            descr_elements[uuid].update_saliency_map({q_uuid: dme.uuid()})
                             self._sm_uuid_dict[(uuid, q_uuid)] = dme.uuid()
-                            #-------------------------------------------------------
 
         self._log.debug('write out saliency uuid dict')
         with open(self.saliency_uuid_dict_file, 'wb') as f:
             pickle.dump(self._sm_uuid_dict, f)
-
 
         self._log.debug("forming output dict")
         return dict((data_elements[k].uuid(), descr_elements[k])

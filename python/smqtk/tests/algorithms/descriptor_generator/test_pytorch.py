@@ -28,7 +28,7 @@ if PytorchDescriptorGenerator.is_usable():
                 'resize_val': 256,
                 'batch_size': 8,
                 'use_gpu': self.use_GPU,
-                'in_gpu_device_id': 0,
+                'in_gpu_device_id': None,
             }
 
         def test_impl_findable(self):
@@ -134,7 +134,7 @@ if PytorchDescriptorGenerator.is_usable():
                 img = img.cuda()
                 self.model_cls = self.model_cls.cuda()
 
-            expected_descr = self.model_cls(Variable(img.unsqueeze(0)))
+            (expected_descr, _) = self.model_cls(Variable(img.unsqueeze(0)))
 
             if self.use_GPU:
                 expected_descr = expected_descr.data.cpu().squeeze().numpy()

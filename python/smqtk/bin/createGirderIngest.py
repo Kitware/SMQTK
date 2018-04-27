@@ -33,7 +33,7 @@ import logging
 
 import requests
 
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.utils import bin_utils, plugin
 from smqtk.utils.girder import GirderTokenManager
@@ -78,7 +78,7 @@ def default_config():
             'dataset_insert_batch_size': None,
         },
         'plugins': {
-            'data_set': plugin.make_config(get_data_set_impls()),
+            'data_set': plugin.make_config(DataSet.get_impls()),
         }
     }
 
@@ -302,7 +302,7 @@ def main():
 
     #: :type: smqtk.representation.DataSet
     data_set = plugin.from_plugin_config(config['plugins']['data_set'],
-                                         get_data_set_impls())
+                                         DataSet.get_impls())
 
     batch = collections.deque()
     rps = [0]*7

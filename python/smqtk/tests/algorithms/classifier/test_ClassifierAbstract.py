@@ -2,8 +2,7 @@ from __future__ import division, print_function
 import mock
 import unittest
 
-from smqtk.algorithms.classifier import Classifier, SupervisedClassifier, \
-    get_classifier_impls
+from smqtk.algorithms.classifier import Classifier, SupervisedClassifier
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 
@@ -117,12 +116,12 @@ class TestGetClassifierImpls (unittest.TestCase):
 
     def test_get_classifier_impls_subclass_interface_classifier(self):
         # Simple test that primarily makes sure the function doesn't fall down.
-        m = get_classifier_impls()
+        m = Classifier.get_impls()
         self.assertIsInstance(m, dict)
         self.assertIn("IndexLabelClassifier", m)
 
         # Should act the same as calling with no sub-interface
-        m2 = get_classifier_impls(sub_interface=Classifier)
+        m2 = Classifier.get_impls()
         self.assertIsInstance(m, dict)
         self.assertIn("IndexLabelClassifier", m)
         self.assertEqual(m, m2)
@@ -130,6 +129,6 @@ class TestGetClassifierImpls (unittest.TestCase):
     def test_get_classifier_impls_subclass_interface_supervised(self):
         # should not return when sub_interface is set to the
         # SupervisedClassifier base-class.
-        m = get_classifier_impls(sub_interface=SupervisedClassifier)
+        m = SupervisedClassifier.get_impls()
         self.assertIsInstance(m, dict)
         self.assertNotIn("IndexLabelClassifier", m)

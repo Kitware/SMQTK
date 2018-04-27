@@ -1,6 +1,6 @@
 from smqtk.representation import \
     SmqtkRepresentation, \
-    get_descriptor_element_impls
+    DescriptorElement
 from smqtk.utils.plugin import make_config
 from smqtk.utils import merge_dict
 
@@ -47,7 +47,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(get_descriptor_element_impls())
+        return make_config(DescriptorElement.get_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
@@ -76,7 +76,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
             config_dict = merged_config
 
         return DescriptorElementFactory(
-            get_descriptor_element_impls()[config_dict['type']],
+            DescriptorElement.get_impls()[config_dict['type']],
             config_dict[config_dict['type']]
         )
 

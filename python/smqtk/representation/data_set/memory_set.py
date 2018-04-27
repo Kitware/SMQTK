@@ -4,7 +4,7 @@ from smqtk.exceptions import ReadOnlyError
 
 from six.moves import cPickle as pickle
 
-from smqtk.representation import DataElement, DataSet, get_data_element_impls
+from smqtk.representation import DataElement, DataSet
 from smqtk.utils import merge_dict, plugin, SimpleTimer
 
 
@@ -56,7 +56,7 @@ class DataMemorySet (DataSet):
 
         """
         c = super(DataMemorySet, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        c['cache_element'] = plugin.make_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -86,7 +86,7 @@ class DataMemorySet (DataSet):
         cache_element = None
         if c['cache_element'] and c['cache_element']['type']:
             cache_element = plugin.from_plugin_config(c['cache_element'],
-                                                      get_data_element_impls())
+                                                      DataElement.get_impls())
         c['cache_element'] = cache_element
 
         return super(DataMemorySet, cls).from_config(c, False)

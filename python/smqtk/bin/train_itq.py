@@ -12,12 +12,10 @@ string.
 """
 
 import logging
-import os.path
+import os
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
-from smqtk.representation import (
-    get_descriptor_index_impls,
-)
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
     bin_utils,
     plugin,
@@ -31,7 +29,7 @@ def default_config():
     return {
         "itq_config": ItqFunctor.get_default_config(),
         "uuids_list_filepath": None,
-        "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
+        "descriptor_index": plugin.make_config(DescriptorIndex.get_impls()),
     }
 
 
@@ -55,7 +53,7 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['descriptor_index'],
-        get_descriptor_index_impls(),
+        DescriptorIndex.get_impls(),
     )
 
     if uuids_list_filepath and os.path.isfile(uuids_list_filepath):

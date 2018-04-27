@@ -17,7 +17,6 @@ import logging
 import os
 
 from smqtk.algorithms import SupervisedClassifier
-from smqtk.algorithms import get_classifier_impls
 
 from smqtk.iqr import IqrSession
 
@@ -42,7 +41,7 @@ def get_cli_parser():
 
 def get_default_config():
     return {
-        "classifier": make_config(get_classifier_impls()),
+        "classifier": make_config(SupervisedClassifier.get_impls()),
     }
 
 
@@ -50,7 +49,7 @@ def train_classifier_iqr(config, iqr_state_fp):
     #: :type: smqtk.algorithms.SupervisedClassifier
     classifier = from_plugin_config(
         config['classifier'],
-        get_classifier_impls(sub_interface=SupervisedClassifier)
+        SupervisedClassifier.get_impls()
     )
 
     # Load state into an empty IqrSession instance.

@@ -5,7 +5,6 @@ import six
 from smqtk.exceptions import MissingLabelError
 from smqtk.utils import Configurable, SmqtkObject, merge_dict, plugin
 
-from . import get_classifier_impls
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 from ._interface_classifier import Classifier
 
@@ -31,7 +30,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         del c['classifiers']
 
         # Add slot of a list of classifier plugin specifications
-        c[cls.EXAMPLE_KEY] = plugin.make_config(get_classifier_impls())
+        c[cls.EXAMPLE_KEY] = plugin.make_config(Classifier.get_impls())
 
         return c
 
@@ -69,7 +68,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
 
             classifier_config = config_dict[label]
             classifier = plugin.from_plugin_config(classifier_config,
-                                                   get_classifier_impls())
+                                                   Classifier.get_impls())
             classifier_map[label] = classifier
 
         # Don't merge back in "example" default

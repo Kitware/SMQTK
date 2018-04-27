@@ -1,6 +1,10 @@
-__author__ = "paul.tunison@kitware.com"
+import os
 
-import os.path as osp
+import six
 
 
-TEST_DATA_DIR = osp.join(osp.dirname(__file__), "data")
+# Centrally add the mock move
+six.add_move(six.MovedModule('mock', 'mock', 'unittest.mock'))
+
+
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")

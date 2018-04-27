@@ -7,7 +7,7 @@ from six.moves import map
 import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
-from smqtk.representation import get_data_element_impls
+from smqtk.representation import DataElement
 from smqtk.utils import merge_dict, plugin
 from smqtk.utils.bit_utils import (
     bit_vector_to_int_large,
@@ -47,7 +47,7 @@ class LinearHashIndex (HashIndex):
 
         """
         c = super(LinearHashIndex, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        c['cache_element'] = plugin.make_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -79,7 +79,7 @@ class LinearHashIndex (HashIndex):
                 and config_dict['cache_element']['type']:
             cache_element = \
                 plugin.from_plugin_config(config_dict['cache_element'],
-                                          get_data_element_impls())
+                                          DataElement.get_impls())
         config_dict['cache_element'] = cache_element
 
         return super(LinearHashIndex, cls).from_config(config_dict, False)

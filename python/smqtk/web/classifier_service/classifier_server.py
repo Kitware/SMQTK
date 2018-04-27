@@ -10,8 +10,8 @@ from six.moves import cPickle as pickle
 from six.moves import urllib, zip
 
 from smqtk.algorithms import (
-    get_classifier_impls,
-    get_descriptor_generator_impls,
+    Classifier,
+    DescriptorGenerator,
     SupervisedClassifier
 )
 from smqtk.algorithms.classifier import (
@@ -104,16 +104,14 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             ClassificationElementFactory.get_default_config()
         # Descriptor generator for new content
         c[cls.CONFIG_DESCRIPTOR_GENERATOR] = smqtk.utils.plugin.make_config(
-            get_descriptor_generator_impls()
+            DescriptorGenerator.get_impls()
         )
         # Descriptor factory for new content descriptors
         c[cls.CONFIG_DESCRIPTOR_FACTORY] = \
             DescriptorElementFactory.get_default_config()
         # from-IQR-state *supervised* classifier configuration
         c[cls.CONFIG_IQR_CLASSIFIER] = smqtk.utils.plugin.make_config(
-            get_classifier_impls(
-                sub_interface=SupervisedClassifier
-            )
+            SupervisedClassifier.get_impls()
         )
         c[cls.CONFIG_IMMUTABLE_LABELS] = []
 
@@ -153,7 +151,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_gen = smqtk.utils.plugin.from_plugin_config(
             json_config[self.CONFIG_DESCRIPTOR_GENERATOR],
-            smqtk.algorithms.get_descriptor_generator_impls()
+            smqtk.algorithms.DescriptorGenerator.get_impls()
         )
 
         # Classifier config for uploaded IQR states.
@@ -608,7 +606,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         #: :type: SupervisedClassifier
         classifier = smqtk.utils.plugin.from_plugin_config(
             self.iqr_state_classifier_config,
-            get_classifier_impls(sub_interface=SupervisedClassifier)
+            SupervisedClassifier.get_impls()
         )
         classifier.train(class_examples={'positive': pos, 'negative': neg})
 

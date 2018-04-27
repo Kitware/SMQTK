@@ -76,11 +76,10 @@ import sklearn.model_selection
 import sklearn.metrics
 import six
 
-from smqtk.algorithms import get_classifier_impls
 from smqtk.algorithms.classifier import SupervisedClassifier
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.representation.classification_element.memory import \
     MemoryClassificationElement
@@ -94,17 +93,13 @@ from smqtk.utils import (
 __author__ = "paul.tunison@kitware.com"
 
 
-def get_supervised_classifier_impls():
-    return get_classifier_impls(sub_interface=SupervisedClassifier)
-
-
 def default_config():
     return {
         "plugins": {
             "supervised_classifier":
-                plugin.make_config(get_supervised_classifier_impls()),
+                plugin.make_config(SupervisedClassifier.get_impls()),
             "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
+                plugin.make_config(DescriptorIndex.get_impls()),
         },
         "cross_validation": {
             "truth_labels": None,
@@ -156,7 +151,7 @@ def classifier_kfold_validation():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
     log.info("Loading classifier configuration")
     #: :type: dict
@@ -220,7 +215,7 @@ def classifier_kfold_validation():
         #: :type: SupervisedClassifier
         classifier = plugin.from_plugin_config(
             classifier_config,
-            get_supervised_classifier_impls()
+            SupervisedClassifier.get_impls()
         )
 
         log.info("-- gathering descriptors")

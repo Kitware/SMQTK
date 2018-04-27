@@ -5,6 +5,7 @@ import os
 import unittest
 
 from smqtk.representation import DescriptorElement
+from smqtk.utils.plugin import Pluggable
 from smqtk.web.iqr_service import IqrService
 
 from smqtk.tests.web.iqr_service.stubs import \
@@ -17,10 +18,7 @@ class TestIqrService (unittest.TestCase):
     # Patch in this module for stub implementation access.
     # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
-        "CLASSIFIER_PATH": STUB_MODULE_PATH,
-        "DESCRIPTOR_INDEX_PATH": STUB_MODULE_PATH,
-        "DESCRIPTOR_GENERATOR_PATH": STUB_MODULE_PATH,
-        "NN_INDEX_PATH": STUB_MODULE_PATH,
+        Pluggable.PLUGIN_ENV_VAR: STUB_MODULE_PATH
     })
     def setUp(self):
         """

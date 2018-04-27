@@ -3,7 +3,7 @@ import unittest
 
 import mock
 
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor \
     import ColorDescriptor_Image_csift  # arbitrary leaf class
 
@@ -14,7 +14,7 @@ if ColorDescriptor_Image_csift.is_usable():
 
         def test_impl_findable(self):
             self.assertIn(ColorDescriptor_Image_csift.__name__,
-                          get_descriptor_generator_impls())
+                          DescriptorGenerator.get_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator'
                     '.colordescriptor.colordescriptor'

@@ -16,12 +16,12 @@ import logging
 import os
 
 from smqtk.algorithms import (
-    get_lsh_functor_impls,
+    LshFunctor,
 )
 from smqtk.compute_functions import compute_hash_codes
 from smqtk.representation import (
-    get_descriptor_index_impls,
-    get_key_value_store_impls,
+    DescriptorIndex,
+    KeyValueStore,
 )
 from smqtk.utils import (
     bin_utils,
@@ -70,10 +70,10 @@ def default_config():
         },
         "plugins": {
             "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
-            "lsh_functor": plugin.make_config(get_lsh_functor_impls()),
+                plugin.make_config(DescriptorIndex.get_impls()),
+            "lsh_functor": plugin.make_config(LshFunctor.get_impls()),
             "hash2uuid_kvstore":
-                plugin.make_config(get_key_value_store_impls()),
+                plugin.make_config(KeyValueStore.get_impls()),
         },
     }
 
@@ -118,19 +118,19 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
     log.info("Loading LSH functor")
     #: :type: smqtk.algorithms.LshFunctor
     lsh_functor = plugin.from_plugin_config(
         config['plugins']['lsh_functor'],
-        get_lsh_functor_impls()
+        LshFunctor.get_impls()
     )
     log.info("Loading Key/Value store")
     #: :type: smqtk.representation.KeyValueStore
     hash2uuids_kvstore = plugin.from_plugin_config(
         config['plugins']['hash2uuid_kvstore'],
-        get_key_value_store_impls()
+        KeyValueStore.get_impls()
     )
 
     # Iterate either over what's in the file given, or everything in the

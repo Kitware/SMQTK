@@ -4,7 +4,6 @@ from smqtk.representation import (
     DataElement,
     DataSet,
     KeyValueStore,
-    get_key_value_store_impls
 )
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
@@ -44,7 +43,7 @@ class KVSDataSet (DataSet):
         """
         c = super(KVSDataSet, cls).get_default_config()
         c['kvstore'] = merge_dict(
-            plugin.make_config(get_key_value_store_impls()),
+            plugin.make_config(KeyValueStore.get_impls()),
             plugin.to_plugin_config(c['kvstore'])
         )
         return c
@@ -71,7 +70,7 @@ class KVSDataSet (DataSet):
 
         # Convert KVStore config to instance for constructor.
         kvs_inst = plugin.from_plugin_config(config_dict['kvstore'],
-                                             get_key_value_store_impls())
+                                             KeyValueStore.get_impls())
         config_dict['kvstore'] = kvs_inst
 
         return super(KVSDataSet, cls).from_config(config_dict, False)

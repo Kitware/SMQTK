@@ -28,31 +28,43 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # if underlying library is not found, the import above will error
         return faiss is not None
 
-    def __init__(self, index_uri=None, parameters_uri=None, descriptor_cache_uri=None,
-                 exhaustive=False, index_type="IVF100,Flat", nprob=3):
+    def __init__(self, index_uri=None, descriptor_cache_uri=None,
+                 exhaustive=True, index_type=None, nprob=3):
         """
-        Initialize MRPT index properties. Does not contain a queryable index
-        until one is built via the ``build_index`` method, or loaded from
-        existing model files.
+        Initialize a FAISS index
 
+        :param index_uri: Optional URI to where to load/store FLANN index
+            when initialized and/or built.
 
+            If not configured, no model files are written to or loaded from
+            disk.
+        :type index_uri: None | str (default: None)
 
-        :param index_type: index type used for index_factory. (NOTE, we need to give the
-            feature dimension in order to use the index factory.)
-        :type index_type: str (default: IVF)
+        :param descriptor_cache_uri: Optional file location to load/store
+            DescriptorElements in this index.
 
+            If not configured, no model files are written to or loaded from
+            disk.
+        :type descriptor_cache_uri: None | str
+
+        :param exhaustive: If it is true, it means on indexing algorithm
+            will be used. In this case, index_type has no meaning.
+        :type exhaustive: bool (default: True)
+
+        :param index_type: index type used for index_factory.
+        :type index_type: None | str (default: None)
+
+        :param nprob: number of cells needs to be search for finding NN
+        :type nprob: int (defalut: 3)
         """
         super(FaissNearestNeighborsIndex, self).__init__()
 
         self._index_uri = index_uri
-        self._index_param_uri = parameters_uri
         self._descr_cache_uri = descriptor_cache_uri
 
         # Elements will be None if input URI is None
         self._index_elem = \
             self._index_uri and from_uri(self._index_uri)
-        self._index_param_elem = \
-            self._index_param_uri and from_uri(self._index_param_uri)
         self._descr_cache_elem = \
             self._descr_cache_uri and from_uri(self._descr_cache_uri)
 
@@ -75,10 +87,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     def get_config(self):
         return {
             "index_uri": self._index_uri,
-            "parameters_uri": self._index_param_uri,
             "descriptor_cache_uri": self._descr_cache_uri,
-            "exhaustive": self.exhaustive,
-            "index_type": self.index_type,
+            "exhaustive": self._exhaustive,
+            "index_type": self._index_type,
             "nprob": self._nprob,
         }
 
@@ -87,10 +98,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         check if configured model files are configured and not empty
         """
         return (self._index_elem and not self._index_elem.is_empty() and
-                self._index_param_elem and not self._index_param_elem.is_empty() and
                 self._descr_cache_elem and not self._descr_cache_elem.is_empty())
 
-    def _load_flann_model(self):
+    def _load_faiss_model(self):
         if not self._descr_cache and not self._descr_cache_elem.is_empty():
             # Load descriptor cache
             # - is copied on fork, so only need to load here.
@@ -115,10 +125,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         If there is a loaded index and we're on the same process that created it
         this does nothing.
         """
-        if bool(self._flann) \
+        if bool(self._faiss_index) \
                 and self._has_model_data() \
                 and self._pid != multiprocessing.current_process().pid:
-            self._load_flann_model()
+            self._load_faiss_model()
 
     def build_index(self, descriptors):
         """
@@ -157,9 +167,18 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         if self._exhaustive:
             self._faiss_index = faiss.IndexFlatL2(self._feature_dim)
+            if not self._faiss_index.is_trained:
+                raise RuntimeError('faiss_index is not trained!')
         else:
             self._faiss_index = faiss.index_factory(self._feature_dim, self._index_type)
             self._faiss_index.train(data)
+
+            if not self._faiss_index.is_trained:
+                raise RuntimeError('faiss_index is not trained!')
+        self._faiss_index.add(data)
+
+        print('total index: {}'.format(self._faiss_index.ntotal))
+        self._log.info('total index: {}'.format(self._faiss_index.ntotal))
 
         if self._index_elem and self._index_elem.writable():
             self._log.debug("Caching index: %s", self._index_elem)
@@ -176,16 +195,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._pid = multiprocessing.current_process().pid
 
     def nn(self, d, n=1):
-        if self._exhaustive and not self._faiss_index.is_trained:
+        self._restore_index()
+
+        if not self._faiss_index.is_trained:
             raise RuntimeError('The Faiss index is not trained!')
 
-        self._restore_index()
         super(FaissNearestNeighborsIndex, self).nn(d, n)
 
         # TODO: d can be multiple query descrptors. Currently, we only consider single query.
-        query_descr = d.vector()
         query = np.empty((1, self._feature_dim), dtype=np.float32)
-        elements_to_matrix([query_descr], mat=query, report_interval=1.0)
+        elements_to_matrix([d], mat=query, report_interval=1.0)
 
         dists, ids = self._faiss_index.search(query, n)
         dists, ids = dists.squeeze(), ids.squeeze()

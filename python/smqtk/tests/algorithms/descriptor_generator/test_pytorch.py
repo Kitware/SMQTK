@@ -21,7 +21,7 @@ if PytorchDescriptorGenerator.is_usable():
         lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
         def setUp(self):
             self.model_cls_name = 'ImageNet_ResNet50'
-            self.use_GPU = True
+            self.use_GPU = False
             self.expected_params = {
                 'model_cls_name': self.model_cls_name,
                 'model_uri': None,

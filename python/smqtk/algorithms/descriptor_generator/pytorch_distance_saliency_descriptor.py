@@ -56,9 +56,16 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
     Generating the sliding window style masks
 
     :param grid_size: the block window size (with value 0, other areas with value 1)
+    :type grid_size: int
+
     :param stride: the sliding step
+    :type stride: int
+
     :param image_size: the mask size which should be the same to the image size
+    :type image_size: tuple (default: (224, 224))
+
     :return: the sliding window style masks
+    :rtype: torch.cuda.Tensor
     """
     if not os.path.isfile('block_mask_{}_{}.npy'.format(grid_size, stride)):
         grid_num = image_size[0] // stride
@@ -656,7 +663,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                             # write out the top K saliency maps
                             dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx],
                                                                                h[idx]), content_type='image/png')
-                            self.data_set.add_data([dme])
+                            self.data_set.add_data(dme)
 
                             descr_elements[uuid].update_saliency_map({q_uuid: dme.uuid()})
                             self._sm_uuid_dict[(uuid, q_uuid)] = dme.uuid()

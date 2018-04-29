@@ -37,8 +37,7 @@ if FaissNearestNeighborsIndex.is_usable():
         def test_impl_findable(self):
             # Already here because the implementation is reporting itself as
             # usable.
-            self.assertIn(FaissNearestNeighborsIndex.__name__,
-                             get_nn_index_impls())
+            self.assertIn(FaissNearestNeighborsIndex.__name__, get_nn_index_impls())
 
         def test_has_model_data_no_uris(self):
             f = FaissNearestNeighborsIndex()
@@ -98,7 +97,7 @@ if FaissNearestNeighborsIndex.is_usable():
 
         def test_indexingAlg_known_descriptors_euclidean_unit(self):
             dim = 5000
-            k=1000
+            k = 1000
 
             ###
             # Unit vectors -- Equal distance
@@ -179,7 +178,6 @@ if FaissNearestNeighborsIndex.is_usable():
                 v = numpy.zeros(dim, dtype=numpy.float32)
                 v[j] = float(j)
                 numpy.testing.assert_equal(d.vector(), v)
-
 
         def test_configuration(self):
             index_filepath = '/index_filepath'

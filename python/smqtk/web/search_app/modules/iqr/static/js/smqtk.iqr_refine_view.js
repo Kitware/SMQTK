@@ -120,13 +120,13 @@ IqrRefineView.prototype.construct_refine_pane = function (saliency_flag) {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
-        this.button_saliency_top,
+        // this.button_saliency_top,
         this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
-        this.button_saliency_bot,
+        // this.button_saliency_bot,
         this.button_refine_showMore
     );
     // initially hide bottom buttons

@@ -84,6 +84,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._pid = None
 
+        # Load the index/parameters if one exists
+        if self._has_model_data():
+            self._log.info("Found existing model data. Loading.")
+            self._load_faiss_model()
+
     def get_config(self):
         return {
             "index_uri": self._index_uri,
@@ -106,6 +111,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             # - is copied on fork, so only need to load here.
             self._log.debug("Loading cached descriptors")
             self._descr_cache = cPickle.loads(self._descr_cache_elem.get_bytes())
+            self._feature_dim = self._descr_cache[0].vector().size
 
         # Load the binary index
         if self._index_elem and not self._index_elem.is_empty():

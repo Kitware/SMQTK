@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import mock
 import random
 import unittest
-
+import os
 
 import numpy
 
@@ -32,6 +32,14 @@ if FaissNearestNeighborsIndex.is_usable():
                 "exhaustive": False,
                 "index_type": "IVF10,Flat",
                 "nprob": 10,
+            }
+
+            self.exhaustive_params_indexfile = {
+                "index_uri": "./index.faiss",
+                "descriptor_cache_uri": "./index.cache",
+                "exhaustive": True,
+                "index_type": "IVF100,Flat",
+                "nprob": 5,
             }
 
         def test_impl_findable(self):
@@ -229,3 +237,29 @@ if FaissNearestNeighborsIndex.is_usable():
             # Internal elements should not have non-zero byte values.
             self.assertGreater(len(f._index_elem.get_bytes()), 0)
             self.assertGreater(len(f._descr_cache_elem.get_bytes()), 0)
+
+        def test_load_index(self):
+            index1 = FaissNearestNeighborsIndex(**self.exhaustive_params_indexfile)
+
+            # make vectors to return in a known euclidean distance order
+            dim = 1000
+            test_descriptors = []
+            for i in range(dim):
+                v = numpy.zeros(dim, dtype=numpy.float32)
+                v[i] = float(i)
+                d = DescriptorMemoryElement('unit', i)
+                d.set_vector(v)
+                test_descriptors.append(d)
+            random.shuffle(test_descriptors)
+            index1.build_index(test_descriptors)
+
+            index2 = FaissNearestNeighborsIndex(**self.exhaustive_params_indexfile)
+            q = DescriptorMemoryElement('query', dim + 1)
+            q.set_vector(numpy.zeros(dim, dtype=numpy.float32))
+
+            r, dists = index2.nn(q, 10)
+            self.assertEquals(index1._index_elem, index2._index_elem)
+
+            os.remove("./index.faiss")
+            os.remove("./index.cache")
+

@@ -6,7 +6,8 @@ import pytest
 
 import smqtk
 from smqtk.compute_functions import (compute_many_descriptors,
-                                     compute_transformed_descriptors)
+                                     compute_transformed_descriptors,
+                                     _CountedGenerator)
 
 from six.moves import range
 from six import add_move, MovedModule
@@ -90,9 +91,13 @@ def test_compute_many_descriptors(data_elements, descr_generator, mock_de,
                                            descr_factory, descr_index,
                                            batch_size=None)
 
-    # Make sure order is preserved
+    descriptors_count = 0
     for desc, uuid in zip(descriptors, range(NUM_BASE_ELEMENTS)):
+        # Make sure order is preserved
         assert desc[0].uuid() == uuid
+        descriptors_count += 1
+    # Make sure correct number of elements returned
+    assert descriptors_count == NUM_BASE_ELEMENTS
 
     # Since batch_size is None, these should only be called once
     assert descr_generator.compute_descriptor_async.call_count == 1
@@ -106,15 +111,28 @@ def test_compute_many_descriptors_batched(data_elements, descr_generator,
                                            descr_factory, descr_index,
                                            batch_size=batch_size)
 
-    # Make sure order is preserved
+    descriptors_count = 0
     for desc, uuid in zip(descriptors, range(NUM_BASE_ELEMENTS)):
+        # Make sure order is preserved
         assert desc[0].uuid() == uuid
+        descriptors_count += 1
+    # Make sure correct number of elements returned
+    assert descriptors_count == NUM_BASE_ELEMENTS
 
     # Check number of calls
     num_calls = NUM_BASE_ELEMENTS / batch_size + [0, 1][
         bool(NUM_BASE_ELEMENTS % batch_size)]
     assert descr_generator.compute_descriptor_async.call_count == num_calls
     assert descr_index.add_many_descriptors.call_count == num_calls
+
+
+def test_CountedGenerator():
+    test_data = range(NUM_BASE_ELEMENTS)
+    lengths = []
+    test_counted_generator = _CountedGenerator(test_data, lengths)()
+    for stored_element, value in zip(test_counted_generator, test_data):
+        assert value == stored_element
+    assert lengths == [NUM_BASE_ELEMENTS]
 
 
 def test_compute_transformed_descriptors(data_elements, descr_generator,

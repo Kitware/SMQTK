@@ -70,16 +70,6 @@ def mock_de():
 
 
 @pytest.fixture
-def mock_de():
-    """Mock descriptor element"""
-    mock_DescriptorElement = mock.Mock(
-        spec=smqtk.representation.DescriptorElement)
-    mock_de = mock_DescriptorElement()
-    mock_de.has_vector.return_value = False
-    return mock_de
-
-
-@pytest.fixture
 def descr_factory():
     descr_factory = mock_DescriptorFactory()
     descr_factory.new_descriptor.return_value = mock_de

@@ -183,7 +183,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 raise RuntimeError('faiss_index is not trained!')
         self._faiss_index.add(data)
 
-        print('total index: {}'.format(self._faiss_index.ntotal))
         self._log.info('total index: {}'.format(self._faiss_index.ntotal))
 
         if self._index_elem and self._index_elem.writable():

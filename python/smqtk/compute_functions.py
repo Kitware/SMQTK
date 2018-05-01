@@ -158,6 +158,25 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         for de in de_deque:
             yield de, m[de.uuid()]
 
+class _CountedGenerator(object):
+    """
+    Used to count elements of an iterable as they are accessed
+
+    :param collections.Iterable iterable: An iterable containing elements to be
+        accessed and counted.
+    :param list count_list: A list to which the count of items in iterable will
+        be added once the iterable has been exhausted.
+    """
+    def __init__(self, iterable, count_list):
+        self.iterable = iterable
+        self.count_list = count_list
+        self.count = 0
+
+    def __call__(self):
+        for item in self.iterable:
+            self.count += 1
+            yield item
+        self.count_list.append(self.count)
 
 def compute_transformed_descriptors(data_elements, descr_generator,
                                     descr_factory, descr_index,
@@ -173,24 +192,28 @@ def compute_transformed_descriptors(data_elements, descr_generator,
     *Note:* **This function currently only operates over images due to the
     specific data validity check/filter performed.*
 
-    :param transform_function: Takes in a DataElement and returns a sized
-        iterable of transformed DataElements.
+    :param transform_function: Takes in a DataElement and returns an iterable
+        of transformed DataElements.
     :type transform_function: collections.Callable
 
     :rtype: collections.Iterable[
         (smqtk.representation.DataElement,
          collections.Iterable[smqtk.representation.DescriptorElement])]
     """
-    transformed_elements = [transform_function(elem) for elem in data_elements]
-    transform_counts = [len(element_set) for element_set in
-                        transformed_elements]
-    transformed_elements = itertools.chain.from_iterable(transformed_elements)
+    transformed_counts = []
+
+    def transformed_elements():
+        for elem in data_elements:
+            yield _CountedGenerator(transform_function(elem),
+                                  transformed_counts)()
+
+    transformed_elements = itertools.chain.from_iterable(transformed_elements())
     descriptors = compute_many_descriptors(transformed_elements,
                                            descr_generator, descr_factory,
                                            descr_index, batch_size=batch_size,
                                            overwrite=overwrite, procs=procs,
                                            **kwds)
-    for count, de in zip(transform_counts, data_elements):
+    for count, de in zip(transformed_counts, data_elements):
         yield de, itertools.islice((d[1] for d in descriptors), count)
 
 

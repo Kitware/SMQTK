@@ -10,6 +10,7 @@ function IqrRefineView(container, saliency_flag) {
     // Members
     //
     this.show_more_step = 20;
+    this.pre_to_display = 0;
 
     // parallel arrays of ordered result UUIDs and relevancy scores.
     //this.displayed_search_results = [];
@@ -51,9 +52,10 @@ function IqrRefineView(container, saliency_flag) {
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
 
-    this.button_saliency_top = $('<button class="btn btn-primary" type="button"/>');
+    this.button_saliency_top = $('<button class="btn btn-success" type="button"/>');
     this.button_saliency_top.text("Saliency On");
     this.button_saliency_bot = this.button_saliency_top.clone();
+    this.button_saliency_flag = true;
 
     // To be put in top button container
     this.button_toggle_random = $('<button class="btn" type="button"/>');
@@ -100,6 +102,20 @@ IqrRefineView.prototype.update_view = function () {
     this.update_refine_pane();
 };
 
+IqrRefineView.prototype.show_saliency_map = function () {
+    if (inst.button_saliency_flag) {
+        inst.saliency_flag = true;
+        inst.button_saliency_top.text("Saliency Off");
+        inst.button_saliency_flag = false;
+    } else {
+        inst.saliency_flag = false;
+        inst.button_saliency_top.text("Saliency On");
+        inst.button_saliency_flag = true;
+    }
+    inst.results_container_refine.children().remove();
+    inst.show_more_refine_results(inst.saliency_flag, true);
+};
+
 /**
  * Construct the IQR Search pane
  */
@@ -120,13 +136,13 @@ IqrRefineView.prototype.construct_refine_pane = function (saliency_flag) {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
-        // this.button_saliency_top,
+        this.button_saliency_top,
         this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
-        // this.button_saliency_bot,
+        this.button_saliency_bot,
         this.button_refine_showMore
     );
     // initially hide bottom buttons
@@ -147,9 +163,35 @@ IqrRefineView.prototype.construct_refine_pane = function (saliency_flag) {
     this.button_toggle_random.click(function () {
         inst.toggle_random_pane(inst.saliency_flag);
     });
+    this.button_saliency_top.click(function () {
+        inst.saliency_control();
+    });
+    this.button_saliency_bot.click(function () {
+        inst.saliency_control();
+    });
 
     // sets element initial visible/hidden status
     this.update_refine_pane(inst.saliency_flag);
+};
+
+IqrRefineView.prototype.saliency_control = function () {
+        if (this.button_saliency_flag) {
+            this.saliency_flag = true;
+            this.button_saliency_top.text("Saliency Off");
+            this.button_saliency_bot.text("Saliency Off");
+            this.button_saliency_flag = false;
+            this.button_saliency_top.attr("class", "btn btn-danger");
+            this.button_saliency_bot.attr("class", "btn btn-danger");
+        } else {
+            this.saliency_flag = false;
+            this.button_saliency_top.text("Saliency On");
+            this.button_saliency_bot.text("Saliency On");
+            this.button_saliency_flag = true;
+            this.button_saliency_top.attr("class", "btn btn-success");
+            this.button_saliency_bot.attr("class", "btn btn-success");
+        }
+        this.results_container_refine.children().remove();
+        this.show_more_refine_results(this.saliency_flag, true);
 };
 
 /**
@@ -161,6 +203,10 @@ IqrRefineView.prototype.update_refine_pane = function (saliency_flag) {
     // get ordered results information
     // display first X results
     this.results_container_refine.children().remove();
+    this.button_saliency_top.attr("class", "btn btn-success");
+    this.button_saliency_bot.attr("class", "btn btn-success");
+    this.button_saliency_top.text("Saliency On");
+    this.button_saliency_bot.text("Saliency On");
     this.refine_result_uuids = [];
     this.refine_result_score = [];
     this.refine_results_displayed = 0;
@@ -220,11 +266,20 @@ IqrRefineView.prototype.update_refine_pane = function (saliency_flag) {
  *
  * If we have shown all results possible, we hide the "Show More" button.
  */
-IqrRefineView.prototype.show_more_refine_results = function (saliency_flag) {
-    var to_display = Math.min(
+IqrRefineView.prototype.show_more_refine_results = function (saliency_flag, replay_flag) {
+    replay_flag = replay_flag || false;   //set default of replay_flag to false
+
+    var to_display = 0;
+    if (replay_flag) {
+        to_display = this.pre_to_display;
+        this.refine_results_displayed = 0;
+    } else {
+        to_display = Math.min(
         this.refine_result_uuids.length,
-        this.refine_results_displayed + this.show_more_step
-    );
+        this.refine_results_displayed + this.show_more_step);
+    }
+    this.pre_to_display = to_display;
+
     while (this.refine_results_displayed < to_display)
     {
         new DataView(this.results_container_refine,

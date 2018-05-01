@@ -33,7 +33,6 @@ function IqrView(container, upload_post_url) {
     this.results_zone = $('<div>');
 
     this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
-    this.button_saliency_index_initialize = $('<button class="btn btn-primary" type="button"/>');
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     this.button_state_save = $('<button class="btn" type="button"/>');
 
@@ -67,7 +66,6 @@ IqrView.prototype.construct_view = function (container) {
 
     this.control_zone.append(
         this.button_index_initialize,
-        this.button_saliency_index_initialize,
         this.button_reset_session,
         this.button_state_save
     );
@@ -77,7 +75,6 @@ IqrView.prototype.construct_view = function (container) {
     this.results_view_inst = new IqrRefineView(this.results_zone, self.saliency_flag);
 
     this.button_index_initialize.text("Initialize Index");
-    this.button_saliency_index_initialize.text("Initialize Index with Saliency");
     this.button_reset_session.text("Reset IQR Session");
     this.button_state_save.text("Save IQR state");
     this.button_state_save.addClass('pull-right');
@@ -120,11 +117,6 @@ IqrView.prototype.construct_view = function (container) {
 
     this.button_index_initialize.click(function () {
         self.saliency_flag = false;
-        self.initialize_index();
-    });
-
-    this.button_saliency_index_initialize.click(function () {
-        self.saliency_flag = true;
         self.initialize_index();
     });
 

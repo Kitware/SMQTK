@@ -660,7 +660,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                         else:
                             # generate the saliency map
                             sa_map = self.saliency_generator[idx]
-                            # write out the top K saliency maps
+                            # write out the saliency maps
                             dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx],
                                                                                h[idx]), content_type='image/png')
                             self.data_set.add_data(dme)

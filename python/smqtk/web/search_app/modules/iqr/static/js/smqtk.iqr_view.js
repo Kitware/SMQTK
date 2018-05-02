@@ -36,8 +36,6 @@ function IqrView(container, upload_post_url) {
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     this.button_state_save = $('<button class="btn" type="button"/>');
 
-    this.saliency_flag = false;
-
     //
     // Setup
     //
@@ -72,7 +70,7 @@ IqrView.prototype.construct_view = function (container) {
 
     this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
     this.status_inst = new IqrStatusView(this.status_zone);
-    this.results_view_inst = new IqrRefineView(this.results_zone, self.saliency_flag);
+    this.results_view_inst = new IqrRefineView(this.results_zone);
 
     this.button_index_initialize.text("Initialize Index");
     this.button_reset_session.text("Reset IQR Session");
@@ -116,12 +114,10 @@ IqrView.prototype.construct_view = function (container) {
     });
 
     this.button_index_initialize.click(function () {
-        self.saliency_flag = false;
         self.initialize_index();
     });
 
     this.button_reset_session.click(function () {
-        this.saliency_flag = false;
         self.reset_session();
     });
 
@@ -142,9 +138,9 @@ IqrView.prototype.reset_session = function() {
         success: function (data) {
             if ( data.success ) {
                 self.status_inst.update_view();
-                self.results_view_inst.update_refine_pane(this.saliency_flag);
+                self.results_view_inst.update_refine_pane(false);
                 if (self.results_view_inst.random_enabled) {
-                    self.results_view_inst.toggle_random_pane(this.saliency_flag);
+                    self.results_view_inst.toggle_random_pane(false);
                 }
                 alert_success("IQR Session Reset");
             }
@@ -179,7 +175,7 @@ IqrView.prototype.initialize_index = function () {
         success: function (data) {
             if (data.success) {
                 remove_prog_bar("Initialization Complete", "success");
-                self.results_view_inst.iqr_refine(self.saliency_flag);
+                self.results_view_inst.iqr_refine(false);
             }
             else {
                 remove_prog_bar("Initialization Failure", "danger");

@@ -3,7 +3,7 @@
  *
  * @constructor
  */
-function IqrRefineView(container, saliency_flag) {
+function IqrRefineView(container) {
     Object.call(this);
 
     //
@@ -73,7 +73,7 @@ function IqrRefineView(container, saliency_flag) {
     this.results_container_refine = $('<div/>');
     this.results_container_random = $('<div/>');
 
-    this.saliency_flag = saliency_flag;
+    this.saliency_flag = false;
 
     //
     // Construct layout
@@ -100,20 +100,6 @@ IqrRefineView.prototype.construct_view = function (saliency_flag) {
  */
 IqrRefineView.prototype.update_view = function () {
     this.update_refine_pane();
-};
-
-IqrRefineView.prototype.show_saliency_map = function () {
-    if (inst.button_saliency_flag) {
-        inst.saliency_flag = true;
-        inst.button_saliency_top.text("Saliency Off");
-        inst.button_saliency_flag = false;
-    } else {
-        inst.saliency_flag = false;
-        inst.button_saliency_top.text("Saliency On");
-        inst.button_saliency_flag = true;
-    }
-    inst.results_container_refine.children().remove();
-    inst.show_more_refine_results(inst.saliency_flag, true);
 };
 
 /**
@@ -203,10 +189,18 @@ IqrRefineView.prototype.update_refine_pane = function (saliency_flag) {
     // get ordered results information
     // display first X results
     this.results_container_refine.children().remove();
-    this.button_saliency_top.attr("class", "btn btn-success");
-    this.button_saliency_bot.attr("class", "btn btn-success");
-    this.button_saliency_top.text("Saliency On");
-    this.button_saliency_bot.text("Saliency On");
+    if (this.saliency_flag) {
+        this.button_saliency_top.attr("class", "btn btn-danger");
+        this.button_saliency_bot.attr("class", "btn btn-danger");
+        this.button_saliency_top.text("Saliency Off");
+        this.button_saliency_bot.text("Saliency Off");
+    } else {
+        this.button_saliency_top.attr("class", "btn btn-success");
+        this.button_saliency_bot.attr("class", "btn btn-success");
+        this.button_saliency_top.text("Saliency On");
+        this.button_saliency_bot.text("Saliency On");
+    }
+
     this.refine_result_uuids = [];
     this.refine_result_score = [];
     this.refine_results_displayed = 0;

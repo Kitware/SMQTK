@@ -139,15 +139,6 @@ def main():
     # Add data files to DataSet
     DataFileElement = representation.get_data_element_impls()["DataFileElement"]
 
-    # for fp in args.input_files:
-    #     fp = osp.expanduser(fp)
-    #     if osp.isfile(fp):
-    #         data_set.add_data(DataFileElement(fp))
-    #     else:
-    #         log.debug("Expanding glob: %s" % fp)
-    #         for g in glob.iglob(fp):
-    #             data_set.add_data(DataFileElement(g))
-
     with open(args.input_files, 'r') as f:
         for line in tqdm(f, total=832, desc='add image to dataset'):
             cur_line = line.rstrip('\n')

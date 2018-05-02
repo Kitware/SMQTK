@@ -381,6 +381,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 "static_preview_link": None,
                 "smap_preview_link": None,
                 "smap_static_file_link": None,
+                "gt_label": None,
             }
 
             # Try to find a DataElement by the given UUID in our indexed data
@@ -402,6 +403,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 preview_path = self._preview_cache.get_preview_image(de)
                 img = PIL.Image.open(preview_path)
                 info["shape"] = img.size
+                info["gt_label"] = de.GT_label
 
                 if de.uuid() not in self._static_cache:
                     self._static_cache[de.uuid()] = \

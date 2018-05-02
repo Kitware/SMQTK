@@ -10,7 +10,7 @@
  *                    data, in contrast to data in the IQR working index.
  *
  */
-function DataView(container, rank, uid, probability, saliency_flag, is_example) {
+function DataView(container, rank, uid, probability, saliency_flag, is_example, gt_label) {
     Object.call(this);
 
     var inst = this;
@@ -19,6 +19,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     this.probability = probability;
     this.saliency_flag = saliency_flag;
     this.is_example = is_example === undefined ? false : is_example;
+    this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
@@ -64,9 +65,13 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     // Header container textual identifiers
     this.header = $('<div/>');
     this.header.css('height', '24px');
-    this.header.text("#" + (this.rank+1) + " | "
-                     //+ "UID: " + this.uid + " | "
-                     + (this.probability*100).toFixed(2) + "%");
+    this.header.text("#" + (this.rank + 1) + " | "
+        + (this.probability * 100).toFixed(2) + "%");
+
+    // GT label container
+    this.gtl_header = $('<div class="iqr-gt-label"/>');
+    this.gtl_header.css('height', '24px');
+    this.gtl_header.text(this.gt_label);
 
     // adjudication icons / functionality
     this.adjudication_controls = $('<div class="adjudication-box"/>');
@@ -95,6 +100,8 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example) 
     // Assemble result box
     if (! this.is_example) {
         this.result.append(this.header);
+        if (this.gt_label)
+            this.result.append(this.gtl_header);
         this.result.append(this.adjudication_controls);
     }
     this.result.append(this.image_container);
@@ -184,7 +191,6 @@ DataView.prototype.update_view = function (server_update) {
 
         // floating window for original image
         inst.image_data_view.mouseenter(function () {
-            console.log('input image: ' + inst.sm_static_view_link);
             inst.showtrail(inst.static_view_link, 192, 192);
         });
 
@@ -194,7 +200,6 @@ DataView.prototype.update_view = function (server_update) {
 
         // floating window for saliency image
         inst.saliency_data_view.mouseenter(function () {
-            console.log('input image: ' + inst.sm_static_view_link);
             inst.showtrail(inst.sm_static_view_link, 192, 192);
         });
 
@@ -275,6 +280,8 @@ DataView.prototype.update_view = function (server_update) {
                     inst.static_view_link = data.static_file_link;
                     inst.sm_static_view_link = data.smap_static_file_link;
                     inst.image_loaded = true;
+                    inst.gt_label = data.gt_label;
+                    inst.gtl_header.text(inst.gt_label);
 
                     inst.img_long_side =
                         parseInt(data.shape[1]) > parseInt(data.shape[0]);
@@ -438,7 +445,7 @@ DataView.prototype.showtrail = function (imagename, width, height) {
     }
 
     function show(imagename, width, height) {
-        console.log('[inside show] imagename: ' + imagename);
+
         var docwidth=document.all? truebody().scrollLeft+truebody().clientWidth : pageXOffset+window.innerWidth - offsetfrommouse[0]
         var docheight=document.all? Math.min(truebody().scrollHeight, truebody().clientHeight) : Math.min(window.innerHeight)
 
@@ -458,13 +465,10 @@ DataView.prototype.showtrail = function (imagename, width, height) {
             });
 
             newHTML = '<div class="border_preview">';
-            console.log('inst.img_long_side' + inst.img_long_side);
             if(inst.img_long_side) {
-                console.log('height: ' + height);
                 newHTML = newHTML + '<div class="preview_temp_load">' +
                     '<img style="height:' + height + 'px" src="' + imagename + '" border="0"></div>';
             } else {
-                console.log('width: ' + width);
                 newHTML = newHTML + '<div class="preview_temp_load">' +
                     '<img style="width:' + width + 'px" src="' + imagename + '" border="0"></div>';
             }
@@ -483,7 +487,6 @@ DataView.prototype.showtrail = function (imagename, width, height) {
         }
     }
 
-    console.log('image_name: ' + imagename);
     i = imagename;
     w = width;
     h = height;

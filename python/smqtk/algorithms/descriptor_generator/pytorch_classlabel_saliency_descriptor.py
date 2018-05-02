@@ -493,7 +493,7 @@ class PytorchSaliencyDescriptorGenerator (DescriptorGenerator):
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
-            for (d, uuids, resized_org_img, (w, h)) in data_loader:
+            for (d, uuids, resized_org_img, w, h) in data_loader:
                 # estimated topK saliency maps
                 self.saliency_generator.process_imgbatch = d
                 if topk_label_list is not None:

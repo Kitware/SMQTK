@@ -10,6 +10,15 @@
     background-color:rgba(220, 220, 250, 0.1);
     vertical-align: top;
 }
+.iqr-gt-label {
+    color: #ffffff;
+    background: #5563aa;
+    font-size: 0.7vw;
+    max-width: 192px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+    text-align: center;
+}
 .iqr-result-img-container {
     height: 192px;
     width: 192px;

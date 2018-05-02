@@ -139,18 +139,15 @@ function FlowUploadZone(container, upload_url) {
     });
 
     flow.on("filesSubmitted", function(array, event) {
-        console.log('fileSubmitted');
         flow.upload();
     });
 
     flow.on("fileProgress", function (file) {
-        console.log('fileProgress');
         // Update file's associated progress indicator element
         ffid_fpi_map[file.uniqueIdentifier].update();
     });
 
     flow.on("fileSuccess", function (file, message) {
-        console.log('fileSuccess');
         alert_success("[Flow] Success uploading file '" + file.name + ": "
                       + message);
         hook_fileSuccess && hook_fileSuccess(file);

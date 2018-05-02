@@ -114,10 +114,22 @@ class DataFileElement (DataElement):
         if not self._content_type:
             self._content_type = mimetypes.guess_type(filepath)[0]
 
+        # It requires to put the input into a folder whose name is the GT label
+        path_str = self._filepath.split('/')
+        self._gt_label = path_str[-2]
+
     def __repr__(self):
         return super(DataFileElement, self).__repr__() + \
             "{filepath: %s, readonly: %s, explicit_mimetype: %s}" \
             % (self._filepath, self._readonly, self._explicit_mimetype)
+
+    @property
+    def GT_label(self):
+        return self._gt_label
+
+    @GT_label.setter
+    def GT_label(self, val):
+        self._gt_label = val
 
     def get_config(self):
         return {

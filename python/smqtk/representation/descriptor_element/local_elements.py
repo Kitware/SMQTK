@@ -27,14 +27,17 @@ class DescriptorMemoryElement (DescriptorElement):
         super(DescriptorMemoryElement, self).__init__(type_str, uuid)
         self.__v = None
         self.__sa_dict = None
+        self.__gt_label = None
 
     def __getstate__(self):
         # save vector as binary string
         b = BytesIO()
         sb = BytesIO()
+        gt_label = BytesIO()
         numpy.save(b, self.vector())
         numpy.save(sb, self.saliency_map())
-        return (self.type(), self.uuid(), b.getvalue(), sb.getvalue())
+        numpy.save(gt_label, self.GT_label())
+        return (self.type(), self.uuid(), b.getvalue(), sb.getvalue(), gt_label.getvalue())
 
     def __setstate__(self, state):
         self._type_label = state[0]
@@ -44,6 +47,9 @@ class DescriptorMemoryElement (DescriptorElement):
 
         sb = BytesIO(state[3])
         self.__sa_dict = numpy.load(sb).item()
+
+        gt_label = BytesIO(state[4])
+        self.__gt_label = numpy.load(gt_label)
 
     def _get_cache_index(self):
         """
@@ -107,6 +113,16 @@ class DescriptorMemoryElement (DescriptorElement):
             self.__v = numpy.copy(new_vec)
         else:
             self.__v = None
+
+    def GT_label(self):
+        if self.__gt_label is not None:
+            return deepcopy(self.__gt_label)
+
+        return None
+
+    def set_GT_lable(self, gt_label):
+        if gt_label is not None:
+            self.__gt_label = deepcopy(gt_label)
 
     def saliency_map(self):
         if self.__sa_dict is not None:

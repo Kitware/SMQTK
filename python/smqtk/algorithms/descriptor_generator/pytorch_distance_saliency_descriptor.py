@@ -631,14 +631,15 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self._log.debug("Converting deque to tuple for segmentation")
             kwargs = {'num_workers': procs if procs is not None else multiprocessing.cpu_count(), 'pin_memory': True}
             data_loader_cls = PytorchDataLoader(file_list=data_elements, resize_val=self.resize_val,
-                                                uuid4proc=uuid4proc, transform=self.transform, saliency_info=True)
+                                                uuid4proc=uuid4proc, transform=self.transform,
+                                                saliency_info=True, gt_info=True)
             data_loader = torch.utils.data.DataLoader(data_loader_cls, batch_size=self.batch_size,
                                                       shuffle=False, **kwargs)
 
             self._log.debug("Extract pytorch features")
 
-            for (d, uuids, resized_org_img, (w, h)) in tqdm(data_loader, total=len(data_loader),
-                                                            desc='extracting feature'):
+            for (d, uuids, resized_org_img, w, h, gt_labels) in tqdm(data_loader, total=len(data_loader),
+                                                          desc='extracting feature'):
                 # use output probability as the feature vector
                 pytorch_f = self.model_cls(Variable(d.cuda()))[0]
 
@@ -652,6 +653,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                 for idx, uuid in enumerate(uuids):
                     f_vec = pytorch_f.data.cpu().numpy()[idx]
                     descr_elements[uuid].set_vector(f_vec)
+                    descr_elements[uuid].set_GT_lable(gt_labels[idx])
 
                     if saliency_flag:
                         if (uuid, q_uuid) in self._sm_uuid_dict and \

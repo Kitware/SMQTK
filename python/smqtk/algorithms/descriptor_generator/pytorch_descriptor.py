@@ -45,15 +45,25 @@ __all__ = [
 
 
 class PytorchDataLoader(data.Dataset):
-    def __init__(self, file_list, resize_val, uuid4proc, transform=None, saliency_info=False):
+    def __init__(self, file_list, resize_val, uuid4proc, transform=None, saliency_info=False, gt_info=False):
         self._file_list = file_list
         self._resize_val = resize_val
         self._uuid4proc = uuid4proc
         self._transform = transform
         self._saliency_info = saliency_info
+        self._gt_info = gt_info
 
     def __getitem__(self, index):
-        img = Image.open(io.BytesIO(self._file_list[self._uuid4proc[index]].get_bytes()))
+        cur_file = self._file_list[self._uuid4proc[index]]
+        img = Image.open(io.BytesIO(cur_file.get_bytes()))
+        gt_label = None
+
+        if self._gt_info:
+            if not hasattr(cur_file, 'GT_label'):
+                raise ValueError('The data_element dose not have GT_label attribute!')
+
+            gt_label = cur_file.GT_label
+
         (org_w, org_h) = img.size
         resized_org_img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
 
@@ -65,10 +75,16 @@ class PytorchDataLoader(data.Dataset):
         b = io.BytesIO()
         resized_org_img.save(b, format='PNG')
 
-        if self._saliency_info is False:
-            return img, self._uuid4proc[index]
-        else:
-            return img, self._uuid4proc[index], b.getvalue(), (org_w, org_h)
+        res = (img, self._uuid4proc[index])
+
+        if self._saliency_info is True and self._gt_info is False:
+            res = res + (b.getvalue(), org_w, org_h)
+        elif self._saliency_info is False and self._gt_info is True:
+            res = res + (gt_label)
+        elif self._saliency_info is True and self._gt_info is True:
+            res = res + (b.getvalue(), org_w, org_h, gt_label)
+
+        return res
 
     def __len__(self):
         return len(self._uuid4proc)

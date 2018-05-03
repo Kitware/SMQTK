@@ -57,6 +57,11 @@ function IqrRefineView(container) {
     this.button_saliency_bot = this.button_saliency_top.clone();
     this.button_saliency_flag = true;
 
+    this.button_gt_top = $('<button class="btn btn-success" type="button"/>');
+    this.button_gt_top.text("GT label On");
+    this.button_gt_bot = this.button_gt_top.clone();
+    this.button_gt_flag = true;
+
     // To be put in top button container
     this.button_toggle_random = $('<button class="btn" type="button"/>');
     this.button_toggle_random.text('Toggle Random Results');
@@ -122,12 +127,14 @@ IqrRefineView.prototype.construct_refine_pane = function () {
     this.button_container_refine_top.append(
         this.button_refine_top,
         this.button_saliency_top,
+        this.button_gt_top,
         this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
         this.button_saliency_bot,
+        this.button_gt_bot,
         this.button_refine_showMore
     );
     // initially hide bottom buttons
@@ -154,6 +161,13 @@ IqrRefineView.prototype.construct_refine_pane = function () {
     this.button_saliency_bot.click(function () {
         inst.saliency_control();
     });
+    this.button_gt_top.click(function() {
+        inst.gt_control();
+    });
+    this.button_gt_bot.click(function() {
+        inst.gt_control();
+    });
+
 
     // sets element initial visible/hidden status
     this.update_refine_pane();
@@ -177,7 +191,31 @@ IqrRefineView.prototype.saliency_control = function () {
         }
         this.results_container_refine.children().remove();
         this.show_more_refine_results(true);
+
+
 };
+
+IqrRefineView.prototype.gt_control = function () {
+    if (this.button_gt_flag) {
+            this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
+            this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
+            this.button_gt_flag = false;
+            this.button_gt_top.text("GT label Off");
+            this.button_gt_bot.text("GT label Off");
+            this.button_gt_top.attr("class", "btn btn-danger");
+            this.button_gt_bot.attr("class", "btn btn-danger");
+
+        } else {
+            this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
+            this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
+            this.button_gt_flag = true;
+            this.button_gt_top.text("GT label On");
+            this.button_gt_bot.text("GT label On");
+            this.button_gt_top.attr("class", "btn btn-success");
+            this.button_gt_bot.attr("class", "btn btn-success");
+        }
+};
+
 
 /**
  * Refresh the view of the refine pane based on server-side model

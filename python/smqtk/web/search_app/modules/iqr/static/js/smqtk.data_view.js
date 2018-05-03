@@ -59,7 +59,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
     this.float_div.appendTo($(container));
 
     // top-level container
-    this.result = $('<div class="iqr-result"/>');
+    this.result = $('<div id="iqr_res" class="iqr-result"/>');
     this.result.appendTo($(container));
 
     // Header container textual identifiers
@@ -69,7 +69,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
         + (this.probability * 100).toFixed(2) + "%");
 
     // GT label container
-    this.gtl_header = $('<div class="iqr-gt-label"/>');
+    this.gtl_header = $('<div id="gt_div" class="iqr-gt-label-hide"/>');
     this.gtl_header.css('height', '24px');
     this.gtl_header.text(this.gt_label);
 

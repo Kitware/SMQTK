@@ -10,8 +10,17 @@
     background-color:rgba(220, 220, 250, 0.1);
     vertical-align: top;
 }
-.iqr-gt-label {
+.iqr-gt-label-show {
     color: #ffffff;
+    background: #5563aa;
+    font-size: 0.7vw;
+    max-width: 192px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+    text-align: center;
+}
+.iqr-gt-label-hide {
+    color: #5563aa;
     background: #5563aa;
     font-size: 0.7vw;
     max-width: 192px;

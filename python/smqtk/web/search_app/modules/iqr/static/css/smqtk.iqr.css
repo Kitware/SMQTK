@@ -13,7 +13,7 @@
 .iqr-gt-label-show {
     color: #ffffff;
     background: #5563aa;
-    font-size: 0.7vw;
+    font-size: 14px;
     max-width: 192px;
     opacity: 0.8;
     margin-bottom: 2px;
@@ -22,7 +22,7 @@
 .iqr-gt-label-hide {
     color: #5563aa;
     background: #5563aa;
-    font-size: 0.7vw;
+    font-size: 14px;
     max-width: 192px;
     opacity: 0.8;
     margin-bottom: 2px;

@@ -79,6 +79,7 @@ function IqrRefineView(container) {
     this.results_container_random = $('<div/>');
 
     this.saliency_flag = false;
+    this.gt_flag = false;
 
     //
     // Construct layout
@@ -174,46 +175,46 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 };
 
 IqrRefineView.prototype.saliency_control = function () {
-        if (this.button_saliency_flag) {
-            this.saliency_flag = true;
-            this.button_saliency_top.text("Saliency Off");
-            this.button_saliency_bot.text("Saliency Off");
-            this.button_saliency_flag = false;
-            this.button_saliency_top.attr("class", "btn btn-danger");
-            this.button_saliency_bot.attr("class", "btn btn-danger");
-        } else {
-            this.saliency_flag = false;
-            this.button_saliency_top.text("Saliency On");
-            this.button_saliency_bot.text("Saliency On");
-            this.button_saliency_flag = true;
-            this.button_saliency_top.attr("class", "btn btn-success");
-            this.button_saliency_bot.attr("class", "btn btn-success");
-        }
-        this.results_container_refine.children().remove();
-        this.show_more_refine_results(true);
-
-
+    if (this.button_saliency_flag) {
+        this.saliency_flag = true;
+        this.button_saliency_top.text("Saliency Off");
+        this.button_saliency_bot.text("Saliency Off");
+        this.button_saliency_flag = false;
+        this.button_saliency_top.attr("class", "btn btn-danger");
+        this.button_saliency_bot.attr("class", "btn btn-danger");
+    } else {
+        this.saliency_flag = false;
+        this.button_saliency_top.text("Saliency On");
+        this.button_saliency_bot.text("Saliency On");
+        this.button_saliency_flag = true;
+        this.button_saliency_top.attr("class", "btn btn-success");
+        this.button_saliency_bot.attr("class", "btn btn-success");
+    }
+    this.results_container_refine.children().remove();
+    this.show_more_refine_results(true);
 };
 
 IqrRefineView.prototype.gt_control = function () {
     if (this.button_gt_flag) {
-            this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
-            this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
-            this.button_gt_flag = false;
-            this.button_gt_top.text("GT label Off");
-            this.button_gt_bot.text("GT label Off");
-            this.button_gt_top.attr("class", "btn btn-danger");
-            this.button_gt_bot.attr("class", "btn btn-danger");
+        this.gt_flag = true;
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
+        this.button_gt_flag = false;
+        this.button_gt_top.text("GT label Off");
+        this.button_gt_bot.text("GT label Off");
+        this.button_gt_top.attr("class", "btn btn-danger");
+        this.button_gt_bot.attr("class", "btn btn-danger");
 
-        } else {
-            this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
-            this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
-            this.button_gt_flag = true;
-            this.button_gt_top.text("GT label On");
-            this.button_gt_bot.text("GT label On");
-            this.button_gt_top.attr("class", "btn btn-success");
-            this.button_gt_bot.attr("class", "btn btn-success");
-        }
+    } else {
+        this.gt_flag = false;
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
+        this.button_gt_flag = true;
+        this.button_gt_top.text("GT label On");
+        this.button_gt_bot.text("GT label On");
+        this.button_gt_top.attr("class", "btn btn-success");
+        this.button_gt_bot.attr("class", "btn btn-success");
+    }
 };
 
 
@@ -318,6 +319,22 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
                       this.refine_result_score[this.refine_results_displayed],
                       this.saliency_flag);
         this.refine_results_displayed++;
+    }
+
+    if (this.gt_flag) {
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
+        this.button_gt_top.text("GT label Off");
+        this.button_gt_bot.text("GT label Off");
+        this.button_gt_top.attr("class", "btn btn-danger");
+        this.button_gt_bot.attr("class", "btn btn-danger");
+    } else {
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
+        this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
+        this.button_gt_top.text("GT label On");
+        this.button_gt_bot.text("GT label On");
+        this.button_gt_top.attr("class", "btn btn-success");
+        this.button_gt_bot.attr("class", "btn btn-success");
     }
 
     if (this.refine_results_displayed === 0) {

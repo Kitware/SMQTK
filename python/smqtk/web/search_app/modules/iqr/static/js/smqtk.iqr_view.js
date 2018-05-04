@@ -139,6 +139,10 @@ IqrView.prototype.reset_session = function() {
             if ( data.success ) {
                 self.status_inst.update_view();
                 self.results_view_inst.saliency_flag = false;
+
+                self.results_view_inst.button_gt_flag = false;
+                self.results_view_inst.gt_control();
+
                 self.results_view_inst.update_refine_pane();
                 if (self.results_view_inst.random_enabled) {
                     self.results_view_inst.toggle_random_pane();

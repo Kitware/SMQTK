@@ -11,6 +11,7 @@ from smqtk.compute_functions import (compute_many_descriptors,
 
 from six.moves import range
 from six import add_move, MovedModule
+# Add mock as module in six.moves
 add_move(MovedModule('mock', 'mock', 'unittest.mock'))
 from six.moves import mock  # NOQA E402
 

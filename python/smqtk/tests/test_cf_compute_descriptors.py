@@ -50,6 +50,7 @@ def descr_generator():
 
     def dummy_cd_async(elems, *args, **kwargs):
         # Note: Cannot simply mock this because we must run through iterator
+        collections.deque(elems, maxlen=0)
         return {i: mock_vector for i in range(NUM_BASE_ELEMENTS)}
 
     descr_generator = mock_DescriptorGenerator()

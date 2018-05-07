@@ -33,6 +33,16 @@ def dummy_transform(data_element):
     return new_elements
 
 
+def dummy_compute_many_descriptors(*args, **kwargs):
+    """
+    Mock compute_many_descriptors by exhausting its data elements argument
+    """
+    res = []
+    for index, de in enumerate(args[0]):
+        res.append((de, de.uuid()**2 + index))
+    return res
+
+
 @pytest.fixture
 def data_elements():
     """Mock data elements"""
@@ -136,20 +146,26 @@ def test_CountedGenerator():
     assert lengths == [NUM_BASE_ELEMENTS]
 
 
-def test_compute_transformed_descriptors(data_elements, descr_generator,
+@mock.patch('smqtk.compute_functions.compute_many_descriptors')
+def test_compute_transformed_descriptors(mock_compute_many_descriptors,
+                                         data_elements, descr_generator,
                                          mock_de, descr_factory, descr_index):
+    mock_compute_many_descriptors.side_effect = dummy_compute_many_descriptors
     descriptors = compute_transformed_descriptors(data_elements,
                                                   descr_generator,
-                                                  descr_factory, descr_index,
+                                                  descr_factory,
+                                                  descr_index,
                                                   dummy_transform,
                                                   batch_size=None)
 
-    # Make sure order is preserved
+    descriptors_count = 0
     for desc, uuids in zip(descriptors, [[0], [1, 2], [4, 5, 6]]):
         for i, uuid_ in enumerate(uuids):
+            # Make sure order is preserved
             assert desc[0].uuid()**2 + i == uuid_
+            descriptors_count += 1
             collections.deque(desc[1], maxlen=0)  # Run through iterator
 
-    # Since batch_size is None, these should only be called once
-    assert descr_generator.compute_descriptor_async.call_count == 1
-    assert descr_index.add_many_descriptors.call_count == 1
+    assert descriptors_count == 6
+
+    assert mock_compute_many_descriptors.call_count == 1

@@ -78,6 +78,21 @@ if LibSvmHikRelevancyIndex.is_usable():
             iqr_index.build_index(self.index_descriptors)
             ntools.assert_equal(iqr_index.count(), 7)
 
+
+        def _test_simple_iqr_helper(self, rank):
+            rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
+            # Check expected ordering
+            # 0-5-1-2-6-3-4
+            # - 2 should end up coming before 6, because 6 has more intersection
+            #   with the negative example.
+            ntools.assert_equal(rank_ordered[0][0], self.d0)
+            ntools.assert_equal(rank_ordered[1][0], self.d5)
+            ntools.assert_equal(rank_ordered[2][0], self.d1)
+            ntools.assert_equal(rank_ordered[3][0], self.d2)
+            ntools.assert_equal(rank_ordered[4][0], self.d6)
+            ntools.assert_equal(rank_ordered[5][0], self.d3)
+            ntools.assert_equal(rank_ordered[6][0], self.d4)
+
         def test_simple_iqr_scenario(self):
             # Make some descriptors;
             # Pick some from created set that are close to each other and use as
@@ -90,16 +105,7 @@ if LibSvmHikRelevancyIndex.is_usable():
             iqr_index.build_index(self.index_descriptors)
 
             rank = iqr_index.rank([self.q_pos], [self.q_neg])
-            rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
-
-            # Check expected ordering
-            # 0-5-1-2-6-3-4
-            # - 2 should end up coming before 6, because 6 has more intersection
-            #   with the negative example.
-            ntools.assert_equal(rank_ordered[0][0], self.d0)
-            ntools.assert_equal(rank_ordered[1][0], self.d5)
-            ntools.assert_equal(rank_ordered[2][0], self.d1)
-            ntools.assert_equal(rank_ordered[3][0], self.d2)
-            ntools.assert_equal(rank_ordered[4][0], self.d6)
-            ntools.assert_equal(rank_ordered[5][0], self.d3)
-            ntools.assert_equal(rank_ordered[6][0], self.d4)
+            self._test_simple_iqr_helper(rank)
+            iqr_index.use_libsvm = True
+            rank_libsvm = iqr_index.rank([self.q_pos], [self.q_neg])
+            self._test_simple_iqr_helper(rank_libsvm)

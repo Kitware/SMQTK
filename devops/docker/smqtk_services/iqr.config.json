@@ -109,7 +109,8 @@
                     "autoneg_select_ratio": 1,
                     "cores": null,
                     "descr_cache_filepath": null,
-                    "multiprocess_fetch": true
+                    "multiprocess_fetch": true,
+                    "use_libsvm": false
                 },
                 "type": "LibSvmHikRelevancyIndex"
             }

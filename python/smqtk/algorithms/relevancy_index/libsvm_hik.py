@@ -55,7 +55,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         return svm and svmutil
 
     def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1,
-                 multiprocess_fetch=False, cores=None):
+                 multiprocess_fetch=False, cores=None, use_libsvm=False):
         """
         Initialize a new or existing index.
 
@@ -84,6 +84,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             of None means to use all available cores.
         :type cores: int | None
 
+        :param use_libsvm: Whether we wish to use LIBSVM to do the scaling or
+            not, defaults to false.
+        :type use_libsvm: bool
+
         """
         super(LibSvmHikRelevancyIndex, self).__init__()
 
@@ -91,6 +95,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         self.autoneg_select_ratio = int(autoneg_select_ratio)
         self.multiprocess_fetch = multiprocess_fetch
         self.cores = cores
+        self.use_libsvm = use_libsvm
 
         # Descriptor elements in this index
         self._descr_cache = []
@@ -133,6 +138,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             'autoneg_select_ratio': self.autoneg_select_ratio,
             'multiprocess_fetch': self.multiprocess_fetch,
             'cores': self.cores,
+            'use_libsvm': self.use_libsvm,
         }
 
     def count(self):
@@ -302,39 +308,61 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)
+        if self.use_libsvm:
+            self._log.debug("Scaling with LIBSVM")
+            dict_self_descr_cache = []
+            for d in self._descr_cache:
+                dict_self_descr_cache.append(dict(zip(range(len(d.vector())),
+                                                      list(d.vector()))))
 
-        self._log.debug("Platt scaling")
-        # the actual platt scaling stuff
-        weights = numpy.array(svm_model.get_sv_coef()).flatten()
-        margins = numpy.dot(weights, svm_test_k)
-        rho = svm_model.rho[0]
-        probA = svm_model.probA[0]
-        probB = svm_model.probB[0]
-        #: :type: numpy.core.multiarray.ndarray
-        probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
+            # Using arbitrary labels because they are only used to calculate
+            # errors:
+            # https://github.com/Kitware/SMQTK/blob/4b768a6c436635867f036ee58523b5e8a2cff8bd/TPL/libsvm-3.1-custom/python/svmutil.py#L242
+            arbitrary_labels = [-1]*len(self._descr_cache)
 
-        # Detect whether we need to flip probabilities
-        # - Probability of input positive examples should have a high
-        #   probability score among the generated probabilities of our index.
-        # - If the positive example probabilities show to be in the lower 50%,
-        #   flip the generated probabilities, since its experimentally known
-        #   that the SVM will change which index it uses to represent a
-        #   particular class label occasionally, which influences the Platt
-        #   scaling apparently.
-        pos_vectors = numpy.array(train_vectors[:num_pos])
-        pos_test_k = compute_distance_matrix(svm_SVs, pos_vectors,
-                                             histogram_intersection_distance,
-                                             row_wise=True)
-        pos_margins = numpy.dot(weights, pos_test_k)
-        #: :type: numpy.core.multiarray.ndarray
-        pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))
-        # Check if average positive probability is less than the average index
-        # probability. If so, the platt scaling probably needs to be flipped.
-        if (pos_probs.sum() / pos_probs.size) < (probs.sum() / probs.size):
-            self._log.debug("inverting probabilities")
-            probs = 1. - probs
+            predicted_labels, _, predicted_probs = \
+                svmutil.svm_predict(arbitrary_labels,
+                                    dict_self_descr_cache, svm_model, "-b 1")
+            # (TODO: Mmanu) For some reason I don't understand now, the order
+            # obtained after sorting the probabilities for class -1 not +1
+            # matches with our previous implementation.  I used the same testing
+            # method (_test_simple_iqr_helper) for this implementation as well.
+            rank_pool = dict(zip(self._descr_cache,
+                                 [x[1] for x in predicted_probs]))
 
-        rank_pool = dict(zip(self._descr_cache, probs))
+        else:
+            self._log.debug("Platt scaling")
+            # the actual platt scaling stuff
+            weights = numpy.array(svm_model.get_sv_coef()).flatten()
+            margins = numpy.dot(weights, svm_test_k)
+            rho = svm_model.rho[0]
+            probA = svm_model.probA[0]
+            probB = svm_model.probB[0]
+            #: :type: numpy.core.multiarray.ndarray
+            probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
+
+            # Detect whether we need to flip probabilities
+            # - Probability of input positive examples should have a high
+            #   probability score among the generated probabilities of our index.
+            # - If the positive example probabilities show to be in the lower 50%,
+            #   flip the generated probabilities, since its experimentally known
+            #   that the SVM will change which index it uses to represent a
+            #   particular class label occasionally, which influences the Platt
+            #   scaling apparently.
+            pos_vectors = numpy.array(train_vectors[:num_pos])
+            pos_test_k = compute_distance_matrix(svm_SVs, pos_vectors,
+                                                 histogram_intersection_distance,
+                                                 row_wise=True)
+            pos_margins = numpy.dot(weights, pos_test_k)
+            #: :type: numpy.core.multiarray.ndarray
+            pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))
+            # Check if average positive probability is less than the average index
+            # probability. If so, the platt scaling probably needs to be flipped.
+            if (pos_probs.sum() / pos_probs.size) < (probs.sum() / probs.size):
+                self._log.debug("inverting probabilities")
+                probs = 1. - probs
+
+            rank_pool = dict(zip(self._descr_cache, probs))
         self.svm_model = svm_model
         return rank_pool
 

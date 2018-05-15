@@ -19,6 +19,7 @@ from smqtk.utils import (
     parallel,
 )
 
+
 def compute_many_descriptors(data_elements, descr_generator, descr_factory,
                              descr_index, batch_size=None, overwrite=False,
                              procs=None, **kwds):
@@ -53,8 +54,8 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         results before all descriptors have been computed, yet still take
         advantage of any batch asynchronous computation optimizations a
         particular DescriptorGenerator implementation may have. If this is 0 or
-        None (false-evaluating), this function blocks until all descriptors have
-        been generated.
+        None (false-evaluating), this function blocks until all descriptors
+        have been generated.
     :type batch_size: None | int | long
 
     :param overwrite: If descriptors from a particular generator already exist
@@ -158,6 +159,7 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         for de in de_deque:
             yield de, m[de.uuid()]
 
+
 class _CountedGenerator(object):
     """
     Used to count elements of an iterable as they are accessed
@@ -177,6 +179,7 @@ class _CountedGenerator(object):
             self.count += 1
             yield item
         self.count_list.append(self.count)
+
 
 def compute_transformed_descriptors(data_elements, descr_generator,
                                     descr_factory, descr_index,
@@ -205,9 +208,10 @@ def compute_transformed_descriptors(data_elements, descr_generator,
     def transformed_elements():
         for elem in data_elements:
             yield _CountedGenerator(transform_function(elem),
-                                  transformed_counts)()
+                                    transformed_counts)()
 
-    transformed_elements = itertools.chain.from_iterable(transformed_elements())
+    transformed_elements = itertools.chain.from_iterable(
+        transformed_elements())
     descriptors = compute_many_descriptors(transformed_elements,
                                            descr_generator, descr_factory,
                                            descr_index, batch_size=batch_size,
@@ -217,9 +221,8 @@ def compute_transformed_descriptors(data_elements, descr_generator,
         yield de, itertools.islice((d[1] for d in descriptors), count)
 
 
-
-def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
-                       ordered=False):
+def compute_hash_codes(uuids, index, functor, report_interval=1.0,
+                       use_mp=False, ordered=False):
     """
     Given an iterable of DescriptorElement UUIDs, asynchronously access them
     from the given ``index``, asynchronously compute hash codes via ``functor``

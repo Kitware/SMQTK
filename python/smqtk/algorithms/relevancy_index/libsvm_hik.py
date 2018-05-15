@@ -12,6 +12,7 @@ from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
 from six.moves import range, zip
 import six
+import collections
 
 try:
     import svm
@@ -189,6 +190,49 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             with open(self.descr_cache_fp, 'wb') as f:
                 cPickle.dump(self._descr_cache, f, -1)
 
+    def get_descr_and_distance_list(self, svm_model):
+        dict_self_descr_cache = []
+        d_for_unlabelled = []
+        for d in self._descr_cache:
+            dict_self_descr_cache.append(dict(zip(range(len(d.vector())),
+                                                  list(d.vector()))))
+            svm_node_array, _ = svm.gen_svm_nodearray(list(d.vector()))
+            distance = svmutil.svm_distance_from_plane(svm_node_array,
+                                                       svm_model)
+            d_for_unlabelled.append(abs(distance[0]))
+
+        return dict_self_descr_cache, d_for_unlabelled
+
+    def get_rank_and_feedback_using_libsvm(self, svm_model):
+        self._log.debug("Scaling with LIBSVM")
+        dict_self_descr_cache, d_for_unlabelled = \
+            self.get_descr_and_distance_list(svm_model)
+
+        # Using arbitrary labels because they are only used to calculate
+        # errors:
+        # https://github.com/Kitware/SMQTK/blob/4b768a6c436635867f036ee58523b5e8a2cff8bd/TPL/libsvm-3.1-custom/python/svmutil.py#L242
+        arbitrary_labels = [-1]*len(self._descr_cache)
+
+        predicted_labels, _, predicted_probs = \
+            svmutil.svm_predict(arbitrary_labels,
+                                dict_self_descr_cache, svm_model, "-b 1")
+        # (TODO: Mmanu) For some reason I don't understand now, the order
+        # obtained after sorting the probabilities for class -1 not +1
+        # matches with our previous implementation.  I used the same testing
+        # method for this implementation as well.
+
+        # method (_test_simple_iqr_helper) for this implementation as well.
+
+        ind_sorted_by_distance = numpy.argsort(d_for_unlabelled)
+        rank_pool = dict(zip(self._descr_cache,
+                             [p[1] for p in predicted_probs]))
+
+        feedback_pool = collections.OrderedDict()
+        for i in ind_sorted_by_distance:
+            feedback_pool[self._descr_cache[i]] = d_for_unlabelled[i]
+
+        return rank_pool, feedback_pool
+        
     def rank(self, pos, neg):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
@@ -202,9 +246,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :return: Map of indexed descriptor elements to a rank value between
-            [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
-            meaning least relevant.
+        :return: A tuple consisting of rank_pool and feedback_pool, where the
+            rank pool is a map of indexed descriptor elements to a rank value
+            between [0, 1] (inclusive) range, where a 1.0 means most relevant
+            and 0.0 meaning least relevant.
+            And the feedback_pool is a an ordered map mapping descriptor with
+            their distance from plane. The order corresponds to the increasing 
+            order of distance of the descriptors from the separating plane.
+
+
         :rtype: dict[smqtk.representation.DescriptorElement, float]
 
         """
@@ -308,28 +358,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
                                              histogram_intersection_distance,
                                              row_wise=True)
+        feedback_pool = None
         if self.use_libsvm:
-            self._log.debug("Scaling with LIBSVM")
-            dict_self_descr_cache = []
-            for d in self._descr_cache:
-                dict_self_descr_cache.append(dict(zip(range(len(d.vector())),
-                                                      list(d.vector()))))
-
-            # Using arbitrary labels because they are only used to calculate
-            # errors:
-            # https://github.com/Kitware/SMQTK/blob/4b768a6c436635867f036ee58523b5e8a2cff8bd/TPL/libsvm-3.1-custom/python/svmutil.py#L242
-            arbitrary_labels = [-1]*len(self._descr_cache)
-
-            predicted_labels, _, predicted_probs = \
-                svmutil.svm_predict(arbitrary_labels,
-                                    dict_self_descr_cache, svm_model, "-b 1")
-            # (TODO: Mmanu) For some reason I don't understand now, the order
-            # obtained after sorting the probabilities for class -1 not +1
-            # matches with our previous implementation.  I used the same testing
-            # method (_test_simple_iqr_helper) for this implementation as well.
-            rank_pool = dict(zip(self._descr_cache,
-                                 [x[1] for x in predicted_probs]))
-
+            rank_pool, feedback_pool = \
+                self.get_rank_and_feedback_using_libsvm(svm_model)
         else:
             self._log.debug("Platt scaling")
             # the actual platt scaling stuff
@@ -364,7 +396,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
             rank_pool = dict(zip(self._descr_cache, probs))
         self.svm_model = svm_model
-        return rank_pool
+
+        return {
+            "rank_pool":     rank_pool,
+            "feedback_pool": feedback_pool
+        }
 
     def get_model(self):
         return self.svm_model

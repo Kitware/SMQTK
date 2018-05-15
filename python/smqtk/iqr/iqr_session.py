@@ -131,6 +131,9 @@ class IqrSession (SmqtkObject):
         # This is None before any initialization or refinement occurs.
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results = None
+        # Ordered mapping of DescriptorElement to distance, in increasing order
+        # of distance from the separating plane.
+        self.feedback_map = None
 
         #
         # Algorithm Instances [+Config]
@@ -170,6 +173,20 @@ class IqrSession (SmqtkObject):
                                     key=lambda p: p[1],
                                     reverse=True))
             return None
+
+    def ordered_feedback(self):
+        """
+        Return a tuple of (id, distance) in order of increasing distance from
+        the separating plane for SSVM.
+        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
+
+        """
+        with self.lock:
+            if self.feedback_map:
+                return tuple(self.feedback_map.items())
+            return None
+
+
 
     def adjudicate(self, new_positives=(), new_negatives=(),
                    un_positives=(), un_negatives=()):
@@ -276,7 +293,9 @@ class IqrSession (SmqtkObject):
                                    "adjudication.")
 
             self.rel_index.use_libsvm = True
-            element_probability_map = self.rel_index.rank(pos, neg)
+            rank_and_feedback_maps = self.rel_index.rank(pos, neg)
+            element_probability_map = rank_and_feedback_maps["rank_pool"]
+            self.feedback_map = rank_and_feedback_maps["feedback_pool"]
 
             if self.results is None:
                 self.results = IqrResultsDict()
@@ -292,6 +311,7 @@ class IqrSession (SmqtkObject):
             for d in neg:
                 if d in self.results:
                     self.results[d] = 0.0
+                    
 
     def reset(self):
         """ Reset the IQR Search state

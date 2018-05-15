@@ -210,9 +210,9 @@ def compute_transformed_descriptors(data_elements, descr_generator,
             yield _CountedGenerator(transform_function(elem),
                                     transformed_counts)()
 
-    transformed_elements = itertools.chain.from_iterable(
+    chained_elements = itertools.chain.from_iterable(
         transformed_elements())
-    descriptors = compute_many_descriptors(transformed_elements,
+    descriptors = compute_many_descriptors(chained_elements,
                                            descr_generator, descr_factory,
                                            descr_index, batch_size=batch_size,
                                            overwrite=overwrite, procs=procs,

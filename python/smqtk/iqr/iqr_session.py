@@ -177,7 +177,7 @@ class IqrSession (SmqtkObject):
     def ordered_feedback(self):
         """
         Return a tuple of (id, distance) in order of increasing distance from
-        the separating plane for SSVM.
+        the separating plane for SVM.
         :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
 
         """

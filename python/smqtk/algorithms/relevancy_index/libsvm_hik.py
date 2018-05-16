@@ -191,6 +191,17 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 cPickle.dump(self._descr_cache, f, -1)
 
     def get_descr_and_distance_list(self, svm_model):
+        """
+        Compute the distances of the descriptors from the separating plane of
+        the SVM.
+
+        :param svm_model: The trained SVM model we want to use.
+        :return: A tuple of lists.  The first member of the tuple is a list of
+        descriptors and the second member a list of corresponding distances of
+        the descriptors from the separating plane.
+
+        :rtype: ([smqtk.representation.DescriptorElement], [float])
+        """
         dict_self_descr_cache = []
         d_for_unlabelled = []
         for d in self._descr_cache:
@@ -204,6 +215,19 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         return dict_self_descr_cache, d_for_unlabelled
 
     def get_rank_and_feedback_using_libsvm(self, svm_model):
+        """
+        Get the rank and feedback dictionaries when using LIBSVM for scaling.
+
+        :param svm_model: The trained SVM model we want to use.
+        :return: A tuple of dictionaries.  The first member of the tuple being
+        a dictionary mapping descriptors to the predicted probabilities obtained
+        using the scaling done by LIBSVM.  The second member of the tuple being
+        a dictionary mapping descriptors to their distances from separating
+        plane.
+
+        :rtype (dict[smqtk.representation.DescriptorElement, float],
+        (dict[smqtk.representation.DescriptorElement, float])
+        """
         self._log.debug("Scaling with LIBSVM")
         dict_self_descr_cache, d_for_unlabelled = \
             self.get_descr_and_distance_list(svm_model)
@@ -255,7 +279,9 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             order of distance of the descriptors from the separating plane.
 
 
-        :rtype: dict[smqtk.representation.DescriptorElement, float]
+        :rtype: (dict[smqtk.representation.DescriptorElement, float],
+        dict[smqtk.representation.DescriptorElement, float])
+
 
         """
         # Notes:

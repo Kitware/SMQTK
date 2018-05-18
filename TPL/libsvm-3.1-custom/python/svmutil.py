@@ -170,6 +170,11 @@ def svm_train(arg1, arg2=None, arg3=None):
 		m.x_space = prob.x_space
 		return m
 
+def svm_distance_from_plane(xi, model):
+	dec_values = (c_double * 1)()
+	libsvm.svm_predict_values(model, xi, dec_values)
+	return dec_values
+
 def svm_predict(y, x, m, options=""):
 	"""
 	svm_predict(y, x, m [, "options"]) -> (p_labels, p_acc, p_vals)

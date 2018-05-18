@@ -79,19 +79,20 @@ if LibSvmHikRelevancyIndex.is_usable():
             ntools.assert_equal(iqr_index.count(), 7)
 
 
-        def _test_simple_iqr_helper(self, rank):
+        def _test_simple_iqr_helper(self, rank, libsvm_for_scaling=False):
             rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
             # Check expected ordering
             # 0-5-1-2-6-3-4
-            # - 2 should end up coming before 6, because 6 has more intersection
-            #   with the negative example.
             ntools.assert_equal(rank_ordered[0][0], self.d0)
             ntools.assert_equal(rank_ordered[1][0], self.d5)
             ntools.assert_equal(rank_ordered[2][0], self.d1)
-            ntools.assert_equal(rank_ordered[3][0], self.d2)
-            ntools.assert_equal(rank_ordered[4][0], self.d6)
-            ntools.assert_equal(rank_ordered[5][0], self.d3)
-            ntools.assert_equal(rank_ordered[6][0], self.d4)
+    		# The probabilities are equal (0.5)
+            ntools.assert_equal(set([rank_ordered[3][0], rank_ordered[4][0]]),
+                set([self.d2, self.d6]))
+            # The probabilities are equal 0.414
+            ntools.assert_equal(set([rank_ordered[5][0], rank_ordered[6][0]]),
+                set([self.d3, self.d4]))
+
 
         def test_simple_iqr_scenario(self):
             # Make some descriptors;
@@ -104,8 +105,11 @@ if LibSvmHikRelevancyIndex.is_usable():
             iqr_index = LibSvmHikRelevancyIndex()
             iqr_index.build_index(self.index_descriptors)
 
-            rank = iqr_index.rank([self.q_pos], [self.q_neg])
+            rank_and_feedback = iqr_index.rank([self.q_pos], [self.q_neg])
+            rank = rank_and_feedback["rank_pool"]
             self._test_simple_iqr_helper(rank)
             iqr_index.use_libsvm = True
-            rank_libsvm = iqr_index.rank([self.q_pos], [self.q_neg])
-            self._test_simple_iqr_helper(rank_libsvm)
+            rank_and_feedback = iqr_index.rank([self.q_pos], [self.q_neg])
+            self._test_simple_iqr_helper(rank_and_feedback["rank_pool"],
+                                         libsvm_for_scaling=True)
+

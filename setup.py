@@ -141,6 +141,7 @@ setuptools.setup(
         'scikit-learn',
         'scipy',
         'six',
+        'ubelt',
     ],
     extras_require={
         # Various optional dependencies for plugins

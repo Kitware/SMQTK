@@ -47,9 +47,9 @@ recursively in the mounted directory (uses command ``find <dir> -type f``):
 
     OR
 
-    nvidia-docker run -d -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
+    docker run -d --runtime nvidia -v <abs-img-dir>:/home/smqtk/data/images -p 5000:5000 kitware/smqtk/iqr_playground_nvidia -b [-t]
 
-The use of ``nvidia-docker`` is required to use the GPU computation
+The use of ``--runtime nvidia`` is required to use the GPU computation
 capabilities (default options, can be changed and described later).
 The ``-v`` option above shows where to mount a directory of images for
 processing. The ``-p`` option above shows the default IQR web-app server port

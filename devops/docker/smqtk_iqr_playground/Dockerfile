@@ -1,4 +1,4 @@
-FROM ubuntu:trusty
+FROM ubuntu:xenial
 MAINTAINER paul.tunison@kitware.com
 
 # System Package dependencies
@@ -6,7 +6,9 @@ ENV TERM=xterm
 RUN rm /bin/sh \
  && ln -s /bin/bash /bin/sh \
  && apt-get -y update \
- && apt-get -y install git cmake curl vim less parallel
+ && apt-get -y install git cmake curl vim less parallel sudo \
+        # Additional packages implicitly brought in by nvidia cuda image
+        apt-transport-https build-essential bzip2
 
 
 # System Space #################################################################
@@ -23,22 +25,25 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" \
 
 
 # MongoDB installation
-# - Not using standard system install because that would cause a boost install
-#   version conflict with caffe. Caffe is more imporant here.
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10 \
- && echo "deb http://repo.mongodb.org/apt/ubuntu $(lsb_release -sc)/mongodb-org/3.0 multiverse" \
-    >/etc/apt/sources.list.d/mongodb-org-3.0.list \
+# - Using official package from MongoDB
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
+ && echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.6 multiverse" \
+    | tee /etc/apt/sources.list.d/mongodb-org-3.6.list \
  && apt-get -y update \
- && apt-get -y install mongodb-org
+    # Installing with specific version pin.
+ && apt-get -y install mongodb-org=3.6.5
 
 
 # Caffe system deps
 RUN apt-get -y install \
-    libatlas-base-dev libatlas-dev libboost1.55-all-dev libprotobuf-dev \
+    libatlas-base-dev libatlas-dev libboost1.58-all-dev libprotobuf-dev \
     protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev
     # Optional: libopencv-dev liblmdb-dev libleveldb-dev libsnappy-dev
     # - See USE_* variabled in Caffe CMake configuration below.
 
+
+# SMQTK Plugin system deps
+RUN apt-get -y install postgresql-server-dev-9.4
 
 # User Space ###################################################################
 
@@ -56,7 +61,7 @@ RUN curl --insecure \
     >miniconda2-latest-linux-x86_64.sh \
  && bash miniconda2-latest-linux-x86_64.sh -b -p ${HOME}/miniconda \
  && rm miniconda2-latest-linux-x86_64.sh \
- && conda update --all
+ && conda update -y --all
 # - Some python niceties
 RUN pip install ipython
 
@@ -64,7 +69,7 @@ RUN pip install ipython
 # Caffe installation
 # - git hash is master as of 2016/10/05
 ENV CAFFE_URL="https://github.com/BVLC/caffe.git" \
-    CAFFE_VERSION=4ba654f5c88c36ee8ba53964b7faf25c6d7010b4
+    CAFFE_VERSION=1.0
 # - Python deps
 RUN pip install numpy scikit-image protobuf
 # - Get the source code
@@ -84,13 +89,12 @@ RUN mkdir caffe/build \
     -DPYTHON_INCLUDE_DIR:PATH=${HOME}/miniconda/include/python2.7 \
     -DPYTHON_INCLUDE_DIR2:PATH=${HOME}/miniconda/include/python2.7 \
     -DPYTHON_LIBRARY:PATH=${HOME}/miniconda/lib/libpython2.7.so \
-    -DUSE_CUDNN:BOOL=OFF \
     -DUSE_LEVELDB:BOOL=OFF \
     -DUSE_LMDB:BOOL=OFF \
     -DUSE_OPENCV:BOOL=OFF \
     -DCMAKE_INSTALL_PREFIX:PATH=${HOME}/caffe/install \
     ${HOME}/caffe/source \
- && make -j12
+ && make -j$(nproc)
 # - "Install" python component with .pth file
 RUN echo "${HOME}/caffe/source/python" >miniconda/lib/python2.7/site-packages/caffe.pth
 # - Get basic model files
@@ -114,11 +118,9 @@ RUN mkdir smqtk/build \
     -DCMAKE_INSTALL_PREFIX:PATH=${HOME}/miniconda \
     -DSMQTK_PIP_INSTALL_FLAGS:STRING="-e" \
     ${HOME}/smqtk/source \
- && make install -j12
+ && make install -j$(nproc)
 # - added optional plugin requirements
-RUN sudo apt-get -y update \
- && sudo apt-get -y install postgresql-server-dev-9.4 \
- && pip install psycopg2
+RUN pip install psycopg2
 # Expected volume mount directories
 RUN mkdir -p data/{images,models,configs,logs,db.psql,db.mongo}
 

@@ -222,7 +222,6 @@ then
     then
         compute_hash_codes \
             -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
-            --output-hash2uuids "${MODEL_DIR}/${HASH2UUID_MAP}" \
             &> "${LOG_CHC}"
         touch "${STP_CHC}"
     fi
@@ -230,9 +229,7 @@ then
     # Compute balltree hash index
     if [ ! -e "${STP_MBT}" ]
     then
-        make_balltree "${MODEL_DIR}/${HASH2UUID_MAP}" ${ITQ_BIT_SIZE} \
-            ${BALLTREE_LEAFSIZE} ${BALLTREE_RAND_SEED} \
-            "${MODEL_DIR}/${BALLTREE_MODEL}" \
+        make_balltree -v -c "${CONFIG_DIR}/${SMQTK_BALLTREE_CONFIG}" \
             &> "${LOG_MBT}"
         touch "${STP_MBT}"
     fi
@@ -275,9 +272,9 @@ then
   }
   function smqtk_cleanup() {
     echo "Stopping IQR REST Service"
-    kill -${signal} $(cat "${SMQTK_REST_IQR_PID}")
+    kill -${1} $(cat "${SMQTK_REST_IQR_PID}")
     echo "Stopping NN REST Service"
-    kill -${signal} $(cat "${SMQTK_REST_NNSS_PID}")
+    kill -${1} $(cat "${SMQTK_REST_NNSS_PID}")
   }
   function smqtk_pid_cleanup() {
     echo "Cleaning NN/IQR PID files"
@@ -303,7 +300,7 @@ else
   }
   function smqtk_cleanup() {
     echo "Stopping IQR GUI app"
-    kill -${signal} $(cat "${SMQTK_IQR_PID}")
+    kill -${1} $(cat "${SMQTK_IQR_PID}")
   }
   function smqtk_pid_cleanup() {
     echo "Cleaning IQR App PID file"

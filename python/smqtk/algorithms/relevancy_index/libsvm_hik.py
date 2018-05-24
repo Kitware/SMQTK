@@ -376,8 +376,9 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             # svm_predict returns probs for both classes, observe values for
             # index used for positive label.
             pos_label_index = svm_model.get_labels().index(+1)
-            pos_probs = numpy.array([p[pos_label_index] for p in pos_vec_probs])
-            if numpy.average(pos_probs) < numpy.average(rank_pool.values()):
+            pos_probs = [p[pos_label_index] for p in pos_vec_probs]
+            test_probs = list(six.itervalues(rank_pool))
+            if numpy.average(pos_probs) < numpy.average(test_probs):
                 self._log.debug("inverting probabilities")
                 rank_pool = {k: 1.0 - v for k, v, in six.iteritems(rank_pool)}
         else:

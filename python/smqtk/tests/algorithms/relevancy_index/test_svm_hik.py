@@ -20,19 +20,19 @@ if LibSvmHikRelevancyIndex.is_usable():
         def setUpClass(cls):
             # Don't need to clear cache because we're setting the vectors here
             cls.d0 = DescriptorMemoryElement('index', 0)
-            cls.d0.set_vector(np.array([1, 0, 0, 0, 0], float))
             cls.d1 = DescriptorMemoryElement('index', 1)
-            cls.d1.set_vector(np.array([0, 1, 0, 0, 0], float))
             cls.d2 = DescriptorMemoryElement('index', 2)
-            cls.d2.set_vector(np.array([0, 0, 1, 0, 0], float))
             cls.d3 = DescriptorMemoryElement('index', 3)
-            cls.d3.set_vector(np.array([0, 0, 0, 1, 0], float))
             cls.d4 = DescriptorMemoryElement('index', 4)
-            cls.d4.set_vector(np.array([0, 0, 0, 0, 1], float))
             cls.d5 = DescriptorMemoryElement('index', 5)
-            cls.d5.set_vector(np.array([0.5, 0, 0.5, 0, 0], float))
             cls.d6 = DescriptorMemoryElement('index', 6)
-            cls.d6.set_vector(np.array([.2, .2, .2, .2, .2], float))
+            cls.d0.set_vector(np.array([1,   0,   0,  0,  0], float))
+            cls.d1.set_vector(np.array([0,   1,   0,  0,  0], float))
+            cls.d2.set_vector(np.array([0,   0,   1,  0,  0], float))
+            cls.d3.set_vector(np.array([0,   0,   0,  1,  0], float))
+            cls.d4.set_vector(np.array([0,   0,   0,  0,  1], float))
+            cls.d5.set_vector(np.array([0.5, 0, 0.5,  0,  0], float))
+            cls.d6.set_vector(np.array([.2, .2,  .2, .2, .2], float))
             cls.index_descriptors = [cls.d0, cls.d1, cls.d2, cls.d3, cls.d4,
                                      cls.d5, cls.d6]
 
@@ -40,6 +40,9 @@ if LibSvmHikRelevancyIndex.is_usable():
             cls.q_pos.set_vector(np.array([.75, .25, 0, 0,  0], float))
             cls.q_neg = DescriptorMemoryElement('query', 1)
             cls.q_neg.set_vector(np.array([0,   0,   0, .5, .5], float))
+            # These examples should rank the 7 descriptors above in the
+            # following order:
+            # 0-5-1-2/6-3/4
 
         def test_configuration(self):
             c = LibSvmHikRelevancyIndex.get_default_config()
@@ -86,13 +89,12 @@ if LibSvmHikRelevancyIndex.is_usable():
             ntools.assert_equal(rank_ordered[0][0], self.d0)
             ntools.assert_equal(rank_ordered[1][0], self.d5)
             ntools.assert_equal(rank_ordered[2][0], self.d1)
-    		# The probabilities are equal (0.5)
-            ntools.assert_equal(set([rank_ordered[3][0], rank_ordered[4][0]]),
-                set([self.d2, self.d6]))
+            # The probabilities are equal (0.5)
+            ntools.assert_equal({rank_ordered[3][0], rank_ordered[4][0]},
+                                {self.d2, self.d6})
             # The probabilities are equal 0.414
-            ntools.assert_equal(set([rank_ordered[5][0], rank_ordered[6][0]]),
-                set([self.d3, self.d4]))
-
+            ntools.assert_equal({rank_ordered[5][0], rank_ordered[6][0]},
+                                {self.d3, self.d4})
 
         def test_simple_iqr_scenario(self):
             # Make some descriptors;
@@ -113,3 +115,30 @@ if LibSvmHikRelevancyIndex.is_usable():
             self._test_simple_iqr_helper(rank_and_feedback["rank_pool"],
                                          libsvm_for_scaling=True)
 
+        def test_simple_rank_2(self):
+            pos = DescriptorMemoryElement('query', 0)
+            neg = DescriptorMemoryElement('query', 1)
+            pos.set_vector(np.array([.75, .25, 0,   0,   0], float))
+            neg.set_vector(np.array([  0,   0, 0, .25, .75], float))
+
+            def assert_order(rank):
+                # reverse is true because the highest scoring element is the
+                # most relevant and should be closest to index 0.
+                rank_ordered = sorted(rank.items(), key=lambda e: e[1],
+                                      reverse=True)
+                assert rank_ordered[0][0] == self.d0
+                assert rank_ordered[1][0] == self.d1
+                assert rank_ordered[2][0] == self.d2
+                assert rank_ordered[3][0] == self.d3
+                assert rank_ordered[4][0] == self.d4
+
+            iqr_index = LibSvmHikRelevancyIndex()
+            iqr_index.build_index([self.d0, self.d1, self.d2, self.d3, self.d4])
+
+            iqr_index.use_libsvm = False
+            rf1 = iqr_index.rank([pos], [neg])
+            assert_order(rf1['rank_pool'])
+
+            iqr_index.use_libsvm = True
+            rf2 = iqr_index.rank([pos], [neg])
+            assert_order(rf2['rank_pool'])

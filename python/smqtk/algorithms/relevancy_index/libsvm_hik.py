@@ -247,16 +247,18 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         # method (_test_simple_iqr_helper) for this implementation as well.
 
-        ind_sorted_by_distance = numpy.argsort(d_for_unlabelled)
+        # Positive train label is +1 (see line 302)
+        pos_label_index = svm_model.get_labels().index(+1)
         rank_pool = dict(zip(self._descr_cache,
-                             [p[1] for p in predicted_probs]))
+                             [p[pos_label_index] for p in predicted_probs]))
 
         feedback_pool = collections.OrderedDict()
+        ind_sorted_by_distance = numpy.argsort(d_for_unlabelled)
         for i in ind_sorted_by_distance:
             feedback_pool[self._descr_cache[i]] = d_for_unlabelled[i]
 
         return rank_pool, feedback_pool
-        
+
     def rank(self, pos, neg):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``
@@ -275,14 +277,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             between [0, 1] (inclusive) range, where a 1.0 means most relevant
             and 0.0 meaning least relevant.
             And the feedback_pool is a an ordered map mapping descriptor with
-            their distance from plane. The order corresponds to the increasing 
+            their distance from plane. The order corresponds to the increasing
             order of distance of the descriptors from the separating plane.
-
-
-        :rtype: (dict[smqtk.representation.DescriptorElement, float],
-        dict[smqtk.representation.DescriptorElement, float])
-
-
+        :rtype: dict[dict[smqtk.representation.DescriptorElement, float],
+                     dict[smqtk.representation.DescriptorElement, float]]
         """
         # Notes:
         # - Pos and neg exemplars may be in our index.
@@ -357,38 +355,60 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         if svm_model.l == 0:
             raise RuntimeError("SVM Model learning failed")
 
-        #
-        # Platt Scaling for probability rankings
-        #
-
-        self._log.debug("making test distance matrix")
-        # Number of support vectors
-        # Q: is this always the same as ``svm_model.l``?
-        num_SVs = sum(svm_model.nSV[:svm_model.nr_class])
-        # Support vector dimensionality
-        dim_SVs = len(train_vectors[0])
-        # initialize matrix they're going into
-        svm_SVs = numpy.ndarray((num_SVs, dim_SVs), dtype=float)
-        for i, nlist in enumerate(svm_model.SV[:svm_SVs.shape[0]]):
-            svm_SVs[i, :] = [n.value for n in nlist[:len(train_vectors[0])]]
-        # compute matrix of distances from support vectors to index elements
-        # TODO: Optimize this step by caching SV distance vectors
-        #       - It is known that SVs are vectors from the training data, so
-        #           if the same descriptors are given to this function
-        #           repeatedly (which is the case for IQR), this can be faster
-        #           because we're only computing at most a few more distance
-        #           vectors against our indexed descriptor matrix, and the rest
-        #           have already been computed before.
-        #       - At worst, we're effectively doing this call because each SV
-        #           needs to have its distance vector computed.
-        svm_test_k = compute_distance_matrix(svm_SVs, self._descr_matrix,
-                                             histogram_intersection_distance,
-                                             row_wise=True)
         feedback_pool = None
         if self.use_libsvm:
             rank_pool, feedback_pool = \
                 self.get_rank_and_feedback_using_libsvm(svm_model)
+
+            # Detect whether we need to flip probabilities
+            # (similar to check on L425)
+            # - Probability of input positive examples should have a high
+            #   probability score among the generated probabilities of our
+            #   index.
+            # - If the positive example probabilities show to be in the lower
+            #   50%, flip the generated probabilities, since its experimentally
+            #   known that the SVM will change which index it uses to represent
+            #   a particular class label occasionally.
+            pos_vectors = train_vectors[:num_pos]
+            _, _, pos_vec_probs = \
+                svmutil.svm_predict([+1]*len(pos_vectors), pos_vectors,
+                                    svm_model, "-b 1")
+            # svm_predict returns probs for both classes, observe values for
+            # index used for positive label.
+            pos_label_index = svm_model.get_labels().index(+1)
+            pos_probs = numpy.array([p[pos_label_index] for p in pos_vec_probs])
+            if numpy.average(pos_probs) < numpy.average(rank_pool.values()):
+                self._log.debug("inverting probabilities")
+                rank_pool = {k: 1.0 - v for k, v, in six.iteritems(rank_pool)}
         else:
+            #
+            # Platt Scaling for probability rankings
+            #
+            self._log.debug("making test distance matrix")
+            # Number of support vectors
+            # Q: is this always the same as ``svm_model.l``?
+            num_SVs = sum(svm_model.nSV[:svm_model.nr_class])
+            # Support vector dimensionality
+            dim_SVs = len(train_vectors[0])
+            # initialize matrix they're going into
+            svm_SVs = numpy.ndarray((num_SVs, dim_SVs), dtype=float)
+            for i, nlist in enumerate(svm_model.SV[:svm_SVs.shape[0]]):
+                svm_SVs[i, :] = [n.value for n in nlist[:len(train_vectors[0])]]
+            # compute matrix of distances from support vectors to index elements
+            # TODO: Optimize this step by caching SV distance vectors
+            #       - It is known that SVs are vectors from the training data,
+            #           so if the same descriptors are given to this function
+            #           repeatedly (which is the case for IQR), this can be
+            #           faster because we're only computing at most a few more
+            #           distance vectors against our indexed descriptor matrix,
+            #           and the rest have already been computed before.
+            #       - At worst, we're effectively doing this call because each
+            #           SV needs to have its distance vector computed.
+            svm_test_k = compute_distance_matrix(
+                svm_SVs, self._descr_matrix, histogram_intersection_distance,
+                row_wise=True
+            )
+
             self._log.debug("Platt scaling")
             # the actual platt scaling stuff
             weights = numpy.array(svm_model.get_sv_coef()).flatten()
@@ -400,13 +420,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             probs = 1.0 / (1.0 + numpy.exp((margins - rho) * probA + probB))
 
             # Detect whether we need to flip probabilities
+            # (similar to check on L367)
             # - Probability of input positive examples should have a high
-            #   probability score among the generated probabilities of our index.
-            # - If the positive example probabilities show to be in the lower 50%,
-            #   flip the generated probabilities, since its experimentally known
-            #   that the SVM will change which index it uses to represent a
-            #   particular class label occasionally, which influences the Platt
-            #   scaling apparently.
+            #   probability score among the generated probabilities of our
+            #   index.
+            # - If the positive example probabilities show to be in the lower
+            #   50%, flip the generated probabilities, since its experimentally
+            #   known that the SVM will change which index it uses to represent
+            #   a particular class label occasionally, which influences the
+            #   Platt scaling apparently.
             pos_vectors = numpy.array(train_vectors[:num_pos])
             pos_test_k = compute_distance_matrix(svm_SVs, pos_vectors,
                                                  histogram_intersection_distance,
@@ -414,8 +436,9 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             pos_margins = numpy.dot(weights, pos_test_k)
             #: :type: numpy.core.multiarray.ndarray
             pos_probs = 1.0 / (1.0 + numpy.exp((pos_margins - rho) * probA + probB))
-            # Check if average positive probability is less than the average index
-            # probability. If so, the platt scaling probably needs to be flipped.
+            # Check if average positive probability is less than the average
+            # index probability. If so, the platt scaling probably needs to be
+            # flipped.
             if (pos_probs.sum() / pos_probs.size) < (probs.sum() / probs.size):
                 self._log.debug("inverting probabilities")
                 probs = 1. - probs

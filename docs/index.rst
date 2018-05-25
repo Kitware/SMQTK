@@ -16,6 +16,7 @@ Python toolkit for pluggable algorithms and data structures for multimedia-based
    installation
    architecture
    examples/overview
+   releasing
 
 Indices and tables
 ==================

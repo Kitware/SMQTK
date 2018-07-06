@@ -23,6 +23,9 @@ Docker
 - Versioning changes to, by default, encode date built instead of arbitrary
   separate versioning.
 
+- Classifier and IQR docker images now use the local SMQTK checkout on the host
+  system instead of cloning from the internet.
+
 Representation
 
 - Descriptor Element

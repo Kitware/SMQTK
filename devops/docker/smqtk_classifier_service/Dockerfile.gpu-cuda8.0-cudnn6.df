@@ -22,13 +22,14 @@ RUN apt-get update -y \
 #
 # SMQTK install
 #
-ENV SMQTK_VERSION="master" \
-    SMQTK_URL="https://github.com/Kitware/SMQTK.git"
-RUN mkdir -p /smqtk/source \
- && git clone ${SMQTK_URL} /smqtk/source \
- && cd /smqtk/source \
- && git checkout ${SMQTK_VERSION} \
- && mkdir /smqtk/build \
+COPY docs /smqtk/source/docs
+COPY etc /smqtk/source/etc
+COPY python /smqtk/source/python
+COPY src /smqtk/source/src
+COPY TPL /smqtk/source/TPL
+COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* VERSION \
+     /smqtk/source/
+RUN mkdir /smqtk/build \
  && cd /smqtk/build \
  && cmake \
     -DCMAKE_BUILD_TYPE:STRING=Release \
@@ -41,7 +42,7 @@ RUN mkdir -p /smqtk/source \
  # Create directory for standard configuration file mounting
  && mkdir /configuration
 
-ADD default_server.gpu.json /configuration/server.json
-ADD entrypoint.sh /docker-entrypoint.sh
+ADD devops/docker/smqtk_classifier_service/default_server.gpu.json /configuration/server.json
+ADD devops/docker/smqtk_classifier_service/entrypoint.sh /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 EXPOSE 5002

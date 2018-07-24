@@ -30,13 +30,14 @@ RUN apt-get -y update \
 
 
 # SMQTK Installation
-ENV SMQTK_VERSION="master" \
-    SMQTK_URL="https://github.com/Kitware/SMQTK.git"
-RUN mkdir -p /smqtk/source \
- && git clone ${SMQTK_URL} /smqtk/source \
- && cd /smqtk/source \
- && git checkout ${SMQTK_VERSION} \
- && mkdir /smqtk/build \
+COPY docs /smqtk/source/docs
+COPY etc /smqtk/source/etc
+COPY python /smqtk/source/python
+COPY src /smqtk/source/src
+COPY TPL /smqtk/source/TPL
+COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* VERSION \
+     /smqtk/source/
+RUN mkdir /smqtk/build \
  && cd /smqtk/build \
  && cmake \
     -DCMAKE_BUILD_TYPE:STRING=Release \
@@ -76,7 +77,11 @@ RUN mkdir -p data/{models,configs,logs,db.psql,db.mongo} \
  && ln -s /images data/images
 
 
-ADD entrypoint.sh descr_comp_test.cpu.py /home/smqtk/
-ADD default_confs/* default_confs/cpu/* /home/smqtk/data/configs/
+COPY devops/docker/smqtk_iqr_playground/entrypoint.sh \
+     devops/docker/smqtk_iqr_playground/descr_comp_test.cpu.py \
+     /home/smqtk/
+COPY devops/docker/smqtk_iqr_playground/default_confs/* \
+     devops/docker/smqtk_iqr_playground/default_confs/cpu/* \
+     /home/smqtk/data/configs/
 ENTRYPOINT ["/home/smqtk/entrypoint.sh"]
 EXPOSE 5000 5001

@@ -259,6 +259,7 @@ class LibSvmClassifier (SupervisedClassifier):
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
         :param extra_params: Dictionary with extra parameters for training.
+            This is not used by this implementation.
         :type extra_params: None | dict[basestring, object]
 
         """

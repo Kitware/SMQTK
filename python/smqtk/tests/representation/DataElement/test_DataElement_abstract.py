@@ -121,7 +121,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_content_type_extension(self,
                                     _mock_open, _mock_os_open, _mock_os_close,
                                     _mock_fcntl, _mock_scd):

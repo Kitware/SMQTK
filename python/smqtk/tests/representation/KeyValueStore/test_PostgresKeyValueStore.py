@@ -4,6 +4,7 @@ import unittest
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value.postgres import PostgresKeyValueStore
 
+
 if PostgresKeyValueStore.is_usable():
 
     class TestPostgresKeyValueStore (unittest.TestCase):
@@ -90,8 +91,11 @@ if PostgresKeyValueStore.is_usable():
             # rows being found by the first call to the method when checking
             # for key presence in table.
             s._psql_helper.batch_execute = mock.Mock(return_value=[])
+            PY2_SET_KEY_ERROR_RE = "set\(\[(?:0|1), (?:0|1)\]\)"
+            PY3_SET_KEY_ERROR_RE = "{(?:0|1), (?:0|1)}"
             self.assertRaisesRegexp(
-                KeyError, '^set\(\[(?:0|1), (?:0|1)\]\)$',
+                KeyError, '^(?:{}|{})$'.format(PY2_SET_KEY_ERROR_RE,
+                                               PY3_SET_KEY_ERROR_RE),
                 s.remove_many, [0, 1]
             )
 

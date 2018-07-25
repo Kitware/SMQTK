@@ -1,4 +1,5 @@
 import base64
+import binascii
 import collections
 import json
 import multiprocessing
@@ -400,7 +401,7 @@ class IqrService (SmqtkWebApp):
 
         try:
             descriptor = self.describe_base64_data(data_b64, content_type)
-        except TypeError as e:
+        except (TypeError, binascii.Error) as e:
             if str(e) == "Incorrect padding":
                 return make_response_json("Failed to parse base64 data."), 400
             # In case some other exception is raised, actually a server error.
@@ -599,7 +600,7 @@ class IqrService (SmqtkWebApp):
 
         try:
             descriptor = self.describe_base64_data(data_b64, content_type)
-        except TypeError as e:
+        except (TypeError, binascii.Error) as e:
             if str(e) == "Incorrect padding":
                 return make_response_json("Failed to parse base64 data."), 400
             # In case some other exception is raised, actually a server error.
@@ -1454,7 +1455,7 @@ class IqrService (SmqtkWebApp):
             # alphabets.
             state_bytes = \
                 base64.urlsafe_b64decode(state_base64.encode('utf-8'))
-        except TypeError as ex:
+        except (TypeError, binascii.Error) as ex:
             return make_response_json("Invalid base64 input: %s" % str(ex)), \
                    400
 

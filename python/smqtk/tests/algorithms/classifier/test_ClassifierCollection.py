@@ -129,7 +129,9 @@ class TestClassifierCollection (unittest.TestCase):
             'b': {'DummyClassifier': {}, 'type': 'DummyClassifier'},
         })
         self.assertEqual(
-            list(ccol._label_to_classifier.keys()), ['a', 'b']
+            # Using sort because return from ``keys()`` has no guarantee on
+            # order.
+            sorted(ccol._label_to_classifier.keys()), ['a', 'b']
         )
         self.assertIsInstance(ccol._label_to_classifier['a'], DummyClassifier)
         self.assertIsInstance(ccol._label_to_classifier['b'], DummyClassifier)

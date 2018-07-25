@@ -438,7 +438,7 @@ class IqrSession (SmqtkObject):
                              "zipped file name.")
 
         # Extract expected json file object
-        state = json.loads(z.read(self.STATE_ZIP_FILENAME))
+        state = json.loads(z.read(self.STATE_ZIP_FILENAME).decode())
         del z, z_buffer
 
         with self:

@@ -1,6 +1,7 @@
 import unittest
 
 import numpy
+from six import BytesIO
 from six.moves import cPickle, cStringIO
 
 from smqtk.representation.descriptor_element.local_elements import \
@@ -48,7 +49,7 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         expected_type = 'test-type'
         expected_uid = 'test-uid'
         expected_v = numpy.array([1, 2, 3])
-        expected_v_b = cStringIO()
+        expected_v_b = BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_v_b, expected_v)
         expected_v_dump = expected_v_b.getvalue()

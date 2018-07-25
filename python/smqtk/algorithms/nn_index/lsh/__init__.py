@@ -8,6 +8,7 @@ import itertools
 import multiprocessing
 
 import numpy
+from six.moves import map, zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
@@ -27,8 +28,6 @@ try:
     from six.moves import cPickle as pickle
 except ImportError:
     import pickle
-
-from six.moves import map, zip
 
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
@@ -417,7 +416,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # no longer maps anything, remove that hash from the hash index if
             # we have one.
             hashes_for_removal = collections.deque()
-            for uid, h_int, h_vec in itertools.izip(uids, h_ints, h_vectors):
+            for uid, h_int, h_vec in zip(uids, h_ints, h_vectors):
                 # noinspection PyUnresolvedReferences
                 new_uid_set = self.hash2uuids_kvstore.get(h_int) - {uid}
                 # If the resolved UID set is not empty re-add it, otherwise

@@ -416,10 +416,12 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         )
         self.assertDictEqual(s._table, expected_table)
 
+        PY2_SET_KEY_ERROR_RE = "set\(\[(?:7|8), (?:7|8)\]\)"
+        PY3_SET_KEY_ERROR_RE = "{(?:7|8), (?:7|8)}"
         self.assertRaisesRegexp(
             KeyError,
             # Should show a "set" that contains 7 and 8, regardless of order.
-            'set\(\[(?:7|8), (?:7|8)\]\)',
+            '(?:{}|{})'.format(PY2_SET_KEY_ERROR_RE, PY3_SET_KEY_ERROR_RE),
             s.remove_many, [7, 8]
         )
 

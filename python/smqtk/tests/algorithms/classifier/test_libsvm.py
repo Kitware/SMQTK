@@ -54,7 +54,8 @@ if LibSvmClassifier.is_usable():
                 MemoryClassificationElement, {}
             )
 
-            def make_element((i, v)):
+            def make_element(iv):
+                i, v = iv
                 d = d_factory.new_descriptor('test', i)
                 d.set_vector(v)
                 return d
@@ -117,7 +118,8 @@ if LibSvmClassifier.is_usable():
                 MemoryClassificationElement, {}
             )
 
-            def make_element((i, v)):
+            def make_element(iv):
+                i, v = iv
                 elem = d_factory.new_descriptor('test', i)
                 elem.set_vector(v)
                 return elem
@@ -223,7 +225,8 @@ if LibSvmClassifier.is_usable():
             )
             di = 0
 
-            def make_element((i, v)):
+            def make_element(iv):
+                i, v = iv
                 elem = d_factory.new_descriptor('test', i)
                 elem.set_vector(v)
                 return elem

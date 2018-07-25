@@ -57,7 +57,7 @@ class TestIqrService (unittest.TestCase):
         :type r: flask.wrappers.Response
         :type regex: str
         """
-        self.assertRegexpMatches(json.loads(r.data)['message'], regex)
+        self.assertRegexpMatches(json.loads(r.data.decode())['message'], regex)
 
     # Test Methods ############################################################
 
@@ -88,7 +88,7 @@ class TestIqrService (unittest.TestCase):
 
     def test_add_descriptor_from_data_no_content_type(self):
         query_data = {
-            'data_b64': base64.b64encode("some test data")
+            'data_b64': base64.b64encode(b"some test data").decode()
         }
         r = self.app.test_client().post('/add_descriptor_from_data',
                                         data=query_data)
@@ -107,8 +107,8 @@ class TestIqrService (unittest.TestCase):
         self.assertJsonMessageRegex(r, "Failed to parse base64 data")
 
     def test_add_descriptor_from_data(self):
-        expected_bytes = "some test bytes"
-        expected_base64 = base64.b64encode(expected_bytes)
+        expected_bytes = b"some test bytes"
+        expected_base64 = base64.b64encode(expected_bytes).decode()
         expected_contenttype = 'text/plain'
         expected_descriptor_uid = 'test-descr-uid'
         expected_descriptor = mock.MagicMock(spec=DescriptorElement)
@@ -135,7 +135,7 @@ class TestIqrService (unittest.TestCase):
 
         self.assertStatusCode(r, 201)
         self.assertJsonMessageRegex(r, "Success")
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertEqual(r_json['uid'], expected_descriptor_uid)
 
     def test_get_nn_index_status(self):
@@ -144,14 +144,14 @@ class TestIqrService (unittest.TestCase):
             r = tc.get('/nn_index')
             self.assertStatusCode(r, 200)
             self.assertJsonMessageRegex(r, "Success")
-            self.assertEqual(json.loads(r.data)['index_size'], 0)
+            self.assertEqual(json.loads(r.data.decode())['index_size'], 0)
 
         self.app.neighbor_index.count = mock.Mock(return_value=89756234876)
         with self.app.test_client() as tc:
             r = tc.get('/nn_index')
             self.assertStatusCode(r, 200)
             self.assertJsonMessageRegex(r, "Success")
-            self.assertEqual(json.loads(r.data)['index_size'], 89756234876)
+            self.assertEqual(json.loads(r.data.decode())['index_size'], 89756234876)
 
     def test_update_nn_index_no_args(self):
         """ Test that error is returned when no arguments provided """
@@ -228,7 +228,7 @@ class TestIqrService (unittest.TestCase):
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
 
     def test_update_nn_index_delayed_key_error(self):
@@ -272,7 +272,7 @@ class TestIqrService (unittest.TestCase):
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['bad_uids'], expected_bad_uids)
 
     def test_update_nn_index(self):
@@ -306,7 +306,7 @@ class TestIqrService (unittest.TestCase):
         )
 
         self.assertStatusCode(r, 200)
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['descriptor_uids'], expected_uid_list)
         self.assertEqual(r_json['index_size'], expected_new_index_count)
 
@@ -385,7 +385,7 @@ class TestIqrService (unittest.TestCase):
             self.assertStatusCode(r, 400)
             self.assertJsonMessageRegex(r, "Some provided UIDs do not exist "
                                            "in the current index")
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertListEqual(r_json['bad_uids'], [expected_exception_msg])
 
     def test_remove_from_nn_index(self):
@@ -407,7 +407,7 @@ class TestIqrService (unittest.TestCase):
 
             self.assertStatusCode(r, 200)
             self.assertJsonMessageRegex(r, "Success")
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertListEqual(r_json['descriptor_uids'], [1, 2, 3])
             self.assertEqual(r_json['index_size'], 3)
 
@@ -426,7 +426,7 @@ class TestIqrService (unittest.TestCase):
     def test_data_nearest_neighbors_no_contenttype(self):
         """ Test not providing base64 """
         data = dict(
-            data_b64=base64.b64encode('test-data'),
+            data_b64=base64.b64encode(b'test-data').decode(),
             # content_type='text/plain',
             k=10,
         )
@@ -438,7 +438,7 @@ class TestIqrService (unittest.TestCase):
     def test_data_nearest_neighbors_no_k(self):
         """ Test not providing base64 """
         data = dict(
-            data_b64=base64.b64encode('test-data'),
+            data_b64=base64.b64encode(b'test-data').decode(),
             content_type='text/plain',
             # k=10,
         )
@@ -450,7 +450,7 @@ class TestIqrService (unittest.TestCase):
     def test_data_nearest_neighbors_bad_k_json(self):
         """ Test string for k """
         data = dict(
-            data_b64=base64.b64encode('test-data'),
+            data_b64=base64.b64encode(b'test-data').decode(),
             content_type='text/plain',
             k="10.2",  # float string fails an int cast.
         )
@@ -486,7 +486,7 @@ class TestIqrService (unittest.TestCase):
         )
 
         data = dict(
-            data_b64=base64.b64encode('test-data'),
+            data_b64=base64.b64encode(b'test-data').decode(),
             content_type='text/plain',
             k=3,  # float string fails an int cast.
         )
@@ -501,7 +501,7 @@ class TestIqrService (unittest.TestCase):
         )
 
         self.assertStatusCode(r, 200)
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['neighbor_uids'], expected_uids)
         self.assertListEqual(r_json['neighbor_dists'], expected_dists)
 
@@ -584,7 +584,7 @@ class TestIqrService (unittest.TestCase):
         )
 
         self.assertStatusCode(r, 200)
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['neighbor_uids'], expected_uids)
         self.assertListEqual(r_json['neighbor_dists'], expected_dists)
 
@@ -653,8 +653,8 @@ class TestIqrService (unittest.TestCase):
     def test_get_iqr_state(self):
         # Test that the base64 returned is what is returned from
         #  IqrSession.get_state_bytes (mocked)
-        expected_bytes = 'these-bytes'
-        expected_b64 = base64.b64encode(expected_bytes.encode('utf8'))
+        expected_bytes = b'these-bytes'
+        expected_b64 = base64.b64encode(expected_bytes).decode()
 
         # Pretend input SID is valid
         self.app.controller.has_session_uuid = mock.Mock(return_value=True)
@@ -667,7 +667,7 @@ class TestIqrService (unittest.TestCase):
                                            sid='some-sid'
                                        ))
         self.assertStatusCode(r, 200)
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertEqual(r_json['message'], "Success")
         self.assertEqual(r_json['sid'], 'some-sid')
         self.assertEqual(r_json['state_b64'], expected_b64)
@@ -707,7 +707,7 @@ class TestIqrService (unittest.TestCase):
     def test_set_iqr_state_invalid_sid(self):
         # Test that an invalid SID provided causes an error.  Must set a state
         # to an existing session.
-        test_b64 = base64.b64encode('test'.encode('utf8'))
+        test_b64 = base64.b64encode(b'test')
 
         # App starts with nothing in session controller, so no SID should be
         # initially valid.
@@ -723,8 +723,8 @@ class TestIqrService (unittest.TestCase):
         # Test that expected base64 decoded bytes are passed to
         # `IqrSession.set_state_bytes` method.
         expected_sid = 'test-sid'
-        expected_bytes = 'expected-state-bytes'
-        expected_bytes_b64 = base64.b64encode(expected_bytes.encode('utf8'))
+        expected_bytes = b'expected-state-bytes'
+        expected_bytes_b64 = base64.b64encode(expected_bytes).decode()
 
         self.app.controller.has_session_uuid = mock.Mock(return_value=True)
         self.app.controller.get_session = mock.Mock()
@@ -739,6 +739,6 @@ class TestIqrService (unittest.TestCase):
             expected_bytes, self.app.descriptor_factory
         )
         self.assertStatusCode(r, 200)
-        r_json = json.loads(r.data)
+        r_json = json.loads(r.data.decode())
         self.assertRegexpMatches(r_json['message'], 'Success')
         self.assertRegexpMatches(r_json['sid'], expected_sid)

@@ -1,7 +1,7 @@
 import threading
 
 import numpy as np
-from six import BytesIO
+from six import BytesIO, next
 from six.moves import map
 from sklearn.neighbors import BallTree, DistanceMetric
 
@@ -226,7 +226,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             # duplicate values happily).
             hash_tuple_set = set(map(lambda v: tuple(v), hashes))
             # Convert tuples back into numpy arrays for BallTree constructor.
-            hash_vector_list = map(lambda t: np.array(t), hash_tuple_set)
+            hash_vector_list = list(map(lambda t: np.array(t), hash_tuple_set))
             self._build_bt_internal(hash_vector_list)
 
     def _update_index(self, hashes):
@@ -294,12 +294,12 @@ class SkLearnBallTreeHashIndex (HashIndex):
                     hash_tuples.add(h_t)
                 new_data = tuple_matrix - hash_tuples
                 self._build_bt_internal(
-                    map(lambda t: np.array(t), new_data)
+                    list(map(lambda t: np.array(t), new_data))
                 )
             else:
                 # No index built, so anything is a key error.
                 # We can also only be here if hashes was non-zero in size.
-                raise KeyError(np.asarray(iter(hashes).next()))
+                raise KeyError(np.asarray(next(iter(hashes))))
 
     def _nn(self, h, n=1):
         """

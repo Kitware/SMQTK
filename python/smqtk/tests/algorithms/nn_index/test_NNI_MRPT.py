@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import random
 import os.path as osp
@@ -296,14 +295,15 @@ class TestMRPTIndex (unittest.TestCase):
             d.set_vector(vectors[i])
             test_descriptors.append(d)
         index.build_index(test_descriptors)
-        # query descriptor -- first point
-        q = DescriptorMemoryElement('query', 0)
-        q.set_vector(vectors[0])
-        r, dists = index.nn(q)
-        self.assertEqual(len(dists), 1)
-        # Distance should be zero
-        self.assertEqual(dists[0], 0.)
-        self.assertItemsEqual(r[0].vector(), vectors[0])
+        for i in range(dim):
+            # query descriptor -- first point
+            q = DescriptorMemoryElement('query', i)
+            q.set_vector(vectors[i])
+            r, dists = index.nn(q)
+            self.assertEqual(len(dists), 1)
+            # Distance should be zero (exact match)
+            self.assertEqual(dists[0], 0.)
+            np.testing.assert_allclose(r[0].vector(), vectors[i])
 
     def test_nn_known_descriptors_euclidean_ordered(self):
         index = self._make_inst()

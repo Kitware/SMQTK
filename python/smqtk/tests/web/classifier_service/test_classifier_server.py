@@ -67,7 +67,7 @@ class TestClassifierService (unittest.TestCase):
         self.assertEqual(rv.status_code, code)
 
     def assertResponseMessageRegex(self, rv, regex):
-        self.assertRegexpMatches(json.loads(rv.data)['message'], regex)
+        self.assertRegexpMatches(json.loads(rv.data.decode())['message'], regex)
 
     def assertMessage(self, resp_data, message):
         self.assertEqual(resp_data['message'], message)
@@ -76,14 +76,14 @@ class TestClassifierService (unittest.TestCase):
         rv = self.app.test_client().get('/is_ready')
 
         self.assertStatus(rv, 200)
-        resp_data = json.loads(rv.data)
+        resp_data = json.loads(rv.data.decode())
         self.assertMessage(resp_data, "Yes, I'm alive!")
 
     def test_preconfigured_labels(self):
         rv = self.app.test_client().get('/classifier_labels')
 
         self.assertStatus(rv, 200)
-        resp_data = json.loads(rv.data)
+        resp_data = json.loads(rv.data.decode())
         self.assertMessage(resp_data, "Classifier labels.")
         self.assertListEqual(resp_data['labels'], ['dummy'])
 
@@ -91,7 +91,7 @@ class TestClassifierService (unittest.TestCase):
         results_exp = dict(positive=0.5, negative=0.5)
         label = 'dummy'
         content_type = 'text/plain'
-        element = base64.b64encode('TEST ELEMENT')
+        element = base64.b64encode(b'TEST ELEMENT').decode()
 
         with self.app.test_client() as cli:
             rv = cli.post('/classify', data={
@@ -99,7 +99,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': element,
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             self.assertDictEqual(resp_data['result'][label], results_exp)
 
@@ -130,7 +130,7 @@ class TestClassifierService (unittest.TestCase):
         results_exp = dict(positive=0.5, negative=0.5)
         label = 'dummy'
         content_type = 'text/plain'
-        element = base64.b64encode('TEST ELEMENT')
+        element = base64.b64encode(b'TEST ELEMENT').decode()
 
         with self.app.test_client() as cli:
             rv = cli.post('/classify', data={
@@ -141,7 +141,7 @@ class TestClassifierService (unittest.TestCase):
                 }),
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             self.assertDictEqual(resp_data['result'][label], results_exp)
 
@@ -153,7 +153,7 @@ class TestClassifierService (unittest.TestCase):
                 }),
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             result = resp_data['result'][label]
             self.assertAlmostEqual(result['positive'], 1/(1+math.exp(-1)))
@@ -167,7 +167,7 @@ class TestClassifierService (unittest.TestCase):
                 }),
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             result = resp_data['result'][label]
             self.assertAlmostEqual(result['positive'], 1/(1+math.exp(1)))
@@ -175,7 +175,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_multiple_classify(self):
         content_type = 'text/plain'
-        element = base64.b64encode('TEST ELEMENT')
+        element = base64.b64encode(b'TEST ELEMENT').decode()
         results_exp = dict(positive=0.5, negative=0.5)
         pickle_data = pickle.dumps(DummyClassifier.from_config({}))
         enc_data = base64.b64encode(pickle_data)
@@ -190,7 +190,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': enc_data,
             })
             self.assertStatus(rv, 201)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
                              % new_label)
@@ -202,7 +202,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': element,
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             self.assertDictEqual(resp_data['result'][new_label], results_exp)
 
@@ -211,7 +211,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': element,
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Finished classification.")
             self.assertDictEqual(resp_data['result'][old_label], results_exp)
             self.assertDictEqual(resp_data['result'][new_label], results_exp)
@@ -225,14 +225,14 @@ class TestClassifierService (unittest.TestCase):
                 'label': old_label,
             })
             self.assertStatus(rv, 200)
-            enc_data = rv.data
+            enc_data = rv.data.decode()
 
             rv = cli.post('/classifier', data={
                 'label': new_label,
                 'bytes_b64': enc_data,
             })
             self.assertStatus(rv, 201)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
                              % new_label)
@@ -240,7 +240,7 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.get('/classifier_labels')
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Classifier labels.")
             self.assertSetEqual(set(resp_data['labels']),
                                 {old_label, new_label})
@@ -249,7 +249,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': new_label,
             })
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertEqual(resp_data["message"],
                              "Removed classifier with label '%s'."
                              % new_label)
@@ -257,13 +257,13 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.get('/classifier_labels')
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Classifier labels.")
             self.assertSetEqual(set(resp_data['labels']), {old_label})
 
     def test_add_imm_del_classifier(self):
         pickle_data = pickle.dumps(DummyClassifier.from_config({}))
-        enc_data = base64.b64encode(pickle_data)
+        enc_data = base64.b64encode(pickle_data).decode('utf8')
         old_label = 'dummy'
         new_label = 'dummy2'
         lock_clfr_str = 'true'
@@ -275,7 +275,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': enc_data,
             })
             self.assertStatus(rv, 201)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertEqual(resp_data["message"],
                              "Uploaded classifier for label '%s'."
                              % new_label)
@@ -283,7 +283,7 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.get('/classifier_labels')
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Classifier labels.")
             self.assertSetEqual(set(resp_data['labels']),
                                 {old_label, new_label})
@@ -292,7 +292,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': new_label,
             })
             self.assertStatus(rv, 405)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertEqual(resp_data["message"],
                              "Label '%s' refers to a classifier that is"
                              " immutable." % new_label)
@@ -300,7 +300,7 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.get('/classifier_labels')
             self.assertStatus(rv, 200)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data, "Classifier labels.")
             self.assertSetEqual(set(resp_data['labels']),
                                 {old_label, new_label})
@@ -319,7 +319,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': enc_data,
             })
             self.assertStatus(rv, 400)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,
                                "Label '%s' already exists in classifier"
                                " collection." % old_label)
@@ -327,12 +327,12 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.post('/classifier', data={'label': old_label})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "No state base64 data provided.")
 
             rv = cli.post('/classifier', data={'bytes_b64': enc_data})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "No descriptive label provided.")
 
             rv = cli.post('/classifier', data={
@@ -341,7 +341,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': enc_data,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "Invalid boolean value for 'lock_label'."
                                " Was given: '%s'" % lock_clfr_str)
 
@@ -350,7 +350,7 @@ class TestClassifierService (unittest.TestCase):
                 'bytes_b64': bad_data,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "Data added for label '%s' is not a"
                                " Classifier." % new_label)
 
@@ -361,11 +361,11 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             rv = cli.delete('/classifier', data={})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data), "No label provided.")
+            self.assertMessage(json.loads(rv.data.decode()), "No label provided.")
 
             rv = cli.delete('/classifier', data={'label': old_label})
             self.assertStatus(rv, 405)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,
                                "Label '%s' refers to a classifier that is"
                                " immutable." % old_label)
@@ -373,7 +373,7 @@ class TestClassifierService (unittest.TestCase):
 
             rv = cli.delete('/classifier', data={'label': new_label})
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,
                                "Label '%s' does not refer to a classifier"
                                " currently registered." % new_label)
@@ -385,11 +385,11 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             rv = cli.get('/classifier', data={})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data), "No label provided.")
+            self.assertMessage(json.loads(rv.data.decode()), "No label provided.")
 
             rv = cli.get('/classifier', data={'label': label})
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,
                                "Label '%s' does not refer to a classifier"
                                " currently registered." % label)
@@ -397,7 +397,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_classify_failures(self):
         content_type = 'text/plain'
-        bytes_b64 = base64.b64encode('TEST ELEMENT')
+        bytes_b64 = base64.b64encode(b'TEST ELEMENT').decode()
         label_invalid_json_failure = '['
         label_valid_json_failure = '{}'
         label_valid_json_list_failure = '["test", {}]'
@@ -411,14 +411,14 @@ class TestClassifierService (unittest.TestCase):
                 'content_type': content_type,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "No base-64 bytes provided.")
 
             rv = cli.post('/classify', data={
                 'bytes_b64': bytes_b64,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "No content type provided.")
 
             rv = cli.post('/classify', data={
@@ -427,7 +427,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': label_invalid_json_failure,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "Label(s) are not properly formatted JSON.")
 
             rv = cli.post('/classify', data={
@@ -436,7 +436,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': label_valid_json_failure,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "Label must be a list of strings or a single"
                                " string.")
 
@@ -446,7 +446,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': label_valid_json_list_failure,
             })
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data),
+            self.assertMessage(json.loads(rv.data.decode()),
                                "Label must be a list of strings or a single"
                                " string.")
 
@@ -456,7 +456,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': json.dumps(missing_clfrs_1),
             })
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assert_(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
@@ -469,7 +469,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': json.dumps(missing_clfrs_2),
             })
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assert_(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
@@ -482,7 +482,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': json.dumps(missing_clfrs_3),
             })
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assert_(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
@@ -495,7 +495,7 @@ class TestClassifierService (unittest.TestCase):
                 'label': json.dumps(missing_clfrs_4),
             })
             self.assertStatus(rv, 404)
-            resp_data = json.loads(rv.data)
+            resp_data = json.loads(rv.data.decode())
             self.assert_(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
@@ -506,7 +506,7 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             #: :type: flask.wrappers.Response
             r = cli.get('/classifier_metadata')
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertStatus(r, 400)
             self.assertMessage(r_json, "No label provided.")
 
@@ -514,7 +514,7 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             args = dict(label="no-valid-label")
             r = cli.get('/classifier_metadata', query_string=args)
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertStatus(r, 404)
             self.assertMessage(r_json, "Label 'no-valid-label' does not refer "
                                        "to a classifier currently registered.")
@@ -547,7 +547,7 @@ class TestClassifierService (unittest.TestCase):
                     .assert_called_once_with(expected_label)
             mock_classifier.get_labels.assert_called_once_with()
 
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertStatus(r, 200)
             self.assertMessage(r_json, "Success")
             self.assertIn('class_labels', r_json)
@@ -560,7 +560,7 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             args = dict(label=self.dummy_label)
             r = cli.get('/classifier_metadata', query_string=args)
-            r_json = json.loads(r.data)
+            r_json = json.loads(r.data.decode())
             self.assertStatus(r, 200)
             self.assertMessage(r_json, "Success")
             self.assertIn('class_labels', r_json)
@@ -569,7 +569,7 @@ class TestClassifierService (unittest.TestCase):
 
     def test_add_iqr_state_classifier_param_failures(self):
         test_bytes = b"some not used bytes"
-        test_bytes_b64 = base64.b64encode(test_bytes)
+        test_bytes_b64 = base64.b64encode(test_bytes).decode()
         test_label = "classifier-test-label"
 
         with self.app.test_client() as cli:

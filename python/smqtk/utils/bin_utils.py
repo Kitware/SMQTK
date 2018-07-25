@@ -6,6 +6,7 @@ import os
 import sys
 import threading
 import time
+import warnings
 
 from smqtk.utils import merge_dict, SmqtkObject
 
@@ -137,6 +138,15 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
 
 
 class ProgressReporter (SmqtkObject):
+    """
+    Helper utility for reporting the state of a loop and the rate at which
+    looping is occurring based on lapsed wall-time and a given reporting
+    interval.
+
+    Includes optional methods that are thread-safe.
+
+    TODO: Add parameter for an optionally known total number of increments.
+    """
 
     def __init__(self, log_func, interval):
         """
@@ -145,7 +155,9 @@ class ProgressReporter (SmqtkObject):
         :param log_func: Logging function to use.
         :type log_func: (str, *args, **kwds) -> None
 
-        :param interval: Time interval to perform reporting in seconds.
+        :param interval: Time interval to perform reporting in seconds.  If no
+            reporting during incrementation should occur, infinity should be
+            passed.
         :type interval: float
 
         """
@@ -164,6 +176,8 @@ class ProgressReporter (SmqtkObject):
         Repeated calls to this method resets the state of the reporting for
         multiple uses.
 
+        This method is thread-safe.
+
         :returns: Self
         :rtype: ProgressReporter
 
@@ -180,17 +194,29 @@ class ProgressReporter (SmqtkObject):
         Increment counter and time since last report, reporting if delta exceeds
         the set reporting interval period.
         """
+        if not self.started:
+            raise RuntimeError("Reporter needs to be started first.")
+        self.c += 1
+        self.t = time.time()
+        self.t_delta = self.t - self.t_last
+        # Only report if its been ``interval`` seconds since the last
+        # report.
+        if self.t_delta >= self.interval:
+            self.c_delta = self.c - self.c_last
+            self.report()
+            self.t_last = self.t
+            self.c_last = self.c
+
+    def increment_report_threadsafe(self):
+        """
+        The same as ``increment_report`` but additionally acquires a lock on
+        resources first for thread-safety.
+
+        This version of the method is a little more costly due to the lock
+        acquisition.
+        """
         with self.lock:
-            if not self.started:
-                raise RuntimeError("Reporter needs to be started first.")
-            self.c += 1
-            self.t = time.time()
-            self.t_delta = self.t - self.t_last
-            if self.t_delta >= self.interval:
-                self.c_delta = self.c - self.c_last
-                self.report()
-                self.t_last = self.t
-                self.c_last = self.c
+            self.increment_report()
 
     def report(self):
         """
@@ -198,16 +224,27 @@ class ProgressReporter (SmqtkObject):
 
         Does nothing if no increments have occurred yet.
         """
+        if not self.started:
+            raise RuntimeError("Reporter needs to be started first.")
+        # divide-by-zero safeguard
+        if self.t_delta > 0 and (self.t - self.t_start) > 0:
+            self.log_func("Loops per second %f (avg %f) "
+                          "(%d current interval / %d total)"
+                          % (self.c_delta / self.t_delta,
+                             self.c / (self.t - self.t_start),
+                             self.c_delta,
+                             self.c))
+
+    def report_threadsafe(self):
+        """
+        The same as ``report`` but additionally acquires a lock on
+        resources first for thread-safety.
+
+        This version of the method is a little more costly due to the lock
+        acquisition.
+        """
         with self.lock:
-            if not self.started:
-                raise RuntimeError("Reporter needs to be started first.")
-            if self.t_delta > 0 and (self.t - self.t_start) > 0:
-                self.log_func("Loops per second %f (avg %f) "
-                              "(%d current interval / %d total)"
-                              % (self.c_delta / self.t_delta,
-                                 self.c / (self.t - self.t_start),
-                                 self.c_delta,
-                                 self.c))
+            self.report()
 
 
 def report_progress(log, state, interval):
@@ -235,6 +272,9 @@ def report_progress(log, state, interval):
     :type interval: float
 
     """
+    warnings.warn("``report_progress`` is deprecated. Please use the"
+                  "``ProgressReporter`` class instead.",
+                  DeprecationWarning)
     # State format (c=count, t=time:
     #   [last_c, c, delta_c, last_t, t, delta_t, starting_t]
     #   [  0,    1,    2,       3,   4,    5,         6    ]

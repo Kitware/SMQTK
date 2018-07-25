@@ -8,6 +8,7 @@ References/Resources:
 from collections import Sequence
 from copy import deepcopy
 import logging
+import math
 
 import numpy
 from six import BytesIO
@@ -16,7 +17,7 @@ from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation import get_data_element_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import merge_dict, plugin
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 
 
 class ItqFunctor (LshFunctor):
@@ -315,16 +316,16 @@ class ItqFunctor (LshFunctor):
         if self.has_model():
             raise RuntimeError("Model components have already been loaded.")
 
-        dbg_report_interval = None
-        if self.get_logger().getEffectiveLevel() <= logging.DEBUG:
-            dbg_report_interval = 1.0  # seconds
+        dbg_report_interval = 1.0
+        dbg_report = self.get_logger().getEffectiveLevel() <= logging.DEBUG
         if not isinstance(descriptors, Sequence):
             self._log.info("Creating sequence from iterable")
             descriptors_l = []
-            rs = [0]*7
+            pr = ProgressReporter(self._log.debug, dbg_report_interval).start()
             for d in descriptors:
                 descriptors_l.append(d)
-                report_progress(self._log.debug, rs, dbg_report_interval)
+                dbg_report and pr.increment_report()
+            dbg_report and pr.report()
             descriptors = descriptors_l
         if len(descriptors[0].vector()) < self.bit_length:
             raise ValueError("Input descriptors have fewer features than "

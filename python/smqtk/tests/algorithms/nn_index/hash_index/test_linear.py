@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import unittest
 
 import numpy
-from six.moves import cStringIO
+from six import BytesIO
 
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -168,7 +168,7 @@ class TestLinearHashIndex (unittest.TestCase):
         self.assertFalse(cache_element.is_empty())
         # Check byte content
         expected_cache = {1, 2, 3, 4}
-        actual_cache = set(numpy.load(cStringIO(cache_element.get_bytes())))
+        actual_cache = set(numpy.load(BytesIO(cache_element.get_bytes())))
         self.assertSetEqual(expected_cache, actual_cache)
 
     def test_save_cache_update_index(self):
@@ -185,7 +185,7 @@ class TestLinearHashIndex (unittest.TestCase):
         self.assertFalse(cache_element.is_empty())
         # Check byte content
         expected_cache = {1, 2, 3, 4}
-        actual_cache = set(numpy.load(cStringIO(cache_element.get_bytes())))
+        actual_cache = set(numpy.load(BytesIO(cache_element.get_bytes())))
         self.assertSetEqual(expected_cache, actual_cache)
 
     def test_save_cache_remove_from_index(self):
@@ -201,7 +201,7 @@ class TestLinearHashIndex (unittest.TestCase):
                        [1, 1, 0]])  # 6
         self.assertFalse(cache_element.is_empty())
         self.assertSetEqual(
-            set(numpy.load(cStringIO(cache_element.get_bytes()))),
+            set(numpy.load(BytesIO(cache_element.get_bytes()))),
             {2, 3, 4, 6}
         )
 
@@ -210,7 +210,7 @@ class TestLinearHashIndex (unittest.TestCase):
                              [1, 0, 0]])  # 4
         self.assertFalse(cache_element.is_empty())
         self.assertSetEqual(
-            set(numpy.load(cStringIO(cache_element.get_bytes()))),
+            set(numpy.load(BytesIO(cache_element.get_bytes()))),
             {2, 6}
         )
 

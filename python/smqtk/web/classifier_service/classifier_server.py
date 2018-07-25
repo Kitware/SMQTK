@@ -1,11 +1,13 @@
 from __future__ import print_function
 
 import base64
+import binascii
+import json
 
 import flask
 import six
 from six.moves import cPickle as pickle
-from six.moves import zip
+from six.moves import urllib, zip
 
 from smqtk.algorithms import (
     get_classifier_impls,
@@ -34,7 +36,11 @@ if hasattr(flask.json._json, 'JSONDecodeError'):
     # noinspection PyProtectedMember
     JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
 else:
-    JSON_DECODE_EXCEPTION = ValueError
+    # Exception thrown from ``json`` module.
+    if six.PY2:
+        JSON_DECODE_EXCEPTION = ValueError
+    else:
+        JSON_DECODE_EXCEPTION = json.JSONDecodeError
 
 
 class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
@@ -373,10 +379,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 # Since the concept of a "letter" is fraught with encoding and
                 # locality issues, we simply let urllib make this decision for
                 # us.
-                from urllib import quote
+
                 # If label_str matches the url-encoded version of itself, go
                 # ahead and use it
-                if quote(label_str, safe='') == label_str:
+                if urllib.parse.quote(label_str, safe='') == label_str:
                     labels = [label_str]
                 else:
                     return make_response_json(
@@ -570,13 +576,19 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         elif label is None or len(label) == 0:
             return make_response_json("No descriptive label provided.", 400)
         try:
-            # This can throw a ValueError if lock_clfr is malformed JSON
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
-        except (ValueError, flask.json.JSONDecoder):
+        except JSON_DECODE_EXCEPTION:
             return make_response_json("Invalid boolean value for"
                                       " 'lock_label'. Was given: '%s'"
                                       % lock_clfr_str,
                                       400)
+        try:
+            # Using urlsafe version because it handles both regular and urlsafe
+            # alphabets.
+            data_bytes = base64.urlsafe_b64decode(data_b64.encode('utf-8'))
+        except (TypeError, binascii.Error) as ex:
+            return make_response_json("Invalid base64 input: %s" % str(ex)), \
+                   400
 
         # If the given label conflicts with one already in the collection,
         # fail.
@@ -586,8 +598,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         # Create dummy IqrSession to extract pos/neg descriptors.
         iqrs = IqrSession()
-        iqrs.set_state_bytes(base64.b64decode(data_b64.encode('utf-8')),
-                             self.descriptor_factory)
+        iqrs.set_state_bytes(data_bytes, self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
         del iqrs
@@ -699,7 +710,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         try:
             # This can throw a ValueError if lock_clfr is malformed JSON
             lock_clfr = bool(flask.json.loads(lock_clfr_str))
-        except (ValueError, flask.json.JSONDecoder):
+        except JSON_DECODE_EXCEPTION:
             return make_response_json("Invalid boolean value for"
                                       " 'lock_label'. Was given: '%s'"
                                       % lock_clfr_str,

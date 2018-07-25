@@ -11,12 +11,17 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 import six
-from six.moves import range
-from six.moves import cPickle as pickle
+# noinspection PyUnresolvedReferences
+from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
 from smqtk.utils.bin_utils import report_progress
+
+try:
+    from six.moves import cPickle as pickle
+except ImportError:
+    import pickle
 
 try:
     import kwcnn

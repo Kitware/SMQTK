@@ -8,6 +8,7 @@ import threading
 
 import numpy as np
 from six.moves import range, cPickle as pickle, zip
+from six import next
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
@@ -235,7 +236,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         Build an MRPT structure
         """
-        sample = self._descriptor_set.iterdescriptors().next()
+        sample = next(self._descriptor_set.iterdescriptors())
         sample_v = sample.vector()
         n = self.count()
         d = sample_v.size
@@ -294,7 +295,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         del pts_array
 
         self._log.debug("Constructing trees")
-        desc_ids = list(self._descriptor_set.iterkeys())
+        desc_ids = list(self._descriptor_set.keys())
         # Start with no trees
         self._trees = []
         for t in range(self._num_trees):

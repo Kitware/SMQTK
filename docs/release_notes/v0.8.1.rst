@@ -1,0 +1,18 @@
+SMQTK v0.8.1 Release Notes
+===========================
+This patch release addresses a bug with PostgreSQL implementations incorrectly
+calling a helper class.
+
+
+Fixes since v0.8.0
+------------------
+
+Descriptor Index Plugins
+
+* Fix bug in PostgreSQL plugin where the helper class was not being called
+  appropriately.
+
+Utilities
+
+* Fix bug in PostgreSQL connection helper where the connection object was
+  being called upon when it may not have been initialized.

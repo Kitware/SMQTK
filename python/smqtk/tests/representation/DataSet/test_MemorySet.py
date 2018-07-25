@@ -1,5 +1,9 @@
+from __future__ import division, print_function
+
 import pickle
 import unittest
+
+import six
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -37,7 +41,7 @@ class TestDataFileSet (unittest.TestCase):
         i = DataMemorySet.from_config(c)
         self.assertIsNotNone(i.cache_element)
         self.assertIsInstance(i.cache_element, DataMemoryElement)
-        self.assertEqual(i.cache_element.get_bytes(), '')
+        self.assertEqual(i.cache_element.get_bytes(), six.b(''))
         self.assertEqual(i.pickle_protocol, -1)
         self.assertEqual(i._element_map, {})
 
@@ -188,7 +192,7 @@ class TestDataFileSet (unittest.TestCase):
         )
 
     def test_add_data(self):
-        de = DataMemoryElement('some bytes', 'text/plain', True)
+        de = DataMemoryElement(six.b('some bytes'), 'text/plain', True)
         expected_map = {de.uuid(): de}
 
         dms = DataMemorySet()

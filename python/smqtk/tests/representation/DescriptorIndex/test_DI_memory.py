@@ -1,17 +1,14 @@
 import unittest
 
 import numpy
+import six
+from six.moves import cPickle as pickle
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import merge_dict
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 RAND_UUID = 0
@@ -262,7 +259,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         self.assertEqual(pickle.loads(i.cache_element.get_bytes()),
                          expected_table)
 
-        rm_d = expected_table.values()[0]
+        rm_d = list(expected_table.values())[0]
         del expected_table[rm_d.uuid()]
         i.remove_descriptor(rm_d.uuid())
         self.assertEqual(pickle.loads(i.cache_element.get_bytes()),
@@ -306,5 +303,5 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         i = MemoryDescriptorIndex()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
-        self.assertEqual(set(i.iteritems()),
+        self.assertEqual(set(six.iteritems(i)),
                          set((d.uuid(), d) for d in descrs))

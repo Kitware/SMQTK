@@ -1,5 +1,6 @@
 import unittest
 
+import six
 
 from smqtk.representation.data_element.memory_element \
     import DataMemoryElement
@@ -80,8 +81,8 @@ class TestKeyValueDataSet (unittest.TestCase):
         mem_kv = MemoryKeyValueStore()
         kvds = KVSDataSet(mem_kv)
 
-        de1 = DataMemoryElement('bytes1')
-        de2 = DataMemoryElement('bytes2')
+        de1 = DataMemoryElement(six.b('bytes1'))
+        de2 = DataMemoryElement(six.b('bytes2'))
         kvds.add_data(de1, de2)
 
         # Check that appropriate keys and values are retrievable and located in

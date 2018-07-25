@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import abc
 import logging
 import json
@@ -11,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 
+import six
 import numpy
 import six
 import sklearn.cluster
@@ -23,6 +25,8 @@ from smqtk.utils.video_utils import get_metadata_info
 
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
+
+from six import next
 
 
 # Requires FLANN bindings
@@ -772,7 +776,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
         if len(data_set) == 1:
             # because an iterable doesn't necessarily have a next() method
-            di = iter(data_set).next()
+            di = next(iter(data_set))
             # Check for checkpoint files
             info_fp, desc_fp = \
                 self._get_standard_info_descriptors_filepath(di)

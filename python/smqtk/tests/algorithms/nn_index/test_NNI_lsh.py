@@ -1,6 +1,8 @@
+from __future__ import division, print_function
+
 import collections
-import mock
 import json
+import mock
 import random
 import types
 import unittest
@@ -443,7 +445,7 @@ class TestLshIndex (unittest.TestCase):
 
     def test_remove_from_index(self):
         # Test that removing by UIDs does the correct thing.
-        
+
         # Descriptors are 1 dim, value == index.
         descriptors = [
             DescriptorMemoryElement('t', 0),
@@ -459,7 +461,7 @@ class TestLshIndex (unittest.TestCase):
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
         idx.build_index(descriptors)
-        
+
         # Attempt removing 1 uid.
         idx.remove_from_index([3])
         self.assertEqual(idx.descriptor_index._table, {

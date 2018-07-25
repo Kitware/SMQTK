@@ -8,7 +8,6 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 from six.moves import configparser
-
 from six.moves import StringIO
 
 

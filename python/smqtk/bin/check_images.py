@@ -2,10 +2,12 @@
 Validate a list of images returning the filepaths and UUIDs of only the
 valid images, or optionally, only the invalid images.
 """
-import itertools
+from __future__ import print_function
 import logging
 import os
 import sys
+
+from six.moves import map
 
 from smqtk.utils.bin_utils import (
     basic_cli_parser,
@@ -61,11 +63,10 @@ def main():
             return is_valid_element(d, check_image=True), d
 
     with open(args.file_list) as infile:
-        checked_images = \
-            parallel.parallel_map(check_image,
-                                  itertools.imap(str.strip, infile),
-                                  name='check-image-validity',
-                                  use_multiprocessing=True)
+        checked_images = parallel.parallel_map(check_image,
+                                               map(str.strip, infile),
+                                               name='check-image-validity',
+                                               use_multiprocessing=True)
 
         for is_valid, dfe in checked_images:
             if dfe:  # in the case of a non-existent file

@@ -3,7 +3,7 @@ Compute a descriptor vector for a given data file, outputting the generated
 feature vector to standard out, or to an output file if one was specified (in
 numpy format).
 """
-
+from __future__ import print_function
 import logging
 import os
 

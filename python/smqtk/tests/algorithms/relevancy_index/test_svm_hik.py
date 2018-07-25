@@ -1,3 +1,4 @@
+from __future__ import division, print_function
 import unittest
 
 import numpy as np
@@ -32,7 +33,7 @@ if LibSvmHikRelevancyIndex.is_usable():
                                      cls.d5, cls.d6]
 
             cls.q_pos = DescriptorMemoryElement('query', 0)
-            cls.q_pos.set_vector(np.array([.75, .25, 0, 0,  0], float))
+            cls.q_pos.set_vector(np.array([.75, .25, 0, 0, 0], float))
             cls.q_neg = DescriptorMemoryElement('query', 1)
             cls.q_neg.set_vector(np.array([0,   0,   0, .5, .5], float))
 
@@ -89,14 +90,24 @@ if LibSvmHikRelevancyIndex.is_usable():
             rank_ordered = sorted(rank.items(), key=lambda e: e[1],
                                   reverse=True)
 
+            print("rank_ordered:")
+            for i, r in enumerate(rank_ordered):
+                print("..{}: {}".format(i, r))
+
             # Check expected ordering
             # 0-5-1-2-6-3-4
             # - 2 should end up coming before 6, because 6 has more intersection
             #   with the negative example.
-            self.assertEqual(rank_ordered[0][0], self.d0)
-            self.assertEqual(rank_ordered[1][0], self.d5)
-            self.assertEqual(rank_ordered[2][0], self.d1)
-            self.assertEqual(rank_ordered[3][0], self.d2)
-            self.assertEqual(rank_ordered[4][0], self.d6)
-            self.assertEqual(rank_ordered[5][0], self.d3)
-            self.assertEqual(rank_ordered[6][0], self.d4)
+            assert rank_ordered[0][0] == self.d0
+            assert rank_ordered[1][0] == self.d5
+            assert rank_ordered[2][0] == self.d1
+            # Results show that d2 and d6 have the same rank, so their position
+            # in interchangeable.
+            assert rank_ordered[3][0] in (self.d2, self.d6)
+            assert rank_ordered[4][0] in (self.d2, self.d6)
+            assert rank_ordered[3][0] != rank_ordered[4][0]
+            # d3 and d4 evaluate to the same rank based on query (no
+            # intersection with positive, equal intersection with negative).
+            assert rank_ordered[5][0] in (self.d3, self.d4)
+            assert rank_ordered[6][0] in (self.d3, self.d4)
+            assert rank_ordered[5][0] != rank_ordered[6][0]

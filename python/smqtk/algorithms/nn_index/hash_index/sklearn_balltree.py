@@ -1,7 +1,8 @@
 import threading
 
 import numpy as np
-from six.moves import StringIO
+from six import BytesIO
+from six.moves import map
 from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -142,7 +143,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                     #   to be hamming distance (see ``build_index``).
                     s = self.bt.__getstate__()
                     tail = s[4:11]
-                    buff = StringIO()
+                    buff = BytesIO()
                     # noinspection PyTypeChecker
                     np.savez(buff,
                              data_arr=s[0],
@@ -166,7 +167,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
             if self.cache_element and not self.cache_element.is_empty():
                 self._log.debug("Loading model from cache: %s",
                                 self.cache_element)
-                buff = StringIO(self.cache_element.get_bytes())
+                buff = BytesIO(self.cache_element.get_bytes())
                 with np.load(buff) as cache:
                     tail = tuple(cache['tail'])
                     s = (cache['data_arr'], cache['idx_array_arr'],
@@ -215,7 +216,6 @@ class SkLearnBallTreeHashIndex (HashIndex):
         :param hashes: Iterable of descriptor elements to build index
             over.
         :type hashes: collections.Iterable[np.ndarray[bool]]
-
         """
         with self._model_lock:
             self._log.debug("Building ball tree")

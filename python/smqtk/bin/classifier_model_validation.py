@@ -36,6 +36,7 @@ See Scikit-Learn PR and ROC curve explanations and examples:
     - http://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
 
 """
+from __future__ import division, print_function
 
 import collections
 import csv
@@ -277,7 +278,7 @@ def log_cm(p_func, conf_mat, labels):
     # get col max widths
     col_max_lens = []
     for x in range(print_mat.shape[1]):
-        col_max_lens.append(max(map(len, print_mat[:, x].flatten().tolist())))
+        col_max_lens.append(max(list(map(len, print_mat[:, x].flatten().tolist()))))
 
     # Construct printed rows based on column max width
     p_func("Confusion Matrix (Counts)")

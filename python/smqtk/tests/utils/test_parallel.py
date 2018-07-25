@@ -1,7 +1,8 @@
+from __future__ import division, print_function
 import random
 import unittest
 
-from six.moves import range
+from six.moves import map, range
 
 from smqtk.utils.parallel import parallel_map
 
@@ -17,7 +18,7 @@ class TestParallelMap (unittest.TestCase):
         cls.test_func = ord
         # Since this parallel function is intended to perform similar to the
         # built-in map function.
-        cls.expected = map(cls.test_func, cls.test_string)
+        cls.expected = list(map(cls.test_func, cls.test_string))
 
     def test_simple_ordered_threaded(self):
         # Make sure results are still in order as requested
@@ -121,7 +122,7 @@ class TestParallelMap (unittest.TestCase):
                           use_multiprocessing=True,
                           cores=2)
 
-        expected = map(ord, self.test_string)
+        expected = list(map(ord, self.test_string))
         self.assertEqual(
             list(g4),
             expected
@@ -150,7 +151,7 @@ class TestParallelMap (unittest.TestCase):
                           cores=2,
                           name='g4')
 
-        expected = map(ord, self.test_string)
+        expected = list(map(ord, self.test_string))
         self.assertEqual(
             list(g4),
             expected

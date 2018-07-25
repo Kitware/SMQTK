@@ -5,6 +5,9 @@ import sys
 import threading
 import time
 
+from six.moves import queue
+from six import next
+
 import numpy
 from six.moves import queue
 
@@ -48,7 +51,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         If this is not supplied, we create a new matrix to insert vectors into
         based on the number of input descriptor elements. This mode required
         that the input elements are in a container that defines __len__
-    :type mat: None | numpy.core.multiarray.ndarray
+    :type mat: None | numpy.ndarray
 
     :param procs: Optional specification of the number of threads/cores to use.
         If None, we will attempt to use all available threads/cores.
@@ -75,14 +78,14 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
     :type thread_q_put_interval: float
 
     :return: Created or input matrix.
-    :rtype: numpy.core.multiarray.ndarray
+    :rtype: numpy.ndarray
 
     """
     log = logging.getLogger(__name__)
 
     # Create/check matrix
     if mat is None:
-        sample = descr_elements.__iter__().next()
+        sample = next(iter(descr_elements))
         sample_v = sample.vector()
         shp = (len(descr_elements),
                sample_v.size)
@@ -204,13 +207,13 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self.q = q
         self.descr_elements = descr_elements
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         try:
@@ -305,13 +308,13 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         self.out_q = out_q
         self.q_put_interval = q_put_interval
 
-        self._stop = threading.Event()
+        self._stop_event = threading.Event()
 
     def stop(self):
-        self._stop.set()
+        self._stop_event.set()
 
     def stopped(self):
-        return self._stop.isSet()
+        return self._stop_event.isSet()
 
     def run(self):
         try:

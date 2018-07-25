@@ -89,7 +89,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.get = mock.MagicMock(side_effect=lambda v: v)
 
         # Make sure keys now returns expected list.
-        self.assertEqual(s.keys(), expected_keys_values)
+        self.assertEqual(set(s.keys()), expected_keys_values)
 
         # Get initial iterator. ``keys`` should have only been called once so
         # far, and ``get`` method should not have been called yet.

@@ -58,7 +58,7 @@ def url_join(url, *urls):
                 skip_slash_prefix = not tail
 
                 concat = protocol + tail
-                # print "Restarting:", concat
+                # print("Restarting:", concat)
 
             # Check for leading slash
             elif p.startswith(URL_SEP):
@@ -66,7 +66,7 @@ def url_join(url, *urls):
                 concat = URL_SEP + p
                 # Don't add separator on next if p was just a slash
                 skip_slash_prefix = not p
-                # print "Restarting:", concat
+                # print("Restarting:", concat)
 
             # Otherwise append
             else:
@@ -76,7 +76,7 @@ def url_join(url, *urls):
                     skip_slash_prefix = False
                 else:
                     concat += URL_SEP + p
-                # print "Appended:", p,  "->", concat
+                # print("Appended:", p,  "->", concat)
 
             first = False
 

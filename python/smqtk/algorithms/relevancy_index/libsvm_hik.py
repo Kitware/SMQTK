@@ -4,7 +4,7 @@ import os.path as osp
 
 import numpy
 import six
-from six.moves import range
+from six.moves import range, zip
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (

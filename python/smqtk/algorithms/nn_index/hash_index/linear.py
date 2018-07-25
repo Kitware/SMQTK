@@ -1,7 +1,9 @@
 import heapq
 import threading
 
-from six.moves import StringIO
+from six import BytesIO
+from six.moves import map
+
 import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
@@ -112,7 +114,7 @@ class LinearHashIndex (HashIndex):
         """
         with self._model_lock:
             if self.cache_element and not self.cache_element.is_empty():
-                buff = StringIO(self.cache_element.get_bytes())
+                buff = BytesIO(self.cache_element.get_bytes())
                 self.index = set(numpy.load(buff))
 
     def save_cache(self):
@@ -124,7 +126,7 @@ class LinearHashIndex (HashIndex):
                 if self.cache_element.is_read_only():
                     raise ValueError("Cache element (%s) is read-only."
                                      % self.cache_element)
-                buff = StringIO()
+                buff = BytesIO()
                 # noinspection PyTypeChecker
                 numpy.save(buff, tuple(self.index))
                 self.cache_element.set_bytes(buff.getvalue())

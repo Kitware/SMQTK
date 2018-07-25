@@ -1,7 +1,8 @@
-import pickle
 import unittest
 
 import mock
+import six
+from six.moves import cPickle as pickle
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -50,7 +51,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
     def test_from_config_with_cache_element(self):
         # Pickled dictionary with a known entry
         expected_table = {'some_key': 'some_value'}
-        empty_dict_pickle = "(dp1\nS'some_key'\np2\nS'some_value'\np3\ns."
+        empty_dict_pickle = six.b("(dp1\nS'some_key'\np2\nS'some_value'\np3\ns.")
 
         # Test construction with memory data element.
         config = {'cache_element': {
@@ -146,10 +147,10 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         set.
         """
         s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement('someBytes', 'text/plain', False)
+        s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain', False)
         expected_config = {'cache_element': {
             "DataMemoryElement": {
-                'bytes': 'someBytes',
+                'bytes': six.b('someBytes'),
                 'content_type': 'text/plain',
                 'readonly': False,
             },
@@ -313,7 +314,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         s = MemoryKeyValueStore(c)
         self.assertEqual(s._table, {})
-        self.assertEqual(c.get_bytes(), "")
+        self.assertEqual(c.get_bytes(), six.b(""))
 
         s.add_many(d)
         self.assertEqual(s._table, d)

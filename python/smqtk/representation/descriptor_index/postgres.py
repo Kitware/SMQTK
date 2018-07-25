@@ -5,12 +5,13 @@ References:
         answer from "a_horse_with_no_name"
 
 """
-import itertools
 import logging
 import multiprocessing
 
+from six.moves import zip
+
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except ImportError:
     import pickle
 
@@ -452,7 +453,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                            self.multiquery_batch_size,
                                            yield_result_rows=True)
         i = 0
-        for r, expected_uuid in itertools.izip(g, uuid_order):
+        for r, expected_uuid in zip(g, uuid_order):
             d = pickle.loads(str(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)

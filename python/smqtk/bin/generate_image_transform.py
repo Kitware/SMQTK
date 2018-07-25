@@ -56,11 +56,15 @@ import os
 import PIL.Image
 import PIL.ImageEnhance
 import numpy
-from six.moves import range
 
 import smqtk.utils.bin_utils
 import smqtk.utils.file_utils
 import smqtk.utils.parallel
+
+from six.moves import range, zip
+
+
+__author__ = "paul.tunison@kitware.com"
 
 
 def image_crop_center_levels(image, n_crops):
@@ -94,7 +98,7 @@ def image_crop_center_levels(image, n_crops):
     # Outside edges of generated points in the original image size
     for i in range(1, n_crops + 1):
         # crop wants: [xmin, ymin, xmax, ymax]
-        t = zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]])
+        t = list(zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]]))
         yield i, image.crop(t[0] + t[1])
 
 

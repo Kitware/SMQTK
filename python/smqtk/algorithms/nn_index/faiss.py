@@ -3,7 +3,6 @@ from __future__ import print_function, unicode_literals
 
 import collections
 from copy import deepcopy
-import itertools
 import json
 import multiprocessing
 import numpy as np
@@ -447,14 +446,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
             self._uid2idx_kvs.clear()
             self._uid2idx_kvs.add_many(
-                dict(itertools.izip(new_uuids, idx_ids))
+                dict(zip(new_uuids, idx_ids))
             )
             assert len(self._uid2idx_kvs) == n, \
                 "New uid2idx map size doesn't match data size."
 
             self._idx2uid_kvs.clear()
             self._idx2uid_kvs.add_many(
-                dict(itertools.izip(idx_ids, new_uuids))
+                dict(zip(idx_ids, new_uuids))
             )
             assert len(self._idx2uid_kvs) == n, \
                 "New idx2uid map size doesn't match data size."
@@ -523,13 +522,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 "New descriptor set size doesn't match old + data size"
 
             self._uid2idx_kvs.add_many(
-                dict(itertools.izip(new_uuids, new_ids))
+                dict(zip(new_uuids, new_ids))
             )
             assert len(self._uid2idx_kvs) == old_ntotal + n, \
                 "New uid2idx kvs size doesn't match old + new data size."
 
             self._idx2uid_kvs.add_many(
-                dict(itertools.izip(new_ids, new_uuids))
+                dict(zip(new_ids, new_uuids))
             )
             assert len(self._idx2uid_kvs) == old_ntotal + n, \
                 "New idx2uid kvs size doesn't match old + new data size."

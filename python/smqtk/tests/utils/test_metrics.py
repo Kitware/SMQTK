@@ -1,9 +1,11 @@
+from __future__ import division, print_function
 import random
 import unittest
 
 import numpy as np
 from six.moves import range
 
+from six.moves import range
 from smqtk.utils import metrics as df
 
 

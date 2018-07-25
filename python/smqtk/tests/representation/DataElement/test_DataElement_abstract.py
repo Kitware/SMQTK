@@ -7,14 +7,20 @@ import mock
 import os.path as osp
 import tempfile
 import unittest
+import six
 
 import smqtk.exceptions
 import smqtk.representation.data_element
 
+if six.PY2:
+    builtin_open = '__builtin__.open'
+else:
+    builtin_open = 'builtins.open'
+
 
 # because this has a stable mimetype conversion
 EXPECTED_CONTENT_TYPE = "image/png"
-EXPECTED_BYTES = "hello world"
+EXPECTED_BYTES = six.b("hello world")
 EXPECTED_MD5 = hashlib.md5(EXPECTED_BYTES).hexdigest()
 EXPECTED_SHA1 = hashlib.sha1(EXPECTED_BYTES).hexdigest()
 EXPECTED_SHA512 = hashlib.sha512(EXPECTED_BYTES).hexdigest()
@@ -141,7 +147,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_writeTemp_noExisting_noDir(self,
                                         mock_open, _mock_os_open,
                                         _mock_os_close, _mock_fcntl, mock_scd):
@@ -156,7 +162,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_writeTemp_noExisting_givenDir(self,
                                            mock_open, _mock_os_open,
                                            _mock_os_close, _mock_fcntl,
@@ -176,7 +182,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_writeTemp_hasExisting_noDir(self,
                                          mock_open, _mock_os_open,
                                          _mock_os_close, _mock_fcntl, mock_scd,
@@ -215,7 +221,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_writeTemp_hasExisting_givenNewDir(self, mock_open, _mock_os_open,
                                                _mock_os_close, _mock_fcntl,
                                                mock_scd):
@@ -240,7 +246,7 @@ class TestDataElementAbstract (unittest.TestCase):
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
-    @mock.patch('__builtin__.open')
+    @mock.patch(builtin_open)
     def test_writeTemp_hasExisting_givenExistingDir(self, mock_open,
                                                     _mock_os_open,
                                                     _mock_os_close,
@@ -328,12 +334,14 @@ class TestDataElementAbstract (unittest.TestCase):
         de = DummyDataElement()
         de.TEST_BYTES = EXPECTED_BYTES
         br = de.to_buffered_reader()
-        self.assertEqual(br.readlines(), ['hello world'])
+        self.assertEqual(br.readlines(), [six.b('hello world')])
 
-        de.TEST_BYTES = 'some content\nwith new \nlines'
+        de.TEST_BYTES = six.b('some content\nwith new \nlines')
         br = de.to_buffered_reader()
         self.assertEqual(br.readlines(),
-                         ['some content\n', 'with new \n', 'lines'])
+                         [six.b('some content\n'),
+                          six.b('with new \n'),
+                          six.b('lines')])
 
     def test_is_read_only(self):
         de = DummyDataElement()
@@ -350,7 +358,7 @@ class TestDataElementAbstract (unittest.TestCase):
         de.TEST_WRITABLE = False
         self.assertRaises(
             smqtk.exceptions.ReadOnlyError,
-            de.set_bytes, 'test bytes'
+            de.set_bytes, six.b('test bytes')
         )
 
         # Caches shouldn't have been invalidated due to error
@@ -361,7 +369,7 @@ class TestDataElementAbstract (unittest.TestCase):
         # trigger UUID cache at least once
         self.assertEqual(de.uuid(), EXPECTED_UUID)
 
-        new_expected_bytes = 'some new byte content'
+        new_expected_bytes = six.b('some new byte content')
         new_expected_uuid = hashlib.sha1(new_expected_bytes).hexdigest()
 
         de.TEST_WRITABLE = True

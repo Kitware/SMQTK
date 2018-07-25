@@ -88,6 +88,14 @@ class DataFileElement (DataElement):
             ``filepath`` extension using the python ``mimetype`` module.
         :type explicit_mimetype: None | str
 
+
+        Example
+        -------
+        >>> from smqtk.representation.data_element import file_element
+        >>> self = DataFileElement(file_element.__file__)
+        >>> assert isinstance(self.get_bytes(), six.binary_type)
+        >>> self = DataFileElement('does-not-exist')
+        >>> assert isinstance(self.get_bytes(), six.binary_type)
         """
         super(DataFileElement, self).__init__()
 
@@ -148,7 +156,7 @@ class DataFileElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return (not self.is_empty() and open(self._filepath, 'rb').read()) or ""
+        return (not self.is_empty() and open(self._filepath, 'rb').read()) or six.b("")
 
     def writable(self):
         """

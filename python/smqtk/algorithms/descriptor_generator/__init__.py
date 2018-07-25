@@ -44,7 +44,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
             ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
-        :param overwrite: Whether or not to force re-computation of a descriptor
+        :param ot staverwrite: Whether or not to force re-computation of a descriptor
             vector for the given data even when there exists a precomputed
             vector in the generated DescriptorElement as generated from the
             provided factory. This will overwrite the persistently stored vector

@@ -153,7 +153,7 @@ class ReadWriteLock (object):
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
-        # print "[DEBUG] acquireRead ID:", me
+        # print("[DEBUG] acquireRead ID:", me)
         if timeout is not None:
             expire_time = time.time() + timeout
         with self.__cond:
@@ -214,7 +214,7 @@ class ReadWriteLock (object):
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
-        # print "[DEBUG] acquireWrite ID:", me
+        # print("[DEBUG] acquireWrite ID:", me)
         if timeout is not None:
             expire_time = time.time() + timeout
         with self.__cond:
@@ -276,7 +276,7 @@ class ReadWriteLock (object):
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
-        # print "[DEBUG] releaseRead ID:", me
+        # print("[DEBUG] releaseRead ID:", me)
         with self.__cond:
             # Releasing an inner read lock within an outer write lock. Must have
             # at least one reader level available, else this is an unbound
@@ -332,7 +332,7 @@ class ReadWriteLock (object):
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
-        # print "[DEBUG] releaseWrite ID:", me
+        # print("[DEBUG] releaseWrite ID:", me)
         with self.__cond:
             # Obviously, only decrement when we own the write lock
             if self.__writer == me:

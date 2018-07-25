@@ -123,7 +123,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
             # self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
             return flask.render_template("index.html",
-                                         instance_keys=self.instances.keys(),
+                                         instance_keys=list(self.instances.keys()),
                                          debug=self.debug)
 
         @self.route('/', methods=['POST'])
@@ -170,7 +170,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
                 self._log.debug("IQR tab config:\n%s", config)
                 # Strip any keys that are not expected by IqrSearch
                 # constructor
-                expected_keys = IqrSearch.get_default_config().keys()
+                expected_keys = list(IqrSearch.get_default_config().keys())
                 for k in set(config).difference(expected_keys):
                     self._log.debug("Removing unexpected key: %s", k)
                     del config[k]

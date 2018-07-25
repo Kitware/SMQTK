@@ -1,4 +1,5 @@
 from __future__ import print_function
+import six
 
 import mock
 import os
@@ -183,12 +184,12 @@ class TestDataFileElement (unittest.TestCase):
         e = DataFileElement.from_uri(test_file_path)
         self.assertIsInstance(e, DataFileElement)
         self.assertEqual(e._filepath, test_file_path)
-        self.assertEqual(e.get_bytes(), '')
+        self.assertEqual(e.get_bytes(), six.b(''))
 
         e = DataFileElement.from_uri('file://' + test_file_path)
         self.assertIsInstance(e, DataFileElement)
         self.assertEqual(e._filepath, test_file_path)
-        self.assertEqual(e.get_bytes(), '')
+        self.assertEqual(e.get_bytes(), six.b(''))
 
     # noinspection PyUnresolvedReferences
     def test_from_uri_plugin_level(self):
@@ -199,12 +200,12 @@ class TestDataFileElement (unittest.TestCase):
         e = from_uri(test_file_path)
         self.assertIsInstance(e, DataFileElement)
         self.assertEqual(e._filepath, test_file_path)
-        self.assertEqual(e.get_bytes(), '')
+        self.assertEqual(e.get_bytes(), six.b(''))
 
         e = from_uri('file://' + test_file_path)
         self.assertIsInstance(e, DataFileElement)
         self.assertEqual(e._filepath, test_file_path)
-        self.assertEqual(e.get_bytes(), '')
+        self.assertEqual(e.get_bytes(), six.b(''))
 
     def test_is_empty_file_not_exists(self):
         e = DataFileElement('/no/exists')
@@ -222,16 +223,16 @@ class TestDataFileElement (unittest.TestCase):
         e = DataFileElement("/not/a/valid/path.txt", readonly=True)
         # We currently expect, in the case where the filepath doesn't exist, to
         # get the same bytes as if the file existed and were empty.
-        self.assertEqual(e.get_bytes(), "")
+        self.assertEqual(e.get_bytes(), six.b(""))
         # read-only status should have no effect.
         e = DataFileElement("/not/a/valid/path.txt", readonly=True)
-        self.assertEqual(e.get_bytes(), "")
+        self.assertEqual(e.get_bytes(), six.b(""))
 
     def test_get_bytes(self):
         # Test with a known real file.
         test_file_path = os.path.join(TEST_DATA_DIR, 'text_file')
         e = DataFileElement(test_file_path)
-        self.assertEqual(e.get_bytes(), "Some text content.\n")
+        self.assertEqual(e.get_bytes(), six.b("Some text content.\n"))
 
     def test_writable_readonly_false(self):
         e = DataFileElement('foo')
@@ -255,7 +256,7 @@ class TestDataFileElement (unittest.TestCase):
     def test_set_bytes_writable(self, m_sfw):
         # Using a relative filepath
         test_path = 'foo'
-        test_bytes = 'test string of bytes'
+        test_bytes = six.b('test string of bytes')
 
         e = DataFileElement(test_path)
         e.set_bytes(test_bytes)
@@ -268,5 +269,5 @@ class TestDataFileElement (unittest.TestCase):
         self.assertRaises(
             ReadOnlyError,
             e.set_bytes,
-            'some bytes'
+            six.b('some bytes')
         )

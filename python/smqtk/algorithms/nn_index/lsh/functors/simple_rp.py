@@ -1,3 +1,4 @@
+from __future__ import division
 import logging
 
 import numpy as np
@@ -13,7 +14,7 @@ class SimpleRPFunctor (LshFunctor):
     LshFunctors and NNIndex plugins. It is not meant to be used in
     production, as it is unlikely to produce a quality index.
     """
-    
+
     @classmethod
     def is_usable(cls):
         return True

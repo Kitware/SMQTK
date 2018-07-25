@@ -25,7 +25,7 @@ set(SMQTK_VERSION_PATCH ${CMAKE_MATCH_5})
 find_package(PythonInterp REQUIRED)
 
 execute_process(
-  COMMAND "${PYTHON_EXECUTABLE}" -c "import distutils.sysconfig; print distutils.sysconfig.get_python_lib(prefix='')"
+  COMMAND "${PYTHON_EXECUTABLE}" -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(prefix=''))"
   RESULT_VARIABLE proc_success
   OUTPUT_VARIABLE python_site_packages
   )

@@ -10,18 +10,13 @@ from copy import deepcopy
 import logging
 
 import numpy
+from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation import get_data_element_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import merge_dict, plugin
 from smqtk.utils.bin_utils import report_progress
-
-try:
-    # noinspection PyCompatibility
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
 
 
 class ItqFunctor (LshFunctor):
@@ -218,9 +213,9 @@ class ItqFunctor (LshFunctor):
                 and self.rotation_cache_elem
                 and not self.rotation_cache_elem.is_empty()):
             self.mean_vec = \
-                numpy.load(StringIO(self.mean_vec_cache_elem.get_bytes()))
+                numpy.load(BytesIO(self.mean_vec_cache_elem.get_bytes()))
             self.rotation = \
-                numpy.load(StringIO(self.rotation_cache_elem.get_bytes()))
+                numpy.load(BytesIO(self.rotation_cache_elem.get_bytes()))
 
     def save_model(self):
         # Check that we have cache elements set, they are writable and that we
@@ -229,12 +224,12 @@ class ItqFunctor (LshFunctor):
                 self.mean_vec_cache_elem.writable() and
                 self.rotation_cache_elem.writable() and
                 self.mean_vec is not None and self.rotation is not None):
-            b = StringIO()
+            b = BytesIO()
             # noinspection PyTypeChecker
             numpy.save(b, self.mean_vec)
             self.mean_vec_cache_elem.set_bytes(b.getvalue())
 
-            b = StringIO()
+            b = BytesIO()
             # noinspection PyTypeChecker
             numpy.save(b, self.rotation)
             self.rotation_cache_elem.set_bytes(b.getvalue())

@@ -22,8 +22,9 @@ libSVM source tree. For example:
 """
 
 import csv
-import itertools
 import logging
+import six
+from six.moves import zip
 
 import six
 
@@ -83,13 +84,11 @@ def main():
     with open(output_filepath, 'w') as ofile:
         label2int = {}
         next_int = 1
-        uuids, labels = zip(*input_uuid_labels)
+        uuids, labels = list(zip(*input_uuid_labels))
 
         log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
-                    itertools.izip(labels,
-                                   descriptor_index.get_many_descriptors(uuids))
-                ):
+                    zip(labels, descriptor_index.get_many_descriptors(uuids))):
             log.debug("%d %s", i, d.uuid())
             if l not in label2int:
                 label2int[l] = next_int

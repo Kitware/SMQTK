@@ -1,16 +1,17 @@
 import abc
 import inspect
 import types
+import six
 
 from smqtk.utils import merge_dict
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Configurable (object):
     """
     Interface for objects that should be configurable via a configuration
     dictionary consisting of JSON types.
     """
-    __metaclass__ = abc.ABCMeta
 
     @classmethod
     def get_default_config(cls):
@@ -31,8 +32,17 @@ class Configurable (object):
         :return: Default configuration dictionary for the class.
         :rtype: dict
 
+        >>> class SimpleConfig(Configurable):
+        ...     def __init__(self, a=1, b='foo'):
+        ...         self.a = a
+        ...         self.b = b
+        ...     def get_config(self):
+        ...         return {'a': self.a, 'b': self.b}
+        >>> self = SimpleConfig()
+        >>> config = self.get_default_config()
+        >>> assert config == {'a': 1, 'b': 'foo'}
         """
-        if isinstance(cls.__init__, types.MethodType):
+        if isinstance(cls.__init__, (types.MethodType, types.FunctionType)):
             argspec = inspect.getargspec(cls.__init__)
 
             # Ignores potential *args or **kwargs present

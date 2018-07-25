@@ -4,7 +4,7 @@ import sys
 import tempfile
 import unittest
 
-from six.moves import cStringIO as StringIO
+from six.moves import StringIO
 
 from smqtk.bin.check_images import main as check_images_main
 from smqtk.representation.data_element.file_element import DataFileElement

@@ -1,5 +1,6 @@
-import numpy
 import unittest
+
+import numpy
 
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory

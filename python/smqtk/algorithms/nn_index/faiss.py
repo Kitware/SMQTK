@@ -449,6 +449,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == n, \
                 "New descriptor set size doesn't match data size"
+            idx_ids = idx_ids.astype(object)
 
             self._uid2idx_kvs.clear()
             self._uid2idx_kvs.add_many(
@@ -526,6 +527,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == old_ntotal + n, \
                 "New descriptor set size doesn't match old + data size"
+
+            new_ids = new_ids.astype(object)
 
             self._uid2idx_kvs.add_many(
                 dict(zip(new_uuids, new_ids))
@@ -640,7 +643,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         with self._model_lock:
             s_dists, s_ids = self._faiss_index.search(q, n)
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
+            s_ids = s_ids.astype(object)
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids if s_id >= 0]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

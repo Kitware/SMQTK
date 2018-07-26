@@ -647,7 +647,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             )
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
             s_ids = s_ids.astype(object)
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids if s_id >= 0]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

@@ -641,10 +641,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:
-            s_dists, s_ids = self._faiss_index.search(q, n)
+            s_dists, s_ids = self._faiss_index.search(
+                q, min(n, self._faiss_index.ntotal)
+            )
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
             s_ids = s_ids.astype(object)
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids if s_id >= 0]
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

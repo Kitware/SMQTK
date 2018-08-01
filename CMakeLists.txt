@@ -84,7 +84,7 @@ install(FILES "${SMQTK_BINARY_DIR}/setup_env.install.sh"
 # This is probably not the correct way to be doing this, but when using CPack,
 # make sure the CMAKE_INSTALL_PREFIX is clean before constructing packages. If
 # it is not, you may drag in other content not intended for installation.
-# TODO: Have to do something about the sh'bang modification that python does
+# TODO: Have to do something about the shebang modification that python does
 #       when we start caring about CPack generation as local python executable
 #       probably won't match what a user has when installing.
 set(SMQTK_PIP_INSTALL_FLAGS "" CACHE STRING "Additional flags to pass to SMQTK pip installation command.")

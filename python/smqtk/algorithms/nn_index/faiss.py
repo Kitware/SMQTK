@@ -524,8 +524,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.info("FAISS index has been updated with %d"
                            " new vectors", n)
 
-            self._save_faiss_model()
-
             self._log.debug("Adding new descriptor elements")
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == old_ntotal + n, \
@@ -544,6 +542,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             )
             assert len(self._idx2uid_kvs) == old_ntotal + n, \
                 "New idx2uid kvs size doesn't match old + new data size."
+
+            self._save_faiss_model()
 
     def _remove_from_index(self, uids):
         """

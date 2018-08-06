@@ -346,13 +346,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
                 # Check that descriptor-set and kvstore instances match up in
                 # size.
-                assert len(self._descriptor_set) == len(self._uid2idx_kvs) == \
-                    len(self._idx2uid_kvs) == self._faiss_index.ntotal, \
-                    "Not all of our storage elements agree on size: " \
-                    "len(dset, uid2idx, idx2uid, faiss_idx) = " \
-                    "(%d, %d, %d, %d)" \
-                    % (len(self._descriptor_set), len(self._uid2idx_kvs),
-                       len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                if not (
+                        len(self._descriptor_set) == len(self._uid2idx_kvs) ==
+                        len(self._idx2uid_kvs) == self._faiss_index.ntotal):
+                    self._log.warn(
+                        "Not all of our storage elements agree on size: "
+                        "len(dset, uid2idx, idx2uid, faiss_idx) = "
+                        "(%d, %d, %d, %d)"
+                        % (len(self._descriptor_set), len(self._uid2idx_kvs),
+                           len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                    )
 
     def _save_faiss_model(self):
         """

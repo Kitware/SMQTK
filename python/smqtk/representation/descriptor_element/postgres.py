@@ -3,7 +3,8 @@ import multiprocessing
 import numpy
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils.postgres import norm_psql_cmd_string
+from smqtk.utils.postgres \
+    import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
 try:
@@ -154,6 +155,20 @@ class PostgresDescriptorElement (DescriptorElement):
         self.db_user = db_user
         self.db_pass = db_pass
 
+        self.psql_helper = PsqlConnectionHelper(db_name, db_host, db_port,
+                                                db_user, db_pass,
+                                                1, # No batching in this class
+                                                PSQL_TABLE_CREATE_RLOCK)
+
+        if create_table:
+            self.psql_helper.set_table_upsert_sql(
+                self.UPSERT_TABLE_TMPL.format(
+                    table_name=self.table_name,
+                    uuid_col=self.uuid_col,
+                    binary_col=self.binary_col,
+                )
+            )
+
     def get_config(self):
         return {
             "table_name": self.table_name,
@@ -168,37 +183,6 @@ class PostgresDescriptorElement (DescriptorElement):
             "db_user": self.db_user,
             "db_pass": self.db_pass,
         }
-
-    def _get_psql_connection(self):
-        """
-        :return: A new connection to the configured database
-        :rtype: psycopg2._psycopg.connection
-        """
-        return psycopg2.connect(
-            database=self.db_name,
-            user=self.db_user,
-            password=self.db_pass,
-            host=self.db_host,
-            port=self.db_port,
-        )
-
-    def _ensure_table(self, cursor):
-        """
-        Execute on psql connector cursor the table create-of-not-exists query.
-
-        :param cursor: Connection active cursor.
-
-        """
-        if self.create_table:
-            q_table_upsert = self.UPSERT_TABLE_TMPL.format(**dict(
-                table_name=self.table_name,
-                type_col=self.type_col,
-                uuid_col=self.uuid_col,
-                binary_col=self.binary_col,
-            ))
-            with PSQL_TABLE_CREATE_RLOCK:
-                cursor.execute(q_table_upsert)
-                cursor.connection.commit()
 
     def has_vector(self):
         """
@@ -232,22 +216,11 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
-
-        try:
-            self._ensure_table(cur)
+        def exec_hook(cur):
             cur.execute(q_select, q_select_values)
-            r = cur.fetchone()
-            # For server cleaning (e.g. pgbouncer)
-            conn.commit()
-            return bool(r)
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+
+        # Should either yield one or zero rows
+        return bool(list(self.psql_helper.single_execute(exec_hook, yield_result_rows=True)))
 
     def vector(self):
         """
@@ -269,27 +242,16 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
-        try:
-            self._ensure_table(cur)
+        def exec_hook(cur):
             cur.execute(q_select, q_select_values)
 
-            r = cur.fetchone()
-            conn.commit()
-
-            if not r:
-                return None
-            else:
-                b = r[0]
-                v = numpy.frombuffer(b, self.ARRAY_DTYPE)
-                return v
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+        r = list(self.psql_helper.single_execute(exec_hook, yield_result_rows=True))
+        if len(r) == 0:
+            return None
+        else:
+            b = r[0][0]
+            v = numpy.frombuffer(b, self.ARRAY_DTYPE)
+            return v
 
     def set_vector(self, new_vec):
         """
@@ -331,15 +293,7 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid()),
         }
 
-        conn = self._get_psql_connection()
-        cur = conn.cursor()
-        try:
-            self._ensure_table(cur)
+        def exec_hook(cur):
             cur.execute(q_upsert, q_upsert_values)
-            conn.commit()
-        except:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-            conn.close()
+
+        self.psql_helper.single_execute(exec_hook, yield_result_rows=False)

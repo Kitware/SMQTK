@@ -19,9 +19,10 @@ Patch Release
 1. Create a new branch off of the ``release`` branch named something like
    ``release-patch-{NEW_VERSION}``.
     - Increment patch value in ``VERSION`` file.
-    - Rename the ``docs/release_notes/pending_patch.md`` file to
-      ``docs/release_notes/v{VERSION}.md``, matching the value in the
+    - Rename the ``docs/release_notes/pending_patch.rst`` file to
+      ``docs/release_notes/v{VERSION}.rst``, matching the value in the
       ``VERSION`` file.
+    - Add new release notes RST file reference to ``docs/release_notes.rst``.
 2. Merge version bump branch into ``release`` and ``master`` branches.
 
 Major and Minor Releases
@@ -29,9 +30,10 @@ Major and Minor Releases
 1. Create a new branch off of the ``master`` branch named something like
    ``release-[major,minor]-{NEW_VERSION}``.
     - Increment patch value in ``VERSION`` file.
-    - Rename the ``docs/release_notes/pending_release.md`` file to
-      ``docs/release_notes/v{VERSION}.md``, matching the value in the
+    - Rename the ``docs/release_notes/pending_release.rst`` file to
+      ``docs/release_notes/v{VERSION}.rst``, matching the value in the
       ``VERSION`` file.
+    - Add new release notes RST file reference to ``docs/release_notes.rst``.
 2. Merge version bump branch into the ``master`` branch.
 3. Reset the release branch (--hard) to point to the new master.
 

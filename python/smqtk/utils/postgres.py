@@ -25,6 +25,60 @@ GLOBAL_CONNECTION_POOL_LOCK = RLock()
 _connection_pools = dict()
 
 
+def get_connection_pool(db_name, db_host, db_port, db_user, db_pass):
+    """
+    Get the connection pool instance for a specific address specification.
+
+    :param db_name: The name of the database to connect to.
+    :type db_name: str
+
+    :param db_host: Host address of the Postgres server. If None, we
+        assume the server is on the local machine and use the UNIX socket.
+        This might be a required field on Windows machines (not tested yet).
+    :type db_host: str | None
+
+    :param db_port: Port the Postgres server is exposed on. If None, we
+        assume the default port (5423).
+    :type db_port: int | None
+
+    :param db_user: Postgres user to connect as. If None, postgres
+        defaults to using the current accessing user account name on the
+        operating system.
+    :type db_user: str | None
+
+    :param db_pass: Password for the user we're connecting as. This may be
+        None if no password is to be used.
+    :type db_pass: str | None
+
+    :return: New or existing connection pool instance for the given address
+        specification.
+    :rtype: psycopg2.pool.ThreadedConnectionPool
+    """
+    key_tuple = (
+        db_name,
+        db_host,
+        db_port,
+        db_user,
+    )
+    with GLOBAL_CONNECTION_POOL_LOCK:
+        try:
+            cp = _connection_pools[key_tuple]
+        except KeyError:
+            _connection_pools[key_tuple] = cp = \
+                psycopg2.pool.ThreadedConnectionPool(
+                    # FIXME: The min and max connections have been
+                    # hard-coded to sensible values, but we should find a
+                    # way to make them configurable.
+                    0, 100,
+                    database=db_name,
+                    user=db_user,
+                    password=db_pass,
+                    host=db_host,
+                    port=db_port,
+                )
+    return cp
+
+
 def norm_psql_cmd_string(s):
     """
     Simple function to reduce down a multi-line string written for readability
@@ -97,28 +151,8 @@ class PsqlConnectionHelper (SmqtkObject):
         self.table_upsert_lock = table_upsert_lock
         self.table_upsert_sql = None
 
-        key_tuple = (
-            self.db_name,
-            self.db_user,
-            self.db_host,
-            self.db_port
-        )
-        with GLOBAL_CONNECTION_POOL_LOCK:
-            try:
-                self.connection_pool = _connection_pools[key_tuple]
-            except KeyError:
-                _connection_pools[key_tuple] = self.connection_pool = \
-                    psycopg2.pool.ThreadedConnectionPool(
-                        # FIXME: The min and max connections have been
-                        # hard-coded to sensible values, but we should find a
-                        # way to make them configurable.
-                        0, 100,
-                        database=self.db_name,
-                        user=self.db_user,
-                        password=self.db_pass,
-                        host=self.db_host,
-                        port=self.db_port,
-                    )
+        self.connection_pool = get_connection_pool(db_name, db_host, db_port,
+                                                   db_user, db_pass)
 
     def get_psql_connection(self):
         """

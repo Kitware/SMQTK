@@ -9,32 +9,25 @@ if PostgresKeyValueStore.is_usable():
 
     class TestPostgresKeyValueStore (unittest.TestCase):
 
-        @staticmethod
-        def _mock_psql_helper(s):
-            """
-            :type s: PostgresKeyValueStore
-            """
-            s._psql_helper.get_psql_connection = mock.MagicMock()
-
-        def test_remove_readonly(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove_readonly(self, m_gcp):
             """ Test that we cannot remove from readonly instance. """
             s = PostgresKeyValueStore(read_only=True)
-            self._mock_psql_helper(s)
 
             self.assertRaises(
                 ReadOnlyError,
                 s.remove, 0
             )
 
-        def test_remove_invalid_key(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove_invalid_key(self, m_gcp):
             """
             Simulate an missing key and that it should result in a thrown
             KeyError
             """
             s = PostgresKeyValueStore()
-            self._mock_psql_helper(s)
 
-            # Pretend this store contains nothing.|
+            # Pretend this store contains nothing.
             s.has = mock.Mock(return_value=False)
 
             self.assertRaises(
@@ -42,14 +35,14 @@ if PostgresKeyValueStore.is_usable():
                 s.remove, 0
             )
 
-        def test_remove(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove(self, m_gcp):
             """
             Simulate removing a value from the store. Checking executions on
             the mock cursor.
             """
             # Cut out create table calls.
             s = PostgresKeyValueStore(create_table=False)
-            self._mock_psql_helper(s)
             # Pretend key exists in index.
             s.has = mock.Mock(return_value=True)
 
@@ -58,7 +51,8 @@ if PostgresKeyValueStore.is_usable():
             mock_execute = s._psql_helper.get_psql_connection().cursor()\
                             .__enter__().execute
 
-            s.remove(0)
+            expected_key = 'test_remove_key'
+            s.remove(expected_key)
 
             # Call to ensure table and call to remove.
             mock_execute.assert_called_once()
@@ -66,26 +60,26 @@ if PostgresKeyValueStore.is_usable():
             self.assertRegexpMatches(mock_execute.call_args[0][0],
                                      "DELETE FROM .+ WHERE .+ LIKE .+")
             self.assertDictEqual(mock_execute.call_args[0][1],
-                                 {'key_like': 0})
+                                 {'key_like': expected_key})
 
-        def test_remove_many_readonly(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove_many_readonly(self, m_gcp):
             """
             Test failure to remove from a readonly instance.
             """
             s = PostgresKeyValueStore(read_only=True)
-            self._mock_psql_helper(s)
             self.assertRaises(
                 ReadOnlyError,
                 s.remove_many, [0, 1]
             )
 
-        def test_remove_many_invalid_keys(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove_many_invalid_keys(self, m_gcp):
             """
             Test failure when one or more provided keys are not present in
             store.
             """
             s = PostgresKeyValueStore(create_table=False)
-            self._mock_psql_helper(s)
 
             # Simulate the batch execute returning nothing.  This simulates no
             # rows being found by the first call to the method when checking
@@ -111,35 +105,41 @@ if PostgresKeyValueStore.is_usable():
                 s.remove_many, [0, 1]
             )
 
-        def test_remove_many(self):
+        @mock.patch('smqtk.utils.postgres.get_connection_pool')
+        def test_remove_many(self, m_gcp):
             """
             Test expected calls to psql cursor during normal operation.
             """
+            expected_key_1 = 'test_remove_many_key_1'
+            expected_key_2 = 'test_remove_many_key_2'
+
             # Skip table creation calls.
             s = PostgresKeyValueStore(create_table=False)
-            self._mock_psql_helper(s)
 
             # Cursor is created via a context (i.e. __enter__()
             #: :type: mock.Mock
             mock_cursor = s._psql_helper.get_psql_connection().cursor() \
                 .__enter__()
             # Make the cursor iterate keys in order to pass key check.
-            mock_cursor.__iter__.return_value = [[0], [1]]
+            mock_cursor.__iter__.return_value = [[expected_key_1],
+                                                 [expected_key_2]]
             #: :type: mock.Mock
             mock_execute = mock_cursor.execute
 
-            s.remove_many([0, 1])
+            s.remove_many([expected_key_1, expected_key_2])
 
             # Cursor should have been executed 2 times, 1 for batch key check
             # and 1 for batch deletion.  1 call for each since 2 < default
             # batch size of 1000.
-            self.assertEqual(mock_execute.call_count, 2)
+            self.assertEqual(2, mock_execute.call_count)
 
             expected_has_q = "SELECT key FROM data_set WHERE key LIKE " \
                              "%(key_like)s"
-            expected_has_vals = [{'key_like': 0}, {'key_like': 1}]
+            expected_has_vals = [{'key_like': expected_key_1},
+                                 {'key_like': expected_key_2}]
             mock_execute.assert_any_call(expected_has_q, expected_has_vals)
 
             expected_del_q = "DELETE FROM data_set WHERE key LIKE %(key_like)s"
-            expected_del_vals = [{'key_like': 0}, {'key_like': 1}]
+            expected_del_vals = [{'key_like': expected_key_1},
+                                 {'key_like': expected_key_2}]
             mock_execute.assert_any_call(expected_del_q, expected_del_vals)

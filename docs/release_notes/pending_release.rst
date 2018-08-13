@@ -2,12 +2,8 @@ SMQTK Pending Release Notes
 ===========================
 
 
-Updates / New Features since v0.8.1
------------------------------------
-
-General
-
-- Added support for Python 3.
+Updates / New Features
+----------------------
 
 Algorithms
 
@@ -252,8 +248,8 @@ Web
     - Added endpoints to update, remove from and query against the global
       nearest-neighbors index.
 
-Fixes since v0.8.1
-------------------
+Fixes
+-----
 
 Algorithms
 

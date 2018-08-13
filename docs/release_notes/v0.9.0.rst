@@ -1,0 +1,28 @@
+SMQTK v0.9.0 Release Notes
+==========================
+
+This minor release represents an update to supporting python 3 versions
+as well as adding connection pooling support to the PostgreSQL helper
+class.
+
+
+Updates / New Features since v0.8.1
+-----------------------------------
+
+General
+
+- Added support for Python 3.
+- Made some optimizations to the Postgres database access.
+
+Travis CI
+
+- Removed use of Miniconda installation since it wasn't being utilized in
+  special way.
+
+Fixes since v0.8.1
+------------------
+
+Tests
+
+- Fixed ambiguous ordering check in libsvm-hik implementation of
+  RelevancyIndex algorithm.

@@ -374,5 +374,5 @@ class PostgresDescriptorElement (DescriptorElement):
 
         # No return but need to force iteration.
         psql_helper = self._get_psql_helper()
-        list(psql_helper.single_execute(cb))
+        list(psql_helper.single_execute(cb, yield_result_rows=False))
         return self

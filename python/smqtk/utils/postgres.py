@@ -6,6 +6,7 @@ from smqtk.utils import SmqtkObject
 
 try:
     import psycopg2
+    import psycopg2.pool
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
@@ -13,6 +14,15 @@ except ImportError as ex:
 
 
 GLOBAL_PSQL_TABLE_CREATE_RLOCK = RLock()
+GLOBAL_CONNECTION_POOL_LOCK = RLock()
+
+
+# This dictionary contains a set of global connection pools. Each key is a
+# tuple of a database name, host, user, and port. The value is the connection
+# pool for that tuple. If we didn't do it this way, each PsqlConnectionHelper
+# would have its own connection pool, even if it had the same credentials,
+# which would defeat the purpose of pooling.
+_connection_pools = dict()
 
 
 def norm_psql_cmd_string(s):
@@ -87,18 +97,35 @@ class PsqlConnectionHelper (SmqtkObject):
         self.table_upsert_lock = table_upsert_lock
         self.table_upsert_sql = None
 
+        key_tuple = (
+            self.db_name,
+            self.db_user,
+            self.db_host,
+            self.db_port
+        )
+        with GLOBAL_CONNECTION_POOL_LOCK:
+            try:
+                self.connection_pool = _connection_pools[key_tuple]
+            except KeyError:
+                _connection_pools[key_tuple] = self.connection_pool = \
+                    psycopg2.pool.ThreadedConnectionPool(
+                        # FIXME: The min and max connections have been
+                        # hard-coded to sensible values, but we should find a
+                        # way to make them configurable.
+                        0, 100,
+                        database=self.db_name,
+                        user=self.db_user,
+                        password=self.db_pass,
+                        host=self.db_host,
+                        port=self.db_port,
+                    )
+
     def get_psql_connection(self):
         """
         :return: A new connection to the configured database
         :rtype: psycopg2._psycopg.connection
         """
-        return psycopg2.connect(
-            database=self.db_name,
-            user=self.db_user,
-            password=self.db_pass,
-            host=self.db_host,
-            port=self.db_port,
-        )
+        return self.connection_pool.getconn()
 
     @staticmethod
     def get_unique_cursor_name():
@@ -214,7 +241,7 @@ class PsqlConnectionHelper (SmqtkObject):
             raise
         finally:
             # conn.__exit__ doesn't close connection, just the transaction
-            conn.close()
+            self.connection_pool.putconn(conn)
 
     def batch_execute(self, iterable, cursor_callback, batch_size,
                       yield_result_rows=False, named=False):
@@ -354,5 +381,5 @@ class PsqlConnectionHelper (SmqtkObject):
         finally:
             # conn.__exit__ doesn't close connection, just the transaction
             if conn is not None:
-                conn.close()
+                self.connection_pool.putconn(conn)
             self._log.debug('-- done')

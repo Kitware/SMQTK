@@ -235,7 +235,8 @@ class ExposedAutoGenMeta (type):
 
 # Wrapper around numpy ndarray class, providing pass-through functions for class
 # functions as of numpy 1.8.0
-# TODO: Add``method_to_typeid`` for numpy.array functions that return copies of data
+# TODO: Add``method_to_typeid`` for numpy.array functions that return copies of
+#       data.
 @six.add_metaclass(ExposedAutoGenMeta)
 class ArrayProxy (BaseProxy2):
     _exposed_ = all_safe_methods(ndarray)
@@ -247,7 +248,8 @@ class ArrayProxy (BaseProxy2):
 
 # Wrapper around numpy matrix class, providing pass-through functions for class
 # functions as of numpy 1.8.0.
-# TODO: Add``method_to_typeid`` for numpy.matrix functions that return copies of data
+# TODO: Add``method_to_typeid`` for numpy.matrix functions that return copies of
+#       data.
 @six.add_metaclass(ExposedAutoGenMeta)
 class MatrixProxy (BaseProxy2):
     _exposed_ = all_safe_methods(matrix)
@@ -359,7 +361,7 @@ class TimedCacheProxy (BaseProxy2):
 class ProxyManager (SyncManager):
     """
     This class shouldn't be initialized directly, but instead initialized and
-    retrieved through the init and get functions below.
+    retrieved through the init* and get* functions below.
     """
     pass
 
@@ -371,9 +373,11 @@ ProxyManager.register('matrix',           np.matrix,        MatrixProxy)
 ProxyManager.register('ReadWriteLock',    ReadWriteLock,    ReadWriteLockProxy)
 ProxyManager.register('DistanceKernel',   DistanceKernel,   DistanceKernelProxy)
 ProxyManager.register('FeatureMemory',    FeatureMemory,    FeatureMemoryProxy)
-ProxyManager.register('FeatureMemoryMap', FeatureMemoryMap, FeatureMemoryMapProxy)
+ProxyManager.register('FeatureMemoryMap', FeatureMemoryMap,
+                      FeatureMemoryMapProxy)
 # Function based
-ProxyManager.register('get_common_fmm',   get_common_fmm,   FeatureMemoryMapProxy)
+ProxyManager.register('get_common_fmm',   get_common_fmm,
+                      FeatureMemoryMapProxy)
 ProxyManager.register('get_common_tc',    get_common_tc,    TimedCacheProxy)
 ProxyManager.register("symmetric_dk_from_file",
                       DistanceKernel.construct_symmetric_from_files,
@@ -387,23 +391,35 @@ ProxyManager.register("asymmetric_dk_from_file",
 #   proxy type that it returns CANNOT have been registered with
 #   ``create_method=True``. Reason: the server uses the registered typeid's
 #   callable to create the return object
-ProxyManager.register('rarray',           proxytype=ArrayProxy,           create_method=False)
-ProxyManager.register("rmatrix",          proxytype=MatrixProxy,          create_method=False)
+ProxyManager.register('rarray',
+                      proxytype=ArrayProxy,
+                      create_method=False)
+ProxyManager.register("rmatrix",
+                      proxytype=MatrixProxy,
+                      create_method=False)
 # Generated structure from read_lock() and write_lock() methods in ReadWriteLock
-ProxyManager.register("rRWLockWith",      proxytype=RWLockWithProxy,      create_method=False)
-ProxyManager.register("rReadWriteLock",   proxytype=ReadWriteLockProxy,   create_method=False)
-ProxyManager.register("rDistanceKernel",  proxytype=DistanceKernelProxy,  create_method=False)
-ProxyManager.register("rFeatureMemory",   proxytype=FeatureMemoryProxy,   create_method=False)
+ProxyManager.register("rRWLockWith",
+                      proxytype=RWLockWithProxy,
+                      create_method=False)
+ProxyManager.register("rReadWriteLock",
+                      proxytype=ReadWriteLockProxy,
+                      create_method=False)
+ProxyManager.register("rDistanceKernel",
+                      proxytype=DistanceKernelProxy,
+                      create_method=False)
+ProxyManager.register("rFeatureMemory",
+                      proxytype=FeatureMemoryProxy,
+                      create_method=False)
 
 
 # Map of ProxyManager instance keyed on the address
-#: :type: dict of (tuple or str or None, ProxyManager)
+#: :type: dict[tuple or str or None, ProxyManager]
 __mgr_cache__ = {}
 
 
 # noinspection PyPep8Naming
-def initFeatureManagerConnection(address=None, authkey=None,
-                                 serializer='pickle'):
+def initProxyManagerConnection(address=None, authkey=None,
+                               serializer='pickle'):
     """ Initialize ProxyManager connection
 
     :raises ValueError: The given address already maps to an initialized
@@ -420,6 +436,9 @@ def initFeatureManagerConnection(address=None, authkey=None,
         are getting the feature manager for this process tree (creating the
         connection).
     :type authkey: None or str
+
+    :param serializer: Transport serialization method.  This can be 'pickle' or
+        'xmlrpclib' (see ``multiprocessing.managers.listener_client``).
 
     """
     global __mgr_cache__
@@ -444,7 +463,7 @@ def initFeatureManagerConnection(address=None, authkey=None,
         raise
 
 
-def removeFeatureManagerConnection(address=None):
+def removeProxyManagerConnection(address=None):
     """ Shutdown and remove an initialized ProxyManager connection
     :raises KeyError: if the given address is not associated with to an active
         manager.
@@ -460,7 +479,7 @@ def removeFeatureManagerConnection(address=None):
 
 
 # noinspection PyPep8Naming
-def getFeatureManager(address=None):
+def getProxyManager(address=None):
     """
     Get the ProxyManager instance for the given address from the cache. If the
     address is None, returns the ProxyManager for the current process tree

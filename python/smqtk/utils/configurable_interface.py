@@ -51,7 +51,8 @@ class Configurable (object):
 
             if argspec.defaults:
                 num_defaults = len(argspec.defaults)
-                vals = ((None,) * (num_params - num_defaults) + argspec.defaults)
+                vals = ((None,) * (num_params - num_defaults)
+                        + argspec.defaults)
             else:
                 vals = (None,) * num_params
 

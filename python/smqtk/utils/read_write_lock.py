@@ -20,7 +20,6 @@ class ReaderUpdateException (Exception):
     pass
 
 
-# noinspection PyPep8Naming
 class DummyRWLock (object):
     """
     Dummy object that mimics the API of a ReadWrite lock but doesn't actually
@@ -39,28 +38,29 @@ class DummyRWLock (object):
     def releaseWrite(self, _id=None):
         pass
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
     def read_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyReadWithLock (object):
             def __enter__(_self):
                 pass
+
             def __exit__(_self, *args):
                 pass
         return DummyReadWithLock()
 
-    # noinspection PyMethodMayBeStatic
-    def write_lock(self, timneout=None, _id=None):
+    # noinspection PyMethodMayBeStatic,PyUnusedLocal
+    def write_lock(self, timeout=None, _id=None):
         # noinspection PyMethodParameters
         class DummyWriteWithLock (object):
             def __enter__(_self):
                 pass
+
             def __exit__(_self, *args):
                 pass
         return DummyWriteWithLock()
 
 
-# noinspection PyPep8Naming
 class ReadWriteLock (object):
     """ Reentrant Read-Write for multiprocessing
 
@@ -145,6 +145,11 @@ class ReadWriteLock (object):
         :param timeout: Optional timeout on the lock acquire time in seconds.
         :type timeout: int or None
 
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
+
         """
         me = _id or (multiprocessing.current_process().ident,
                      current_thread().ident)
@@ -200,6 +205,11 @@ class ReadWriteLock (object):
 
         :param timeout: Optional timeout on the lock acquire time in seconds.
         :type timeout: int or None
+
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
 
         """
         me = _id or (multiprocessing.current_process().ident,
@@ -356,6 +366,11 @@ class ReadWriteLock (object):
         :param timeout: Optional timeout on the lock acquire in seconds.
         :type timeout: int
 
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
+
         :return: New object instance with __enter__ and __exit__ methods
             defined.
         :rtype: object
@@ -391,6 +406,11 @@ class ReadWriteLock (object):
         :param timeout: Optional timeout on the lock acquire in seconds.
         :type timeout: int
 
+        :param _id: Optional identity token.  This should not be used unless you
+            know what you are doing.  This is usually the combination of thread
+            and process identifiers.
+        :type _id: (int, int)
+
         :return: New object instance with __enter__ and __exit__ methods
             defined.
         :rtype: object
@@ -409,3 +429,52 @@ class ReadWriteLock (object):
                 self.releaseWrite(me)
 
         return WriteWithLock()
+
+
+class ContextualReadWriteLock (object):
+    """
+    Case-3 reader-writer lock that does NOT allow read-lock carriers to upgrade
+    to a write lock.
+
+    Care should be made to not nest write-lock contexts under an existing read
+    or write-lock context, otherwise a dead-lock will occur.
+
+    Source algorithm:
+        https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem#Third_readers-writers_problem
+    """
+
+    def __init__(self):
+        self._service_lock = multiprocessing.Lock()
+        self._resource_lock = multiprocessing.Lock()
+        self._reader_count_lock = multiprocessing.Lock()
+        self._reader_count = 0
+
+    def read_context(self):
+        # noinspection PyMethodParameters
+        class ReadLockContext (object):
+            def __enter__(_self):
+                with self._service_lock:
+                    with self._reader_count_lock:
+                        if self._reader_count == 0:
+                            self._resource_lock.acquire()
+                        self._reader_count += 1
+
+            def __exit__(_self, exc_type, exc_val, exc_tb):
+                with self._reader_count_lock:
+                    self._reader_count -= 1
+                    if self._reader_count == 0:
+                        self._resource_lock.release()
+
+        return ReadLockContext()
+
+    def write_context(self):
+        # noinspection PyMethodParameters
+        class WriteLockContext (object):
+            def __enter__(_self):
+                with self._service_lock:
+                    self._resource_lock.acquire()
+
+            def __exit__(_self, exc_type, exc_val, exc_tb):
+                self._resource_lock.release()
+
+        return WriteLockContext()

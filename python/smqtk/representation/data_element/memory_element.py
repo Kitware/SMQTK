@@ -91,7 +91,12 @@ class DataMemoryElement (DataElement):
         """
         if b64_str is None:
             raise ValueError("Base 64 string should not be None")
-        return DataMemoryElement(base64.urlsafe_b64decode(b64_str), content_type)
+        # The decode function does not like taking unicode strings.
+        # Additionally, the encoding alphabet should not container any unicode
+        # symbols, so this aught to be safe.
+        b64_str = str(b64_str)
+        return DataMemoryElement(base64.urlsafe_b64decode(b64_str),
+                                 content_type)
 
     # noinspection PyShadowingBuiltins
     def __init__(self, bytes=None, content_type=None, readonly=False):
@@ -100,10 +105,10 @@ class DataMemoryElement (DataElement):
         type.
 
         :param bytes: Bytes to contain. May be None to represent no bytes.
-        :type bytes: None | bytes | str
+        :type bytes: None | bytes
 
         :param content_type: Content type of the bytes given.
-        :type content_type: None | str
+        :type content_type: None | basestring
 
         :param readonly: If this element should allow writing or not.
         :type readonly: bool

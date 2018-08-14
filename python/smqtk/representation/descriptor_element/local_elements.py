@@ -1,11 +1,11 @@
 import numpy
 import os.path as osp
 
+from six import BytesIO
+
 from smqtk.representation import DescriptorElement
 from smqtk.utils import file_utils
 from smqtk.utils.string_utils import partition_string
-
-from six import BytesIO
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -27,23 +27,24 @@ class DescriptorMemoryElement (DescriptorElement):
         self.__v = None
 
     def __getstate__(self):
+        state = super(DescriptorMemoryElement, self).__getstate__()
         # save vector as binary string
         b = BytesIO()
+        # noinspection PyTypeChecker
         numpy.save(b, self.vector())
-        return (self.type(), self.uuid(), b.getvalue())
+        state['v'] = b.getvalue()
+        return state
 
     def __setstate__(self, state):
-        self._type_label = state[0]
-        self._uuid = state[1]
-        b = BytesIO(state[2])
+        # Handle the previous state format:
+        if isinstance(state, tuple):
+            self._type_label = state[0]
+            self._uuid = state[1]
+            b = BytesIO(state[2])
+        else:  # dictionary
+            super(DescriptorMemoryElement, self).__setstate__(state)
+            b = BytesIO(state['v'])
         self.__v = numpy.load(b)
-
-    def _get_cache_index(self):
-        """
-        :return: Index tuple for this element in the global cache
-        :rtype: (str, collections.Hashable)
-        """
-        return self.type(), self.uuid()
 
     def get_config(self):
         """
@@ -94,12 +95,16 @@ class DescriptorMemoryElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray | tuple | list | None
 
+        :returns: Self.
+        :rtype: DescriptorMemoryElement
+
         """
         # Copy a non-None value given, otherwise stay None
         if new_vec is not None:
             self.__v = numpy.copy(new_vec)
         else:
             self.__v = None
+        return self
 
 
 class DescriptorFileElement (DescriptorElement):
@@ -149,22 +154,36 @@ class DescriptorFileElement (DescriptorElement):
 
         """
         super(DescriptorFileElement, self).__init__(type_str, uuid)
-
         self._save_dir = osp.abspath(osp.expanduser(save_dir))
-
-        # Saving components
         self._subdir_split = subdir_split
-        if subdir_split and int(subdir_split) > 1:
-            save_dir = osp.join(self._save_dir,
-                                *partition_string(str(uuid).replace('-', ''),
-                                                  int(subdir_split))[:-1]
-                                )
+
+        # Generate filepath from parameters
+        if self._subdir_split and int(self._subdir_split) > 1:
+            save_dir = osp.join(
+                self._save_dir,
+                *partition_string(str(self.uuid()).replace('-', ''),
+                                  int(self._subdir_split))[:-1]
+            )
         else:
             save_dir = self._save_dir
-
         self._vec_filepath = osp.join(save_dir,
-                                      "%s.%s.vector.npy" % (self._type_label,
-                                                            str(uuid)))
+                                      "%s.%s.vector.npy" % (self.type(),
+                                                            str(self.uuid())))
+
+    def __getstate__(self):
+        state = super(DescriptorFileElement, self).__getstate__()
+        state.update({
+            '_save_dir': self._save_dir,
+            '_subdir_split': self._subdir_split,
+            '_vec_filepath': self._vec_filepath,
+        })
+        return state
+
+    def __setstate__(self, state):
+        super(DescriptorFileElement, self).__setstate__(state)
+        self._save_dir = state['_save_dir']
+        self._subdir_split = state['_subdir_split']
+        self._vec_filepath = state['_vec_filepath']
 
     def get_config(self):
         return {
@@ -203,9 +222,13 @@ class DescriptorFileElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray
 
+        :returns: Self.
+        :rtype: DescriptorFileElement
+
         """
         file_utils.safe_create_dir(osp.dirname(self._vec_filepath))
         numpy.save(self._vec_filepath, new_vec)
+        return self
 
 
 DESCRIPTOR_ELEMENT_CLASS = [

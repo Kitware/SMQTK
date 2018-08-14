@@ -1,7 +1,6 @@
 import atexit
 import threading
 import time
-import uuid
 
 from smqtk.utils import SmqtkObject
 

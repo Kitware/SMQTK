@@ -1,16 +1,15 @@
 import imageio
 import logging
-import mimetypes
 import os
 import shutil
 
+import six
+
 from smqtk.utils import file_utils, video_utils
+from smqtk.utils.mimetype import get_mimetypes
 
 
-__author__ = "paul.tunison@kitware.com"
-
-
-MIMETYPES = mimetypes.MimeTypes()
+MIMETYPES = get_mimetypes()
 
 
 class PreviewCache (object):
@@ -43,12 +42,13 @@ class PreviewCache (object):
         # Cache of preview images for data elements encountered.
         #: :type: dict[collections.Hashable, str]
         self._preview_cache = {}
+        self._video_work_dir = os.path.join(cache_dir, 'tmp_video_work')
 
     def __del__(self):
         """
         Cleanup after ourselves.
         """
-        for fp in self._preview_cache.values():
+        for fp in six.itervalues(self._preview_cache):
             os.remove(fp)
 
     def get_preview_image(self, elem):
@@ -73,14 +73,16 @@ class PreviewCache (object):
             self._log.debug("Generating preview image based on content type: "
                             "%s", elem.content_type)
             file_utils.safe_create_dir(self._cache_dir)
-            fp = self.PREVIEW_GEN_METHOD[elem.content_type()](elem, self._cache_dir)
+            fp = self.PREVIEW_GEN_METHOD[elem.content_type()](self, elem,
+                                                              self._cache_dir)
         else:
             content_class = elem.content_type().split('/', 1)[0]
             if content_class in self.PREVIEW_GEN_METHOD:
                 self._log.debug("Generating preview image based on content "
                                 "class: %s", content_class)
                 file_utils.safe_create_dir(self._cache_dir)
-                fp = self.PREVIEW_GEN_METHOD[content_class](elem, self._cache_dir)
+                fp = self.PREVIEW_GEN_METHOD[content_class](self, elem,
+                                                            self._cache_dir)
             else:
                 raise ValueError("No preview generation method for the data "
                                  "element provided, of content type '%s'."
@@ -88,8 +90,8 @@ class PreviewCache (object):
         self._preview_cache[elem.uuid()] = fp
         return fp
 
-    @staticmethod
-    def gen_image_preview(elem, output_dir):
+    # noinspection PyMethodMayBeStatic
+    def gen_image_preview(self, elem, output_dir):
         """
         Copy temporary image to specified output filepath.
 
@@ -111,8 +113,7 @@ class PreviewCache (object):
             elem.clean_temp()
         return output_fp
 
-    @staticmethod
-    def gen_video_preview(elem, output_dir):
+    def gen_video_preview(self, elem, output_dir):
         """
         Copy temporary image to specified output filepath.
 
@@ -129,7 +130,8 @@ class PreviewCache (object):
             tmp_vid_fp = elem.write_temp()
             interval = 0.5  # ~2fps gif
             fm = video_utils.ffmpeg_extract_frame_map(
-                tmp_vid_fp, second_interval=interval
+                self._video_work_dir, tmp_vid_fp,
+                second_interval=interval
             )
             img_arrays = []
             for frm_num in sorted(fm.keys()):

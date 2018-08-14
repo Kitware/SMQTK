@@ -1,6 +1,11 @@
+import io
+import json
 import logging
 import threading
 import uuid
+import zipfile
+
+import six
 
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
@@ -100,7 +105,7 @@ class IqrSession (SmqtkObject):
         :type rel_index_config: dict
 
         :param session_uid: Optional manual specification of session UUID.
-        :type session_uid: str or uuid.UUID
+        :type session_uid: str | uuid.UUID
 
         """
         self.uuid = session_uid or str(uuid.uuid1()).replace('-', '')
@@ -117,6 +122,12 @@ class IqrSession (SmqtkObject):
         # UUIDs we've used to query the neighbor index with already.
         #: :type: set[collections.Hashable]
         self._wi_seeds_used = set()
+
+        # Descriptor elements representing data from external sources.
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.external_positive_descriptors = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.external_negative_descriptors = set()
 
         # Descriptor references from our index (above) that have been
         #   adjudicated.
@@ -158,18 +169,44 @@ class IqrSession (SmqtkObject):
     def ordered_results(self):
         """
         Return a tuple of the current (id, probability) result pairs in
-        order of probability score. If there are no results yet, None is
-        returned.
+        order of descending probability score. If there are no results yet, None
+        is returned.
 
         :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
 
         """
         with self.lock:
             if self.results:
-                return tuple(sorted(self.results.items(),
+                return tuple(sorted(six.iteritems(self.results),
                                     key=lambda p: p[1],
                                     reverse=True))
             return None
+
+    def external_descriptors(self, positive=(), negative=()):
+        """
+        Add positive/negative descriptors from external data.
+
+        These descriptors may not be a part of our working index.
+
+        :param positive: Iterable of descriptors from external sources to
+            consider positive examples.
+        :type positive:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :param negative: Iterable of descriptors from external sources to
+            consider negative examples.
+        :type negative:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        positive = set(positive)
+        negative = set(negative)
+        with self.lock:
+            self.external_positive_descriptors.update(positive)
+            self.external_positive_descriptors.difference_update(negative)
+
+            self.external_negative_descriptors.update(negative)
+            self.external_negative_descriptors.difference_update(positive)
 
     def adjudicate(self, new_positives=(), new_negatives=(),
                    un_positives=(), un_negatives=()):
@@ -186,21 +223,30 @@ class IqrSession (SmqtkObject):
 
         :param new_positives: Descriptors of elements in our working index to
             now be considered to be positively relevant.
-        :type new_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param new_negatives: Descriptors of elements in our working index to
             now be considered to be negatively relevant.
-        :type new_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type new_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_positives: Descriptors of elements in our working index to now
             be considered not positive any more.
-        :type un_positives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_positives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_negatives: Descriptors of elements in our working index to now
             be considered not negative any more.
-        :type un_negatives: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type un_negatives:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        new_positives = set(new_positives)
+        new_negatives = set(new_negatives)
+        un_positives = set(un_positives)
+        un_negatives = set(un_negatives)
+
         with self.lock:
             self.positive_descriptors.update(new_positives)
             self.positive_descriptors.difference_update(un_positives)
@@ -226,7 +272,9 @@ class IqrSession (SmqtkObject):
             session to use as a basis for querying.
 
         """
-        if len(self.positive_descriptors) <= 0:
+        pos_examples = (self.external_positive_descriptors |
+                        self.positive_descriptors)
+        if len(pos_examples) == 0:
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
 
@@ -235,9 +283,15 @@ class IqrSession (SmqtkObject):
         updated = False
 
         # adding to working index
-        for p in self.positive_descriptors:
+        self._log.info("Building working index using %d positive examples "
+                       "(%d external, %d adjudicated)",
+                       len(pos_examples),
+                       len(self.external_positive_descriptors),
+                       len(self.positive_descriptors))
+        # TODO: parallel_map and reduce with merge-dict
+        for p in pos_examples:
             if p.uuid() not in self._wi_seeds_used:
-                self._log.info("Querying neighbors to: %s", p)
+                self._log.debug("Querying neighbors to: %s", p)
                 self.working_index.add_many_descriptors(
                     nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
@@ -248,8 +302,9 @@ class IqrSession (SmqtkObject):
         if updated:
             self._log.info("Creating new relevancy index over working index.")
             #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
-            self.rel_index = plugin.from_plugin_config(self.rel_index_config,
-                                                       get_relevancy_index_impls())
+            self.rel_index = plugin.from_plugin_config(
+                self.rel_index_config, get_relevancy_index_impls()
+            )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 
     def refine(self):
@@ -267,14 +322,16 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("No relevancy index yet. Must not have "
                                    "initialized session (no working index).")
 
-            # fuse pos/neg adjudications + added positive data descriptors
-            pos = self.positive_descriptors
-            neg = self.negative_descriptors
+            # combine pos/neg adjudications + added external data descriptors
+            pos = self.positive_descriptors | self.external_positive_descriptors
+            neg = self.negative_descriptors | self.external_negative_descriptors
 
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
+            self._log.debug("Ranking working set with %d pos and %d neg total "
+                            "examples.", len(pos), len(neg))
             element_probability_map = self.rel_index.rank(pos, neg)
 
             if self.results is None:
@@ -303,6 +360,108 @@ class IqrSession (SmqtkObject):
             self._wi_seeds_used.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
+            self.external_positive_descriptors.clear()
+            self.external_negative_descriptors.clear()
 
             self.rel_index = None
             self.results = None
+
+    ###########################################################################
+    # I/O Methods
+
+    # I/O Constants. These should not be changed.
+    STATE_ZIP_COMPRESSION = zipfile.ZIP_DEFLATED
+    STATE_ZIP_FILENAME = "iqr_state.json"
+
+    def get_state_bytes(self):
+        """
+        Get a byte representation of the current descriptor and adjudication
+        state of this session.
+
+        This does not encode current results or the relevancy index's state, but
+        these can be reproduced with this state.
+
+        :return: State representation bytes
+        :rtype: bytes
+
+        """
+        def d_set_to_list(d_set):
+            # Convert set of descriptors to list of tuples:
+            #   [..., (uuid, type, vector), ...]
+            return [(d.uuid(), d.type(), d.vector().tolist()) for d in d_set]
+
+        with self:
+            # Convert session descriptors into basic values.
+            pos_d = d_set_to_list(self.positive_descriptors)
+            neg_d = d_set_to_list(self.negative_descriptors)
+            ext_pos_d = d_set_to_list(self.external_positive_descriptors)
+            ext_neg_d = d_set_to_list(self.external_negative_descriptors)
+
+        z_buffer = io.BytesIO()
+        z = zipfile.ZipFile(z_buffer, 'w', self.STATE_ZIP_COMPRESSION)
+        z.writestr(self.STATE_ZIP_FILENAME, json.dumps({
+            'pos': pos_d,
+            'neg': neg_d,
+            'external_pos': ext_pos_d,
+            'external_neg': ext_neg_d,
+        }))
+        z.close()
+        return z_buffer.getvalue()
+
+    def set_state_bytes(self, b, descriptor_factory):
+        """
+        Set this session's state to the given byte representation, resetting
+        this session in the process.
+
+        Bytes given must have been retrieved via a previous call to
+        ``get_state_bytes`` otherwise this method will fail.
+
+        Since this state may be completely different from the current state,
+        this session is reset before applying the new state. Thus, any current
+        ranking results are thrown away.
+
+        :param b: Bytes to set this session's state to.
+        :type b: bytes
+
+        :param descriptor_factory: Descriptor element factory to use when
+            generating descriptor elements from extracted data.
+        :type descriptor_factory: smqtk.representation.DescriptorElementFactory
+
+        :raises ValueError: The input bytes could not be loaded due to
+            incompatibility.
+
+        """
+        z_buffer = io.BytesIO(b)
+        z = zipfile.ZipFile(z_buffer, 'r', self.STATE_ZIP_COMPRESSION)
+        if self.STATE_ZIP_FILENAME not in z.namelist():
+            raise ValueError("Invalid bytes given, did not contain expected "
+                             "zipped file name.")
+
+        # Extract expected json file object
+        state = json.loads(z.read(self.STATE_ZIP_FILENAME).decode())
+        del z, z_buffer
+
+        with self:
+            self.reset()
+
+            def load_descriptor(_uid, _type_str, vec_list):
+                _e = descriptor_factory.new_descriptor(_type_str, _uid)
+                if _e.has_vector():
+                    assert _e.vector().tolist() == vec_list, \
+                        "Found existing vector for UUID '%s' but vectors did " \
+                        "not match."
+                else:
+                    _e.set_vector(vec_list)
+                return _e
+
+            # Read in raw descriptor data from the state, convert to descriptor
+            # element, then store in our descriptor sets.
+            for source, target in [(state['external_pos'],
+                                    self.external_positive_descriptors),
+                                   (state['external_neg'],
+                                    self.external_negative_descriptors),
+                                   (state['pos'], self.positive_descriptors),
+                                   (state['neg'], self.negative_descriptors)]:
+                for uid, type_str, vector_list in source:
+                    e = load_descriptor(uid, type_str, vector_list)
+                    target.add(e)

@@ -4,8 +4,11 @@ nearest neighbor indexing, and various implementations of LSH functors for use
 in the base.
 """
 import collections
+import itertools
+import multiprocessing
 
 import numpy
+from six.moves import map, zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
@@ -18,15 +21,13 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
 from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 from smqtk.utils import merge_dict
 
 try:
     from six.moves import cPickle as pickle
 except ImportError:
     import pickle
-
-from six.moves import map, zip
 
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
@@ -157,18 +158,18 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         Initialize LSH algorithm with a hashing functor, descriptor index and
         hash nearest-neighbor index.
 
-        In order to provide out-of-the-box neighbor querying ability, all three
-        of the ``descriptor_index``, ``hash_index`` and
-        ``hash2uuids_kvstore`` must be provided. The two indices should
-        also be fully linked by the mapping provided by the key-value mapping
-        provided by the ``hash2uuids_kvstore``. If not, not all descriptors will
-        be accessible via the nearest-neighbor query (not referenced in
-        ``hash2uuids_kvstore`` map), or the requested number of neighbors might
-        not be returned (descriptors hashed in ``hash_index`` disjoint from
-        ``descriptor_index``).
+        In order to provide out-of-the-box neighbor querying ability, at least
+        the ``descriptor_index`` and ``hash2uuids_kvstore`` must be provided.
+        The UIDs of descriptors in the ``descriptor_index`` should be fully
+        mapped by the key-value mapping (``hash2uuids_kvstore``). If not, not
+        all descriptors will be accessible via the nearest-neighbor query (not
+        referenced in ``hash2uuids_kvstore`` map), or the requested number of
+        neighbors might not be returned (descriptors hashed in ``hash_index``
+        disjoint from ``descriptor_index``).
 
         An ``LSHNearestNeighborIndex`` instance is effectively read-only if any
-        of its input structures are read-only.
+        of its input structures (`descriptor_index`, `hash2uuids_kvstore`,
+        `hash_index`) are read-only.
 
         :param lsh_functor: LSH functor implementation instance.
         :type lsh_functor: smqtk.algorithms.nn_index.lsh.functors.LshFunctor
@@ -224,6 +225,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         self.distance_method = distance_method
         self.read_only = read_only
 
+        # Lock for model component access (combination of descriptor-set,
+        # hash_index and kvstore).  Multiprocessing because resources can be
+        # potentially modified on other processes.
+        self._model_lock = multiprocessing.RLock()
+
         self._distance_function = self._get_dist_func(self.distance_method)
 
     @staticmethod
@@ -264,19 +270,23 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             may be smaller of hash2uuids mapping is not complete.
         :rtype: int
         """
-        return len(self.descriptor_index)
+        with self._model_lock:
+            c = 0
+            for set_v in self.hash2uuids_kvstore.values():
+                c += len(set_v)
+            return c
 
-    def build_index(self, descriptors):
+    def _build_index(self, descriptors):
         """
-        Build the index over the descriptor data elements. This in turn builds
-        the configured hash index if one is set.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index. Rebuilding
-        the LSH index involves clearing the set descriptor index, key-value
-        store and, if set, the hash index.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
-        :raises ValueError: No data available in the given iterable.
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
 
         :param descriptors: Iterable of descriptor elements to build index
             over.
@@ -284,43 +294,154 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        if self.read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
 
-        self._log.debug("Clearing and adding new descriptor elements")
-        self.descriptor_index.clear()
-        self.descriptor_index.add_many_descriptors(descriptors)
+            self._log.debug("Clearing and adding new descriptor elements")
+            self.descriptor_index.clear()
+            self.descriptor_index.add_many_descriptors(descriptors)
 
-        self._log.debug("Generating hash codes")
-        state = [0] * 7
-        hash_vectors = collections.deque()
-        self.hash2uuids_kvstore.clear()
-        for d in self.descriptor_index:
-            h = self.lsh_functor.get_hash(d.vector())
-            hash_vectors.append(h)
+            self._log.debug("Generating hash codes")
+            #: :type: collections.deque[numpy.ndarray[bool]]
+            hash_vectors = collections.deque()
+            self.hash2uuids_kvstore.clear()
+            prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+            for d in self.descriptor_index:
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                hash_vectors.append(h_vec)
 
-            h_int = bit_vector_to_int_large(h)
+                h_int = bit_vector_to_int_large(h_vec)
 
-            # Get, update and reinsert hash UUID set object
-            #: :type: set
-            hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
-            hash_uuid_set.add(d.uuid())
-            self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+                # Get, update and reinsert hash UUID set object
+                #: :type: set
+                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
+                hash_uuid_set.add(d.uuid())
+                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
 
-            report_progress(self._log.debug, state, 1.0)
-        state[1] -= 1
-        report_progress(self._log.debug, state, 0)
+                prog_reporter.increment_report()
+            prog_reporter.report()
 
-        if self.hash_index is not None:
-            self._log.debug("Clearing and building hash index of type %s",
-                            type(self.hash_index))
-            # a build is supposed to clear previous state.
-            self.hash_index.build_index(hash_vectors)
+            if self.hash_index is not None:
+                self._log.debug("Clearing and building hash index of type %s",
+                                type(self.hash_index))
+                # a build is supposed to clear previous state.
+                self.hash_index.build_index(hash_vectors)
 
-    def nn(self, d, n=1):
+    def _update_index(self, descriptors):
         """
-        Return the nearest `N` neighbors to the given descriptor element.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            # tee out iterable for use in adding to index as well as hash code
+            # generation.
+            d_for_index, d_for_hashing = itertools.tee(descriptors, 2)
+
+            self._log.debug("Updating descriptor index.")
+            self.descriptor_index.add_many_descriptors(d_for_index)
+
+            self._log.debug("Generating hash codes for new descriptors")
+            prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
+            #: :type: collections.deque[numpy.ndarray[bool]]
+            hash_vectors = collections.deque()  # for updating hash_index
+            for d in d_for_hashing:
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                hash_vectors.append(h_vec)
+                h_int = bit_vector_to_int_large(h_vec)
+                # Get, update and reinsert hash UUID set object
+                #: :type: set
+                hash_uuid_set = self.hash2uuids_kvstore.get(h_int, set())
+                hash_uuid_set.add(d.uuid())
+                self.hash2uuids_kvstore.add(h_int, hash_uuid_set)
+                prog_reporter.increment_report()
+            prog_reporter.report()
+
+            if self.hash_index is not None:
+                self._log.debug("Updating hash index structure.")
+                self.hash_index.update_index(hash_vectors)
+
+    def _remove_from_index(self, uids):
+        """
+        Remove descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.  The index should not be modified.
+        :raises ReadOnlyError: This index is set to be read-only and cannot be
+            modified.
+
+        """
+        with self._model_lock:
+            if self.read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+
+            uids = list(uids)
+
+            # Remove UIDs from our hash2uid-kvs
+            # - get the hash for each input UID's descriptor, remove UID from
+            #   recorded association set.
+            # - `get_many_descriptors` fails when bad UIDs are provided
+            #   (KeyError).
+            self._log.debug("Removing hash2uid entries for UID's descriptors")
+            h_vectors = collections.deque()
+            h_ints = collections.deque()
+            for d in self.descriptor_index.get_many_descriptors(uids):
+                h_vec = self.lsh_functor.get_hash(d.vector())
+                h_vectors.append(h_vec)
+                h_int = bit_vector_to_int_large(h_vec)
+                h_ints.append(h_int)
+
+            # If we're here, then all given UIDs mapped to an indexed
+            # descriptor.  Proceed with removal from hash2uids kvs.  If a hash
+            # no longer maps anything, remove that hash from the hash index if
+            # we have one.
+            hashes_for_removal = collections.deque()
+            for uid, h_int, h_vec in zip(uids, h_ints, h_vectors):
+                # noinspection PyUnresolvedReferences
+                new_uid_set = self.hash2uuids_kvstore.get(h_int) - {uid}
+                # If the resolved UID set is not empty re-add it, otherwise
+                # remove the
+                if new_uid_set:
+                    self.hash2uuids_kvstore.add(h_int, new_uid_set)
+                else:
+                    hashes_for_removal.append(h_vec)
+                    self.hash2uuids_kvstore.remove(h_int)
+
+            # call remove-from-index on hash-index if we have one and there are
+            # hashes to be removed.
+            if self.hash_index and hashes_for_removal:
+                self.hash_index.remove_from_index(hashes_for_removal)
+
+            # Remove descriptors from our set matching the given UIDs.
+            self.descriptor_index.remove_many_descriptors(uids)
+
+    def _nn(self, d, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
+
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
 
         :param d: Descriptor element to compute the neighbors of.
         :type d: smqtk.representation.DescriptorElement
@@ -328,13 +449,11 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple
-            of the distance values to those neighbors.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        super(LSHNearestNeighborIndex, self).nn(d, n)
-
         self._log.debug("generating hash for descriptor")
         d_v = d.vector()
         d_h = self.lsh_functor.get_hash(d_v)
@@ -342,30 +461,33 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         def comp_descr_dist(d2_v):
             return self._distance_function(d_v, d2_v)
 
-        self._log.debug("getting near hashes")
-        hi = self.hash_index
-        if hi is None:
-            # Make on-the-fly linear index
-            hi = LinearHashIndex()
-            # not calling ``build_index`` because we already have the int
-            # hashes.
-            hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
-        near_hashes, _ = hi.nn(d_h, n)
+        with self._model_lock:
+            self._log.debug("getting near hashes")
+            hi = self.hash_index
+            if hi is None:
+                # Make on-the-fly linear index
+                hi = LinearHashIndex()
+                # not calling ``build_index`` because we already have the int
+                # hashes.
+                hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
+            near_hashes, _ = hi.nn(d_h, n)
 
-        self._log.debug("getting UUIDs of descriptors for nearby hashes")
-        neighbor_uuids = []
-        for h_int in map(bit_vector_to_int_large, near_hashes):
-            # If descriptor hash not in our map, we effectively skip it.
-            # Get set of descriptor UUIDs for a hash code.
-            #: :type: set[collections.Hashable]
-            near_uuids = self.hash2uuids_kvstore.get(h_int, set())
-            # Accumulate matching descriptor UUIDs to a list.
-            neighbor_uuids.extend(near_uuids)
-        self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
+            self._log.debug("getting UUIDs of descriptors for nearby hashes")
+            neighbor_uuids = []
+            for h_int in map(bit_vector_to_int_large, near_hashes):
+                # If descriptor hash not in our map, we effectively skip it.
+                # Get set of descriptor UUIDs for a hash code.
+                #: :type: set[collections.Hashable]
+                near_uuids = self.hash2uuids_kvstore.get(h_int, set())
+                # Accumulate matching descriptor UUIDs to a list.
+                neighbor_uuids.extend(near_uuids)
+            self._log.debug("-- matched %d UUIDs", len(neighbor_uuids))
 
-        self._log.debug("getting descriptors for neighbor_uuids")
-        neighbors = \
-            list(self.descriptor_index.get_many_descriptors(neighbor_uuids))
+            self._log.debug("getting descriptors for neighbor_uuids")
+            neighbors = \
+                list(self.descriptor_index.get_many_descriptors(neighbor_uuids))
+
+        # Done with model parts at this point, so releasing lock.
 
         self._log.debug("ordering descriptors via distance method '%s'",
                         self.distance_method)

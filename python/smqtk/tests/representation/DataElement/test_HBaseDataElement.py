@@ -1,8 +1,6 @@
 import mock
 from unittest import TestCase
 
-import nose.tools
-
 import smqtk.exceptions
 from smqtk.representation.data_element.hbase_element import HBaseDataElement
 
@@ -36,7 +34,7 @@ class TestHBaseDataElement(TestCase):
 
     def test_config(self):
         cfg = HBaseDataElement.get_default_config()
-        nose.tools.assert_equal(cfg, {
+        self.assertEqual(cfg, {
             'element_key': None,
             'binary_column': None,
             'hbase_address': None,
@@ -45,42 +43,43 @@ class TestHBaseDataElement(TestCase):
         })
 
         cfg = self.DUMMY_CFG
+        #: :type: HBaseDataElement
         e = HBaseDataElement.from_config(cfg)
 
-        nose.tools.assert_equal(e.element_key, cfg['element_key'])
-        nose.tools.assert_equal(e.binary_column, cfg['binary_column'])
-        nose.tools.assert_equal(e.hbase_address, cfg['hbase_address'])
-        nose.tools.assert_equal(e.hbase_table, cfg['hbase_table'])
-        nose.tools.assert_equal(e.timeout, cfg['timeout'])
+        self.assertEqual(e.element_key, cfg['element_key'])
+        self.assertEqual(e.binary_column, cfg['binary_column'])
+        self.assertEqual(e.hbase_address, cfg['hbase_address'])
+        self.assertEqual(e.hbase_table, cfg['hbase_table'])
+        self.assertEqual(e.timeout, cfg['timeout'])
 
         # output should be the same as what we constructed with in this case
         e_get_cfg = e.get_config()
-        nose.tools.assert_equal(e_get_cfg, cfg)
+        self.assertEqual(e_get_cfg, cfg)
 
     def test_get_bytes(self):
         expected_bytes = 'foo bar test string'
         e = self.make_element(expected_bytes)
-        nose.tools.assert_equal(e.get_bytes(), expected_bytes)
+        self.assertEqual(e.get_bytes(), expected_bytes)
 
     def test_is_empty_zero_bytes(self):
         # Simulate empty bytes
         e = self.make_element('')
-        nose.tools.assert_true(e.is_empty())
+        self.assertTrue(e.is_empty())
 
     def test_is_empty_nonzero_bytes(self):
         # Simulate non-empty bytes
         e = self.make_element('some bytes')
-        nose.tools.assert_false(e.is_empty())
+        self.assertFalse(e.is_empty())
 
     def test_writable(self):
         # Read-only element
         e = self.make_element('')
-        nose.tools.assert_false(e.writable())
+        self.assertFalse(e.writable())
 
     def test_set_bytes(self):
         # Read-only element
         e = self.make_element('')
-        nose.tools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.ReadOnlyError,
             e.set_bytes, 'some bytes'
         )

@@ -1,13 +1,9 @@
 from __future__ import division, print_function
 import mock
-import nose.tools as ntools
 import numpy
 import unittest
 
 from smqtk.representation import DescriptorElement
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class DummyDescriptorElement (DescriptorElement):
@@ -17,16 +13,16 @@ class DummyDescriptorElement (DescriptorElement):
         return True
 
     def get_config(self):
-        return {}
+        """ stub """
 
     def set_vector(self, new_vec):
-        pass
+        """ stub """
 
     def has_vector(self):
-        pass
+        """ stub """
 
     def vector(self):
-        pass
+        """ stub """
 
 
 class TestDescriptorElementAbstract (unittest.TestCase):
@@ -35,8 +31,8 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         expected_uuid = 'some uuid'
         expected_type_str = 'some type'
         de = DummyDescriptorElement(expected_type_str, expected_uuid)
-        ntools.assert_equal(de.type(), expected_type_str)
-        ntools.assert_equal(de.uuid(), expected_uuid)
+        self.assertEqual(de.type(), expected_type_str)
+        self.assertEqual(de.uuid(), expected_uuid)
 
     def test_equality(self):
         de1 = DummyDescriptorElement('t', 'u1')
@@ -44,16 +40,25 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         de1.vector = de2.vector = \
             mock.Mock(return_value=numpy.random.randint(0, 10, 10))
 
-        ntools.assert_true(de1 == de1)
-        ntools.assert_true(de2 == de2)
-        ntools.assert_true(de1 == de2)
-        ntools.assert_false(de1 != de2)
+        self.assertTrue(de1 == de1)
+        self.assertTrue(de2 == de2)
+        self.assertTrue(de1 == de2)
+        self.assertFalse(de1 != de2)
+
+    def test_equality_diffTypeStr(self):
+        # Type strings no longer considered in descriptor equality nor hashing.
+        v = numpy.random.randint(0, 10, 10)
+        d1 = DummyDescriptorElement('a', 'u')
+        d2 = DummyDescriptorElement('b', 'u')
+        d1.vector = d2.vector = mock.Mock(return_value=v)
+        self.assertFalse(d1 != d2)
+        self.assertTrue(d1 == d2)
 
     def test_nonEquality_diffInstance(self):
         # diff instance
         de = DummyDescriptorElement('a', 'b')
-        ntools.assert_false(de == 'string')
-        ntools.assert_true(de != 'string')
+        self.assertFalse(de == 'string')
+        self.assertTrue(de != 'string')
 
     def test_nonEquality_diffVectors(self):
         # different vectors (same size)
@@ -66,8 +71,8 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d2 = DummyDescriptorElement('a', 'b')
         d2.vector = mock.Mock(return_value=v2)
 
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
+        self.assertFalse(d1 == d2)
+        self.assertTrue(d1 != d2)
 
     def test_nonEquality_diffVectorSize(self):
         # different sized vectors
@@ -80,19 +85,50 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         d2 = DummyDescriptorElement('a', 'b')
         d2.vector = mock.Mock(return_value=v2)
 
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
-
-    def test_nonEquality_diffTypeStr(self):
-        v = numpy.random.randint(0, 10, 10)
-        d1 = DummyDescriptorElement('a', 'u')
-        d2 = DummyDescriptorElement('b', 'u')
-        d1.vector = d2.vector = mock.Mock(return_value=v)
-        ntools.assert_false(d1 == d2)
-        ntools.assert_true(d1 != d2)
+        self.assertFalse(d1 == d2)
+        self.assertTrue(d1 != d2)
 
     def test_hash(self):
-        t = 'a'
-        uuid = 'some uuid'
-        de = DummyDescriptorElement(t, uuid)
-        ntools.assert_equal(hash(de), hash((t, uuid)))
+        # Hash of a descriptor element is solely based on the UUID value of that
+        # element.
+        t1 = 'a'
+        uuid1 = 'some uuid'
+        de1 = DummyDescriptorElement(t1, uuid1)
+
+        t2 = 'b'
+        uuid2 = 'some uuid'
+        de2 = DummyDescriptorElement(t2, uuid2)
+
+        self.assertEqual(hash(de1), hash(uuid1))
+        self.assertEqual(hash(de2), hash(uuid2))
+        self.assertEqual(hash(de1), hash(de2))
+
+    def test_getstate(self):
+        expected_type = 'a'
+        expected_uid = 'b'
+        e = DummyDescriptorElement(expected_type, expected_uid)
+        state = e.__getstate__()
+        self.assertDictEqual(
+            state,
+            {
+                '_type_label': expected_type,
+                '_uuid': expected_uid,
+            }
+        )
+
+    def test_setstate(self):
+        # Intentionally bad input types.
+        # noinspection PyTypeChecker
+        e = DummyDescriptorElement(None, None)
+        self.assertIsNone(e._type_label)
+        self.assertIsNone(e._uuid)
+
+        expected_type = 'a'
+        expected_uid = 'b'
+        state = {
+            '_type_label': expected_type,
+            '_uuid': expected_uid,
+        }
+        e.__setstate__(state)
+        self.assertEqual(e._type_label, expected_type)
+        self.assertEqual(e._uuid, expected_uid)

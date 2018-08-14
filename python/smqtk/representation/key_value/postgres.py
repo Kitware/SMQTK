@@ -4,7 +4,6 @@ import multiprocessing
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
@@ -47,7 +46,7 @@ class PostgresKeyValueStore (KeyValueStore):
         SELECT_LIKE_TMPL = norm_psql_cmd_string("""
             SELECT {query:s}
               FROM {table_name:s}
-             WHERE {key_col:s} like %(key_like)s
+             WHERE {key_col:s} LIKE %(key_like)s
         """)
 
         UPSERT_TMPL = norm_psql_cmd_string("""
@@ -61,6 +60,11 @@ class PostgresKeyValueStore (KeyValueStore):
               ({key_col:s}, {value_col:s})
               SELECT %(key)s, %(val)s
                 WHERE NOT EXISTS (SELECT * FROM upsert)
+        """)
+
+        DELETE_LIKE_TMPL = norm_psql_cmd_string("""
+            DELETE FROM {table_name:s}
+            WHERE {key_col:s} LIKE %(key_like)s 
         """)
 
         DELETE_ALL = norm_psql_cmd_string("""
@@ -166,7 +170,7 @@ class PostgresKeyValueStore (KeyValueStore):
         )
 
         # Only set table upsert if not read-only.
-        if not self._read_only:
+        if not self._read_only and self._create_table:
             # NOT read-only, so allow table upsert.
             self._psql_helper.set_table_upsert_sql(
                 self.SqlTemplates.UPSERT_TABLE_TMPL.format(
@@ -264,7 +268,9 @@ class PostgresKeyValueStore (KeyValueStore):
                 query='count(%s)' % self._key_col,
                 table_name=self._table_name,
             ))
-        return list(self._psql_helper.single_execute(cb, True))[0][0]
+        return list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        ))[0][0]
 
     def keys(self):
         """
@@ -278,7 +284,8 @@ class PostgresKeyValueStore (KeyValueStore):
             ))
         # We can use a named cursor because this is a select statement as well
         # as server table size may be large.
-        for r in self._psql_helper.single_execute(cb, True, True):
+        for r in self._psql_helper.single_execute(cb, yield_result_rows=True,
+                                                  named=True):
             # Convert from buffer -> string -> python
             yield self._bin_to_py(r[0])
 
@@ -293,7 +300,8 @@ class PostgresKeyValueStore (KeyValueStore):
                 query=self._value_col,
                 table_name=self._table_name,
             ))
-        for r in self._psql_helper.single_execute(cb, True, True):
+        for r in self._psql_helper.single_execute(cb, yield_result_rows=True,
+                                                  named=True):
             # Convert from buffer -> string -> python
             yield self._bin_to_py(r[0])
 
@@ -327,7 +335,9 @@ class PostgresKeyValueStore (KeyValueStore):
 
         def cb(cur):
             cur.execute(q, {'key_like': self._py_to_bin(key)})
-        return bool(list(self._psql_helper.single_execute(cb, True)))
+        return bool(list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        )))
 
     def add(self, key, value):
         """
@@ -361,6 +371,7 @@ class PostgresKeyValueStore (KeyValueStore):
             cur.execute(q, v)
 
         list(self._psql_helper.single_execute(cb))
+        return self
 
     def add_many(self, d):
         """
@@ -374,9 +385,7 @@ class PostgresKeyValueStore (KeyValueStore):
         :rtype: KeyValueStore
 
         """
-        # Custom override to take advantage of PSQL batching.
-        if self.is_read_only():
-            raise ReadOnlyError("Cannot add to read-only instance %s." % self)
+        super(PostgresKeyValueStore, self).add_many(d)
 
         q = self.SqlTemplates.UPSERT_TMPL.format(
             table_name=self._table_name,
@@ -396,6 +405,102 @@ class PostgresKeyValueStore (KeyValueStore):
             cur.executemany(q, v_batch)
 
         list(self._psql_helper.batch_execute(val_iter(), cb, self._batch_size))
+        return self
+
+    def remove(self, key):
+        """
+        Remove a single key-value entry.
+
+        :param key: Key to remove.
+        :type key: collections.Hashable
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
+        :raises KeyError: The given key is not present in this store and no
+            default value given.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        super(PostgresKeyValueStore, self).remove(key)
+        if key not in self:
+            raise KeyError(key)
+
+        q = self.SqlTemplates.DELETE_LIKE_TMPL.format(
+            table_name=self._table_name,
+            key_col=self._key_col,
+        )
+        v = dict(
+            key_like=key
+        )
+
+        def cb(cursor):
+            cursor.execute(q, v)
+
+        list(self._psql_helper.single_execute(cb))
+        return self
+
+    def remove_many(self, keys):
+        """
+        Remove multiple keys and associated values.
+
+        :param keys: Iterable of keys to remove.  If this is empty this method
+            does nothing.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :raises ReadOnlyError: If this instance is marked as read-only.
+        :raises KeyError: The given key is not present in this store and no
+            default value given.  The store is not modified if any key is
+            invalid.
+
+        :return: Self.
+        :rtype: KeyValueStore
+
+        """
+        super(PostgresKeyValueStore, self).remove_many(keys)
+
+        keys = list(keys)
+
+        def key_like_iter():
+            """ Iterator over query value sets. """
+            for k_ in keys:
+                yield {'key_like': k_}
+
+        # Check that all keys are contained in our table.
+        # - This should be more efficient than just calling `key in self`
+        #   len(keys) times.
+        def has_cb(cursor, v_batch):
+            # Execute the query with a list of value dicts.
+            cursor.execute(has_q, v_batch)
+        has_q = self.SqlTemplates.SELECT_LIKE_TMPL.format(
+            query=self._key_col,
+            table_name=self._table_name,
+            key_col=self._key_col,
+        )
+        key_diff = set(keys) - set([
+            r[0] for r in self._psql_helper.batch_execute(
+                                    key_like_iter(), has_cb, self._batch_size,
+                                    yield_result_rows=True)
+        ])
+        # If we're trying to remove a key not in our table, appropriately raise
+        # a KeyError.
+        if key_diff:
+            if len(key_diff) == 1:
+                raise KeyError(list(key_diff)[0])
+            else:
+                raise KeyError(key_diff)
+
+        # proceed with removal
+        def del_cb(cursor, v_batch):
+            # Execute the query with a list of value dicts.
+            cursor.execute(del_q, v_batch)
+        del_q = self.SqlTemplates.DELETE_LIKE_TMPL.format(
+            table_name=self._table_name,
+            key_col=self._key_col,
+        )
+        list(self._psql_helper.batch_execute(key_like_iter(), del_cb,
+                                             self._batch_size))
+        return self
 
     def get(self, key, default=NO_DEFAULT_VALUE):
         """
@@ -429,7 +534,9 @@ class PostgresKeyValueStore (KeyValueStore):
         def cb(cur):
             cur.execute(q, v)
 
-        rows = list(self._psql_helper.single_execute(cb, True))
+        rows = list(self._psql_helper.single_execute(
+            cb, yield_result_rows=True
+        ))
         # If no rows and no default, raise KeyError.
         if len(rows) == 0:
             if default is NO_DEFAULT_VALUE:

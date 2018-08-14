@@ -78,8 +78,8 @@ def safe_file_write(path, b, tmp_dir=None):
         c = os.write(fd, b)
         if c != len(b):
             raise RuntimeError("Failed to write all bytes to file.")
-    except:
-        # Remove temporary file if something bad happens.
+    except Exception:
+        # Remove temporary file if anything bad happens.
         os.remove(fp)
         raise
     finally:
@@ -87,7 +87,7 @@ def safe_file_write(path, b, tmp_dir=None):
     os.rename(fp, path)
 
 
-def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
+def make_tempfile(suffix="", prefix="tmp", directory=None, text=False):
     """
     Wrapper for ``tempfile.mkstemp`` that closes/discards the file descriptor
     returned from the method. Arguments/keywords passed are the same as, and
@@ -97,7 +97,7 @@ def make_tempfile(suffix="", prefix="tmp", dir=None, text=False):
     :rtype: str
 
     """
-    fd, fp = tempfile.mkstemp(suffix, prefix, dir, text)
+    fd, fp = tempfile.mkstemp(suffix, prefix, directory, text)
     os.close(fd)
     return fp
 
@@ -235,6 +235,7 @@ def file_mimetype_filemagic(filepath):
     :rtype: str
 
     """
+    # noinspection PyUnresolvedReferences
     import magic
     if os.path.isfile(filepath):
         d = magic.detect_from_filename(filepath)
@@ -262,6 +263,7 @@ def file_mimetype_tika(filepath):
     :rtype: str
 
     """
+    # noinspection PyUnresolvedReferences
     import tika.detector
     return tika.detector.from_file(filepath)
 

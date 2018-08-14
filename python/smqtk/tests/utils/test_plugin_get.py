@@ -3,12 +3,7 @@ import abc
 import os
 import unittest
 
-import nose.tools as ntools
-
 from smqtk.utils.plugin import Pluggable, get_plugins, OS_ENV_PATH_SEP
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class DummyInterface (Pluggable):
@@ -43,18 +38,18 @@ class TestGetPluginGeneric (unittest.TestCase):
 
     def test_get_internal_modules(self, do_return=False):
         m = self.get_dummy_plugins()
-        ntools.assert_in('ImplFoo', m)
-        ntools.assert_in('ImplBar', m)
-        ntools.assert_in('ImplDoExport', m)
+        self.assertIn('ImplFoo', m)
+        self.assertIn('ImplBar', m)
+        self.assertIn('ImplDoExport', m)
 
-        ntools.assert_equal(m['ImplFoo']().inst_method('a'), 'fooa')
-        ntools.assert_equal(m['ImplBar']().inst_method('b'), 'barb')
-        ntools.assert_equal(m['ImplDoExport']().inst_method('c'), 'doExportc')
+        self.assertEqual(m['ImplFoo']().inst_method('a'), 'fooa')
+        self.assertEqual(m['ImplBar']().inst_method('b'), 'barb')
+        self.assertEqual(m['ImplDoExport']().inst_method('c'), 'doExportc')
 
-        ntools.assert_not_in('ImplNotUsable', m)
-        ntools.assert_not_in('SomethingElse', m)
-        ntools.assert_not_in('ImplNoExport', m)
-        ntools.assert_not_in('ImplSkipModule', m)
+        self.assertNotIn('ImplNotUsable', m)
+        self.assertNotIn('SomethingElse', m)
+        self.assertNotIn('ImplNoExport', m)
+        self.assertNotIn('ImplSkipModule', m)
 
         if do_return:
             return m
@@ -65,12 +60,12 @@ class TestGetPluginGeneric (unittest.TestCase):
         os.environ[self.ENV_VAR] = self.EXT_MOD_1
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_in('ImplExternal1', m)
-        ntools.assert_in('ImplExternal2', m)
-        ntools.assert_not_in('ImplExternal3', m)
+        self.assertIn('ImplExternal1', m)
+        self.assertIn('ImplExternal2', m)
+        self.assertNotIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal1']().inst_method('d'), 'external1d')
-        ntools.assert_equal(m['ImplExternal2']().inst_method('e'), 'external2e')
+        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
+        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value
@@ -83,12 +78,12 @@ class TestGetPluginGeneric (unittest.TestCase):
         os.environ[self.ENV_VAR] = self.EXT_MOD_1+OS_ENV_PATH_SEP
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_in('ImplExternal1', m)
-        ntools.assert_in('ImplExternal2', m)
-        ntools.assert_not_in('ImplExternal3', m)
+        self.assertIn('ImplExternal1', m)
+        self.assertIn('ImplExternal2', m)
+        self.assertNotIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal1']().inst_method('d'), 'external1d')
-        ntools.assert_equal(m['ImplExternal2']().inst_method('e'), 'external2e')
+        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
+        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value
@@ -101,12 +96,12 @@ class TestGetPluginGeneric (unittest.TestCase):
         os.environ[self.ENV_VAR] = OS_ENV_PATH_SEP+self.EXT_MOD_1
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_in('ImplExternal1', m)
-        ntools.assert_in('ImplExternal2', m)
-        ntools.assert_not_in('ImplExternal3', m)
+        self.assertIn('ImplExternal1', m)
+        self.assertIn('ImplExternal2', m)
+        self.assertNotIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal1']().inst_method('d'), 'external1d')
-        ntools.assert_equal(m['ImplExternal2']().inst_method('e'), 'external2e')
+        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
+        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value
@@ -119,11 +114,11 @@ class TestGetPluginGeneric (unittest.TestCase):
         os.environ[self.ENV_VAR] = self.EXT_MOD_2
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_not_in('ImplExternal1', m)
-        ntools.assert_not_in('ImplExternal2', m)
-        ntools.assert_in('ImplExternal3', m)
+        self.assertNotIn('ImplExternal1', m)
+        self.assertNotIn('ImplExternal2', m)
+        self.assertIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal3']().inst_method('f'), 'external3f')
+        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value
@@ -137,13 +132,13 @@ class TestGetPluginGeneric (unittest.TestCase):
                                                          self.EXT_MOD_2])
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_in('ImplExternal1', m)
-        ntools.assert_in('ImplExternal2', m)
-        ntools.assert_in('ImplExternal3', m)
+        self.assertIn('ImplExternal1', m)
+        self.assertIn('ImplExternal2', m)
+        self.assertIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal1']().inst_method('d'), 'external1d')
-        ntools.assert_equal(m['ImplExternal2']().inst_method('e'), 'external2e')
-        ntools.assert_equal(m['ImplExternal3']().inst_method('f'), 'external3f')
+        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
+        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
+        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value
@@ -175,13 +170,13 @@ class TestGetPluginGeneric (unittest.TestCase):
                                                          'but still uses sep'])
         m = self.test_get_internal_modules(True)
 
-        ntools.assert_in('ImplExternal1', m)
-        ntools.assert_in('ImplExternal2', m)
-        ntools.assert_in('ImplExternal3', m)
+        self.assertIn('ImplExternal1', m)
+        self.assertIn('ImplExternal2', m)
+        self.assertIn('ImplExternal3', m)
 
-        ntools.assert_equal(m['ImplExternal1']().inst_method('d'), 'external1d')
-        ntools.assert_equal(m['ImplExternal2']().inst_method('e'), 'external2e')
-        ntools.assert_equal(m['ImplExternal3']().inst_method('f'), 'external3f')
+        self.assertEqual(m['ImplExternal1']().inst_method('d'), 'external1d')
+        self.assertEqual(m['ImplExternal2']().inst_method('e'), 'external2e')
+        self.assertEqual(m['ImplExternal3']().inst_method('f'), 'external3f')
 
         if env_orig_value:
             os.environ[self.ENV_VAR] = env_orig_value

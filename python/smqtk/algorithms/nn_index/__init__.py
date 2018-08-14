@@ -1,72 +1,12 @@
-"""
-Interface for generic element-wise nearest-neighbor computation.
-"""
-
-import abc
 import os
 
-from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils.plugin import get_plugins
+from ._interface_nn_index import NearestNeighborsIndex
 
 
-class NearestNeighborsIndex (SmqtkAlgorithm):
-    """
-    Common interface for descriptor-based nearest-neighbor computation over a
-    built index of descriptors.
-
-    Implementations, if they allow persistent storage of their index, should
-    take the necessary parameters at construction time. Persistent storage
-    content should be (over)written ``build_index`` is called.
-
-    """
-
-    def __len__(self):
-        return self.count()
-
-    @abc.abstractmethod
-    def count(self):
-        """
-        :return: Number of elements in this index.
-        :rtype: int
-        """
-
-    @abc.abstractmethod
-    def build_index(self, descriptors):
-        """
-        Build the index over the descriptor data elements.
-
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
-
-        :raises ValueError: No data available in the given iterable.
-
-        :param descriptors: Iterable of descriptor elements to build index
-            over.
-        :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-
-    @abc.abstractmethod
-    def nn(self, d, n=1):
-        """
-        Return the nearest `N` neighbors to the given descriptor element.
-
-        :param d: Descriptor element to compute the neighbors of.
-        :type d: smqtk.representation.DescriptorElement
-
-        :param n: Number of nearest neighbors to find.
-        :type n: int
-
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
-            the distance values to those neighbors.
-        :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
-
-        """
-        if not d.has_vector():
-            raise ValueError("Query descriptor did not have a vector set!")
-        elif not self.count():
-            raise ValueError("No index currently set to query from!")
+__all__ = [
+    'NearestNeighborsIndex', 'get_nn_index_impls',
+]
 
 
 def get_nn_index_impls(reload_modules=False):
@@ -76,12 +16,12 @@ def get_nn_index_impls(reload_modules=False):
     values are the actual class type objects.
 
     We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
+        - modules next to this file this function is defined in (ones that
+          begin with an alphanumeric character),
         - python modules listed in the environment variable ``NN_INDEX_PATH``
             - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
+              specifications, separated by the platform specific PATH
+              separator character (``;`` for Windows, ``:`` for unix)
 
     Within a module we first look for a helper variable by the name
     ``NN_INDEX_CLASS``, which can either be a single class object or

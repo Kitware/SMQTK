@@ -1,6 +1,8 @@
 import abc
 import os
 
+import six
+
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import plugin
@@ -155,7 +157,7 @@ class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
 
         """
         m = (None, 0.)
-        for i in self.get_classification().items():
+        for i in six.iteritems(self.get_classification()):
             if i[1] > m[1]:
                 m = i
         if m[0] is None:

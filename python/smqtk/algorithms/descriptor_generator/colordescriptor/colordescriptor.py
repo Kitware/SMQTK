@@ -14,6 +14,7 @@ import tempfile
 
 import six
 import numpy
+import six
 import sklearn.cluster
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
@@ -271,7 +272,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
     @property
     def temp_dir(self):
-        return file_utils.safe_create_dir(osp.join(self._work_dir, 'temp_files'))
+        return file_utils.safe_create_dir(osp.join(self._work_dir,
+                                                   'temp_files'))
 
     @abc.abstractmethod
     def descriptor_type(self):
@@ -361,7 +363,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
             return osp.join(self._get_checkpoint_dir(data),
                             "%s.feature.npy" % str(data.uuid()))
 
-    def generate_model(self, data_set, **kwargs):
+    def generate_model(self, data_set):
         """
         Generate this feature detector's data-model given a file ingest. This
         saves the generated model to the currently configured data directory.
@@ -528,13 +530,13 @@ class ColorDescriptor_Base (DescriptorGenerator):
                     # the number of descriptors and keeps the last one because
                     # hik is a similarity score and not a distance, which is
                     # also why the values in dists is flipped below.
-                    #: :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+                    #: :type: (numpy.ndarray, numpy.ndarray)
                     idxs = flann.nn_index(descriptors,
                                           self._codebook.shape[0])[0]
                     # Only keep the last index for each descriptor return
                     idxs = numpy.array([i_array[-1] for i_array in idxs])
                 else:
-                    # :type: numpy.core.multiarray.ndarray, numpy.core.multiarray.ndarray
+                    #: :type: (numpy.ndarray, numpy.ndarray)
                     idxs = flann.nn_index(descriptors, 1)[0]
             except AssertionError:
 
@@ -936,12 +938,12 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         # If an odd number of jobs, favor descriptor extraction
         if self.parallel:
-            descr_parallel = int(max(1, math.ceil(self.parallel/2.0)))
-            extract_parallel = int(max(1, math.floor(self.parallel/2.0)))
+            descr_parallel = int(max(1.0, math.ceil(self.parallel/2.0)))
+            extract_parallel = int(max(1.0, math.floor(self.parallel/2.0)))
         else:
             cpuc = multiprocessing.cpu_count()
-            descr_parallel = int(max(1, math.ceil(cpuc/2.0)))
-            extract_parallel = int(max(1, math.floor(cpuc/2.0)))
+            descr_parallel = int(max(1.0, math.ceil(cpuc/2.0)))
+            extract_parallel = int(max(1.0, math.floor(cpuc/2.0)))
 
         # For each video, extract frames and submit colorDescriptor processing
         # jobs for each frame, combining all results into a single matrix for
@@ -1031,7 +1033,8 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 ssi = None
                 if video_num_desc > per_item_limit:
                     ssi = sorted(
-                        numpy.random.permutation(video_num_desc)[:per_item_limit]
+                        numpy.random
+                             .permutation(video_num_desc)[:per_item_limit]
                     )
                     video_num_desc = len(ssi)
 
@@ -1138,32 +1141,48 @@ def _create_video_descriptor_class(descriptor_type_str):
 # variables in the module. Dynamic generation causes issues with pickling (the
 # default data transmission protocol).
 
-ColorDescriptor_Image_rgbhistogram = _create_image_descriptor_class('rgbhistogram')
-ColorDescriptor_Image_opponenthistogram = _create_image_descriptor_class('opponenthistogram')
-ColorDescriptor_Image_huehistogram = _create_image_descriptor_class('huehistogram')
-ColorDescriptor_Image_nrghistogram = _create_image_descriptor_class('nrghistogram')
-ColorDescriptor_Image_transformedcolorhistogram = _create_image_descriptor_class('transformedcolorhistogram')
-ColorDescriptor_Image_colormoments = _create_image_descriptor_class('colormoments')
-ColorDescriptor_Image_colormomentinvariants = _create_image_descriptor_class('colormomentinvariants')
+ColorDescriptor_Image_rgbhistogram = \
+    _create_image_descriptor_class('rgbhistogram')
+ColorDescriptor_Image_opponenthistogram = \
+    _create_image_descriptor_class('opponenthistogram')
+ColorDescriptor_Image_huehistogram = \
+    _create_image_descriptor_class('huehistogram')
+ColorDescriptor_Image_nrghistogram = \
+    _create_image_descriptor_class('nrghistogram')
+ColorDescriptor_Image_transformedcolorhistogram = \
+    _create_image_descriptor_class('transformedcolorhistogram')
+ColorDescriptor_Image_colormoments = \
+    _create_image_descriptor_class('colormoments')
+ColorDescriptor_Image_colormomentinvariants = \
+    _create_image_descriptor_class('colormomentinvariants')
 ColorDescriptor_Image_sift = _create_image_descriptor_class('sift')
 ColorDescriptor_Image_huesift = _create_image_descriptor_class('huesift')
 ColorDescriptor_Image_hsvsift = _create_image_descriptor_class('hsvsift')
-ColorDescriptor_Image_opponentsift = _create_image_descriptor_class('opponentsift')
+ColorDescriptor_Image_opponentsift = \
+    _create_image_descriptor_class('opponentsift')
 ColorDescriptor_Image_rgsift = _create_image_descriptor_class('rgsift')
 ColorDescriptor_Image_csift = _create_image_descriptor_class('csift')
 ColorDescriptor_Image_rgbsift = _create_image_descriptor_class('rgbsift')
 
-ColorDescriptor_Video_rgbhistogram = _create_video_descriptor_class('rgbhistogram')
-ColorDescriptor_Video_opponenthistogram = _create_video_descriptor_class('opponenthistogram')
-ColorDescriptor_Video_huehistogram = _create_video_descriptor_class('huehistogram')
-ColorDescriptor_Video_nrghistogram = _create_video_descriptor_class('nrghistogram')
-ColorDescriptor_Video_transformedcolorhistogram = _create_video_descriptor_class('transformedcolorhistogram')
-ColorDescriptor_Video_colormoments = _create_video_descriptor_class('colormoments')
-ColorDescriptor_Video_colormomentinvariants = _create_video_descriptor_class('colormomentinvariants')
+ColorDescriptor_Video_rgbhistogram = \
+    _create_video_descriptor_class('rgbhistogram')
+ColorDescriptor_Video_opponenthistogram = \
+    _create_video_descriptor_class('opponenthistogram')
+ColorDescriptor_Video_huehistogram = \
+    _create_video_descriptor_class('huehistogram')
+ColorDescriptor_Video_nrghistogram = \
+    _create_video_descriptor_class('nrghistogram')
+ColorDescriptor_Video_transformedcolorhistogram = \
+    _create_video_descriptor_class('transformedcolorhistogram')
+ColorDescriptor_Video_colormoments = \
+    _create_video_descriptor_class('colormoments')
+ColorDescriptor_Video_colormomentinvariants = \
+    _create_video_descriptor_class('colormomentinvariants')
 ColorDescriptor_Video_sift = _create_video_descriptor_class('sift')
 ColorDescriptor_Video_huesift = _create_video_descriptor_class('huesift')
 ColorDescriptor_Video_hsvsift = _create_video_descriptor_class('hsvsift')
-ColorDescriptor_Video_opponentsift = _create_video_descriptor_class('opponentsift')
+ColorDescriptor_Video_opponentsift = \
+    _create_video_descriptor_class('opponentsift')
 ColorDescriptor_Video_rgsift = _create_video_descriptor_class('rgsift')
 ColorDescriptor_Video_csift = _create_video_descriptor_class('csift')
 ColorDescriptor_Video_rgbsift = _create_video_descriptor_class('rgbsift')

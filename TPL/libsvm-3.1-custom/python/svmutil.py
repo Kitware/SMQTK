@@ -5,6 +5,7 @@ from svm import *
 import numpy as np
 
 import sys
+import six
 
 def svm_read_problem(data_file_name):
 	"""
@@ -34,7 +35,13 @@ def svm_load_model(model_file_name):
 
 	Load a LIBSVM model from model_file_name and return.
 	"""
-	model = libsvm.svm_load_model(model_file_name)
+	# Insconsistency between Python 3 and Python 2.
+	if isinstance(model_file_name, six.binary_type):
+		model_file_name_bytes = model_file_name
+	else:
+		model_file_name_bytes = six.b(model_file_name)
+
+	model = libsvm.svm_load_model(model_file_name_bytes)
 	if not model:
 		print("can't open model file %s" % model_file_name)
 		return None
@@ -65,10 +72,12 @@ def svm_save_model(model_file_name, model):
 
 	Save a LIBSVM model to the file model_file_name.
 	"""
-	if sys.version_info >= (3, 0):
-		libsvm.svm_save_model(bytes(model_file_name, encoding='utf-8'), model)
+	# Insconsistency between Python 3 and Python 2.
+	if isinstance(model_file_name, six.binary_type):
+		model_file_name_bytes = model_file_name
 	else:
-		libsvm.svm_save_model(model_file_name, model)
+		model_file_name_bytes = six.b(model_file_name)
+	libsvm.svm_save_model(model_file_name_bytes, model)
 
 def evaluations(ty, pv):
 	"""

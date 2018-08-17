@@ -41,10 +41,30 @@ Major and Minor Releases
 
 Tag new version
 ---------------
+Currently the ``From GitHub`` method is preferred as it creates a "verified"
+release.
+
+From GitHub
+^^^^^^^^^^^
+Navigate to the `releases page on GitHub`_ and click the ``Draft a new
+release`` button in upper right
+
+Fill in the new version in the ``Tag version`` text box (e.g. ``v#.#.#``)
+and use the same string in the ``Release title`` text box.
+
+Copy and past this version's release notes into the ``Describe this release``
+text box.
+
+Remember to check the ``This is a pre-release`` check-box if appropriate.
+
+Click the ``Public release`` button at the bottom of the page when complete.
+
+From Git on the Command Line
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Create a new git tag using the new version number (format:
 ``v<MAJOR.<MINOR>.<PATCH>``) on the merge commit for the version update branch
 merger::
-    $ git tag -a -m "[Major|Minor|Patch]" release v#.#.#
+    $ git tag -a -m "[Major|Minor|Patch] release v#.#.#"
 
 Push this new tag to GitHub (assuming origin remote points to `SMQTK on
 GitHub`_::
@@ -79,4 +99,5 @@ upload dist packages created with::
 
 
 .. _SMQTK on GitHub: https://github.com/Kitware/SMQTK
+.. _releases page on GitHub: https://github.com/Kitware/SMQTK/releases
 .. _tags page on GitHub: https://github.com/Kitware/SMQTK/tags

@@ -22,7 +22,14 @@ PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
 class PostgresKeyValueStore (KeyValueStore):
     """
     PostgreSQL-backed key-value storage.
+
+    NOTE: Due to the differences in pickle serialization between python
+    versions 2 and 3 (even with the same protocol version) the same underlying
+    postgresql table should not be shared between instances of
+    ``PostgresKeyValueStore`` in different python major versions.
     """
+
+    PICKLE_PROTOCOL_VER = -1
 
     class SqlTemplates (object):
         """
@@ -198,16 +205,22 @@ class PostgresKeyValueStore (KeyValueStore):
         :rtype: psycopg2.Binary
 
         """
-        return psycopg2.Binary(pickle.dumps(k))
+        return psycopg2.Binary(pickle.dumps(
+            k, protocol=PostgresKeyValueStore.PICKLE_PROTOCOL_VER
+        ))
 
     @staticmethod
     def _bin_to_py(b):
         """
-        Un-"translate" psycopg2.Binary value (buffer) to a python type.
+        Un-"translate" binary return from a psycopg2 query (buffer) to a python
+        object instance.
 
-        :param b: ``psycopg2.Binary`` buffer instance as retrieved from a
-            PostgreSQL query.
-        :type b: psycopg2.Binary
+        :param b: Buffer instance as retrieved from a PostgreSQL query.  This
+            may be either a ``buffer`` instead (python 2.x) or a ``memoryview``
+            instance (python 3.x).  Generally, the type passed here should be
+            passable to the ``bytes`` constructor to get the underlying byte
+            string.
+        :type b: buffer | memoryview
 
         :return: Python object instance as loaded via pickle from the given
             ``psycopg2.Binary`` buffer.

@@ -3,8 +3,8 @@ SMQTK IQR Playground and Turn-key container
 
 We provide the docker container images:
 
-    ``kitware/smqtk/iqr_playground_cpu``
-    ``kitware/smqtk/iqr_playground_nvidia``
+    kitware/smqtk/iqr_playground_cpu
+    kitware/smqtk/iqr_playground_nvidia
 
 This is a self-contained SMQTK playground environment that can also act as an
 image-to-application turn-key container. As an application, this container can

@@ -74,7 +74,7 @@ trigger model building.
 
 
 RESTful service
-^^^^^^^^^^^^^^^
+===============
 
 This container runs a RESTful service that provides the meat of the IQR
 functionality. This is running on port 5001 inside the container and can be

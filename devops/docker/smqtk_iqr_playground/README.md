@@ -15,8 +15,7 @@ the IQR GUI web-application as well as the underlying IQR RESTful service
 server.
 
 
-Quick Information
------------------
+### Quick Information
 
 Default IQR web-app login:
 
@@ -38,17 +37,17 @@ Container internal data directories for volume mounting:
     /home/smqtk/data/models/    -- common directory for model files
 
 
-Running IQR on New Imagery
---------------------------
+### Running IQR on New Imagery
+
 One way to use this container is to treat it like an command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
 recursively in the mounted directory (uses command ``find <dir> -type f``):
 
-    docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...cpu... -b [-t]
+    `docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...cpu... -b [-t]`
 
     OR
 
-    nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...gpu... -b [-t]
+    `nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...gpu... -b [-t]`
 
 The use of ``nvidia-docker`` is required to use the GPU computation
 capabilities (default options, can be changed and described later).
@@ -73,16 +72,14 @@ nothing to process/ingest. The ``-b`` option must also be given in order to
 trigger model building.
 
 
-RESTful service
-===============
+## RESTful service
 
 This container runs a RESTful service that provides the meat of the IQR
 functionality. This is running on port 5001 inside the container and can be
 published outside the container if desired.
 
 
-Runner Script
-^^^^^^^^^^^^^
+## Runner Script
 
 Included here are the bash scripts ``run_container.*.sh``. These are intended to
 be a simple way of running the containers as is (i.e. with default
@@ -109,8 +106,7 @@ When all the logs settle, mainly the ``runApp.IqrSearchDispatcher.log`` and the
 application be functional and interactive.
 
 
-Saving Generated Data
-^^^^^^^^^^^^^^^^^^^^^
+## Saving Generated Data
 
 If models or other generated data from this container is to be saved in a more
 permanent manner, the container should be started with more volume mounts than
@@ -138,8 +134,8 @@ Directories used in the container's filesystem:
     options are provided.
 
 
-Using Custom Configuration
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+## Using Custom Configuration
+
 While the default configuration files are fine for producing a generally usable
 IQR instance, configurations may be extracted, modified and mounted to
 ``/home/smqtk/data/configs/``.
@@ -206,8 +202,7 @@ Configuration files and what they are used for:
     be publicly faced.
 
 
-Troubleshooting
----------------
+### Troubleshooting
 
 Q: My container quickly stopped after I executed the above "docker run..."
 command.
@@ -218,4 +213,5 @@ command.
     utility (grep -i for "error" on log files).
 
 TODO: More error situations. If a confusing situation arises, email
-paul.tunison@kitware.com and we can add new Q&As here!
+[paul.tunison@kitware.com](mailto:paul.tunison@kitware.com) and we can add 
+new Q&As here!

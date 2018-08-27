@@ -8,7 +8,8 @@ Configuration
     - plugins
         - supervised_classifier
             Supervised Classifier implementation configuration to use. This
-            should not be set to use a persistent model if able.
+            should not be set to use a persistent model if able (this utility
+            will repeatedly train a new model for each fold).
 
         - descriptor_index
             Index to draw descriptors to classify from.

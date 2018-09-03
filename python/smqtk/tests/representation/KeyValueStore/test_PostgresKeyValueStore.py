@@ -43,8 +43,8 @@ if PostgresKeyValueStore.is_usable():
             the mock cursor.
             """
             expected_key = 'test_remove_key'
-            expected_key_bytea = bytes(
-                PostgresKeyValueStore._py_to_bin(expected_key))
+            expected_key_bytea = \
+                PostgresKeyValueStore._py_to_bin(expected_key).getquoted()
 
             # Cut out create table calls.
             s = PostgresKeyValueStore(create_table=False)
@@ -66,7 +66,12 @@ if PostgresKeyValueStore.is_usable():
                                      "DELETE FROM .+ WHERE .+ LIKE .+")
             self.assertEqual(set(mock_execute.call_args[0][1].keys()),
                              {'key_like'})
-            self.assertEqual(bytes(mock_execute.call_args[0][1]['key_like']),
+            # Value passed to ``cursor.execute`` should be the result of
+            # ``_py_to_bin``, AKA the ``psycopg2.Binary`` instance.  Compare
+            # using the quoted representation that will be used in the SQL
+            # query.
+            self.assertIsNotNone(mock_execute.call_args[0][1]['key_like'].getquoted())
+            self.assertEqual(mock_execute.call_args[0][1]['key_like'].getquoted(),
                              expected_key_bytea)
 
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
@@ -156,22 +161,28 @@ if PostgresKeyValueStore.is_usable():
                              "%(key_tuple)s"
             mock_execute_call_args = mock_execute.call_args[0]
             self.assertEqual(mock_execute_call_args[0], expected_has_q)
+            # Value passed to ``cursor.execute`` should be the result of
+            # ``_py_to_bin``, AKA the ``psycopg2.Binary`` instance.  Compare
+            # using the quoted representation that will be used in the SQL
+            # query.
             self.assertEqual(set(mock_execute_call_args[1].keys()), {'key_tuple'})
+            for k in mock_execute_call_args[1]['key_tuple']:
+                self.assertIsNotNone(k.getquoted())
             self.assertEqual(
-                [bytes(k) for k in mock_execute_call_args[1]['key_tuple']],
-                [bytes(k) for k in [exp_key_1_bytea, exp_key_2_bytea]]
+                [k.getquoted() for k in mock_execute_call_args[1]['key_tuple']],
+                [k.getquoted() for k in [exp_key_1_bytea, exp_key_2_bytea]]
             )
 
             # Confirm call arguments to ``psycopg2.extras.execute_batch``
             expected_del_q = "DELETE FROM data_set WHERE key LIKE %(key_like)s"
-            expected_del_vals = [{'key_like': exp_key_1_bytea},
-                                 {'key_like': exp_key_2_bytea}]
             psqlExecBatch_call_args = m_psqlExecBatch.call_args[0]
             self.assertEqual(psqlExecBatch_call_args[0], mock_cursor)
             self.assertEqual(psqlExecBatch_call_args[1], expected_del_q)
             # 3rd argument is a list of dictionaries for 'key_like' replacements
             self.assertEqual(len(psqlExecBatch_call_args[2]), 2)
+            for d in psqlExecBatch_call_args[2]:
+                self.assertIsNotNone(d['key_like'].getquoted())
             self.assertListEqual(
-                [bytes(d['key_like']) for d in psqlExecBatch_call_args[2]],
-                [bytes(exp_key_1_bytea), bytes(exp_key_2_bytea)]
+                [d['key_like'].getquoted() for d in psqlExecBatch_call_args[2]],
+                [exp_key_1_bytea.getquoted(), exp_key_2_bytea.getquoted()]
             )

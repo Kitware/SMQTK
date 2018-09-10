@@ -377,10 +377,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     else:
                         to_write = self._faiss_index
                     faiss.write_index(to_write, fp)
-                    self._index_element.set_bytes(
-                        os.read(fd, os.path.getsize(fp)))
+                    # Use the file descriptor to create the file object.
+                    # This avoids reopening the file and will automatically
+                    # close the file descriptor on exiting the with block.
+                    # fdopen() is required because in Python 2 open() does
+                    # not accept a file descriptor.
+                    with os.fdopen(fd, 'rb') as f:
+                        self._index_element.set_bytes(f.read())
                 finally:
-                    os.close(fd)
                     os.remove(fp)
                 # Store index parameters used.
                 params = {

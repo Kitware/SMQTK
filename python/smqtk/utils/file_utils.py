@@ -72,19 +72,16 @@ def safe_file_write(path, b, tmp_dir=None):
     # TODO(paul.tunison): Do something else on windows since moves there are not
     #   guaranteed atomic.
     tmp_dir = file_dir if tmp_dir is None else tmp_dir
-    fd, fp = tempfile.mkstemp(suffix=file_ext, prefix=file_base + '.',
-                              dir=tmp_dir)
+    f = tempfile.NamedTemporaryFile(suffix=file_ext, prefix=file_base + '.',
+                                    dir=tmp_dir, delete=False)
     try:
-        c = os.write(fd, b)
-        if c != len(b):
-            raise RuntimeError("Failed to write all bytes to file.")
+        with f:
+            f.write(b)
     except Exception:
         # Remove temporary file if anything bad happens.
-        os.remove(fp)
+        os.remove(f.name)
         raise
-    finally:
-        os.close(fd)
-    os.rename(fp, path)
+    os.rename(f.name, path)
 
 
 def make_tempfile(suffix="", prefix="tmp", directory=None, text=False):

@@ -328,7 +328,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 # Load the binary index
                 tmp_fp = self._index_element.write_temp()
                 self._faiss_index = self._convert_index(
-                    faiss.read_index(tmp_fp)
+                    # As of Faiss 1.3.0, only str (not unicode) is
+                    # accepted in Python 2.7
+                    faiss.read_index(str(tmp_fp))
                 )
                 self._index_element.clean_temp()
 

@@ -1,0 +1,1 @@
+from .classifier_server import SmqtkClassifierService

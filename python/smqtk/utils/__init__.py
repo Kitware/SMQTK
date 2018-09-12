@@ -112,6 +112,7 @@ def merge_dict(a, b, deep_copy=False):
 from .bin_utils import initialize_logging
 from .configurable_interface import Configurable
 from .database_info import DatabaseInfo
+from .iter_validation import check_empty_iterable
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock
 from .safe_config_comment_parser import SafeConfigCommentParser
 from .signal_handler import SignalHandler

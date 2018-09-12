@@ -60,18 +60,19 @@ class IndexLabelClassifier (Classifier):
 
     def _classify(self, d):
         """
-        Internal method that defines the generation of the classification map
-        for a given DescriptorElement. This returns a dictionary mapping
-        integer labels to a floating point value.
+        Internal method that constructs the label-to-confidence map (dict) for
+        a given DescriptorElement.
 
-        This implementation fails to classify an input "descriptor" when the
-        label and descriptor vector differ in dimensionality.
+        The passed descriptor element is guaranteed to have a vector to extract.
+        It is not extracted yet due to the philosophy of waiting until the
+        vector is immediately needed. This moment is thus determined by the
+        implementing algorithm.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement
 
         :raises RuntimeError: Could not perform classification for some reason
-            (see message).
+            (see message in raised exception).
 
         :return: Dictionary mapping trained labels to classification confidence
             values.
@@ -84,4 +85,4 @@ class IndexLabelClassifier (Classifier):
                                "descriptor of incongruous dimensionality (%d "
                                "labels != %d vector dimension)"
                                % tuple(map(len, [self.label_vector, d_vector])))
-        return dict(zip(self.label_vector, d.vector()))
+        return dict(zip(self.label_vector, d_vector))

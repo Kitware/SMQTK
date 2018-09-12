@@ -21,7 +21,8 @@ Patch Release
     - Increment patch value in ``VERSION`` file.
     - Rename the ``docs/release_notes/pending_patch.rst`` file to
       ``docs/release_notes/v{VERSION}.rst``, matching the value in the
-      ``VERSION`` file.
+      ``VERSION`` file.  Add a descriptive paragraph under the title section
+      summarizing this release.
     - Add new release notes RST file reference to ``docs/release_notes.rst``.
 2. Merge version bump branch into ``release`` and ``master`` branches.
 
@@ -32,7 +33,8 @@ Major and Minor Releases
     - Increment patch value in ``VERSION`` file.
     - Rename the ``docs/release_notes/pending_release.rst`` file to
       ``docs/release_notes/v{VERSION}.rst``, matching the value in the
-      ``VERSION`` file.
+      ``VERSION`` file.  Add a descriptive paragraph under the title section
+      summarizing this release.
     - Add new release notes RST file reference to ``docs/release_notes.rst``.
 2. Merge version bump branch into the ``master`` branch.
 3. Reset the release branch (--hard) to point to the new master.

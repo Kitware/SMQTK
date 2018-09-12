@@ -1,3 +1,4 @@
+// Remove comments from JSON files before attempting to use them!
 {
     // Flask application configuration properties. These are set into the
     // flask.Flask application instance config property.

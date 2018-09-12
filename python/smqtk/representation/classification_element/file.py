@@ -1,5 +1,6 @@
-from six.moves import cPickle
 import os.path as osp
+
+from six.moves import cPickle
 
 from smqtk.representation.classification_element import ClassificationElement
 

@@ -1,5 +1,4 @@
 import math
-import six
 
 import numpy
 
@@ -9,6 +8,7 @@ from six.moves import range
 from . import ncr
 
 try:
+    # noinspection PyUnresolvedReferences
     from numba import jit
 except (ImportError, TypeError):
     # Create passthrough function if numba is not installed.
@@ -18,9 +18,6 @@ except (ImportError, TypeError):
             return func_or_sig
         else:
             return lambda *args, **kwds: func_or_sig
-
-if not six.PY2:
-    long = int
 
 
 def next_perm(v):
@@ -103,15 +100,15 @@ def bit_vector_to_int(v):
     This version handles vectors of up to 64bits in size.
 
     :param v: 1D Vector of bits
-    :type v: numpy.core.multiarray.ndarray
+    :type v: numpy.ndarray
 
     :return: Integer equivalent
     :rtype: int
 
     """
-    c = long(0)
+    c = 0
     for b in v:
-        c = (c * long(2)) + int(b)
+        c = (c << 1) + int(b)
     return c
 
 
@@ -124,15 +121,15 @@ def bit_vector_to_int_large(v):
     (>64bit).
 
     :param v: 1D Vector of bits
-    :type v: numpy.core.multiarray.ndarray
+    :type v: numpy.ndarray
 
     :return: Integer equivalent
     :rtype: int
 
     """
-    c = long(0)
+    c = 0
     for b in v:
-        c = (c * long(2)) + int(b)
+        c = (c << 1) + int(b)
     return c
 
 
@@ -218,8 +215,8 @@ def popcount(v):
     """
     Count the number of bits set (number of 1-bits, not 0-bits).
 
-    Pure python popcount algorithm adapted implementation at:
-    see: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+    Pure python popcount algorithm adapted implementation at
+    https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel.
 
     Maximum known stable value that can be passed through this method:
     2**256 - 2. See the ``popcount.v_max`` function property.
@@ -260,6 +257,7 @@ def popcount(v):
     # truncation as if v were only a tp-bit integer
     # Magic 8 represents bits ina byte
     return ((v * h01) & t) >> ((b-1) * 8)
+
 
 # Maximum known stable value that can be passed as ``v``.
 popcount.v_max = (2**256) - 2

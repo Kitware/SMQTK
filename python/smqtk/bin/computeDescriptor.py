@@ -18,7 +18,8 @@ from smqtk.utils import bin_utils, plugin
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
-        "content_descriptor": plugin.make_config(get_descriptor_generator_impls()),
+        "content_descriptor":
+            plugin.make_config(get_descriptor_generator_impls()),
     }
 
 

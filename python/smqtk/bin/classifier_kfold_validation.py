@@ -71,7 +71,8 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy
-import sklearn.cross_validation
+import six
+import sklearn.model_selection
 import sklearn.metrics
 import six
 
@@ -186,10 +187,11 @@ def classifier_kfold_validation():
     #
     # Cross validation
     #
-    kfolds = sklearn.cross_validation.StratifiedKFold(
-        truth_labels, config['cross_validation']['num_folds'],
-        random_state=config['cross_validation']['random_seed']
-    )
+    kfolds = sklearn.model_selection.StratifiedKFold(
+        n_splits=config['cross_validation']['num_folds'],
+        shuffle=True,
+        random_state=config['cross_validation']['random_seed'],
+    ).split(numpy.zeros(len(truth_labels)), truth_labels)
 
     """
     Truth and classification probability results for test data per fold.
@@ -247,7 +249,7 @@ def classifier_kfold_validation():
         # Only considering positive labels
         for t_label in pos_map:
             fold_data[i][t_label] = {
-                "truth": [l == t_label for l in truth_labels[test]],
+                "truth": [L == t_label for L in truth_labels[test]],
                 "proba": [uuid2c[uuid][t_label] for uuid in uuids[test]]
             }
 
@@ -284,64 +286,67 @@ def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
     """
     Generic method for PR/ROC curve generation
 
+    fold data format:
+        {
+            0: {
+                '<label>':  {
+                    "truth": [...],   # Parallel truth and classification
+                    "proba": [...],   # Parallel probability values
+                },
+                ...
+            },
+            ...
+        }
+
+    :param log: Logger instance to use.
     :param skl_curve_func: scikit-learn curve generation function. This should
         be wrapped to return (x, y) value arrays.
+    :param title_hook: Descriptive label of the classifier.
+    :param x_label: X-axis label
+    :param y_label: Y-axis label
+    :param fold_data: Truth and classification probability results for test data
+        per fold.  See above for format.
+    :param output_dir: Directory to output plot images to.
+    :param plot_prefix: String prefix for output files.
+    :param show: Show the output plots interactively or not.
     """
     file_utils.safe_create_dir(output_dir)
 
     log.info("Generating %s curves for per-folds and overall", title_hook)
-    # in-order list of fold (x, y) value lists
-    fold_xy = []
-    fold_auc = []
 
-    # all truth and proba pairs
-    g_truth = []
-    g_proba = []
+    # All class labels encountered
+    class_labels = set()
 
+    # Make curves for classes per fold. One line per class
     for i in fold_data:
         log.info("-- Fold %i", i)
-        f_truth = []
-        f_proba = []
 
         plt.clf()
         for label in fold_data[i]:
             log.info("   -- label '%s'", label)
+            class_labels.add(label)
             l_truth = fold_data[i][label]['truth']
             l_proba = fold_data[i][label]['proba']
             x, y = skl_curve_func(l_truth, l_proba)
             auc = sklearn.metrics.auc(x, y)
             plt.plot(x, y, label="class '%s' (auc=%f)" % (label, auc))
 
-            f_truth.extend(l_truth)
-            f_proba.extend(l_proba)
-
-        # Plot for fold
-        x, y = skl_curve_func(f_truth, f_proba)
-        auc = sklearn.metrics.auc(x, y)
-        plt.plot(x, y, label="Fold (auc=%f)" % auc)
-
         format_plt("Classifier %s - Fold %d" % (title_hook, i),
                    x_label, y_label)
         filename = plot_prefix + 'fold_%d.png' % i
         save_plt(output_dir, filename, show)
 
-        fold_xy.append([x, y])
-        fold_auc.append(auc)
-        g_truth.extend(f_truth)
-        g_proba.extend(f_proba)
-
-    # Plot global curve
+    # Plot aggregate performance curve per class
     log.info("-- All folds")
     plt.clf()
-    for i in fold_data:
-        plt.plot(fold_xy[i][0], fold_xy[i][1],
-                 label="Fold %d (auc=%f)" % (i, fold_auc[i]))
+    for label in sorted(class_labels):
+        l_truth = [t for i in fold_data for t in fold_data[i][label]['truth']]
+        l_proba = [p for i in fold_data for p in fold_data[i][label]['proba']]
+        x, y = skl_curve_func(l_truth, l_proba)
+        auc = sklearn.metrics.auc(x, y)
+        plt.plot(x, y, label="agg '%s' (auc=%f)" % (label, auc))
 
-    x, y = skl_curve_func(g_truth, g_proba)
-    auc = sklearn.metrics.auc(x, y)
-    plt.plot(x, y, label="All (auc=%f)" % auc)
-
-    format_plt("Classifier %s - Validation" % title_hook, x_label, y_label)
+    format_plt("Classifier %s - Fold Summary" % title_hook, x_label, y_label)
     filename = plot_prefix + "validation.png"
     save_plt(output_dir, filename, show)
 

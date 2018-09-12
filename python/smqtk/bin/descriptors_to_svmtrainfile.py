@@ -26,6 +26,8 @@ import logging
 import six
 from six.moves import zip
 
+import six
+
 from smqtk.representation import (
     get_descriptor_index_impls,
 )

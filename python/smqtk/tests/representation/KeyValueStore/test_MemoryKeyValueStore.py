@@ -1,10 +1,8 @@
-from __future__ import division, print_function
-import pickle
 import unittest
-import six
 
 import mock
-import nose.tools
+import six
+from six.moves import cPickle as pickle
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -15,30 +13,30 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
     def test_is_usable(self):
         # Should always be usable
-        nose.tools.assert_true(MemoryKeyValueStore.is_usable())
+        self.assertTrue(MemoryKeyValueStore.is_usable())
 
     def test_get_default(self):
         # Check default config
         default_config = MemoryKeyValueStore.get_default_config()
-        nose.tools.assert_is_instance(default_config, dict)
-        # - Should just contain cache element property, which is a nested plugin
-        #   config with no default type.
-        nose.tools.assert_in('cache_element', default_config)
-        nose.tools.assert_in('type', default_config['cache_element'])
-        nose.tools.assert_is_none(default_config['cache_element']['type'])
+        self.assertIsInstance(default_config, dict)
+        # - Should just contain cache element property, which is a nested
+        #   plugin config with no default type.
+        self.assertIn('cache_element', default_config)
+        self.assertIn('type', default_config['cache_element'])
+        self.assertIsNone(default_config['cache_element']['type'])
 
     def test_from_config_empty_config(self):
         # should resort to default parameters
         s = MemoryKeyValueStore.from_config({})
-        nose.tools.assert_is_none(s._cache_element)
-        nose.tools.assert_equal(s._table, {})
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, {})
 
     def test_from_config_none_value(self):
         # When cache_element value is None
         expected_config = {'cache_element': None}
         s = MemoryKeyValueStore.from_config(expected_config)
-        nose.tools.assert_is_none(s._cache_element)
-        nose.tools.assert_equal(s._table, {})
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, {})
 
     def test_from_config_none_type(self):
         # When config map given, but plugin type set to null/None
@@ -47,8 +45,8 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             'type': None,
         }}
         s = MemoryKeyValueStore.from_config(config)
-        nose.tools.assert_is_none(s._cache_element)
-        nose.tools.assert_equal(s._table, {})
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, {})
 
     def test_from_config_with_cache_element(self):
         # Pickled dictionary with a known entry
@@ -63,22 +61,28 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             'type': 'DataMemoryElement'
         }}
         s = MemoryKeyValueStore.from_config(config)
-        nose.tools.assert_is_instance(s._cache_element, DataMemoryElement)
-        nose.tools.assert_equal(s._table, expected_table)
+        self.assertIsInstance(s._cache_element, DataMemoryElement)
+        self.assertEqual(s._table, expected_table)
 
     def test_new_no_cache(self):
+        """ Test construction with no cache element. """
         s = MemoryKeyValueStore()
-        nose.tools.assert_is_none(s._cache_element)
-        nose.tools.assert_equal(s._table, {})
+        self.assertIsNone(s._cache_element)
+        self.assertEqual(s._table, {})
 
     def test_new_empty_cache(self):
-        # Cache element with no bytes.
+        """
+        Test construction with a cache element set with no bytes (empty).
+        """
         c = DataMemoryElement()
         s = MemoryKeyValueStore(c)
-        nose.tools.assert_equal(s._cache_element, c)
-        nose.tools.assert_equal(s._table, {})
+        self.assertEqual(s._cache_element, c)
+        self.assertEqual(s._table, {})
 
     def test_new_cached_table(self):
+        """
+        Test construction with a cached table.
+        """
         expected_table = {
             'a': 'b',
             'c': 1,
@@ -89,24 +93,33 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         c = DataMemoryElement(expected_table_pickle)
         s = MemoryKeyValueStore(c)
-        nose.tools.assert_equal(s._cache_element, c)
-        nose.tools.assert_equal(s._table, expected_table)
+        self.assertEqual(s._cache_element, c)
+        self.assertEqual(s._table, expected_table)
 
     def test_repr_no_cache(self):
+        """
+        Test representational string when no cache is set.
+        """
         expected_repr = '<MemoryKeyValueStore cache_element: None>'
         s = MemoryKeyValueStore()
         actual_repr = repr(s)
-        nose.tools.assert_equal(actual_repr, expected_repr)
+        self.assertEqual(actual_repr, expected_repr)
 
     def test_repr_simple_cache(self):
+        """
+        Test representational string when a cache element is set.
+        """
         c = DataMemoryElement()
         s = MemoryKeyValueStore(c)
         expected_repr = "<MemoryKeyValueStore cache_element: " \
                         "DataMemoryElement{len(bytes): 0, content_type: " \
                         "None, readonly: False}>"
-        nose.tools.assert_equal(repr(s), expected_repr)
+        self.assertEqual(repr(s), expected_repr)
 
     def test_count(self):
+        """
+        Test that count returns appropriately based on table state.
+        """
         s = MemoryKeyValueStore()
         assert s.count() == 0
         s._table = {
@@ -118,6 +131,9 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         assert s.count() == 4
 
     def test_get_config_no_cache_elem(self):
+        """
+        Test that configuration returned reflects no cache element being set.
+        """
         s = MemoryKeyValueStore()
         s._cache_element = None
         # We expect an default DataElement config (no impl type defined)
@@ -126,6 +142,10 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         self.assertIsNone(c['cache_element']['type'])
 
     def test_get_config_mem_cache_elem(self):
+        """
+        Test that configuration returned reflects the cache element that is
+        set.
+        """
         s = MemoryKeyValueStore()
         s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain', False)
         expected_config = {'cache_element': {
@@ -136,13 +156,19 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             },
             'type': 'DataMemoryElement'
         }}
-        nose.tools.assert_equal(s.get_config(), expected_config)
+        self.assertEqual(s.get_config(), expected_config)
 
     def test_keys_empty(self):
+        """
+        Test that no keys are present in a freshly constructed instance.
+        """
         s = MemoryKeyValueStore()
-        nose.tools.assert_equal(list(s.keys()), [])
+        self.assertEqual(list(s.keys()), [])
 
     def test_keys_with_table(self):
+        """
+        Test that keys returned reflect the table state.
+        """
         s = MemoryKeyValueStore()
         s._table = {
             'a': 'b',
@@ -150,79 +176,92 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             'asdfghsdfg': None,
             'r3adf3a#+': [4, 5, 6, '7'],
         }
-        nose.tools.assert_set_equal(
+        self.assertSetEqual(
             set(s.keys()),
             {'a', 'c', 'asdfghsdfg', 'r3adf3a#+'}
         )
 
     def test_read_only_no_cache(self):
+        """ Test that read_only is false when there is no cache. """
         s = MemoryKeyValueStore()
-        nose.tools.assert_is_none(s._cache_element)
-        nose.tools.assert_false(s.is_read_only())
+        self.assertIsNone(s._cache_element)
+        self.assertFalse(s.is_read_only())
 
     def test_read_only_with_writable_cache(self):
+        """ Test that read-only status reflects a non-read-only cache """
         s = MemoryKeyValueStore()
         s._cache_element = DataMemoryElement(readonly=False)
-        nose.tools.assert_false(s.is_read_only())
+        self.assertFalse(s.is_read_only())
 
     def test_read_only_with_read_only_cache(self):
+        """ Test that read-only status reflects a read-only cache """
         s = MemoryKeyValueStore()
         s._cache_element = DataMemoryElement(readonly=True)
-        nose.tools.assert_true(s.is_read_only())
+        self.assertTrue(s.is_read_only())
 
     def test_has_invalid_key(self):
+        """ Test that has-key is false for a key not in the table. """
         s = MemoryKeyValueStore()
-        nose.tools.assert_equal(s._table, {})
-        nose.tools.assert_false(s.has('some key'))
+        self.assertEqual(s._table, {})
+        self.assertFalse(s.has('some key'))
 
-    def test_has_valid_key(self):
+    def test_has_key(self):
+        """ Test that has-key returns true for entered keys. """
         s = MemoryKeyValueStore()
         s._table = {
             'a': 0,
             'b': 1,
             0: 2,
         }
-        nose.tools.assert_true(s.has('a'))
-        nose.tools.assert_true(s.has('b'))
-        nose.tools.assert_true(s.has(0))
-        nose.tools.assert_false(s.has('c'))
+        self.assertTrue(s.has('a'))
+        self.assertTrue(s.has('b'))
+        self.assertTrue(s.has(0))
+        self.assertFalse(s.has('c'))
 
     def test_add_invalid_key(self):
+        """ Test that we cannot add non-hashable keys. """
         s = MemoryKeyValueStore()
 
-        nose.tools.assert_raises(ValueError, s.add, [1, 2, 3], 0)
-        nose.tools.assert_equal(s._table, {})
+        self.assertRaises(TypeError, s.add, [1, 2, 3], 0)
+        self.assertEqual(s._table, {})
 
-        nose.tools.assert_raises(ValueError, s.add, {0: 1}, 0)
-        nose.tools.assert_equal(s._table, {})
+        self.assertRaises(TypeError, s.add, {0: 1}, 0)
+        self.assertEqual(s._table, {})
 
     def test_add_read_only(self):
-        s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement(readonly=True)
+        """
+        Test that we cannot add when read-only (based on cache element).
+        """
+        s = MemoryKeyValueStore(DataMemoryElement(readonly=True))
 
-        nose.tools.assert_raises(ReadOnlyError, s.add, 'a', 'b')
-        nose.tools.assert_raises(ReadOnlyError, s.add, 'foo', None)
+        self.assertRaises(ReadOnlyError, s.add, 'a', 'b')
+        self.assertRaises(ReadOnlyError, s.add, 'foo', None)
 
     def test_add(self):
+        """ Test that we can add key-value pairs. """
         s = MemoryKeyValueStore()
 
         s.add('a', 'b')
-        nose.tools.assert_equal(s._table, {'a': 'b'})
+        self.assertEqual(s._table, {'a': 'b'})
 
         s.add('foo', None)
-        nose.tools.assert_equal(s._table, {
+        self.assertEqual(s._table, {
             'a': 'b',
             'foo': None,
         })
 
         s.add(0, 89)
-        nose.tools.assert_equal(s._table, {
+        self.assertEqual(s._table, {
             'a': 'b',
             'foo': None,
             0: 89,
         })
 
     def test_add_with_caching(self):
+        """
+        Test that we can add key-value pairs and they reflect in the cache
+        element.
+        """
         c = DataMemoryElement()
         s = MemoryKeyValueStore(c)
 
@@ -231,39 +270,23 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         s.add('a', 'b')
         s.add('foo', None)
         s.add(0, 89)
-        nose.tools.assert_equal(
+        self.assertEqual(
             pickle.loads(c.get_bytes()),
             expected_cache_dict
         )
 
-    def test_add_with_caching_no_cache(self):
-        c = DataMemoryElement()
-        s = MemoryKeyValueStore(c)
-
-        expected_cache_dict = {'a': 'b', 'foo': None}
-
-        s.add('a', 'b', False)
-        # No caching means there should be nothign there yet
-        nose.tools.assert_equal(
-            c.get_bytes(),
-            six.b("")
-        )
-
-        s.add('foo', None, True)
-        # With caching, meaning the state should be cached here, which includes
-        # everything added previously, including the a:b pair.
-        nose.tools.assert_equal(
-            pickle.loads(c.get_bytes()),
-            expected_cache_dict
-        )
-
-        s.add(0, 89, False)
-        nose.tools.assert_equal(
-            pickle.loads(c.get_bytes()),
-            expected_cache_dict
+    def test_add_many_readonly(self):
+        """ Test that we can't add many on a read-only instance. """
+        s = MemoryKeyValueStore(DataMemoryElement(readonly=True))
+        self.assertRaises(
+            ReadOnlyError,
+            s.add_many, {0: 1}
         )
 
     def test_add_many(self):
+        """
+        Test that we can add many key-values via a dictionary input.
+        """
         d = {
             'a': 'b',
             'foo': None,
@@ -279,6 +302,9 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         self.assertEqual(s._table, d)
 
     def test_add_many_with_caching(self):
+        """
+        Test that adding many reflects in cache.
+        """
         d = {
             'a': 'b',
             'foo': None,
@@ -297,26 +323,163 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             d
         )
 
-    def test_get_invalid_key(self):
+    def test_remove_readonly(self):
+        """ Test that we cannot remove from a read-only instance. """
+        s = MemoryKeyValueStore(DataMemoryElement(readonly=True))
+        self.assertRaises(
+            ReadOnlyError,
+            s.remove, 0
+        )
+
+    def test_remove_missing_key(self):
+        """
+        Test that we cannot remove a key not in the store.
+        """
         s = MemoryKeyValueStore()
-        nose.tools.assert_raises(
+        s._table = {
+            0: 1,
+            'a': 'b'
+        }
+        self.assertRaises(
+            KeyError,
+            s.remove, 'some-key'
+        )
+        # table should remain unchanged.
+        self.assertDictEqual(s._table, {0: 1, 'a': 'b'})
+
+    def test_remove_with_cache(self):
+        """
+        Test that removal correctly updates the cache element.
+        """
+        existing_data = {
+            0: 1,
+            'a': 'b',
+        }
+
+        c = DataMemoryElement(pickle.dumps(existing_data))
+        s = MemoryKeyValueStore(c)
+        self.assertDictEqual(s._table, existing_data)
+
+        s.remove('a')
+        self.assertDictEqual(s._table, {0: 1})
+        self.assertDictEqual(pickle.loads(c.get_bytes()),
+                             {0: 1})
+
+    def test_remove(self):
+        """ Test normal removal. """
+        s = MemoryKeyValueStore()
+        s._table = {
+            0: 1,
+            'a': 'b',
+        }
+
+        s.remove(0)
+        self.assertDictEqual(s._table, {'a': 'b'})
+
+    def test_remove_many_readonly(self):
+        """ Test that we cannot remove many from a read-only instance. """
+        s = MemoryKeyValueStore(DataMemoryElement(readonly=True))
+        self.assertRaises(
+            ReadOnlyError,
+            s.remove_many, [0]
+        )
+
+    def test_remove_many_missing_key(self):
+        """
+        Test that we cannot remove keys not present in table and that table
+        is not modified on error.
+        """
+        expected_table = {
+            0: 0,
+            1: 1,
+            2: 2,
+        }
+
+        s = MemoryKeyValueStore()
+        s._table = {
+            0: 0,
+            1: 1,
+            2: 2,
+        }
+
+        self.assertRaisesRegexp(
+            KeyError, 'a',
+            s.remove_many, ['a']
+        )
+        self.assertDictEqual(s._table, expected_table)
+
+        # Even if one of the keys is value, the table should not be modified if
+        # one of the keys is invalid.
+        self.assertRaisesRegexp(
+            KeyError, '6',
+            s.remove_many, [1, 6]
+        )
+        self.assertDictEqual(s._table, expected_table)
+
+        PY2_SET_KEY_ERROR_RE = "set\(\[(?:7|8), (?:7|8)\]\)"
+        PY3_SET_KEY_ERROR_RE = "{(?:7|8), (?:7|8)}"
+        self.assertRaisesRegexp(
+            KeyError,
+            # Should show a "set" that contains 7 and 8, regardless of order.
+            '(?:{}|{})'.format(PY2_SET_KEY_ERROR_RE, PY3_SET_KEY_ERROR_RE),
+            s.remove_many, [7, 8]
+        )
+
+    def test_remove_many(self):
+        """
+        Test expected remove_many functionality.
+        """
+        s = MemoryKeyValueStore()
+        s._table = {
+            0: 0,
+            1: 1,
+            2: 2,
+        }
+
+        s.remove_many([0, 1])
+        self.assertDictEqual(s._table, {2: 2})
+
+    def test_remove_many_with_cache(self):
+        starting_table = {
+            0: 0,
+            1: 1,
+            2: 2,
+        }
+        c = DataMemoryElement(pickle.dumps(starting_table))
+        s = MemoryKeyValueStore(c)
+        self.assertDictEqual(s._table, starting_table)
+
+        s.remove_many([0, 2])
+
+        self.assertDictEqual(pickle.loads(c.get_bytes()), {1: 1})
+
+    def test_get_invalid_key(self):
+        """
+        Test that trying to get a value from a key not entered yields an
+        exception.
+        """
+        s = MemoryKeyValueStore()
+        self.assertRaises(
             KeyError,
             s.get, 0
         )
 
     def test_get_invalid_key_with_default(self):
+        """ Test default value return on missing key. """
         s = MemoryKeyValueStore()
-        nose.tools.assert_equal(
+        self.assertEqual(
             s.get(0, 1),
             1,
         )
         assert s.get(0, ()) == ()
 
     def test_get_invalid_key_with_default_None(self):
+        """ Test that passing None as a default returns None appropriately. """
         s = MemoryKeyValueStore()
-        nose.tools.assert_is_none(s.get(0, None))
+        self.assertIsNone(s.get(0, None))
 
     def test_get(self):
+        """ Test normal get functionality. """
         s = MemoryKeyValueStore()
         s._table['a'] = 'b'
         s._table[0] = 1
@@ -324,23 +487,25 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         assert s.get('a') == 'b'
         assert s.get(0) == 1
 
-    def test_clear(self):
-        table_before_clear = dict(a=1, b=2, c=3)
-
-        s = MemoryKeyValueStore()
-        s._table = table_before_clear
-        s.clear()
-        nose.tools.assert_equal(s._table, {})
-
     def test_clear_readonly(self):
+        """ Test trying to clear on a read-only store. """
         table_before_clear = dict(a=1, b=2, c=3)
 
         s = MemoryKeyValueStore()
         s._table = table_before_clear
         s.is_read_only = mock.MagicMock(return_value=True)
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             ReadOnlyError,
             s.clear
         )
-        nose.tools.assert_equal(s._table, table_before_clear)
+        self.assertEqual(s._table, table_before_clear)
+
+    def test_clear(self):
+        """ Test normal clear functionality. """
+        table_before_clear = dict(a=1, b=2, c=3)
+
+        s = MemoryKeyValueStore()
+        s._table = table_before_clear
+        s.clear()
+        self.assertEqual(s._table, {})

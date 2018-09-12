@@ -1,8 +1,10 @@
+import collections
 import copy
-from six.moves import cPickle
 import os.path as osp
 
 import numpy
+import six
+from six.moves import range, zip
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (
@@ -10,9 +12,11 @@ from smqtk.utils.distance_kernel import (
 )
 from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
-from six.moves import range, zip
-import six
-import collections
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 try:
     import svm
@@ -20,9 +24,6 @@ try:
 except ImportError:
     svm = None
     svmutil = None
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class LibSvmHikRelevancyIndex (RelevancyIndex):
@@ -49,7 +50,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         Required valid presence of svm and svmutil modules
 
-        :return: Boolean determination of whether this implementation is usable.
+        :return:
+            Boolean determination of whether this implementation is usable.
         :rtype: bool
 
         """
@@ -111,7 +113,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         if self.descr_cache_fp and osp.exists(self.descr_cache_fp):
             with open(self.descr_cache_fp, 'rb') as f:
-                descriptors = cPickle.load(f)
+                descriptors = pickle.load(f)
                 # Temporarily unsetting so we don't cause an extra write inside
                 # build_index.
                 self.descr_cache_fp = None
@@ -131,7 +133,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
     def _gen_svm_parameter_string(cls, num_pos, num_neg):
         params = copy.copy(cls.SVM_TRAIN_PARAMS)
         params['-w1'] = cls._gen_w1_weight(num_pos, num_neg)
-        return ' '.join((' '.join((str(k), str(v))) for k, v in params.items()))
+        return ' '.join(('%s %s' % (k, v) for k, v in params.items()))
 
     def get_config(self):
         return {
@@ -149,12 +151,15 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         Build the index based on the given iterable of descriptor elements.
 
-        Subsequent calls to this method should rebuild the index, not add to it.
+        Subsequent calls to this method should rebuild the index, not add to
+        it.
 
         :raises ValueError: No data available in the given iterable.
 
-        :param descriptors: Iterable of descriptor elements to build index over.
-        :type descriptors: collections.Iterable[smqtk.representation.DescriptorElement]
+        :param descriptors:
+            Iterable of descriptor elements to build index over.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # ordered cache of descriptors in our index.
@@ -165,9 +170,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # matrix for creating distance kernel
         self._descr_matrix = []
 
-        def get_vector(d):
-            return d, d.vector()
+        def get_vector(d_elem):
+            return d_elem, d_elem.vector()
 
+        # noinspection PyTypeChecker
         vector_iter = parallel_map(get_vector, descriptors,
                                    name='vector_iter',
                                    use_multiprocessing=self.multiprocess_fetch,
@@ -176,6 +182,8 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         for i, (d, v) in enumerate(vector_iter):
             self._descr_cache.append(d)
+            # ``_descr_matrix`` is a list, currently.
+            # noinspection PyUnresolvedReferences
             self._descr_matrix.append(v)
             self._descr2index[tuple(v)] = i
         self._descr_matrix = numpy.array(self._descr_matrix)
@@ -188,7 +196,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         if self.descr_cache_fp:
             with open(self.descr_cache_fp, 'wb') as f:
-                cPickle.dump(self._descr_cache, f, -1)
+                pickle.dump(self._descr_cache, f, -1)
 
     def get_descr_and_distance_list(self, svm_model):
         """
@@ -301,22 +309,30 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             num_pos += 1
         self._log.debug("Positives given: %d", num_pos)
 
-        # When no negative examples are given, naively pick most distant example
-        # in our dataset, using HI metric, for each positive example
+        # When no negative examples are given, naively pick most distant
+        # example in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
+        # Copy neg descriptors into a set for testing size.
+        if not isinstance(neg, collections.Sized):
+            #: :type: set[smqtk.representation.DescriptorElement]
+            neg = set(neg)
         if not neg:
-            self._log.info("Auto-selecting negative examples. (%d per positive)",
-                           self.autoneg_select_ratio)
-            # ``train_vectors`` only composed of positive examples at this point
+            self._log.info("Auto-selecting negative examples. (%d per "
+                           "positive)", self.autoneg_select_ratio)
+            # ``train_vectors`` only composed of positive examples at this
+            # point.
             for p in pos:
-                # where d is the distance vector to descriptor elements in cache
+                # Where d is the distance vector to descriptor elements in
+                # cache.
                 d = histogram_intersection_distance(p.vector(),
                                                     self._descr_matrix)
                 # Scan vector for max distance index
                 # - Allow variable number of maximally distance descriptors to
                 #   be picked per positive.
-                m_set = {}  # track most distance neighbors
-                m_val = -float('inf')  # track smallest distance of most distant neighbors
+                # track most distance neighbors
+                m_set = {}
+                # track smallest distance of most distant neighbors
+                m_val = -float('inf')
                 for i in range(d.size):
                     if d[i] > m_val:
                         m_set[d[i]] = i
@@ -332,14 +348,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                             len(neg_autoselect), neg_autoselect)
 
         num_neg = 0
-        for d in neg:
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
-        for d in neg_autoselect:
-            train_labels.append(-1)
-            train_vectors.append(d.vector().tolist())
-            num_neg += 1
+        for n_iterable in (neg, neg_autoselect):
+            for d in n_iterable:
+                train_labels.append(-1)
+                train_vectors.append(d.vector().tolist())
+                num_neg += 1
 
         if not num_pos:
             raise ValueError("No positive examples provided.")
@@ -349,9 +362,20 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Training SVM model
         self._log.debug("online model training")
         svm_problem = svm.svm_problem(train_labels, train_vectors)
-        svm_model = svmutil.svm_train(svm_problem,
-                                      self._gen_svm_parameter_string(num_pos,
-                                                                     num_neg))
+        param_str = self._gen_svm_parameter_string(num_pos, num_neg)
+        svm_param = svm.svm_parameter(param_str)
+        svm_model = svmutil.svm_train(svm_problem, svm_param)
+
+        if hasattr(svm_model, "param"):
+            self._log.debug("SVM input parameters: %s", param_str)
+            self._log.debug("SVM model parsed parameters: %s",
+                            str(svm_model.param))
+            param = svm_model.param
+            wgt_pairs = [(param.weight_label[i], param.weight[i])
+                         for i in range(param.nr_weight)]
+            wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
+            self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
+
         if svm_model.l == 0:
             raise RuntimeError("SVM Model learning failed")
 
@@ -410,6 +434,10 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
                 row_wise=True
             )
 
+            # TODO(john.moeller): None of the Platt scaling should be necessary.
+            # svmutil.svm_predict will apply the Platt scaling directly. See
+            # https://github.com/cjlin1/libsvm/tree/master/python
+
             self._log.debug("Platt scaling")
             # the actual platt scaling stuff
             weights = numpy.array(svm_model.get_sv_coef()).flatten()
@@ -454,7 +482,5 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
     def get_model(self):
         return self.svm_model
-
-
 
 RELEVANCY_INDEX_CLASS = LibSvmHikRelevancyIndex

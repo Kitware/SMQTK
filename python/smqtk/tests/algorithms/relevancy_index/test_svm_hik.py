@@ -1,15 +1,11 @@
 from __future__ import division, print_function
 import unittest
 
-import nose.tools as ntools
 import numpy as np
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 if LibSvmHikRelevancyIndex.is_usable():
@@ -46,17 +42,18 @@ if LibSvmHikRelevancyIndex.is_usable():
 
         def test_configuration(self):
             c = LibSvmHikRelevancyIndex.get_default_config()
-            ntools.assert_in('descr_cache_filepath', c)
+            self.assertIn('descr_cache_filepath', c)
 
             # change default for something different
             c['descr_cache_filepath'] = 'foobar.thing'
 
+            #: :type: LibSvmHikRelevancyIndex
             iqr_index = LibSvmHikRelevancyIndex.from_config(c)
-            ntools.assert_equal(iqr_index.descr_cache_fp,
-                                c['descr_cache_filepath'])
+            self.assertEqual(iqr_index.descr_cache_fp,
+                             c['descr_cache_filepath'])
 
             # test config idempotency
-            ntools.assert_dict_equal(c, iqr_index.get_config())
+            self.assertDictEqual(c, iqr_index.get_config())
 
         def test_rank_no_neg(self):
             iqr_index = LibSvmHikRelevancyIndex()
@@ -68,22 +65,23 @@ if LibSvmHikRelevancyIndex.is_usable():
         def test_rank_no_pos(self):
             iqr_index = LibSvmHikRelevancyIndex()
             iqr_index.build_index(self.index_descriptors)
-            ntools.assert_raises(ValueError, iqr_index.rank, [], [self.q_neg])
+            self.assertRaises(ValueError, iqr_index.rank, [], [self.q_neg])
 
         def test_rank_no_input(self):
             iqr_index = LibSvmHikRelevancyIndex()
             iqr_index.build_index(self.index_descriptors)
-            ntools.assert_raises(ValueError, iqr_index.rank, [], [])
+            self.assertRaises(ValueError, iqr_index.rank, [], [])
 
         def test_count(self):
             iqr_index = LibSvmHikRelevancyIndex()
-            ntools.assert_equal(iqr_index.count(), 0)
+            self.assertEqual(iqr_index.count(), 0)
             iqr_index.build_index(self.index_descriptors)
-            ntools.assert_equal(iqr_index.count(), 7)
+            self.assertEqual(iqr_index.count(), 7)
 
 
         def _test_simple_iqr_helper(self, rank, libsvm_for_scaling=False):
-            rank_ordered = sorted(rank.items(), key=lambda e: e[1], reverse=True)
+            rank_ordered = sorted(rank.items(), key=lambda e: e[1],
+                                  reverse=True)
 
             print("rank_ordered:")
             for i, r in enumerate(rank_ordered):
@@ -91,15 +89,15 @@ if LibSvmHikRelevancyIndex.is_usable():
 
             # Check expected ordering
             # 0-5-1-2-6-3-4
-            ntools.assert_equal(rank_ordered[0][0], self.d0)
-            ntools.assert_equal(rank_ordered[1][0], self.d5)
-            ntools.assert_equal(rank_ordered[2][0], self.d1)
+            self.assertEqual(rank_ordered[0][0], self.d0)
+            self.assertEqual(rank_ordered[1][0], self.d5)
+            self.assertEqual(rank_ordered[2][0], self.d1)
             # The probabilities are equal (0.5)
-            ntools.assert_equal({rank_ordered[3][0], rank_ordered[4][0]},
-                                {self.d2, self.d6})
+            self.assertEqual({rank_ordered[3][0], rank_ordered[4][0]},
+                             {self.d2, self.d6})
             # The probabilities are equal 0.414
-            ntools.assert_equal({rank_ordered[5][0], rank_ordered[6][0]},
-                                {self.d3, self.d4})
+            self.assertEqual({rank_ordered[5][0], rank_ordered[6][0]},
+                             {self.d3, self.d4})
 
         def test_simple_iqr_scenario(self):
             # Make some descriptors;

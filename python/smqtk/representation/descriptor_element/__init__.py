@@ -46,16 +46,11 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         self._uuid = uuid
 
     def __hash__(self):
-        return hash((self.type(), self.uuid()))
+        return hash(self.uuid())
 
     def __eq__(self, other):
         if isinstance(other, DescriptorElement):
-            b = self.vector() == other.vector()
-            if isinstance(b, numpy.core.multiarray.ndarray):
-                vec_equal = b.all()
-            else:
-                vec_equal = b
-            return vec_equal and (self.type() == other.type())
+            return numpy.array_equal(self.vector(), other.vector())
         return False
 
     def __ne__(self, other):
@@ -64,6 +59,16 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
     def __repr__(self):
         return "%s{type: %s, uuid: %s}" % (self.__class__.__name__, self.type(),
                                            self.uuid())
+
+    def __getstate__(self):
+        return {
+            "_type_label": self._type_label,
+            "_uuid": self._uuid,
+        }
+
+    def __setstate__(self, state):
+        self._type_label = state['_type_label']
+        self._uuid = state['_uuid']
 
     @classmethod
     def get_default_config(cls):
@@ -157,7 +162,7 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         """
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
-        :rtype: numpy.core.multiarray.ndarray or None
+        :rtype: numpy.ndarray or None
         """
 
     @abc.abstractmethod
@@ -169,7 +174,10 @@ class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
         overwrite it.
 
         :param new_vec: New vector to contain.
-        :type new_vec: numpy.core.multiarray.ndarray
+        :type new_vec: numpy.ndarray
+
+        :returns: Self.
+        :rtype: DescriptorMemoryElement
 
         """
 
@@ -186,7 +194,8 @@ def get_descriptor_element_impls(reload_modules=False):
     We search for implementation classes in:
         - modules next to this file this function is defined in (ones that begin
           with an alphanumeric character),
-        - python modules listed in the environment variable ``DESCRIPTOR_ELEMENT_PATH``
+        - python modules listed in the environment variable
+          ``DESCRIPTOR_ELEMENT_PATH``
             - This variable should contain a sequence of python module
               specifications, separated by the platform specific PATH separator
               character (``;`` for Windows, ``:`` for unix)

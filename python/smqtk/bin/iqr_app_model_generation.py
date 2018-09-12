@@ -1,16 +1,18 @@
 """
 Train and generate models for the SMQTK IQR Application.
 """
+import argparse
 import glob
 import json
 import logging
-import argparse
-import six
 import os.path as osp
+
+import six
 
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.utils import bin_utils, jsmin, plugin
+
 
 __author__ = 'paul.tunison@kitware.com'
 
@@ -56,16 +58,16 @@ def main():
     # Input parameters
     #
     # The following dictionaries are JSON configurations that are used to
-    # configure the various data structures and algorithms needed for the IQR demo
-    # application. Values here can be changed to suit your specific data and
-    # algorithm needs.
+    # configure the various data structures and algorithms needed for the IQR
+    # demo application. Values here can be changed to suit your specific data
+    # and algorithm needs.
     #
-    # See algorithm implementation doc-strings for more information on configuration
-    # parameters (see implementation class ``__init__`` method).
+    # See algorithm implementation doc-strings for more information on
+    # configuration parameters (see implementation class ``__init__`` method).
     #
 
     # base actions on a specific IQR tab configuration (choose index here)
-    if args.tab <  0 or args.tab > (len(search_app_config["iqr_tabs"]) - 1):
+    if args.tab < 0 or args.tab > (len(search_app_config["iqr_tabs"]) - 1):
         log.error("Invalid tab number provided.")
         exit(1)
 
@@ -75,31 +77,33 @@ def main():
     data_set_config = search_app_iqr_config['data_set']
 
     # Configure DescriptorGenerator algorithm implementation, parameters and
-    # persistant model component locations (if implementation has any).
+    # persistent model component locations (if implementation has any).
     descriptor_generator_config = search_app_iqr_config['descr_generator']
 
     # Configure NearestNeighborIndex algorithm implementation, parameters and
-    # persistant model component locations (if implementation has any).
+    # persistent model component locations (if implementation has any).
     nn_index_config = search_app_iqr_config['nn_index']
 
     # Configure RelevancyIndex algorithm implementation, parameters and
-    # persistant model component locations (if implementation has any).
+    # persistent model component locations (if implementation has any).
     #
-    # The LibSvmHikRelevancyIndex implementation doesn't actually build a persistant
-    # model (or doesn't have to that is), but we're leaving this block here in
-    # anticipation of other potential implementations in the future.
+    # The LibSvmHikRelevancyIndex implementation doesn't actually build a
+    # persistent model (or doesn't have to that is), but we're leaving this
+    # block here in anticipation of other potential implementations in the
+    # future.
     #
     rel_index_config = search_app_iqr_config['rel_index_config']
 
-    # Configure DescriptorElementFactory instance, which defines what implementation
-    # of DescriptorElement to use for storing generated descriptor vectors below.
+    # Configure DescriptorElementFactory instance, which defines what
+    # implementation of DescriptorElement to use for storing generated
+    # descriptor vectors below.
     descriptor_elem_factory_config = search_app_iqr_config['descriptor_factory']
 
     #
     # Initialize data/algorithms
     #
-    # Constructing appropriate data structures and algorithms, needed for the IQR
-    # demo application, in preparation for model training.
+    # Constructing appropriate data structures and algorithms, needed for the
+    # IQR demo application, in preparation for model training.
     #
 
     descriptor_elem_factory = \

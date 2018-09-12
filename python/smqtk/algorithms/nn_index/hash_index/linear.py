@@ -1,4 +1,5 @@
 import heapq
+import threading
 
 from six import BytesIO
 from six.moves import map
@@ -87,13 +88,16 @@ class LinearHashIndex (HashIndex):
         """
         Initialize linear, brute-force hash index.
 
-        :param cache_element: Optional path to a file to cache our index to.
+        :param cache_element: Optional data element to cache our index to.
         :type cache_element: smqtk.representation.DataElement | None
 
         """
         super(LinearHashIndex, self).__init__()
         self.cache_element = cache_element
+        # Our index is the set of bit-vectors as an integers/longs.
+        #: :type: set[int]
         self.index = set()
+        self._model_lock = threading.RLock()
         self.load_cache()
 
     def get_config(self):
@@ -108,78 +112,121 @@ class LinearHashIndex (HashIndex):
         """
         Load from file cache if we have one
         """
-        if self.cache_element and not self.cache_element.is_empty():
-            buff = BytesIO(self.cache_element.get_bytes())
-            self.index = set(numpy.load(buff))
+        with self._model_lock:
+            if self.cache_element and not self.cache_element.is_empty():
+                buff = BytesIO(self.cache_element.get_bytes())
+                self.index = set(numpy.load(buff))
 
     def save_cache(self):
         """
         save to file cache if configures
         """
-        if self.cache_element and self.index:
-            if self.cache_element.is_read_only():
-                raise ValueError("Cache element (%s) is read-only."
-                                 % self.cache_element)
-            buff = BytesIO()
-            numpy.save(buff, tuple(self.index))
-            self.cache_element.set_bytes(buff.getvalue())
+        with self._model_lock:
+            if self.cache_element and self.index:
+                if self.cache_element.is_read_only():
+                    raise ValueError("Cache element (%s) is read-only."
+                                     % self.cache_element)
+                buff = BytesIO()
+                # noinspection PyTypeChecker
+                numpy.save(buff, tuple(self.index))
+                self.cache_element.set_bytes(buff.getvalue())
 
     def count(self):
-        return len(self.index)
+        with self._model_lock:
+            return len(self.index)
 
-    def build_index(self, hashes):
+    def _build_index(self, hashes):
         """
-        Build the index with the give hash codes (bit-vectors).
+        Internal method to be implemented by sub-classes to build the index with
+        the given hash codes (bit-vectors).
 
-        Subsequent calls to this method should rebuild the index, not add to
-        it. If an exception is raised, the current index, if there is one, will
-        not be modified.
-
-        :raises ValueError: No data available in the given iterable.
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
 
         :param hashes: Iterable of descriptor elements to build index
             over.
         :type hashes: collections.Iterable[numpy.ndarray[bool]]
 
         """
-        new_index = set(map(bit_vector_to_int_large, hashes))
-        if not len(new_index):
-            raise ValueError("No hashes given to index.")
-        self.index = new_index
-        self.save_cache()
+        with self._model_lock:
+            new_index = set(map(bit_vector_to_int_large, hashes))
+            self.index = new_index
+            self.save_cache()
 
-    def nn(self, h, n=1):
+    def _update_index(self, hashes):
         """
-        Return the nearest `N` neighbors to the given hash code.
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more hash vectors given.
+
+        If no index exists yet, a new one should be created using the given hash
+        vectors.
+
+        :param hashes: Iterable of numpy boolean hash vectors to add to this
+            index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        """
+        with self._model_lock:
+            self.index.update(set(map(bit_vector_to_int_large, hashes)))
+            self.save_cache()
+
+    def _remove_from_index(self, hashes):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        hashes from this index.
+
+        :param hashes: Iterable of numpy boolean hash vectors to remove from
+            this index.
+        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+
+        :raises KeyError: One or more hashes provided do not match any stored
+            hashes.  The index should not be modified.
+
+        """
+        with self._model_lock:
+            h_int_set = set(map(bit_vector_to_int_large, hashes))
+            # KeyError if any hash ints are not in our index map.
+            for h in h_int_set:
+                if h not in self.index:
+                    raise KeyError(h)
+            self.index = self.index - h_int_set
+            self.save_cache()
+
+    def _nn(self, h, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbor hash codes as bit-vectors to the given hash code
+        bit-vector.
 
         Distances are in the range [0,1] and are the percent different each
         neighbor hash is from the query, based on the number of bits contained
-        in the query.
+        in the query (normalized hamming distance).
+
+        When this internal method is called, we have already checked that our
+        index is not empty.
 
         :param h: Hash code to compute the neighbors of. Should be the same bit
             length as indexed hash codes.
-        :type h: numpy.ndarray[bool] | list[bool]
+        :type h: numpy.ndarray[bool]
 
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :raises ValueError: No index to query from.
-
         :return: Tuple of nearest N hash codes and a tuple of the distance
             values to those neighbors.
-        :rtype: (tuple[numpy.ndarray[bool], tuple[float])
+        :rtype: (tuple[numpy.ndarray[bool]], tuple[float])
 
         """
-        super(LinearHashIndex, self).nn(h, n)
-
-        h_int = bit_vector_to_int_large(h)
-        bits = len(h)
-        #: :type: list[int|long]
-        near_codes = \
-            heapq.nsmallest(n, self.index,
-                            lambda e: hamming_distance(h_int, e)
-                            )
-        distances = list(map(hamming_distance, near_codes,
-                             [h_int] * len(near_codes)))
-        return [int_to_bit_vector_large(c, bits) for c in near_codes], \
-               [d / float(bits) for d in distances]
+        with self._model_lock:
+            h_int = bit_vector_to_int_large(h)
+            bits = len(h)
+            #: :type: list[int|long]
+            near_codes = \
+                heapq.nsmallest(n, self.index,
+                                lambda e: hamming_distance(h_int, e)
+                                )
+            distances = map(hamming_distance, near_codes,
+                            [h_int] * len(near_codes))
+            return [int_to_bit_vector_large(c, bits) for c in near_codes], \
+                   [d / float(bits) for d in distances]

@@ -6,9 +6,13 @@
  *
  * for image load progress status, see: http://usablica.github.io/progress.js/
  *
- * @param is_example: Boolean flag for whether or not this is a view of example
- *                    data, in contrast to data in the IQR working index.
- *
+ * @param container jQuery or DOM element that should contain this DataView.
+ * @param rank 0-indexed rank value of this data element.
+ * @param uid UID of this data element
+ * @param probability Floating point relevance probability value in the range
+ *                    [0,1]
+ * @param is_example Boolean flag for whether or not this is a view of example
+ *                   data, in contrast to data in the IQR working index.
  */
 function DataView(container, rank, uid, probability, is_example) {
     Object.call(this);
@@ -49,22 +53,32 @@ function DataView(container, rank, uid, probability, is_example) {
     //
 
     // top-level container
-    this.result = $('<div class="iqr-result"/>');
+    this.result = $('<div class="iqr-result"></div>');
     this.result.appendTo($(container));
 
     // Header container textual identifiers
-    this.header = $('<div/>');
+    this.header = $('<div></div>');
     this.header.css('height', '24px');
-    this.header.text("#" + (this.rank+1) + " | "
-                     //+ "UID: " + this.uid + " | "
-                     + (this.probability*100).toFixed(2) + "%");
+    if (isFinite(this.probability)) {
+        // ``probability`` is a numeric value, so assume a [0,1] percentage and
+        // mult by 100.
+        this.header.text("#" + (this.rank + 1) + " | "
+            //+ "UID: " + this.uid + " | "
+            + (this.probability * 100).toFixed(2) + "%");
+    } else {
+        // ``probability`` is not a numeric value, so assume a value to be
+        // directly printed.
+        this.header.text("#" + (this.rank + 1) + " | "
+            //+ "UID: " + this.uid + " | "
+            + this.probability);
+    }
 
     // adjudication icons / functionality
-    this.adjudication_controls = $('<div class="adjudication-box"/>');
-    this.adj_pos_icon = $('<img height="24px">');
+    this.adjudication_controls = $('<div class="adjudication-box"></div>');
+    this.adj_pos_icon = $('<img height="24px" src="">');
     this.adj_pos_icon.css('padding-left', '12px');
     this.adj_pos_icon.attr('src', inst.adj_pos_off_icon);
-    this.adj_neg_icon = $('<img height="24px">');
+    this.adj_neg_icon = $('<img height="24px" src="">');
     this.adj_neg_icon.css('padding-left', '12px');
     this.adj_neg_icon.attr('src', inst.adj_neg_off_icon);
 
@@ -72,8 +86,8 @@ function DataView(container, rank, uid, probability, is_example) {
     this.adjudication_controls.append(this.adj_neg_icon);
 
     // image container image data and adjudication buttons
-    this.image_container = $('<div class="iqr-result-img-container"/>');
-    this.image_data_view = $('<img>');
+    this.image_container = $('<div class="iqr-result-img-container"></div>');
+    this.image_data_view = $('<img src="">');
     // Showing loading GIF by default until image preview actually loaded via
     // ajax call.
     this.image_data_view.attr('src', this.loading_gif);
@@ -111,16 +125,6 @@ function DataView(container, rank, uid, probability, is_example) {
 
     return this;
 }
-/**
- * Return boolean value indicating if this result has or has not been
- * adjudicated yet.
- *
- * @returns boolean True of this result has been adjudicated and false if
- *      not.
- */
-DataView.prototype.is_adjudicated = function () {
-    return (this.is_negative || this.is_positive);
-};
 
 /**
  * Update the view of this element based on current state.
@@ -213,7 +217,9 @@ DataView.prototype.update_view = function (server_update) {
                     inst.image_preview_data = inst.adj_neg_on_icon;
                 }
                 else {
+                    // noinspection JSUnresolvedVariable
                     inst.image_preview_data = data.static_preview_link;
+                    // noinspection JSUnresolvedVariable
                     inst.static_view_link = data.static_file_link;
                     inst.image_loaded = true;
 
@@ -258,7 +264,7 @@ DataView.prototype.set_positive = function () {
         url: "adjudicate",
         data: post_data,
         method: "POST",
-        success: function (data) {
+        success: function () {
             //alert_info("Marked ID "+inst.uid+" as "+adj_type);
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -296,7 +302,7 @@ DataView.prototype.set_negative = function () {
         url: "adjudicate",
         data: post_data,
         method: "POST",
-        success: function (data) {
+        success: function () {
             //alert_info("Marked ID "+inst.uid+" as "+adj_type);
         },
         error: function (jqXHR, textStatus, errorThrown) {

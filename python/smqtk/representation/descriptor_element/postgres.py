@@ -3,8 +3,7 @@ import multiprocessing
 import numpy
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils.postgres \
-    import norm_psql_cmd_string, PsqlConnectionHelper
+from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
 try:
@@ -155,19 +154,78 @@ class PostgresDescriptorElement (DescriptorElement):
         self.db_user = db_user
         self.db_pass = db_pass
 
-        self.psql_helper = PsqlConnectionHelper(db_name, db_host, db_port,
-                                                db_user, db_pass,
-                                                1, # No batching in this class
-                                                PSQL_TABLE_CREATE_RLOCK)
+        self._psql_helper = None
 
-        if create_table:
-            self.psql_helper.set_table_upsert_sql(
-                self.UPSERT_TABLE_TMPL.format(
-                    table_name=self.table_name,
-                    uuid_col=self.uuid_col,
-                    binary_col=self.binary_col,
-                )
+    def __getstate__(self):
+        """
+        Construct serialization state.
+
+        Due to the psql_helper containing a lock, it cannot be serialized.  This
+        is OK due to our creation of the helper on demand.  The cost incurred by
+        discarding the instance upon serialization is that once deserialized
+        elsewhere the helper instance will have to be created.  Since this
+        creation post-deserialization only happens once, this is acceptable.
+
+        """
+        state = super(PostgresDescriptorElement, self).__getstate__()
+        state.update({
+            "table_name": self.table_name,
+            "uuid_col": self.uuid_col,
+            "type_col": self.type_col,
+            "binary_col": self.binary_col,
+            "create_table": self.create_table,
+            "db_name": self.db_name,
+            "db_host": self.db_host,
+            "db_port": self.db_port,
+            "db_user": self.db_user,
+            "db_pass": self.db_pass,
+        })
+        return state
+
+    def __setstate__(self, state):
+        # Base DescriptorElement parts
+        super(PostgresDescriptorElement, self).__setstate__(state)
+        # Our parts
+        self.table_name = state['table_name']
+        self.uuid_col = state['uuid_col']
+        self.type_col = state['type_col']
+        self.binary_col = state['binary_col']
+        self.create_table = state['create_table']
+        self.db_name = state['db_name']
+        self.db_host = state['db_host']
+        self.db_port = state['db_port']
+        self.db_user = state['db_user']
+        self.db_pass = state['db_pass']
+        self._psql_helper = None
+
+    def _get_psql_helper(self):
+        """
+        Internal method to create on demand the PSQL connection helper class.
+        :return: PsqlConnectionHelper utility.
+        :rtype: PsqlConnectionHelper
+        """
+        # `hasattr` check used for backwards compatibility when interacting with
+        # databases containing elements serialized before the inclusion of this
+        # helper class.
+        if self._psql_helper is None:
+            # Only using a transport iteration size of 1 since this element is
+            # only meant to refer to a single entry in the associated table.
+            self._psql_helper = PsqlConnectionHelper(
+                self.db_name, self.db_host, self.db_port, self.db_user,
+                self.db_pass, itersize=1,
+                table_upsert_lock=PSQL_TABLE_CREATE_RLOCK
             )
+            # Register table upsert command
+            if self.create_table:
+                self._psql_helper.set_table_upsert_sql(
+                    self.UPSERT_TABLE_TMPL.format(
+                        table_name=self.table_name,
+                        type_col=self.type_col,
+                        uuid_col=self.uuid_col,
+                        binary_col=self.binary_col,
+                    )
+                )
+        return self._psql_helper
 
     def get_config(self):
         return {
@@ -216,11 +274,14 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        def exec_hook(cur):
-            cur.execute(q_select, q_select_values)
+        def cb(cursor):
+            cursor.execute(q_select, q_select_values)
 
-        # Should either yield one or zero rows
-        return bool(list(self.psql_helper.single_execute(exec_hook, yield_result_rows=True)))
+        # Should either yield one or zero rows.
+        psql_helper = self._get_psql_helper()
+        return bool(list(psql_helper.single_execute(
+            cb, yield_result_rows=True
+        )))
 
     def vector(self):
         """
@@ -228,7 +289,7 @@ class PostgresDescriptorElement (DescriptorElement):
 
         :return: Get the stored descriptor vector as a numpy array. This returns
             None of there is no vector stored in this container.
-        :rtype: numpy.core.multiarray.ndarray or None
+        :rtype: numpy.ndarray or None
 
         """
         q_select = self.SELECT_TMPL.format(**{
@@ -242,11 +303,17 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid())
         }
 
-        def exec_hook(cur):
-            cur.execute(q_select, q_select_values)
+        # query execution callback
+        # noinspection PyProtectedMember
+        def cb(cursor):
+            # type: (psycopg2._psycopg.cursor) -> None
+            cursor.execute(q_select, q_select_values)
 
-        r = list(self.psql_helper.single_execute(exec_hook, yield_result_rows=True))
-        if len(r) == 0:
+        # This should only fetch a single row.  Cannot yield more than one due
+        # use of primary keys.
+        psql_helper = self._get_psql_helper()
+        r = list(psql_helper.single_execute(cb, yield_result_rows=True))
+        if not r:
             return None
         else:
             b = r[0][0]
@@ -271,15 +338,21 @@ class PostgresDescriptorElement (DescriptorElement):
         :raises ValueError: ``new_vec`` was not a numpy ndarray.
 
         :param new_vec: New vector to contain. This must be a numpy array.
-        :type new_vec: numpy.core.multiarray.ndarray
+        :type new_vec: numpy.ndarray
+
+        :returns: Self.
+        :rtype: PostgresDescriptorElement
 
         """
-        if not isinstance(new_vec, numpy.core.multiarray.ndarray):
-            raise ValueError("Input array for setting was not a numpy.ndarray! "
-                             "(given: %s)" % type(new_vec))
+        if not isinstance(new_vec, numpy.ndarray):
+            new_vec = numpy.copy(new_vec)
 
         if new_vec.dtype != self.ARRAY_DTYPE:
-            new_vec = new_vec.astype(self.ARRAY_DTYPE)
+            try:
+                new_vec = new_vec.astype(self.ARRAY_DTYPE)
+            except TypeError:
+                raise ValueError("Could not convert input to a vector of type "
+                                 "%s." % self.ARRAY_DTYPE)
 
         q_upsert = self.UPSERT_TMPL.strip().format(**{
             "table_name": self.table_name,
@@ -293,7 +366,13 @@ class PostgresDescriptorElement (DescriptorElement):
             "uuid_val": str(self.uuid()),
         }
 
-        def exec_hook(cur):
-            cur.execute(q_upsert, q_upsert_values)
+        # query execution callback
+        # noinspection PyProtectedMember
+        def cb(cursor):
+            # type: (psycopg2._psycopg.cursor) -> None
+            cursor.execute(q_upsert, q_upsert_values)
 
-        self.psql_helper.single_execute(exec_hook, yield_result_rows=False)
+        # No return but need to force iteration.
+        psql_helper = self._get_psql_helper()
+        list(psql_helper.single_execute(cb, yield_result_rows=False))
+        return self

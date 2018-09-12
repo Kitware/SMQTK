@@ -1,6 +1,5 @@
 from __future__ import division, print_function
 import mock
-import nose.tools
 import os
 import six
 import unittest
@@ -14,7 +13,7 @@ class TestDataFileSet (unittest.TestCase):
 
     def test_configuration(self):
         default_config = DataFileSet.get_default_config()
-        nose.tools.assert_equal(default_config, {
+        self.assertEqual(default_config, {
             'root_directory': None,
             'uuid_chunk': 10,
             'pickle_protocol': -1,
@@ -22,18 +21,18 @@ class TestDataFileSet (unittest.TestCase):
 
         default_config['root_directory'] = '/some/dir'
         inst1 = DataFileSet.from_config(default_config)
-        nose.tools.assert_equal(default_config, inst1.get_config())
+        self.assertEqual(default_config, inst1.get_config())
 
         inst2 = DataFileSet.from_config(inst1.get_config())
-        nose.tools.assert_equal(inst1, inst2)
+        self.assertEqual(inst1, inst2)
 
     def test_new_invalid_uuid_chunk(self):
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             DataFileSet, '/', 0
         )
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             DataFileSet, '/', -1
         )
@@ -60,7 +59,7 @@ class TestDataFileSet (unittest.TestCase):
 
         dfs = DataFileSet(test_dir_path, uuid_chunk=None, pickle_protocol=2)
         actual_filepaths = set(dfs._iter_file_tree())
-        nose.tools.assert_set_equal(actual_filepaths, expected_filepaths)
+        self.assertSetEqual(actual_filepaths, expected_filepaths)
 
     def test_iter_file_tree_chunk3(self):
         test_dir_path = os.path.join(TEST_DATA_DIR, 'test_data_file_set_tree')
@@ -74,7 +73,7 @@ class TestDataFileSet (unittest.TestCase):
 
         dfs = DataFileSet(test_dir_path, uuid_chunk=3, pickle_protocol=2)
         actual_filepaths = set(dfs._iter_file_tree())
-        nose.tools.assert_set_equal(actual_filepaths, expected_filepaths)
+        self.assertSetEqual(actual_filepaths, expected_filepaths)
 
     def test_iter_file_tree_chunk4(self):
         test_dir_path = os.path.join(TEST_DATA_DIR, 'test_data_file_set_tree')
@@ -84,57 +83,58 @@ class TestDataFileSet (unittest.TestCase):
 
         dfs = DataFileSet(test_dir_path, uuid_chunk=5, pickle_protocol=2)
         actual_filepaths = set(dfs._iter_file_tree())
-        nose.tools.assert_set_equal(actual_filepaths, expected_filepaths)
+        self.assertSetEqual(actual_filepaths, expected_filepaths)
 
     def test_containing_dir_str_uuid(self):
         # Chunk == None
         s = DataFileSet('/', uuid_chunk=None)
-        nose.tools.assert_equal(s._containing_dir('0000'), '/')
-        nose.tools.assert_equal(s._containing_dir('346'), '/')
+        self.assertEqual(s._containing_dir('0000'), '/')
+        self.assertEqual(s._containing_dir('346'), '/')
         # Chunk == 1
         s = DataFileSet('/', uuid_chunk=1)
-        nose.tools.assert_equal(s._containing_dir('0000'), '/')
-        nose.tools.assert_equal(s._containing_dir('346'), '/')
+        self.assertEqual(s._containing_dir('0000'), '/')
+        self.assertEqual(s._containing_dir('346'), '/')
         # Chunk == 3
         s = DataFileSet('/', uuid_chunk=3)
-        nose.tools.assert_equal(s._containing_dir('123456'), '/12/34')
-        nose.tools.assert_equal(s._containing_dir('685225624578'), '/6852/2562')
-        nose.tools.assert_equal(s._containing_dir('1234567'), '/123/45')
+        self.assertEqual(s._containing_dir('123456'), '/12/34')
+        self.assertEqual(s._containing_dir('685225624578'), '/6852/2562')
+        self.assertEqual(s._containing_dir('1234567'), '/123/45')
 
     def test_containing_dir_not_str_uuid(self):
-        nose.tools.assert_equal(
+        self.assertEqual(
             DataFileSet('/', None)._containing_dir(4123458),
             "/"
         )
-        nose.tools.assert_equal(
+        self.assertEqual(
             DataFileSet('/', 3)._containing_dir(4123458),
             "/412/34"
         )
 
     def test_fp_for_uuid(self):
-        nose.tools.assert_equal(
+        self.assertEqual(
             DataFileSet('/', None)._fp_for_uuid(0),
             '/UUID_0.dataElement'
         )
-        nose.tools.assert_equal(
+        self.assertEqual(
             DataFileSet('/', None)._fp_for_uuid('abc'),
             '/UUID_abc.dataElement'
         )
-        nose.tools.assert_equal(
+        self.assertEqual(
             DataFileSet('/', 3)._fp_for_uuid('abc'),
             '/a/b/UUID_abc.dataElement'
         )
 
     @mock.patch('smqtk.representation.data_set.file_set.pickle')
-    @mock.patch('smqtk.representation.data_set.file_set.open', new_callable=mock.MagicMock)
+    @mock.patch('smqtk.representation.data_set.file_set.open',
+                new_callable=mock.MagicMock)
     def test_iter(self, m_open, m_pickle):
         expected_file_tree_iter = ['/a', '/b', '/d']
         dfs = DataFileSet('/')
         dfs._iter_file_tree = mock.MagicMock(
             return_value=expected_file_tree_iter)
         list(dfs)
-        nose.tools.assert_equal(m_open.call_count, 3)
-        nose.tools.assert_equal(m_pickle.load.call_count, 3)
+        self.assertEqual(m_open.call_count, 3)
+        self.assertEqual(m_pickle.load.call_count, 3)
         m_open.assert_any_call('/a')
         m_open.assert_any_call('/b')
         m_open.assert_any_call('/d')
@@ -144,7 +144,7 @@ class TestDataFileSet (unittest.TestCase):
         dfs = DataFileSet('/')
         dfs._iter_file_tree = mock.MagicMock(
             return_value=expected_file_tree_iter)
-        nose.tools.assert_equal(dfs.count(), 3)
+        self.assertEqual(dfs.count(), 3)
 
     def test_uuids(self):
         # mocking self iteration results
@@ -169,11 +169,11 @@ class TestDataFileSet (unittest.TestCase):
             m_iter.side_effect = test_iter
 
             dfs = DataFileSet('/')
-            nose.tools.assert_set_equal(dfs.uuids(), expected_uuid_set)
+            self.assertSetEqual(dfs.uuids(), expected_uuid_set)
 
     def test_add_data_not_dataelement(self):
         dfs = DataFileSet('/')
-        nose.tools.assert_raises_regexp(
+        self.assertRaisesRegexp(
             AssertionError,
             "^Not given a DataElement for addition:",
             dfs.add_data, 'not a dataElement'
@@ -184,7 +184,7 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.file_utils'
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
-    def test_add_data_single(self, m_isinstance, m_scd, m_open, m_pickle):
+    def test_add_data_single(self, m_isinstance, m_scd, m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -216,7 +216,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk0(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -237,10 +237,10 @@ class TestDataFileSet (unittest.TestCase):
         dfs = DataFileSet('/', uuid_chunk=None)
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created root 3 times
-        nose.tools.assert_equal(m_scd.call_count, 3)
+        self.assertEqual(m_scd.call_count, 3)
         m_scd.assert_called_with('/')
         # called open correctly 3 times
-        nose.tools.assert_equal(m_open.call_count, 3)
+        self.assertEqual(m_open.call_count, 3)
         m_open.assert_any_call('/UUID_abcdefg.dataElement', 'wb')
         m_open.assert_any_call('/UUID_1234567.dataElement', 'wb')
         m_open.assert_any_call('/UUID_4F*s93#5.dataElement', 'wb')
@@ -251,7 +251,7 @@ class TestDataFileSet (unittest.TestCase):
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk3(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+                                      _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -272,12 +272,12 @@ class TestDataFileSet (unittest.TestCase):
         dfs = DataFileSet('/', uuid_chunk=3)
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created correct directories
-        nose.tools.assert_equal(m_scd.call_count, 3)
+        self.assertEqual(m_scd.call_count, 3)
         m_scd.assert_any_call('/abc/de')
         m_scd.assert_any_call('/123/45')
         m_scd.assert_any_call('/4F*/s93')
         # called open correctly 3 times
-        nose.tools.assert_equal(m_open.call_count, 3)
+        self.assertEqual(m_open.call_count, 3)
         m_open.assert_any_call('/abc/de/UUID_abcdefg.dataElement', 'wb')
         m_open.assert_any_call('/123/45/UUID_1234567.dataElement', 'wb')
         m_open.assert_any_call('/4F*/s93/UUID_4F*s93#5.dataElement', 'wb')
@@ -287,8 +287,8 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.file_utils'
                 '.safe_create_dir')
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
-    def test_add_data_multiple_chunk3_relative(self, m_isinstance, m_scd, m_open,
-                                      m_pickle):
+    def test_add_data_multiple_chunk3_relative(self, m_isinstance, m_scd,
+                                               m_open, _m_pickle):
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -309,15 +309,18 @@ class TestDataFileSet (unittest.TestCase):
         dfs = DataFileSet('rel/subdir', uuid_chunk=3)
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created correct directories
-        nose.tools.assert_equal(m_scd.call_count, 3)
+        self.assertEqual(m_scd.call_count, 3)
         m_scd.assert_any_call('rel/subdir/abc/de')
         m_scd.assert_any_call('rel/subdir/123/45')
         m_scd.assert_any_call('rel/subdir/4F*/s93')
         # called open correctly 3 times
-        nose.tools.assert_equal(m_open.call_count, 3)
-        m_open.assert_any_call('rel/subdir/abc/de/UUID_abcdefg.dataElement', 'wb')
-        m_open.assert_any_call('rel/subdir/123/45/UUID_1234567.dataElement', 'wb')
-        m_open.assert_any_call('rel/subdir/4F*/s93/UUID_4F*s93#5.dataElement', 'wb')
+        self.assertEqual(m_open.call_count, 3)
+        m_open.assert_any_call('rel/subdir/abc/de/UUID_abcdefg.dataElement',
+                               'wb')
+        m_open.assert_any_call('rel/subdir/123/45/UUID_1234567.dataElement',
+                               'wb')
+        m_open.assert_any_call('rel/subdir/4F*/s93/UUID_4F*s93#5.dataElement',
+                               'wb')
 
     @mock.patch('smqtk.representation.data_set.file_set.osp.isfile')
     def test_get_data_no_file(self, m_isfile):
@@ -327,7 +330,7 @@ class TestDataFileSet (unittest.TestCase):
         m_isfile.return_value = False
 
         dfs = DataFileSet(TEST_DATA_DIR, None)
-        nose.tools.assert_raises_regexp(
+        self.assertRaisesRegexp(
             KeyError,
             'no_exist_uuid',
             dfs.get_data, 'no_exist_uuid'
@@ -352,4 +355,4 @@ class TestDataFileSet (unittest.TestCase):
         actual_return = dfs.get_data(expected_uuid)
         m_isfile.assert_called_once_with(expected_filepath)
         m_open.assert_called_once_with(expected_filepath, 'rb')
-        nose.tools.assert_equal(actual_return, expected_pickle_return)
+        self.assertEqual(actual_return, expected_pickle_return)

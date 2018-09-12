@@ -1,4 +1,6 @@
-from six.moves import cPickle
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+
 import collections
 from copy import deepcopy
 import ctypes
@@ -6,10 +8,11 @@ import logging
 import os
 import tempfile
 
-import six
-
 import numpy
 import numpy.linalg
+import scipy.stats
+import six
+from six.moves import cPickle
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.representation.data_element import from_uri
@@ -70,13 +73,13 @@ class LibSvmClassifier (SupervisedClassifier):
         :param svm_model_uri: Path to the libSVM model file.
         :type svm_model_uri: None | str
 
-        :param svm_label_map_uri: Path to the pickle file containing this model's
-            output labels.
+        :param svm_label_map_uri: Path to the pickle file containing this
+            model's output labels.
         :type svm_label_map_uri: None | str
 
         :param train_params: SVM parameters used for training. See libSVM
             documentation for parameter flags and values.
-        :type train_params: dict[str, int|float]
+        :type train_params: dict[basestring, int|float]
 
         :param normalize: Normalize input vectors to training and
             classification methods using ``numpy.linalg.norm``. This may either
@@ -181,16 +184,16 @@ class LibSvmClassifier (SupervisedClassifier):
             self.svm_model_elem.clean_temp()
 
         if self.svm_label_map_elem and not self.svm_label_map_elem.is_empty():
-            svm_lm_tmp_fp = self.svm_label_map_elem.write_temp()
-            self.svm_label_map = cPickle.load(svm_lm_tmp_fp)
-            self.svm_label_map_elem.clean_temp()
+            self.svm_label_map = \
+                cPickle.loads(self.svm_label_map_elem.get_bytes())
 
     @staticmethod
     def _gen_param_string(params):
         """
         Make a single string out of a parameters dictionary
         """
-        return ' '.join((str(k) + ' ' + str(v) for k, v in six.iteritems(params)))
+        return ' '.join((str(k) + ' ' + str(v)
+                         for k, v in six.iteritems(params)))
 
     def _norm_vector(self, v):
         """
@@ -239,35 +242,27 @@ class LibSvmClassifier (SupervisedClassifier):
         """
         return None not in (self.svm_model, self.svm_label_map)
 
-    def train(self, class_examples=None, **kwds):
+    def _train(self, class_examples, **extra_params):
         """
-        Train the supervised classifier model.
+        Internal method that trains the classifier implementation.
 
-        If a model is already loaded, we will raise an exception in order to
-        prevent accidental overwrite.
+        This method is called after checking that there is not already a model
+        trained, thus it can be assumed that no model currently exists.
 
-        If the same label is provided to both ``class_examples`` and ``kwds``,
-        the examples given to the reference in ``kwds`` will prevail.
+        The class labels will have already been checked before entering this
+        method, so it can be assumed that the ``class_examples`` will container
+        at least two classes.
 
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
         :type class_examples: dict[collections.Hashable,
                  collections.Iterable[smqtk.representation.DescriptorElement]]
 
-        :param kwds: Keyword assignment of labels to iterables of
-            DescriptorElement training examples.
-        :type kwds: dict[str,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
-
-        :raises ValueError: There were no class examples provided.
-        :raises ValueError: Less than 2 classes were given.
-        :raises RuntimeError: A model already exists in this instance.Following
-            through with training would overwrite this model. Throwing an
-            exception for information protection.
+        :param extra_params: Dictionary with extra parameters for training.
+            This is not used by this implementation.
+        :type extra_params: None | dict[basestring, object]
 
         """
-        class_examples = \
-            super(LibSvmClassifier, self).train(class_examples, **kwds)
 
         # Offset from 0 for positive class labels to use
         # - not using label of 0 because we think libSVM wants positive labels
@@ -306,7 +301,7 @@ class LibSvmClassifier (SupervisedClassifier):
             del g, x
 
         assert len(train_labels) == len(train_vectors), \
-            "Count miss-match between parallel labels and descriptor vectors" \
+            "Count mismatch between parallel labels and descriptor vectors" \
             "being sent to libSVM (%d != %d)" \
             % (len(train_labels), len(train_vectors))
 
@@ -314,14 +309,14 @@ class LibSvmClassifier (SupervisedClassifier):
         #: :type: dict
         params = deepcopy(self.train_params)
         params.update(param_debug)
-        # Calculating class weights for C-SVC SVM
+        # Calculating class weights if set to C-SVC type SVM
         if '-s' not in params or int(params['-s']) == 0:
-            total_examples = sum(train_group_sizes)
+            # (john.moeller): The weighting should probably be the geometric
+            # mean of the number of examples over the classes divided by the
+            # number of examples for the current class.
+            gmean = scipy.stats.gmean(train_group_sizes)
             for i, n in enumerate(train_group_sizes, CLASS_LABEL_OFFSET):
-                # weight is the ratio of between number of other-class examples
-                # to the number of examples in this class.
-                other_class_examples = total_examples - n
-                w = max(1.0, other_class_examples / float(n))
+                w = gmean / n
                 params['-w' + str(i)] = w
                 self._log.debug("-- class '%s' weight: %s",
                                 self.svm_label_map[i], w)
@@ -342,7 +337,8 @@ class LibSvmClassifier (SupervisedClassifier):
                 cPickle.dumps(self.svm_label_map, -1)
             )
         if self.svm_model_elem and self.svm_model_elem.writable():
-            self._log.debug("saving model to element (%s)", self.svm_model_elem)
+            self._log.debug("saving model to element (%s)",
+                            self.svm_model_elem)
             # LibSvm I/O only works with filepaths, thus the need for an
             # intermediate temporary file.
             fd, fp = tempfile.mkstemp()
@@ -372,15 +368,19 @@ class LibSvmClassifier (SupervisedClassifier):
 
     def _classify(self, d):
         """
-        Internal method that defines the generation of the classification map
-        for a given DescriptorElement. This returns a dictionary mapping
-        integer labels to a floating point value.
+        Internal method that constructs the label-to-confidence map (dict) for
+        a given DescriptorElement.
+
+        The passed descriptor element is guaranteed to have a vector to
+        extract. It is not extracted yet due to the philosophy of waiting
+        until the vector is immediately needed. This moment is thus determined
+        by the implementing algorithm.
 
         :param d: DescriptorElement containing the vector to classify.
         :type d: smqtk.representation.DescriptorElement
 
         :raises RuntimeError: Could not perform classification for some reason
-            (see message).
+            (see message in raised exception).
 
         :return: Dictionary mapping trained labels to classification confidence
             values
@@ -405,7 +405,7 @@ class LibSvmClassifier (SupervisedClassifier):
             # noinspection PyUnresolvedReferences
             if svm_type in [svm.NU_SVR, svm.EPSILON_SVR]:
                 nr_class = 0
-            # noinspection PyCallingNonCallable
+            # noinspection PyCallingNonCallable,PyTypeChecker
             prob_estimates = (ctypes.c_double * nr_class)()
             svm.libsvm.svm_predict_probability(self.svm_model, v,
                                                prob_estimates)
@@ -419,7 +419,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 nr_classifier = 1
             else:
                 nr_classifier = nr_class * (nr_class - 1) // 2
-            # noinspection PyCallingNonCallable
+            # noinspection PyCallingNonCallable,PyTypeChecker
             dec_values = (ctypes.c_double * nr_classifier)()
             label = svm.libsvm.svm_predict_values(self.svm_model, v,
                                                   dec_values)
@@ -428,3 +428,8 @@ class LibSvmClassifier (SupervisedClassifier):
 
         assert len(c) == len(self.svm_label_map)
         return c
+
+
+# Explicitly declare to avoid silly warning about ignoring parent abstract
+# class.
+CLASSIFIER_CLASS = LibSvmClassifier

@@ -2,15 +2,15 @@
 Tests for high level ``from_uri`` function, separate from the
 ``DataElement.from_uri`` class method.
 """
-
-import nose.tools
 import unittest
 
 import smqtk.exceptions
 import smqtk.representation.data_element
 
 
+# noinspection PyClassHasNoInit
 class UnresolvableElement (smqtk.representation.data_element.DataElement):
+    """ Does not implement from_uri, declaring no support for URI resolution """
 
     @classmethod
     def is_usable(cls):
@@ -38,6 +38,7 @@ class UnresolvableElement (smqtk.representation.data_element.DataElement):
         pass
 
 
+# noinspection PyClassHasNoInit
 class ResolvableElement (smqtk.representation.data_element.DataElement):
 
     @classmethod
@@ -81,7 +82,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
         def impl_generator():
             return {}
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.InvalidUriError,
             smqtk.representation.data_element.from_uri,
             'whatever',
@@ -99,7 +100,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
                 "ur2": UnresolvableElement,
             }
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.InvalidUriError,
             smqtk.representation.data_element.from_uri,
             'something',
@@ -117,7 +118,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
             }
 
         # URI that can be resolved by ResolvableElement
-        nose.tools.assert_is_instance(
+        self.assertIsInstance(
             smqtk.representation.data_element.from_uri(
                 "resolvable://data",
                 impl_generator
@@ -126,7 +127,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
         )
 
         # bad URI even though something can resolve it
-        nose.tools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.InvalidUriError,
             smqtk.representation.data_element.from_uri,
             'not_resolvable', impl_generator

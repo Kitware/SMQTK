@@ -15,6 +15,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
     type and configuration.
     """
 
+    # noinspection PyShadowingBuiltins
     def __init__(self, type, type_config):
         """
         Initialize the factory to produce ClassificationElement instances of the
@@ -91,37 +92,39 @@ class ClassificationElementFactory (SmqtkRepresentation):
             type_name: self.type_config,
         }
 
+    # noinspection PyShadowingBuiltins
     def new_classification(self, type, uuid):
         """
         Create a new ClassificationElement instance of the configured
         implementation.
 
-        :param type: Type of descriptor. This is usually the name of the
-            content descriptor that generated this vector.
+        :param type: Type of classifier. This is usually the name of the
+            classifier that generated this result.
         :type type: str
 
-        :param uuid: UUID to associate with the descriptor
+        :param uuid: UUID to associate with the classification.
         :type uuid: collections.Hashable
 
-        :return: New ClassificationElement instance
+        :return: New ClassificationElement instance.
         :rtype: smqtk.representation.ClassificationElement
 
         """
         return self.type.from_config(self.type_config, type, uuid)
 
+    # noinspection PyShadowingBuiltins
     def __call__(self, type, uuid):
         """
         Create a new ClassificationElement instance of the configured
         implementation.
 
-        :param type: Type of descriptor. This is usually the name of the
-            content descriptor that generated this vector.
+        :param type: Type of classifier. This is usually the name of the
+            classifier that generated this result.
         :type type: str
 
-        :param uuid: UUID to associate with the descriptor
+        :param uuid: UUID to associate with the classification.
         :type uuid: collections.Hashable
 
-        :return: New ClassificationElement instance
+        :return: New ClassificationElement instance.
         :rtype: smqtk.representation.ClassificationElement
 
         """

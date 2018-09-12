@@ -1,8 +1,6 @@
 """
 Utilities for URLs
 """
-
-import collections
 import re
 
 
@@ -32,7 +30,7 @@ def url_join(url, *urls):
     :type url: str
 
     :param urls: path components to join with slashes.
-    :type urls: tuple[str]
+    :type urls: string-castable
 
     :return: Joined URL string
     :rtype: str

@@ -2,22 +2,21 @@
 from __future__ import absolute_import, division
 from __future__ import print_function, unicode_literals
 
-# noinspection PyPep8Naming
+from itertools import chain, groupby
+from os import path as osp
+import threading
+
+import numpy as np
 from six.moves import range, cPickle as pickle, zip
 from six import next
 
-from os import path as osp
-
-import numpy as np
-
-from itertools import groupby
-
-from smqtk.utils import plugin, merge_dict
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import get_descriptor_index_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.utils import plugin, merge_dict
 from smqtk.utils.file_utils import safe_create_dir
+
 
 CHUNK_SIZE = 5000
 
@@ -87,6 +86,39 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         return default
 
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        """
+        Instantiate a new instance of this class given the configuration
+        JSON-compliant dictionary encapsulating initialization arguments.
+
+        This method should not be called via super unless and instance of the
+        class is desired.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: MRPTNearestNeighborsIndex
+
+        """
+        if merge_default:
+            cfg = cls.get_default_config()
+            merge_dict(cfg, config_dict)
+        else:
+            cfg = config_dict
+
+        cfg['descriptor_set'] = \
+            plugin.from_plugin_config(cfg['descriptor_set'],
+                                      get_descriptor_index_impls())
+
+        return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
+
     def __init__(self, descriptor_set, index_filepath=None,
                  parameters_filepath=None, read_only=False,
                  # Parameters for building an index
@@ -150,6 +182,9 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         def normpath(p):
             return (p and osp.abspath(osp.expanduser(p))) or p
 
+        # Lock for model component access.
+        self._model_lock = threading.RLock()
+
         self._index_filepath = normpath(index_filepath)
         self._index_param_filepath = normpath(parameters_filepath)
         # Now they're either None or an absolute path
@@ -188,39 +223,6 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             "num_trees": self._num_trees,
         }
 
-    @classmethod
-    def from_config(cls, config_dict, merge_default=True):
-        """
-        Instantiate a new instance of this class given the configuration
-        JSON-compliant dictionary encapsulating initialization arguments.
-
-        This method should not be called via super unless and instance of the
-        class is desired.
-
-        :param config_dict: JSON compliant dictionary encapsulating
-            a configuration.
-        :type config_dict: dict
-
-        :param merge_default: Merge the given configuration on top of the
-            default provided by ``get_default_config``.
-        :type merge_default: bool
-
-        :return: Constructed instance from the provided config.
-        :rtype: MRPTNearestNeighborsIndex
-
-        """
-        if merge_default:
-            cfg = cls.get_default_config()
-            merge_dict(cfg, config_dict)
-        else:
-            cfg = config_dict
-
-        cfg['descriptor_set'] = \
-            plugin.from_plugin_config(cfg['descriptor_set'],
-                                      get_descriptor_index_impls())
-
-        return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
-
     def _has_model_files(self):
         """
         check if configured model files are configured and exist
@@ -230,43 +232,10 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 self._index_param_filepath and
                 osp.isfile(self._index_param_filepath))
 
-    def build_index(self, descriptors):
-        """
-        Build the index over the descriptor data elements.
-
-        Subsequent calls to this method should rebuild the index, not add to
-        it, or raise an exception to as to protect the current index.
-
-        :raises ValueError: No data available in the given iterable.
-
-        :param descriptors: Iterable of descriptor elements to build index
-            over.
-        :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
-
-        """
-        if self._read_only:
-            raise ReadOnlyError("Cannot modify container attributes due to "
-                                "being in read-only mode.")
-
-        super(MRPTNearestNeighborsIndex, self).build_index(descriptors)
-
-        self._log.info("Building new MRPT index")
-
-        self._log.debug("Clearing and adding new descriptor elements")
-        self._descriptor_set.clear()
-        self._descriptor_set.add_many_descriptors(descriptors)
-
-        self._log.debug('Building MRPT index')
-        self._build_multiple_trees()
-
-        self._save_mrpt_model()
-
     def _build_multiple_trees(self, chunk_size=CHUNK_SIZE):
         """
         Build an MRPT structure
         """
-
         sample = next(self._descriptor_set.iterdescriptors())
         sample_v = sample.vector()
         n = self.count()
@@ -300,15 +269,19 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         # Build all the random bases and the projections at the same time
         # (_num_trees * _depth shouldn't really be that high -- if it is,
         # you're a monster)
+        if self._rand_seed is not None:
+            np.random.seed(self._rand_seed)
         random_bases = np.random.randn(self._num_trees, d, self._depth)
         projs = np.empty((n, self._num_trees, self._depth), dtype=np.float64)
         # Load the data in chunks (because n * d IS high)
         pts_array = np.empty((chunk_size, d), sample_v.dtype)
         # Enumerate the descriptors and div the index by the chunk size
+        # (causes each loop to only deal with at most chunk_size descriptors at
+        # a time).
         for k, g in groupby(enumerate(self._descriptor_set.iterdescriptors()),
                             lambda pair: pair[0] // chunk_size):
             # Items are still paired so extract the descriptors
-            chunk = list(desc for i, desc in g)
+            chunk = list(desc for (i, desc) in g)
             # Take care of dangling end piece
             k_beg = k * chunk_size
             k_end = min((k+1) * chunk_size, n)
@@ -459,11 +432,94 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :return: Number of elements in this index.
         :rtype: int
         """
+        # Descriptor-set should already handle concurrency.
         return len(self._descriptor_set)
 
-    def nn(self, d, n=1):
+    def _build_index(self, descriptors):
         """
-        Return the nearest `N` neighbors to the given descriptor element.
+        Internal method to be implemented by sub-classes to build the index with
+        the given descriptor data elements.
+
+        Subsequent calls to this method should rebuild the current index.  This
+        method shall not add to the existing index nor raise an exception to as
+        to protect the current index.
+
+        :param descriptors: Iterable of descriptor elements to build index
+            over.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due to "
+                                    "being in read-only mode.")
+
+            self._log.info("Building new MRPT index")
+
+            self._log.debug("Clearing and adding new descriptor elements")
+            # NOTE: It may be the case for some DescriptorIndex implementations,
+            # this clear may interfere with iteration when part of the input
+            # iterator of descriptors was this index's previous descriptor-set,
+            # as is the case with ``update_index``.
+            self._descriptor_set.clear()
+            self._descriptor_set.add_many_descriptors(descriptors)
+
+            self._log.debug('Building MRPT index')
+            self._build_multiple_trees()
+
+            self._save_mrpt_model()
+
+    def _update_index(self, descriptors):
+        """
+        Internal method to be implemented by sub-classes to additively update
+        the current index with the one or more descriptor elements given.
+
+        If no index exists yet, a new one should be created using the given
+        descriptors.
+
+        *NOTE:* This implementation fully rebuilds the index using the current
+        index contents merged with the provided new descriptor elements.
+
+        :param descriptors: Iterable of descriptor elements to add to this
+            index.
+        :type descriptors:
+            collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            self._log.debug("Updating index by rebuilding with union. ")
+            self.build_index(chain(self._descriptor_set, descriptors))
+
+    def _remove_from_index(self, uids):
+        """
+        Internal method to be implemented by sub-classes to partially remove
+        descriptors from this index associated with the given UIDs.
+
+        :param uids: Iterable of UIDs of descriptors to remove from this index.
+        :type uids: collections.Iterable[collections.Hashable]
+
+        :raises KeyError: One or more UIDs provided do not match any stored
+            descriptors.
+
+        """
+        with self._model_lock:
+            if self._read_only:
+                raise ReadOnlyError("Cannot modify container attributes due "
+                                    "to being in read-only mode.")
+            self._descriptor_set.remove_many_descriptors(uids)
+            self.build_index(self._descriptor_set)
+
+    def _nn(self, d, n=1):
+        """
+        Internal method to be implemented by sub-classes to return the nearest
+        `N` neighbors to the given descriptor element.
+
+        When this internal method is called, we have already checked that there
+        is a vector in ``d`` and our index is not empty.
 
         :param d: Descriptor element to compute the neighbors of.
         :type d: smqtk.representation.DescriptorElement
@@ -471,24 +527,11 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         :param n: Number of nearest neighbors to find.
         :type n: int
 
-        :return: Tuple of nearest N DescriptorElement instances, and a tuple
-            of the distance values to those neighbors.
+        :return: Tuple of nearest N DescriptorElement instances, and a tuple of
+            the distance values to those neighbors.
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
-        super(MRPTNearestNeighborsIndex, self).nn(d, n)
-
-        self._log.debug("Received query for %d nearest neighbors", n)
-
-        depth, ntrees, db_size = self._depth, self._num_trees, self.count()
-        leaf_size = db_size//(1 << depth)
-        if leaf_size * ntrees < n:
-            self._log.warning(
-                "The number of descriptors in a leaf (%d) times the number "
-                "of trees (%d) is less than the number of descriptors "
-                "requested by the query (%d). The query result will be "
-                "deficient.", leaf_size, ntrees, n)
-
         def _query_single(tree):
             # Search a single tree for the leaf that matches the query
             # NB: random_basis has shape (levels, N)
@@ -535,30 +578,42 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             return ([_uuids[idx] for idx in near_indices],
                     dists[near_indices])
 
-        # Take union of all tree hits
-        tree_hits = set()
-        for t in self._trees:
-            tree_hits.update(_query_single(t))
+        with self._model_lock:
+            self._log.debug("Received query for %d nearest neighbors", n)
 
-        hit_union = len(tree_hits)
-        self._log.debug(
-            "Query (k): %g, Hit union (h): %g, DB (N): %g, "
-            "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
-            n, hit_union, db_size, leaf_size, leaf_size * ntrees)
-        self._log.debug("k/L     = %.3f", n / leaf_size)
-        self._log.debug("h/N     = %.3f", hit_union / db_size)
-        self._log.debug("h/L     = %.3f", hit_union / leaf_size)
-        self._log.debug("h/(T*L) = %.3f", hit_union / (leaf_size * ntrees))
+            depth, ntrees, db_size = self._depth, self._num_trees, self.count()
+            leaf_size = db_size//(1 << depth)
+            if leaf_size * ntrees < n:
+                self._log.warning(
+                    "The number of descriptors in a leaf (%d) times the "
+                    "number of trees (%d) is less than the number of "
+                    "descriptors requested by the query (%d). The query "
+                    "result will be deficient.", leaf_size, ntrees, n)
 
-        uuids, distances = _exact_query(list(tree_hits))
-        order = distances.argsort()
-        uuids, distances = zip(
-            *((uuids[oidx], distances[oidx]) for oidx in order))
+            # Take union of all tree hits
+            tree_hits = set()
+            for t in self._trees:
+                tree_hits.update(_query_single(t))
 
-        self._log.debug("Returning query result of size %g", len(uuids))
+            hit_union = len(tree_hits)
+            self._log.debug(
+                "Query (k): %g, Hit union (h): %g, DB (N): %g, "
+                "Leaf size (L = N/2^l): %g, Examined (T*L): %g",
+                n, hit_union, db_size, leaf_size, leaf_size * ntrees)
+            self._log.debug("k/L     = %.3f", n / leaf_size)
+            self._log.debug("h/N     = %.3f", hit_union / db_size)
+            self._log.debug("h/L     = %.3f", hit_union / leaf_size)
+            self._log.debug("h/(T*L) = %.3f", hit_union / (leaf_size * ntrees))
 
-        return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
-                tuple(distances))
+            uuids, distances = _exact_query(list(tree_hits))
+            order = distances.argsort()
+            uuids, distances = zip(
+                *((uuids[oidx], distances[oidx]) for oidx in order))
+
+            self._log.debug("Returning query result of size %g", len(uuids))
+
+            return (tuple(self._descriptor_set.get_many_descriptors(uuids)),
+                    tuple(distances))
 
 
 NN_INDEX_CLASS = MRPTNearestNeighborsIndex

@@ -8,16 +8,16 @@ References/Resources:
 from collections import Sequence
 from copy import deepcopy
 import logging
+import math
 
 import numpy
+from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation import get_data_element_impls
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import merge_dict, plugin
-from smqtk.utils.bin_utils import report_progress
-
-from six import BytesIO
+from smqtk.utils.bin_utils import ProgressReporter
 
 
 class ItqFunctor (LshFunctor):
@@ -226,10 +226,12 @@ class ItqFunctor (LshFunctor):
                 self.rotation_cache_elem.writable() and
                 self.mean_vec is not None and self.rotation is not None):
             b = BytesIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.mean_vec)
             self.mean_vec_cache_elem.set_bytes(b.getvalue())
 
             b = BytesIO()
+            # noinspection PyTypeChecker
             numpy.save(b, self.rotation)
             self.rotation_cache_elem.set_bytes(b.getvalue())
 
@@ -300,6 +302,11 @@ class ItqFunctor (LshFunctor):
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
+        :param use_multiprocessing: If multiprocessing should be used, as
+            opposed to threading, when collecting descriptor elements from the
+            given iterable.
+        :type use_multiprocessing: bool
+
         :raises RuntimeError: There is already a model loaded
 
         :return: Matrix hash codes for provided descriptors in order.
@@ -309,16 +316,16 @@ class ItqFunctor (LshFunctor):
         if self.has_model():
             raise RuntimeError("Model components have already been loaded.")
 
-        dbg_report_interval = None
-        if self.get_logger().getEffectiveLevel() <= logging.DEBUG:
-            dbg_report_interval = 1.0  # seconds
+        dbg_report_interval = 1.0
+        dbg_report = self.get_logger().getEffectiveLevel() <= logging.DEBUG
         if not isinstance(descriptors, Sequence):
             self._log.info("Creating sequence from iterable")
             descriptors_l = []
-            rs = [0]*7
+            pr = ProgressReporter(self._log.debug, dbg_report_interval).start()
             for d in descriptors:
                 descriptors_l.append(d)
-                report_progress(self._log.debug, rs, dbg_report_interval)
+                dbg_report and pr.increment_report()
+            dbg_report and pr.report()
             descriptors = descriptors_l
         if len(descriptors[0].vector()) < self.bit_length:
             raise ValueError("Input descriptors have fewer features than "
@@ -362,8 +369,8 @@ class ItqFunctor (LshFunctor):
                             'singular value')
 
         # Same ordering method for both eig/svd sources.
-        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda p: p[0],
-                              reverse=1)
+        l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda _p: _p[0],
+                              reverse=True)
 
         self._log.debug("-- top vector extraction")
         # Only keep the top ``bit_length`` vectors after ordering by descending

@@ -1,59 +1,78 @@
 import mock
-import nose.tools as ntools
 import unittest
 
 import numpy
+from six.moves import cPickle
 
-from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
-
-
-__author__ = "paul.tunison@kitware.com"
+from smqtk.representation.descriptor_element.local_elements import \
+    DescriptorFileElement
 
 
 class TestDescriptorFileElement (unittest.TestCase):
 
     def test_configuration1(self):
         default_config = DescriptorFileElement.get_default_config()
-        ntools.assert_equal(default_config,
-                            {
-                                'save_dir': None,
-                                'subdir_split': None,
-                            })
+        self.assertEqual(default_config,
+                         {
+                             'save_dir': None,
+                             'subdir_split': None,
+                         })
 
         default_config['save_dir'] = '/some/path/somewhere'
         default_config['subdir_split'] = 4
 
+        #: :type: DescriptorFileElement
         inst1 = DescriptorFileElement.from_config(default_config,
                                                   'test', 'abcd')
-        ntools.assert_equal(default_config, inst1.get_config())
-        ntools.assert_equal(inst1._save_dir, '/some/path/somewhere')
-        ntools.assert_equal(inst1._subdir_split, 4)
+        self.assertEqual(default_config, inst1.get_config())
+        self.assertEqual(inst1._save_dir, '/some/path/somewhere')
+        self.assertEqual(inst1._subdir_split, 4)
 
         # vector-based equality
         inst2 = DescriptorFileElement.from_config(inst1.get_config(),
                                                   'test', 'abcd')
-        ntools.assert_equal(inst1, inst2)
+        self.assertEqual(inst1, inst2)
 
     def test_vec_filepath_generation(self):
         d = DescriptorFileElement('test', 'abcd', '/base', 4)
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/a/b/c/test.abcd.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/a/b/c/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 2)
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/ab/test.abcd.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/ab/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 1)
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base', 0)
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/test.abcd.vector.npy')
 
         d = DescriptorFileElement('test', 'abcd', '/base')
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/test.abcd.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/test.abcd.vector.npy')
+
+    def test_serialization(self):
+        # Test that an instance can be serialized and deserialized via pickle
+        # successfully.
+        ex_type = 'test'
+        ex_uid = 12345
+        ex_save_dir = 'some-dir'
+        ex_split = 5
+        e1 = DescriptorFileElement(ex_type, ex_uid, ex_save_dir, ex_split)
+
+        # pickle dump and load into a new copy
+        #: :type: DescriptorFileElement
+        e2 = cPickle.loads(cPickle.dumps(e1))
+        # Make sure the two have the smme attributes, including base descriptor
+        # element things.
+        self.assertEqual(e1.type(), e2.type())
+        self.assertEqual(e1.uuid(), e2.uuid())
+        self.assertEqual(e1._save_dir, e2._save_dir)
+        self.assertEqual(e1._subdir_split, e2._subdir_split)
+        self.assertEqual(e1._vec_filepath, e2._vec_filepath)
 
     @mock.patch('smqtk.representation.descriptor_element.local_elements'
                 '.numpy.save')
@@ -61,8 +80,8 @@ class TestDescriptorFileElement (unittest.TestCase):
                 '.file_utils.safe_create_dir')
     def test_vector_set(self, mock_scd, mock_save):
         d = DescriptorFileElement('test', 1234, '/base', 4)
-        ntools.assert_equal(d._vec_filepath,
-                            '/base/1/2/3/test.1234.vector.npy')
+        self.assertEqual(d._vec_filepath,
+                         '/base/1/2/3/test.1234.vector.npy')
 
         v = numpy.zeros(16)
         d.set_vector(v)
@@ -73,11 +92,11 @@ class TestDescriptorFileElement (unittest.TestCase):
                 '.numpy.load')
     def test_vector_get(self, mock_load):
         d = DescriptorFileElement('test', 1234, '/base', 4)
-        ntools.assert_false(d.has_vector())
-        ntools.assert_is(d.vector(), None)
+        self.assertFalse(d.has_vector())
+        self.assertIs(d.vector(), None)
 
         d.has_vector = mock.Mock(return_value=True)
-        ntools.assert_true(d.has_vector())
+        self.assertTrue(d.has_vector())
         v = numpy.zeros(16)
         mock_load.return_value = v
         numpy.testing.assert_equal(d.vector(), v)

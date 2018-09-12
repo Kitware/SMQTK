@@ -13,6 +13,14 @@ from six.moves import range, zip
 from six.moves import zip_longest
 from six.moves import queue
 
+# handle 2.x/3.x Queue import
+try:
+    # noinspection PyUnresolvedReferences
+    import Queue as Queue
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    import queue as Queue
+
 
 def parallel_map(work_func, *sequences, **kwargs):
     """
@@ -60,7 +68,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     :param sequences: Input data to apply to the given ``work_func`` function.
         If more than one sequence is given, the function is called with an
         argument list consisting of the corresponding item of each sequence.
-    :type sequences: collections.Iterable[collections.Iterable]
+    :type sequences: collections.Iterable
 
     :param kwargs: Optionally available keyword arguments are as follows:
 
@@ -110,7 +118,6 @@ def parallel_map(work_func, *sequences, **kwargs):
               messages. ``None`` means no names are added.
             - type: str
             - default: None
-    :type kwargs: dict
 
     :return: A new parallel results iterator that starts work on the input
         iterable when iterated.
@@ -294,6 +301,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
             raise StopIteration()
 
+        # If anything bad happens, stop iteration and workers.
         except Exception:
             self.stop()
             raise

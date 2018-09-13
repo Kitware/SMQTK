@@ -1,6 +1,7 @@
 # Python auto-compiled files
 *.pyc
 *.pyo
+*.npy
 
 # Mac OSX files
 .DS_Store
@@ -68,3 +69,9 @@ errors.log
 
 # pycharm project
 .idea
+
+#others
+*.pkl
+*.cache
+*.index
+*.params

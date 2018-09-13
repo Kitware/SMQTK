@@ -31,7 +31,6 @@ except ImportError as ex:
     torch = None
 else:
     import torch.utils.data as data
-    from torch.autograd import Variable
     import torch.nn as nn
     import torch.nn.functional as F
 
@@ -85,7 +84,7 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
         masks = np.fromfile('block_mask_{}_{}.npy'.format(grid_size, stride),
                             dtype=np.float32).reshape(-1, 1, *image_size)
 
-    masks = torch.from_numpy(masks).float().cuda()
+    masks = torch.from_numpy(masks).float().to(torch.device("cuda"))
     return masks
 
 
@@ -139,6 +138,7 @@ class DisMaskSaliencyDataset(data.Dataset):
         self._batch_size = batch_size
         self._filters_num = masks.size(0)
         self._dis_type = dis_type
+        self._device = torch.device("cuda")
 
     @classmethod
     def get_logger(cls):
@@ -252,8 +252,8 @@ class DisMaskSaliencyDataset(data.Dataset):
     def __getitem__(self, index):
         cur_img, _ = self._img_set[index]
 
-        unmasked_img_f = self._classifier(Variable(cur_img.unsqueeze(0).cuda()))[0]
-        query_f = Variable(torch.from_numpy(self._query_f).unsqueeze(0).cuda())
+        unmasked_img_f = self._classifier(cur_img.unsqueeze(0).to(self._device))[0]
+        query_f = torch.from_numpy(self._query_f).unsqueeze(0).to(self._device)
 
         # distance estimation
         if self._dis_type is DIS_TYPE.L2:
@@ -272,11 +272,11 @@ class DisMaskSaliencyDataset(data.Dataset):
             # masked_image loader
             kwargs = {'shuffle': False}
             masked_imgs_loader = torch.utils.data.DataLoader(
-                    TensorDataset(self._filters.cuda(), img.cuda()), batch_size=self._batch_size, **kwargs)
+                    TensorDataset(self._filters.to(self._device), img.to(self._device)), batch_size=self._batch_size, **kwargs)
 
             sim = []
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
-                matched_f = self._classifier(Variable(m_img))[0]
+                matched_f = self._classifier(m_img)[0]
 
                 # distance estimation
                 if self._dis_type is DIS_TYPE.L2:
@@ -426,7 +426,8 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
         if self.use_gpu:
             self._log.debug("Using GPU")
-            self.model_cls.cuda(self.gpu_device_id[0])
+            # self.model_cls.cuda(self.gpu_device_id[0])
+            self.model_cls.to(torch.device("cuda:{}".format(self.gpu_device_id[0])))
             self.model_cls = torch.nn.DataParallel(self.model_cls, device_ids=self.gpu_device_id)
         else:
             self._log.debug("using CPU")
@@ -641,7 +642,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             for (d, uuids, resized_org_img, w, h, gt_labels) in tqdm(data_loader, total=len(data_loader),
                                                           desc='extracting feature'):
                 # use output probability as the feature vector
-                pytorch_f = self.model_cls(Variable(d.cuda()))[0]
+                pytorch_f = self.model_cls(d.to(torch.device("cuda")))[0]
 
                 # estimated probablity saliency maps
                 if saliency_flag:
@@ -651,7 +652,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                     self.saliency_generator.process_imgbatch = d
 
                 for idx, uuid in enumerate(uuids):
-                    f_vec = pytorch_f.data.cpu().numpy()[idx]
+                    f_vec = pytorch_f.detach().to(torch.device("cpu")).numpy()[idx]
                     descr_elements[uuid].set_vector(f_vec)
                     descr_elements[uuid].set_GT_lable(gt_labels[idx])
 

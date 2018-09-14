@@ -30,6 +30,8 @@ def svm_load_model(model_file_name):
 	svm_load_model(model_file_name) -> model
 
 	Load a LIBSVM model from model_file_name and return.
+
+        model_file_name's type should be str (Python 2.7) or bytes (Python 3).
 	"""
 	model = libsvm.svm_load_model(model_file_name)
 	if not model:
@@ -51,6 +53,8 @@ def svm_save_model(model_file_name, model):
 	svm_save_model(model_file_name, model) -> None
 
 	Save a LIBSVM model to the file model_file_name.
+
+        model_file_name's type should be str (Python 2.7) or bytes (Python 3).
 	"""
 	libsvm.svm_save_model(model_file_name, model)
 

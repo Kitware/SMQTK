@@ -322,8 +322,9 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls_name, model_uri=None, grid_size=20, stride=4, resize_val=224,
-                 batch_size=1, use_gpu=False, in_gpu_device_id=None, saliency_store_uri='./sa_map',
+    def __init__(self, model_cls_name, model_uri=None, grid_size=20, stride=4,
+                 resize_val=(224,224), batch_size=1, use_gpu=False,
+                 in_gpu_device_id=None, saliency_store_uri='./sa_map',
                  saliency_uuid_dict_file=None, dis_type_str='L2'):
         """
         Create a pytorch CNN descriptor generator with distance-based saliency map generator
@@ -340,8 +341,8 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         :param stride: the mask block shift stride
         :type stride: int (default 4)
 
-        :param resize_val: Resize the input image to the resize_val x resize_val.
-        :type resize-val: int (default 224)
+        :param resize_val: Resize the input image to resize_val.
+        :type resize-val: tuple of (height, width) (default (224,224))
 
         :param batch_size: The maximum number of images to process in one feed
             forward of the network. This is especially important for GPUs since
@@ -384,6 +385,8 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got {})".format(self.batch_size)
+
+        assert (len(self.resize_val) == 2)
 
         if self.use_gpu:
             gpu_list = [x for x in range(torch.cuda.device_count())]
@@ -437,7 +440,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             snapshot = torch.load(self.model_uri)
             self.model_cls.load_state_dict(snapshot['state_dict'])
 
-        masks = generate_block_masks(self.grid_size, self.stride, image_size=(self.resize_val, self.resize_val))
+        masks = generate_block_masks(self.grid_size, self.stride, image_size=self.resize_val)
         self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size,
                                                          DIS_TYPE[self.dis_type_str])
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)

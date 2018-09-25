@@ -427,6 +427,10 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         for p in self.model_cls.parameters():
             p.requires_grad = False
 
+        if self.model_uri is not None:
+            self._log.debug("load the trained model: {}".format(self.model_uri))
+            self.model_cls.load(self.model_uri)
+
         if self.use_gpu:
             self._log.debug("Using GPU")
             # self.model_cls.cuda(self.gpu_device_id[0])
@@ -434,10 +438,6 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self.model_cls = torch.nn.DataParallel(self.model_cls, device_ids=self.gpu_device_id)
         else:
             self._log.debug("using CPU")
-
-        if self.model_uri is not None:
-            self._log.debug("load the trained model: {}".format(self.model_uri))
-            self.model_cls.load(self.model_uri)
 
         masks = generate_block_masks(self.grid_size, self.stride, image_size=self.resize_val)
         self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size,

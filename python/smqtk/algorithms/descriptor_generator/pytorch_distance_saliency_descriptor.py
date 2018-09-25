@@ -67,13 +67,14 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
     :rtype: torch.cuda.Tensor
     """
     if not os.path.isfile('block_mask_{}_{}.npy'.format(grid_size, stride)):
-        grid_num = image_size[0] // stride
-        mask_num = int(grid_num * grid_num)
+        grid_num_r = image_size[0] // stride
+        grid_num_c = image_size[1] // stride
+        mask_num = int(grid_num_r * grid_num_c)
         print('mask_num {}'.format(mask_num))
 
         masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.float32)
         i = 0
-        for r in tqdm(np.arange(0, image_size[0] - grid_size + stride, stride), total=grid_num, desc="Generating rows"):
+        for r in tqdm(np.arange(0, image_size[0] - grid_size + stride, stride), total=grid_num_r, desc="Generating rows"):
             for c in np.arange(0, image_size[1] - grid_size + stride, stride):
                 masks[i, r:r + grid_size, c:c + grid_size] = 0.0
                 i += 1

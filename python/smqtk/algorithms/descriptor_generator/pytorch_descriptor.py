@@ -68,11 +68,8 @@ class PytorchDataLoader(data.Dataset):
 
         (org_w, org_h) = img.size
 
-        if img.size != self._resize_val[::-1]:
-            resized_org_img = img.resize(self._resize_val[::-1],
-                                         Image.BILINEAR).convert('RGB')
-        else:
-            resized_org_img = img
+        resized_org_img = img.resize(self._resize_val[::-1],
+                                     Image.BILINEAR).convert('RGB')
 
         if self._transform is not None:
             img = self._transform(resized_org_img)

@@ -67,15 +67,15 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
     :rtype: torch.cuda.Tensor
     """
     if not os.path.isfile('block_mask_{}_{}.npy'.format(grid_size, stride)):
-        grid_num_r = image_size[0] // stride
-        grid_num_c = image_size[1] // stride
-        mask_num = int(grid_num_r * grid_num_c)
+        grid_num_r = (image_size[0] - grid_size) // stride
+        grid_num_c = (image_size[1] - grid_size) // stride
+        mask_num = grid_num_r * grid_num_c
         print('mask_num {}'.format(mask_num))
 
         masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.float32)
         i = 0
-        for r in tqdm(np.arange(0, image_size[0] - grid_size + stride, stride), total=grid_num_r, desc="Generating rows"):
-            for c in np.arange(0, image_size[1] - grid_size + stride, stride):
+        for r in tqdm(np.arange(0, image_size[0] - grid_size, stride), total=grid_num_r, desc="Generating rows"):
+            for c in np.arange(0, image_size[1] - grid_size, stride):
                 masks[i, r:r + grid_size, c:c + grid_size] = 0.0
                 i += 1
 
@@ -666,6 +666,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
                         else:
                             # generate the saliency map
                             sa_map = self.saliency_generator[idx]
+
                             # write out the saliency maps
                             dme = DataMemoryElement(bytes=overlay_saliency_map(sa_map, resized_org_img[idx], w[idx],
                                                                                h[idx]), content_type='image/png')

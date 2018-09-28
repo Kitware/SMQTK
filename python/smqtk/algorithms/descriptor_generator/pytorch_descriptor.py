@@ -189,7 +189,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         if self.model_uri is not None:
             self._log.debug("load the trained model: {}".format(self.model_uri))
-            self.model_cls.load(self.model_uri)
+            snapshot = torch.load(self.model_uri)
+            self.model_cls.load_state_dict(snapshot['state_dict'])
 
         if self.use_gpu:
             self._log.debug("Using GPU")

@@ -18,15 +18,23 @@ else:
     from torchvision import models
     from torchvision import transforms
 
-__author__ = 'bo.dong@kitware.com'
+__author__ = 'deepak.chittajallu@kitware.com'
 
-__all__ = ["ImageNet_ResNet50",]
+__all__ = ["Cholec80_SelfSupervised_ResNet50",]
 
 # The model structure class
-class ImageNet_ResNet50_def(nn.Module):
+class Cholec80_SelfSupervised_ResNet50_def(nn.Module):
+
+
+    num_features = 4096
+    """Number of output neurons, i.e., dimension of the learned feature space."""
+
     def __init__(self):
-        super(ImageNet_ResNet50_def, self).__init__()
-        self.resnet = models.resnet50(pretrained=True)
+        super(Cholec80_SelfSupervised_ResNet50_def, self).__init__()
+        self.resnet = torchvision.models.resnet50(pretrained=True)
+        self.feature = nn.Linear(
+            12288, Cholec80_SelfSupervised_ResNet50_def.num_features)
+        self.sig = nn.Sigmoid()
 
     def forward(self, x):
         x = self.resnet.conv1(x)
@@ -40,17 +48,19 @@ class ImageNet_ResNet50_def(nn.Module):
         x = self.resnet.layer4(x)
 
         x = self.resnet.avgpool(x)
-        features = x.view(x.size(0), -1)
-        out = self.resnet.fc(features)
+        x = x.view(x.size(0), -1)
+        x = self.feature(x)
 
-        return (features, out)
+        return (self.sig(x),)
 
     def load(self, model_file):
-        snapshot = torch.load(model_file)
-        self.load_state_dict(snapshot['state_dict'])
+        self.load_state_dict(torch.load(model_file))
+
+    def save(self, model_file):
+        torch.save(self.state_dict(), model_file)
 
 
-class ImageNet_ResNet50(PyTorchModelElement):
+class Cholec80_SelfSupervised_ResNet50(PyTorchModelElement):
 
     @classmethod
     def is_usable(cls):
@@ -61,16 +71,15 @@ class ImageNet_ResNet50(PyTorchModelElement):
         return valid
 
     def model_def(self):
-        return ImageNet_ResNet50_def()
+        return Cholec80_SelfSupervised_ResNet50_def()
 
     def transforms(self):
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
+
         transform = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
+            transforms.Resize((216, 384)),
             transforms.ToTensor(),
-            normalize
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
         ])
 
         return transform

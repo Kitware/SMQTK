@@ -53,6 +53,8 @@ class PytorchDataLoader(data.Dataset):
         self._saliency_info = saliency_info
         self._gt_info = gt_info
 
+        assert (len(self._resize_val) == 2)
+
     def __getitem__(self, index):
         cur_file = self._file_list[self._uuid4proc[index]]
         img = Image.open(io.BytesIO(cur_file.get_bytes()))
@@ -65,7 +67,9 @@ class PytorchDataLoader(data.Dataset):
             gt_label = cur_file.GT_label
 
         (org_w, org_h) = img.size
-        resized_org_img = img.resize((self._resize_val, self._resize_val), Image.BILINEAR).convert('RGB')
+
+        resized_org_img = img.resize(self._resize_val[::-1],
+                                     Image.BILINEAR).convert('RGB')
 
         if self._transform is not None:
             img = self._transform(resized_org_img)
@@ -104,7 +108,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             module cannot be imported")
         return valid
 
-    def __init__(self, model_cls_name, model_uri=None, resize_val=224,
+    def __init__(self, model_cls_name, model_uri=None, resize_val=(224, 224),
                  batch_size=1, use_gpu=False, in_gpu_device_id=0):
         """
         Create a pytorch CNN descriptor generator
@@ -115,8 +119,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         :param model_uri: URI to the trained ``.pt`` file to use.
         :type model_uri: None | str
 
-        :param resize_val: Resize the input image to the resize_val x resize_val.
-        :type resize-val: int
+        :param resize_val: Resize the input image to resize_val.
+        :type resize-val: tuple of (height, width) (default (224, 224))
 
         :param batch_size: The maximum number of images to process in one feed
             forward of the network. This is especially important for GPUs since
@@ -143,6 +147,8 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got {})".format(self.batch_size)
+
+        assert (len(self._resize_val) == 2)
 
         if self.use_gpu:
             gpu_list = [x for x in range(torch.cuda.device_count())]
@@ -181,17 +187,16 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
 
         self.model_cls.eval()
 
+        if self.model_uri is not None:
+            self._log.debug("load the trained model: {}".format(self.model_uri))
+            self.model_cls.load(self.model_uri)
+
         if self.use_gpu:
             self._log.debug("Using GPU")
             self.model_cls.cuda(self.gpu_device_id[0])
             self.model_cls = torch.nn.DataParallel(self.model_cls, device_ids=self.gpu_device_id)
         else:
             self._log.debug("using CPU")
-
-        if self.model_uri is not None:
-            self._log.debug("load the trained model: {}".format(self.model_uri))
-            snapshot = torch.load(self.model_uri)
-            self.model_cls.load_state_dict(snapshot['state_dict'])
 
     def get_config(self):
         """

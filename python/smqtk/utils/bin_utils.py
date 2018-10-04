@@ -286,7 +286,8 @@ def basic_cli_parser(description=None, configuration_group=True):
         g_config = parser.add_argument_group('Configuration')
         g_config.add_argument('-c', '--config',
                               metavar="PATH",
-                              help='Path to the JSON configuration file.')
+                              help='Path to the JSON configuration file.',
+                              default="/home/bdong/XAI/SMQTK_example/IQR_example/config.IqrSearchApp_L2ImageNet.json")
         g_config.add_argument('-g', '--generate-config',
                               metavar="PATH",
                               help='Optionally generate a default configuration '

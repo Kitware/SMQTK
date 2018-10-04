@@ -40,7 +40,8 @@ __author__ = "paul.tunison@kitware.com"
 def get_cli_parser():
     parser = basic_cli_parser(__doc__)
     parser.add_argument('-i', '--iqr-state',
-                        help="Path to the ZIP file saved from an IQR session.")
+                        help="Path to the ZIP file saved from an IQR session.",
+                        default='/home/bdong/Downloads/898c2421-68ab-4496-af15-cdeac06a80a6.IqrState')
     return parser
 
 

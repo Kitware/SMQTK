@@ -8,6 +8,7 @@ import os.path as osp
 import random
 import shutil
 from six.moves import StringIO
+from io import BytesIO
 import zipfile
 
 import flask
@@ -330,7 +331,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                      in iqrs.negative_descriptors],
                 ))
 
-            z_buffer = StringIO()
+            z_buffer = BytesIO()
             z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
             z.writestr(iqrs_uuid, json.dumps({
                 'pos': pos_elements,

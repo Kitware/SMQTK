@@ -149,7 +149,7 @@ def main():
     imgIds = coco.getImgIds()
     imgs = coco.loadImgs(imgIds)
 
-    for img in imgs:
+    for img in tqdm(imgs, total=len(imgs), desc='add image to dataset'):
         # obtain corresponding annoation
         annIds = coco.getAnnIds(imgIds=img['id'], iscrowd=0)
         anns = coco.loadAnns(annIds)

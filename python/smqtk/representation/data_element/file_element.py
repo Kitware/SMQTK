@@ -70,7 +70,7 @@ class DataFileElement (DataElement):
 
         return DataFileElement(path)
 
-    def __init__(self, filepath, readonly=False, explicit_mimetype=None):
+    def __init__(self, filepath, coco_annotation=None, readonly=False, explicit_mimetype=None):
         """
         Create a new FileElement.
 
@@ -118,6 +118,9 @@ class DataFileElement (DataElement):
         path_str = self._filepath.split('/')
         self._gt_label = path_str[-2]
 
+        # coco annotation for this image
+        self._coco_ann = coco_annotation
+
     def __repr__(self):
         return super(DataFileElement, self).__repr__() + \
             "{filepath: %s, readonly: %s, explicit_mimetype: %s}" \
@@ -130,6 +133,14 @@ class DataFileElement (DataElement):
     @GT_label.setter
     def GT_label(self, val):
         self._gt_label = val
+
+    @property
+    def COCO_ann(self):
+        return self._coco_ann
+
+    @COCO_ann.setter
+    def COCO_ann(self, val):
+        self._coco_ann = val
 
     def get_config(self):
         return {

@@ -230,6 +230,25 @@ class COCO:
         elif type(ids) == int:
             return [self.imgs[ids]]
 
+    def obtainCatNames(self, anns=[]):
+        """
+        Obtain category names from the givn anns
+        :param ids (int array)       : list of anns
+        :return: catNMs (str array) : cats name's array
+        """
+        cat_set = set()
+        cat_list = list()
+        if _isArrayLike(anns):
+            for ann in anns:
+                cat_set.add(ann['category_id'])
+
+            for cat in self.loadCats(list(cat_set)):
+                cat_list.append(cat['name'])
+
+            return cat_list
+        else:
+            raise ValueError("anns has to be a list, but got a {}".format(type(anns)))
+
     def showAnns(self, anns, draw_bbox=False):
         """
         Display the specified annotations.

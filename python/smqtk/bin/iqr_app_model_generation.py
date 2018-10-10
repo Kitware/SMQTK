@@ -153,15 +153,16 @@ def main():
         # obtain corresponding annoation
         annIds = coco.getAnnIds(imgIds=img['id'], iscrowd=0)
         anns = coco.loadAnns(annIds)
+        cat_names = coco.obtainCatNames(anns)
 
         img_path = osp.join(args.data_path, img['file_name'])
 
         if osp.isfile(img_path):
-            data_set.add_data(DataFileElement(img_path, anns))
+            data_set.add_data(DataFileElement(img_path, coco_catNM=cat_names))
         else:
             log.debug("Expanding glob: %s" % img_path)
             for g in glob.iglob(img_path):
-                data_set.add_data(DataFileElement(g, anns))
+                data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

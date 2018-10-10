@@ -68,7 +68,7 @@ class IqrSession (SmqtkObject):
 
     def __init__(self, pos_seed_neighbors=500,
                  rel_index_config=DFLT_REL_INDEX_CONFIG,
-                 session_uid=None):
+                 session_uid=None, dataset=None):
         """
         Initialize the IQR session
 
@@ -154,8 +154,10 @@ class IqrSession (SmqtkObject):
         self._retrival_target = None
 
         #retrieved image's annotation for calculate retrival accuracy
-        #: :type: None | list(set)
-        self._retrival_image_ann = None
+        #: :type: list | list(list)
+        self._retrival_image_catNMs = list()
+
+        self._dataset = dataset
 
     def __enter__(self):
         """
@@ -193,12 +195,12 @@ class IqrSession (SmqtkObject):
         self._retrival_target = val
 
     @property
-    def retrival_image_ann(self):
-        return self._retrival_image_ann
+    def retrival_image_catNMs(self):
+        return self._retrival_image_catNMs
 
-    @retrival_image_ann.setter
-    def retrival_image_ann(self, val):
-        self._retrival_image_ann = val
+    @retrival_image_catNMs.setter
+    def retrival_image_catNMs(self, val):
+        self._retrival_image_catNMs = val
 
     def ordered_results(self):
         """
@@ -322,6 +324,9 @@ class IqrSession (SmqtkObject):
 
             element_probability_map = self.rel_index.rank(pos, neg)
 
+            # clear the retrivaled category
+            # self.retrival_image_catNMs.clear()
+
             if self.results is None:
                 self.results = IqrResultsDict()
             self.results.update(element_probability_map)
@@ -355,4 +360,18 @@ class IqrSession (SmqtkObject):
             self.query_uuid = None
 
             self.retrival_target = None
-            self.retrival_image_ann = None
+            self.retrival_image_catNMs.clear()
+
+    def retrival_acc(self, first_n=20):
+        correct_count = 0.0
+        if self.retrival_image_catNMs is None:
+            return 0.0
+        for cat_nm in self.retrival_image_catNMs[:first_n]:
+            # print("{}".format(cat_nm))
+            if self.retrival_target in cat_nm:
+                correct_count += 1.0
+
+        acc = correct_count / first_n
+        self.retrival_image_catNMs.clear()
+
+        return acc

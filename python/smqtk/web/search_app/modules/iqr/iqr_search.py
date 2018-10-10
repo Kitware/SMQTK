@@ -32,7 +32,7 @@ from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
 from smqtk.algorithms.descriptor_generator.pytorch_classlabel_saliency_descriptor import PytorchSaliencyDescriptorGenerator
 from smqtk.algorithms.descriptor_generator.pytorch_distance_saliency_descriptor import PytorchDisSaliencyDescriptorGenerator
-
+from smqtk.utils.coco_api.pycocotools.coco import COCO
 
 __author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
 
@@ -394,7 +394,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 with self.get_current_iqr_session() as iqrs:
                     #: :type: smqtk.representation.DataElement | None
                     de = self._iqr_example_data[iqrs.uuid].get(uid, None)
-            
+
             if not de:
                 info["success"] = False
                 info["message"] = "UUID not part of the active data set!"
@@ -660,6 +660,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             with self.get_current_iqr_session() as iqrs:
                 try:
                     iqrs.refine()
+
                     return flask.jsonify({
                         "success": True,
                         "message": "Completed refinement"
@@ -692,6 +693,22 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                                                if iqrs.results else 0))
                 #: :type: tuple[(smqtk.representation.DescriptorElement, float)]
                 r = (iqrs.ordered_results() or ())[i:j]
+
+                for d, _ in r:
+                    # Try to find a DataElement by the given UUID in our indexed data
+                    # or in the session's example data.
+                    if self._data_set.has_uuid(d.uuid()):
+                        #: :type: smqtk.representation.DataElement
+                        de = self._data_set.get_data(d.uuid())
+                    else:
+                        with self.get_current_iqr_session() as iqrs:
+                            #: :type: smqtk.representation.DataElement | None
+                            de = self._iqr_example_data[iqrs.uuid].get(d.uuid(), None)
+
+                    iqrs.retrival_image_catNMs.append(de.COCO_catNM)
+
+                acc = iqrs.retrival_acc(first_n=20)
+
                 return flask.jsonify({
                     "results": [(d.uuid(), p) for d, p in r]
                 })

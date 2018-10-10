@@ -149,6 +149,14 @@ class IqrSession (SmqtkObject):
         #: :type: None | smqtk.algorithms.relevancy_index.RelevancyIndex
         self.rel_index = None
 
+        #retrival target for calculate retrival accuracy
+        #: :type: None | str
+        self._retrival_target = None
+
+        #retrieved image's annotation for calculate retrival accuracy
+        #: :type: None | list(set)
+        self._retrival_image_ann = None
+
     def __enter__(self):
         """
         :rtype: IqrSession
@@ -175,6 +183,22 @@ class IqrSession (SmqtkObject):
     @query_uuid.setter
     def query_uuid(self, val):
         self._query_uuid = val
+
+    @property
+    def retrival_target(self):
+        return self._retrival_target
+
+    @retrival_target.setter
+    def retrival_target(self, val):
+        self._retrival_target = val
+
+    @property
+    def retrival_image_ann(self):
+        return self._retrival_image_ann
+
+    @retrival_image_ann.setter
+    def retrival_image_ann(self, val):
+        self._retrival_image_ann = val
 
     def ordered_results(self):
         """
@@ -329,3 +353,6 @@ class IqrSession (SmqtkObject):
             self.results = None
             self.query_f = None
             self.query_uuid = None
+
+            self.retrival_target = None
+            self.retrival_image_ann = None

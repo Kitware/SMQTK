@@ -394,7 +394,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 with self.get_current_iqr_session() as iqrs:
                     #: :type: smqtk.representation.DataElement | None
                     de = self._iqr_example_data[iqrs.uuid].get(uid, None)
-
+            
             if not de:
                 info["success"] = False
                 info["message"] = "UUID not part of the active data set!"

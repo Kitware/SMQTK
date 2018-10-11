@@ -20,6 +20,8 @@ function IqrView(container, upload_post_url) {
     // Instance of IqrResultsView being used.
     this.results_view_inst = null;
 
+    this.query_uuids = [];
+
     // View elements
     // - contains flow.js controls
     this.flow_zone = $('<div>');
@@ -81,42 +83,40 @@ IqrView.prototype.construct_view = function (container) {
     // Control
     //
 
-    
-
-
+    self.show_query_image();
 
     // Add uploaded content to current session online ingest
-    this.flow_inst.onFileSuccess(function(file) {
-        var fname = file.name;
-        var fid = file.uniqueIdentifier;
-
-        var message_prefix = "Ingesting file ["+fname+"]: ";
-        var bar = new ActivityBar(self.ingest_progress_zone,
-                                  message_prefix+"Ingesting...");
-        bar.on();
-
-        $.ajax({
-            url: "iqr_ingest_file",
-            type: 'POST',
-            data: {
-                fid: fid
-            },
-            success: function(data) {
-                bar.on(message_prefix+"Complete");
-                bar.stop_active("success");
-                bar.progress_div.fadeOut('slow', function () {
-                    bar.remove();
-                });
-                self.status_inst.update_view();
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                bar.on("ERROR: "+errorThrown);
-                bar.stop_active("danger");
-                alert_error("Error during file upload: "
-                            + jqXHR.responseText);
-            }
-        });
-    });
+    // this.flow_inst.onFileSuccess(function(file) {
+    //     var fname = file.name;
+    //     var fid = file.uniqueIdentifier;
+    //
+    //     var message_prefix = "Ingesting file ["+fname+"]: ";
+    //     var bar = new ActivityBar(self.ingest_progress_zone,
+    //                               message_prefix+"Ingesting...");
+    //     bar.on();
+    //
+    //     $.ajax({
+    //         url: "iqr_ingest_file",
+    //         type: 'POST',
+    //         data: {
+    //             fid: fid
+    //         },
+    //         success: function(data) {
+    //             bar.on(message_prefix+"Complete");
+    //             bar.stop_active("success");
+    //             bar.progress_div.fadeOut('slow', function () {
+    //                 bar.remove();
+    //             });
+    //             self.status_inst.update_view();
+    //         },
+    //         error: function(jqXHR, textStatus, errorThrown) {
+    //             bar.on("ERROR: "+errorThrown);
+    //             bar.stop_active("danger");
+    //             alert_error("Error during file upload: "
+    //                         + jqXHR.responseText);
+    //         }
+    //     });
+    // });
 
     this.button_index_initialize.click(function () {
         self.initialize_index();
@@ -129,6 +129,56 @@ IqrView.prototype.construct_view = function (container) {
     this.button_state_save.attr({
         onclick: "location.href='get_iqr_state'"
     })
+};
+
+
+IqrView.prototype.show_query_image = function () {
+    // clear children of results container
+    // get ordered results information
+    // display first X results
+    var self = this;
+
+    self.flow_zone.children().remove();
+
+    query_uuids = [];
+    query_catNMs = [];
+
+    // Fetch query image + display
+    $.ajax({
+        // url: "iqr_ordered_results",
+        url: "fetch_query_imgs",
+        method: "GET",
+        success: function (data) {
+            // Update refinement result uuid/score arrays
+            for (var i=0; i < data["results"].length; i++) {
+                query_uuids.push(data["results"][i][0]);
+                query_catNMs.push(data["results"][i][1]);
+            }
+
+            // create/show top N results
+            // - If no results, display text verification of no results
+            if (query_uuids.length === 0) {
+                self.flow_zone.append(
+                    $("<span>No Query Image</span>")
+                );
+            }
+            else {
+                var displayed = 0;
+
+                while (displayed < query_uuids.length)
+                {
+                    new QueryView(self.flow_zone,
+                                  query_uuids[displayed],
+                                  query_catNMs[displayed]);
+                    displayed++;
+                }
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            alert_error("Error fetching query images: " +
+                "("+errorThrown+") " + textStatus);
+        }
+    });
 };
 
 /**

@@ -177,7 +177,7 @@ def main():
     with open(args.query_imgID_list, 'r') as f:
         for line in f:
             coco_img_id = line.rstrip('\n')
-            q_img = coco.loadImgs(int(coco_img_id))
+            q_img = coco.loadImgs(int(coco_img_id))[0]
 
             annIds = coco.getAnnIds(imgIds=q_img['id'], iscrowd=0)
             anns = coco.loadAnns(annIds)

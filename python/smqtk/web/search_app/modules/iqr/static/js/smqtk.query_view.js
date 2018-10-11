@@ -10,11 +10,12 @@
  *                    data, in contrast to data in the IQR working index.
  *
  */
-function QueryView(container, uid) {
+function QueryView(container, uid, catNMs) {
     Object.call(this);
 
     var inst = this;
     this.uid = uid;
+    this.catNMs = catNMs;
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;

@@ -679,6 +679,35 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                                                        str(ex))
                     })
 
+        @self.route("/fetch_query_imgs", methods=['GET'])
+        @self._parent_app.module_login.login_required
+        def fetch_query_imgs():
+            """
+            Get ordered (UID, probability) pairs in between the given indices,
+            [i, j). If j Is beyond the end of available results, only available
+            results are returned.
+
+            This may be empty if no refinement has yet occurred.
+
+            Return format:
+            {
+                results: [ (uid, probability), ... ]
+            }
+            """
+            q_uuids = list(self._query_set.uuids())
+            result = list()
+            for uid in q_uuids:
+                # Try to find a DataElement by the given UUID in our indexed data
+                # or in the session's example data.
+
+                de = self._query_set.get_data(uid)
+
+                result.append((uid, de.COCO_catNM))
+
+            return flask.jsonify({
+                "results": result
+            })
+
         @self.route("/iqr_ordered_results", methods=['GET'])
         @self._parent_app.module_login.login_required
         def get_ordered_results():
@@ -697,7 +726,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             with self.get_current_iqr_session() as iqrs:
                 i = int(flask.request.args.get('i', 0))
                 j = int(flask.request.args.get('j', len(iqrs.results)
-                                               if iqrs.results else 0))
+                if iqrs.results else 0))
                 #: :type: tuple[(smqtk.representation.DescriptorElement, float)]
                 r = (iqrs.ordered_results() or ())[i:j]
 
@@ -719,6 +748,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 return flask.jsonify({
                     "results": [(d.uuid(), p) for d, p in r]
                 })
+
 
         @self.route("/reset_iqr_session", methods=["GET"])
         @self._parent_app.module_login.login_required

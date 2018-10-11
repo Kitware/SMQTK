@@ -82,41 +82,7 @@ IqrView.prototype.construct_view = function (container) {
     //
     // Control
     //
-
     self.show_query_image();
-
-    // Add uploaded content to current session online ingest
-    // this.flow_inst.onFileSuccess(function(file) {
-    //     var fname = file.name;
-    //     var fid = file.uniqueIdentifier;
-    //
-    //     var message_prefix = "Ingesting file ["+fname+"]: ";
-    //     var bar = new ActivityBar(self.ingest_progress_zone,
-    //                               message_prefix+"Ingesting...");
-    //     bar.on();
-    //
-    //     $.ajax({
-    //         url: "iqr_ingest_file",
-    //         type: 'POST',
-    //         data: {
-    //             fid: fid
-    //         },
-    //         success: function(data) {
-    //             bar.on(message_prefix+"Complete");
-    //             bar.stop_active("success");
-    //             bar.progress_div.fadeOut('slow', function () {
-    //                 bar.remove();
-    //             });
-    //             self.status_inst.update_view();
-    //         },
-    //         error: function(jqXHR, textStatus, errorThrown) {
-    //             bar.on("ERROR: "+errorThrown);
-    //             bar.stop_active("danger");
-    //             alert_error("Error during file upload: "
-    //                         + jqXHR.responseText);
-    //         }
-    //     });
-    // });
 
     this.button_index_initialize.click(function () {
         self.initialize_index();
@@ -205,6 +171,7 @@ IqrView.prototype.reset_session = function() {
                     self.results_view_inst.toggle_random_pane();
                 }
                 self.flow_zone.show();
+                self.status_inst.reset_target_list();
                 alert_success("IQR Session Reset");
             }
         }

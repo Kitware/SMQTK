@@ -36,7 +36,6 @@ function QueryView(container, ingest_progress_zone, status_inst, uid, catNMs) {
     //
     // View Layout
     //
-
     // float view container
     this.float_div = $('<div id="float_div_'+this.rank+'" style="display:none; vertical-align: top"/>');
     this.float_div.appendTo($(container));
@@ -92,6 +91,7 @@ QueryView.prototype.ingest_query = function() {
             });
             inst.status_inst.update_view();
             inst.container.slideUp();
+            inst.status_inst.update_target_list(inst.catNMs)
         },
         error: function(jqXHR, textStatus, errorThrown) {
             bar.on("ERROR: "+errorThrown);
@@ -160,15 +160,3 @@ QueryView.prototype.update_view = function () {
         });
     }
 };
-
-/**
- * Open this image up in a new window
- */
-QueryView.prototype.display_full_image = function () {
-    if (this.image_loaded) {
-        // TODO: Should make this better...
-        //       like open a webpage instead of just opening static data...
-        window.open(this.static_view_link);
-    }
-};
-

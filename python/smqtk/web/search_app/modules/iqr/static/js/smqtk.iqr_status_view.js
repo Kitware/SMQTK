@@ -12,8 +12,15 @@ function IqrStatusView (container) {
     this.example_pos_data_zone = $('<div style="float:left;width:50%;height:300px;">');
     this.AMT_zone = $('<div style="float:right;width:50%;height:300px;">');
     this.example_neg_data_zone = $('<div>');
+
+    this.query_target_statement = "<label class=\"likert_statement\">Query Target:</label>";
+    this.query_target_dropdown = $('<select>');
+    this.query_target_dropdown.attr('id', "target_list");
+    this.query_target_dropdown.append( new Option("--select--", "None"));
+
     this.acc_statement = "<label class=\"likert_statement\">IQR Accuracy:</label>";
     this.acc_input = $('<input type="text">');
+
     this.likert_statement = "<label class=\"likert_statement\">" +
         "I give feedback with 100% confidence.</label>";
     this.likert_scale = "<ul class='likert'>\n" +
@@ -39,6 +46,8 @@ function IqrStatusView (container) {
         "      </li>\n" +
         "    </ul>";
 
+    this.cal_acc_button = $('<button class="btn" type="button"/>');
+
 
     //
     // Setup
@@ -54,16 +63,25 @@ function IqrStatusView (container) {
  * @param container: Parent container element to append view elements to.
  */
 IqrStatusView.prototype.construct_view = function (container) {
-
+    var self = this;
 
     this.AMT_zone.append(
         $("<span><h3>AMT Control:</h3></span>"),
+        this.query_target_statement,
+        this.query_target_dropdown,
+        this.cal_acc_button,
+        $('<br/>'),
         this.acc_statement,
         this.acc_input,
         $('<br/>'),
         this.likert_statement,
         this.likert_scale
     );
+
+    this.cal_acc_button.text("Calculate Accuracy");
+    this.cal_acc_button.click(function () {
+        self.cal_acc();
+    });
 
     this.acc_input.val('98.76%');
     this.acc_input.attr('readonly',true);
@@ -139,4 +157,25 @@ IqrStatusView.prototype.update_view = function () {
                 "("+errorThrown+") " + textStatus);
         }
     });
+};
+
+
+IqrStatusView.prototype.reset_target_list = function (list) {
+    var self = this;
+    $("#target_list option").remove();
+    self.query_target_dropdown.append( new Option("--select--", "None"));
+};
+
+IqrStatusView.prototype.update_target_list = function (list) {
+    var self = this;
+    self.reset_target_list();
+    for (var i=0; i < list.length; i++) {
+        self.query_target_dropdown.append(new Option(list[i], list[i]));
+    }
+};
+
+IqrStatusView.prototype.cal_acc = function () {
+    var target = $("#target_list :selected").text();
+
+    //call cal_acc
 };

@@ -149,10 +149,6 @@ class IqrSession (SmqtkObject):
         #: :type: None | smqtk.algorithms.relevancy_index.RelevancyIndex
         self.rel_index = None
 
-        #retrival target for calculate retrival accuracy
-        #: :type: None | str
-        self._retrival_target = None
-
         #retrieved image's annotation for calculate retrival accuracy
         #: :type: list | list(list)
         self._retrival_image_catNMs = list()
@@ -185,14 +181,6 @@ class IqrSession (SmqtkObject):
     @query_uuid.setter
     def query_uuid(self, val):
         self._query_uuid = val
-
-    @property
-    def retrival_target(self):
-        return self._retrival_target
-
-    @retrival_target.setter
-    def retrival_target(self, val):
-        self._retrival_target = val
 
     @property
     def retrival_image_catNMs(self):
@@ -362,16 +350,16 @@ class IqrSession (SmqtkObject):
             self.retrival_target = None
             self.retrival_image_catNMs.clear()
 
-    def retrival_acc(self, first_n=20):
+    def retrival_acc(self, retrival_target, first_n=20):
         correct_count = 0.0
         if self.retrival_image_catNMs is None:
             return 0.0
         for cat_nm in self.retrival_image_catNMs[:first_n]:
             # print("{}".format(cat_nm))
-            if self.retrival_target in cat_nm:
+            if retrival_target in cat_nm:
                 correct_count += 1.0
 
-        acc = correct_count / first_n
+        acc = correct_count / first_n * 100.0
         self.retrival_image_catNMs.clear()
 
-        return acc
+        return "{0:.2f}".format(acc)

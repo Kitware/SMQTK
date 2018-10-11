@@ -83,7 +83,7 @@ IqrStatusView.prototype.construct_view = function (container) {
         self.cal_acc();
     });
 
-    this.acc_input.val('98.76%');
+    // this.acc_input.val('98.76%');
     this.acc_input.attr('readonly',true);
 
     this.pos_AMT_zone.append(
@@ -160,7 +160,7 @@ IqrStatusView.prototype.update_view = function () {
 };
 
 
-IqrStatusView.prototype.reset_target_list = function (list) {
+IqrStatusView.prototype.reset_target_list = function () {
     var self = this;
     $("#target_list option").remove();
     self.query_target_dropdown.append( new Option("--select--", "None"));
@@ -175,7 +175,22 @@ IqrStatusView.prototype.update_target_list = function (list) {
 };
 
 IqrStatusView.prototype.cal_acc = function () {
+    var self = this;
     var target = $("#target_list :selected").text();
 
+    $.ajax({
+        url: "cal_retrival_acc?target="+target,
+
+        success: function (data)
+        {
+            acc = data['acc'];
+            self.acc_input.val(acc + "%");
+
+        },
+        error: function (jqXHR, textStatus, errorThrown)
+        {
+            alert_error("AJAX Error: " + errorThrown);
+        }
+    });
     //call cal_acc
 };

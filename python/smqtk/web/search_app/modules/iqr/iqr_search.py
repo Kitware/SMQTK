@@ -728,15 +728,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self._parent_app.module_login.login_required
         def fetch_query_imgs():
             """
-            Get ordered (UID, probability) pairs in between the given indices,
-            [i, j). If j Is beyond the end of available results, only available
-            results are returned.
-
-            This may be empty if no refinement has yet occurred.
+            Get ordered (UID, coco_cat_nm) pairs in query_set
 
             Return format:
             {
-                results: [ (uid, probability), ... ]
+                results: [ (uid, coco_cat_nm), ... ]
             }
             """
             q_uuids = list(self._query_set.uuids())
@@ -752,6 +748,23 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             return flask.jsonify({
                 "results": result
             })
+
+        @self.route("/cal_retrival_acc", methods=["GET"])
+        @self._parent_app.module_login.login_required
+        def cal_retrival_acc():
+            """
+            Calculate retrival accuracy based on the retrival target
+
+            :return: {
+                    acc: <float>
+                }
+            """
+            retrival_target = flask.request.args['target']
+            with self.get_current_iqr_session() as iqrs:
+                acc = iqrs.retrival_acc(retrival_target, first_n=20)
+                return flask.jsonify({
+                    "acc": acc
+                })
 
         @self.route("/iqr_ordered_results", methods=['GET'])
         @self._parent_app.module_login.login_required
@@ -788,7 +801,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                     iqrs.retrival_image_catNMs.append(de.COCO_catNM)
 
-                acc = iqrs.retrival_acc(first_n=20)
+
 
                 return flask.jsonify({
                     "results": [(d.uuid(), p) for d, p in r]

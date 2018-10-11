@@ -74,6 +74,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         # fill in plugin configs
         d['data_set'] = plugin.make_config(get_data_set_impls())
         d['smap_set'] = plugin.make_config(get_data_set_impls())
+        d['query_set'] = plugin.make_config(get_data_set_impls())
 
         d['descr_generator'] = \
             plugin.make_config(get_descriptor_generator_impls())
@@ -120,7 +121,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         merged['smap_set'] = \
             plugin.from_plugin_config(merged['smap_set'],
                                       get_data_set_impls())
-
+        merged['query_set'] = \
+            plugin.from_plugin_config(merged['query_set'],
+                                      get_data_set_impls())
         merged['descr_generator'] = \
             plugin.from_plugin_config(merged['descr_generator'],
                                       get_descriptor_generator_impls())
@@ -133,7 +136,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         return cls(parent_app, **merged)
 
-    def __init__(self, parent_app, data_set, smap_set, descr_generator, nn_index,
+    def __init__(self, parent_app, data_set, smap_set, query_set,descr_generator, nn_index,
                  working_directory, rel_index_config=DFLT_REL_INDEX_CONFIG,
                  descriptor_factory=DFLT_DESCRIPTOR_FACTORY,
                  pos_seed_neighbors=500):
@@ -152,6 +155,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         :param smap_set: DataSet instance that saliency map of references indexed data.
         :type smap_set: SMQTK.representation.DataSet
+
+        :param query_set: DataSet instance that query image of references indexed data for AMT task.
+        :type query_set: SMQTK.representation.DataSet
 
         :param descr_generator: DescriptorGenerator instance to use in IQR
             sessions for generating descriptors on new data.
@@ -202,6 +208,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         self._parent_app = parent_app
         self._data_set = data_set
         self._smap_set = smap_set
+        self._query_set = query_set
         self._descriptor_generator = descr_generator
         self._nn_index = nn_index
         self._rel_index_config = rel_index_config
@@ -767,6 +774,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             'working_directory': self._working_dir,
             'data_set': plugin.to_plugin_config(self._data_set),
             'smap_set': plugin.to_plugin_config(self._smap_set),
+            'query_set': plugin.to_plugin_config(self._query_set),
             'descr_generator':
                 plugin.to_plugin_config(self._descriptor_generator),
             'nn_index': plugin.to_plugin_config(self._nn_index),

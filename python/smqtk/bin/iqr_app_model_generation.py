@@ -40,6 +40,8 @@ def cli_parser():
                         help="COCO annotation file")
     parser.add_argument('--data_path', type=str,
                         help="COCO data root path")
+    parser.add_argument('--query_imgID_list', type=str,
+                        help="AMT query image ID")
 
     return parser
 
@@ -83,6 +85,8 @@ def main():
     # Configure DataSet implementation and parameters
     data_set_config = search_app_iqr_config['data_set']
 
+    query_set_config = search_app_iqr_config['query_set']
+
     # Configure DescriptorGenerator algorithm implementation, parameters and
     # persistant model component locations (if implementation has any).
     descriptor_generator_config = search_app_iqr_config['descr_generator']
@@ -119,6 +123,11 @@ def main():
     data_set = \
         plugin.from_plugin_config(data_set_config,
                                   representation.get_data_set_impls())
+
+    query_set = \
+        plugin.from_plugin_config(query_set_config,
+                                  representation.get_data_set_impls())
+
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
@@ -163,6 +172,25 @@ def main():
             log.debug("Expanding glob: %s" % img_path)
             for g in glob.iglob(img_path):
                 data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
+
+    # add query image to query_set
+    with open(args.query_imgID_list, 'r') as f:
+        for line in f:
+            coco_img_id = line.rstrip('\n')
+            q_img = coco.loadImgs(int(coco_img_id))
+
+            annIds = coco.getAnnIds(imgIds=q_img['id'], iscrowd=0)
+            anns = coco.loadAnns(annIds)
+            cat_names = coco.obtainCatNames(anns)
+
+            img_path = osp.join(args.data_path, q_img['file_name'])
+
+            if osp.isfile(img_path):
+                query_set.add_data(DataFileElement(img_path, coco_catNM=cat_names))
+            else:
+                log.debug("Expanding glob: %s" % img_path)
+                for g in glob.iglob(img_path):
+                    query_set.add_data(DataFileElement(g, coco_catNM=cat_names))
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

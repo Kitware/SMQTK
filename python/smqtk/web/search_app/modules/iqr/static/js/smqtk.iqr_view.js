@@ -68,7 +68,7 @@ IqrView.prototype.construct_view = function (container) {
         this.button_state_save
     );
 
-    this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
+    // this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
     this.status_inst = new IqrStatusView(this.status_zone);
     this.results_view_inst = new IqrRefineView(this.results_zone);
 
@@ -80,6 +80,11 @@ IqrView.prototype.construct_view = function (container) {
     //
     // Control
     //
+
+    
+
+
+
     // Add uploaded content to current session online ingest
     this.flow_inst.onFileSuccess(function(file) {
         var fname = file.name;

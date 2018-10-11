@@ -10,10 +10,14 @@
  *                    data, in contrast to data in the IQR working index.
  *
  */
-function QueryView(container, uid, catNMs) {
+function QueryView(container, ingest_progress_zone, status_inst, uid, catNMs) {
     Object.call(this);
 
     var inst = this;
+
+    this.container = container;
+    this.ingest_progress_zone = ingest_progress_zone;
+    this.status_inst = status_inst;
     this.uid = uid;
     this.catNMs = catNMs;
 
@@ -57,7 +61,7 @@ function QueryView(container, uid, catNMs) {
     //
     // link click controls
     this.image_data_view.click(function () {
-        inst.display_full_image();
+        inst.ingest_query();
     });
 
     // Update to initial view from the server's state
@@ -65,6 +69,39 @@ function QueryView(container, uid, catNMs) {
 
     return this;
 }
+
+QueryView.prototype.ingest_query = function() {
+    var inst = this;
+
+    var message_prefix = "Ingesting file selected query Image: ";
+    var bar = new ActivityBar(inst.ingest_progress_zone,
+                              message_prefix+"Ingesting...");
+    bar.on();
+
+    $.ajax({
+        url: "query_ingest_file",
+        type: 'POST',
+        data: {
+            fid: inst.uid
+        },
+        success: function(data) {
+            bar.on(message_prefix+"Complete");
+            bar.stop_active("success");
+            bar.progress_div.fadeOut('slow', function () {
+                bar.remove();
+            });
+            inst.status_inst.update_view();
+            inst.container.slideUp();
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            bar.on("ERROR: "+errorThrown);
+            bar.stop_active("danger");
+            alert_error("Error during file upload: "
+                        + jqXHR.responseText);
+        }
+    });
+};
+
 
 /**
  * Update the view of this element based on current state.

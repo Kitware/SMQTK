@@ -168,6 +168,8 @@ IqrView.prototype.show_query_image = function () {
                 while (displayed < query_uuids.length)
                 {
                     new QueryView(self.flow_zone,
+                                  self.ingest_progress_zone,
+                                  self.status_inst,
                                   query_uuids[displayed],
                                   query_catNMs[displayed]);
                     displayed++;
@@ -202,6 +204,7 @@ IqrView.prototype.reset_session = function() {
                 if (self.results_view_inst.random_enabled) {
                     self.results_view_inst.toggle_random_pane();
                 }
+                self.flow_zone.show();
                 alert_success("IQR Session Reset");
             }
         }

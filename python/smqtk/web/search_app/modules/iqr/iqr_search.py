@@ -530,6 +530,51 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                     return str(uuid)
 
+        @self.route('/query_ingest_file', methods=['POST'])
+        @self._parent_app.module_login.login_required
+        def query_ingest_file():
+            """
+            Ingest the file with the given UID
+
+            :return: string of data/descriptor element's UUID
+            :rtype: str
+
+            """
+            # TODO: Add status dict with a "GET" method branch for getting that
+            #       status information.
+
+            # Start the ingest of a FID when POST
+            if flask.request.method == "POST":
+                with self.get_current_iqr_session() as iqrs:
+                    fid = flask.request.form['fid']
+
+                    query_img = self._query_set.get_data(fid)
+
+                    self._iqr_example_data[iqrs.uuid][fid] = query_img
+
+                    # Extend session ingest -- modifying
+                    self._log.debug("[%s::%s] Adding new data to session "
+                                    "positives", iqrs.uuid, fid)
+                    # iqrs.add_positive_data(upload_data)
+                    try:
+                        upload_descr = \
+                            self._descriptor_generator.compute_descriptor(
+                                query_img, self._descr_elem_factory
+                            )
+                    except ValueError as ex:
+                        return "Input Error: %s" % str(ex), 400
+
+                    self._iqr_example_pos_descr[iqrs.uuid][fid] = upload_descr
+                    self._log.debug('saliency_descr_flag is {}'.format(self._saliency_descr_flag))
+                    if self._saliency_descr_flag:
+                        iqrs.query_f = upload_descr.vector()
+                        iqrs.query_uuid = fid
+                        self._log.debug('query uuid {}'.format(fid))
+
+                    iqrs.adjudicate((upload_descr,))
+
+                    return str(fid)
+
         @self.route("/iqr_initialize", methods=["POST"])
         @self._parent_app.module_login.login_required
         def iqr_initialize():

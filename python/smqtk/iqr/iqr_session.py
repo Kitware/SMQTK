@@ -360,6 +360,6 @@ class IqrSession (SmqtkObject):
                 correct_count += 1.0
 
         acc = correct_count / first_n * 100.0
-        self.retrival_image_catNMs.clear()
+        # self.retrival_image_catNMs.clear()
 
         return "{0:.2f}".format(acc)

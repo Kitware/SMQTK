@@ -9,8 +9,12 @@ function IqrRefineView(container) {
     //
     // Members
     //
-    this.show_more_step = 20;
+    this.show_more_step = 50;
     this.pre_to_display = 0;
+    this.IQR_round = -1;
+
+    this.pos_num;
+    this.neg_num;
 
     // parallel arrays of ordered result UUIDs and relevancy scores.
     //this.displayed_search_results = [];
@@ -49,7 +53,7 @@ function IqrRefineView(container) {
     this.button_container_random_bot = this.button_container_refine_top.clone();
 
     this.button_refine_top = $('<button class="btn btn-primary" type="button"/>');
-    this.button_refine_top.text("Refine");
+    this.button_refine_top.text("Refine + Record");
     this.button_refine_bot = this.button_refine_top.clone();
 
     this.button_saliency_top = $('<button class="btn btn-success" type="button"/>');
@@ -77,6 +81,8 @@ function IqrRefineView(container) {
 
     this.results_container_refine = $('<div/>');
     this.results_container_random = $('<div/>');
+
+    this.status_inst;
 
     this.saliency_flag = false;
     this.gt_flag = false;
@@ -244,6 +250,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
     this.refine_results_displayed = 0;
 
     var self = this;
+
     // Check initialization status of session
     // - When not initialized, disable buttons + don't try to show results
     //   (there aren't going to be any)
@@ -265,6 +272,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
                             self.refine_result_uuids.push(data["results"][i][0]);
                             self.refine_result_score.push(data["results"][i][1]);
                         }
+
+                        self.status_inst.cal_acc_store(self.pos_num, self.neg_num);
 
                         // create/show top N results
                         // - If no results, display text verification of no results
@@ -359,42 +368,64 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
  */
 IqrRefineView.prototype.iqr_refine = function() {
     var self = this;
-
-    // helper methods for display stuff
-    function disable_buttons() {
-        self.button_container_refine_top.children().prop("disabled", true);
-        self.button_container_refine_bot.children().prop("disabled", true);
-    }
-    function enable_buttons() {
-        self.button_container_refine_top.children().prop("disabled", false);
-        self.button_container_refine_bot.children().prop("disabled", false);
-    }
-    function restore() {
-        self.progress_bar_refine.off();
-    }
-
-    disable_buttons();
-    this.progress_bar_refine.on("Refining");
-
-    // Refine and then display the first N results.
-    $.ajax({
-        url: 'iqr_refine',
-        method: "POST",
-        success: function (data) {
-            if (data['success']) {
-                enable_buttons();
-            }
-            else {
-                alert_error("IQR Refine error: " + data['message']);
-            }
-            self.update_refine_pane();
-            restore();
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            alert_error("AJAX Error: " + errorThrown);
-            restore();
+    alert_info($('#liker_form input[name=likert]:checked').val());
+    alert_info(self.IQR_round);
+    if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
+        var info = "Please answer the question ";
+        var question = "I give feedback with 100% confidence.";
+        alert(info+"\n" + "\t •" + question);
+    } else {
+        $('#liker_form input[name=likert]').prop('checked', false);
+        // helper methods for display stuff
+        function disable_buttons() {
+            self.button_container_refine_top.children().prop("disabled", true);
+            self.button_container_refine_bot.children().prop("disabled", true);
         }
-    });
+
+        function enable_buttons() {
+            self.button_container_refine_top.children().prop("disabled", false);
+            self.button_container_refine_bot.children().prop("disabled", false);
+        }
+
+        function restore() {
+            self.progress_bar_refine.off();
+        }
+
+        disable_buttons();
+        this.progress_bar_refine.on("Refining");
+
+        // Refine and then display the first N results.
+        $.ajax({
+            url: 'iqr_refine',
+            method: "POST",
+            success: function (data) {
+                if (data['success']) {
+                    enable_buttons();
+                    self.pos_num = data['pos_num'];
+                    self.neg_num = data['neg_num'];
+
+                    self.IQR_round = self.IQR_round + 1;
+                    //reset AMT zone for next round IQR
+                    $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
+                    // $('#liker_form input[name=likert]').prop('checked', false);
+
+                }
+                else {
+                    alert_error("IQR Refine error: " + data['message']);
+                }
+
+                self.update_refine_pane();
+
+
+                restore();
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                alert_error("AJAX Error: " + errorThrown);
+                restore();
+            }
+        });
+
+    }
 };
 
 

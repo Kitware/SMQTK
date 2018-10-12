@@ -2,15 +2,16 @@
  * View of IQR session stat/status, including uploaded example data and views of
  * adjudicated data.
  */
-function IqrStatusView (container) {
+function IqrStatusView (container, result_inst) {
     //
     // Members
     //
 
+    this.result_inst = result_inst;
     // View components
     this.pos_AMT_zone = $('<div>');
-    this.example_pos_data_zone = $('<div style="float:left;width:50%;height:300px;">');
-    this.AMT_zone = $('<div style="float:right;width:50%;height:300px;">');
+    this.example_pos_data_zone = $('<div style="float:left;width:50%;height:350px;">');
+    this.AMT_zone = $('<div style="float:right;width:50%;height:350px;">');
     this.example_neg_data_zone = $('<div>');
 
     this.query_target_statement = "<label class=\"likert_statement\">Query Target:</label>";
@@ -18,11 +19,18 @@ function IqrStatusView (container) {
     this.query_target_dropdown.attr('id', "target_list");
     this.query_target_dropdown.append( new Option("--select--", "None"));
 
-    this.acc_statement = "<label class=\"likert_statement\">IQR Accuracy:</label>";
+    this.acc_statement = $('<lable>');
+    this.acc_statement.attr('class', 'likert_statement');
+    this.acc_statement.attr('id', 'acc_stat');
+    this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
+
     this.acc_input = $('<input type="text">');
+    this.acc_input.attr('id', 'acc_input');
 
     this.likert_statement = "<label class=\"likert_statement\">" +
         "I give feedback with 100% confidence.</label>";
+    this.likert_form = $('<form>');
+    this.likert_form.attr('id', 'liker_form');
     this.likert_scale = "<ul class='likert'>\n" +
         "      <li>\n" +
         "        <input type=\"radio\" name=\"likert\" value=5>\n" +
@@ -46,7 +54,7 @@ function IqrStatusView (container) {
         "      </li>\n" +
         "    </ul>";
 
-    this.cal_acc_button = $('<button class="btn" type="button"/>');
+    this.re_acc;
 
 
     //
@@ -65,25 +73,18 @@ function IqrStatusView (container) {
 IqrStatusView.prototype.construct_view = function (container) {
     var self = this;
 
+    this.likert_form.append(this.likert_scale);
     this.AMT_zone.append(
-        $("<span><h3>AMT Control:</h3></span>"),
-        this.query_target_statement,
-        this.query_target_dropdown,
-        this.cal_acc_button,
-        $('<br/>'),
+        $("<span><h4>AMT Control:</h4></span>"),
+        // this.query_target_statement,
+        // this.query_target_dropdown,
         this.acc_statement,
         this.acc_input,
         $('<br/>'),
         this.likert_statement,
-        this.likert_scale
+        this.likert_form
     );
 
-    this.cal_acc_button.text("Calculate Accuracy");
-    this.cal_acc_button.click(function () {
-        self.cal_acc();
-    });
-
-    // this.acc_input.val('98.76%');
     this.acc_input.attr('readonly',true);
 
     this.pos_AMT_zone.append(
@@ -115,7 +116,10 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
     // clear current window, reconstruct views for received UUIDs
     this.example_pos_data_zone.children().remove();
     this.example_pos_data_zone.append(
-        $("<span><h3>Query Image:</h3></span>")
+        $("<span><h4>Query Image:</h4></span>"),
+        this.query_target_statement,
+        this.query_target_dropdown,
+        $('<br/>')
     );
     for (var i=0; i < iqr_sess_state["ex_pos"].length; i++) {
         new DataView(this.example_pos_data_zone, 0, iqr_sess_state["ex_pos"][i],
@@ -144,6 +148,8 @@ IqrStatusView.prototype.update_neg_zone_content = function (iqr_sess_state) {
  */
 IqrStatusView.prototype.update_view = function () {
     var self = this;
+    this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
+    this.acc_input.val('');
     $.ajax({
         url: "iqr_session_info",
         method: "GET",
@@ -174,17 +180,20 @@ IqrStatusView.prototype.update_target_list = function (list) {
     }
 };
 
-IqrStatusView.prototype.cal_acc = function () {
+IqrStatusView.prototype.cal_acc_store = function (pos_num, neg_num) {
     var self = this;
     var target = $("#target_list :selected").text();
+    self.query_target_dropdown.attr('disabled', 'disabled');
 
     $.ajax({
         url: "cal_retrival_acc?target="+target,
 
         success: function (data)
         {
-            acc = data['acc'];
-            self.acc_input.val(acc + "%");
+            self.re_acc = data['acc'];
+            self.acc_input.val(self.re_acc + "%");
+            self.store_input(pos_num, neg_num);
+
 
         },
         error: function (jqXHR, textStatus, errorThrown)
@@ -192,5 +201,44 @@ IqrStatusView.prototype.cal_acc = function () {
             alert_error("AJAX Error: " + errorThrown);
         }
     });
-    //call cal_acc
+
+};
+
+IqrStatusView.prototype.store_input = function (pos_num, neg_num) {
+    var self = this;
+
+    //retrival target
+    var target = $("#target_list :selected").text();
+    //iqr round number
+    var iqr_round = self.result_inst.IQR_round;
+
+    //confidence
+    var likert_score = $('#liker_form input[name=likert]:checked').val();
+
+
+    alert_info("Iqr round: " + iqr_round + "target: " + target + " acc: " + self.re_acc +
+        "pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
+
+    // $.ajax({
+    //     url: "record_AMT_input",
+    //     type: 'GET',
+    //     data: {
+    //         target: target,
+    //         iqr_round: iqr_round,
+    //         acc: self.re_acc,
+    //         likert_score: likert_score
+    //     },
+    //     success: function (data)
+    //     {
+    //         acc = data['acc'];
+    //         self.acc_input.val(acc + "%");
+    //
+    //     },
+    //     error: function (jqXHR, textStatus, errorThrown)
+    //     {
+    //         alert_error("AJAX Error: " + errorThrown);
+    //     }
+    // });
+    //call cal_acc_store
+
 };

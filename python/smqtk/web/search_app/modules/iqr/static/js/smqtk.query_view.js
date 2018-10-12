@@ -90,8 +90,15 @@ QueryView.prototype.ingest_query = function() {
                 bar.remove();
             });
             inst.status_inst.update_view();
+
             inst.container.slideUp();
-            inst.status_inst.update_target_list(inst.catNMs)
+            $('#ingest_progress_zone').slideDown();
+            $('#status_zone').slideDown();
+            $('#control_zone').slideDown();
+
+
+            inst.status_inst.update_target_list(inst.catNMs);
+            inst.status_inst.query_target_dropdown.removeAttr('disabled');
         },
         error: function(jqXHR, textStatus, errorThrown) {
             bar.on("ERROR: "+errorThrown);

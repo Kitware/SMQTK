@@ -709,12 +709,18 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             Fails gracefully if there are no positive[/negative] adjudications.
 
             """
+
             with self.get_current_iqr_session() as iqrs:
+                iqrs.retrival_image_catNMs.clear()
                 try:
+                    pos_num = len(iqrs.positive_descriptors)
+                    neg_num = len(iqrs.negative_descriptors)
                     iqrs.refine()
 
                     return flask.jsonify({
                         "success": True,
+                        "pos_num": pos_num,
+                        "neg_num": neg_num,
                         "message": "Completed refinement"
                     })
                 except Exception as ex:

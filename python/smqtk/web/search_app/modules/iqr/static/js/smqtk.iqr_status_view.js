@@ -207,6 +207,7 @@ IqrStatusView.prototype.cal_acc_store = function () {
     var target = $("#target_list :selected").text();
     var iqr_round = self.result_inst.IQR_round;
     var likert_score = $('#liker_form input[name=likert]:checked').val();
+    $('#liker_form input[name=likert]').prop('checked', false);
     if (typeof likert_score === 'undefined') {
         likert_score = -1;
     }

@@ -369,7 +369,7 @@ IqrRefineView.prototype.iqr_refine = function() {
 
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
         var info = "Please answer the question ";
-        var question = "I give feedback with 100% confidence.";
+        var question = "I have high confidence in my positive/negative label assignments.";
         alert(info+"\n" + "\t •" + question);
     } else {
 
@@ -456,7 +456,7 @@ IqrRefineView.prototype.construct_random_pane = function () {
     // });
 
     // sets element initial visible/hidden status
-    this.show_random_functionals();
+    // this.show_random_functionals();
 };
 
 /**

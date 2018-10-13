@@ -10,8 +10,15 @@ function IqrStatusView (container, result_inst) {
     this.result_inst = result_inst;
     // View components
     this.pos_AMT_zone = $('<div>');
+    this.pos_AMT_zone.attr('id', "pos_AMT_zone");
+    this.pos_AMT_zone.css('background', "rgba(255, 255, 255,1)");
+
+
     this.example_pos_data_zone = $('<div style="float:left;width:50%;height:350px;">');
+    this.example_pos_data_zone.css('background', "rgba(255,255,255,1)");
     this.AMT_zone = $('<div style="float:right;width:50%;height:350px;">');
+    this.AMT_zone.css('background', "rgba(255,255,255, 1)");
+
     this.example_neg_data_zone = $('<div>');
 
     this.query_target_statement = "<label class=\"likert_statement\">Query Target:</label>";
@@ -111,6 +118,7 @@ IqrStatusView.prototype.construct_view = function (container) {
     container.append(
         this.pos_AMT_zone
     );
+
 
     this.pos_AMT_zone.attr("id", "pos_AMT_zone");
     this.AMT_zone.attr("id", "AMT_zone");

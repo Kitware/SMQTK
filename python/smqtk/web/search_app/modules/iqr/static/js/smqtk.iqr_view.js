@@ -71,11 +71,11 @@ IqrView.prototype.construct_view = function (container) {
     this.control_zone.append(
         this.button_index_initialize,
         this.button_reset_session,
-        this.button_state_save
+        // this.button_state_save
     );
 
     // this.flow_inst = new FlowUploadZone(this.flow_zone, this.upload_post_url);
-
+    self.status_zone.addClass("sticky");
     this.results_view_inst = new IqrRefineView(this.results_zone);
     this.status_inst = new IqrStatusView(this.status_zone, this.results_view_inst);
     this.results_view_inst.status_inst = this.status_inst;

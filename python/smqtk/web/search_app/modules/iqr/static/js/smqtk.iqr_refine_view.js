@@ -31,6 +31,8 @@ function IqrRefineView(container) {
     // top-level container for layout
     this.iqr_view_container = $('<div id="iqr_view_instance"/>');
 
+
+
     // for DataView views
     this.refine_container = $('<div class="iqr-view-results-container"/>');
     this.refine_container.css('width', '100%');

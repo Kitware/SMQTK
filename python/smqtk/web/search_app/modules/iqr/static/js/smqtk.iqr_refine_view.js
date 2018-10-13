@@ -46,11 +46,11 @@ function IqrRefineView(container) {
     this.button_container_refine_top = $('<div/>');
     this.button_container_refine_top.css('text-align', 'center');
     this.button_container_refine_bot = this.button_container_refine_top.clone();
-    this.button_container_random_top = this.button_container_refine_top.clone();
-    this.button_container_random_bot = this.button_container_refine_top.clone();
+    // this.button_container_random_top = this.button_container_refine_top.clone();
+    // this.button_container_random_bot = this.button_container_refine_top.clone();
 
     this.button_refine_top = $('<button class="btn btn-primary" type="button"/>');
-    this.button_refine_top.text("Refine + Record");
+    this.button_refine_top.text("Refine Results");
     this.button_refine_bot = this.button_refine_top.clone();
 
     this.button_saliency_top = $('<button class="btn btn-success" type="button"/>');
@@ -58,23 +58,23 @@ function IqrRefineView(container) {
     this.button_saliency_bot = this.button_saliency_top.clone();
     this.button_saliency_flag = true;
 
-    this.button_gt_top = $('<button class="btn btn-success" type="button"/>');
-    this.button_gt_top.text("GT label On");
-    this.button_gt_bot = this.button_gt_top.clone();
-    this.button_gt_flag = true;
+    // this.button_gt_top = $('<button class="btn btn-success" type="button"/>');
+    // this.button_gt_top.text("GT label On");
+    // this.button_gt_bot = this.button_gt_top.clone();
+    // this.button_gt_flag = true;
 
     // To be put in top button container
-    this.button_toggle_random = $('<button class="btn" type="button"/>');
-    this.button_toggle_random.text('Toggle Random Results');
+    // this.button_toggle_random = $('<button class="btn" type="button"/>');
+    // this.button_toggle_random.text('Toggle Random Results');
 
     // To be put in bottom button container in results panel
-    this.button_refine_showMore = $('<button class="btn" type="button"/>');
-    this.button_refine_showMore.text("Show More");
+    // this.button_refine_showMore = $('<button class="btn" type="button"/>');
+    // this.button_refine_showMore.text("Show More");
 
-    this.button_random_refresh = $('<button class="btn btn-danger" type="button"/>');
-    this.button_random_refresh.text("Refresh Random Results");
+    // this.button_random_refresh = $('<button class="btn btn-danger" type="button"/>');
+    // this.button_random_refresh.text("Refresh Random Results");
 
-    this.button_random_showMore = this.button_refine_showMore.clone();
+    // this.button_random_showMore = this.button_refine_showMore.clone();
 
     this.results_container_refine = $('<div/>');
     this.results_container_random = $('<div/>');
@@ -130,16 +130,16 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
-        this.button_saliency_top,
-        this.button_gt_top,
-        this.button_toggle_random
+        this.button_saliency_top
+        // this.button_gt_top,
+        // this.button_toggle_random
     );
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
         this.button_saliency_bot,
-        this.button_gt_bot,
-        this.button_refine_showMore
+        // this.button_gt_bot,
+        // this.button_refine_showMore
     );
     // initially hide bottom buttons
     this.button_container_refine_bot.hide();
@@ -153,24 +153,24 @@ IqrRefineView.prototype.construct_refine_pane = function () {
     this.button_refine_bot.click(function () {
         inst.iqr_refine();
     });
-    this.button_refine_showMore.click(function () {
-        inst.show_more_refine_results();
-    });
-    this.button_toggle_random.click(function () {
-        inst.toggle_random_pane();
-    });
+    // this.button_refine_showMore.click(function () {
+    //     inst.show_more_refine_results();
+    // });
+    // this.button_toggle_random.click(function () {
+    //     inst.toggle_random_pane();
+    // });
     this.button_saliency_top.click(function () {
         inst.saliency_control();
     });
     this.button_saliency_bot.click(function () {
         inst.saliency_control();
     });
-    this.button_gt_top.click(function() {
-        inst.gt_control();
-    });
-    this.button_gt_bot.click(function() {
-        inst.gt_control();
-    });
+    // this.button_gt_top.click(function() {
+    //     inst.gt_control();
+    // });
+    // this.button_gt_bot.click(function() {
+    //     inst.gt_control();
+    // });
 
 
     // sets element initial visible/hidden status
@@ -203,20 +203,20 @@ IqrRefineView.prototype.gt_control = function () {
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
         this.button_gt_flag = false;
-        this.button_gt_top.text("GT label Off");
-        this.button_gt_bot.text("GT label Off");
-        this.button_gt_top.attr("class", "btn btn-danger");
-        this.button_gt_bot.attr("class", "btn btn-danger");
+        // this.button_gt_top.text("GT label Off");
+        // this.button_gt_bot.text("GT label Off");
+        // this.button_gt_top.attr("class", "btn btn-danger");
+        // this.button_gt_bot.attr("class", "btn btn-danger");
 
     } else {
         this.gt_flag = false;
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
         this.button_gt_flag = true;
-        this.button_gt_top.text("GT label On");
-        this.button_gt_bot.text("GT label On");
-        this.button_gt_top.attr("class", "btn btn-success");
-        this.button_gt_bot.attr("class", "btn btn-success");
+        // this.button_gt_top.text("GT label On");
+        // this.button_gt_bot.text("GT label On");
+        // this.button_gt_top.attr("class", "btn btn-success");
+        // this.button_gt_bot.attr("class", "btn btn-success");
     }
 };
 
@@ -331,17 +331,17 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
     if (this.gt_flag) {
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-hide");
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-show");
-        this.button_gt_top.text("GT label Off");
-        this.button_gt_bot.text("GT label Off");
-        this.button_gt_top.attr("class", "btn btn-danger");
-        this.button_gt_bot.attr("class", "btn btn-danger");
+        // this.button_gt_top.text("GT label Off");
+        // this.button_gt_bot.text("GT label Off");
+        // this.button_gt_top.attr("class", "btn btn-danger");
+        // this.button_gt_bot.attr("class", "btn btn-danger");
     } else {
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").removeClass("iqr-gt-label-show");
         this.results_container_refine.children("div#iqr_res").children("div#gt_div").addClass("iqr-gt-label-hide");
-        this.button_gt_top.text("GT label On");
-        this.button_gt_bot.text("GT label On");
-        this.button_gt_top.attr("class", "btn btn-success");
-        this.button_gt_bot.attr("class", "btn btn-success");
+        // this.button_gt_top.text("GT label On");
+        // this.button_gt_bot.text("GT label On");
+        // this.button_gt_top.attr("class", "btn btn-success");
+        // this.button_gt_bot.attr("class", "btn btn-success");
     }
 
     if (this.refine_results_displayed === 0) {
@@ -351,12 +351,12 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
         this.button_container_refine_bot.show();
 
         // Conditionally show or hide the show-more button
-        if (this.refine_results_displayed === this.refine_result_uuids.length) {
-            this.button_refine_showMore.hide();
-        }
-        else {
-            this.button_refine_showMore.show();
-        }
+        // if (this.refine_results_displayed === this.refine_result_uuids.length) {
+        //     this.button_refine_showMore.hide();
+        // }
+        // else {
+        //     this.button_refine_showMore.show();
+        // }
     }
 };
 
@@ -437,23 +437,23 @@ IqrRefineView.prototype.construct_random_pane = function () {
     this.iqr_view_container.append(this.random_container);
 
     this.random_container.append(this.progress_bar_random.progress_div);
-    this.random_container.append(this.button_container_random_top);
+    // this.random_container.append(this.button_container_random_top);
     this.random_container.append(this.results_container_random);
-    this.random_container.append(this.button_container_random_bot);
+    // this.random_container.append(this.button_container_random_bot);
 
-    this.button_container_random_top.append(this.button_random_refresh);
+    // this.button_container_random_top.append(this.button_random_refresh);
 
-    this.button_container_random_bot.append(this.button_random_showMore);
+    // this.button_container_random_bot.append(this.button_random_showMore);
 
     // Random pane events
     var inst = this;
-    this.button_random_refresh.click(function () {
-        inst.refresh_random_ids();
-    });
+    // this.button_random_refresh.click(function () {
+    //     inst.refresh_random_ids();
+    // });
 
-    this.button_random_showMore.click(function () {
-        inst.iterate_more_random_results();
-    });
+    // this.button_random_showMore.click(function () {
+    //     inst.iterate_more_random_results();
+    // });
 
     // sets element initial visible/hidden status
     this.show_random_functionals();
@@ -469,24 +469,24 @@ IqrRefineView.prototype.remove_random_pane = function () {
 /**
  * Show functional elements in the random container
  */
-IqrRefineView.prototype.show_random_functionals = function () {
-    this.button_random_refresh.show();
-    // Only show the showMode button if there are any results displayed
-    if (this.random_results_displayed > 0) {
-        this.button_random_showMore.show();
-    }
-    else {
-        this.button_random_showMore.hide();
-    }
-};
+// IqrRefineView.prototype.show_random_functionals = function () {
+//     // this.button_random_refresh.show();
+//     // Only show the showMode button if there are any results displayed
+//     if (this.random_results_displayed > 0) {
+//         this.button_random_showMore.show();
+//     }
+//     else {
+//         this.button_random_showMore.hide();
+//     }
+// };
 
 /**
  * Hide functional elements in the random container
  */
-IqrRefineView.prototype.hide_random_functionals = function () {
-    this.button_random_refresh.hide();
-    this.button_random_showMore.hide();
-};
+// IqrRefineView.prototype.hide_random_functionals = function () {
+//     // this.button_random_refresh.hide();
+//     this.button_random_showMore.hide();
+// };
 
 /**
  * Clear currently displayed and stored random results.
@@ -516,26 +516,26 @@ IqrRefineView.prototype.display_random_results_range = function (s, e) {
     }
 
     // update functionals shown.
-    this.show_random_functionals();
+    // this.show_random_functionals();
 
     // Hide "show more" button if there are no more to show
-    if (this.random_results_displayed === this.random_ids.length) {
-        this.button_random_showMore.hide();
-    }
+    // if (this.random_results_displayed === this.random_ids.length) {
+    //     this.button_random_showMore.hide();
+    // }
 };
 
 /**
  * Query from the server the list of data element IDs in a random order.
  */
 IqrRefineView.prototype.refresh_random_ids = function () {
-    this.hide_random_functionals();
+    // this.hide_random_functionals();
     this.clear_random_results();
     this.progress_bar_random.on("Refreshing random list");
 
     var inst = this;
     var restore = function () {
         inst.progress_bar_random.off();
-        inst.show_random_functionals();
+        // inst.show_random_functionals();
     };
 
     $.ajax({
@@ -578,14 +578,14 @@ IqrRefineView.prototype.toggle_random_pane = function () {
     if (this.random_enabled)
     {
         // moving button first to avoid detaching handler attachments
-        this.button_container_refine_top.append(this.button_toggle_random);
+        // this.button_container_refine_top.append(this.button_toggle_random);
         this.remove_random_pane();
         this.refine_container.css('width', "100%");
     }
     else
     {
         this.construct_random_pane();
-        this.button_container_random_top.append(this.button_toggle_random);
+        // this.button_container_random_top.append(this.button_toggle_random);
         this.refine_container.css('width', '49%');
         this.random_container.css('width', '49%');
 

@@ -19,7 +19,10 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
     this.probability = probability;
     this.saliency_flag = saliency_flag;
     this.is_example = is_example === undefined ? false : is_example;
-    this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
+    // this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
+
+    //remove gt_label for AMT study
+    this.gt_label = false;
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
@@ -209,7 +212,7 @@ DataView.prototype.update_view = function (server_update) {
 
         var data_veiw_len = 192;
         if (inst.saliency_flag) {
-            data_veiw_len = Math.floor(data_veiw_len / 2);
+            inst.image_container.removeClass("iqr-result-img-container").addClass("iqr-sa-result-img-container");
         }
         var data_veiw_len_str = data_veiw_len.toString() + 'px';
 

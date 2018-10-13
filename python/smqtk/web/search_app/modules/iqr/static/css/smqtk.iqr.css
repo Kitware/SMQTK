@@ -32,6 +32,10 @@
     height: 192px;
     width: 192px;
 }
+.iqr-sa-result-img-container {
+    height: 192px;
+    width: 384px;
+}
 .result-positive {
     border-color: lightgreen;
     background-color:rgba(154, 230, 154, 0.3);

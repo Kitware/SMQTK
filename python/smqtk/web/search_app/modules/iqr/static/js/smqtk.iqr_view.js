@@ -40,7 +40,7 @@ function IqrView(container, upload_post_url) {
 
     this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
-    this.button_state_save = $('<button class="btn" type="button"/>');
+    // this.button_state_save = $('<button class="btn" type="button"/>');
 
     //
     // Setup
@@ -80,10 +80,10 @@ IqrView.prototype.construct_view = function (container) {
     this.status_inst = new IqrStatusView(this.status_zone, this.results_view_inst);
     this.results_view_inst.status_inst = this.status_inst;
 
-    this.button_index_initialize.text("Initialize Index");
-    this.button_reset_session.text("Reset IQR Session");
-    this.button_state_save.text("Save IQR state");
-    this.button_state_save.addClass('pull-right');
+    this.button_index_initialize.text("Run Query");
+    this.button_reset_session.text("Choose a New Query");
+    // this.button_state_save.text("Save IQR state");
+    // this.button_state_save.addClass('pull-right');
 
     //
     // Control
@@ -98,9 +98,9 @@ IqrView.prototype.construct_view = function (container) {
         self.reset_session();
     });
 
-    this.button_state_save.attr({
-        onclick: "location.href='get_iqr_state'"
-    });
+    // this.button_state_save.attr({
+    //     onclick: "location.href='get_iqr_state'"
+    // });
 
     this.status_zone.hide();
     this.control_zone.hide();

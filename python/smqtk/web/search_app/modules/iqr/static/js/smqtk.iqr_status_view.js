@@ -38,7 +38,7 @@ function IqrStatusView (container, result_inst) {
     this.acc_input.attr('size', 8);
 
     this.likert_statement = "<label class=\"likert_statement\">" +
-        "I give feedback with 100% confidence.</label>";
+        "I have high confidence in my positive/negative label assignments.</label>";
     this.likert_form = $('<form>');
     this.likert_form.attr('id', 'liker_form');
     this.likert_scale = "<ul class='likert'>\n" +

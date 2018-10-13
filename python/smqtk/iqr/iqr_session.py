@@ -2,6 +2,11 @@ import logging
 import threading
 import uuid
 
+import os
+import os.path as osp
+from datetime import datetime
+
+
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import SmqtkObject
@@ -363,3 +368,25 @@ class IqrSession (SmqtkObject):
         # self.retrival_image_catNMs.clear()
 
         return "{0:.2f}".format(acc)
+
+    def record_AMT_input(self, record):
+        """ record AMT input into a file
+
+            :param record: :The AMT record
+            :type record: list(str)
+        """
+        home = osp.expanduser("~")
+        record_dir = '{}/AMT_record'.format(home)
+        if not osp.exists(record_dir):
+            os.makedirs(record_dir)
+
+        t_str = datetime.now().strftime('%m-%d_%H:%M:%S')
+        file_name = '{}/{}_{}.txt'.format(record_dir, self.uuid[-8:], t_str)
+
+        with open(file_name, 'w') as f:
+            try:
+                f.write(' '.join(map(str, record)))
+            except:
+                import sys
+                print("Unexpected error:", sys.exc_info()[0])
+                raise

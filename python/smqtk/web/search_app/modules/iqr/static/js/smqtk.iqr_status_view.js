@@ -19,13 +19,23 @@ function IqrStatusView (container, result_inst) {
     this.query_target_dropdown.attr('id', "target_list");
     this.query_target_dropdown.append( new Option("--select--", "None"));
 
-    this.acc_statement = $('<lable>');
+    this.session_statement = $('<label>');
+    this.session_statement.attr('class', 'likert_statement');
+    this.session_statement.attr('id', 'sess_stat');
+    this.session_statement.text("Session ID: ");
+
+    this.session_input = $('<input type="text">');
+    this.session_input.attr('id', 'sess_input');
+    this.session_input.attr('size', 40);
+
+    this.acc_statement = $('<label>');
     this.acc_statement.attr('class', 'likert_statement');
     this.acc_statement.attr('id', 'acc_stat');
     this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
 
     this.acc_input = $('<input type="text">');
     this.acc_input.attr('id', 'acc_input');
+    this.acc_input.attr('size', 8);
 
     this.likert_statement = "<label class=\"likert_statement\">" +
         "I give feedback with 100% confidence.</label>";
@@ -54,7 +64,12 @@ function IqrStatusView (container, result_inst) {
         "      </li>\n" +
         "    </ul>";
 
-    this.re_acc;
+    this.re_acc_20 = 0.0;
+    this.re_acc_30 = 0.0;
+    this.re_acc_40 = 0.0;
+    this.re_acc_50 = 0.0;
+
+    this.session_id;
 
 
     //
@@ -76,8 +91,8 @@ IqrStatusView.prototype.construct_view = function (container) {
     this.likert_form.append(this.likert_scale);
     this.AMT_zone.append(
         $("<span><h4>AMT Control:</h4></span>"),
-        // this.query_target_statement,
-        // this.query_target_dropdown,
+        this.session_statement,
+        this.session_input,
         this.acc_statement,
         this.acc_input,
         $('<br/>'),
@@ -86,6 +101,7 @@ IqrStatusView.prototype.construct_view = function (container) {
     );
 
     this.acc_input.attr('readonly',true);
+    this.session_input.attr('readonly', true);
 
     this.pos_AMT_zone.append(
         this.example_pos_data_zone,
@@ -125,6 +141,7 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
         new DataView(this.example_pos_data_zone, 0, iqr_sess_state["ex_pos"][i],
                      0, false, true);
     }
+
 };
 
 /**
@@ -155,6 +172,7 @@ IqrStatusView.prototype.update_view = function () {
         method: "GET",
         dataType: "json",
         success: function (data) {
+            self.session_id = data['uuid'];
             self.update_pos_zone_content(data);
             self.update_neg_zone_content(data);
         },
@@ -180,65 +198,44 @@ IqrStatusView.prototype.update_target_list = function (list) {
     }
 };
 
-IqrStatusView.prototype.cal_acc_store = function (pos_num, neg_num) {
+IqrStatusView.prototype.cal_acc_store = function () {
     var self = this;
-    var target = $("#target_list :selected").text();
+
     self.query_target_dropdown.attr('disabled', 'disabled');
+    self.session_input.val(self.session_id);
+
+    var target = $("#target_list :selected").text();
+    var iqr_round = self.result_inst.IQR_round;
+    var likert_score = $('#liker_form input[name=likert]:checked').val();
+    if (typeof likert_score === 'undefined') {
+        likert_score = -1;
+    }
 
     $.ajax({
-        url: "cal_retrival_acc?target="+target,
-
+        url: "record_AMT_input",
+        data: {
+            target: target,
+            iqr_round: iqr_round,
+            likert_score: likert_score
+        },
         success: function (data)
         {
-            self.re_acc = data['acc'];
-            self.acc_input.val(self.re_acc + "%");
-            self.store_input(pos_num, neg_num);
+            self.re_acc_20 = data['acc_20'];
+            self.re_acc_30 = data['acc_30'];
+            self.re_acc_40 = data['acc_40'];
+            self.re_acc_50 = data['acc_50'];
+            pos_num = data['pos_num'];
+            neg_num = data['neg_num'];
+            self.acc_input.val(self.re_acc_20 + "%");
+            // self.store_input(pos_num, neg_num);
 
-
+            alert_info("session_id:"+ self.session_id + " Iqr round: " + iqr_round + " target: " + target +
+        " acc_20: " + self.re_acc_20 + " acc_30 " + self.re_acc_30+ " acc_40 " + self.re_acc_40 + " acc_50: " + self.re_acc_50 +
+        " pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
         },
         error: function (jqXHR, textStatus, errorThrown)
         {
-            alert_error("AJAX Error: " + errorThrown);
+            alert_error("AJAX Error: cal_acc_store" + errorThrown);
         }
     });
-
-};
-
-IqrStatusView.prototype.store_input = function (pos_num, neg_num) {
-    var self = this;
-
-    //retrival target
-    var target = $("#target_list :selected").text();
-    //iqr round number
-    var iqr_round = self.result_inst.IQR_round;
-
-    //confidence
-    var likert_score = $('#liker_form input[name=likert]:checked').val();
-
-
-    alert_info("Iqr round: " + iqr_round + "target: " + target + " acc: " + self.re_acc +
-        "pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
-
-    // $.ajax({
-    //     url: "record_AMT_input",
-    //     type: 'GET',
-    //     data: {
-    //         target: target,
-    //         iqr_round: iqr_round,
-    //         acc: self.re_acc,
-    //         likert_score: likert_score
-    //     },
-    //     success: function (data)
-    //     {
-    //         acc = data['acc'];
-    //         self.acc_input.val(acc + "%");
-    //
-    //     },
-    //     error: function (jqXHR, textStatus, errorThrown)
-    //     {
-    //         alert_error("AJAX Error: " + errorThrown);
-    //     }
-    // });
-    //call cal_acc_store
-
 };

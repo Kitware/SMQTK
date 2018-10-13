@@ -713,14 +713,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             with self.get_current_iqr_session() as iqrs:
                 iqrs.retrival_image_catNMs.clear()
                 try:
-                    pos_num = len(iqrs.positive_descriptors)
-                    neg_num = len(iqrs.negative_descriptors)
+
                     iqrs.refine()
 
                     return flask.jsonify({
                         "success": True,
-                        "pos_num": pos_num,
-                        "neg_num": neg_num,
+                        # "pos_num": pos_num,
+                        # "neg_num": neg_num,
                         "message": "Completed refinement"
                     })
                 except Exception as ex:
@@ -755,9 +754,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 "results": result
             })
 
-        @self.route("/cal_retrival_acc", methods=["GET"])
+        @self.route("/record_AMT_input", methods=["GET"])
         @self._parent_app.module_login.login_required
-        def cal_retrival_acc():
+        def record_AMT_input():
             """
             Calculate retrival accuracy based on the retrival target
 
@@ -765,12 +764,45 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     acc: <float>
                 }
             """
-            retrival_target = flask.request.args['target']
-            with self.get_current_iqr_session() as iqrs:
-                acc = iqrs.retrival_acc(retrival_target, first_n=20)
-                return flask.jsonify({
-                    "acc": acc
-                })
+
+
+            if flask.request.method == "GET":
+                record_list = list()
+
+                retrival_target = flask.request.args['target']
+                iqr_round = flask.request.args['iqr_round']
+                likert_score = flask.request.args['likert_score']
+
+                with self.get_current_iqr_session() as iqrs:
+                    pos_num = len(iqrs.positive_descriptors)
+                    neg_num = len(iqrs.negative_descriptors)
+                    acc_20 = iqrs.retrival_acc(retrival_target, first_n=20)
+                    acc_30 = iqrs.retrival_acc(retrival_target, first_n=30)
+                    acc_40 = iqrs.retrival_acc(retrival_target, first_n=40)
+                    acc_50 = iqrs.retrival_acc(retrival_target, first_n=50)
+
+                    record_list.append(iqrs.uuid)
+                    record_list.append(retrival_target)
+                    record_list.append(iqr_round)
+                    record_list.append(likert_score)
+                    record_list.append(pos_num)
+                    record_list.append(neg_num)
+                    record_list.append(acc_20)
+                    record_list.append(acc_30)
+                    record_list.append(acc_40)
+                    record_list.append(acc_50)
+
+                    iqrs.record_AMT_input(record_list)
+
+                    return flask.jsonify({
+                        "acc_20": acc_20,
+                        "acc_30": acc_30,
+                        "acc_40": acc_40,
+                        "acc_50": acc_50,
+                        "pos_num": pos_num,
+                        "neg_num": neg_num
+                    })
+
 
         @self.route("/iqr_ordered_results", methods=['GET'])
         @self._parent_app.module_login.login_required

@@ -9,12 +9,9 @@ function IqrRefineView(container) {
     //
     // Members
     //
-    this.show_more_step = 50;
+    this.show_more_step = 20;
     this.pre_to_display = 0;
     this.IQR_round = -1;
-
-    this.pos_num;
-    this.neg_num;
 
     // parallel arrays of ordered result UUIDs and relevancy scores.
     //this.displayed_search_results = [];
@@ -273,7 +270,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
                             self.refine_result_score.push(data["results"][i][1]);
                         }
 
-                        self.status_inst.cal_acc_store(self.pos_num, self.neg_num);
+                        self.status_inst.cal_acc_store();
+
 
                         // create/show top N results
                         // - If no results, display text verification of no results
@@ -368,14 +366,13 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
  */
 IqrRefineView.prototype.iqr_refine = function() {
     var self = this;
-    alert_info($('#liker_form input[name=likert]:checked').val());
-    alert_info(self.IQR_round);
+
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
         var info = "Please answer the question ";
         var question = "I give feedback with 100% confidence.";
         alert(info+"\n" + "\t •" + question);
     } else {
-        $('#liker_form input[name=likert]').prop('checked', false);
+
         // helper methods for display stuff
         function disable_buttons() {
             self.button_container_refine_top.children().prop("disabled", true);
@@ -401,8 +398,6 @@ IqrRefineView.prototype.iqr_refine = function() {
             success: function (data) {
                 if (data['success']) {
                     enable_buttons();
-                    self.pos_num = data['pos_num'];
-                    self.neg_num = data['neg_num'];
 
                     self.IQR_round = self.IQR_round + 1;
                     //reset AMT zone for next round IQR

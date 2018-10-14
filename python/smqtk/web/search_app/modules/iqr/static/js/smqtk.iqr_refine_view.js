@@ -17,6 +17,9 @@ function IqrRefineView(container) {
     //this.displayed_search_results = [];
     this.refine_result_uuids = [];
     this.refine_result_score = [];
+    // the UUIDs for pos selected and neg selected
+    this.pos_selected_uuids = [];
+    this.neg_selected_uuids = [];
     // number of refine results currently displayed from the above arrays.
     this.refine_results_displayed = 0;
 
@@ -81,6 +84,12 @@ function IqrRefineView(container) {
     this.results_container_refine = $('<div/>');
     this.results_container_random = $('<div/>');
 
+    //
+    // Pos and neg container
+    //
+    this.pos_container = $('<div/>');
+    this.neg_container = $('<div/>');
+
     this.status_inst;
 
     this.saliency_flag = false;
@@ -119,6 +128,11 @@ IqrRefineView.prototype.update_view = function () {
 IqrRefineView.prototype.construct_refine_pane = function () {
     var inst = this;
 
+    this.pos_container.remove();
+    this.iqr_view_container.append(this.pos_container);
+    this.neg_container.remove();
+    this.iqr_view_container.append(this.neg_container);
+
     // remove the main container in case its already there
     this.refine_container.remove();
     this.iqr_view_container.append(this.refine_container);
@@ -139,7 +153,7 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.button_container_refine_bot.append(
         this.button_refine_bot,
-        this.button_saliency_bot,
+        this.button_saliency_bot
         // this.button_gt_bot,
         // this.button_refine_showMore
     );
@@ -195,6 +209,8 @@ IqrRefineView.prototype.saliency_control = function () {
         this.button_saliency_top.attr("class", "btn btn-success");
         this.button_saliency_bot.attr("class", "btn btn-success");
     }
+    this.pos_container.children().remove();
+    this.neg_container.children().remove();
     this.results_container_refine.children().remove();
     this.show_more_refine_results(true);
 };
@@ -231,6 +247,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
     // clear children of results container
     // get ordered results information
     // display first X results
+    this.pos_container.children().remove();
+    this.neg_container.children().remove();
     this.results_container_refine.children().remove();
     if (this.saliency_flag) {
         this.button_saliency_top.attr("class", "btn btn-danger");
@@ -246,6 +264,9 @@ IqrRefineView.prototype.update_refine_pane = function () {
 
     this.refine_result_uuids = [];
     this.refine_result_score = [];
+
+    this.pos_selected_uuids = [];
+    this.neg_selected_uuids = [];
     this.refine_results_displayed = 0;
 
     var self = this;
@@ -272,6 +293,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
                             self.refine_result_score.push(data["results"][i][1]);
                         }
 
+                        //calcualte accuracy and store the result into file
                         self.status_inst.cal_acc_store();
 
 
@@ -297,6 +319,14 @@ IqrRefineView.prototype.update_refine_pane = function () {
                 self.button_container_refine_top.children().prop("disabled", true);
                 self.button_container_refine_bot.hide();
             }
+
+            for (var i = 0; i < data["positive_uids"].length; i++) {
+                self.pos_selected_uuids.push(data["positive_uids"][i]);
+            }
+
+            for (var i = 0; i < data["negative_uids"].length; i++) {
+                self.neg_selected_uuids.push(data["negative_uids"][i]);
+            }
         }
     });
 };
@@ -307,6 +337,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
  * If we have shown all results possible, we hide the "Show More" button.
  */
 IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
+    var self = this;
     replay_flag = replay_flag || false;   //set default of replay_flag to false
 
     var to_display = 0;
@@ -320,13 +351,44 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
     }
     this.pre_to_display = to_display;
 
+    //show neg selected images on neg_container
+    for (var i = 0; i < this.neg_selected_uuids.length; i++) {
+        new DataView(this.neg_container,
+                      i,  // show 1-indexed rank value
+                      this.neg_selected_uuids[i],
+                      0.0,
+                      this.saliency_flag, false, false, false);
+    }
+
     while (this.refine_results_displayed < to_display)
     {
-        new DataView(this.results_container_refine,
-                      this.refine_results_displayed+1,  // show 1-indexed rank value
+        var cur_uid = this.refine_result_uuids[this.refine_results_displayed];
+        //show pos selected images on pos_container
+        if (this.pos_selected_uuids.includes(cur_uid)) {
+            new DataView(this.pos_container,
+                      this.refine_results_displayed,  // show 1-indexed rank value
                       this.refine_result_uuids[this.refine_results_displayed],
                       this.refine_result_score[this.refine_results_displayed],
-                      this.saliency_flag);
+                      this.saliency_flag, false, false, false);
+            to_display++;
+        } else if (this.neg_selected_uuids.includes(cur_uid)) {
+            //show neg selected images on neg_container if the neg_selected will be
+            //shown in the result_container (i.e., no other result will be shown,
+            // very rare)
+            new DataView(this.neg_container,
+                      this.refine_results_displayed,  // show 1-indexed rank value
+                      this.refine_result_uuids[this.refine_results_displayed],
+                      this.refine_result_score[this.refine_results_displayed],
+                      this.saliency_flag, false, false, false);
+            to_display++;
+        } else {
+
+            new DataView(this.results_container_refine,
+                this.refine_results_displayed,  // show 1-indexed rank value
+                this.refine_result_uuids[this.refine_results_displayed],
+                this.refine_result_score[this.refine_results_displayed],
+                this.saliency_flag, false, false, true);
+        }
         this.refine_results_displayed++;
     }
 
@@ -370,6 +432,7 @@ IqrRefineView.prototype.iqr_refine = function() {
     var self = this;
 
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
+        //check whether the likert scale has been selected
         var info = "Please answer the question ";
         var question = "I have high confidence in my positive/negative label assignments.";
         alert(info+"\n" + "\t •" + question);
@@ -404,15 +467,12 @@ IqrRefineView.prototype.iqr_refine = function() {
                     self.IQR_round = self.IQR_round + 1;
                     //reset AMT zone for next round IQR
                     $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
-                    // $('#liker_form input[name=likert]').prop('checked', false);
-
                 }
                 else {
                     alert_error("IQR Refine error: " + data['message']);
                 }
 
                 self.update_refine_pane();
-
 
                 restore();
             },

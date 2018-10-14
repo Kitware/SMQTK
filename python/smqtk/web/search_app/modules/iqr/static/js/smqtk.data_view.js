@@ -6,11 +6,17 @@
  *
  * for image load progress status, see: http://usablica.github.io/progress.js/
  *
+ * @param saliency_flag: Boolean flag for whether or not to show saliency map
+ *
  * @param is_example: Boolean flag for whether or not this is a view of example
  *                    data, in contrast to data in the IQR working index.
  *
+ * @param gt_label: Boolean flag for whether or not to show the GT label
+ *
+ * @param result_zone_flag: Boolean flag for whether or not this is for result zone
+ *
  */
-function DataView(container, rank, uid, probability, saliency_flag, is_example, gt_label) {
+function DataView(container, rank, uid, probability, saliency_flag, is_example, gt_label, result_zone_flag) {
     Object.call(this);
 
     var inst = this;
@@ -19,10 +25,8 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
     this.probability = probability;
     this.saliency_flag = saliency_flag;
     this.is_example = is_example === undefined ? false : is_example;
-    // this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
-
-    //remove gt_label for AMT study
-    this.gt_label = false;
+    this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
+    this.result_zone_flag = result_zone_flag=== undefined ? true : result_zone_flag;
 
     // image ``src`` reference to use for display in an <img>.
     this.image_preview_data = null;
@@ -138,8 +142,6 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
         inst.display_full_saliencyMap();
     });
 
-
-
     // Update to initial view from the server's state
     this.update_view(true);
 
@@ -164,7 +166,7 @@ DataView.prototype.update_view = function (server_update) {
     server_update = server_update || false;
 
     // Fetch/Update adjudication status
-    function update_adj_button_view()
+    function update_adj_button_view(server_flag)
     {
         if (inst.is_positive) {
             inst.adj_pos_icon.attr('src', inst.adj_pos_on_icon);
@@ -211,9 +213,16 @@ DataView.prototype.update_view = function (server_update) {
         });
 
         var data_veiw_len = 192;
-        if (inst.saliency_flag) {
+        if (inst.result_zone_flag && inst.saliency_flag) {
             inst.image_container.removeClass("iqr-result-img-container").addClass("iqr-sa-result-img-container");
+        } else if (!inst.result_zone_flag && !inst.saliency_flag) {
+            data_veiw_len = data_veiw_len / 2;
+            inst.image_container.removeClass("iqr-result-img-container").addClass("iqr-posneg-img-container");
+        } else if (!inst.result_zone_flag && inst.saliency_flag) {
+            data_veiw_len = data_veiw_len / 2;
+            inst.image_container.removeClass("iqr-result-img-container").addClass("iqr-posneg_sm-img-container");
         }
+
         var data_veiw_len_str = data_veiw_len.toString() + 'px';
 
         // balance side scaling.
@@ -249,7 +258,7 @@ DataView.prototype.update_view = function (server_update) {
                 inst.is_positive = data['is_pos'];
                 inst.is_negative = data['is_neg'];
 
-                update_adj_button_view();
+                update_adj_button_view(true);
             },
             error: function (jqXHR, textStatus, errorThrown)
             {
@@ -305,6 +314,7 @@ DataView.prototype.update_view = function (server_update) {
  * Set display to positive indication and let the server know of change.
  */
 DataView.prototype.set_positive = function () {
+
     var post_data = {};
     //var adj_type = '';  // for alert_info below
     if (!this.is_positive) {

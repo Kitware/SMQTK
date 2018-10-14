@@ -36,6 +36,14 @@
     height: 192px;
     width: 384px;
 }
+.iqr-posneg-img-container {
+    height: 96px;
+    width: 96px;
+}
+.iqr-posneg_sm-img-container{
+    height: 96px;
+    width: 192px;
+}
 .result-positive {
     border-color: lightgreen;
     background-color:rgba(154, 230, 154, 0.3);

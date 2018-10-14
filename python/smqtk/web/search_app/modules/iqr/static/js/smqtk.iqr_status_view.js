@@ -147,7 +147,7 @@ IqrStatusView.prototype.update_pos_zone_content = function (iqr_sess_state) {
     );
     for (var i=0; i < iqr_sess_state["ex_pos"].length; i++) {
         new DataView(this.example_pos_data_zone, 0, iqr_sess_state["ex_pos"][i],
-                     0, false, true);
+                     0, false, true, false);
     }
 
 };

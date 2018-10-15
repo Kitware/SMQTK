@@ -42,6 +42,8 @@ def cli_parser():
                         help="COCO data root path")
     parser.add_argument('--query_imgID_list', type=str,
                         help="AMT query image ID")
+    parser.add_argument('--out_uuid_file', type=str,
+                        help="output uuid file")
 
     return parser
 
@@ -173,6 +175,8 @@ def main():
             for g in glob.iglob(img_path):
                 data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
 
+    of = open(args.out_uuid_file, 'w')
+
     # add query image to query_set
     with open(args.query_imgID_list, 'r') as f:
         for line in f:
@@ -186,11 +190,16 @@ def main():
             img_path = osp.join(args.data_path, q_img['file_name'])
 
             if osp.isfile(img_path):
-                query_set.add_data(DataFileElement(img_path, coco_catNM=cat_names))
+                cur_data = DataFileElement(img_path, coco_catNM=cat_names)
+                query_set.add_data(cur_data)
+                of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
             else:
                 log.debug("Expanding glob: %s" % img_path)
                 for g in glob.iglob(img_path):
-                    query_set.add_data(DataFileElement(g, coco_catNM=cat_names))
+                    cur_data = DataFileElement(g, coco_catNM=cat_names)
+                    query_set.add_data(cur_data)
+                    of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
+    of.close()
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

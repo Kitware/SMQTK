@@ -89,6 +89,15 @@ function IqrRefineView(container) {
     //
     this.pos_container = $('<div/>');
     this.neg_container = $('<div/>');
+    this.pos_hr = $('<hr id="pos_hr">');
+    this.neg_hr = $('<hr id="neg_hr">');
+
+    this.pos_state = $('<label>');
+    this.pos_state.text("Positive feedbacks:");
+
+    this.neg_state = $('<label>');
+    this.neg_state.text("Negative feedbacks:");
+
 
     this.status_inst;
 
@@ -129,9 +138,18 @@ IqrRefineView.prototype.construct_refine_pane = function () {
     var inst = this;
 
     this.pos_container.remove();
+    this.iqr_view_container.append(this.pos_state);
     this.iqr_view_container.append(this.pos_container);
+    this.iqr_view_container.append(this.pos_hr);
+    this.pos_state.hide();
+    this.pos_hr.hide();
+
     this.neg_container.remove();
+    this.iqr_view_container.append(this.neg_state);
     this.iqr_view_container.append(this.neg_container);
+    this.iqr_view_container.append(this.neg_hr);
+    this.neg_state.hide();
+    this.neg_hr.hide();
 
     // remove the main container in case its already there
     this.refine_container.remove();
@@ -320,10 +338,24 @@ IqrRefineView.prototype.update_refine_pane = function () {
                 self.button_container_refine_bot.hide();
             }
 
+            if (data["positive_uids"].length > 0) {
+                self.pos_state.show();
+                self.pos_hr.show();
+            } else {
+                self.pos_state.hide();
+                self.pos_hr.hide();
+            }
             for (var i = 0; i < data["positive_uids"].length; i++) {
                 self.pos_selected_uuids.push(data["positive_uids"][i]);
             }
 
+            if (data["negative_uids"].length > 0) {
+                self.neg_state.show();
+                self.neg_hr.show();
+            } else {
+                self.neg_state.hide();
+                self.neg_hr.hide();
+            }
             for (var i = 0; i < data["negative_uids"].length; i++) {
                 self.neg_selected_uuids.push(data["negative_uids"][i]);
             }
@@ -371,6 +403,7 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
                       this.refine_result_score[this.refine_results_displayed],
                       this.saliency_flag, false, false, false);
             to_display++;
+
         } else if (this.neg_selected_uuids.includes(cur_uid)) {
             //show neg selected images on neg_container if the neg_selected will be
             //shown in the result_container (i.e., no other result will be shown,

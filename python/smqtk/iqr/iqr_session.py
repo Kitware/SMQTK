@@ -5,6 +5,7 @@ import uuid
 import os
 import os.path as osp
 from datetime import datetime
+from collections import OrderedDict
 
 
 from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
@@ -441,3 +442,4 @@ class IqrSession (SmqtkObject):
                     import sys
                     print("Unexpected error:", sys.exc_info()[0])
                     raise
+

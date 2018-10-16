@@ -890,11 +890,17 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                     iqrs.retrival_image_catNMs.append(de.COCO_catNM)
 
-
-
                 return flask.jsonify({
                     "results": [(d.uuid(), p) for d, p in r]
                 })
+
+        # @self.route("/validate_iqr_feedback", methods=["GET"])
+        # @self._parent_app.module_login.login_required
+        # def validate_iqr_feedback():
+        #     with self.get_current_iqr_session() as iqrs:
+        #         pos_uuid_list = [d.uuid() for d in iqrs.positive_descriptors]
+        #         neg_uuid_list = [d.uuid() for d in iqrs.negative_descriptors]
+
 
 
         @self.route("/reset_iqr_session", methods=["GET"])

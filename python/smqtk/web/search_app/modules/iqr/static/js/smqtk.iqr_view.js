@@ -134,8 +134,8 @@ IqrView.prototype.construct_view = function (container) {
     // });
 
     this.button_uuid_fetch.click(function() {
-        var AMT_id = self.AMT_id.val();
-        var input_str = self.uuid_input.val();
+        var AMT_id = self.AMT_id.val().trim();
+        var input_str = self.uuid_input.val().trim();
         self.uuid_input.val('');
         self.show_query_image(AMT_id, input_str);
     });

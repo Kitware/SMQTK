@@ -344,7 +344,6 @@ IqrRefineView.prototype.update_refine_pane = function () {
                         //calcualte accuracy and store the result into file
                         self.status_inst.cal_acc_store();
 
-
                         // create/show top N results
                         // - If no results, display text verification of no results
                         if (self.refine_result_uuids.length === 0) {
@@ -510,21 +509,54 @@ IqrRefineView.prototype.iqr_refine = function() {
                 iqr_round: self.IQR_round
             },
             success: function (iqr_count_flag){
+                //make sure all the retrieved images are given feedback
                 if (!iqr_count_flag['success']) {
                     cur_count = iqr_count_flag['count'];
                     var left_count = (self.IQR_round + 1) * 20 + 1 - cur_count;
                     alert("Please give feedbacks to all query images! only " + left_count + " lefted!");
                 } else {
-                    // helper methods for display stuff
-                    function disable_buttons() {
-                        self.button_container_refine_top.children().prop("disabled", true);
-                        self.button_container_refine_bot.children().prop("disabled", true);
-                    }
+                    $.ajax({
+                        url: 'validate_iqr_feedback',
+                        method: 'POST',
+                        data: {
+                            iqr_round: self.IQR_round
+                        },
+                        success: function (data) {
+                            alert_info('selected_pos_acc: ' + data['selected_pos_acc']);
+                            alert_info('selected_neg_acc: ' + data['selected_neg_acc']);
+                            if (data['selected_pos_acc'] < 0.7) {
+                                alert("The positive feedbacks are not acurate enough!\n " +
+                                    "Please review the feedbacks and change them accordingly!");
+                            } else if (data['selected_neg_acc'] > 0.3) {
+                                alert("The negtive feedbacks are not acurate enough!\n " +
+                                    "Please review the feedbacks and change them accordingly!");
+                            } else {
+                                // helper methods for display stuff
+                                function disable_buttons() {
+                                    self.button_container_refine_top.children().prop("disabled", true);
+                                    self.button_container_refine_bot.children().prop("disabled", true);
+                                }
 
-                    disable_buttons();
-                    self.progress_bar_refine.on("Refining");
+                                disable_buttons();
+                                self.progress_bar_refine.on("Refining");
+                                self.iqr_refine_excution();
+                            }
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            alert_error("AJAX Error: validate_iqr_feedback: " + errorThrown);
+                            restore();
+                        }
+                    });
 
-                    self.iqr_refine_excution();
+                    // // helper methods for display stuff
+                    // function disable_buttons() {
+                    //     self.button_container_refine_top.children().prop("disabled", true);
+                    //     self.button_container_refine_bot.children().prop("disabled", true);
+                    // }
+                    //
+                    // disable_buttons();
+                    // self.progress_bar_refine.on("Refining");
+                    // self.iqr_refine_excution();
                 }
             },
             error: function (jqXHR, textStatus, errorThrown) {
@@ -534,6 +566,37 @@ IqrRefineView.prototype.iqr_refine = function() {
         });
     }
 };
+
+// IqrRefineView.prototype.validate_iqr_feedback = function() {
+//     var self = this;
+//     $.ajax({
+//         url: 'validate_iqr_feedback',
+//         method: 'POST',
+//         success: function (data) {
+//             if (data['selected_pos_acc'] < 0.7) {
+//                 alert("The positive feedbacks are not acurate enough!\n " +
+//                     "Please review the feedbacks and change them accordingly!");
+//             } else if (data['selected_neg_acc'] > 0.3) {
+//                 alert("The positive feedbacks are not acurate enough!\n " +
+//                     "Please review the feedbacks and change them accordingly!");
+//             } else {
+//                 // helper methods for display stuff
+//                 function disable_buttons() {
+//                     self.button_container_refine_top.children().prop("disabled", true);
+//                     self.button_container_refine_bot.children().prop("disabled", true);
+//                 }
+//
+//                 disable_buttons();
+//                 self.progress_bar_refine.on("Refining");
+//                 self.iqr_refine_excution();
+//             }
+//         },
+//         error: function (jqXHR, textStatus, errorThrown) {
+//             alert_error("AJAX Error: validate_iqr_feedback: " + errorThrown);
+//             restore();
+//         }
+//     });
+// };
 
 IqrRefineView.prototype.iqr_refine_excution = function () {
     var self = this;

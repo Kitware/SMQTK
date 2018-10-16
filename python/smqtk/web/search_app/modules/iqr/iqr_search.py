@@ -888,18 +888,37 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                             #: :type: smqtk.representation.DataElement | None
                             de = self._iqr_example_data[iqrs.uuid].get(d.uuid(), None)
 
-                    iqrs.retrival_image_catNMs.append(de.COCO_catNM)
+                    iqrs.retrival_image_catNMs[d.uuid()] = de.COCO_catNM
 
                 return flask.jsonify({
                     "results": [(d.uuid(), p) for d, p in r]
                 })
 
-        # @self.route("/validate_iqr_feedback", methods=["GET"])
-        # @self._parent_app.module_login.login_required
-        # def validate_iqr_feedback():
-        #     with self.get_current_iqr_session() as iqrs:
-        #         pos_uuid_list = [d.uuid() for d in iqrs.positive_descriptors]
-        #         neg_uuid_list = [d.uuid() for d in iqrs.negative_descriptors]
+        @self.route("/validate_iqr_feedback", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def validate_iqr_feedback():
+            iqr_round = flask.request.form['iqr_round']
+            selected_pos_acc = 1.0
+            selected_neg_acc = 0.0
+            if int(iqr_round) >= 0:
+                with self.get_current_iqr_session() as iqrs:
+                    selected_pos = 0.0
+                    selected_neg = 0.0
+                    for d in iqrs.positive_descriptors:
+                        if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
+                            selected_pos += 1.0
+
+                    for d in iqrs.negative_descriptors:
+                        if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
+                            selected_neg += 1.0
+
+                selected_pos_acc = selected_pos / len(iqrs.positive_descriptors)
+                selected_neg_acc = selected_neg / len(iqrs.negative_descriptors)
+
+            return flask.jsonify({
+                "selected_pos_acc": selected_pos_acc,
+                "selected_neg_acc": selected_neg_acc
+            })
 
 
 

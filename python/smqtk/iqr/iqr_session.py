@@ -156,7 +156,7 @@ class IqrSession (SmqtkObject):
 
         #retrieved image's annotation for calculate retrival accuracy
         #: :type: list | list(list)
-        self._retrival_image_catNMs = list()
+        self._retrival_image_catNMs = OrderedDict()
 
         # retrival target
         #: :type: None | str
@@ -410,7 +410,9 @@ class IqrSession (SmqtkObject):
             correct_count = 0.0
             if self.retrival_image_catNMs is None:
                 return 0.0
-            for cat_nm in self.retrival_image_catNMs[:first_n]:
+
+            catNMs_list = list(self.retrival_image_catNMs.values())
+            for cat_nm in catNMs_list[:first_n]:
                 # print("{}".format(cat_nm))
                 if retrival_target in cat_nm:
                     correct_count += 1.0

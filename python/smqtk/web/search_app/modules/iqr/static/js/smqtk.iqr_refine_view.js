@@ -12,6 +12,7 @@ function IqrRefineView(container) {
     this.show_more_step = 20;
     this.pre_to_display = 0;
     this.IQR_round = -1;
+    this.session_id;
 
     // parallel arrays of ordered result UUIDs and relevancy scores.
     //this.displayed_search_results = [];
@@ -99,6 +100,7 @@ function IqrRefineView(container) {
 
 
     this.status_inst;
+    this.iqr_view_inst;
 
     this.saliency_flag = false;
     this.gt_flag = false;
@@ -181,10 +183,18 @@ IqrRefineView.prototype.construct_refine_pane = function () {
      * Event handling
      */
     this.button_refine_top.click(function () {
-        inst.iqr_refine();
+        if (inst.IQR_round < 2) {
+            inst.iqr_refine();
+        } else {
+            inst.finish_task();
+        }
     });
     this.button_refine_bot.click(function () {
-        inst.iqr_refine();
+        if (inst.IQR_round < 2) {
+            inst.iqr_refine();
+        } else {
+            inst.finish_task();
+        }
     });
     // this.button_refine_showMore.click(function () {
     //     inst.show_more_refine_results();
@@ -255,6 +265,12 @@ IqrRefineView.prototype.gt_control = function () {
     }
 };
 
+IqrRefineView.prototype.finish_task = function () {
+    var self = this;
+    prompt("Please copy the following session ID and paste it back to the HIT webpage!",
+        self.session_id);
+    self.iqr_view_inst.reset_session();
+};
 
 /**
  * Refresh the view of the refine pane based on server-side model
@@ -279,7 +295,6 @@ IqrRefineView.prototype.update_refine_pane = function () {
         this.button_saliency_bot.text("Saliency On");
     }
 
-
     this.refine_result_uuids = [];
     this.refine_result_score = [];
 
@@ -289,6 +304,11 @@ IqrRefineView.prototype.update_refine_pane = function () {
 
     var self = this;
 
+    if (self.IQR_round === 2) {
+        self.button_refine_top.text("Finish Task");
+        self.button_refine_bot.text("Finish Task");
+    }
+
     // Check initialization status of session
     // - When not initialized, disable buttons + don't try to show results
     //   (there aren't going to be any)
@@ -297,6 +317,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
         url: "iqr_session_info",
         method: "GET",
         success: function (data) {
+            self.session_id = data['uuid'];
             if (data["initialized"]) {
                 // enable buttons
                 self.button_container_refine_top.children().prop("disabled", false);
@@ -537,53 +558,6 @@ IqrRefineView.prototype.iqr_refine = function() {
                 restore();
             }
         });
-
-            // // helper methods for display stuff
-            // function disable_buttons() {
-            //     self.button_container_refine_top.children().prop("disabled", true);
-            //     self.button_container_refine_bot.children().prop("disabled", true);
-            // }
-            //
-            // function enable_buttons() {
-            //     self.button_container_refine_top.children().prop("disabled", false);
-            //     self.button_container_refine_bot.children().prop("disabled", false);
-            // }
-            //
-            // function restore() {
-            //     self.progress_bar_refine.off();
-            // }
-            //
-            // disable_buttons();
-            // this.progress_bar_refine.on("Refining");
-            //
-            // // Refine and then display the first N results.
-            // $.ajax({
-            //     url: 'iqr_refine',
-            //     method: "POST",
-            //     success: function (data) {
-            //         if (data['success']) {
-            //             enable_buttons();
-            //             self.button_saliency_top.attr("disabled", true);
-            //             self.button_saliency_bot.attr("disabled", true);
-            //
-            //             self.IQR_round = self.IQR_round + 1;
-            //             //reset AMT zone for next round IQR
-            //             $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
-            //         }
-            //         else {
-            //             alert_error("IQR Refine error: " + data['message']);
-            //         }
-            //
-            //         self.update_refine_pane();
-            //
-            //         restore();
-            //     },
-            //     error: function (jqXHR, textStatus, errorThrown) {
-            //         alert_error("AJAX Error: " + errorThrown);
-            //         restore();
-            //     }
-            // });
-
     }
 };
 

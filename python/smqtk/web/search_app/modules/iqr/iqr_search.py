@@ -295,6 +295,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 # noinspection PyProtectedMember
                 return flask.jsonify({
                     "uuid": iqrs.uuid,
+                    "AMT_ID": iqrs.AMT_ID,
 
                     "descriptor_type": self._descriptor_generator.name,
                     "nn_index_type": self._nn_index.name,

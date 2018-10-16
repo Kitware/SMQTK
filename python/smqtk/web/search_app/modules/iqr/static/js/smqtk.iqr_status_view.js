@@ -26,23 +26,23 @@ function IqrStatusView (container, result_inst) {
     this.query_target_dropdown.attr('id', "target_list");
     this.query_target_dropdown.append( new Option("--select--", "None"));
 
-    this.session_statement = $('<label>');
-    this.session_statement.attr('class', 'likert_statement');
-    this.session_statement.attr('id', 'sess_stat');
-    this.session_statement.text("Session ID: ");
+    this.AMT_statement = $('<label>');
+    this.AMT_statement.attr('class', 'likert_statement');
+    this.AMT_statement.attr('id', 'sess_stat');
+    this.AMT_statement.text("AMT ID: ");
 
-    this.session_input = $('<input type="text">');
-    this.session_input.attr('id', 'sess_input');
-    this.session_input.attr('size', 40);
+    this.AMT_input = $('<input type="text">');
+    this.AMT_input.attr('id', 'sess_input');
+    this.AMT_input.attr('size', 40);
 
-    this.acc_statement = $('<label>');
-    this.acc_statement.attr('class', 'likert_statement');
-    this.acc_statement.attr('id', 'acc_stat');
-    this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
-
-    this.acc_input = $('<input type="text">');
-    this.acc_input.attr('id', 'acc_input');
-    this.acc_input.attr('size', 8);
+    // this.acc_statement = $('<label>');
+    // this.acc_statement.attr('class', 'likert_statement');
+    // this.acc_statement.attr('id', 'acc_stat');
+    // this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
+    //
+    // this.acc_input = $('<input type="text">');
+    // this.acc_input.attr('id', 'acc_input');
+    // this.acc_input.attr('size', 8);
 
     this.likert_statement = "<label class=\"likert_statement\">" +
         "I have high confidence in my positive/negative label assignments.</label>";
@@ -76,7 +76,7 @@ function IqrStatusView (container, result_inst) {
     this.re_acc_40 = 0.0;
     this.re_acc_50 = 0.0;
 
-    this.session_id;
+    this.AMT_id;
 
 
     //
@@ -98,17 +98,17 @@ IqrStatusView.prototype.construct_view = function (container) {
     this.likert_form.append(this.likert_scale);
     this.AMT_zone.append(
         $("<span><h4>AMT Control:</h4></span>"),
-        this.session_statement,
-        this.session_input,
-        this.acc_statement,
-        this.acc_input,
+        this.AMT_statement,
+        this.AMT_input,
+        // this.acc_statement,
+        // this.acc_input,
         $('<br/>'),
         this.likert_statement,
         this.likert_form
     );
 
-    this.acc_input.attr('readonly',true);
-    this.session_input.attr('readonly', true);
+    // this.acc_input.attr('readonly',true);
+    this.AMT_input.attr('readonly', true);
 
     this.pos_AMT_zone.append(
         this.example_pos_data_zone,
@@ -173,14 +173,14 @@ IqrStatusView.prototype.update_neg_zone_content = function (iqr_sess_state) {
  */
 IqrStatusView.prototype.update_view = function () {
     var self = this;
-    this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
-    this.acc_input.val('');
+    // this.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
+    // this.acc_input.val('');
     $.ajax({
         url: "iqr_session_info",
         method: "GET",
         dataType: "json",
         success: function (data) {
-            self.session_id = data['uuid'];
+            self.AMT_id = data['AMT_ID'];
             self.update_pos_zone_content(data);
             self.update_neg_zone_content(data);
         },
@@ -210,7 +210,7 @@ IqrStatusView.prototype.cal_acc_store = function () {
     var self = this;
 
     // self.query_target_dropdown.attr('disabled', 'disabled');
-    self.session_input.val(self.session_id);
+    self.AMT_input.val(self.AMT_id);
 
     var target = $("#target_list :selected").text();
     var iqr_round = self.result_inst.IQR_round;
@@ -237,10 +237,10 @@ IqrStatusView.prototype.cal_acc_store = function () {
             self.re_acc_50 = data['acc_50'];
             pos_num = data['pos_num'];
             neg_num = data['neg_num'];
-            self.acc_input.val(self.re_acc_20 + "%");
+            // self.acc_input.val(self.re_acc_20 + "%");
             // self.store_input(pos_num, neg_num);
 
-            alert_info("session_id:"+ self.session_id + " Iqr round: " + iqr_round + " target: " + target +
+            alert_info("AMT_id:"+ self.AMT_id + " Iqr round: " + iqr_round + " target: " + target +
         " acc_20: " + self.re_acc_20 + " acc_30 " + self.re_acc_30+ " acc_40 " + self.re_acc_40 + " acc_50: " + self.re_acc_50 +
         " pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
         },

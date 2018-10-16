@@ -108,6 +108,7 @@ IqrView.prototype.construct_view = function (container) {
     this.results_view_inst = new IqrRefineView(this.results_zone);
     this.status_inst = new IqrStatusView(this.status_zone, this.results_view_inst);
     this.results_view_inst.status_inst = this.status_inst;
+    this.results_view_inst.iqr_view_inst = this;
 
     this.button_index_initialize.text("Run Query");
     this.button_reset_session.text("Choose a New Query");
@@ -216,8 +217,8 @@ IqrView.prototype.reset_session = function() {
         success: function (data) {
             if ( data.success ) {
                 self.status_inst.update_view();
-                self.status_inst.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
-                self.status_inst.acc_input.val('');
+                // self.status_inst.acc_statement.text("IQR Round 0---Top-20 Accuracy: ");
+                // self.status_inst.acc_input.val('');
                 self.results_view_inst.saliency_flag = false;
 
                 $('#liker_form input[name=likert]').prop('checked', false);

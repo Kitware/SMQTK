@@ -20,7 +20,6 @@ DFLT_REL_INDEX_CONFIG = {
     }
 }
 
-
 class IqrResultsDict (dict):
     """
     Dictionary subclass for containing DescriptorElement-to-float mapping.

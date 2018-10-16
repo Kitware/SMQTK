@@ -209,7 +209,7 @@ IqrStatusView.prototype.update_target_list = function (list) {
 IqrStatusView.prototype.cal_acc_store = function () {
     var self = this;
 
-    self.query_target_dropdown.attr('disabled', 'disabled');
+    // self.query_target_dropdown.attr('disabled', 'disabled');
     self.session_input.val(self.session_id);
 
     var target = $("#target_list :selected").text();
@@ -229,6 +229,8 @@ IqrStatusView.prototype.cal_acc_store = function () {
         },
         success: function (data)
         {
+            AMT_ID = data['AMT_ID'];
+            q_uuid = data['q_UUID'];
             self.re_acc_20 = data['acc_20'];
             self.re_acc_30 = data['acc_30'];
             self.re_acc_40 = data['acc_40'];

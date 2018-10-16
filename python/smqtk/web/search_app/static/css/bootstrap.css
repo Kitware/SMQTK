@@ -2880,6 +2880,7 @@ fieldset[disabled] .btn-success:active,
 fieldset[disabled] .btn-success.active {
   background-color: #5cb85c;
   border-color: #4cae4c;
+
 }
 .btn-success .badge {
   color: #5cb85c;

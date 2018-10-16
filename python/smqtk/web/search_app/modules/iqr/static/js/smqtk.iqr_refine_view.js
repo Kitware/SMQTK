@@ -34,8 +34,6 @@ function IqrRefineView(container) {
     // top-level container for layout
     this.iqr_view_container = $('<div id="iqr_view_instance"/>');
 
-
-
     // for DataView views
     this.refine_container = $('<div class="iqr-view-results-container"/>');
     this.refine_container.css('width', '100%');
@@ -60,6 +58,7 @@ function IqrRefineView(container) {
 
     this.button_saliency_top = $('<button class="btn btn-success" type="button"/>');
     this.button_saliency_top.text("Saliency On");
+
     this.button_saliency_bot = this.button_saliency_top.clone();
     this.button_saliency_flag = true;
 
@@ -280,6 +279,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
         this.button_saliency_bot.text("Saliency On");
     }
 
+
     this.refine_result_uuids = [];
     this.refine_result_score = [];
 
@@ -300,6 +300,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
             if (data["initialized"]) {
                 // enable buttons
                 self.button_container_refine_top.children().prop("disabled", false);
+                self.button_saliency_bot.attr("disabled", true);
+                self.button_saliency_top.attr("disabled", true);
                 // Fetch ordered results + display
                 $.ajax({
                     url: "iqr_ordered_results",
@@ -496,6 +498,8 @@ IqrRefineView.prototype.iqr_refine = function() {
             success: function (data) {
                 if (data['success']) {
                     enable_buttons();
+                    self.button_saliency_top.attr("disabled", true);
+                    self.button_saliency_bot.attr("disabled", true);
 
                     self.IQR_round = self.IQR_round + 1;
                     //reset AMT zone for next round IQR

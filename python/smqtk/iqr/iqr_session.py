@@ -158,6 +158,18 @@ class IqrSession (SmqtkObject):
         #: :type: list | list(list)
         self._retrival_image_catNMs = list()
 
+        # retrival target
+        #: :type: None | str
+        self._query_target = None
+
+        # AMT ID
+        #: :type: None | str
+        self._AMT_ID = None
+
+        # saliency flag
+        #: :type: None | bool
+        self._saliency_flag = None
+
         self._dataset = dataset
 
     def __enter__(self):
@@ -173,27 +185,63 @@ class IqrSession (SmqtkObject):
 
     @property
     def query_f(self):
-        return self._query_f
+        with self.lock:
+            return self._query_f
 
     @query_f.setter
     def query_f(self, val):
-        self._query_f = val
+        with self.lock:
+            self._query_f = val
 
     @property
     def query_uuid(self):
-        return self._query_uuid
+        with self.lock:
+            return self._query_uuid
 
     @query_uuid.setter
     def query_uuid(self, val):
-        self._query_uuid = val
+        with self.lock:
+            self._query_uuid = val
 
     @property
     def retrival_image_catNMs(self):
-        return self._retrival_image_catNMs
+        with self.lock:
+            return self._retrival_image_catNMs
 
     @retrival_image_catNMs.setter
     def retrival_image_catNMs(self, val):
-        self._retrival_image_catNMs = val
+        with self.lock:
+            self._retrival_image_catNMs = val
+
+    @property
+    def query_target(self):
+        with self.lock:
+            return self._query_target
+
+    @query_target.setter
+    def query_target(self, val):
+        with self.lock:
+            self._query_target = val
+
+    @property
+    def AMT_ID(self):
+        with self.lock:
+            return self._AMT_ID
+
+    @AMT_ID.setter
+    def AMT_ID(self, val):
+        with self.lock:
+            self._AMT_ID = val
+
+    @property
+    def sa_flag(self):
+        with self.lock:
+            return self._saliency_flag
+
+    @sa_flag.setter
+    def sa_flag(self, val):
+        with self.lock:
+            self._saliency_flag = val
 
     def ordered_results(self):
         """
@@ -352,22 +400,25 @@ class IqrSession (SmqtkObject):
             self.query_f = None
             self.query_uuid = None
 
-            self.retrival_target = None
+            self.query_target = None
             self.retrival_image_catNMs.clear()
+            self.AMT_ID = None
+            self.sa_flag = None
 
     def retrival_acc(self, retrival_target, first_n=20):
-        correct_count = 0.0
-        if self.retrival_image_catNMs is None:
-            return 0.0
-        for cat_nm in self.retrival_image_catNMs[:first_n]:
-            # print("{}".format(cat_nm))
-            if retrival_target in cat_nm:
-                correct_count += 1.0
+        with self.lock:
+            correct_count = 0.0
+            if self.retrival_image_catNMs is None:
+                return 0.0
+            for cat_nm in self.retrival_image_catNMs[:first_n]:
+                # print("{}".format(cat_nm))
+                if retrival_target in cat_nm:
+                    correct_count += 1.0
 
-        acc = correct_count / first_n * 100.0
-        # self.retrival_image_catNMs.clear()
+            acc = correct_count / first_n * 100.0
+            # self.retrival_image_catNMs.clear()
 
-        return "{0:.2f}".format(acc)
+            return "{0:.2f}".format(acc)
 
     def record_AMT_input(self, record):
         """ record AMT input into a file
@@ -375,18 +426,19 @@ class IqrSession (SmqtkObject):
             :param record: :The AMT record
             :type record: list(str)
         """
-        home = osp.expanduser("~")
-        record_dir = '{}/AMT_record'.format(home)
-        if not osp.exists(record_dir):
-            os.makedirs(record_dir)
+        with self.lock:
+            home = osp.expanduser("~")
+            record_dir = '{}/AMT_record'.format(home)
+            if not osp.exists(record_dir):
+                os.makedirs(record_dir)
 
-        t_str = datetime.now().strftime('%m-%d_%H:%M:%S')
-        file_name = '{}/{}_{}.txt'.format(record_dir, self.uuid[-8:], t_str)
+            t_str = datetime.now().strftime('%m-%d_%H:%M:%S')
+            file_name = '{}/{}_{}.txt'.format(record_dir, self.uuid[-8:], t_str)
 
-        with open(file_name, 'w') as f:
-            try:
-                f.write(' '.join(map(str, record)))
-            except:
-                import sys
-                print("Unexpected error:", sys.exc_info()[0])
-                raise
+            with open(file_name, 'w') as f:
+                try:
+                    f.write(' '.join(map(str, record)))
+                except:
+                    import sys
+                    print("Unexpected error:", sys.exc_info()[0])
+                    raise

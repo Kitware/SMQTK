@@ -32,7 +32,6 @@ from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
 from smqtk.algorithms.descriptor_generator.pytorch_classlabel_saliency_descriptor import PytorchSaliencyDescriptorGenerator
 from smqtk.algorithms.descriptor_generator.pytorch_distance_saliency_descriptor import PytorchDisSaliencyDescriptorGenerator
-from smqtk.utils.coco_api.pycocotools.coco import COCO
 
 __author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
 
@@ -573,7 +572,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                     iqrs.adjudicate((upload_descr,))
 
-                    return str(fid)
+                    # return str(fid)
+                    return flask.jsonify({
+                        "q_target": iqrs.query_target
+                    })
 
         @self.route("/iqr_initialize", methods=["POST"])
         @self._parent_app.module_login.login_required
@@ -740,19 +742,37 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 results: [ (uid, coco_cat_nm), ... ]
             }
             """
-            q_uuids = list(self._query_set.uuids())
-            result = list()
-            for uid in q_uuids:
-                # Try to find a DataElement by the given UUID in our indexed data
-                # or in the session's example data.
+            AMT_id = flask.request.args['AMT_id']
+            input_str = flask.request.args['input_str']
+            idxs = [pos for pos, char in enumerate(input_str) if char == '&']
 
-                de = self._query_set.get_data(uid)
+            with self.get_current_iqr_session() as iqrs:
+                #process the input str
+                fid = input_str[:idxs[0]]
 
-                result.append((uid, de.COCO_catNM))
+                iqrs.AMT_ID = AMT_id
+                iqrs.query_target = input_str[idxs[0] + 1: idxs[1]]
 
-            return flask.jsonify({
-                "results": result
-            })
+                saliency_flag_str = input_str[idxs[1] + 1:]
+
+                iqrs.sa_flag = True if saliency_flag_str == '1' else False
+
+                # q_uuids = list(self._query_set.uuids())
+                q_uuids = list()
+                q_uuids.append(fid)
+                result = list()
+                for uid in q_uuids:
+                    # Try to find a DataElement by the given UUID in our indexed data
+                    # or in the session's example data.
+
+                    de = self._query_set.get_data(uid)
+
+                    result.append((uid, de.COCO_catNM))
+
+                return flask.jsonify({
+                    "results": result,
+                    "sa_flag": iqrs.sa_flag
+                })
 
         @self.route("/record_AMT_input", methods=["GET"])
         @self._parent_app.module_login.login_required
@@ -764,8 +784,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     acc: <float>
                 }
             """
-
-
             if flask.request.method == "GET":
                 record_list = list()
 
@@ -781,7 +799,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     acc_40 = iqrs.retrival_acc(retrival_target, first_n=40)
                     acc_50 = iqrs.retrival_acc(retrival_target, first_n=50)
 
-                    record_list.append(iqrs.uuid)
+                    record_list.append(iqrs.AMT_ID)
+                    record_list.append(iqrs.uuid)       #session ID
+                    record_list.append(iqrs.query_uuid) # query image uuid
                     record_list.append(retrival_target)
                     record_list.append(iqr_round)
                     record_list.append(likert_score)
@@ -795,6 +815,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     iqrs.record_AMT_input(record_list)
 
                     return flask.jsonify({
+                        "AMT_ID": iqrs.AMT_ID,
+                        "q_UUID": iqrs.query_uuid,
                         "acc_20": acc_20,
                         "acc_30": acc_30,
                         "acc_40": acc_40,

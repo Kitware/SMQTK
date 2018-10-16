@@ -10,7 +10,7 @@ function IqrView(container, upload_post_url) {
     //
     // Members
     //
-
+    this.container = container;
     this.upload_post_url = upload_post_url;
 
     // Instance of FlowUploadZone being used.
@@ -25,6 +25,21 @@ function IqrView(container, upload_post_url) {
     // View elements
     // - contains flow.js controls
     this.flow_zone = $('<div>');
+
+    this.AMT_label = "<label>AMT ID</label>";
+    this.AMT_id = $('<input type="text" class="form-control" placeholder="Please paste your AMT ID">');
+    this.AMT_id.attr('id', "AMT_ID");
+    this.AMT_id.attr('size', 60);
+    this.AMT_ins = "<small class=\"form-text text-muted\">" +
+        "<a href=\"https://blog.mturk.com/get-to-know-the-new-worker-site-4a69967d90c3\">" +
+        "where to find AMT ID?</a></small>";
+
+    this.uuid_label = "<label>HIT ID</label>";
+    this.uuid_input = $('<input type="text" class="form-control" placeholder="Please paste the assigned HIT ID">');
+    this.uuid_input.attr('id', 'uuid_input');
+    this.uuid_input.attr('size', 60);
+    this.button_uuid_fetch = $('<button class="btn btn-primary" type="button"/>');
+
     // - contains temporary ingest progress bars (descriptor computation)
     this.ingest_progress_zone = $('<div>');
     this.ingest_progress_zone.attr('id', 'ingest_progress_zone');
@@ -42,6 +57,8 @@ function IqrView(container, upload_post_url) {
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     // this.button_state_save = $('<button class="btn" type="button"/>');
 
+    this.hr = $('<hr>');
+
     //
     // Setup
     //
@@ -58,19 +75,31 @@ function IqrView(container, upload_post_url) {
 IqrView.prototype.construct_view = function (container) {
     var self = this;
 
+    this.flow_zone.append(
+        this.AMT_label,
+        this.AMT_id,
+        this.AMT_ins,
+        $('<br/>'),
+        $('<br/>'),
+        this.uuid_label,
+        this.uuid_input,
+        $('<br/>'),
+        this.button_uuid_fetch
+    );
+
+    this.status_zone.append(this.hr);
+    this.control_zone.append(this.hr);
     container.append(
         this.flow_zone,
         this.ingest_progress_zone,
-        $("<hr>"),
         this.status_zone,
-        $("<hr>"),
         this.control_zone,
         this.results_zone
     );
 
     this.control_zone.append(
         this.button_index_initialize,
-        this.button_reset_session,
+        this.button_reset_session
         // this.button_state_save
     );
 
@@ -84,11 +113,12 @@ IqrView.prototype.construct_view = function (container) {
     this.button_reset_session.text("Choose a New Query");
     // this.button_state_save.text("Save IQR state");
     // this.button_state_save.addClass('pull-right');
+    this.button_uuid_fetch.text("Fetch the query task");
 
     //
     // Control
     //
-    self.show_query_image();
+    // self.show_query_image();
 
     this.button_index_initialize.click(function () {
         self.initialize_index();
@@ -102,13 +132,20 @@ IqrView.prototype.construct_view = function (container) {
     //     onclick: "location.href='get_iqr_state'"
     // });
 
+    this.button_uuid_fetch.click(function() {
+        var AMT_id = self.AMT_id.val();
+        var input_str = self.uuid_input.val();
+        self.uuid_input.val('');
+        self.show_query_image(AMT_id, input_str);
+    });
+
     this.status_zone.hide();
     this.control_zone.hide();
     this.results_zone.hide();
 };
 
 
-IqrView.prototype.show_query_image = function () {
+IqrView.prototype.show_query_image = function (AMT_id, input_str) {
     // clear children of results container
     // get ordered results information
     // display first X results
@@ -125,12 +162,19 @@ IqrView.prototype.show_query_image = function () {
         // url: "iqr_ordered_results",
         url: "fetch_query_imgs",
         method: "GET",
+        data: {
+            AMT_id: AMT_id,
+            input_str: input_str
+        },
         success: function (data) {
             // Update refinement result uuid/score arrays
             for (var i=0; i < data["results"].length; i++) {
                 query_uuids.push(data["results"][i][0]);
                 query_catNMs.push(data["results"][i][1]);
             }
+
+            self.results_view_inst.button_saliency_flag=data["sa_flag"];
+            self.results_view_inst.saliency_control();
 
             // create/show top N results
             // - If no results, display text verification of no results
@@ -186,10 +230,19 @@ IqrView.prototype.reset_session = function() {
                 if (self.results_view_inst.random_enabled) {
                     self.results_view_inst.toggle_random_pane();
                 }
+
+                // self.container.children().remove();
+                self.flow_zone.children().remove();
+                self.status_zone.children().remove();
+                self.control_zone.children().remove();
+                self.results_zone.children().remove();
+                self.construct_view(self.container);
+
                 self.flow_zone.slideDown();
-                self.status_zone.slideUp();
-                self.control_zone.slideUp();
-                self.results_zone.slideUp();
+
+                self.status_zone.hide();
+                self.control_zone.hide();
+                self.results_zone.hide();
 
                 self.status_inst.reset_target_list();
                 alert_success("IQR Session Reset");

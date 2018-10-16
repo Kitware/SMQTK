@@ -96,9 +96,11 @@ QueryView.prototype.ingest_query = function() {
             $('#status_zone').slideDown();
             $('#control_zone').slideDown();
 
-
             inst.status_inst.update_target_list(inst.catNMs);
-            inst.status_inst.query_target_dropdown.removeAttr('disabled');
+            alert_info('data[q_target]: ' + data['q_target']);
+            inst.status_inst.query_target_dropdown.val(data['q_target']);
+            inst.status_inst.query_target_dropdown.attr('disabled', 'disabled');
+            // inst.status_inst.query_target_dropdown.removeAttr('disabled');
         },
         error: function(jqXHR, textStatus, errorThrown) {
             bar.on("ERROR: "+errorThrown);

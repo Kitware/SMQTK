@@ -598,6 +598,34 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                                                        str(ex))
                     })
 
+        @self.route("/count_selection", methods=["POST"])
+        @self._parent_app.module_login.login_required
+        def count_selection():
+            """
+            count current selection
+            """
+            iqr_round = int(flask.request.form['iqr_round'])
+
+            if iqr_round == -1:
+                return flask.jsonify({
+                    "success": True,
+                    "count": 1
+                })
+            else:
+                with self.get_current_iqr_session() as iqrs:
+                    pos_num = len(iqrs.positive_descriptors)
+                    neg_num = len(iqrs.negative_descriptors)
+                    count = pos_num + neg_num
+                    flag = True
+
+                    if count != (iqr_round + 1) * 20 + 1:
+                        flag = False
+                    return flask.jsonify({
+                        "success": flag,
+                        "count": count
+                    })
+
+
         @self.route("/get_example_adjudication", methods=["GET"])
         @self._parent_app.module_login.login_required
         def get_example_adjudication():

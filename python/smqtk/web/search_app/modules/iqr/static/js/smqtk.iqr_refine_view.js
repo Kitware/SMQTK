@@ -473,51 +473,116 @@ IqrRefineView.prototype.iqr_refine = function() {
         alert(info+"\n" + "\t •" + question);
     } else {
 
-        // helper methods for display stuff
-        function disable_buttons() {
-            self.button_container_refine_top.children().prop("disabled", true);
-            self.button_container_refine_bot.children().prop("disabled", true);
-        }
-
-        function enable_buttons() {
-            self.button_container_refine_top.children().prop("disabled", false);
-            self.button_container_refine_bot.children().prop("disabled", false);
-        }
-
-        function restore() {
-            self.progress_bar_refine.off();
-        }
-
-        disable_buttons();
-        this.progress_bar_refine.on("Refining");
-
-        // Refine and then display the first N results.
         $.ajax({
-            url: 'iqr_refine',
-            method: "POST",
-            success: function (data) {
-                if (data['success']) {
-                    enable_buttons();
-                    self.button_saliency_top.attr("disabled", true);
-                    self.button_saliency_bot.attr("disabled", true);
+            url: 'count_selection',
+            method: 'POST',
+            data:{
+                iqr_round: self.IQR_round
+            },
+            success: function (iqr_count_flag){
+                if (!iqr_count_flag['success']) {
+                    cur_count = iqr_count_flag['count'];
+                    var left_count = (self.IQR_round + 1) * 20 + 1 - cur_count;
+                    alert("Please give feedbacks to all query images! only " + left_count + " lefted!");
+                } else {
+                    // helper methods for display stuff
+                    function disable_buttons() {
+                        self.button_container_refine_top.children().prop("disabled", true);
+                        self.button_container_refine_bot.children().prop("disabled", true);
+                    }
 
-                    self.IQR_round = self.IQR_round + 1;
-                    //reset AMT zone for next round IQR
-                    $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
+                    function enable_buttons() {
+                        self.button_container_refine_top.children().prop("disabled", false);
+                        self.button_container_refine_bot.children().prop("disabled", false);
+                    }
+
+                    function restore() {
+                        self.progress_bar_refine.off();
+                    }
+
+                    disable_buttons();
+                    self.progress_bar_refine.on("Refining");
+
+                    // Refine and then display the first N results.
+                    $.ajax({
+                        url: 'iqr_refine',
+                        method: "POST",
+                        success: function (data) {
+                            if (data['success']) {
+                                enable_buttons();
+                                self.button_saliency_top.attr("disabled", true);
+                                self.button_saliency_bot.attr("disabled", true);
+
+                                self.IQR_round = self.IQR_round + 1;
+                                //reset AMT zone for next round IQR
+                                $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
+                            }
+                            else {
+                                alert_error("IQR Refine error: " + data['message']);
+                            }
+
+                            self.update_refine_pane();
+
+                            restore();
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            alert_error("AJAX Error: " + errorThrown);
+                            restore();
+                        }
+                    });
                 }
-                else {
-                    alert_error("IQR Refine error: " + data['message']);
-                }
-
-                self.update_refine_pane();
-
-                restore();
             },
             error: function (jqXHR, textStatus, errorThrown) {
-                alert_error("AJAX Error: " + errorThrown);
+                alert_error("AJAX Error: count_selection: " + errorThrown);
                 restore();
             }
         });
+
+            // // helper methods for display stuff
+            // function disable_buttons() {
+            //     self.button_container_refine_top.children().prop("disabled", true);
+            //     self.button_container_refine_bot.children().prop("disabled", true);
+            // }
+            //
+            // function enable_buttons() {
+            //     self.button_container_refine_top.children().prop("disabled", false);
+            //     self.button_container_refine_bot.children().prop("disabled", false);
+            // }
+            //
+            // function restore() {
+            //     self.progress_bar_refine.off();
+            // }
+            //
+            // disable_buttons();
+            // this.progress_bar_refine.on("Refining");
+            //
+            // // Refine and then display the first N results.
+            // $.ajax({
+            //     url: 'iqr_refine',
+            //     method: "POST",
+            //     success: function (data) {
+            //         if (data['success']) {
+            //             enable_buttons();
+            //             self.button_saliency_top.attr("disabled", true);
+            //             self.button_saliency_bot.attr("disabled", true);
+            //
+            //             self.IQR_round = self.IQR_round + 1;
+            //             //reset AMT zone for next round IQR
+            //             $('#acc_stat').text("IQR Round " + self.IQR_round + "---Top-20 Accuracy: ");
+            //         }
+            //         else {
+            //             alert_error("IQR Refine error: " + data['message']);
+            //         }
+            //
+            //         self.update_refine_pane();
+            //
+            //         restore();
+            //     },
+            //     error: function (jqXHR, textStatus, errorThrown) {
+            //         alert_error("AJAX Error: " + errorThrown);
+            //         restore();
+            //     }
+            // });
 
     }
 };

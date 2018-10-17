@@ -44,6 +44,8 @@ def cli_parser():
                         help="AMT query image ID")
     parser.add_argument('--out_uuid_file', type=str,
                         help="output uuid file")
+    parser.add_argument('--min_class_num', type=int,
+                        help="required minimum class number", default=0)
 
     return parser
 
@@ -160,20 +162,24 @@ def main():
     imgIds = coco.getImgIds()
     imgs = coco.loadImgs(imgIds)
 
+    count = 0
     for img in tqdm(imgs, total=len(imgs), desc='add image to dataset'):
         # obtain corresponding annoation
         annIds = coco.getAnnIds(imgIds=img['id'], iscrowd=0)
         anns = coco.loadAnns(annIds)
         cat_names = coco.obtainCatNames(anns)
 
-        img_path = osp.join(args.data_path, img['file_name'])
+        if len(cat_names) >= args.min_class_num:
+            count += 1
+            img_path = osp.join(args.data_path, img['file_name'])
 
-        if osp.isfile(img_path):
-            data_set.add_data(DataFileElement(img_path, coco_catNM=cat_names))
-        else:
-            log.debug("Expanding glob: %s" % img_path)
-            for g in glob.iglob(img_path):
-                data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
+            if osp.isfile(img_path):
+                data_set.add_data(DataFileElement(img_path, coco_catNM=cat_names))
+            else:
+                log.debug("Expanding glob: %s" % img_path)
+                for g in glob.iglob(img_path):
+                    data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
+    print("{}/{} image has been added".format(count, len(imgs)))
 
     of = open(args.out_uuid_file, 'w')
 
@@ -186,19 +192,19 @@ def main():
             annIds = coco.getAnnIds(imgIds=q_img['id'], iscrowd=0)
             anns = coco.loadAnns(annIds)
             cat_names = coco.obtainCatNames(anns)
+            if len(cat_names) >= args.min_class_num:
+                img_path = osp.join(args.data_path, q_img['file_name'])
 
-            img_path = osp.join(args.data_path, q_img['file_name'])
-
-            if osp.isfile(img_path):
-                cur_data = DataFileElement(img_path, coco_catNM=cat_names)
-                query_set.add_data(cur_data)
-                of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
-            else:
-                log.debug("Expanding glob: %s" % img_path)
-                for g in glob.iglob(img_path):
-                    cur_data = DataFileElement(g, coco_catNM=cat_names)
+                if osp.isfile(img_path):
+                    cur_data = DataFileElement(img_path, coco_catNM=cat_names)
                     query_set.add_data(cur_data)
                     of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
+                else:
+                    log.debug("Expanding glob: %s" % img_path)
+                    for g in glob.iglob(img_path):
+                        cur_data = DataFileElement(g, coco_catNM=cat_names)
+                        query_set.add_data(cur_data)
+                        of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
     of.close()
 
     # Generate a mode if the generator defines a known generation method.

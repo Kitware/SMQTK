@@ -840,6 +840,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     record_list.append(acc_30)
                     record_list.append(acc_40)
                     record_list.append(acc_50)
+                    record_list.append(iqrs.selected_pos_acc)
+                    record_list.append(iqrs.selected_neg_acc)
 
                     iqrs.record_AMT_input(record_list)
 
@@ -898,10 +900,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self._parent_app.module_login.login_required
         def validate_iqr_feedback():
             iqr_round = flask.request.form['iqr_round']
-            selected_pos_acc = 1.0
-            selected_neg_acc = 0.0
-            if int(iqr_round) >= 0:
-                with self.get_current_iqr_session() as iqrs:
+
+            with self.get_current_iqr_session() as iqrs:
+                if int(iqr_round) >= 0:
                     selected_pos = 0.0
                     selected_neg = 0.0
                     for d in iqrs.positive_descriptors:
@@ -912,12 +913,17 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
                             selected_neg += 1.0
 
-                selected_pos_acc = selected_pos / len(iqrs.positive_descriptors)
-                selected_neg_acc = selected_neg / len(iqrs.negative_descriptors)
+                    iqrs.selected_pos_acc = 1.0 if len(iqrs.positive_descriptors) == 0 else \
+                        selected_pos / len(iqrs.positive_descriptors)
+                    iqrs.selected_neg_acc = 0.0 if len(iqrs.negative_descriptors) == 0 else \
+                        selected_neg / len(iqrs.negative_descriptors)
+                else:
+                    iqrs.selected_pos_acc = 1.0
+                    iqrs.selected_neg_acc = 0.0
 
             return flask.jsonify({
-                "selected_pos_acc": selected_pos_acc,
-                "selected_neg_acc": selected_neg_acc
+                "selected_pos_acc": iqrs.selected_pos_acc,
+                "selected_neg_acc": iqrs.selected_neg_acc
             })
 
 

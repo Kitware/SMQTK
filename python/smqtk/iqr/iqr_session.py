@@ -170,6 +170,14 @@ class IqrSession (SmqtkObject):
         #: :type: None | bool
         self._saliency_flag = None
 
+        # selected positive acc
+        #: :type: None | float
+        self._selected_pos_acc = None
+
+        # selected negtive acc
+        #: :type: None | float
+        self._selected_neg_acc = None
+
         self._dataset = dataset
 
     def __enter__(self):
@@ -242,6 +250,27 @@ class IqrSession (SmqtkObject):
     def sa_flag(self, val):
         with self.lock:
             self._saliency_flag = val
+
+    @property
+    def selected_pos_acc(self):
+        with self.lock:
+            return self._selected_pos_acc
+
+    @selected_pos_acc.setter
+    def selected_pos_acc(self, val):
+        with self.lock:
+            self._selected_pos_acc = val
+
+    @property
+    def selected_neg_acc(self):
+        with self.lock:
+            return self._selected_neg_acc
+
+    @selected_neg_acc.setter
+    def selected_neg_acc(self, val):
+        with self.lock:
+            self._selected_neg_acc = val
+
 
     def ordered_results(self):
         """
@@ -404,6 +433,8 @@ class IqrSession (SmqtkObject):
             self.retrival_image_catNMs.clear()
             self.AMT_ID = None
             self.sa_flag = None
+            self.selected_neg_acc = None
+            self.selected_pos_acc = None
 
     def retrival_acc(self, retrival_target, first_n=20):
         with self.lock:

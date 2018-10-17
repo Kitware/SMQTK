@@ -31,10 +31,10 @@ function IqrView(container, upload_post_url) {
     this.AMT_id.attr('id', "AMT_ID");
     this.AMT_id.attr('size', 60);
     this.AMT_ins = "<small class=\"form-text text-muted\">" +
-        "<a href=\"https://blog.mturk.com/get-to-know-the-new-worker-site-4a69967d90c3\">" +
+        "<a href=\"https://blog.mturk.com/get-to-know-the-new-worker-site-4a69967d90c3\" target='_blank'>" +
         "where to find AMT ID?</a></small>";
 
-    this.uuid_label = "<label>HIT ID</label>";
+    this.uuid_label = "<label>HIT TASK ID</label>";
     this.uuid_input = $('<input type="text" class="form-control" placeholder="Please paste the assigned HIT ID">');
     this.uuid_input.attr('id', 'uuid_input');
     this.uuid_input.attr('size', 60);
@@ -153,7 +153,7 @@ IqrView.prototype.show_query_image = function (AMT_id, input_str) {
     var self = this;
 
     self.flow_zone.children().remove();
-    this.flow_zone.append($("<span><h3>Select one of the query images by click it</h3></span>"));
+    this.flow_zone.append($("<span><h3>Click the following image</h3></span>"));
 
     query_uuids = [];
     query_catNMs = [];

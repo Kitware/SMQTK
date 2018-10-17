@@ -97,7 +97,7 @@ QueryView.prototype.ingest_query = function() {
             $('#control_zone').slideDown();
 
             inst.status_inst.update_target_list(inst.catNMs);
-            alert_info('data[q_target]: ' + data['q_target']);
+            // alert_info('data[q_target]: ' + data['q_target']);
             inst.status_inst.query_target_dropdown.val(data['q_target']);
             inst.status_inst.query_target_dropdown.attr('disabled', 'disabled');
             // inst.status_inst.query_target_dropdown.removeAttr('disabled');

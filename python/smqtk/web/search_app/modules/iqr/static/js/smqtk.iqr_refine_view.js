@@ -522,12 +522,13 @@ IqrRefineView.prototype.iqr_refine = function() {
                             iqr_round: self.IQR_round
                         },
                         success: function (data) {
-                            alert_info('selected_pos_acc: ' + data['selected_pos_acc']);
-                            alert_info('selected_neg_acc: ' + data['selected_neg_acc']);
-                            if (data['selected_pos_acc'] < 0.7) {
+                            // alert_info('selected_pos_acc: ' + data['selected_pos_acc']);
+                            // alert_info('selected_neg_acc: ' + data['selected_neg_acc']);
+                            if (data['selected_pos_acc'] < 0.5) {
                                 alert("The positive feedbacks are not acurate enough!\n " +
                                     "Please review the feedbacks and change them accordingly!");
-                            } else if (data['selected_neg_acc'] > 0.3) {
+                            } else if (data['selected_neg_acc'] > 1.0) {
+                                //for now, we ignore the selected_neg_acc
                                 alert("The negtive feedbacks are not acurate enough!\n " +
                                     "Please review the feedbacks and change them accordingly!");
                             } else {

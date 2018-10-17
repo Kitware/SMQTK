@@ -60,7 +60,7 @@ def cli_parser():
                         help="query class number for generating query images", default=1)
     parser.add_argument('--query_area_threshold', type=float,
                         help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
-                        default=0.8)
+                        default=0.5)
 
     return parser
 
@@ -184,7 +184,7 @@ def main():
         anns = coco.loadAnns(annIds)
         cat_names = coco.obtainCatNames(anns)
 
-        if len(cat_names) >= args.min_class_num:
+        if len(cat_names) >= args.min_class_num and len(cat_names) <= args.max_class_num:
             ar_count += 1
             img_path = osp.join(args.data_path, img['file_name'])
 

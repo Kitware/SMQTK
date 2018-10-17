@@ -485,7 +485,7 @@ class IqrSession (SmqtkObject):
 
             return "{0:.2f}".format(acc)
 
-    def record_AMT_input(self, record):
+    def record_AMT_input(self, record, iqr_round):
         """ record AMT input into a file
 
             :param record: :The AMT record
@@ -498,7 +498,7 @@ class IqrSession (SmqtkObject):
                 os.makedirs(record_dir)
 
             t_str = datetime.now().strftime('%m-%d_%H:%M:%S')
-            file_name = '{}/{}_{}.txt'.format(record_dir, self.uuid[-8:], t_str)
+            file_name = '{}/{}_round{}_{}.txt'.format(record_dir, self.uuid[-8:], iqr_round, t_str)
 
             with open(file_name, 'w') as f:
                 try:

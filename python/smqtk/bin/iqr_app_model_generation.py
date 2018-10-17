@@ -16,7 +16,7 @@ from smqtk.utils.bin_utils import initialize_logging
 
 from smqtk.utils.coco_api.pycocotools.coco import COCO
 
-__author__ = 'paul.tunison@kitware.com'
+__author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
 
 
 def cli_parser():

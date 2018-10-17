@@ -846,7 +846,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     record_list.append(iqrs.selected_pos_acc)
                     record_list.append(iqrs.selected_neg_acc)
 
-                    iqrs.record_AMT_input(record_list)
+                    iqrs.record_AMT_input(record_list, iqr_round)
 
                     return flask.jsonify({
                         "AMT_ID": iqrs.AMT_ID,

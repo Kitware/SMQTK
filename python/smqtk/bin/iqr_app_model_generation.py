@@ -162,7 +162,7 @@ def main():
     imgIds = coco.getImgIds()
     imgs = coco.loadImgs(imgIds)
 
-    count = 0
+    ar_count = 0
     for img in tqdm(imgs, total=len(imgs), desc='add image to dataset'):
         # obtain corresponding annoation
         annIds = coco.getAnnIds(imgIds=img['id'], iscrowd=0)
@@ -170,7 +170,7 @@ def main():
         cat_names = coco.obtainCatNames(anns)
 
         if len(cat_names) >= args.min_class_num:
-            count += 1
+            ar_count += 1
             img_path = osp.join(args.data_path, img['file_name'])
 
             if osp.isfile(img_path):
@@ -179,7 +179,8 @@ def main():
                 log.debug("Expanding glob: %s" % img_path)
                 for g in glob.iglob(img_path):
                     data_set.add_data(DataFileElement(g, coco_catNM=cat_names))
-    print("{}/{} image has been added".format(count, len(imgs)))
+
+    print("{}/{} image has been added to archive".format(ar_count, len(imgs)))
 
     of = open(args.out_uuid_file, 'w')
 
@@ -187,6 +188,7 @@ def main():
     with open(args.query_imgID_list, 'r') as f:
         for line in f:
             coco_img_id = line.rstrip('\n')
+            coco_img_id = coco_img_id.rstrip('.jpg').strip('0')
             q_img = coco.loadImgs(int(coco_img_id))[0]
 
             annIds = coco.getAnnIds(imgIds=q_img['id'], iscrowd=0)

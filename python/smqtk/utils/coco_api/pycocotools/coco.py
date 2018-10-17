@@ -249,6 +249,40 @@ class COCO:
         else:
             raise ValueError("anns has to be a list, but got a {}".format(type(anns)))
 
+    def obtainAnns_cat_bboxArea(self, anns=[]):
+        """
+        Obtain category names and corresponding bbox areas from the givn anns
+        :param ids (int array)       : list of anns
+        :return: catNMtoBBoxArea (Dict) : cats name: list(bbox areas)
+        """
+        cat_bboxArea = list()
+
+        if _isArrayLike(anns):
+            for ann in anns:
+                [_, _, bbox_w, bbox_h] = ann['bbox']
+                area = bbox_w * bbox_h
+                cat_name = self.loadCats([ann['category_id']])[0]['name']
+                cat_bboxArea.append((cat_name, area))
+
+            sorted_cat_bboxArea = sorted(cat_bboxArea, key=lambda item: item[1], reverse=True)
+            return sorted_cat_bboxArea
+                # if cat_name in cat_bboxArea:
+                #     cat_bboxArea[cat_name].append(area)
+                # else:
+                #     cat_bboxArea[cat_name] = [area]
+
+            # max_area = -1.0
+            # max_key = None
+            # for key in list(cat_bboxArea.keys()):
+            #     cat_bboxArea[key].sort(reverse=True)
+            #     if cat_bboxArea[key][0] > max_area:
+            #         max_area = cat_bboxArea[key][0]
+            #         max_key = key
+        else:
+            raise ValueError("anns has to be a list, but got a {}".format(type(anns)))
+
+
+
     def showAnns(self, anns, draw_bbox=False):
         """
         Display the specified annotations.

@@ -526,10 +526,13 @@ IqrRefineView.prototype.iqr_refine = function() {
                         success: function (data) {
                             // alert_info('selected_pos_acc: ' + data['selected_pos_acc']);
                             // alert_info('selected_neg_acc: ' + data['selected_neg_acc']);
-                            if (data['selected_pos_acc'] < 0.5) {
+                            var selected_pos_acc_threshold = 0.5;
+                            var selected_neg_acc_threshold = 1.0;
+
+                            if (data['selected_pos_acc'] < selected_pos_acc_threshold && !self.saliency_flag) {
                                 alert("The positive feedback are not acurate enough!\n " +
                                     "Please review the feedback and change them accordingly!");
-                            } else if (data['selected_neg_acc'] > 1.0) {
+                            } else if (data['selected_neg_acc'] > selected_neg_acc_threshold && !self.saliency_flag) {
                                 //for now, we ignore the selected_neg_acc
                                 alert("The negtive feedback are not acurate enough!\n " +
                                     "Please review the feedback and change them accordingly!");

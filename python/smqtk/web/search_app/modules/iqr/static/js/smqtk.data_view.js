@@ -279,7 +279,11 @@ DataView.prototype.update_view = function (server_update) {
     {
         // Get the preview image information from the server
         $.ajax({
-            url: "get_data_preview_image?uid=" + this.uid,
+            url: "get_data_preview_image",
+            data: {
+                uid: this.uid,
+                query_flag: false
+            },
             success: function (data) {
                 // Check for failures
                 if  (!data.success) {

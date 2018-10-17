@@ -144,7 +144,11 @@ QueryView.prototype.update_view = function () {
     {
         // Get the preview image information from the server
         $.ajax({
-            url: "get_data_preview_image?uid=" + this.uid,
+            url: "get_data_preview_image",
+            data: {
+                uid: this.uid,
+                query_flag: true
+            },
             success: function (data) {
                 // Check for failures
                 if  (!data.success) {

@@ -180,16 +180,13 @@ def main():
                 img_path = osp.join(args.data_path, q_img['file_name'])
                 I = Image.open(img_path)
                 img_area = I.size[0] * I.size[1]
-                area_threshold = 0.6 * img_area
+                area_threshold = 0.7 * img_area
 
                 if max_area > area_threshold and sec_max_area > area_threshold:
                     cur_data = None
                     if osp.isfile(img_path):
                         cur_data = DataFileElement(img_path, coco_catNM=cat_names)
                         query_set.add_data(cur_data)
-
-                        # of.write('{}&{}&{}\n'.format(cur_data.uuid(), max_key, 0))
-                        # of.write('{}&{}&{}\n'.format(cur_data.uuid(), max_key, 1))
                     else:
                         log.debug("Expanding glob: %s" % img_path)
                         for g in glob.iglob(img_path):

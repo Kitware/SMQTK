@@ -380,6 +380,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             with the give UID.
             """
             uid = flask.request.args['uid']
+            query_flag = flask.request.args['query_flag']
+
+            data_set = None
+            if query_flag == 'true':
+                data_set = self._query_set
+            else:
+                data_set = self._data_set
 
             info = {
                 "success": True,
@@ -394,9 +401,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             # Try to find a DataElement by the given UUID in our indexed data
             # or in the session's example data.
-            if self._data_set.has_uuid(uid):
+            if data_set.has_uuid(uid):
                 #: :type: smqtk.representation.DataElement
-                de = self._data_set.get_data(uid)
+                de = data_set.get_data(uid)
             else:
                 with self.get_current_iqr_session() as iqrs:
                     #: :type: smqtk.representation.DataElement | None

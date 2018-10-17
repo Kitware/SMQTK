@@ -506,31 +506,33 @@ IqrRefineView.prototype.iqr_refine = function() {
             url: 'count_selection',
             method: 'POST',
             data:{
-                iqr_round: self.IQR_round
+                iqr_round: self.IQR_round,
+                show_step: self.show_more_step
             },
             success: function (iqr_count_flag){
                 //make sure all the retrieved images are given feedback
                 if (!iqr_count_flag['success']) {
                     cur_count = iqr_count_flag['count'];
-                    var left_count = (self.IQR_round + 1) * 20 + 1 - cur_count;
+                    var left_count = (self.IQR_round + 1) * self.show_more_step + 1 - cur_count;
                     alert("Please give feedbacks to all query images! only " + left_count + " lefted!");
                 } else {
                     $.ajax({
                         url: 'validate_iqr_feedback',
                         method: 'POST',
                         data: {
-                            iqr_round: self.IQR_round
+                            iqr_round: self.IQR_round,
+                            show_step: self.show_more_step
                         },
                         success: function (data) {
                             // alert_info('selected_pos_acc: ' + data['selected_pos_acc']);
                             // alert_info('selected_neg_acc: ' + data['selected_neg_acc']);
                             if (data['selected_pos_acc'] < 0.5) {
-                                alert("The positive feedbacks are not acurate enough!\n " +
-                                    "Please review the feedbacks and change them accordingly!");
+                                alert("The positive feedback are not acurate enough!\n " +
+                                    "Please review the feedback and change them accordingly!");
                             } else if (data['selected_neg_acc'] > 1.0) {
                                 //for now, we ignore the selected_neg_acc
-                                alert("The negtive feedbacks are not acurate enough!\n " +
-                                    "Please review the feedbacks and change them accordingly!");
+                                alert("The negtive feedback are not acurate enough!\n " +
+                                    "Please review the feedback and change them accordingly!");
                             } else {
                                 // helper methods for display stuff
                                 function disable_buttons() {

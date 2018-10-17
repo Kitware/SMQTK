@@ -606,6 +606,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             count current selection
             """
             iqr_round = int(flask.request.form['iqr_round'])
+            show_step = int(flask.request.form['show_step'])
 
             if iqr_round == -1:
                 return flask.jsonify({
@@ -619,7 +620,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     count = pos_num + neg_num
                     flag = True
 
-                    if count != (iqr_round + 1) * 20 + 1:
+                    if count != (iqr_round + 1) * show_step + 1:
                         flag = False
                     return flask.jsonify({
                         "success": flag,
@@ -902,6 +903,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self._parent_app.module_login.login_required
         def validate_iqr_feedback():
             iqr_round = int(flask.request.form['iqr_round'])
+            show_step = int(flask.request.form['show_step'])
 
             with self.get_current_iqr_session() as iqrs:
                 if iqr_round >= 0:
@@ -909,9 +911,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     selected_neg = 0.0
 
                     pre_pos_num = len(iqrs.pre_positive_descriptors)
-                    e_idx = 20 + pre_pos_num
+                    e_idx = show_step + pre_pos_num
                     c_count = iqrs.count_correct(iqrs.query_target, pre_pos_num, e_idx)   #correct count
-                    w_count = 20 - c_count
+                    w_count = show_step - c_count
 
                     for d in iqrs.positive_descriptors - iqrs.pre_positive_descriptors:
                         if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:

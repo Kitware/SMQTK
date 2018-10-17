@@ -113,7 +113,7 @@
   margin-bottom:10px;
 }
 .sticky {
-  /*position: -webkit-sticky;*/
+  position: -webkit-sticky;
   position: sticky;
   top: 10px;
   padding: 5px;

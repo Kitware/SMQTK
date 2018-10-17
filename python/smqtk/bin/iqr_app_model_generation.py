@@ -7,6 +7,7 @@ import logging
 import argparse
 import six
 import os.path as osp
+from PIL import Image
 
 from smqtk import algorithms
 from smqtk import representation
@@ -18,6 +19,13 @@ from smqtk.utils.coco_api.pycocotools.coco import COCO
 
 __author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
 
+def check_list(list, idx):
+    if idx < len(list) and idx > 0:
+        flag = True
+        for item in list[:idx]:
+            flag = flag and item != list[idx]
+    else:
+        return False
 
 def cli_parser():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -45,7 +53,14 @@ def cli_parser():
     parser.add_argument('--out_uuid_file', type=str,
                         help="output uuid file")
     parser.add_argument('--min_class_num', type=int,
-                        help="required minimum class number", default=0)
+                        help="required minimum class number", default=2)
+    parser.add_argument('--max_class_num', type=int,
+                        help="required maximum class number", default=3)
+    parser.add_argument('--query_class_num', type=int,
+                        help="query class number for generating query images", default=1)
+    parser.add_argument('--query_area_threshold', type=float,
+                        help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
+                        default=0.8)
 
     return parser
 
@@ -188,25 +203,46 @@ def main():
     with open(args.query_imgID_list, 'r') as f:
         for line in f:
             coco_img_id = line.rstrip('\n')
-            coco_img_id = coco_img_id.rstrip('.jpg').strip('0')
+            coco_img_id = coco_img_id.strip('0').rstrip('.jpg')
             q_img = coco.loadImgs(int(coco_img_id))[0]
 
             annIds = coco.getAnnIds(imgIds=q_img['id'], iscrowd=0)
             anns = coco.loadAnns(annIds)
             cat_names = coco.obtainCatNames(anns)
-            if len(cat_names) >= args.min_class_num:
-                img_path = osp.join(args.data_path, q_img['file_name'])
+            sorted_cat_bboxArea = coco.obtainAnns_cat_bboxArea(anns)
 
-                if osp.isfile(img_path):
-                    cur_data = DataFileElement(img_path, coco_catNM=cat_names)
-                    query_set.add_data(cur_data)
-                    of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
-                else:
-                    log.debug("Expanding glob: %s" % img_path)
-                    for g in glob.iglob(img_path):
-                        cur_data = DataFileElement(g, coco_catNM=cat_names)
+            if len(cat_names) == args.query_class_num:
+                img_path = osp.join(args.data_path, q_img['file_name'])
+                I = Image.open(img_path)
+                img_area = I.size[0] * I.size[1]
+                area_threshold = args.query_area_threshold * img_area
+
+                flag = True
+                key_list = list()
+                for (key, area) in sorted_cat_bboxArea[:args.query_class_num]:
+                    flag = flag and area >= area_threshold
+                    key_list.append(key)
+
+                if flag:
+                    cur_data = None
+                    if osp.isfile(img_path):
+                        cur_data = DataFileElement(img_path, coco_catNM=cat_names)
                         query_set.add_data(cur_data)
-                        of.write('{} {}\n'.format(cur_data.uuid(), cat_names))
+                    else:
+                        log.debug("Expanding glob: %s" % img_path)
+                        for g in glob.iglob(img_path):
+                            cur_data = DataFileElement(g, coco_catNM=cat_names)
+                            query_set.add_data(cur_data)
+
+                    for i, key in enumerate(key_list):
+                        if i == 0:
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 0))
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 1))
+
+                        if check_list(key_list, i):
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 0))
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 1))
+
     of.close()
 
     # Generate a mode if the generator defines a known generation method.

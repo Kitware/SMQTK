@@ -44,8 +44,11 @@ def cli_parser():
                         help="AMT query image ID")
     parser.add_argument('--out_uuid_file', type=str,
                         help="output uuid file")
-    parser.add_argument('--min_class_num', type=int,
-                        help="required minimum class number", default=2)
+    parser.add_argument('--query_class_num', type=int,
+                        help="query class number for generating query images", default=2)
+    parser.add_argument('--query_area_threshold', type=float,
+                        help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
+                        default=0.7)
 
     return parser
 
@@ -145,6 +148,7 @@ def main():
         plugin.from_plugin_config(rel_index_config,
                                   algorithms.get_relevancy_index_impls())
 
+
     #
     # Build models
     #
@@ -170,19 +174,19 @@ def main():
             cat_names = coco.obtainCatNames(anns)
             sorted_cat_bboxArea = coco.obtainAnns_cat_bboxArea(anns)
 
-            if len(cat_names) == args.min_class_num:
-                max_area = sorted_cat_bboxArea[0][1]
-                max_key = sorted_cat_bboxArea[0][0]
-
-                sec_max_area = sorted_cat_bboxArea[1][1]
-                sec_max_key = sorted_cat_bboxArea[1][0]
-
+            if len(cat_names) == args.query_class_num:
                 img_path = osp.join(args.data_path, q_img['file_name'])
                 I = Image.open(img_path)
                 img_area = I.size[0] * I.size[1]
-                area_threshold = 0.7 * img_area
+                area_threshold = args.query_area_threshold * img_area
 
-                if max_area > area_threshold and sec_max_area > area_threshold:
+                flag = True
+                key_list = list()
+                for (key, area) in sorted_cat_bboxArea[:args.query_class_num]:
+                    flag = flag and area >= area_threshold
+                    key_list.append(key)
+
+                if flag:
                     cur_data = None
                     if osp.isfile(img_path):
                         cur_data = DataFileElement(img_path, coco_catNM=cat_names)
@@ -193,14 +197,24 @@ def main():
                             cur_data = DataFileElement(g, coco_catNM=cat_names)
                             query_set.add_data(cur_data)
 
-                    of.write('{}&{}&{}\n'.format(cur_data.uuid(), max_key, 0))
-                    of.write('{}&{}&{}\n'.format(cur_data.uuid(), max_key, 1))
-                    if sec_max_key != max_key:
-                        of.write('{}&{}&{}\n'.format(cur_data.uuid(), sec_max_key, 0))
-                        of.write('{}&{}&{}\n'.format(cur_data.uuid(), sec_max_key, 1))
+                    for i, key in enumerate(key_list):
+                        if i == 0:
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 0))
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 1))
+
+                        if check_list(key_list, i):
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 0))
+                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 1))
 
     of.close()
 
+def check_list(list, idx):
+    if idx < len(list) and idx > 0:
+        flag = True
+        for item in list[:idx]:
+            flag = flag and item != list[idx]
+    else:
+        return False
 
 if __name__ == "__main__":
     main()

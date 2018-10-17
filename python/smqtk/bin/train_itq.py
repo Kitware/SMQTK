@@ -18,7 +18,9 @@ subsampled.
 
 import logging
 import os.path
-import random
+
+import numpy
+from six.moves import zip
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation import (
@@ -44,19 +46,6 @@ def default_config():
 
 def cli_parser():
     return bin_utils.basic_cli_parser(__doc__)
-
-
-def subsample(it, x, length):
-    """Given an iterable it that has length length, return an iterable
-    that consumes it and produces x elements by taking a random sample
-    from it.
-
-    """
-    for elem in it:
-        if random.random() * length < x:
-            yield elem
-            x -= 1
-        length -= 1
 
 
 def main():
@@ -91,7 +80,7 @@ def main():
             if max_descriptors < len(uuids):
                 log.info("Subsampling UUIDs (old count=%d, new count=%d)",
                          len(uuids), max_descriptors)
-                uuids = random.sample(uuids, max_descriptors)
+                uuids = numpy.random.choice(uuids, max_descriptors, replace=False)
         d_iter = descriptor_index.get_many_descriptors(uuids)
     else:
         d_length = len(descriptor_index)
@@ -100,7 +89,8 @@ def main():
         if max_descriptors and max_descriptors < d_length:
             log.info("Subsampling loaded DescriptorIndex (new count=%d)",
                      max_descriptors)
-            d_iter = subsample(descriptor_index, max_descriptors, d_length)
+            selected = numpy.random.permutation(numpy.arange(d_length) < max_descriptors)
+            d_iter = (d for d, s in zip(descriptor_index, selected) if s)
         else:
             d_iter = descriptor_index
 

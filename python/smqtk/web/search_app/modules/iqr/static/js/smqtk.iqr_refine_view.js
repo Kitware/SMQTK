@@ -267,12 +267,13 @@ IqrRefineView.prototype.gt_control = function () {
 
 IqrRefineView.prototype.finish_task = function () {
     var self = this;
-
+    var r_str = Math.random().toString(36).substring(2, 6);
     var session_id_str = self.session_id;
     session_id_str = session_id_str.fontcolor("red");
+    r_str = r_str.fontcolor("red");
     var prompt_win = window.open("", "Session ID", "resizable=yes,top=500,left=500,width=400,height=400");
     prompt_win.document.write("<p>Please copy the following session ID and paste it back to the HIT webpage!</p>");
-    prompt_win.document.write("<p>" + session_id_str + "</p>");
+    prompt_win.document.write("<p>" + session_id_str + r_str +"</p>");
 
     // prompt("Please copy the following session ID and paste it back to the HIT webpage!",
     //     self.session_id);
@@ -492,7 +493,6 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
  */
 IqrRefineView.prototype.iqr_refine = function() {
     var self = this;
-
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
         //check whether the likert scale has been selected
         var info = "Please answer the question ";
@@ -567,37 +567,6 @@ IqrRefineView.prototype.iqr_refine = function() {
         });
     }
 };
-
-// IqrRefineView.prototype.validate_iqr_feedback = function() {
-//     var self = this;
-//     $.ajax({
-//         url: 'validate_iqr_feedback',
-//         method: 'POST',
-//         success: function (data) {
-//             if (data['selected_pos_acc'] < 0.7) {
-//                 alert("The positive feedbacks are not acurate enough!\n " +
-//                     "Please review the feedbacks and change them accordingly!");
-//             } else if (data['selected_neg_acc'] > 0.3) {
-//                 alert("The positive feedbacks are not acurate enough!\n " +
-//                     "Please review the feedbacks and change them accordingly!");
-//             } else {
-//                 // helper methods for display stuff
-//                 function disable_buttons() {
-//                     self.button_container_refine_top.children().prop("disabled", true);
-//                     self.button_container_refine_bot.children().prop("disabled", true);
-//                 }
-//
-//                 disable_buttons();
-//                 self.progress_bar_refine.on("Refining");
-//                 self.iqr_refine_excution();
-//             }
-//         },
-//         error: function (jqXHR, textStatus, errorThrown) {
-//             alert_error("AJAX Error: validate_iqr_feedback: " + errorThrown);
-//             restore();
-//         }
-//     });
-// };
 
 IqrRefineView.prototype.iqr_refine_excution = function () {
     var self = this;

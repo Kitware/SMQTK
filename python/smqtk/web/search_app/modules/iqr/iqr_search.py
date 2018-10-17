@@ -743,6 +743,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
             with self.get_current_iqr_session() as iqrs:
                 iqrs.retrival_image_catNMs.clear()
+                iqrs.pre_positive_descriptors = iqrs.positive_descriptors.copy()
+                iqrs.pre_negative_descriptors = iqrs.negative_descriptors.copy()
                 try:
 
                     iqrs.refine()
@@ -899,24 +901,47 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         @self.route("/validate_iqr_feedback", methods=["POST"])
         @self._parent_app.module_login.login_required
         def validate_iqr_feedback():
-            iqr_round = flask.request.form['iqr_round']
+            iqr_round = int(flask.request.form['iqr_round'])
 
             with self.get_current_iqr_session() as iqrs:
-                if int(iqr_round) >= 0:
+                if iqr_round >= 0:
                     selected_pos = 0.0
                     selected_neg = 0.0
-                    for d in iqrs.positive_descriptors:
+
+                    pre_pos_num = len(iqrs.pre_positive_descriptors)
+                    e_idx = 20 + pre_pos_num
+                    c_count = iqrs.count_correct(iqrs.query_target, pre_pos_num, e_idx)   #correct count
+                    w_count = 20 - c_count
+
+                    for d in iqrs.positive_descriptors - iqrs.pre_positive_descriptors:
                         if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
                             selected_pos += 1.0
 
-                    for d in iqrs.negative_descriptors:
+                    for d in iqrs.pre_positive_descriptors - iqrs.positive_descriptors:
+
+                        if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
+                            # if the user change previous positive feedback to wrong, but it was correct
+                            selected_neg += 1.0
+                        else:
+                            # if the user change previous positive feedback to wrong, but it was wrong
+                            selected_neg -= 1.0
+
+                    for d in iqrs.negative_descriptors - iqrs.pre_negative_descriptors:
                         if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
                             selected_neg += 1.0
 
-                    iqrs.selected_pos_acc = 1.0 if len(iqrs.positive_descriptors) == 0 else \
-                        selected_pos / len(iqrs.positive_descriptors)
-                    iqrs.selected_neg_acc = 0.0 if len(iqrs.negative_descriptors) == 0 else \
-                        selected_neg / len(iqrs.negative_descriptors)
+                    for d in iqrs.pre_negative_descriptors - iqrs.negative_descriptors:
+                        if iqrs.query_target in iqrs.retrival_image_catNMs[d.uuid()]:
+                            # if the user change previous negative feedback to correct, but it was correct
+                            selected_pos += 1.0
+                        else:
+                            # if the user change previous negative feedback to correct, but it was wrong
+                            selected_pos -= 1.0
+
+                    iqrs.selected_pos_acc = 1.0 if c_count == 0 else \
+                        selected_pos / c_count
+                    iqrs.selected_neg_acc = 0.0 if w_count == 0 else \
+                        selected_neg / w_count
                 else:
                     iqrs.selected_pos_acc = 1.0
                     iqrs.selected_neg_acc = 0.0

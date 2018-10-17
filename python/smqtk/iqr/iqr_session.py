@@ -178,6 +178,10 @@ class IqrSession (SmqtkObject):
         #: :type: None | float
         self._selected_neg_acc = None
 
+        # previous round pos and neg descriptors
+        self.pre_positive_descriptors = set()
+        self.pre_negative_descriptors = set()
+
         self._dataset = dataset
 
     def __enter__(self):
@@ -270,6 +274,22 @@ class IqrSession (SmqtkObject):
     def selected_neg_acc(self, val):
         with self.lock:
             self._selected_neg_acc = val
+
+    # @property
+    # def pre_positive_descriptors(self):
+    #     return self._pre_positive_descriptors
+    #
+    # @pre_positive_descriptors.setter
+    # def pre_positive_descriptors(self, val):
+    #     self._pre_positive_descriptors = val
+    #
+    # @property
+    # def pre_negative_descriptors(self):
+    #     return self._pre_negative_descriptors
+    #
+    # @pre_negative_descriptors.setter
+    # def pre_negative_descriptors(self, val):
+    #     self._pre_negative_descriptors = val
 
 
     def ordered_results(self):
@@ -423,6 +443,8 @@ class IqrSession (SmqtkObject):
             self._wi_seeds_used.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()
+            self.pre_positive_descriptors.clear()
+            self.pre_negative_descriptors.clear()
 
             self.rel_index = None
             self.results = None
@@ -436,19 +458,29 @@ class IqrSession (SmqtkObject):
             self.selected_neg_acc = None
             self.selected_pos_acc = None
 
-    def retrival_acc(self, retrival_target, first_n=20):
+    def count_correct(self, retrival_target, start_idx=0, end_idx=20):
         with self.lock:
             correct_count = 0.0
-            if self.retrival_image_catNMs is None:
+            if len(self.retrival_image_catNMs) == 0:
                 return 0.0
 
             catNMs_list = list(self.retrival_image_catNMs.values())
-            for cat_nm in catNMs_list[:first_n]:
+            for cat_nm in catNMs_list[start_idx:end_idx]:
                 # print("{}".format(cat_nm))
                 if retrival_target in cat_nm:
                     correct_count += 1.0
 
-            acc = correct_count / first_n * 100.0
+            return correct_count
+
+
+    def retrival_acc(self, retrival_target, first_n=20):
+        with self.lock:
+            correct_count = self.count_correct(retrival_target, 0, first_n)
+
+            if len(self.retrival_image_catNMs) == 0:
+                acc = 0.0
+            else:
+                acc = correct_count / min(first_n, len(self.retrival_image_catNMs)) * 100.0
             # self.retrival_image_catNMs.clear()
 
             return "{0:.2f}".format(acc)

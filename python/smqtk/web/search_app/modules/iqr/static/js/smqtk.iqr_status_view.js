@@ -45,7 +45,7 @@ function IqrStatusView (container, result_inst) {
     // this.acc_input.attr('size', 8);
 
     this.likert_statement = "<label class=\"likert_statement\">" +
-        "I have high confidence in my positive/negative label assignments.</label>";
+        "I understand why the retrieved images were chosen by the system.</label>";
     this.likert_form = $('<form>');
     this.likert_form.attr('id', 'liker_form');
     this.likert_scale = "<ul class='likert'>\n" +
@@ -243,7 +243,7 @@ IqrStatusView.prototype.cal_acc_store = function () {
         //     alert_info("AMT_id:"+ self.AMT_id + " Iqr round: " + iqr_round + " target: " + target +
         // " acc_20: " + self.re_acc_20 + " acc_30 " + self.re_acc_30+ " acc_40 " + self.re_acc_40 + " acc_50: " + self.re_acc_50 +
         // " pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
-        // },
+        },
         error: function (jqXHR, textStatus, errorThrown)
         {
             alert_error("AJAX Error: cal_acc_store" + errorThrown);

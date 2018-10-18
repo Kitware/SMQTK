@@ -497,7 +497,7 @@ IqrRefineView.prototype.iqr_refine = function() {
         //check whether the likert scale has been selected
         var info = "Please answer the question ";
         // var question = "I understand why the retrieved images were chosen by the system.";
-        alert(info+"\n" + "\t •" + self.status_inst.likert_statement);
+        alert(info+"\n" + "\t •" + self.status_inst.likert_statement.innerText);
     } else {
         function restore() {
             self.progress_bar_refine.off();

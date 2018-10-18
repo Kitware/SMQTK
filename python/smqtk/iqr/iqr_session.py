@@ -503,6 +503,11 @@ class IqrSession (SmqtkObject):
             with open(file_name, 'w') as f:
                 try:
                     f.write(' '.join(map(str, record)))
+                    f.write('\n')
+                    f.write(' '.join(map(str, [d.uuid() for d in self.positive_descriptors])))
+                    f.write('\n')
+                    f.write(' '.join(map(str, [d.uuid() for d in self.negative_descriptors])))
+                    f.write('\n')
                 except:
                     import sys
                     print("Unexpected error:", sys.exc_info()[0])

@@ -496,8 +496,8 @@ IqrRefineView.prototype.iqr_refine = function() {
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
         //check whether the likert scale has been selected
         var info = "Please answer the question ";
-        var question = "I have high confidence in my positive/negative label assignments.";
-        alert(info+"\n" + "\t •" + question);
+        // var question = "I understand why the retrieved images were chosen by the system.";
+        alert(info+"\n" + "\t •" + self.status_inst.likert_statement);
     } else {
         function restore() {
             self.progress_bar_refine.off();

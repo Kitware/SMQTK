@@ -27,6 +27,8 @@ def check_list(list, idx):
     else:
         return False
 
+    return flag
+
 def cli_parser():
     parser = argparse.ArgumentParser(description=__doc__)
 

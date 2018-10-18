@@ -216,6 +216,8 @@ def check_list(list, idx):
     else:
         return False
 
+    return flag
+
 if __name__ == "__main__":
     main()
     print('Done')

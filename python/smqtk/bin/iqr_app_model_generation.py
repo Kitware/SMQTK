@@ -53,14 +53,14 @@ def cli_parser():
     parser.add_argument('--out_uuid_file', type=str,
                         help="output uuid file")
     parser.add_argument('--min_ann_num', type=int,
-                        help="required minimum annotation number", default=3)
+                        help="required minimum annotation number", default=2)
     parser.add_argument('--max_ann_num', type=int,
-                        help="required maximum annotation number", default=4)
-    parser.add_argument('--query_ann_num', type=int,
-                        help="query annoation number for generating query images", default=2)
+                        help="required maximum annotation number", default=3)
+    parser.add_argument('--query_class_num', type=int,
+                        help="query class number for generating query images", default=2)
     parser.add_argument('--query_area_threshold', type=float,
                         help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
-                        default=0.6)
+                        default=0.7)
 
     return parser
 
@@ -200,7 +200,7 @@ def main():
     print("{}/{} image has been added to archive".format(ar_count, len(imgs)))
 
     of = open(args.out_uuid_file, 'w')
-
+    q_count = 0
     # add query image to query_set
     with open(args.query_imgID_list, 'r') as f:
         for line in f:
@@ -226,6 +226,7 @@ def main():
                     key_list.append(key)
 
                 if flag:
+                    q_count += 1
                     cur_data = None
                     if osp.isfile(img_path):
                         cur_data = DataFileElement(img_path, coco_catNM=cat_names)
@@ -246,6 +247,7 @@ def main():
                             of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 1))
 
     of.close()
+    print('{} query images are selected!'.format(q_count))
 
     # Generate a mode if the generator defines a known generation method.
     if hasattr(descriptor_generator, "generate_model"):

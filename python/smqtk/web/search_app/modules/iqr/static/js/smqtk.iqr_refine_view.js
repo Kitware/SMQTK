@@ -93,10 +93,10 @@ function IqrRefineView(container) {
     this.neg_hr = $('<hr id="neg_hr">');
 
     this.pos_state = $('<label>');
-    this.pos_state.text("Positive feedbacks:");
+    this.pos_state.text("Positive feedback:");
 
     this.neg_state = $('<label>');
-    this.neg_state.text("Negative feedbacks:");
+    this.neg_state.text("Negative feedback:");
 
 
     this.status_inst;
@@ -368,7 +368,7 @@ IqrRefineView.prototype.update_refine_pane = function () {
                 self.button_container_refine_bot.hide();
             }
 
-            if (data["positive_uids"].length > 0) {
+            if (data["positive_uids"].length > 1) {
                 self.pos_state.show();
                 self.pos_hr.show();
             } else {

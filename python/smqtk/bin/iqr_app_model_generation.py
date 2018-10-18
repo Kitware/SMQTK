@@ -52,15 +52,15 @@ def cli_parser():
                         help="AMT query image ID")
     parser.add_argument('--out_uuid_file', type=str,
                         help="output uuid file")
-    parser.add_argument('--min_class_num', type=int,
-                        help="required minimum class number", default=2)
-    parser.add_argument('--max_class_num', type=int,
-                        help="required maximum class number", default=3)
-    parser.add_argument('--query_class_num', type=int,
-                        help="query class number for generating query images", default=1)
+    parser.add_argument('--min_ann_num', type=int,
+                        help="required minimum annotation number", default=3)
+    parser.add_argument('--max_ann_num', type=int,
+                        help="required maximum annotation number", default=4)
+    parser.add_argument('--query_ann_num', type=int,
+                        help="query annoation number for generating query images", default=2)
     parser.add_argument('--query_area_threshold', type=float,
                         help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
-                        default=0.5)
+                        default=0.6)
 
     return parser
 
@@ -184,7 +184,9 @@ def main():
         anns = coco.loadAnns(annIds)
         cat_names = coco.obtainCatNames(anns)
 
-        if len(cat_names) >= args.min_class_num and len(cat_names) <= args.max_class_num:
+        anns_num = len(anns)
+
+        if anns_num >= args.min_ann_num and anns_num <= args.max_ann_num and len(cat_names) > args.min_ann_num:
             ar_count += 1
             img_path = osp.join(args.data_path, img['file_name'])
 

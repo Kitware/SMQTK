@@ -29,6 +29,13 @@ Descriptor Generator Plugins
       appropriately used on a separate thread/process after initialization occurs on
       the main (or some other) thread.
 
+Docker
+
+    - IQR Playground
+
+        - Updated README for better instruction on creating the docker image
+          first.
+
 Utilities
     - Fixed broken large file writing in Python 2, creating parity
       with Python 3.

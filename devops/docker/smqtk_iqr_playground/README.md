@@ -37,20 +37,39 @@ Container internal data directories for volume mounting:
     /home/smqtk/data/models/    -- common directory for model files
 
 
+## Building the Docker Images
+
+The IQR image currently depends on Caffe, so the ``smqtk_caffe`` docker image
+needs to be built first. Both the CPU or GPU versions will be build by running
+``../smqtk_caffe/build_image.sh`` which should satisfy the dependencies for the
+CPU and GPU versions of the IQR images.
+
+To build the CPU and GPU versions of the IQR docker images, the
+``build.docker.sh`` script should be run. This will first build the CPU image
+variant and then the GPU variant second.
+
+
 ## Running IQR on New Imagery
 
-One way to use this container is to treat it like an command line tool for
+One way to use this container is to treat it like a command line tool for
 spinning up a new IQR ingest on a directory of images. This will pick up files
-recursively in the mounted directory (uses command ``find <dir> -type f``):
+recursively in the mounted directory (uses command ``find <dir> -type f``).
 
-    `docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...cpu... -b [-t]`
+The following are example commands show how the IQR docker images may
+be run as a quick-start reference. Replace the parts that look like
+``<TEXT-HERE>`` with appropriate values for your use case (image directory to
+mount and the docker image tag to use).
 
-    OR
-
-    `nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:...gpu... -b [-t]`
+```bash
+$ # Running CPU image variant
+$ docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<CPU-TAG> -b
+$ # Running GPU image variant using ``nvidia-docker2``
+$ nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<GPU-TAG> -b
+$ docker run -d --runtime nvidia -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<GPU-TAG> -b
+```
 
 The use of ``nvidia-docker`` is required to use the GPU computation
-capabilities (default options, can be changed and described later).
+capabilities (default options, can be changed and is described later).
 The ``-v`` option above shows where to mount a directory of images for
 processing. The ``-p`` option above shows the default IQR web-app server port
 that should be exposed.
@@ -207,11 +226,20 @@ Configuration files and what they are used for:
 Q: My container quickly stopped after I executed the above "docker run..."
 command.
 
-    Re-run the ``docker run...`` with an additional volume mount to save out
-    the log files: ``-v <some-local-dir>:/home/smqtk/data/logs``. A more
-    descriptive error message should be present in the log for the failing
-    utility (grep -i for "error" on log files).
+- Re-run the ``docker run...`` with an additional volume mount to save out the
+  log files: ``-v <some-local-dir>:/home/smqtk/data/logs``. A more descriptive
+  error message should be present in the log for the failing utility
+  (``grep -i`` for "error" on log files).
+
+Q: I tried running the ``docker run ...`` command and I got an error that looks
+like ``pull access denied for ..., repository does not exist or
+may require 'docker login'``.
+
+- This error in this context refers to an image not being present on your
+  local machine. This may be because the docker image tag used (the text after
+  the colon) is incorrect or because the docker image in question has not been
+  built yet.  Please refer to the "Building the Docker Images" section above.
 
 TODO: More error situations. If a confusing situation arises, email
-[paul.tunison@kitware.com](mailto:paul.tunison@kitware.com) and we can add 
+[paul.tunison@kitware.com](mailto:paul.tunison@kitware.com) and we can add
 new Q&As here!

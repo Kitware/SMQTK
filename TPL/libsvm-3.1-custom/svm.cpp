@@ -2729,11 +2729,8 @@ static const char *kernel_type_table[]=
   "linear","polynomial","rbf","sigmoid","precomputed", "histogram", "NMI", NULL
 };
 
-int svm_save_model(const char *model_file_name, const svm_model *model)
+int save_model_to_file_pointer(FILE *fp, const svm_model *model)
 {
-  FILE *fp = fopen(model_file_name,"w");
-  if(fp==NULL) return -1;
-
   const svm_parameter& param = model->param;
 
   fprintf(fp,"svm_type %s\n", svm_type_table[param.svm_type]);
@@ -2817,6 +2814,31 @@ int svm_save_model(const char *model_file_name, const svm_model *model)
   else return 0;
 }
 
+int svm_save_model(const char *model_file_name, const svm_model *model){
+  FILE *fp = fopen(model_file_name, "w");
+  if(fp==NULL) return -1;
+  return save_model_to_file_pointer(fp, model);
+}
+
+void convert_model_to_bytes(svm_model* model, unsigned char* &buffer,
+                         size_t &size) {
+  char *buf1 = NULL;
+  FILE *fp = open_memstream(&buf1, &size);
+  save_model_to_file_pointer(fp, model);
+  buffer = (unsigned char *) buf1;
+}
+
+std::vector<unsigned char>* convert_model_to_bytes_vector(svm_model* model){
+  size_t size;
+  unsigned char* buffer;
+  convert_model_to_bytes(model, buffer, size);
+  std::vector<unsigned char>* A = new std::vector<unsigned char>(size);
+  A -> assign(buffer, buffer + size);
+  free(buffer);
+
+  return A;
+}
+
 static char *line = NULL;
 static int max_line_len;
 
@@ -2838,8 +2860,7 @@ static char* readline(FILE *input)
   return line;
 }
 
-// TODO May need to remove this.  Ask Matt.
-svm_model *svm_load_model_from_bytes_vector(std::vector<unsigned char>& model_bytes) {
+svm_model *load_model_from_bytes_vector(std::vector<unsigned char>& model_bytes) {
   const char* tmp_file_name = "tmp_svm_cpp.model";
   std::ofstream out(tmp_file_name, std::ios::binary);
   out.write(reinterpret_cast<const char*>(model_bytes.data()), model_bytes.size());
@@ -2848,7 +2869,7 @@ svm_model *svm_load_model_from_bytes_vector(std::vector<unsigned char>& model_by
   return m;
 }
 
-svm_model *svm_load_model_from_bytes(const unsigned char *model_bytes, int size) {
+svm_model *load_model_from_bytes(const unsigned char *model_bytes, int size) {
   const char* tmp_file_name = "tmp_svm_cpp.model";
   std::ofstream out(tmp_file_name, std::ios::binary);
   out.write(reinterpret_cast<const char*>(model_bytes),
@@ -2858,10 +2879,8 @@ svm_model *svm_load_model_from_bytes(const unsigned char *model_bytes, int size)
   return m;
 }
 
-svm_model *svm_load_model(const char *model_file_name)
-{
-  FILE *fp = fopen(model_file_name,"rb");
-  if(fp==NULL) return NULL;
+
+svm_model* get_model_from_FILE_pointer(FILE *fp) {
 
   // read parameters
 
@@ -3057,6 +3076,28 @@ svm_model *svm_load_model(const char *model_file_name)
   model->free_sv = 1; // XXX
   return model;
 }
+
+svm_model *svm_load_model(const char *model_file_name) {
+  FILE *fp = fopen(model_file_name,"rb");
+  if(fp == NULL) return NULL;
+
+  return get_model_from_FILE_pointer(fp);
+}
+
+svm_model *load_model_from_bytes(unsigned char* buffer, size_t size) {
+  FILE *fp = fmemopen(buffer, size, "r");
+  if(fp == NULL) return NULL;
+  svm_model *model = get_model_from_FILE_pointer(fp);
+
+  return model;
+}
+
+svm_model *load_model_from_bytes_vector(std::vector<unsigned char> * v){
+  unsigned char* buf = v->data();
+  svm_model * model = load_model_from_bytes(buf, v->size());
+  return model;
+}
+
 
 void svm_free_model_content(svm_model* model_ptr)
 {

@@ -1,11 +1,21 @@
 CXX ?= g++
 CFLAGS = -Wall -Wconversion -O3 -fPIC
 SHVER = 2
+PYTHON = python2.7
+.PHONY = test
 
 all: svm-train svm-predict svm-scale svm-prob binary-train binary-predict
 
 lib: svm.o
 	$(CXX) -shared -dynamiclib svm.o -o libsvm.so.$(SHVER)
+
+svm-test: svm-test.o svm.o
+	$(CXX) svm-test.o svm.o -lgtest -lpthread -o svm-test
+
+test: svm-test lib
+	mkdir -p ./python/lib && cp libsvm.so.$(SHVER) python/lib/
+	valgrind --leak-check=full ./svm-test
+	cd python && $(PYTHON) svm_test.py
 
 svm-predict: svm-predict.c svm.o
 	$(CXX) $(CFLAGS) svm-predict.c svm.o -o svm-predict -lm
@@ -21,6 +31,9 @@ svm.o: svm.cpp svm.h
 eval.o: eval.cpp eval.h svm.h
 	$(CXX) $(CFLAGS) -c eval.cpp -o eval.o
 
+svm-test.o: svm-test.cpp svm.o
+	$(CXX) -std=c++11 $(CFLAGS) -c svm-test.cpp
+
 binary-predict: binary-predict.c eval.o svm.o
 	$(CXX) $(CFLAGS) binary-predict.c eval.o svm.o -o binary-predict -lm
 binary-train: binary-train.c eval.o svm.o
@@ -28,4 +41,6 @@ binary-train: binary-train.c eval.o svm.o
 
 
 clean:
-	rm -f *~ svm.o eval.o svm-train svm-predict svm-scale svm-prob binary-train binary-predict libsvm.so.$(SHVER) 
+	rm -f *~ svm.o svm-test.o eval.o svm-train svm-predict svm-scale \
+	svm-prob binary-train binary-predict svm-test libsvm.so.$(SHVER) 
+	rm -R ./python/lib

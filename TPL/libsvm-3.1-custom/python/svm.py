@@ -321,7 +321,8 @@ fillprototype(libsvm.svm_cross_validation, None, [POINTER(svm_problem), POINTER(
 
 fillprototype(libsvm.svm_save_model, c_int, [c_char_p, POINTER(svm_model)])
 fillprototype(libsvm.svm_load_model, POINTER(svm_model), [c_char_p])
-fillprototype(libsvm.svm_load_model_from_bytes, POINTER(svm_model), [POINTER(c_ubyte), c_int])
+fillprototype(libsvm.load_model_from_bytes, POINTER(svm_model), [POINTER(c_ubyte), c_int])
+fillprototype(libsvm.convert_model_to_bytes, None, [POINTER(svm_model), POINTER(POINTER(c_ubyte)), POINTER(c_size_t)])
 
 fillprototype(libsvm.svm_get_svm_type, c_int, [POINTER(svm_model)])
 fillprototype(libsvm.svm_get_nr_class, c_int, [POINTER(svm_model)])

@@ -184,13 +184,18 @@ IqrRefineView.prototype.construct_refine_pane = function () {
      */
     this.button_refine_top.click(function () {
         if (inst.IQR_round < 2) {
+            inst.button_refine_top.hide();
+            inst.button_refine_bot.hide();
             inst.iqr_refine();
+
         } else {
             inst.finish_task();
         }
     });
     this.button_refine_bot.click(function () {
         if (inst.IQR_round < 2) {
+            inst.button_refine_top.hide();
+            inst.button_refine_bot.hide();
             inst.iqr_refine();
         } else {
             inst.finish_task();
@@ -389,6 +394,8 @@ IqrRefineView.prototype.update_refine_pane = function () {
             for (var i = 0; i < data["negative_uids"].length; i++) {
                 self.neg_selected_uuids.push(data["negative_uids"][i]);
             }
+            self.button_refine_top.show();
+            self.button_refine_bot.show();
         }
     });
 };

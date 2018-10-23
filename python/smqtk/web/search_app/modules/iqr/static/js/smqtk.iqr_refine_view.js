@@ -283,6 +283,7 @@ IqrRefineView.prototype.finish_task = function () {
     // prompt("Please copy the following session ID and paste it back to the HIT webpage!",
     //     self.session_id);
     self.iqr_view_inst.reset_session();
+
 };
 
 /**

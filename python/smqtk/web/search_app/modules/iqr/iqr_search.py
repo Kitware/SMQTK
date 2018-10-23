@@ -969,21 +969,27 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Reset the current IQR session
             """
-            with self.get_current_iqr_session() as iqrs:
-                iqrs.reset()
 
-                # Clearing working directory
-                if os.path.isdir(self._iqr_work_dirs[iqrs.uuid]):
-                    shutil.rmtree(self._iqr_work_dirs[iqrs.uuid])
-                safe_create_dir(self._iqr_work_dirs[iqrs.uuid])
-
-                # Clearing example data + descriptors
-                self._iqr_example_data[iqrs.uuid].clear()
-                self._iqr_example_pos_descr[iqrs.uuid].clear()
-
-                return flask.jsonify({
-                    "success": True
-                })
+            if 'user' in flask.session:
+                del flask.session['user']
+            else:
+                flask.flash("No user currently logged in!", "error")
+            return flask.redirect("/")
+            # with self.get_current_iqr_session() as iqrs:
+            #     iqrs.reset()
+            #
+            #     # Clearing working directory
+            #     if os.path.isdir(self._iqr_work_dirs[iqrs.uuid]):
+            #         shutil.rmtree(self._iqr_work_dirs[iqrs.uuid])
+            #     safe_create_dir(self._iqr_work_dirs[iqrs.uuid])
+            #
+            #     # Clearing example data + descriptors
+            #     self._iqr_example_data[iqrs.uuid].clear()
+            #     self._iqr_example_pos_descr[iqrs.uuid].clear()
+            #
+            #     return flask.jsonify({
+            #         "success": True
+            #     })
 
         @self.route("/get_random_uids")
         @self._parent_app.module_login.login_required

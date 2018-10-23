@@ -39,9 +39,11 @@ def main():
                 N_uuid = random.choice(Normal_UUID_list)
                 Normal_UUID_list.remove(N_uuid)
                 S_uuid = random.choice(Saliency_UUID_list)
+
                 while N_uuid[:-1] == S_uuid[:-1]:
                     S_uuid = random.choice(Saliency_UUID_list)
-                    Saliency_UUID_list.remove(S_uuid)
+
+                Saliency_UUID_list.remove(S_uuid)
 
                 cur_line = "{},{},{}".format(cur_line, N_uuid, S_uuid)
 

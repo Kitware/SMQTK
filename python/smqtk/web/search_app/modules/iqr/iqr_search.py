@@ -843,6 +843,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     record_list.append(iqrs.query_uuid) # query image uuid
                     record_list.append(retrival_target)
                     record_list.append(iqr_round)
+                    record_list.append(iqrs.sa_flag)
                     record_list.append(likert_score)
                     record_list.append(pos_num)
                     record_list.append(neg_num)

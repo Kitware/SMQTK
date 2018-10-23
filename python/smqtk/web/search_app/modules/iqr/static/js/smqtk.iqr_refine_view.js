@@ -522,6 +522,8 @@ IqrRefineView.prototype.iqr_refine = function() {
                     cur_count = iqr_count_flag['count'];
                     var left_count = (self.IQR_round + 1) * self.show_more_step + 1 - cur_count;
                     alert("Please give feedbacks to all query images! only " + left_count + " lefted!");
+                    self.button_refine_top.show();
+                    self.button_refine_bot.show();
                 } else {
                     $.ajax({
                         url: 'validate_iqr_feedback',
@@ -539,6 +541,8 @@ IqrRefineView.prototype.iqr_refine = function() {
                             if (data['selected_pos_acc'] < selected_pos_acc_threshold && !self.saliency_flag) {
                                 alert("The positive feedback are not acurate enough!\n " +
                                     "Please review the feedback and change them accordingly!");
+                                self.button_refine_bot.show();
+                                self.button_refine_top.show();
                            // } else if (data['selected_neg_acc'] > selected_neg_acc_threshold && !self.saliency_flag) {
                                 //for now, we ignore the selected_neg_acc
                            //     alert("The negtive feedback are not acurate enough!\n " +

@@ -310,10 +310,14 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                 fd, fp = tempfile.mkstemp()
                 try:
                     self._flann.save_index(fp)
-                    self._index_elem.set_bytes(os.read(fd,
-                                                       os.path.getsize(fp)))
+                    # Use the file descriptor to create the file object.
+                    # This avoids reopening the file and will automatically
+                    # close the file descriptor on exiting the with block.
+                    # fdopen() is required because in Python 2 open() does
+                    # not accept a file descriptor.
+                    with os.fdopen(fd, 'rb') as f:
+                        self._index_elem.set_bytes(f.read())
                 finally:
-                    os.close(fd)
                     os.remove(fp)
             if self._index_param_elem and self._index_param_elem.writable():
                 self._log.debug("Caching index params: %s",

@@ -344,11 +344,14 @@ class LibSvmClassifier (SupervisedClassifier):
             fd, fp = tempfile.mkstemp()
             try:
                 svmutil.svm_save_model(fp, self.svm_model)
-                self.svm_model_elem.set_bytes(
-                    os.read(fd, os.path.getsize(fp))
-                )
+                # Use the file descriptor to create the file object.
+                # This avoids reopening the file and will automatically
+                # close the file descriptor on exiting the with block.
+                # fdopen() is required because in Python 2 open() does
+                # not accept a file descriptor.
+                with os.fdopen(fd, 'rb') as f:
+                    self.svm_model_elem.set_bytes(f.read())
             finally:
-                os.close(fd)
                 os.remove(fp)
 
     def get_labels(self):

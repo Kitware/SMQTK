@@ -328,7 +328,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 # Load the binary index
                 tmp_fp = self._index_element.write_temp()
                 self._faiss_index = self._convert_index(
-                    faiss.read_index(tmp_fp)
+                    # As of Faiss 1.3.0, only str (not unicode) is
+                    # accepted in Python 2.7
+                    faiss.read_index(str(tmp_fp))
                 )
                 self._index_element.clean_temp()
 
@@ -375,10 +377,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     else:
                         to_write = self._faiss_index
                     faiss.write_index(to_write, fp)
-                    self._index_element.set_bytes(
-                        os.read(fd, os.path.getsize(fp)))
+                    # Use the file descriptor to create the file object.
+                    # This avoids reopening the file and will automatically
+                    # close the file descriptor on exiting the with block.
+                    # fdopen() is required because in Python 2 open() does
+                    # not accept a file descriptor.
+                    with os.fdopen(fd, 'rb') as f:
+                        self._index_element.set_bytes(f.read())
                 finally:
-                    os.close(fd)
                     os.remove(fp)
                 # Store index parameters used.
                 params = {

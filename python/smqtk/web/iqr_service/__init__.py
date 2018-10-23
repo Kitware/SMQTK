@@ -192,9 +192,11 @@ class IqrService (SmqtkWebApp):
                 one is not provided, we create one here.
 
         """
-        sid = flask.request.form.get('sid', None)
-        if sid is None:
-            sid = new_uuid()
+        # sid = flask.request.form.get('sid', None)
+        # if sid is None:
+        #     sid = new_uuid()
+
+        sid = new_uuid()
 
         if self.controller.has_session_uuid(sid):
             return make_response_json(

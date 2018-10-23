@@ -74,6 +74,7 @@ function IqrView(container, upload_post_url) {
  */
 IqrView.prototype.construct_view = function (container) {
     var self = this;
+    // self.tab_control();
 
     this.flow_zone.append(
         this.AMT_label,
@@ -151,6 +152,39 @@ IqrView.prototype.construct_view = function (container) {
     this.control_zone.hide();
     this.results_zone.hide();
 };
+
+
+// IqrView.prototype.tab_control = function () {
+//     var self = this;
+//     var setCookie,
+//         removeCookie,
+//         // Create constants for things instead of having same string
+//         // in multiple places in code.
+//         COOKIE_NAME = 'TabOpen',
+//         SITE_WIDE_PATH = { path : '/' };
+//
+//     setCookie = function () {
+//         $.cookie(COOKIE_NAME, '1', SITE_WIDE_PATH);
+//     };
+//
+//     removeCookie = function () {
+//         $.removeCookie(COOKIE_NAME, SITE_WIDE_PATH);
+//     };
+//
+//     // We don't need to wait for DOM ready to check the cookie
+//     if ($.cookie(COOKIE_NAME) === undefined) {
+//         setCookie();
+//         $(window).unload(removeCookie);
+//     } else {
+//         // Replace the whole body with an error message when the DOM is ready.
+//         $(function () {
+//             $('body').html('<div class="error">' +
+//                 '<h1>Sorry!</h1>' +
+//                 '<p>You can only have one instance of this web page open at a time.</p>' +
+//                 '</div>');
+//             });
+//     }
+// };
 
 
 IqrView.prototype.show_query_image = function (AMT_id, input_str) {

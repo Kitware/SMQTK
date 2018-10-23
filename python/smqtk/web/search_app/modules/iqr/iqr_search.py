@@ -247,7 +247,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         # TODO: Move session management to database/remote?
         #       Create web-specific IqrSession class that stores/gets its state
         #       directly from database.
-        self._iqr_controller = IqrController()
+        self._iqr_controller = IqrController(expire_enabled=True, expire_check=30)
         # Mapping of session IDs to their work directory
         #: :type: dict[collections.Hashable, str]
         self._iqr_work_dirs = {}

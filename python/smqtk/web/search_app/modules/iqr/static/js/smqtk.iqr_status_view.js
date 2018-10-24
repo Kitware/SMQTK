@@ -45,7 +45,8 @@ function IqrStatusView (container, result_inst) {
     // this.acc_input.attr('size', 8);
 
     this.likert_statement = "<label class=\"likert_statement\">" +
-        "I understand why the retrieved images were chosen by the system.</label>";
+        "I have high confidence that the correct object in the retrieved image is matched to the target " +
+        "object in the query image.</label>";
     this.likert_form = $('<form>');
     this.likert_form.attr('id', 'liker_form');
     this.likert_scale = "<ul class='likert'>\n" +

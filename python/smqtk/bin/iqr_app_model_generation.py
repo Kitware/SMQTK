@@ -60,9 +60,12 @@ def cli_parser():
                         help="required maximum annotation number", default=3)
     parser.add_argument('--query_class_num', type=int,
                         help="query class number for generating query images", default=2)
-    parser.add_argument('--query_area_threshold', type=float,
-                        help="query object of query class's bbox should occupy 'query_area threshold' of whole image ",
-                        default=0.7)
+    parser.add_argument('--query_area_max_threshold', type=float,
+                        help="query object of query class's bbox should less than 'query_area threshold' of whole image ",
+                        default=0.5)
+    parser.add_argument('--query_area_min_threshold', type=float,
+                        help="query object of query class's bbox should larger than 'query_area threshold' of whole image ",
+                        default=0.3)
 
     return parser
 
@@ -219,12 +222,13 @@ def main():
                 img_path = osp.join(args.data_path, q_img['file_name'])
                 I = Image.open(img_path)
                 img_area = I.size[0] * I.size[1]
-                area_threshold = args.query_area_threshold * img_area
+                max_area_threshold = args.query_area_max_threshold * img_area
+                min_area_threshold = args.query_area_min_threshold * img_area
 
                 flag = True
                 key_list = list()
                 for (key, area) in sorted_cat_bboxArea[:args.query_class_num]:
-                    flag = flag and area >= area_threshold
+                    flag = flag and area >= min_area_threshold and area <= max_area_threshold
                     key_list.append(key)
 
                 if flag:
@@ -241,12 +245,12 @@ def main():
 
                     for i, key in enumerate(key_list):
                         if i == 0:
-                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 0))
-                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key, 1))
+                            of.write('{}&{}&{} {}\n'.format(cur_data.uuid(), key, 0, img_path))
+                            of.write('{}&{}&{} {}\n'.format(cur_data.uuid(), key, 1, img_path))
 
                         if check_list(key_list, i):
-                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 0))
-                            of.write('{}&{}&{}\n'.format(cur_data.uuid(), key_list[i], 1))
+                            of.write('{}&{}&{} {}\n'.format(cur_data.uuid(), key_list[i], 0, img_path))
+                            of.write('{}&{}&{} {}\n'.format(cur_data.uuid(), key_list[i], 1, img_path))
 
     of.close()
     print('{} query images are selected!'.format(q_count))

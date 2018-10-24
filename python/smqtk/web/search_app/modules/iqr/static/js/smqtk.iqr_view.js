@@ -53,7 +53,7 @@ function IqrView(container, upload_post_url) {
     this.results_zone = $('<div>');
     this.results_zone.attr('id', 'result_zone');
 
-    this.button_index_initialize = $('<button class="btn btn-primary" type="button"/>');
+    this.button_index_initialize = $('<button class="btn btn-primary" id="button_index_init" type="button"/>');
     this.button_reset_session = $('<button class="btn btn-danger" type="button"/>');
     // this.button_state_save = $('<button class="btn" type="button"/>');
 
@@ -143,6 +143,7 @@ IqrView.prototype.construct_view = function (container) {
             alert("Please provide the HIT TASK ID!")
         } else {
             self.uuid_input.val('');
+            self.button_index_initialize.show();
             self.show_query_image(AMT_id, input_str);
         }
     });

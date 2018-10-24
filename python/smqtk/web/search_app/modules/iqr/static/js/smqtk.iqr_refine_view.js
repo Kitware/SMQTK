@@ -501,6 +501,7 @@ IqrRefineView.prototype.show_more_refine_results = function (replay_flag) {
  */
 IqrRefineView.prototype.iqr_refine = function() {
     var self = this;
+    $('#button_index_init').hide();
     if (typeof $('#liker_form input[name=likert]:checked').val() === 'undefined' && self.IQR_round !== -1) {
         //check whether the likert scale has been selected
         var info = "Please answer the question ";

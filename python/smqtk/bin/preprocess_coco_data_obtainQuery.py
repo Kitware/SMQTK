@@ -48,10 +48,10 @@ def cli_parser():
                         help="query class number for generating query images", default=2)
     parser.add_argument('--query_area_max_threshold', type=float,
                         help="query object of query class's bbox should less than 'query_area threshold' of whole image ",
-                        default=0.5)
+                        default=1.0)
     parser.add_argument('--query_area_min_threshold', type=float,
                         help="query object of query class's bbox should larger than 'query_area threshold' of whole image ",
-                        default=0.3)
+                        default=0.6)
 
     return parser
 

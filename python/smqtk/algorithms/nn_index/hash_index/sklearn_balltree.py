@@ -142,7 +142,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
                     # - Not saving distance function because its always going
                     #   to be hamming distance (see ``build_index``).
                     s = self.bt.__getstate__()
-                    tail = s[4:11]
+                    # Everything after known numpy ndarrays we consider as a
+                    # chunk.  Importantly, index 11 should be the distance
+                    # metric function used in the model.  We currently assume
+                    # its a hamming distance metric.
+                    tail = s[4:]
                     buff = BytesIO()
                     # noinspection PyTypeChecker
                     np.savez(buff,
@@ -170,9 +174,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 buff = BytesIO(self.cache_element.get_bytes())
                 with np.load(buff) as cache:
                     tail = tuple(cache['tail'])
-                    s = (cache['data_arr'], cache['idx_array_arr'],
-                         cache['node_data_arr'], cache['node_bounds_arr']) +\
-                        tail + (DistanceMetric.get_metric('hamming'),)
+                    s = [cache['data_arr'], cache['idx_array_arr'],
+                         cache['node_data_arr'], cache['node_bounds_arr']]
+                    s.extend(tail)
+                    s[11] = DistanceMetric.get_metric('hamming')
+                    s = tuple(s)
                 # noinspection PyTypeChecker
                 #: :type: sklearn.neighbors.BallTree
                 self.bt = BallTree.__new__(BallTree)

@@ -3,7 +3,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 docker pull ubuntu:16.04
-docker build -t kitware/smqtk/caffe:1.0-cpu \
+docker build --no-cache -t kitware/smqtk/caffe:1.0-cpu \
              -f "${SCRIPT_DIR}/Dockerfile.cpu.df" \
              "${SCRIPT_DIR}"
 

@@ -10,18 +10,33 @@ Fixes
 -----
 
 Algorithms
+
     - Classifiers
+
         - SVM
+
             - Fixed broken large model saving in Python 2, creating
               parity with Python 3.
+
     - Nearest-Neighbors
+
         - FAISS
+
             - Fixed use of strings for compatibility with Python 2.
             - Fixed broken large model saving in Python 2, creating
               parity with Python 3.
+
         - FLANN
+
             - Fixed broken large model saving in Python 2, creating
               parity with Python 3.
+
+        - Hash Index
+
+            - Scikit-Learn BallTree
+
+                - Fix ``save_model`` and ``load_model`` methods for additional
+                  compatibility with scikit-learn version 0.20.0.
 
 Descriptor Generator Plugins
 

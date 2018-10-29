@@ -28,13 +28,7 @@ import re
 import sys
 
 import six
-
-try:
-    # noinspection PyStatementEffect
-    reload
-except NameError:
-    # noinspection PyUnresolvedReferences
-    reload = importlib.reload
+from six.moves import reload_module
 
 
 # Template for checking validity of sub-module files
@@ -148,7 +142,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
     :return: Map of discovered class objects descending from type
         ``baseclass_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
         the string names of the class types.
-    :rtype: dict of (str, type)
+    :rtype: dict[str, type]
 
     """
     log = logging.getLogger('.'.join([__name__,
@@ -191,7 +185,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
         # We want any exception this might throw to continue up. If a module
         # in the directory is not importable, the user should know.
         try:
-            module = importlib.import_module(module_path)
+            _module = importlib.import_module(module_path)
         except Exception as ex:
             if warn:
                 log.warn("[%s] Failed to import module due to exception: "
@@ -200,16 +194,18 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
             continue
         if reload_modules:
             # Invoke reload in case the module changed between imports.
-            module = reload(module)
-            if module is None:
+            # six should find the right thing.
+            # noinspection PyCompatibility
+            _module = reload_module(_module)
+            if _module is None:
                 raise RuntimeError("[%s] Failed to reload"
                                    % module_path)
 
         # Find valid classes in the discovered module by:
         classes = []
-        if hasattr(module, helper_var):
+        if hasattr(_module, helper_var):
             # Looking for magic variable for import guidance
-            classes = getattr(module, helper_var)
+            classes = getattr(_module, helper_var)
             if classes is None:
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
@@ -229,45 +225,43 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
         else:
             # Scan module valid attributes for classes that descend from the
             # given base-class.
-            for attr_name in dir(module):
+            log.debug("[%s] No helper, scanning module attributes",
+                      module_path)
+            for attr_name in dir(_module):
                 if VALUE_ATTRIBUTE_RE.match(attr_name):
-                    log.debug("[%s] Checking attribute '%s'", module_path,
-                              attr_name)
-                    attr = getattr(module, attr_name)
-                    # If the attribute looks like a class that descends and
-                    # implements the interface, add it to the class list
-                    # - we require that base is pluggable, so if class descends
-                    #   from the given base-class, it will have
-                    #   __abstractmethods__ property.
-                    if isinstance(attr, type) and \
-                            attr is not baseclass_type and \
-                            issubclass(attr, baseclass_type) and \
-                            not bool(attr.__abstractmethods__):
-                        log.debug("[%s] -- Discovered subclass: %s",
-                                  module_path, attr.__name__)
-                        classes.append(attr)
+                    classes.append(getattr(_module, attr_name))
 
         # Check the validity of the discovered class types
         for cls in classes:
-            # check that all class types in iterable are types and
-            # are subclasses of the given base-type and plugin interface
-            if not (isinstance(cls, type) and
-                    cls is not baseclass_type and
-                    issubclass(cls, baseclass_type)):
-                raise RuntimeError("[%s] Found element in list "
-                                   "that is not a class or does "
-                                   "not descend from required base "
-                                   "class '%s': %s"
-                                   % (module_path,
-                                      baseclass_type.__name__,
-                                      cls))
-            # Check if the algorithm reports being usable
+            # check that all class types in iterable are:
+            # - Class types,
+            # - Subclasses of the given base-type and plugin interface
+            # - Not missing any abstract implementations.
+            #
+            # noinspection PyUnresolvedReferences
+            if not isinstance(cls, type):
+                # No logging, over verbose, undetermined type.
+                pass
+            elif cls is baseclass_type:
+                log.debug("[%s.%s] [skip] Literally the base class.",
+                          module_path, cls.__name__)
+            elif not issubclass(cls, baseclass_type):
+                log.debug("[%s.%s] [skip] Does not descend from base class.",
+                          module_path, cls.__name__)
+            elif bool(cls.__abstractmethods__):
+                # Making this a warning as I think this indicates a broken
+                # implementation in the ecosystem.
+                # noinspection PyUnresolvedReferences
+                log.warn('[%s.%s] [skip] Does not implement one or more '
+                         'abstract methods: %s',
+                         module_path, cls.__name__,
+                         list(cls.__abstractmethods__))
             elif not cls.is_usable():
-                log.debug('[%s] Class type "%s" reported not usable '
-                          '(skipping).',
+                log.debug("[%s.%s] [skip] Class does not report as usable.",
                           module_path, cls.__name__)
             else:
-                # Otherwise add it to the output mapping
+                log.debug('[%s.%s] [KEEP] Retaining subclass.',
+                          module_path, cls.__name__)
                 class_map[cls.__name__] = cls
 
     return class_map
@@ -330,9 +324,13 @@ def from_plugin_config(config, plugin_map, *args):
     provided ``plugin_getter`` function given the plugin configuration
     dictionary ``config``.
 
-    :raises KeyError: There was no ``type`` field to inspect, or there was no
-        parameter specification for the specified ``type``.
-    :raises ValueError: Type field did not specify any implementation key.
+    :raises ValueError:
+        This may be raised if:
+            - type field set to ``None``
+            - type field did not match any available configuration in the given
+              config.
+            - Type field did not specify any implementation key.
+
     :raises TypeError: Insufficient/incorrect initialization parameters were
         specified for the specified ``type``'s constructor.
 
@@ -350,11 +348,28 @@ def from_plugin_config(config, plugin_map, *args):
     :rtype: smqtk.utils.Configurable
 
     """
+    if 'type' not in config:
+        raise ValueError("Configuration dictionary given does not have an "
+                         "implementation type specification.")
     t = config['type']
+    config_type_options = set(config.keys()) - {'type'}
+    plugin_type_options = set(plugin_map.keys())
+    # Type provided may either by None, not have a matching block in the config,
+    # not have a matching implementation type, or match both.
     if t is None:
-        options = set(config.keys()) - {'type'}
         raise ValueError("No implementation type specified. Options: %s"
-                         % options)
+                         % config_type_options)
+    elif t not in config_type_options:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "configuration block was present for that type. "
+                         "Available configuration block options: %s"
+                         % (t, list(config_type_options)))
+    elif t not in plugin_type_options:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "plugin implementations are available for that type. "
+                         "Available implementation types options: %s"
+                         % (t, list(plugin_type_options)))
+    #: :type: smqtk.utils.Configurable
     cls = plugin_map[t]
     # noinspection PyUnresolvedReferences
     return cls.from_config(config[t], *args)

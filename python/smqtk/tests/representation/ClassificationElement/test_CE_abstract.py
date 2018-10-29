@@ -2,13 +2,9 @@ from __future__ import division, print_function
 import unittest
 
 import mock
-import nose.tools
 
 import smqtk.representation
 import smqtk.exceptions
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class DummyCEImpl (smqtk.representation.ClassificationElement):
@@ -34,12 +30,12 @@ class TestClassificationElementAbstract (unittest.TestCase):
 
     def test_init(self):
         e = DummyCEImpl('foo', 'bar')
-        nose.tools.assert_equal(e.type_name, 'foo')
-        nose.tools.assert_equal(e.uuid, 'bar')
+        self.assertEqual(e.type_name, 'foo')
+        self.assertEqual(e.uuid, 'bar')
 
     def test_hash(self):
-        nose.tools.assert_equal(hash(DummyCEImpl('foo', 'bar')),
-                                hash(('foo', 'bar')))
+        self.assertEqual(hash(DummyCEImpl('foo', 'bar')),
+                         hash(('foo', 'bar')))
 
     def test_equality(self):
         e1 = DummyCEImpl('test', 0)
@@ -47,7 +43,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         e1.get_classification = e2.get_classification = \
             mock.Mock(return_value={1: 1, 2: 0})
 
-        nose.tools.assert_equal(e1, e2)
+        self.assertEqual(e1, e2)
 
     def test_not_equal(self):
         e1 = DummyCEImpl('test', 0)
@@ -56,14 +52,14 @@ class TestClassificationElementAbstract (unittest.TestCase):
         e2 = DummyCEImpl('other', 1)
         e2.get_classification = mock.Mock(return_value={1: 0, 2: 1})
 
-        nose.tools.assert_not_equal(e1, e2)
+        self.assertNotEqual(e1, e2)
 
     def test_get_items(self):
         e1 = DummyCEImpl('test', 0)
         e1.get_classification = mock.Mock(return_value={1: 1, 2: 0})
 
-        nose.tools.assert_equal(e1[1], 1)
-        nose.tools.assert_equal(e1[2], 0)
+        self.assertEqual(e1[1], 1)
+        self.assertEqual(e1[2], 0)
 
         try:
             e1[0]
@@ -76,25 +72,25 @@ class TestClassificationElementAbstract (unittest.TestCase):
         e = DummyCEImpl('test', 0)
 
         e.get_classification = mock.Mock(return_value={})
-        nose.tools.assert_raises(
+        self.assertRaises(
             smqtk.exceptions.NoClassificationError,
             e.max_label
         )
 
         e.get_classification = mock.Mock(return_value={1: 0, 2: 1})
-        nose.tools.assert_not_equal(e.max_label(), 1)
-        nose.tools.assert_equal(e.max_label(), 2)
+        self.assertNotEqual(e.max_label(), 1)
+        self.assertEqual(e.max_label(), 2)
 
     def test_set_no_input(self):
         e = DummyCEImpl('test', 0)
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             e.set_classification,
         )
 
     def test_set_empty_input(self):
         e = DummyCEImpl('test', 0)
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             e.set_classification,
             {}
@@ -103,17 +99,16 @@ class TestClassificationElementAbstract (unittest.TestCase):
     def test_set_input_dict(self):
         e = DummyCEImpl('test', 0)
         v = {1: 0, 2: 1}
-        nose.tools.assert_equal(e.set_classification(v),
-                                v)
+        self.assertEqual(e.set_classification(v),  v)
 
     def test_set_kwargs(self):
         e = DummyCEImpl('test', 0)
-        nose.tools.assert_equal(e.set_classification(a=1, b=0),
-                                {'a': 1, 'b': 0})
+        self.assertEqual(e.set_classification(a=1, b=0),
+                         {'a': 1, 'b': 0})
 
     def test_set_mixed(self):
         e = DummyCEImpl('test', 0)
-        nose.tools.assert_equal(
+        self.assertEqual(
             e.set_classification({'a': .25, 1: .25},
                                  b=.25, d=.25),
             {'a': .25, 1: .25, 'b': .25, 'd': .25}
@@ -123,7 +118,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         # Many classifiers output 1-sum confidence values, but not all (e.g.
         # CNN final layers like AlexNet).
         e = DummyCEImpl('test', 0)
-        nose.tools.assert_equal(
+        self.assertEqual(
             e.set_classification({'a': 1, 1: 1},
                                  b=1, d=1),
             {'a': 1, 1: 1, 'b': 1, 'd': 1}
@@ -139,5 +134,5 @@ class TestClassificationElementAbstractImplGetter (unittest.TestCase):
         #   FileClassificationElement
         m = smqtk.representation.get_classification_element_impls()
         assert len(m) >= 2
-        nose.tools.assert_in('MemoryClassificationElement', m)
-        nose.tools.assert_in('FileClassificationElement', m)
+        self.assertIn('MemoryClassificationElement', m)
+        self.assertIn('FileClassificationElement', m)

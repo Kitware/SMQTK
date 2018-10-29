@@ -160,6 +160,16 @@ class svm_parameter(Structure):
 		for attr, val in zip(attrs, values):
 			print(' %s: %s' % (attr, val))
 
+	def __str__(self):
+		s = ''
+		attrs = svm_parameter._names + list(self.__dict__.keys())
+		values = map(lambda attr: getattr(self, attr), attrs)
+		for attr, val in zip(attrs, values):
+			s += (' %s: %s\n' % (attr, val))
+			s = s.strip()
+
+		return s
+
 	def set_to_default_values(self):
 		self.svm_type = C_SVC;
 		self.kernel_type = RBF

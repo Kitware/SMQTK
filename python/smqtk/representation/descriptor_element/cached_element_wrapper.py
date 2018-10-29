@@ -2,12 +2,11 @@ import threading
 import time
 import six
 
+import six
+
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation import get_descriptor_element_impls
-
-
-__author__ = 'paul.tunison@kitware.com'
 
 
 class CachingDescriptorElement (DescriptorElement):
@@ -147,21 +146,22 @@ class CachingDescriptorElement (DescriptorElement):
             self.cache_thread.join()
 
     def __getstate__(self):
-        return {
-            # Base DescriptorElement stuff
-            "type": self.type(),
-            "uuid": self.uuid(),
-            # This impl's stuff
+        state = super(CachingDescriptorElement, self).__getstate__()
+        state.update({
             "wrapped_element_factory": self.wrapped_element_factory,
             "cache_expiration_timeout": self.cache_expiration_timeout,
             "poll_interval": self.poll_interval
-        }
+        })
+        return state
 
     def __setstate__(self, c):
-        # base-class
-        self._type_label = c['type']
-        self._uuid = c['uuid']
-        # this-class
+        # Support older state version
+        if 'type' in c:
+            self._type_label = c['type']
+            self._uuid = c['uuid']
+        else:
+            super(CachingDescriptorElement, self).__setstate__(c)
+
         self.wrapped_element_factory = c['wrapped_element_factory']
         self.cache_expiration_timeout = c['cache_expiration_timeout']
         self.poll_interval = c['poll_interval']
@@ -246,6 +246,9 @@ class CachingDescriptorElement (DescriptorElement):
         :param new_vec: New vector to contain.
         :type new_vec: numpy.core.multiarray.ndarray
 
+        :returns: Self.
+        :rtype: CachingDescriptorElement
+
         """
         # set source vector and set as current cache
         with self.cache_lock:
@@ -275,6 +278,7 @@ class CachingDescriptorElement (DescriptorElement):
             # Update cache vector and access time
             self.cache_v = new_vec
             self.cache_last_access = time.time()
+        return self
 
     @staticmethod
     def thread_monitor_cache_expiration(elem):

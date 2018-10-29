@@ -15,6 +15,7 @@ from smqtk.utils import plugin
 from smqtk.utils import merge_dict
 from smqtk.web import SmqtkWebApp
 
+
 MIMETYPES = mimetypes.MimeTypes()
 
 
@@ -45,15 +46,15 @@ class DescriptorServiceServer (SmqtkWebApp):
     Additional Configuration
 
 
-
-    .. note:: We will look for an environment variable `DescriptorService_CONFIG` for a
-              string file path to an additional JSON configuration file to consider.
+    .. note:: We will look for an environment variable
+              `DescriptorService_CONFIG` for a string file path to an additional
+              JSON configuration file to consider.
 
     """
 
     @classmethod
     def is_usable(cls):
-      return True
+        return True
 
     @classmethod
     def get_default_config(cls):
@@ -95,15 +96,15 @@ class DescriptorServiceServer (SmqtkWebApp):
         #: :type: dict[str, dict]
         self.generator_label_configs = self.json_config['descriptor_generators']
 
-        # Cache of DescriptorGenerator instances so we don't have to continuously
-        # initialize them as we get requests.
+        # Cache of DescriptorGenerator instances so we don't have to
+        # continuously initialize them as we get requests.
         self.descriptor_cache = {}
         self.descriptor_cache_lock = multiprocessing.RLock()
 
         @self.route("/")
         def list_ingest_labels():
             return flask.jsonify({
-                "labels": sorted(self.generator_label_configs.keys())
+                "labels": sorted(self.generator_label_configs)
             })
 
         @self.route("/all/content_types")
@@ -159,8 +160,8 @@ class DescriptorServiceServer (SmqtkWebApp):
             finished_loop = False
             if data_elem:
                 for l in self.generator_label_configs:
-                    if data_elem.content_type() \
-                            in self.get_descriptor_inst(l).valid_content_types():
+                    if data_elem.content_type() in \
+                            self.get_descriptor_inst(l).valid_content_types():
                         d = None
                         try:
                             d = self.generate_descriptor(data_elem, l)

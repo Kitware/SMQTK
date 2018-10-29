@@ -3,8 +3,6 @@ from __future__ import print_function
 
 from svm import *
 
-import sys
-
 def svm_read_problem(data_file_name):
 	"""
 	svm_read_problem(data_file_name) -> [y, x]
@@ -32,6 +30,8 @@ def svm_load_model(model_file_name):
 	svm_load_model(model_file_name) -> model
 
 	Load a LIBSVM model from model_file_name and return.
+
+        model_file_name's type should be str (Python 2.7) or bytes (Python 3).
 	"""
 	model = libsvm.svm_load_model(model_file_name)
 	if not model:
@@ -53,11 +53,10 @@ def svm_save_model(model_file_name, model):
 	svm_save_model(model_file_name, model) -> None
 
 	Save a LIBSVM model to the file model_file_name.
+
+        model_file_name's type should be str (Python 2.7) or bytes (Python 3).
 	"""
-	if sys.version_info >= (3, 0):
-		libsvm.svm_save_model(bytes(model_file_name, encoding='utf-8'), model)
-	else:
-		libsvm.svm_save_model(model_file_name, model)
+	libsvm.svm_save_model(model_file_name, model)
 
 def evaluations(ty, pv):
 	"""

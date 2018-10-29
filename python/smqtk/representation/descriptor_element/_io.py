@@ -9,6 +9,7 @@ from six.moves import queue
 from six import next
 
 import numpy
+from six.moves import queue
 
 from smqtk.utils import SmqtkObject
 

@@ -1,5 +1,5 @@
-from __future__ import division, print_function
 import unittest
+
 import six
 
 from smqtk.representation.data_element.memory_element \
@@ -12,7 +12,7 @@ from smqtk.representation.key_value.memory import MemoryKeyValueStore
 class TestKeyValueDataSet (unittest.TestCase):
 
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.MEM_STORE = MemoryKeyValueStore()
         cls.MEM_STORE.add_many({
             0: 'a',

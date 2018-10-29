@@ -1,8 +1,6 @@
 import mock
 import unittest
 
-import nose.tools
-
 from smqtk.utils.file_utils import safe_file_write
 
 
@@ -37,7 +35,7 @@ class TestSafeFileWrite (unittest.TestCase):
         m_scd.assert_called_once_with('')
         m_mkstemp.assert_called_once_with(suffix='.txt', prefix='bar.', dir='')
         m_write.assert_called_once_with(test_tmp_fd, expected_bytes)
-        nose.tools.assert_equal(m_remove.call_count, 0)
+        self.assertEqual(m_remove.call_count, 0)
         m_close.assert_called_once_with(test_tmp_fd)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
@@ -66,7 +64,7 @@ class TestSafeFileWrite (unittest.TestCase):
         m_mkstemp.assert_called_once_with(suffix='.txt', prefix='bar.',
                                           dir='foo/other')
         m_write.assert_called_once_with(test_tmp_fd, expected_bytes)
-        nose.tools.assert_equal(m_remove.call_count, 0)
+        self.assertEqual(m_remove.call_count, 0)
         m_close.assert_called_once_with(test_tmp_fd)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
@@ -96,7 +94,7 @@ class TestSafeFileWrite (unittest.TestCase):
         m_mkstemp.assert_called_once_with(suffix='.txt', prefix='bar.',
                                           dir=custom_tmp_dir)
         m_write.assert_called_once_with(test_tmp_fd, expected_bytes)
-        nose.tools.assert_equal(m_remove.call_count, 0)
+        self.assertEqual(m_remove.call_count, 0)
         m_close.assert_called_once_with(test_tmp_fd)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
@@ -125,7 +123,7 @@ class TestSafeFileWrite (unittest.TestCase):
         m_mkstemp.assert_called_once_with(suffix='.txt', prefix='bar.',
                                           dir='/some/absolute/dir')
         m_write.assert_called_once_with(test_tmp_fd, expected_bytes)
-        nose.tools.assert_equal(m_remove.call_count, 0)
+        self.assertEqual(m_remove.call_count, 0)
         m_close.assert_called_once_with(test_tmp_fd)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
@@ -151,7 +149,7 @@ class TestSafeFileWrite (unittest.TestCase):
         # Mock return from write simulating not all bytes being written.
         m_write.return_value = len(expected_bytes) - 3
 
-        nose.tools.assert_raises(
+        self.assertRaises(
             RuntimeError,
             safe_file_write, fp, expected_bytes
         )
@@ -160,8 +158,8 @@ class TestSafeFileWrite (unittest.TestCase):
         m_mkstemp.assert_called_once_with(suffix='.txt', prefix='bar.', dir='')
         m_write.assert_called_once_with(test_tmp_fd, expected_bytes)
         # Remove should now be called on temp file path
-        nose.tools.assert_equal(m_remove.call_count, 1)
+        self.assertEqual(m_remove.call_count, 1)
         m_remove.assert_called_once_with(test_tmp_fp)
         m_close.assert_called_once_with(test_tmp_fd)
         # Rename should no longer be called.
-        nose.tools.assert_equal(m_rename.call_count, 0)
+        self.assertEqual(m_rename.call_count, 0)

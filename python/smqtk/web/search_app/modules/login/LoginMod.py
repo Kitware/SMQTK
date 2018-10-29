@@ -1,10 +1,9 @@
-
-import six
 import flask
 import functools
 import json
 import os.path
 
+import six
 import requests
 
 from smqtk.utils import SmqtkObject
@@ -111,7 +110,7 @@ class LoginMod (SmqtkObject, flask.Blueprint):
 
         :param user_info: The user dictionary as recorded in our users.json
             config file.
-        :type user_info: dict of (str, str or list of str)
+        :type user_info: dict[str, str or list of str]
 
         """
         flask.session['user'] = {

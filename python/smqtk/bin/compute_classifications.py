@@ -169,19 +169,19 @@ def main():
 
     c_labels = classifier.get_labels()
 
-    def make_row(c):
+    def make_row(e):
         """
-        :type c: smqtk.representation.ClassificationElement
+        :type e: smqtk.representation.ClassificationElement
         """
-        c_m = c.get_classification()
-        return [c.uuid] + [c_m[l] for l in c_labels]
+        c_m = e.get_classification()
+        return [e.uuid] + [c_m[l] for l in c_labels]
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)
     file_utils.safe_create_dir(os.path.dirname(output_csv_header_filepath))
     with open(output_csv_header_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
-        w.writerow(['uuid'] + c_labels)
+        w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
     # CSV file
     log.info("Writing CSV data file: %s", output_csv_filepath)

@@ -26,6 +26,12 @@ Configuration details:
             # width or height, respectively, then the crop out as many tiles as
             # neatly fit starting from the axis origin. The remaining pixels are
             # ignored.
+
+        "tile_stride": null | [x, y]
+            # If not null and is a list of two integers, crop out sub-images of
+            # the above width and height (if given) with this stride. When not
+            # this is not provided, the default stride is the same as the tile
+            # width and height.
     },
 
     "brightness_levels": null | int
@@ -53,6 +59,7 @@ import numpy
 
 import smqtk.utils.bin_utils
 import smqtk.utils.file_utils
+import smqtk.utils.parallel
 
 from six.moves import range, zip
 
@@ -135,7 +142,7 @@ def image_crop_quadrant_pyramid(image, n_levels):
                 )
 
 
-def image_crop_tiles(image, tile_width, tile_height):
+def image_crop_tiles(image, tile_width, tile_height, stride=None):
     """
     Crop out tile windows from the base image that have the width and height
     specified.
@@ -144,25 +151,40 @@ def image_crop_tiles(image, tile_width, tile_height):
     height, respectively, then the crop out as many tiles as neatly fit starting
     from the axis origin. The remaining pixels are ignored.
 
-    :param image: Image to crop tiles from
+    :param image: Image to crop tiles from.
     :type image: PIL.Image.Image
 
     :param tile_width: Tile crop width in pixels.
     :type tile_width: int
+
     :param tile_height: Tile crop height in pixels.
     :type tile_height: int
-    :return: Generator yielding tuples containing a cropped image and its
-        row and column position in the original image.
-    :rtype: __generator[(int, int, PIL.Image.Image)]
-    """
-    c_num = image.width // tile_width
-    r_num = image.height // tile_height
 
-    for r in range(r_num):
-        for c in range(c_num):
-            t = image.crop([c*tile_width, r*tile_height,
-                            (c+1)*tile_width, (r+1)*tile_height])
-            yield (r, c, t)
+    :param stride: Optional tuple of integer pixel stride for cropping out sub-
+        images. When this is None, the stride is the same as the width and
+        height of the requested sub-images.
+    :type stride: None | (int, int)
+
+    :return: Generator yielding tuples containing a cropped image and its upper-
+        left xy position in the original image.
+    :rtype: __generator[(int, int, PIL.Image.Image)]
+
+    """
+    if stride:
+        stride_x, stride_y = map(int, stride)
+    else:
+        stride_x = tile_width
+        stride_y = tile_height
+
+    # upper-left xy pixel coordinates for sub-images.
+    y = 0
+    while (y + tile_height) < image.height:
+        x = 0
+        while (x + tile_width) < image.width:
+            t = image.crop([x, y, x+tile_width, y+tile_height])
+            yield (x, y, t)
+            x += stride_x
+        y += stride_y
 
 
 def image_brightness_intervals(image, n):
@@ -209,8 +231,8 @@ def image_contrast_intervals(image, n):
 
 def generate_image_transformations(image_path,
                                    crop_center_n, crop_quadrant_levels,
-                                   crop_tile_shape,
-                                   brigntness_intervals,
+                                   crop_tile_shape, crop_tile_stride,
+                                   brightness_intervals,
                                    contrast_intervals,
                                    output_dir=None,
                                    output_ext='.png'):
@@ -235,14 +257,14 @@ def generate_image_transformations(image_path,
     p_base = os.path.join(output_dir, p_base)
     image = PIL.Image.open(image_path).convert('RGB')
 
-    def save_image(i, suffixes):
+    def save_image(img, suffixes):
         """
         Save an image based on source image basename and an iterable of suffix
         parts that will be separated by periods.
         """
         fn = '.'.join([p_base] + list(suffixes)) + p_ext
         log.debug("Saving: %s", fn)
-        i.save(fn)
+        img.save(fn)
 
     if crop_center_n:
         log.info("Computing center crops")
@@ -258,18 +280,22 @@ def generate_image_transformations(image_path,
             save_image(c, [tag, str(l), "q_{:d}_{:d}".format(i, j)])
 
     if crop_tile_shape and crop_tile_shape[0] > 0 and crop_tile_shape[1] > 0:
-        log.info("Cropping %dx%d pixel tiles from images"
-                 % tuple(crop_tile_shape))
         tag = "crop_tiles"
         t_width = crop_tile_shape[0]
         t_height = crop_tile_shape[1]
-        for r, c, i in image_crop_tiles(image, t_width, t_height):
-            save_image(i, [tag, '%dx%d' % (t_width, t_height), 'r%d' % r,
-                           'c%d' % c])
+        log.info("Cropping %dx%d pixel tiles from images with stride %s"
+                 % (t_width, t_height, crop_tile_stride))
+        # List needed to iterate generator.
+        list(smqtk.utils.parallel.parallel_map(
+            lambda x, y, ii:
+                save_image(ii, [tag,
+                                '%dx%d+%d+%d' % (t_width, t_height, x, y)]),
+            image_crop_tiles(image, t_width, t_height, crop_tile_stride)
+        ))
 
-    if brigntness_intervals:
+    if brightness_intervals:
         log.info("Computing brightness variants")
-        for b, i in image_brightness_intervals(image, brigntness_intervals):
+        for b, i in image_brightness_intervals(image, brightness_intervals):
             save_image(i, ['brightness', str(b)])
 
     if contrast_intervals:
@@ -286,7 +312,10 @@ def default_config():
             # 0 means disabled, 2 meaning 2x2 and 4x4
             "quadrant_pyramid_levels": None,
             # Tile shape or None for no tiling
-            "tile_shape": None
+            "tile_shape": None,
+            # The stride of tiles top crop out. This defaults to the height and
+            # width of the tiles to create non-overlapping chips.
+            "tile_stride": None,
         },
         "brightness_levels": None,
         "contrast_levels": None,
@@ -323,13 +352,14 @@ def main():
     crop_center_levels = config['crop']['center_levels']
     crop_quad_levels = config['crop']['quadrant_pyramid_levels']
     crop_tile_shape = config['crop']['tile_shape']
+    crop_tile_stride = config['crop']['tile_stride']
     b_levels = config['brightness_levels']
     c_levels = config['contrast_levels']
 
     generate_image_transformations(
         input_image_path,
         crop_center_levels, crop_quad_levels,
-        crop_tile_shape,
+        crop_tile_shape, crop_tile_stride,
         b_levels, c_levels,
         output_dir
     )

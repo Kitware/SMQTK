@@ -2,7 +2,6 @@ from __future__ import division, print_function
 import random
 import unittest
 
-import nose.tools
 import numpy
 # noinspection PyUnresolvedReferences
 from six.moves import range
@@ -52,23 +51,23 @@ class TestBitUtils (unittest.TestCase):
 
     def test_int_to_bit_vector_large_invalid_bits(self):
         # Cannot represent 5 in binary using 1 bit.
-        nose.tools.assert_raises(
+        self.assertRaises(
             ValueError,
             bit_utils.int_to_bit_vector_large,
             5, 1
         )
 
     def test_popcount(self):
-        nose.tools.assert_equal(bit_utils.popcount(1), 1)
-        nose.tools.assert_equal(bit_utils.popcount(2), 1)
-        nose.tools.assert_equal(bit_utils.popcount(3), 2)
-        nose.tools.assert_equal(bit_utils.popcount(2 ** 16), 1)
-        nose.tools.assert_equal(bit_utils.popcount(2**16 - 1), 16)
-        nose.tools.assert_equal(bit_utils.popcount(2 ** 32), 1)
-        nose.tools.assert_equal(bit_utils.popcount(2 ** 32 - 1), 32)
+        self.assertEqual(bit_utils.popcount(1), 1)
+        self.assertEqual(bit_utils.popcount(2), 1)
+        self.assertEqual(bit_utils.popcount(3), 2)
+        self.assertEqual(bit_utils.popcount(2 ** 16), 1)
+        self.assertEqual(bit_utils.popcount(2**16 - 1), 16)
+        self.assertEqual(bit_utils.popcount(2 ** 32), 1)
+        self.assertEqual(bit_utils.popcount(2 ** 32 - 1), 32)
 
     def test_popcount_0(self):
-        nose.tools.assert_equal(bit_utils.popcount(0), 0)
+        self.assertEqual(bit_utils.popcount(0), 0)
 
     def test_popcount_limits(self):
         # Make sure documented integer limit is truthful.
@@ -82,5 +81,5 @@ class TestBitUtils (unittest.TestCase):
             # Test method
             v_pop_count = bit_utils.popcount(v)
 
-            nose.tools.assert_equal(v_pop_count, v_bin_count,
-                                    'popcount failed for integer %d' % v)
+            self.assertEqual(v_pop_count, v_bin_count,
+                             'popcount failed for integer %d' % v)

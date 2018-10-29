@@ -51,6 +51,11 @@ Docker
         - Updated README for better instruction on creating the docker image
           first.
 
+Misc.
+
+    - Update requests package version in ``requirements.txt`` file due to
+      GitHub security alert.
+
 Utilities
     - Fixed broken large file writing in Python 2, creating parity
       with Python 3.

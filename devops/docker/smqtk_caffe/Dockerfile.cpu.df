@@ -10,14 +10,14 @@ RUN rm /bin/sh \
         build-essential python python-pip git cmake \
         # Caffe Dependencies
         libatlas-base-dev libatlas-dev libboost-all-dev libprotobuf-dev \
-        protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev 
-
- # Python dependencies for pycaffe
-RUN pip install --upgrade pip
-RUN pip install numpy scikit-image protobuf \
+        protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev \
  # Clean products of ``update``
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+ # Python dependencies for pycaffe
+RUN pip install --upgrade pip
+RUN pip install numpy scikit-image protobuf
 
 #
 # Caffe Install

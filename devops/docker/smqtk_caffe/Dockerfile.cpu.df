@@ -13,7 +13,6 @@ RUN rm /bin/sh \
         protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev 
 
  # Python dependencies for pycaffe
-RUN pip install -U pip 
 RUN pip install --upgrade pip
 RUN pip install numpy scikit-image protobuf \
  # Clean products of ``update``

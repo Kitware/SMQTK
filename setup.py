@@ -133,9 +133,7 @@ setuptools.setup(
         'jinja2',
         'matplotlib',
         'numpy',
-        # Pinning Pillow version due to large-image conversion issue in versions
-        # 4.1.0 and up.
-        'pillow==4.0.0',
+        'pillow',
         'pymongo',
         'requests',
         'scikit-learn',

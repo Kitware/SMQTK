@@ -10,7 +10,7 @@ RUN rm /bin/sh \
         build-essential python python-pip git cmake \
         # Caffe Dependencies
         libatlas-base-dev libatlas-dev libboost-all-dev libprotobuf-dev \
-        protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev \
+        protobuf-compiler libgoogle-glog-dev libgflags-dev libhdf5-dev 
  # Python dependencies for pycaffe
 RUN pip install -U pip
 RUN pip install --upgrade pip 

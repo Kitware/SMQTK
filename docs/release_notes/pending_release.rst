@@ -53,7 +53,8 @@ Docker
 
 Misc.
 
-    - Update requests package version in ``requirements.txt`` file due to
+    - Update requests and flask package version in ``requirements.txt`` and
+      ``devops/docker/smqtk_wrapper_python/requirements.txt`` files due to
       GitHub security alert.
 
 Utilities

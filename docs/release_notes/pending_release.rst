@@ -51,6 +51,10 @@ Docker
         - Updated README for better instruction on creating the docker image
           first.
 
+    - Caffe image
+    
+        - Resolved an issue with upgrading pip for a newer version of matplotlib.
+
 Misc.
 
     - Update requests and flask package version in ``requirements.txt`` and

@@ -2,7 +2,8 @@
 Example of a module that implements implementations but states that nothing is
 exported by setting the helper variable to ``None``.
 """
-from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
+from smqtk.tests.utils.test_plugin_dir.internal_plugins.interface import \
+    DummyInterface
 
 
 class ImplSkipModule (DummyInterface):

@@ -1,11 +1,6 @@
 import abc
-import os
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.utils.plugin import get_plugins
-
-
-__author__ = "paul.tunison@kitware.com"
 
 
 class RelevancyIndex (SmqtkAlgorithm):

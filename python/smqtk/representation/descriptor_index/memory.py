@@ -2,7 +2,12 @@ import six
 from six.moves import cPickle as pickle
 
 from smqtk.representation import DataElement, DescriptorIndex
-from smqtk.utils import merge_dict, plugin, SimpleTimer
+from smqtk.utils import merge_dict, SimpleTimer
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 
 
 class MemoryDescriptorIndex (DescriptorIndex):
@@ -50,7 +55,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
 
         """
         c = super(MemoryDescriptorIndex, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(DataElement.get_impls())
+        c['cache_element'] = make_default_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -77,8 +82,8 @@ class MemoryDescriptorIndex (DescriptorIndex):
         # Optionally construct cache element from sub-config.
         if config_dict['cache_element'] \
                 and config_dict['cache_element']['type']:
-            e = plugin.from_plugin_config(config_dict['cache_element'],
-                                          DataElement.get_impls())
+            e = from_config_dict(config_dict['cache_element'],
+                                 DataElement.get_impls())
             config_dict['cache_element'] = e
         else:
             config_dict['cache_element'] = None
@@ -121,7 +126,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         })
         if self.cache_element:
             merge_dict(c['cache_element'],
-                       plugin.to_plugin_config(self.cache_element))
+                       to_config_dict(self.cache_element))
         return c
 
     def cache_table(self):

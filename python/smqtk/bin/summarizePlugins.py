@@ -14,7 +14,10 @@ import smqtk.algorithms.nn_index.hash_index
 import smqtk.algorithms.nn_index.lsh.functors
 import smqtk.representation
 import smqtk.utils.bin_utils
-import smqtk.utils.plugin
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def cli():
@@ -45,17 +48,18 @@ def main():
     collect_defaults = args.defaults
     defaults = {}
 
-    def collect_configs(name, impl_map):
+    def collect_configs(name, impl_set):
         """
         :type name: str
-        :type impl_map: dict
+        :type impl_set: dict
         """
         if collect_defaults:
-            defaults[name] = smqtk.utils.plugin.make_config(impl_map)
+            defaults[name] = make_default_config(impl_set)
 
     log = logging.getLogger("smqtk.checkPlugins")
 
     # Key is the interface type name
+    #: :type: dict[str, dict[str, type]]
     plugin_info = {}
     # List of plugin_info keys in order they were added
     plugin_type_list = []
@@ -65,15 +69,15 @@ def main():
         Record discoverable implementations for an interface class type.
 
         :param interface_t: Interface class type.
-        :type interface_t: smqtk.utils.SmqtkObject
+        :type interface_t: type[smqtk.utils.plugin.Pluggable|smqtk.utils.configuration.Configurable]
 
         """
         type_name = interface_t.__name__
         log.info("Checking %s plugins", type_name)
         plugin_type_list.append(type_name)
-        impl_map = interface_t.get_impls()
-        plugin_info[plugin_type_list[-1]] = impl_map
-        collect_configs(type_name, impl_map)
+        impl_set = interface_t.get_impls()
+        plugin_info[plugin_type_list[-1]] = impl_set
+        collect_configs(type_name, impl_set)
 
     #
     # smqtk.representation
@@ -103,10 +107,10 @@ def main():
         print("[Type]", k)
         print('=' * (7 + len(k)))
         print()
-        for l, t in plugin_info[k].items():
-            print(":: " + l)
+        for t in plugin_info[k]:
+            print(":: " + t.__name__)
             if t.__doc__:
-                print(t.__doc__.rstrip())
+                print(t.__doc__.rstrip().encode('utf-8'))
                 print()
         print()
         print()

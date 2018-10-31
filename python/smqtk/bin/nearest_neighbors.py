@@ -19,7 +19,10 @@ from smqtk.utils.bin_utils import (
 
 from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.representation import DescriptorIndex
-from smqtk.utils import plugin
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 __author__ = 'dan.lamanna@kitware.com'
@@ -45,8 +48,8 @@ def get_cli_parser():
 def get_default_config():
     return {
         'plugins': {
-            'descriptor_set': plugin.make_config(DescriptorIndex.get_impls()),
-            'nn_index': plugin.make_config(NearestNeighborsIndex.get_impls())
+            'descriptor_set': make_default_config(DescriptorIndex.get_impls()),
+            'nn_index': make_default_config(NearestNeighborsIndex.get_impls())
         }
     }
 
@@ -64,11 +67,11 @@ def main():
     log.debug('Showing debug messages.')
 
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_set = plugin.from_plugin_config(
+    descriptor_set = from_config_dict(
         config['plugins']['descriptor_set'], DescriptorIndex.get_impls()
     )
     #: :type: smqtk.algorithms.NearestNeighborsIndex
-    nearest_neighbor_index = plugin.from_plugin_config(
+    nearest_neighbor_index = from_config_dict(
         config['plugins']['nn_index'], NearestNeighborsIndex.get_impls()
     )
 

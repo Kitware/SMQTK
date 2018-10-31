@@ -33,12 +33,6 @@ class DummyHI (HashIndex):
 
 class TestHashIndex (unittest.TestCase):
 
-    def test_get_impls(self):
-        m = HashIndex.get_impls()
-        self.assertIsInstance(m, dict)
-        for cls in six.itervalues(m):
-            self.assertTrue(issubclass(cls, HashIndex))
-
     def test_empty_iterable_exception(self):
         v = DummyHI._empty_iterable_exception()
         self.assertIsInstance(v, ValueError)

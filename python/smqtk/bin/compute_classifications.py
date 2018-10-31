@@ -30,7 +30,10 @@ from smqtk.utils import (
     bin_utils,
     file_utils,
     parallel,
-    plugin,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -48,11 +51,11 @@ def default_config():
             }
         },
         "plugins": {
-            "classifier": plugin.make_config(Classifier.get_impls()),
-            "classification_factory": plugin.make_config(
+            "classifier": make_default_config(Classifier.get_impls()),
+            "classification_factory": make_default_config(
                 ClassificationElement.get_impls()
             ),
-            "descriptor_index": plugin.make_config(
+            "descriptor_index": make_default_config(
                 DescriptorIndex.get_impls()
             ),
         }
@@ -107,7 +110,7 @@ def main():
 
     log.info("Initializing descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
         DescriptorIndex.get_impls()
     )
@@ -119,7 +122,7 @@ def main():
 
     log.info("Initializing classifier")
     #: :type: smqtk.algorithms.Classifier
-    classifier = plugin.from_plugin_config(
+    classifier = from_config_dict(
         config['plugins']['classifier'], Classifier.get_impls()
     )
 

@@ -1,8 +1,8 @@
 from smqtk.representation import \
     SmqtkRepresentation, \
     DescriptorElement
-from smqtk.utils.plugin import make_config
 from smqtk.utils import merge_dict
+from smqtk.utils.configuration import make_default_config
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -47,7 +47,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(DescriptorElement.get_impls())
+        return make_default_config(DescriptorElement.get_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
@@ -75,10 +75,11 @@ class DescriptorElementFactory (SmqtkRepresentation):
             merge_dict(merged_config, config_dict)
             config_dict = merged_config
 
-        return DescriptorElementFactory(
-            DescriptorElement.get_impls()[config_dict['type']],
-            config_dict[config_dict['type']]
-        )
+        de_type_map = {t.__name__: t
+                       for t in DescriptorElement.get_impls()}
+        de_type = de_type_map[config_dict['type']]
+        de_conf = config_dict[config_dict['type']]
+        return DescriptorElementFactory(de_type, de_conf)
 
     def get_config(self):
         d_type_name = self._d_type.__name__

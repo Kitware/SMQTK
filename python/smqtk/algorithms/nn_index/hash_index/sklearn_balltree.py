@@ -7,7 +7,12 @@ from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.representation import DataElement
-from smqtk.utils import merge_dict, plugin
+from smqtk.utils import merge_dict
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 
 
 class SkLearnBallTreeHashIndex (HashIndex):
@@ -46,7 +51,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         c = super(SkLearnBallTreeHashIndex, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(DataElement.get_impls())
+        c['cache_element'] = make_default_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -78,8 +83,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
         if config_dict['cache_element'] and \
                 config_dict['cache_element']['type']:
             cache_element = \
-                plugin.from_plugin_config(config_dict['cache_element'],
-                                          DataElement.get_impls())
+                from_config_dict(config_dict['cache_element'],
+                                 DataElement.get_impls())
         config_dict['cache_element'] = cache_element
 
         return super(SkLearnBallTreeHashIndex, cls).from_config(config_dict,
@@ -119,8 +124,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
         })
         if self.cache_element:
             c['cache_element'] = merge_dict(c['cache_element'],
-                                            plugin.to_plugin_config(
-                                                self.cache_element))
+                                            to_config_dict(self.cache_element))
         return c
 
     def save_model(self):

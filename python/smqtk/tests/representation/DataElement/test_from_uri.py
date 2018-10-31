@@ -95,10 +95,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
         the ``from_uri`` class method
         """
         def impl_generator():
-            return {
-                "ur1": UnresolvableElement,
-                "ur2": UnresolvableElement,
-            }
+            return {UnresolvableElement}
 
         self.assertRaises(
             smqtk.exceptions.InvalidUriError,
@@ -112,10 +109,7 @@ class TestDataElementHighLevelFromUri (unittest.TestCase):
         When at least one plugin can resolve a URI
         """
         def impl_generator():
-            return {
-                "e1": UnresolvableElement,
-                "e2": ResolvableElement,
-            }
+            return {UnresolvableElement, ResolvableElement}
 
         # URI that can be resolved by ResolvableElement
         self.assertIsInstance(

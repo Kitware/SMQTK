@@ -3,7 +3,8 @@ Example where only explicitly listed classes are exported even though others are
 implemented.
 """
 
-from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
+from smqtk.tests.utils.test_plugin_dir.internal_plugins.interface import \
+    DummyInterface
 
 
 class ImplDoExport (DummyInterface):

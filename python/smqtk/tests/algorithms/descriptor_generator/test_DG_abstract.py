@@ -13,8 +13,8 @@ class TestGetDescriptorGeneratorImpls (unittest.TestCase):
     def test_get_descriptors(self):
         m = DescriptorGenerator.get_impls()
         # Currently no types that are guaranteed available
-        self.assertIsInstance(m, dict, "Should return a dictionary of "
-                                       "class label-to-types")
+        self.assertIsInstance(m, set, "Should return a set of "
+                                      "DescriptorGenerator class types")
 
 
 class DummyDescriptorGenerator (DescriptorGenerator):

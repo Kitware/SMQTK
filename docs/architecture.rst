@@ -133,5 +133,5 @@ Function and Interface Reference
 .. autoclass:: smqtk.utils.plugin.Pluggable
    :members:
 
-.. autoclass:: smqtk.utils.configurable_interface.Configurable
+.. autoclass:: smqtk.utils.configuration.Configurable
    :members:

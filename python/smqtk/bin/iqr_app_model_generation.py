@@ -18,8 +18,10 @@ import six
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import bin_utils, jsmin, plugin
-from smqtk.web.iqr_service import IqrService
+from smqtk.utils import bin_utils, jsmin
+from smqtk.utils.configuration import (
+    from_config_dict,
+)
 
 
 __author__ = 'paul.tunison@kitware.com'
@@ -121,20 +123,19 @@ def main():
     log.info("Instantiating plugins")
     #: :type: representation.DataSet
     data_set = \
-        plugin.from_plugin_config(data_set_config,
-                                  representation.DataSet.get_impls())
+        from_config_dict(data_set_config, representation.DataSet.get_impls())
     descriptor_elem_factory = \
         representation.DescriptorElementFactory \
         .from_config(descriptor_elem_factory_config)
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
-        plugin.from_plugin_config(descriptor_generator_config,
-                                  algorithms.DescriptorGenerator.get_impls())
+        from_config_dict(descriptor_generator_config,
+                         algorithms.DescriptorGenerator.get_impls())
 
     #: :type: algorithms.NearestNeighborsIndex
     nn_index = \
-        plugin.from_plugin_config(nn_index_config,
-                                  algorithms.NearestNeighborsIndex.get_impls())
+        from_config_dict(nn_index_config,
+                         algorithms.NearestNeighborsIndex.get_impls())
 
     #
     # Build models

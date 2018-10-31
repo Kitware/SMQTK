@@ -1,4 +1,5 @@
-from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
+from smqtk.tests.utils.test_plugin_dir.internal_plugins.interface import \
+    DummyInterface
 
 
 class ImplExternal4 (DummyInterface):

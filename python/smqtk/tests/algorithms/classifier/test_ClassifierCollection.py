@@ -119,9 +119,7 @@ class TestClassifierCollection (unittest.TestCase):
     def test_from_config_with_content(self, m_get_impls):
         # Mocking implementation getter to only return the dummy
         # implementation.
-        m_get_impls.side_effect = lambda: {
-            'DummyClassifier': DummyClassifier,
-        }
+        m_get_impls.side_effect = lambda: {DummyClassifier}
 
         ccol = ClassifierCollection.from_config({
             'a': {'DummyClassifier': {}, 'type': 'DummyClassifier'},

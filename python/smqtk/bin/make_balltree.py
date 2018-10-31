@@ -9,12 +9,14 @@ from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
 import smqtk.representation
 import smqtk.utils.bin_utils
 import smqtk.utils.bit_utils
-import smqtk.utils.plugin
-
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 def default_config():
     return {
-        "hash2uuid_kv_store": smqtk.utils.plugin.make_config(
+        "hash2uuid_kv_store": make_default_config(
             smqtk.representation.KeyValueStore.get_impls()
         ),
         "sklearn_balltree": SkLearnBallTreeHashIndex.get_default_config(),
@@ -36,7 +38,7 @@ def main():
     bit_len = int(config['itq_bit_length'])
     log.info("Loading hash2uuid KeyValue store")
     #: :type: smqtk.representation.KeyValueStore
-    hash2uuid_kv_store = smqtk.utils.plugin.from_plugin_config(
+    hash2uuid_kv_store = from_config_dict(
         config['hash2uuid_kv_store'],
         smqtk.representation.KeyValueStore.get_impls()
     )

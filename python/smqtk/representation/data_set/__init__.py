@@ -1,12 +1,11 @@
 import abc
 import collections
-import os
 
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils import plugin
+from smqtk.utils.plugin import Pluggable
 
 
-class DataSet (collections.Set, SmqtkRepresentation, plugin.Pluggable):
+class DataSet (collections.Set, SmqtkRepresentation, Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on

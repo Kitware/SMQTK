@@ -122,16 +122,3 @@ class TestClassificationElementAbstract (unittest.TestCase):
                                  b=1, d=1),
             {'a': 1, 1: 1, 'b': 1, 'd': 1}
         )
-
-
-class TestClassificationElementAbstractImplGetter (unittest.TestCase):
-
-    def test_get_plugins(self):
-        # There are at least 2 internally provided implementations that will
-        # always be available:
-        #   MemoryClassificationElement
-        #   FileClassificationElement
-        m = smqtk.representation.ClassificationElement.get_impls()
-        assert len(m) >= 2
-        self.assertIn('MemoryClassificationElement', m)
-        self.assertIn('FileClassificationElement', m)

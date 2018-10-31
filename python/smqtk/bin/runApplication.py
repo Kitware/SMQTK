@@ -75,7 +75,8 @@ def main():
                                  logging.WARN - (20*debug_server))
     log = logging.getLogger(__name__)
 
-    web_applications = smqtk.web.get_web_applications()
+    webapp_types = smqtk.web.SmqtkWebApp.get_impls()
+    web_applications = {t.__name__: t for t in webapp_types}
 
     if args.list:
         log.info("")

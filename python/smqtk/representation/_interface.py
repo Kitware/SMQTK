@@ -1,4 +1,5 @@
-from smqtk.utils import Configurable, SmqtkObject
+from smqtk.utils import SmqtkObject
+from smqtk.utils.configuration import Configurable
 
 
 #  noinspection PyAbstractClass

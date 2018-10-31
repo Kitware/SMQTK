@@ -28,7 +28,7 @@ if FlannNearestNeighborsIndex.is_usable():
         def test_impl_findable(self):
             # Already here because the implementation is reporting itself as
             # usable.
-            self.assertIn(FlannNearestNeighborsIndex.__name__,
+            self.assertIn(FlannNearestNeighborsIndex,
                           NearestNeighborsIndex.get_impls())
 
         def test_configuration(self):

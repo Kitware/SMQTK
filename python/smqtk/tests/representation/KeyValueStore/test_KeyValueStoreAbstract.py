@@ -202,12 +202,3 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s = DummyKVStore()
         s.TEST_READ_ONLY = False
         s.clear()
-
-
-def test_kvstore_impl_getter():
-    # At least the in-memory implementation should always be available, so make
-    # sure at least that is returned from the getter.
-    d = KeyValueStore.get_impls()
-    assert isinstance(d, dict)
-    assert 'MemoryKeyValueStore' in d
-    assert d['MemoryKeyValueStore'] == MemoryKeyValueStore

@@ -71,7 +71,6 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy
-import six
 import sklearn.model_selection
 import sklearn.metrics
 import six
@@ -86,7 +85,10 @@ from smqtk.representation.classification_element.memory import \
 from smqtk.utils import (
     bin_utils,
     file_utils,
-    plugin,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -97,9 +99,9 @@ def default_config():
     return {
         "plugins": {
             "supervised_classifier":
-                plugin.make_config(SupervisedClassifier.get_impls()),
+                make_default_config(SupervisedClassifier.get_impls()),
             "descriptor_index":
-                plugin.make_config(DescriptorIndex.get_impls()),
+                make_default_config(DescriptorIndex.get_impls()),
         },
         "cross_validation": {
             "truth_labels": None,
@@ -149,7 +151,7 @@ def classifier_kfold_validation():
     log.info("Initializing DescriptorIndex (%s)",
              config['plugins']['descriptor_index']['type'])
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
         DescriptorIndex.get_impls()
     )
@@ -213,7 +215,7 @@ def classifier_kfold_validation():
 
         log.info("-- creating classifier")
         #: :type: SupervisedClassifier
-        classifier = plugin.from_plugin_config(
+        classifier = from_config_dict(
             classifier_config,
             SupervisedClassifier.get_impls()
         )

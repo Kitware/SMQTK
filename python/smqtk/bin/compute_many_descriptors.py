@@ -17,24 +17,28 @@ from smqtk.representation import (
     DescriptorIndex,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.utils import parallel
 from smqtk.utils.bin_utils import (
     utility_main_helper,
     report_progress,
     basic_cli_parser,
 )
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 from smqtk.utils.image import is_valid_element
-from smqtk.utils import plugin, parallel
 
 
 def default_config():
     return {
         "descriptor_generator":
-            plugin.make_config(DescriptorGenerator.get_impls()),
+            make_default_config(DescriptorGenerator.get_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "descriptor_index":
-            plugin.make_config(DescriptorIndex.get_impls()),
+            make_default_config(DescriptorIndex.get_impls()),
         "optional_data_set":
-            plugin.make_config(DataSet.get_impls())
+            make_default_config(DataSet.get_impls())
     }
 
 
@@ -75,23 +79,23 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
 
     log.info("Making descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(c['descriptor_index'],
-                                                 DescriptorIndex.get_impls())
+    descriptor_index = from_config_dict(c['descriptor_index'],
+                                        DescriptorIndex.get_impls())
 
+    # ``data_set`` added to within the ``iter_valid_elements`` function.
     data_set = None
     if c['optional_data_set']['type'] is None:
         log.info("Not saving loaded data elements to data set")
     else:
         log.info("Initializing data set to append to")
         #: :type: smqtk.representation.DataSet
-        data_set = plugin.from_plugin_config(c['optional_data_set'],
-                                             DataSet.get_impls())
+        data_set = from_config_dict(c['optional_data_set'], DataSet.get_impls())
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
     #: :type: smqtk.algorithms.DescriptorGenerator
-    generator = plugin.from_plugin_config(c['descriptor_generator'],
-                                          DescriptorGenerator.get_impls())
+    generator = from_config_dict(c['descriptor_generator'],
+                                 DescriptorGenerator.get_impls())
 
     def iter_valid_elements():
         def is_valid(file_path):

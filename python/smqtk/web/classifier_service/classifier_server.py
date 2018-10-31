@@ -24,8 +24,12 @@ from smqtk.representation import (
     DescriptorElementFactory,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-import smqtk.utils.plugin
 from smqtk.utils import prob_utils
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 from smqtk.utils.web import make_response_json
 import smqtk.web
 
@@ -40,6 +44,7 @@ else:
     if six.PY2:
         JSON_DECODE_EXCEPTION = ValueError
     else:
+        # noinspection PyUnresolvedReferences
         JSON_DECODE_EXCEPTION = json.JSONDecodeError
 
 
@@ -103,14 +108,14 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         c[cls.CONFIG_CLASSIFICATION_FACTORY] = \
             ClassificationElementFactory.get_default_config()
         # Descriptor generator for new content
-        c[cls.CONFIG_DESCRIPTOR_GENERATOR] = smqtk.utils.plugin.make_config(
+        c[cls.CONFIG_DESCRIPTOR_GENERATOR] = make_default_config(
             DescriptorGenerator.get_impls()
         )
         # Descriptor factory for new content descriptors
         c[cls.CONFIG_DESCRIPTOR_FACTORY] = \
             DescriptorElementFactory.get_default_config()
         # from-IQR-state *supervised* classifier configuration
-        c[cls.CONFIG_IQR_CLASSIFIER] = smqtk.utils.plugin.make_config(
+        c[cls.CONFIG_IQR_CLASSIFIER] = make_default_config(
             SupervisedClassifier.get_impls()
         )
         c[cls.CONFIG_IMMUTABLE_LABELS] = []
@@ -149,7 +154,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             json_config[self.CONFIG_DESCRIPTOR_FACTORY]
         )
         #: :type: smqtk.algorithms.DescriptorGenerator
-        self.descriptor_gen = smqtk.utils.plugin.from_plugin_config(
+        self.descriptor_gen = from_config_dict(
             json_config[self.CONFIG_DESCRIPTOR_GENERATOR],
             smqtk.algorithms.DescriptorGenerator.get_impls()
         )
@@ -316,8 +321,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 (Optional) JSON-encoded dictionary of labels to floats. Higher
                 values lower the gain on the class and therefore correspond to
                 higher precision (and lower recall) for the class (and higher
-                recall/lower precision for other classes). This translates git to
-                calling ``smqtk.utils.prob_utils.adjust_proba``.
+                recall/lower precision for other classes). This translates git
+                to calling ``smqtk.utils.prob_utils.adjust_proba``.
 
         Possible error codes:
             400
@@ -604,7 +609,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Make a classifier instance from the stored config for IQR
         # session-based classifiers.
         #: :type: SupervisedClassifier
-        classifier = smqtk.utils.plugin.from_plugin_config(
+        classifier = from_config_dict(
             self.iqr_state_classifier_config,
             SupervisedClassifier.get_impls()
         )

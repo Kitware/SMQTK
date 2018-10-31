@@ -14,7 +14,12 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DescriptorIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin, merge_dict
+from smqtk.utils import merge_dict
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 from smqtk.utils.file_utils import safe_create_dir
 
 
@@ -81,7 +86,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(MRPTNearestNeighborsIndex, cls).get_default_config()
 
-        di_default = plugin.make_config(DescriptorIndex.get_impls())
+        di_default = make_default_config(DescriptorIndex.get_impls())
         default['descriptor_set'] = di_default
 
         return default
@@ -114,8 +119,8 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             cfg = config_dict
 
         cfg['descriptor_set'] = \
-            plugin.from_plugin_config(cfg['descriptor_set'],
-                                      DescriptorIndex.get_impls())
+            from_config_dict(cfg['descriptor_set'],
+                             DescriptorIndex.get_impls())
 
         return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
 
@@ -212,7 +217,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
     def get_config(self):
         return {
-            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
+            "descriptor_set": to_config_dict(self._descriptor_set),
             "index_filepath": self._index_filepath,
             "parameters_filepath": self._index_param_filepath,
             "read_only": self._read_only,

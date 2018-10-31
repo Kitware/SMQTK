@@ -1,30 +1,21 @@
 import abc
 import numpy
-import os
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.utils import ContentTypeValidator
 from smqtk.utils.parallel import parallel_map
-from smqtk.utils.plugin import get_plugins
 
 
 DFLT_DESCRIPTOR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})
 
 
-class DescriptorGenerator (SmqtkAlgorithm):
+class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
     """
     Base abstract Feature Descriptor interface
     """
-
-    @abc.abstractmethod
-    def valid_content_types(self):
-        """
-        :return: A set valid MIME type content types that this descriptor can
-            handle.
-        :rtype: set[str]
-        """
 
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
                            overwrite=False):
@@ -44,7 +35,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
             ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
-        :param ot staverwrite: Whether or not to force re-computation of a descriptor
+        :param overwrite: Whether or not to force re-computation of a descriptor
             vector for the given data even when there exists a precomputed
             vector in the generated DescriptorElement as generated from the
             provided factory. This will overwrite the persistently stored vector

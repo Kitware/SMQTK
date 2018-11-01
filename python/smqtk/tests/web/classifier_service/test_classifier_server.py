@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
+from __future__ import (absolute_import, division, print_function)
 
 import base64
 import json
@@ -623,7 +622,13 @@ class TestClassifierService (unittest.TestCase):
                 rv, "Label already exists in classifier collection."
             )
 
-    @mock.patch.dict(os.environ, {"CLASSIFIER_PATH": STUB_CLASSIFIER_MOD_PATH})
+    @mock.patch.dict(os.environ, {
+        Pluggable.PLUGIN_ENV_VAR:
+            OS_ENV_PATH_SEP.join([
+                STUB_CLASSIFIER_MOD_PATH,
+                'smqtk.tests.web.classifier_service.dummy_descriptor_generator',
+            ])
+    })
     def test_add_iqr_state_classifier_simple(self):
         """
         Test calling IQR classifier add endpoint with a simple IQR Session

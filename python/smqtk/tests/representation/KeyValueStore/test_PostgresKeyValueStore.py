@@ -1,5 +1,4 @@
 import mock
-import pickle
 import unittest
 
 from smqtk.exceptions import ReadOnlyError
@@ -10,6 +9,8 @@ if PostgresKeyValueStore.is_usable():
 
     class TestPostgresKeyValueStore (unittest.TestCase):
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
         def test_remove_readonly(self, m_gcp):
             """ Test that we cannot remove from readonly instance. """
@@ -20,6 +21,8 @@ if PostgresKeyValueStore.is_usable():
                 s.remove, 0
             )
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
         def test_remove_invalid_key(self, m_gcp):
             """
@@ -36,6 +39,8 @@ if PostgresKeyValueStore.is_usable():
                 s.remove, 0
             )
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
         def test_remove(self, m_gcp):
             """
@@ -69,6 +74,8 @@ if PostgresKeyValueStore.is_usable():
             self.assertEqual(bytes(mock_execute.call_args[0][1]['key_like']),
                              expected_key_bytea)
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
         def test_remove_many_readonly(self, m_gcp):
             """
@@ -80,6 +87,8 @@ if PostgresKeyValueStore.is_usable():
                 s.remove_many, [0, 1]
             )
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
         def test_remove_many_invalid_keys(self, m_gcp):
             """
@@ -112,66 +121,68 @@ if PostgresKeyValueStore.is_usable():
                 s.remove_many, [0, 1]
             )
 
+        # noinspection PyUnusedLocal
+        # - purposefully not used mock objects
         @mock.patch('smqtk.utils.postgres.get_connection_pool')
-        @mock.patch('smqtk.representation.key_value.postgres.psycopg2.extras.execute_batch')
+        # The underlying psycopg2 function used in callback provided to helper.
+        @mock.patch('smqtk.representation.key_value.postgres.psycopg2.extras'
+                    '.execute_batch')
         def test_remove_many(self, m_psqlExecBatch, m_gcp):
             """
-            Test expected calls to psql cursor during normal operation.
+            Test expected calls to psql `execute_batch` function when removing
+            multiple items.
             """
             expected_key_1 = 'test_remove_many_key_1'
             exp_key_1_bytea = PostgresKeyValueStore._py_to_bin(expected_key_1)
             expected_key_2 = 'test_remove_many_key_2'
             exp_key_2_bytea = PostgresKeyValueStore._py_to_bin(expected_key_2)
 
-            # Skip table creation calls.
+            # Skip table creation calls for simplicity.
             s = PostgresKeyValueStore(create_table=False)
 
-            # Cursor is created via a context (i.e. __enter__()
+            # Mock PSQL cursor stuff because we aren't actually connecting to a
+            # database.
+            # - `get_psql_connection` uses `smqtk.utils.postgres.
+            #   get_connection_pool`, so the return is a mock object.
+            # - Cursor is created via a context (i.e. __enter__()) when utilized
+            #   in `PsqlConnectionHelper` execute methods.
             #: :type: mock.Mock
             mock_cursor = s._psql_helper.get_psql_connection().cursor() \
                 .__enter__()
-            # Make the cursor iterate keys in order to pass key check.
-            mock_cursor.__iter__.return_value = [[pickle.dumps(expected_key_1)],
-                                                 [pickle.dumps(expected_key_2)]]
-            #: :type: mock.Mock
-            mock_execute = mock_cursor.execute
+
+            # Mocking `PostgresKeyValueStore` key-check method so as to pretend
+            # that the given keys exist in the database
+            s._check_contained_keys = mock.MagicMock(return_value=set())
 
             s.remove_many([expected_key_1, expected_key_2])
 
             # As a result of this call, we expect:
-            # - ``cursor.execute`` should have been called once when checking
-            #   for key presence in db (query < batch size)
             # - ``psycopg2.extras.execute_batch`` should have been called once
-            #   when deleting key-value pairs in db (query < batch size)
+            #   when deleting key-value pairs in db (2 < `s._batch_size`)
             #
             # We back to break up the argument equality check of recorded mock
-            # funciton call arguments due to ``psycopg2.Binary`` instances not
+            # function call arguments due to ``psycopg2.Binary`` instances not
             # being comparable.
 
-            mock_execute.assert_called_once()
             m_psqlExecBatch.assert_called_once()
 
-            # Confirm call arguments to ``cursor.execute``
-            expected_has_q = "SELECT key FROM data_set WHERE key IN " \
-                             "%(key_tuple)s"
-            mock_execute_call_args = mock_execute.call_args[0]
-            self.assertEqual(mock_execute_call_args[0], expected_has_q)
-            self.assertEqual(set(mock_execute_call_args[1].keys()), {'key_tuple'})
-            self.assertEqual(
-                [bytes(k) for k in mock_execute_call_args[1]['key_tuple']],
-                [bytes(k) for k in [exp_key_1_bytea, exp_key_2_bytea]]
-            )
-
-            # Confirm call arguments to ``psycopg2.extras.execute_batch``
+            # Confirm call arguments provided to
+            # ``psycopg2.extras.execute_batch`` are as expected.
+            # -
             expected_del_q = "DELETE FROM data_set WHERE key LIKE %(key_like)s"
-            expected_del_vals = [{'key_like': exp_key_1_bytea},
-                                 {'key_like': exp_key_2_bytea}]
             psqlExecBatch_call_args = m_psqlExecBatch.call_args[0]
+            psqlExecBatch_kwargs = m_psqlExecBatch.call_args[1]
             self.assertEqual(psqlExecBatch_call_args[0], mock_cursor)
             self.assertEqual(psqlExecBatch_call_args[1], expected_del_q)
             # 3rd argument is a list of dictionaries for 'key_like' replacements
+            # - dictionary values are `psycopg2.extensions.Binary` type, which
+            #   are not directly comparable (different instances). Have to
+            #   convert to bytes representation in order to compare.
             self.assertEqual(len(psqlExecBatch_call_args[2]), 2)
             self.assertListEqual(
                 [bytes(d['key_like']) for d in psqlExecBatch_call_args[2]],
                 [bytes(exp_key_1_bytea), bytes(exp_key_2_bytea)]
             )
+            self.assertIn('page_size', psqlExecBatch_kwargs)
+            self.assertEqual(psqlExecBatch_kwargs['page_size'], s._batch_size)
+            self.assertEqual(psqlExecBatch_kwargs['page_size'], 1000)  # default

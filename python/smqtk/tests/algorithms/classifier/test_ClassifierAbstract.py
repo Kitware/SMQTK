@@ -2,7 +2,7 @@ from __future__ import division, print_function
 import mock
 import unittest
 
-from smqtk.algorithms.classifier import Classifier, SupervisedClassifier
+from smqtk.algorithms.classifier import Classifier
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 

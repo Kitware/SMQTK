@@ -16,7 +16,7 @@ from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 
 try:
     from six.moves import cPickle as pickle
@@ -34,6 +34,7 @@ except ImportError as ex:
 __author__ = 'jason.parham@kitware.com,paul.tunison@kitware.com'
 
 __all__ = [
+    "kwcnn",
     "KWCNNDescriptorGenerator",
 ]
 
@@ -367,13 +368,11 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
         """
         # Create DescriptorElement instances for each data elem.
-        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         descr_elements = {}
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
-        prog_rep_state = [0] * 7
+        pr = ProgressReporter(self._log.debug, 1.0).start()
         for data in data_iter:
             ct = data.content_type()
             if ct not in self.valid_content_types():
@@ -384,7 +383,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             data_elements[data.uuid()] = data
             descr_elements[data.uuid()] = \
                 descr_factory.new_descriptor(self.name, data.uuid())
-            report_progress(self._log.debug, prog_rep_state, 1.0)
+            pr.increment_report()
+        pr.report()
         self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller

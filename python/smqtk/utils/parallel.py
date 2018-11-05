@@ -118,7 +118,8 @@ def parallel_map(work_func, *sequences, **kwargs):
     Example
     -------
     >>> import math
-    >>> result_iter = parallel_map(math.factorial, range(10), use_multiprocessing=True)
+    >>> result_iter = parallel_map(math.factorial, range(10),
+    ...                            use_multiprocessing=True)
     >>> sorted(result_iter)
     [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
     """

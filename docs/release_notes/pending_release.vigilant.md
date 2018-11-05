@@ -5,6 +5,10 @@ SMQTK VIGILANT Pending Release Notes
 Updates / New Features
 ----------------------
 
+Misc.
+
+* Resolve python static analysis warnings and errors.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
@@ -25,6 +29,9 @@ Utilities
   ``DataElement`` instances, providing methods for validating reported content
   types against a sub-class defined set of "valid" types. Applied to
   ``DescriptorGenerator`` interface.
+  
+* Replace usage of ``smqtk.utils.bin_utils.report_progress`` with the 
+  ``ProgressReporter`` class throughout package.
 
 Fixes
 -----

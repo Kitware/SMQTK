@@ -104,7 +104,7 @@ def test_configurable_default_config_with_default_values():
         def __init__(self, a, b, c=0, d='foobar'):
             pass
     assert T.get_default_config() == \
-           {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
+        {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
 
 
 def test_configurable_default_config_with_default_values_with_star_args():
@@ -119,7 +119,7 @@ def test_configurable_default_config_with_default_values_with_star_args():
         def __init__(self, a, b, c=0, d='foobar', *args, **kwargs):
             pass
     assert T.get_default_config() == \
-           {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
+        {'a': None, 'b': None, 'c': 0, 'd': 'foobar'}
 
 
 def test_configurable_classmethod_override_getdefaultconfig():

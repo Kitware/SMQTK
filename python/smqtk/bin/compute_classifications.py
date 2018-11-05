@@ -189,16 +189,14 @@ def main():
     # CSV file
     log.info("Writing CSV data file: %s", output_csv_filepath)
     file_utils.safe_create_dir(os.path.dirname(output_csv_filepath))
-    r_state = [0] * 7
+    pr = bin_utils.ProgressReporter(log.info, 1.0)
+    pr.start()
     with open(output_csv_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
         for c in classification_iter:
             w.writerow(make_row(c))
-            bin_utils.report_progress(log.info, r_state, 1.0)
-
-    # Final report
-    r_state[1] -= 1
-    bin_utils.report_progress(log.info, r_state, 0)
+            pr.increment_report()
+        pr.report()
 
     log.info("Done")
 

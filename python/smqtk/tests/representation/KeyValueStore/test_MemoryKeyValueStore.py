@@ -51,7 +51,8 @@ class TestMemoryKeyValueStore (unittest.TestCase):
     def test_from_config_with_cache_element(self):
         # Pickled dictionary with a known entry
         expected_table = {'some_key': 'some_value'}
-        empty_dict_pickle = six.b("(dp1\nS'some_key'\np2\nS'some_value'\np3\ns.")
+        empty_dict_pickle = \
+            six.b("(dp1\nS'some_key'\np2\nS'some_value'\np3\ns.")
 
         # Test construction with memory data element.
         config = {'cache_element': {
@@ -147,7 +148,8 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         set.
         """
         s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain', False)
+        s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain',
+                                             readonly=False)
         expected_config = {'cache_element': {
             "DataMemoryElement": {
                 'bytes': six.b('someBytes'),

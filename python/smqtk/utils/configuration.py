@@ -62,6 +62,7 @@ class Configurable (object):
         :return: Default configuration dictionary for the class.
         :rtype: dict
 
+        >>> # noinspection PyUnresolvedReferences
         >>> class SimpleConfig(Configurable):
         ...     def __init__(self, a=1, b='foo'):
         ...         self.a = a
@@ -229,26 +230,26 @@ def from_config_dict(config, type_iter, *args):
     if 'type' not in config:
         raise ValueError("Configuration dictionary given does not have an "
                          "implementation type specification.")
-    t = config['type']
+    conf_type = config['type']
     type_map = dict(map(lambda t: (t.__name__, t), type_iter))
 
     conf_type_options = set(config.keys()) - {'type'}
     iter_type_options = set(type_map.keys())
     # Type provided may either by None, not have a matching block in the config,
     # not have a matching implementation type, or match both.
-    if t is None:
+    if conf_type is None:
         raise ValueError("No implementation type specified. Options: %s"
                          % conf_type_options)
-    elif t not in conf_type_options:
+    elif conf_type not in conf_type_options:
         raise ValueError("Implementation type specified as '%s', but no "
                          "configuration block was present for that type. "
                          "Available configuration block options: %s"
-                         % (t, list(conf_type_options)))
-    elif t not in iter_type_options:
+                         % (conf_type, list(conf_type_options)))
+    elif conf_type not in iter_type_options:
         raise ValueError("Implementation type specified as '%s', but no "
                          "plugin implementations are available for that type. "
                          "Available implementation types options: %s"
-                         % (t, list(iter_type_options)))
-    cls = type_map[t]
+                         % (conf_type, list(iter_type_options)))
+    cls = type_map[conf_type]
     assert issubclass(cls, Configurable)
-    return cls.from_config(config[t], *args)
+    return cls.from_config(config[conf_type], *args)

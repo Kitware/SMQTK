@@ -156,7 +156,9 @@ class DataFileElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return (not self.is_empty() and open(self._filepath, 'rb').read()) or six.b("")
+        # Either read from the non-empty file, or return empty bytes.
+        return (not self.is_empty() and open(self._filepath, 'rb').read()) \
+            or six.b("")
 
     def writable(self):
         """

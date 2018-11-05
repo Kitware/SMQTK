@@ -155,6 +155,8 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :rtype: collections.Hashable
 
         """
+        # Temp (label, confidence) tuple
+        #: :type: (collections.Hashable, float)
         m = (None, 0.)
         for i in six.iteritems(self.get_classification()):
             if i[1] > m[1]:

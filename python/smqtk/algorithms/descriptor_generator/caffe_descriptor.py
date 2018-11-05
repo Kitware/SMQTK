@@ -9,14 +9,13 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 import six
-# noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 from smqtk.representation.data_element import from_uri
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 
 try:
     import caffe
@@ -354,13 +353,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._set_caffe_mode()
 
         # Create DescriptorElement instances for each data elem.
-        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         descr_elements = {}
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
-        prog_rep_state = [0] * 7
+        pr = ProgressReporter(self._log.debug, 1.0).start()
         for data in data_iter:
             ct = data.content_type()
             if ct not in self.valid_content_types():
@@ -371,7 +368,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             data_elements[data.uuid()] = data
             descr_elements[data.uuid()] = \
                 descr_factory.new_descriptor(self.name, data.uuid())
-            report_progress(self._log.debug, prog_rep_state, 1.0)
+            pr.increment_report()
+        pr.report()
         self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
@@ -385,7 +383,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         def check_get_uuid(descriptor_elem):
             if overwrite or not descriptor_elem.has_vector():
-                # noinspection PyUnresolvedReferences
                 uuid4proc.append(descriptor_elem.uuid())
 
         # Using thread-pool due to in-line function + updating local deque
@@ -509,19 +506,25 @@ def _process_load_img_array(input_tuple):
     """
     Helper function for multiprocessing image data loading
 
-    :param data_element: DataElement providing the bytes
-    :type data_element: smqtk.representation.DataElement
+    Expected input argument tuple contents (in tuple order):
+        * data_element: DataElement providing bytes
+        * transformer: Caffe Transformer instance for pre-processing.
+        * data_layer: String label of the network's data layer
+        * load_truncated_images: Boolean of whether loading truncated images is
+          allowed (See PIL.ImageFile.LOAD_TRUNCATED_IMAGES attribute).
+        * pixel_rescale: Pair of floating point values to recale image values
+          into, i.e. [0, 255] (the default).
 
-    :param transformer: Caffe Transformer instance for pre-processing
-    :type transformer: caffe.io.Transformer
-
-    :param load_truncated_images: If PIL should be allowed to load truncated
-        image data. If false, and exception will be raised when encountering
-        such imagery.
+    :param input_tuple:
+        Tuple of input arguments as we expect to be called by a multiprocessing
+        map function. See above for content details.
 
     :return: Pre-processed numpy array.
 
     """
+    # data_element: DataElement providing bytes
+    # transformer: Caffe Transformer instance for pre-processing.
+    # data_layer: String label of the data layer
     (data_element, transformer, data_layer, load_truncated_images,
      pixel_rescale) = input_tuple
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images

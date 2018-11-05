@@ -165,7 +165,18 @@ class ProgressReporter (SmqtkObject):
         self.interval = float(interval)
 
         self.lock = threading.RLock()
+        # c_last : Increment count at the time of the last report. Updated after
+        #          report in ``increment_report``.
+        # c      : Current Increment count, updated in ``increment_report``.
+        # c_delta: Delta between the increment current and previous count at the
+        #          time of the last report. Updated at the time of reporting in
+        #          ``increment_report``.
         self.c_last = self.c = self.c_delta = 0
+        # t_last : Time of the last report. Updated after report in
+        #          ``increment_report``.
+        # t      : Current time, Updated in ``increment_report``
+        # t_delta: Delta between current time and the time of the last report.
+        #          Updated in ``increment_report``.
         self.t_last = self.t = self.t_delta = self.t_start = 0.0
 
         self.started = False

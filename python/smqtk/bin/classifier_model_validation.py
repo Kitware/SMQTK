@@ -212,8 +212,9 @@ def main():
             uuid_cm[tlabel] = collections.defaultdict(set)
             for c in tlabel2classifications[tlabel]:
                 uuid_cm[tlabel][c.max_label()].add(c.uuid)
-            # convert sets to lists
+            # convert sets to lists for JSON output.
             for plabel in uuid_cm[tlabel]:
+                # noinspection PyTypeChecker
                 uuid_cm[tlabel][plabel] = list(uuid_cm[tlabel][plabel])
         with open(output_uuid_cm, 'w') as f:
             log.info("Saving UUID Confusion Matrix: %s", output_uuid_cm)
@@ -253,7 +254,8 @@ def gen_confusion_matrix(tlabel2classifications):
     for true_label in tlabel2classifications:
         for c in tlabel2classifications[true_label]:
             true_classes.append(true_label)
-            pred_classes.append(c.max_label())
+            # Assuming classifier labels are strings (true labels are strings).
+            pred_classes.append(str(c.max_label()))
 
     labels = sorted(set(true_classes).union(pred_classes))
     confusion_mat = sklearn.metrics.confusion_matrix(true_classes,
@@ -276,7 +278,9 @@ def log_cm(p_func, conf_mat, labels):
     # get col max widths
     col_max_lens = []
     for x in range(print_mat.shape[1]):
-        col_max_lens.append(max(list(map(len, print_mat[:, x].flatten().tolist()))))
+        col_max_lens.append(max(list(
+            map(len, print_mat[:, x].flatten().tolist())
+        )))
 
     # Construct printed rows based on column max width
     p_func("Confusion Matrix (Counts)")

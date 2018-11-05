@@ -224,29 +224,6 @@ if FlannNearestNeighborsIndex.is_usable():
             self.assertEqual(r[0], q)
             self.assertEqual(dists[0], 0.)
 
-        def test_configuration(self):
-            index_filepath = '/index_filepath'
-            para_filepath = '/param_fp'
-            descr_cache_fp = '/descrcachefp'
-
-            # Make configuration based on default
-            c = FlannNearestNeighborsIndex.get_default_config()
-            c['index_uri'] = index_filepath
-            c['parameters_uri'] = para_filepath
-            c['descriptor_cache_uri'] = descr_cache_fp
-            c['distance_method'] = 'hik'
-            c['random_seed'] = 42
-
-            # Build based on configuration
-            #: :type: FlannNearestNeighborsIndex
-            index = FlannNearestNeighborsIndex.from_config(c)
-            self.assertEqual(index._index_uri, index_filepath)
-            self.assertEqual(index._index_param_uri, para_filepath)
-            self.assertEqual(index._descr_cache_uri, descr_cache_fp)
-
-            c2 = index.get_config()
-            self.assertEqual(c, c2)
-
         def test_build_index_no_descriptors(self):
             f = FlannNearestNeighborsIndex()
             self.assertRaises(

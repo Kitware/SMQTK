@@ -3,7 +3,6 @@ Data abstraction interface for general key-value storage.
 """
 import abc
 import collections
-import os
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
@@ -69,7 +68,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         """
         :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: collections.Iterator[object]
+        :rtype: collections.Iterator
         """
         for k in self.keys():
             yield self.get(k)

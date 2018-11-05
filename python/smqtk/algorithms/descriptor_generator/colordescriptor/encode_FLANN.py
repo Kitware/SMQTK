@@ -147,6 +147,7 @@ def flann_quantize_data(flann,
 
         idx, dists = flann.nn_index(data[:, 3:], k)
         out_data = np.concatenate((data[:, 0:3], idx, dists), axis=1)
+        # noinspection PyTypeChecker
         np.savetxt(fout, out_data, fmt='%g')
 
     for line in csv.reader(fin, delimiter=' '):
@@ -373,6 +374,7 @@ def build_sp_hist_(filein, fileout, bins_code=np.arange(0, 4096 + 1)):
     hist_csift = np.vstack((hist_csift_g, hist_csift_q1, hist_csift_q2,
                             hist_csift_q3, hist_csift_q4, hist_csift_l1,
                             hist_csift_l2, hist_csift_l3))
+    # noinspection PyTypeChecker
     np.savetxt(fileout, hist_csift, fmt='%g')
     return hist_csift
 

@@ -3,7 +3,6 @@ import random
 import unittest
 
 import numpy as np
-from six.moves import range
 
 from six.moves import range
 from smqtk.utils import metrics as df

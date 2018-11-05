@@ -14,7 +14,7 @@ from six.moves import range
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
 from smqtk.utils.parallel import parallel_map
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.bin_utils import ProgressReporter
 
 
 def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
@@ -53,7 +53,7 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
     side = m.shape[0]
     mat = np.ndarray((side, side), dtype=float)
 
-    s = [0] * 7
+    pr = ProgressReporter(log.debug, 1.0)
     if row_wise:
         log.debug("Computing row-wise distances")
         # For all rows except the last one. We'll have computed all distances by
@@ -66,17 +66,18 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                     mat[i + 1:, i] = mat[i, i + 1:] = dist_func(m[i, :],
                                                                 m[i + 1:, :])
             # Using threading for in-place modification
-            s = [0] * 7
+            pr.start()
             for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
-                report_progress(log.debug, s, 1.)
+                pr.increment_report()
         else:
+            pr.start()
             for i in range(side):
                 # Compute col/row wise distances
                 mat[i, i] = dist_func(m[i], m[i])
                 if i < (side-1):
                     mat[i+1:, i] = mat[i, i+1:] = dist_func(m[i, :], m[i+1:, :])
-                report_progress(log.debug, s, 1.)
+                pr.increment_report()
     else:
         log.debug("Computing element-wise distances")
         if parallel:
@@ -87,17 +88,19 @@ def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):
                 for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
             # Using threading for in-place modification
+            pr.start()
             for _ in parallel_map(work_func, range(side),
                                   use_multiprocessing=False):
-                report_progress(log.debug, s, 1.)
+                pr.increment_report()
         else:
+            pr.start()
             for i in range(side):
                 mat[i, i] = dist_func(m[i], m[i])
                 # cols to the left of diagonal index for this row
                 for j in range(i):
                     mat[i, j] = mat[j, i] = dist_func(m[i], m[j])
-                report_progress(log.debug, s, 1.)
-
+                pr.increment_report()
+    pr.report()
     return mat
 
 

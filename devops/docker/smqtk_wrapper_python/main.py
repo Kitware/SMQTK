@@ -1,23 +1,23 @@
-
 import flask
+from hashlib import sha1
 import json
+from mimetypes import guess_type
 import os
 import os.path
 import requests
 import re
 import sys
-import urllib.parse
 
-from hashlib import sha1
-from threading import Thread
+from six.moves.urllib.parse import urlparse
 
-from mimetypes import guess_type
 
-RE_HTTP = re.compile(r'''^https?\://.*''')
+RE_HTTP = re.compile(r'''^https?://.*''')
+
 
 def log(s):
     print(s)
     sys.stdout.flush()
+
 
 def proxy(new_location):
     log('  PROXYING TO %s' % new_location)
@@ -34,7 +34,7 @@ def proxy(new_location):
     except requests.exceptions.ConnectionError:
         error_message = 'downstream service not yet ready'
 
-    except requests.exceptions.ReadTimeout :
+    except requests.exceptions.ReadTimeout:
         error_message = 'downstream service read timeout'
 
     if error_message is not None:
@@ -43,17 +43,20 @@ def proxy(new_location):
         res.status_code = 503
         res.headers.add('content-type', 'application/json')
 
+    # ``res`` either has a value from the try-catch or from the error catch.
+    # noinspection PyUnboundLocalVariable
     return res
+
 
 app = flask.Flask('wrapper0')
 
-@app.route('/image/<hash>')
-def image(hash):
-    link_path = os.path.join('/links', hash)
+
+@app.route('/image/<img_hash>')
+def image(img_hash):
+    link_path = os.path.join('/links', img_hash)
     real_path = os.path.realpath(link_path)
     log('  SERVING IMAGE: ' + real_path)
     image_name = os.path.basename(real_path)
-    image_ext = os.path.splitext(image_name)[1][1:]
 
     def generate():
         with open(real_path, 'rb') as f:
@@ -71,12 +74,15 @@ def image(hash):
     res.headers['content-disposition'] = 'inline'
     return res
 
+
 @app.route('/<path:url_path>')
 def catch_all0(url_path):
     query = flask.request.query_string.decode('utf8')
+    # noinspection PyTypeChecker
     path = '?'.join(filter(bool, (url_path, query)))
     new_location = 'http://smqtk:12345/' + path
     return proxy(new_location)
+
 
 @app.route('/nn/<path:url_path>')
 @app.route('/nn/<int:n>/<path:url_path>')
@@ -85,6 +91,7 @@ def catch_all0(url_path):
 def intercept_path(n=None, start=None, end=None, url_path=None):
     log('  INTERCEPTING')
     query = flask.request.query_string.decode('utf8')
+    # noinspection PyTypeChecker
     url_path = '?'.join(filter(bool, (url_path, query)))
 
     uri = url_path
@@ -92,7 +99,7 @@ def intercept_path(n=None, start=None, end=None, url_path=None):
         uri = 'http://' + uri
 
     log('  URI: ' + uri)
-    parsed = urllib.parse.urlparse(uri)
+    parsed = urlparse(uri)
     if parsed.hostname == 'localhost':
         log('  REWRITING PATH HOSTNAME')
         log('    BEFORE: ' + url_path)
@@ -137,6 +144,7 @@ def intercept_path(n=None, start=None, end=None, url_path=None):
 
     log('PROXYING?')
     return proxy(new_location)
+
 
 if __name__ == '__main__':
     filenames = next(os.walk('/data'))[2]

@@ -72,8 +72,7 @@ class IqrSession (SmqtkObject):
         )
 
     def __init__(self, pos_seed_neighbors=500,
-                 rel_index_config=DFLT_REL_INDEX_CONFIG,
-                 session_uid=None):
+                 rel_index_config=None, session_uid=None):
         """
         Initialize the IQR session
 
@@ -99,10 +98,10 @@ class IqrSession (SmqtkObject):
         :type pos_seed_neighbors: int
 
         :param rel_index_config: Plugin configuration dictionary for the
-            RelevancyIndex to use for ranking user adjudications. By default we
-            we use an in-memory libSVM based index using the histogram
+            RelevancyIndex to use for ranking user adjudications. If `None` we
+            default to using an in-memory libSVM based index using the histogram
             intersection metric.
-        :type rel_index_config: dict
+        :type rel_index_config: None | dict
 
         :param session_uid: Optional manual specification of session UUID.
         :type session_uid: str | uuid.UUID
@@ -149,6 +148,8 @@ class IqrSession (SmqtkObject):
         # RelevancyIndex configuration and instance that is used for producing
         #   results.
         # This is only [re]constructed when initializing the session.
+        if rel_index_config is None:
+            rel_index_config = DFLT_REL_INDEX_CONFIG
         self.rel_index_config = rel_index_config
         # This is None until session initialization happens after pos/neg
         # exemplar data has been added.

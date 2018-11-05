@@ -116,7 +116,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         Return w1 weight parameter based on pos and neg exemplars
         """
-        return max(1.0, num_neg/float(num_pos))
+        return max(1.0, num_neg / float(num_pos))
 
     @classmethod
     def _gen_svm_parameter_string(cls, num_pos, num_neg):
@@ -216,10 +216,12 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         pos = set(pos)
         # Creating training matrix and labels
         train_labels = []
+        #: :type: list[list]
         train_vectors = []
         num_pos = 0
         for d in pos:
             train_labels.append(+1)
+            # noinspection PyTypeChecker
             train_vectors.append(d.vector().tolist())
             num_pos += 1
         self._log.debug("Positives given: %d", num_pos)
@@ -266,6 +268,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         for n_iterable in (neg, neg_autoselect):
             for d in n_iterable:
                 train_labels.append(-1)
+                # noinspection PyTypeChecker
                 train_vectors.append(d.vector().tolist())
                 num_neg += 1
 

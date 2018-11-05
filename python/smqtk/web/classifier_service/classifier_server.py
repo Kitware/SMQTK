@@ -10,7 +10,6 @@ from six.moves import cPickle as pickle
 from six.moves import urllib, zip
 
 from smqtk.algorithms import (
-    Classifier,
     DescriptorGenerator,
     SupervisedClassifier
 )
@@ -28,7 +27,6 @@ from smqtk.utils import prob_utils
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
-    to_config_dict
 )
 from smqtk.utils.web import make_response_json
 import smqtk.web

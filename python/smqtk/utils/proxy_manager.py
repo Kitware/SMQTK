@@ -8,6 +8,7 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from multiprocessing import current_process
+# noinspection PyProtectedMember
 from multiprocessing.managers import (
     all_methods,
     BaseProxy,
@@ -186,9 +187,9 @@ class ExposedAutoGenMeta (type):
                 to_expose.remove('__getattribute__')
             if '__getattribute__' in dct:
                 print("WARNING: ExposedAutoGenMeta overwriting custom "
-                       "``__getattribute__`` in class '%s' in favor of "
-                       "property proxy supporting version."
-                       % clsname)
+                      "``__getattribute__`` in class '%s' in favor of "
+                      "property proxy supporting version."
+                      % clsname)
             exec("""def __getattr__(self, key):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')
@@ -199,9 +200,9 @@ class ExposedAutoGenMeta (type):
                 to_expose.remove('__setattr__')
             if '__setattr__' in dct:
                 print("WARNING: ExposedAutoGenMeta overwriting custom "
-                       "``__setattr__`` in class '%s' in favor of "
-                       "property proxy supporting version."
-                       % clsname)
+                      "``__setattr__`` in class '%s' in favor of "
+                      "property proxy supporting version."
+                      % clsname)
             exec("""def __setattr__(self, key, value):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')
@@ -212,9 +213,9 @@ class ExposedAutoGenMeta (type):
                 to_expose.remove('__delattr__')
             if '__delattr__' in dct:
                 print("WARNING: ExposedAutoGenMeta overwriting custom "
-                       "``__delattr__`` in class '%s' in favor of "
-                       "property proxy supporting version."
-                       % clsname)
+                      "``__delattr__`` in class '%s' in favor of "
+                      "property proxy supporting version."
+                      % clsname)
             exec("""def __delattr__(self, key):
                 if key in self._exposed_properties_:
                     callmethod = object.__getattribute__(self, '_callmethod')

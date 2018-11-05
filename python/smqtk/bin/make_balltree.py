@@ -14,6 +14,7 @@ from smqtk.utils.configuration import (
     make_default_config,
 )
 
+
 def default_config():
     return {
         "hash2uuid_kv_store": make_default_config(
@@ -50,8 +51,10 @@ def main():
     reporter = smqtk.utils.bin_utils.ProgressReporter(log.debug, 1.0)
     reporter.start()
     for h in hash2uuid_kv_store.keys():
+        # Casting to int is a valid thing to do.
+        # noinspection PyTypeChecker
         hash_vectors.append(
-            smqtk.utils.bit_utils.int_to_bit_vector_large(h, bit_len))
+            smqtk.utils.bit_utils.int_to_bit_vector_large(int(h), bit_len))
         reporter.increment_report()
     reporter.report()
 

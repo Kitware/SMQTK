@@ -4,7 +4,6 @@ import unittest
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
-from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 
 class DummyKVStore (KeyValueStore):
@@ -87,7 +86,9 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.keys = mock.MagicMock(return_value=expected_keys_values)
         s.get = mock.MagicMock(side_effect=lambda v: v)
 
-        # Make sure keys now returns expected list.
+        # Make sure keys now returns expected set.
+        # noinspection PyTypeChecker
+        # - Return value for `keys()` set above is correctly a set.
         self.assertEqual(set(s.keys()), expected_keys_values)
 
         # Get initial iterator. ``keys`` should have only been called once so

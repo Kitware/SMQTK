@@ -2,7 +2,8 @@
 Test computing a descriptor on something.
 """
 
-from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
+from smqtk.algorithms.descriptor_generator.caffe_descriptor \
+    import CaffeDescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
 
 e = DataFileElement("/usr/local/lib/python2.7/dist-packages/smqtk/tests/data/"

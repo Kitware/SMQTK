@@ -30,7 +30,7 @@ def get_cli_parser():
 
     g_required = parser.add_argument_group("Required Arguments")
     g_required.add_argument('-f', '--file-list',
-                            type=str, default=None, metavar='PATH',
+                            default=None, metavar='PATH',
                             help='Path to a file that lists data file paths.')
     return parser
 

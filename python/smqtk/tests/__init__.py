@@ -4,6 +4,8 @@ import six
 
 
 # Centrally add the mock move
+# noinspection PyUnresolvedReferences
+# - These are known attributes of the `six` module.
 six.add_move(six.MovedModule('mock', 'mock', 'unittest.mock'))
 
 

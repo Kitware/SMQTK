@@ -60,8 +60,8 @@ class Pluggable (object):
             Explicitly reload discovered modules from source.
 
         :return: Set of discovered class types descending from type
-            ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
-            the string names of the class types.
+            ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys
+            are the string names of the class types.
         :rtype: set[type[Pluggable]]
 
         """

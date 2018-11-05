@@ -110,14 +110,12 @@ def main():
     )
 
     log.info("Writing file paths")
-    s = [0] * 7
     with open(paths_file, 'w') as of:
+        pr = bin_utils.ProgressReporter(log.info, 1.0).start()
         for rp in remote_paths:
             of.write(rp + '\n')
-            bin_utils.report_progress(log.info, s, 1.)
-    # Final report
-    s[1] -= 1
-    bin_utils.report_progress(log.info, s, 0)
+            pr.increment_report()
+        pr.report()
 
 
 if __name__ == '__main__':

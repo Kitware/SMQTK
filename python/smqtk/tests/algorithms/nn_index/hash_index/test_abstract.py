@@ -1,8 +1,6 @@
 import mock
 import unittest
 
-import six
-
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 
 

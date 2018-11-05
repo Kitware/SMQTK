@@ -46,7 +46,7 @@ class DummyHashFunctor (LshFunctor):
 
         """
         return np.asarray([int(c) for c in bin(int(descriptor.sum()))[2:]],
-                             bool)
+                          bool)
 
 
 class TestLshIndex (unittest.TestCase):

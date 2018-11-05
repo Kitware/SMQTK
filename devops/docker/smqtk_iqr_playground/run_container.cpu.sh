@@ -17,7 +17,7 @@ IQR_REST_PORT_PUBLISH=5001
 # Replace SOMETHING_HERE by the real version (probably a date)
 
 IMAGE_VERSION=`docker image ls | grep iqr | awk '{print $2}' | cut -d\- -f1`
-if [ -z "$IMAGE_VERSION"]; then 
+if [ -z "$IMAGE_VERSION" ]; then
     echo "Unable to determine image version from Docker. Exiting."
     exit 2
 fi

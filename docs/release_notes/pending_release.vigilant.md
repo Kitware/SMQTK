@@ -37,6 +37,8 @@ Utilities
 
 * Moved ``merge_dict`` out of ``smqtk/utils/__init__.py`` and into its own 
   module.
+  
+* Created ``combinatorics`` utils module, moved ``ncr`` function to here.
 
 Fixes
 -----

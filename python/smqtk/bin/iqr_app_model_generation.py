@@ -13,12 +13,13 @@ import json
 import logging
 import os.path as osp
 
+import jsmin
 import six
 
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import bin_utils, jsmin
+from smqtk.utils import bin_utils
 from smqtk.utils.configuration import (
     from_config_dict,
 )

@@ -33,6 +33,8 @@ Utilities
 * Replace usage of ``smqtk.utils.bin_utils.report_progress`` with the 
   ``ProgressReporter`` class throughout package.
 
+* Removed bundled "jsmin" in favor of using pip installed package.
+
 Fixes
 -----
 

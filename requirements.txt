@@ -8,6 +8,7 @@ Flask-login==0.4.1
 Flask-Cors==3.0.7
 imageio==2.3.0
 jinja2==2.10.1
+jsmin==2.2.2
 matplotlib==2.2.3
 numpy==1.15.3
 Pillow==6.2.0

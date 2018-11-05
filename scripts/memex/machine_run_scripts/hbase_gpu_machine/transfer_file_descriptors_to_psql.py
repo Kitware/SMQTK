@@ -12,8 +12,8 @@ import re
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
 from smqtk.representation.descriptor_element.postgres import PostgresDescriptorElement
-from smqtk.utils import bin_utils
-from smqtk.utils import file_utils
+from smqtk.utils import cli
+from smqtk.utils import file
 
 
 ROOT_DIR = "/data/kitware/smqtk/image_cache_cnn_compute/descriptors"
@@ -69,7 +69,7 @@ def proc_transfer(in_queue):
 
 
 def main():
-    bin_utils.initialize_logging(logging.getLogger(), logging.DEBUG)
+    cli.initialize_logging(logging.getLogger(), logging.DEBUG)
     log = logging.getLogger(__name__)
 
     # For each file in descriptor vector file tree, load from file

@@ -55,8 +55,8 @@ import os
 
 import PIL.Image
 
-import smqtk.utils.bin_utils
-import smqtk.utils.file_utils
+import smqtk.utils.cli
+import smqtk.utils.file
 import smqtk.utils.parallel
 from smqtk.utils.image import (
     image_crop_center_levels, image_crop_quadrant_pyramid, image_crop_tiles,
@@ -86,7 +86,7 @@ def generate_image_transformations(image_path,
 
     abs_path = os.path.abspath(image_path)
     output_dir = output_dir or os.path.dirname(abs_path)
-    smqtk.utils.file_utils.safe_create_dir(output_dir)
+    smqtk.utils.file.safe_create_dir(output_dir)
     p_base = os.path.splitext(os.path.basename(abs_path))[0]
     p_ext = output_ext
     p_base = os.path.join(output_dir, p_base)
@@ -158,7 +158,7 @@ def default_config():
 
 
 def cli_parser():
-    parser = smqtk.utils.bin_utils.basic_cli_parser(__doc__)
+    parser = smqtk.utils.cli.basic_cli_parser(__doc__)
 
     g_io = parser.add_argument_group("Input/Output")
     g_io.add_argument("-i", "--image",
@@ -177,7 +177,7 @@ def cli_parser():
 
 def main():
     args = cli_parser().parse_args()
-    config = smqtk.utils.bin_utils.utility_main_helper(default_config, args)
+    config = smqtk.utils.cli.utility_main_helper(default_config, args)
     input_image_path = args.image
     output_dir = args.output
 

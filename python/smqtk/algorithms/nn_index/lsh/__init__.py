@@ -18,8 +18,8 @@ from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DescriptorIndex, KeyValueStore
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
-from smqtk.utils.bit_utils import bit_vector_to_int_large
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.bits import bit_vector_to_int_large
+from smqtk.utils.cli import ProgressReporter
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,

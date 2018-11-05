@@ -116,8 +116,7 @@ class TestDataElementAbstract (unittest.TestCase):
         sha1 = de.sha512()
         self.assertEqual(sha1, EXPECTED_SHA512)
 
-    @mock.patch('smqtk.representation.data_element.file_utils.'
-                'safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -143,7 +142,7 @@ class TestDataElementAbstract (unittest.TestCase):
     #   - os.open is used under the hood of tempfile to open a file (which also
     #       creates it on disk).
 
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -158,7 +157,7 @@ class TestDataElementAbstract (unittest.TestCase):
         self.assertTrue(mock_open.called)
         self.assertEqual(osp.dirname(fp), tempfile.gettempdir())
 
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -178,7 +177,7 @@ class TestDataElementAbstract (unittest.TestCase):
         self.assertEqual(osp.dirname(fp), target_dir)
 
     @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -217,7 +216,7 @@ class TestDataElementAbstract (unittest.TestCase):
         # false so clean_temp doesn't try to remove files that don't exist.
         simulate = False
 
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global
@@ -242,7 +241,7 @@ class TestDataElementAbstract (unittest.TestCase):
         self.assertEqual(osp.dirname(fp), target_dir)
 
     @mock.patch("smqtk.representation.data_element.file_element.osp.isfile")
-    @mock.patch('smqtk.representation.data_element.file_utils.safe_create_dir')
+    @mock.patch('smqtk.representation.data_element.safe_create_dir')
     @mock.patch('fcntl.fcntl')  # global
     @mock.patch('os.close')  # global
     @mock.patch('os.open')  # global

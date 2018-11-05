@@ -2,7 +2,7 @@ import os.path
 from unittest import TestCase
 
 from smqtk.tests import TEST_DATA_DIR
-from smqtk.utils.file_utils import file_mimetype_tika
+from smqtk.utils.file import file_mimetype_tika
 
 try:
     from tika import detector as tika_detector

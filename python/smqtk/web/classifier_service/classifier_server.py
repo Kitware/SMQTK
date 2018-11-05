@@ -23,7 +23,7 @@ from smqtk.representation import (
     DescriptorElementFactory,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-from smqtk.utils import prob_utils
+from smqtk.utils import probability
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
@@ -320,7 +320,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 values lower the gain on the class and therefore correspond to
                 higher precision (and lower recall) for the class (and higher
                 recall/lower precision for other classes). This translates git
-                to calling ``smqtk.utils.prob_utils.adjust_proba``.
+                to calling ``smqtk.utils.probability.adjust_proba``.
 
         Possible error codes:
             400
@@ -448,7 +448,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 # Use opposite of adjustments, because we already set the
                 # convention of "higher: precision, lower: recall"
                 adj = [-adjustments.get(label, 0.0) for label in proba_labels]
-                adj_proba = prob_utils.adjust_proba(proba, adj)
+                adj_proba = probability.adjust_proba(proba, adj)
                 prediction = dict(zip(proba_labels, adj_proba[0]))
             c_json[classifier_label] = prediction
 

@@ -14,7 +14,7 @@ from six.moves import range
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
 from smqtk.utils.parallel import parallel_map
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.cli import ProgressReporter
 
 
 def compute_distance_kernel(m, dist_func, row_wise=False, parallel=True):

@@ -20,7 +20,7 @@ from smqtk.representation import ClassificationElementFactory
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     initialize_logging,
     output_config,
     basic_cli_parser,

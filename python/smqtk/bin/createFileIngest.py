@@ -9,7 +9,7 @@ import os.path as osp
 
 from smqtk.representation import DataSet
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import bin_utils
+from smqtk.utils import cli
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
@@ -23,7 +23,7 @@ def default_config():
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
     parser.add_argument("input_files", metavar='GLOB', nargs='*')
     return parser
 
@@ -31,7 +31,7 @@ def cli_parser():
 def main():
     parser = cli_parser()
     args = parser.parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     log.debug("Script arguments:\n%s" % args)

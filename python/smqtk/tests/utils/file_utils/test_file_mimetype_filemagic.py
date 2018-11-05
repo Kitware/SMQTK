@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase
 
-from smqtk.utils.file_utils import file_mimetype_filemagic
+from smqtk.utils.file import file_mimetype_filemagic
 from smqtk.tests import TEST_DATA_DIR
 
 try:

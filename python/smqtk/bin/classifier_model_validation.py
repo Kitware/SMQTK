@@ -58,7 +58,7 @@ from smqtk.representation import (
     DescriptorIndex,
 )
 from smqtk.utils import (
-    bin_utils,
+    cli,
     parallel,
 )
 from smqtk.utils.configuration import (
@@ -98,12 +98,12 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #

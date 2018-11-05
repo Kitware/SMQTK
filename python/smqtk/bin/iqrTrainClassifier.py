@@ -24,7 +24,7 @@ from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     utility_main_helper,
 )

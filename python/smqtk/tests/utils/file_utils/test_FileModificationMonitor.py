@@ -7,7 +7,7 @@ import time
 import threading
 import unittest
 
-import smqtk.utils.file_utils
+import smqtk.utils.file
 
 
 class TestFileModificationMonitor (unittest.TestCase):
@@ -30,8 +30,8 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertEqual(filepath, fp)
 
         interval = 0.01
-        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
-                                                                 0.5, cb)
+        monitor = smqtk.utils.file.FileModificationMonitor(fp, interval,
+                                                           0.5, cb)
         self.assertTrue(monitor.stopped())
 
         monitor.start()
@@ -77,8 +77,8 @@ class TestFileModificationMonitor (unittest.TestCase):
 
         interval = 0.01
         settle = 0.1
-        monitor = smqtk.utils.file_utils.FileModificationMonitor(fp, interval,
-                                                                 settle, cb)
+        monitor = smqtk.utils.file.FileModificationMonitor(fp, interval,
+                                                           settle, cb)
         try:
             monitor.start()
             # file not touched, should still be waiting
@@ -86,7 +86,7 @@ class TestFileModificationMonitor (unittest.TestCase):
             self.assertFalse(has_triggered[0])
 
             time.sleep(interval)
-            smqtk.utils.file_utils.touch(fp)
+            smqtk.utils.file.touch(fp)
             time.sleep(interval*2)
             monitor._log.info('checking')
             self.assertFalse(has_triggered[0])
@@ -149,7 +149,7 @@ class TestFileModificationMonitor (unittest.TestCase):
                         f.write('0')
                     time.sleep(append_interval)
 
-        m_thread = smqtk.utils.file_utils.FileModificationMonitor(
+        m_thread = smqtk.utils.file.FileModificationMonitor(
             fp, monitor_interval, monitor_settle, cb
         )
         a_thread = AppendThread()
@@ -186,17 +186,17 @@ class TestFileModificationMonitor (unittest.TestCase):
         # Invalid path value
         self.assertRaises(
             ValueError,
-            smqtk.utils.file_utils.FileModificationMonitor,
+            smqtk.utils.file.FileModificationMonitor,
             '/not/real', 1, 1, lambda p: None
         )
         # Invalid timers values
         self.assertRaises(
             ValueError,
-            smqtk.utils.file_utils.FileModificationMonitor,
+            smqtk.utils.file.FileModificationMonitor,
             fp, -1, 1, lambda p: None
         )
         self.assertRaises(
             ValueError,
-            smqtk.utils.file_utils.FileModificationMonitor,
+            smqtk.utils.file.FileModificationMonitor,
             fp, 1, -1, lambda p: None
         )

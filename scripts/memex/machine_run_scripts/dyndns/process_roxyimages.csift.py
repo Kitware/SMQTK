@@ -14,7 +14,7 @@ import os.path as osp
 import shutil
 
 from smqtk.utils import touch
-from smqtk.utils.bin_utils import initialize_logging
+from smqtk.utils.cli import initialize_logging
 from smqtk.utils.configuration import (
     DescriptorFactoryConfiguration,
     ContentDescriptorConfiguration,

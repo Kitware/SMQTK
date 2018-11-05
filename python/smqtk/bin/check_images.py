@@ -9,7 +9,7 @@ import sys
 
 from six.moves import map
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     initialize_logging,
 )

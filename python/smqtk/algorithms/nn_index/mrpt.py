@@ -20,7 +20,7 @@ from smqtk.utils.configuration import (
     to_config_dict
 )
 from smqtk.utils.dict import merge_dict
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file import safe_create_dir
 
 
 CHUNK_SIZE = 5000

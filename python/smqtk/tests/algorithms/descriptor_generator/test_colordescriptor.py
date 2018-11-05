@@ -18,7 +18,7 @@ if ColorDescriptor_Image_csift.is_usable():
 
         @mock.patch('smqtk.algorithms.descriptor_generator'
                     '.colordescriptor.colordescriptor'
-                    '.file_utils.safe_create_dir')
+                    '.file.safe_create_dir')
         def test_configuration(self, _mock_scd):
             default_config = ColorDescriptor_Image_csift.get_default_config()
             default_config['model_directory'] = '/some/path/models/'

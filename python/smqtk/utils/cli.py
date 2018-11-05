@@ -1,3 +1,6 @@
+"""
+Helper functions for command line utilities.
+"""
 import argparse
 import json
 import logging

@@ -6,7 +6,7 @@ import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
-from smqtk.utils.file_utils import safe_file_write
+from smqtk.utils.file import safe_file_write
 
 
 STR_NONE_TYPES = six.string_types + (type(None),)

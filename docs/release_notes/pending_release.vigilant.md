@@ -29,16 +29,19 @@ Utilities
   ``DataElement`` instances, providing methods for validating reported content
   types against a sub-class defined set of "valid" types. Applied to
   ``DescriptorGenerator`` interface.
-  
-* Replace usage of ``smqtk.utils.bin_utils.report_progress`` with the 
+
+* Replace usage of ``smqtk.utils.bin_utils.report_progress`` with the
   ``ProgressReporter`` class throughout package.
 
 * Removed bundled "jsmin" in favor of using pip installed package.
 
-* Moved ``merge_dict`` out of ``smqtk/utils/__init__.py`` and into its own 
+* Moved ``merge_dict`` out of ``smqtk/utils/__init__.py`` and into its own
   module.
-  
+
 * Created ``combinatorics`` utils module, moved ``ncr`` function to here.
+
+* Renamed various utility modules that included ``_utils`` in their name to not
+  include ``_utils`` for the sake of reducing redundancy.
 
 Fixes
 -----

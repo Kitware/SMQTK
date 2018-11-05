@@ -15,13 +15,13 @@ from sklearn.cluster import MiniBatchKMeans
 
 from smqtk.compute_functions import mb_kmeans_build_apply
 from smqtk.representation import DescriptorIndex
-from smqtk.utils.bin_utils import utility_main_helper, basic_cli_parser
+from smqtk.utils.cli import utility_main_helper, basic_cli_parser
 from smqtk.utils.configuration import (
     Configurable,
     from_config_dict,
     make_default_config
 )
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file import safe_create_dir
 
 
 def default_config():

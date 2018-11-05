@@ -7,8 +7,8 @@ import logging
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
     SkLearnBallTreeHashIndex
 import smqtk.representation
-import smqtk.utils.bin_utils
-import smqtk.utils.bit_utils
+import smqtk.utils.cli
+import smqtk.utils.bits
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
@@ -26,13 +26,13 @@ def default_config():
 
 
 def cli_parser():
-    parser = smqtk.utils.bin_utils.basic_cli_parser(__doc__)
+    parser = smqtk.utils.cli.basic_cli_parser(__doc__)
     return parser
 
 
 def main():
     args = cli_parser().parse_args()
-    config = smqtk.utils.bin_utils.utility_main_helper(default_config, args)
+    config = smqtk.utils.cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     # Loading from configurations
@@ -48,13 +48,13 @@ def main():
 
     log.info("Computing hash-code vectors")
     hash_vectors = []
-    reporter = smqtk.utils.bin_utils.ProgressReporter(log.debug, 1.0)
+    reporter = smqtk.utils.cli.ProgressReporter(log.debug, 1.0)
     reporter.start()
     for h in hash2uuid_kv_store.keys():
         # Casting to int is a valid thing to do.
         # noinspection PyTypeChecker
         hash_vectors.append(
-            smqtk.utils.bit_utils.int_to_bit_vector_large(int(h), bit_len))
+            smqtk.utils.bits.int_to_bit_vector_large(int(h), bit_len))
         reporter.increment_report()
     reporter.report()
 

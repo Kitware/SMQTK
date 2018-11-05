@@ -241,9 +241,9 @@ IqrStatusView.prototype.cal_acc_store = function () {
             // self.acc_input.val(self.re_acc_20 + "%");
             // self.store_input(pos_num, neg_num);
 
-        //     alert_info("AMT_id:"+ self.AMT_id + " Iqr round: " + iqr_round + " target: " + target +
-        // " acc_20: " + self.re_acc_20 + " acc_30 " + self.re_acc_30+ " acc_40 " + self.re_acc_40 + " acc_50: " + self.re_acc_50 +
-        // " pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
+            alert_info("AMT_id:"+ self.AMT_id + " Iqr round: " + iqr_round + " target: " + target +
+        " acc_20: " + self.re_acc_20 + " acc_30 " + self.re_acc_30+ " acc_40 " + self.re_acc_40 + " acc_50: " + self.re_acc_50 +
+        " pos_num: "+ pos_num + "----neg_num: " + neg_num + "likert_score: " + likert_score);
         },
         error: function (jqXHR, textStatus, errorThrown)
         {

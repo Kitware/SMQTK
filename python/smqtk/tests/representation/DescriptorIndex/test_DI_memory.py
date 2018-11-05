@@ -8,7 +8,7 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 
 
 RAND_UUID = 0

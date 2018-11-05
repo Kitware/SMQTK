@@ -7,9 +7,9 @@ import os
 
 import flask
 
-from smqtk.utils import merge_dict
 from smqtk.utils import SmqtkObject
 from smqtk.utils.configuration import Configurable
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 
 

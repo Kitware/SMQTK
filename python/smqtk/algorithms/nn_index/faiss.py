@@ -20,9 +20,10 @@ from smqtk.representation import (
     KeyValueStore,
 )
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import merge_dict, metrics
+from smqtk.utils import metrics
 from smqtk.utils.configuration import \
     make_default_config, from_config_dict, to_config_dict
+from smqtk.utils.dict import merge_dict
 
 # Requires FAISS bindings
 try:

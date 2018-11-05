@@ -7,12 +7,12 @@ from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.representation import DataElement
-from smqtk.utils import merge_dict
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
     to_config_dict
 )
+from smqtk.utils.dict import merge_dict
 
 
 class SkLearnBallTreeHashIndex (HashIndex):

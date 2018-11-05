@@ -8,7 +8,8 @@ import threading
 import time
 import warnings
 
-from smqtk.utils import merge_dict, SmqtkObject
+from smqtk.utils.base_object import SmqtkObject
+from smqtk.utils.dict import merge_dict
 
 
 def initialize_logging(logger, stream_level=logging.WARNING,

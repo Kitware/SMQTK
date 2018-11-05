@@ -35,6 +35,9 @@ Utilities
 
 * Removed bundled "jsmin" in favor of using pip installed package.
 
+* Moved ``merge_dict`` out of ``smqtk/utils/__init__.py`` and into its own 
+  module.
+
 Fixes
 -----
 

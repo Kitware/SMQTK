@@ -1,7 +1,6 @@
-from __future__ import division, print_function
 import unittest
 
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 
 
 class TestMergeDict (unittest.TestCase):
@@ -100,3 +99,121 @@ class TestMergeDict (unittest.TestCase):
         # Return value should be the ``a`` parameter input value
         r = merge_dict(self.a, self.b)
         self.assertIs(r, self.a)
+
+    def test_disjoint_update(self):
+        """ Test that ``'c': 3`` gets added to `a`. """
+        a = {
+            'a': 1,
+            'b': 2,
+        }
+        b = {
+            'c': 3
+        }
+        expected = {
+            'a': 1,
+            'b': 2,
+            'c': 3,
+        }
+        merge_dict(a, b)
+        self.assertEqual(a, expected)
+
+    def test_subset_merge(self):
+        """ Test that `b` updates key `a` in dict `a`. """
+        a = {
+            'a': 1,
+            'b': 2,
+        }
+        b = {
+            'a': 3
+        }
+        expected = {
+            'a': 3,
+            'b': 2,
+        }
+        merge_dict(a, b)
+        self.assertEqual(a, expected)
+
+    def test_partial_update(self):
+        """
+        Test that dict `b` updates and adds keys appropriately to dict `a` (adds
+        key `c`, updates key `a`).
+        """
+        a = {
+            'a': 1,
+            'b': 2,
+        }
+        b = {
+            'a': 3,
+            'c': 4,
+        }
+        expected = {
+            'a': 3,
+            'b': 2,
+            'c': 4,
+        }
+        merge_dict(a, b)
+        self.assertEqual(a, expected)
+
+    def test_overrides(self):
+        """ Test that dict `b` overrides key `b` with a nested dict. """
+        a = {
+            'a': 1,
+            'b': 2,
+        }
+        b = {
+            'b': {
+                'c': 3
+            },
+        }
+        expected = {
+            'a': 1,
+            'b': {
+                'c': 3,
+            }
+        }
+        merge_dict(a, b)
+        self.assertEqual(a, expected)
+
+    def test_nested(self):
+        """
+        Test that nested dictionary updates occur correctly without losing
+        values in sibling or nephew dictionaries.
+        """
+        a = {
+            'a': 1,
+            'b': {
+                'c': 2,
+                'd': {
+                    'e': 3
+                },
+            },
+            'f': {
+                'g': 4,
+                'h': {
+                    'i': 5
+                }
+            },
+        }
+        b = {
+            'b': {'c': 6},
+            'f': {'h': {'i': 7}},
+            'j': 8
+        }
+        expected = {
+            'a': 1,
+            'b': {
+                'c': 6,
+                'd': {
+                    'e': 3
+                },
+            },
+            'f': {
+                'g': 4,
+                'h': {
+                    'i': 7
+                }
+            },
+            'j': 8,
+        }
+        merge_dict(a, b)
+        self.assertEqual(a, expected)

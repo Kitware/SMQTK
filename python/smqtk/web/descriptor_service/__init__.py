@@ -11,11 +11,11 @@ from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
-from smqtk.utils import merge_dict
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
 )
+from smqtk.utils.dict import merge_dict
 from smqtk.web import SmqtkWebApp
 
 

@@ -16,6 +16,7 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 from smqtk.representation.data_element import from_uri
 from smqtk.utils.cli import ProgressReporter
+from smqtk.utils.bin_utils import report_progress
 
 try:
     import caffe
@@ -54,8 +55,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Create a Caffe CNN descriptor generator
 
-        :param network_prototxt: URI to the text file defining the
-            network layout.
+        :param smqtk.representation.DataElement network_prototxt: Data element
+            containing the text file defining the network layout.
 
         :param network_model: URI to the trained ``.caffemodel``
             file to use.

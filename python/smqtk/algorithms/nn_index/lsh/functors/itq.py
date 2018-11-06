@@ -338,7 +338,8 @@ class ItqFunctor (LshFunctor):
                              "result being bound by number of features.")
 
         self._log.info("Creating matrix of descriptors for fitting")
-        x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,
+        x = elements_to_matrix(descriptors,
+                               report_interval=dbg_report_interval,
                                use_multiprocessing=use_multiprocessing)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 

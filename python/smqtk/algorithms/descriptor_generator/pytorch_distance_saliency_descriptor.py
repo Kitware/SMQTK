@@ -112,7 +112,7 @@ class TensorDataset(data.Dataset):
 
 
 class DisMaskSaliencyDataset(data.Dataset):
-    def __init__(self, masks, classifier, batch_size, dis_type=DIS_TYPE.L2):
+    def __init__(self, masks, classifier, batch_size, sa_threshold, dis_type=DIS_TYPE.L2):
         """
         We generate the saliency map by leveraging pytorch Dataset
         class which allows us to generate saliency maps in batch style
@@ -138,6 +138,7 @@ class DisMaskSaliencyDataset(data.Dataset):
         self._classifier = classifier
         self._batch_size = batch_size
         self._filters_num = masks.size(0)
+        self._sa_threshold = sa_threshold
         self._dis_type = dis_type
         self._device = torch.device("cuda")
 
@@ -303,6 +304,9 @@ class DisMaskSaliencyDataset(data.Dataset):
 
         res_sa = torch.sum(cur_filters, dim=0) / count
 
+        sa_max = torch.max(res_sa)
+        res_sa = torch.clamp(res_sa, min=sa_max * self._sa_threshold)
+
         return res_sa.cpu().numpy()
 
     def __len__(self):
@@ -326,7 +330,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
     def __init__(self, model_cls_name, model_uri=None, grid_size=20, stride=4,
                  resize_val=(224,224), batch_size=1, use_gpu=False,
                  in_gpu_device_id=None, saliency_store_uri='./sa_map',
-                 saliency_uuid_dict_file=None, dis_type_str='L2'):
+                 saliency_uuid_dict_file=None, sa_threshold = 0.6, dis_type_str='L2'):
         """
         Create a pytorch CNN descriptor generator with distance-based saliency map generator
 
@@ -364,6 +368,10 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             to avoid generate the same saliency map again
         :type saliency_uuid_dict_file: None | str (default None)
 
+        :param sa_threshold: the saliency map threshold define as % of max val of the
+            generated saliency map
+        :type sa_threshold: float
+
         :param dis_type_str: distance type for generating the saliency maps, which
             should be the same as the one used for indexing and refinement
         :type dis_type_str: str (L2)
@@ -381,6 +389,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
         self.in_gpu_device_id = in_gpu_device_id
         self.saliency_store_uri = saliency_store_uri
         self.saliency_uuid_dict_file = saliency_uuid_dict_file
+        self.sa_threshold = sa_threshold
         self.dis_type_str = dis_type_str
         # initialize_logging(self._log, logging.DEBUG)
 
@@ -443,7 +452,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             self._log.debug("using CPU")
 
         masks = generate_block_masks(self.grid_size, self.stride, image_size=self.resize_val)
-        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size,
+        self.saliency_generator = DisMaskSaliencyDataset(masks, self.model_cls, self.batch_size, self.sa_threshold,
                                                          DIS_TYPE[self.dis_type_str])
         self.data_set = DataFileSet(root_directory=self.saliency_store_uri)
 
@@ -477,6 +486,7 @@ class PytorchDisSaliencyDescriptorGenerator (DescriptorGenerator):
             'in_gpu_device_id': self.in_gpu_device_id,
             'saliency_store_uri': self.saliency_store_uri,
             'saliency_uuid_dict_file': self.saliency_uuid_dict_file,
+            'sa_threshold': self.sa_threshold,
             'dis_type_str': self.dis_type_str
         }
 

@@ -1,5 +1,7 @@
 from ._interface import SmqtkRepresentation
 
+from .bbox import AxisAlignedBoundingBox
+
 from .classification_element import ClassificationElement
 from .data_element import DataElement
 from .data_set import DataSet

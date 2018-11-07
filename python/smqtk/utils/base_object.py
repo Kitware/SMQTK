@@ -9,6 +9,8 @@ class SmqtkObject (object):
 
     """
 
+    __slots__ = ()
+
     @classmethod
     def get_logger(cls):
         """

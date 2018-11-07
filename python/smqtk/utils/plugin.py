@@ -38,6 +38,8 @@ class Pluggable (object):
     Interface for classes that have plugin implementations
     """
 
+    __slots__ = ()
+
     PLUGIN_ENV_VAR = "SMQTK_PLUGIN_PATH"
     PLUGIN_HELPER_VAR = "SMQTK_PLUGIN_CLASS"
 

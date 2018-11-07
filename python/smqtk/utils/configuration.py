@@ -43,6 +43,8 @@ class Configurable (object):
     dictionary consisting of JSON types.
     """
 
+    __slots__ = ()
+
     @classmethod
     def get_default_config(cls):
         """

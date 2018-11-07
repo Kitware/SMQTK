@@ -33,6 +33,11 @@ Misc.
 
 * Resolve python static analysis warnings and errors.
 
+Representation
+
+* Added ``BoundingBox`` class for describing N-dimensional euclidean spatial
+  regions.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.

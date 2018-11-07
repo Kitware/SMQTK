@@ -66,6 +66,11 @@ class TestDataSetAbstract (unittest.TestCase):
         self.assertEqual(ds[expected_key], expected_value)
 
     def test_contains(self):
+        """
+        By mocking DummyDataSet's ``has_uuid`` method (an abstract method), we
+        check that the ``__contains__`` method on the parent class does the
+        right thing when using python's ``in`` syntax.
+        """
         # Contains built-in hook expects data element and requests UUID from
         # that.
         expected_uuid = 'some uuid'
@@ -81,8 +86,14 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.has_uuid = mock.MagicMock(side_effect=expected_has_uuid_effect)
 
+        # noinspection PyTypeChecker
+        # - Using a mock object on purpose in conjuction with ``has_uuid``
+        #   override.
         self.assertTrue(mock_data_element in ds)
         ds.has_uuid.assert_called_once_with(expected_uuid)
 
         mock_data_element.uuid.return_value = 'not expected uuid'
+        # noinspection PyTypeChecker
+        # - Using a mock object on purpose in conjuction with ``has_uuid``
+        #   override.
         self.assertFalse(mock_data_element in ds)

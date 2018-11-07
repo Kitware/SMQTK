@@ -363,7 +363,8 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             rv = cli.delete('/classifier', data={})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data.decode()), "No label provided.")
+            self.assertMessage(json.loads(rv.data.decode()),
+                               "No label provided.")
 
             rv = cli.delete('/classifier', data={'label': old_label})
             self.assertStatus(rv, 405)
@@ -387,7 +388,8 @@ class TestClassifierService (unittest.TestCase):
         with self.app.test_client() as cli:
             rv = cli.get('/classifier', data={})
             self.assertStatus(rv, 400)
-            self.assertMessage(json.loads(rv.data.decode()), "No label provided.")
+            self.assertMessage(json.loads(rv.data.decode()),
+                               "No label provided.")
 
             rv = cli.get('/classifier', data={'label': label})
             self.assertStatus(rv, 404)

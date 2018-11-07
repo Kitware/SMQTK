@@ -196,16 +196,19 @@ class TestDataFileSet (unittest.TestCase):
         mock_elem.uuid.return_value = expected_uuid
 
         dfs = DataFileSet('/', uuid_chunk=None)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem)
         m_scd.assert_called_with('/')
         m_open.assert_called_with('/UUID_abcd.dataElement', 'wb')
 
         dfs = DataFileSet('/', uuid_chunk=1)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem)
         m_scd.assert_called_with('/')
         m_open.assert_called_with('/UUID_abcd.dataElement', 'wb')
 
         dfs = DataFileSet('/', uuid_chunk=2)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem)
         m_scd.assert_called_with('/ab')
         m_open.assert_called_with('/ab/UUID_abcd.dataElement', 'wb')
@@ -217,6 +220,10 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk0(self, m_isinstance, m_scd, m_open,
                                       _m_pickle):
+        """
+        Test using the DataFileSet with "uuid_chunk" set to ``None`` (no
+        subdirectories).
+        """
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -235,6 +242,7 @@ class TestDataFileSet (unittest.TestCase):
 
         # Chunk = None
         dfs = DataFileSet('/', uuid_chunk=None)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created root 3 times
         self.assertEqual(m_scd.call_count, 3)
@@ -252,6 +260,9 @@ class TestDataFileSet (unittest.TestCase):
     @mock.patch('smqtk.representation.data_set.file_set.isinstance')
     def test_add_data_multiple_chunk3(self, m_isinstance, m_scd, m_open,
                                       _m_pickle):
+        """
+        Test using the DataFileSet with "uuid_chunk" set to 3 (arbitrary choice)
+        """
         # Pretend that we are giving DataElement instances
         m_isinstance.return_value = True
 
@@ -270,6 +281,7 @@ class TestDataFileSet (unittest.TestCase):
 
         # Chunk = 3
         dfs = DataFileSet('/', uuid_chunk=3)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created correct directories
         self.assertEqual(m_scd.call_count, 3)
@@ -307,6 +319,7 @@ class TestDataFileSet (unittest.TestCase):
 
         # Chunk = 3
         dfs = DataFileSet('rel/subdir', uuid_chunk=3)
+        # noinspection PyTypeChecker
         dfs.add_data(mock_elem_1, mock_elem_2, mock_elem_3)
         # Created correct directories
         self.assertEqual(m_scd.call_count, 3)

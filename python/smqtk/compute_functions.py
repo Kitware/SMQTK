@@ -275,10 +275,10 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
         ))
 
     log.info("Collecting iteratively fitting model")
-    rps = [0] * 7
+    pr = bin_utils.ProgressReporter(log.debug, 1.0).start()
     for i, k in enumerate(index_keys):
         k_deque.append(k)
-        bin_utils.report_progress(log.debug, rps, 1.)
+        pr.increment_report()
 
         if initial_fit_size and not ifit_completed:
             if len(k_deque) == initial_fit_size:
@@ -300,6 +300,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
             log.info("- cleaning")
             d_fitted += len(k_deque)
             k_deque.clear()
+    pr.report()
 
     # Final fit with any remaining descriptors
     if k_deque:
@@ -325,11 +326,10 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
         d_uv_iter,
         use_multiprocessing=False,
         name="uc-collector")
-    rps = [0] * 7
+    pr = bin_utils.ProgressReporter(log.debug, 1.0).start()
     for uuid, c in d_uc_iter:
         d_classes[c].add(uuid)
-        bin_utils.report_progress(log.debug, rps, 1.)
-    rps[1] -= 1
-    bin_utils.report_progress(log.debug, rps, 0)
+        pr.increment_report()
+    pr.report()
 
     return d_classes

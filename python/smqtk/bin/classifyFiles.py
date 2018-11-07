@@ -40,7 +40,7 @@ def get_cli_parser():
                               help='When generating a configuration file, '
                                    'overwrite an existing file.')
     g_classifier.add_argument('-l', '--label',
-                              type=str, default=None,
+                              default=None,
                               help='The class to filter by. This is based on '
                                    'the classifier configuration/model used. '
                                    'If this is not provided, we will list the '

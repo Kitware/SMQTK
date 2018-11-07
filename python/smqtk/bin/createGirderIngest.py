@@ -309,14 +309,15 @@ def main():
                                 DataSet.get_impls())
 
     batch = collections.deque()
-    rps = [0]*7
+    pr = bin_utils.ProgressReporter(log.info, 1.0).start()
     for e in find_girder_files(api_root, ids_folder, ids_item, ids_file,
                                api_key, api_query_batch):
         batch.append(e)
         if insert_batch_size and len(batch) >= insert_batch_size:
             data_set.add_data(*batch)
             batch.clear()
-        bin_utils.report_progress(log.info, rps, 1.0)
+        pr.increment_report()
+    pr.report()
 
     if batch:
         data_set.add_data(*batch)

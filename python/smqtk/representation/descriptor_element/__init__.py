@@ -5,8 +5,7 @@ from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import merge_dict
 from smqtk.utils.plugin import Pluggable
 
-
-__author__ = "paul.tunison@kitware.com"
+from ._io import elements_to_matrix
 
 
 class DescriptorElement (SmqtkRepresentation, Pluggable):
@@ -179,6 +178,3 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :rtype: DescriptorMemoryElement
 
         """
-
-
-from ._io import *

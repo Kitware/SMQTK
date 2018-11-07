@@ -29,7 +29,8 @@ class TestSafeFileWrite (unittest.TestCase):
         safe_file_write(fp, expected_bytes)
 
         m_scd.assert_called_once_with('')
-        m_NTF.assert_called_once_with(suffix='.txt', prefix='bar.', dir='', delete=False)
+        m_NTF.assert_called_once_with(suffix='.txt', prefix='bar.', dir='',
+                                      delete=False)
         m_file.write.assert_called_once_with(expected_bytes)
         m_file.__exit__.assert_called_once_with(None, None, None)
         self.assertEqual(m_remove.call_count, 0)
@@ -136,7 +137,8 @@ class TestSafeFileWrite (unittest.TestCase):
         )
 
         m_scd.assert_called_once_with('')
-        m_NTF.assert_called_once_with(suffix='.txt', prefix='bar.', dir='', delete=False)
+        m_NTF.assert_called_once_with(suffix='.txt', prefix='bar.', dir='',
+                                      delete=False)
         m_file.write.assert_called_once_with(expected_bytes)
         # Remove should now be called on temp file path
         self.assertEqual(m_remove.call_count, 1)

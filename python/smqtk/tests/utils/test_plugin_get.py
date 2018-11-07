@@ -238,11 +238,10 @@ def test_junk_external_mod():
     assert class_dict['ImplDoExport']().inst_method('c') == 'doExportc'
 
 
-@mock.patch.dict(os.environ, {ENV_VAR: OS_ENV_PATH_SEP.join([EXT_MOD_1,
-                                                             'asdgasfhsadf',
-                                                             'some thing weird',
-                                                             EXT_MOD_2,
-                                                             'but still uses sep'])})
+@mock.patch.dict(os.environ,
+                 {ENV_VAR: OS_ENV_PATH_SEP.join([EXT_MOD_1, 'asdgasfhsadf',
+                                                 'some thing weird', EXT_MOD_2,
+                                                 'but still uses sep'])})
 def test_external_1_and_2_and_garbage():
     """
     Tests that we can handle invalid module paths intermixed with valid ones

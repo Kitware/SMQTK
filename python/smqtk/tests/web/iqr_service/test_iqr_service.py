@@ -149,7 +149,8 @@ class TestIqrService (unittest.TestCase):
             r = tc.get('/nn_index')
             self.assertStatusCode(r, 200)
             self.assertJsonMessageRegex(r, "Success")
-            self.assertEqual(json.loads(r.data.decode())['index_size'], 89756234876)
+            self.assertEqual(json.loads(r.data.decode())['index_size'],
+                             89756234876)
 
     def test_update_nn_index_no_args(self):
         """ Test that error is returned when no arguments provided """

@@ -387,7 +387,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             # Filter descriptors NOT matching UIDs of current descriptor
             # cache.
             self._descr_cache = \
-                [d for d in self._descr_cache if d.uuid() in uidset]
+                [descr for descr in self._descr_cache if descr.uuid() in uidset]
             self.build_index(self._descr_cache)
 
     def _nn(self, d, n=1):

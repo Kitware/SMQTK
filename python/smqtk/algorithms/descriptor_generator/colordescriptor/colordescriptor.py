@@ -12,9 +12,9 @@ import subprocess
 import sys
 import tempfile
 
-import six
 import numpy
 import six
+from six import next
 import sklearn.cluster
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
@@ -25,8 +25,6 @@ from smqtk.utils.video_utils import get_metadata_info
 
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
-
-from six import next
 
 
 # Requires FLANN bindings

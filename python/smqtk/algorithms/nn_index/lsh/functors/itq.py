@@ -357,20 +357,20 @@ class ItqFunctor (LshFunctor):
         # thus we need the transpose here.
         c = numpy.cov(x.transpose())
 
-        if True:
-            # Direct translation from UNC matlab code
-            # - eigen vectors are the columns of ``pc``
-            self._log.debug('-- computing linalg.eig')
-            l, pc = numpy.linalg.eig(c)
-            self._log.debug('-- ordering eigen vectors by descending eigen '
-                            'value')
-        else:
-            # Harry translation -- Uses singular values / vectors, not eigen
-            # - singular vectors are the columns of pc
-            self._log.debug('-- computing linalg.svd')
-            pc, l, _ = numpy.linalg.svd(c)
-            self._log.debug('-- ordering singular vectors by descending '
-                            'singular value')
+        # Direct translation from UNC matlab code
+        # - eigen vectors are the columns of ``pc``
+        self._log.debug('-- computing linalg.eig')
+        l, pc = numpy.linalg.eig(c)
+        self._log.debug('-- ordering eigen vectors by descending eigen '
+                        'value')
+
+        # # Harry translation of original matlab code
+        # # - Uses singular values / vectors, not eigen
+        # # - singular vectors are the columns of pc
+        # self._log.debug('-- computing linalg.svd')
+        # pc, l, _ = numpy.linalg.svd(c)
+        # self._log.debug('-- ordering singular vectors by descending '
+        #                 'singular value')
 
         # Same ordering method for both eig/svd sources.
         l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda _p: _p[0],

@@ -2,7 +2,7 @@ import unittest
 
 import numpy
 from six import BytesIO
-from six.moves import cPickle, cStringIO
+from six.moves import cPickle
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -54,6 +54,8 @@ class TestDescriptorMemoryElement (unittest.TestCase):
         numpy.save(expected_v_b, expected_v)
         expected_v_dump = expected_v_b.getvalue()
 
+        # noinspection PyTypeChecker
+        # - Using dummy data in constructor for testing __setstate__.
         e = DescriptorMemoryElement(None, None)
         e.__setstate__((expected_type, expected_uid, expected_v_dump))
         self.assertEqual(e.type(), expected_type)

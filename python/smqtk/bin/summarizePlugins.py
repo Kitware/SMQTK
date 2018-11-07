@@ -15,7 +15,6 @@ import smqtk.algorithms.nn_index.lsh.functors
 import smqtk.representation
 import smqtk.utils.bin_utils
 from smqtk.utils.configuration import (
-    from_config_dict,
     make_default_config,
 )
 
@@ -51,7 +50,7 @@ def main():
     def collect_configs(name, impl_set):
         """
         :type name: str
-        :type impl_set: dict
+        :type impl_set: set[type]
         """
         if collect_defaults:
             defaults[name] = make_default_config(impl_set)
@@ -59,7 +58,7 @@ def main():
     log = logging.getLogger("smqtk.checkPlugins")
 
     # Key is the interface type name
-    #: :type: dict[str, dict[str, type]]
+    #: :type: dict[str, set[type]]
     plugin_info = {}
     # List of plugin_info keys in order they were added
     plugin_type_list = []
@@ -69,12 +68,12 @@ def main():
         Record discoverable implementations for an interface class type.
 
         :param interface_t: Interface class type.
-        :type interface_t: type[smqtk.utils.plugin.Pluggable|smqtk.utils.configuration.Configurable]
 
         """
         type_name = interface_t.__name__
         log.info("Checking %s plugins", type_name)
         plugin_type_list.append(type_name)
+        #: :type: set[type]
         impl_set = interface_t.get_impls()
         plugin_info[plugin_type_list[-1]] = impl_set
         collect_configs(type_name, impl_set)

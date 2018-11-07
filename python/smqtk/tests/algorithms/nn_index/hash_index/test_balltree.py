@@ -200,16 +200,17 @@ class TestBallTreeHashIndex (unittest.TestCase):
         for i in range(1000):
             index[i] = int_to_bit_vector_large(i, 256)
         bt.build_index(index)
-        # Copy post-build index for checking no removal occurred
-        bt_data = np.copy(bt.bt.data)
+        # BallTree data should now contain 1000 entries
+        self.assertEqual(bt.bt.data.shape, (1000, 256))
 
         bt.remove_from_index([
             int_to_bit_vector_large(42, 256),
             int_to_bit_vector_large(998, 256),
         ])
-        # Make sure expected arrays are missing from data block.
+        # Make sure data block is of the expected shape (two rows shorter)
         new_data = np.asarray(bt.bt.data)
         self.assertEqual(new_data.shape, (998, 256))
+        # Make sure expected arrays are missing from data block.
         new_data_set = set(tuple(r) for r in new_data.tolist())
         self.assertNotIn(tuple(int_to_bit_vector_large(42, 256)),
                          new_data_set)

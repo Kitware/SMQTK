@@ -171,6 +171,12 @@ setuptools.setup(
         ],
         'girder': [
             'girder-client',
+        ],
+        'testing': [
+            'coverage',
+            'mock',
+            'pytest',
+            'pytest-cov',
         ]
     },
     tests_require=[

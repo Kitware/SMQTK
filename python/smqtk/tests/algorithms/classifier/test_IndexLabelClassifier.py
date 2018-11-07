@@ -29,7 +29,7 @@ class TestIndexLabelClassifier (unittest.TestCase):
         self.assertTrue(IndexLabelClassifier.is_usable())
 
     def test_impl_findable(self):
-        self.assertIn(IndexLabelClassifier.__name__,
+        self.assertIn(IndexLabelClassifier,
                       Classifier.get_impls())
 
     def test_new(self):

@@ -42,7 +42,7 @@ if FaissNearestNeighborsIndex.is_usable():
                                               uid2idx_kvs, **kwargs)
 
         def test_impl_findable(self):
-            self.assertIn(FaissNearestNeighborsIndex.__name__,
+            self.assertIn(FaissNearestNeighborsIndex,
                           NearestNeighborsIndex.get_impls())
 
         def test_configuration(self):

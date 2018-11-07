@@ -2,8 +2,8 @@ from smqtk.representation import (
     SmqtkRepresentation,
     ClassificationElement
 )
-from smqtk.utils.plugin import make_config
 from smqtk.utils import merge_dict
+from smqtk.utils.configuration import make_default_config
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -52,7 +52,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(ClassificationElement.get_impls())
+        return make_default_config(ClassificationElement.get_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
@@ -80,10 +80,11 @@ class ClassificationElementFactory (SmqtkRepresentation):
             merge_dict(mc, config_dict)
             config_dict = mc
 
-        return ClassificationElementFactory(
-            ClassificationElement.get_impls()[config_dict['type']],
-            config_dict[config_dict['type']]
-        )
+        ce_type_map = {t.__name__: t
+                       for t in ClassificationElement.get_impls()}
+        ce_type = ce_type_map[config_dict['type']]
+        ce_conf = config_dict[config_dict['type']]
+        return ClassificationElementFactory(ce_type, ce_conf)
 
     def get_config(self):
         type_name = self.type.__name__

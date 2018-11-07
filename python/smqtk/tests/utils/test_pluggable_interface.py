@@ -44,15 +44,17 @@ def test_construct_when_not_usable(m_TEST_USABLE):
 def test_get_impls_expected_defaults():
     """
     Test that the correct package and containing module directory is correct
-    for the
+    for the dummy plugin.
     """
     mock_return_value = 'mock return'
     with mock.patch('smqtk.utils.plugin.get_plugins') as m_get_plugins:
         m_get_plugins.return_value = mock_return_value
         assert DummyImpl.get_impls() == mock_return_value
-        m_get_plugins.assert_called_once_with('smqtk.tests.utils', THIS_DIR,
+        m_get_plugins.assert_called_once_with(DummyImpl,
                                               'SMQTK_PLUGIN_PATH',
-                                              'SMQTK_PLUGIN_CLASS', DummyImpl,
+                                              'SMQTK_PLUGIN_CLASS',
+                                              # Default ``warn`` value
+                                              warn=True,
                                               # Default ``reload_modules`` value
                                               reload_modules=False)
 
@@ -60,15 +62,15 @@ def test_get_impls_expected_defaults():
 def test_get_impls_do_reload():
     """
     Test passing change to ``reload_modules`` argument.
-    :return:
     """
     mock_return_value = 'mock return'
     with mock.patch('smqtk.utils.plugin.get_plugins') as m_get_plugins:
         m_get_plugins.return_value = mock_return_value
         assert DummyImpl.get_impls(reload_modules=True) == mock_return_value
-        m_get_plugins.assert_called_once_with('smqtk.tests.utils', THIS_DIR,
+        m_get_plugins.assert_called_once_with(DummyImpl,
                                               'SMQTK_PLUGIN_PATH',
-                                              'SMQTK_PLUGIN_CLASS', DummyImpl,
+                                              'SMQTK_PLUGIN_CLASS',
+                                              warn=True,
                                               reload_modules=True)
 
 
@@ -77,16 +79,20 @@ def test_get_impls_do_reload():
 @mock.patch.object(DummyImpl, 'PLUGIN_ENV_VAR',
                    new_callable=mock.PropertyMock)
 def test_get_impls_change_vars(m_env_var_prop, m_helper_var_prop):
-    """ Test that change to env/helper vars propagates. """
+    """
+    Test that changes to env/helper vars propagates to call to underlying
+    ``get_plugins`` functional call.
+    """
     expected_return_value = 'mock return'
     expected_env_var = m_env_var_prop.return_value = "new test env var"
     expected_helper_var = m_helper_var_prop.return_value = "new test helper var"
     with mock.patch('smqtk.utils.plugin.get_plugins') as m_get_plugins:
         m_get_plugins.return_value = expected_return_value
         assert DummyImpl.get_impls() == expected_return_value
-        m_get_plugins.assert_called_once_with('smqtk.tests.utils', THIS_DIR,
+        m_get_plugins.assert_called_once_with(DummyImpl,
                                               expected_env_var,
-                                              expected_helper_var, DummyImpl,
+                                              expected_helper_var,
+                                              warn=True,
                                               reload_modules=False)
 
 
@@ -99,10 +105,8 @@ def test_get_impls_implemented_classes():
     called, just that its empty.  If there are sub-classes to a fully
     implemented class, then its discovered sub-classes should be returned.
     """
-    expected = {
-        "DummyImplSub": DummyImplSub
-    }
+    expected = {DummyImplSub}
     assert DummyImpl.get_impls() == expected
 
-    expected = {}
+    expected = set()
     assert DummyImplSub.get_impls() == expected

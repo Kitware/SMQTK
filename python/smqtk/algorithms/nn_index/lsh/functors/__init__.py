@@ -2,10 +2,8 @@
 Interface and plugin getter for LSH algorithm hash generation functors.
 """
 import abc
-import os
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.utils import plugin
 
 
 class LshFunctor (SmqtkAlgorithm):

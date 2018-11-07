@@ -1,18 +1,17 @@
 import abc
-import os
 
 import six
 
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils import plugin
 from smqtk.utils import merge_dict
+from smqtk.utils.plugin import Pluggable
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class ClassificationElement(SmqtkRepresentation, plugin.Pluggable):
+class ClassificationElement(SmqtkRepresentation, Pluggable):
     """
     Classification result encapsulation.
 

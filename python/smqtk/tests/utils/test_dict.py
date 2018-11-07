@@ -5,7 +5,7 @@ from smqtk.utils import (
 )
 
 
-class TestMergeConfigs (unittest.TestCase):
+class TestMergeDict (unittest.TestCase):
 
     def test_disjoint_update(self):
         a = {

@@ -15,10 +15,13 @@ from sklearn.cluster import MiniBatchKMeans
 
 from smqtk.compute_functions import mb_kmeans_build_apply
 from smqtk.representation import DescriptorIndex
-from smqtk.utils import Configurable
 from smqtk.utils.bin_utils import utility_main_helper, basic_cli_parser
+from smqtk.utils.configuration import (
+    Configurable,
+    from_config_dict,
+    make_default_config
+)
 from smqtk.utils.file_utils import safe_create_dir
-from smqtk.utils.plugin import make_config, from_plugin_config
 
 
 def default_config():
@@ -33,7 +36,7 @@ def default_config():
 
     c = {
         "minibatch_kmeans_params": MBKTemp.get_default_config(),
-        "descriptor_index": make_config(DescriptorIndex.get_impls()),
+        "descriptor_index": make_default_config(DescriptorIndex.get_impls()),
         # Number of descriptors to run an initial fit with. This brings the
         # advantage of choosing a best initialization point from multiple.
         "initial_fit_size": 0,
@@ -71,8 +74,8 @@ def main():
         raise ValueError("No path given for output map file (pickle).")
 
     #: :type: smqtk.representation.DescriptorIndex
-    index = from_plugin_config(config['descriptor_index'],
-                               DescriptorIndex.get_impls())
+    index = from_config_dict(config['descriptor_index'],
+                             DescriptorIndex.get_impls())
     mbkm = MiniBatchKMeans(verbose=args.verbose,
                            compute_labels=False,
                            **config['minibatch_kmeans_params'])

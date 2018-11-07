@@ -1,16 +1,15 @@
 import abc
 import numpy
-import os
 
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils import plugin
 from smqtk.utils import merge_dict
+from smqtk.utils.plugin import Pluggable
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-class DescriptorElement (SmqtkRepresentation, plugin.Pluggable):
+class DescriptorElement (SmqtkRepresentation, Pluggable):
     """
     Abstract descriptor vector container.
 

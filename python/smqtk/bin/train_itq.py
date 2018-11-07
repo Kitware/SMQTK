@@ -18,7 +18,10 @@ from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
     bin_utils,
-    plugin,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -29,7 +32,7 @@ def default_config():
     return {
         "itq_config": ItqFunctor.get_default_config(),
         "uuids_list_filepath": None,
-        "descriptor_index": plugin.make_config(DescriptorIndex.get_impls()),
+        "descriptor_index": make_default_config(DescriptorIndex.get_impls()),
     }
 
 
@@ -51,7 +54,7 @@ def main():
     log.info("Initializing DescriptorIndex [type=%s]",
              config['descriptor_index']['type'])
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['descriptor_index'],
         DescriptorIndex.get_impls(),
     )

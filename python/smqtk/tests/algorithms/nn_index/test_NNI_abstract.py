@@ -3,7 +3,6 @@ import unittest
 
 import mock
 import numpy
-import six
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -43,7 +42,7 @@ class TestNNIndexAbstract (unittest.TestCase):
         # Some implementations should be returned
         m = NearestNeighborsIndex.get_impls()
         self.assertTrue(m)
-        for cls in six.itervalues(m):
+        for cls in m:
             self.assertTrue(issubclass(cls, NearestNeighborsIndex))
 
     def test_empty_iterable_exception(self):

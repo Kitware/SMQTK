@@ -109,26 +109,3 @@ class TestClassifierAbstractClass (unittest.TestCase):
             # Check for expected classification
             self.assertEqual(m[d].get_classification(),
                              {d.uuid(): d.vector().tolist()})
-
-
-class TestGetClassifierImpls (unittest.TestCase):
-    # IndexLabelClassifier should always be available (no dependencies)
-
-    def test_get_classifier_impls_subclass_interface_classifier(self):
-        # Simple test that primarily makes sure the function doesn't fall down.
-        m = Classifier.get_impls()
-        self.assertIsInstance(m, dict)
-        self.assertIn("IndexLabelClassifier", m)
-
-        # Should act the same as calling with no sub-interface
-        m2 = Classifier.get_impls()
-        self.assertIsInstance(m, dict)
-        self.assertIn("IndexLabelClassifier", m)
-        self.assertEqual(m, m2)
-
-    def test_get_classifier_impls_subclass_interface_supervised(self):
-        # should not return when sub_interface is set to the
-        # SupervisedClassifier base-class.
-        m = SupervisedClassifier.get_impls()
-        self.assertIsInstance(m, dict)
-        self.assertNotIn("IndexLabelClassifier", m)

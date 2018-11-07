@@ -9,36 +9,10 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
 import copy
 import functools
-import logging
 import operator as op
 
 # noinspection PyUnresolvedReferences
 from six.moves import range
-
-
-class SmqtkObject (object):
-    """
-    Highest level object interface for classes defined in SMQTK.
-
-    Currently defines logging methods.
-
-    """
-
-    @classmethod
-    def get_logger(cls):
-        """
-        :return: logging object for this class
-        :rtype: logging.Logger
-        """
-        return logging.getLogger('.'.join((cls.__module__, cls.__name__)))
-
-    @property
-    def _log(self):
-        """
-        :return: logging object for this class as a property
-        :rtype: logging.Logger
-        """
-        return self.get_logger()
 
 
 def ncr(n, r):
@@ -109,8 +83,9 @@ def merge_dict(a, b, deep_copy=False):
 #
 
 # No internal util dependencies
+from .base_object import SmqtkObject
 from .bin_utils import initialize_logging
-from .configurable_interface import Configurable
+from .content_type_validator import ContentTypeValidator
 from .database_info import DatabaseInfo
 from .iter_validation import check_empty_iterable
 from .read_write_lock import ReaderUpdateException, DummyRWLock, ReadWriteLock

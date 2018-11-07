@@ -9,6 +9,7 @@ import unittest
 
 import numpy as np
 
+from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
@@ -53,6 +54,9 @@ class TestLshIndex (unittest.TestCase):
     def test_is_usable(self):
         # Should always be usable since this is a shell class.
         self.assertTrue(LSHNearestNeighborIndex.is_usable())
+
+    def test_findable(self):
+        assert LSHNearestNeighborIndex in NearestNeighborsIndex.get_impls()
 
     def test_configuration(self):
         c = LSHNearestNeighborIndex.get_default_config()

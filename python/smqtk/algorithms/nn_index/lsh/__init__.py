@@ -18,9 +18,13 @@ from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DescriptorIndex, KeyValueStore
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
-from smqtk.utils import plugin
 from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 from smqtk.utils import merge_dict
 
 
@@ -73,19 +77,19 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         default = super(LSHNearestNeighborIndex, cls).get_default_config()
 
-        lf_default = plugin.make_config(LshFunctor.get_impls())
+        lf_default = make_default_config(LshFunctor.get_impls())
         default['lsh_functor'] = lf_default
 
-        di_default = plugin.make_config(DescriptorIndex.get_impls())
+        di_default = make_default_config(DescriptorIndex.get_impls())
         default['descriptor_index'] = di_default
 
-        hi_default = plugin.make_config(HashIndex.get_impls())
+        hi_default = make_default_config(HashIndex.get_impls())
         default['hash_index'] = hi_default
         default['hash_index_comment'] = "'hash_index' may also be null to " \
                                         "default to a linear index built at " \
                                         "query time."
 
-        h2u_default = plugin.make_config(KeyValueStore.get_impls())
+        h2u_default = make_default_config(KeyValueStore.get_impls())
         default['hash2uuids_kvstore'] = h2u_default
 
         return default
@@ -120,17 +124,16 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             merged = config_dict
 
         merged['lsh_functor'] = \
-            plugin.from_plugin_config(merged['lsh_functor'],
-                                      LshFunctor.get_impls())
+            from_config_dict(merged['lsh_functor'], LshFunctor.get_impls())
         merged['descriptor_index'] = \
-            plugin.from_plugin_config(merged['descriptor_index'],
-                                      DescriptorIndex.get_impls())
+            from_config_dict(merged['descriptor_index'],
+                             DescriptorIndex.get_impls())
 
         # Hash index may be None for a default at-query-time linear indexing
         if merged['hash_index'] and merged['hash_index']['type']:
             merged['hash_index'] = \
-                plugin.from_plugin_config(merged['hash_index'],
-                                          HashIndex.get_impls())
+                from_config_dict(merged['hash_index'],
+                                 HashIndex.get_impls())
         else:
             cls.get_logger().debug("No HashIndex impl given. Passing ``None``.")
             merged['hash_index'] = None
@@ -140,8 +143,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             del merged['hash_index_comment']
 
         merged['hash2uuids_kvstore'] = \
-            plugin.from_plugin_config(merged['hash2uuids_kvstore'],
-                                      KeyValueStore.get_impls())
+            from_config_dict(merged['hash2uuids_kvstore'],
+                             KeyValueStore.get_impls())
 
         return super(LSHNearestNeighborIndex, cls).from_config(merged, False)
 
@@ -246,13 +249,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
     def get_config(self):
         hi_conf = None
         if self.hash_index is not None:
-            hi_conf = plugin.to_plugin_config(self.hash_index)
+            hi_conf = to_config_dict(self.hash_index)
         return {
-            "lsh_functor": plugin.to_plugin_config(self.lsh_functor),
-            "descriptor_index": plugin.to_plugin_config(self.descriptor_index),
+            "lsh_functor": to_config_dict(self.lsh_functor),
+            "descriptor_index": to_config_dict(self.descriptor_index),
             "hash_index": hi_conf,
             "hash2uuids_kvstore":
-                plugin.to_plugin_config(self.hash2uuids_kvstore),
+                to_config_dict(self.hash2uuids_kvstore),
             "distance_method": self.distance_method,
             "read_only": self.read_only,
         }

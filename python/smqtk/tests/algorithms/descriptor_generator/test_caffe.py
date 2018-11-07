@@ -50,7 +50,7 @@ if CaffeDescriptorGenerator.is_usable():
             '/download'
 
         def test_impl_findable(self):
-            self.assertIn(CaffeDescriptorGenerator.__name__,
+            self.assertIn(CaffeDescriptorGenerator,
                           DescriptorGenerator.get_impls())
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'

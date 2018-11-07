@@ -6,8 +6,7 @@ import tempfile
 
 from six.moves import cStringIO as StringIO
 
-from smqtk.utils import SmqtkObject
-from smqtk.utils import file_utils
+from smqtk.utils import file_utils, SmqtkObject
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))

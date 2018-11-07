@@ -8,19 +8,17 @@ import os
 import os.path as osp
 import tempfile
 
-import six
-
 from smqtk.exceptions import InvalidUriError, NoUriResolutionError, \
     ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils import file_utils
-from smqtk.utils import plugin
+from smqtk.utils.plugin import Pluggable
 
 
 MIMETYPES = mimetypes.MimeTypes()
 
 
-class DataElement (SmqtkRepresentation, plugin.Pluggable):
+class DataElement (SmqtkRepresentation, Pluggable):
     """
     Abstract interface for a byte data container.
 
@@ -316,7 +314,7 @@ def from_uri(uri, impl_generator=DataElement.get_impls):
         implementation type names to the class type. By default this refers to
         the standard ``*.get_impls()`` function, however this can be
         changed to refer to a custom set of classes if desired.
-    :type impl_generator: () -> dict[str, type]
+    :type impl_generator: () -> collections.Iterable[type[DataElement]]
 
     :raises smqtk.exceptions.InvalidUriError: No data element implementations
         could resolve the given URI.
@@ -329,11 +327,11 @@ def from_uri(uri, impl_generator=DataElement.get_impls):
     log = logging.getLogger(__name__)
     log.debug("Trying to parse URI: '%s'", uri)
 
-    #: :type: collections.Iterable[DataElement]
-    de_type_iter = six.itervalues(impl_generator())
+    de_type_iter = impl_generator()
     inst = None
     for de_type in de_type_iter:
         try:
+            # noinspection PyUnresolvedReferences
             inst = de_type.from_uri(uri)
         except NoUriResolutionError:
             # Expected error signaling that DataElement implementation does not

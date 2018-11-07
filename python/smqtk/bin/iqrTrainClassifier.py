@@ -28,8 +28,10 @@ from smqtk.utils.bin_utils import (
     basic_cli_parser,
     utility_main_helper,
 )
-from smqtk.utils.plugin import make_config
-from smqtk.utils.plugin import from_plugin_config
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def get_cli_parser():
@@ -41,13 +43,13 @@ def get_cli_parser():
 
 def get_default_config():
     return {
-        "classifier": make_config(SupervisedClassifier.get_impls()),
+        "classifier": make_default_config(SupervisedClassifier.get_impls()),
     }
 
 
 def train_classifier_iqr(config, iqr_state_fp):
     #: :type: smqtk.algorithms.SupervisedClassifier
-    classifier = from_plugin_config(
+    classifier = from_config_dict(
         config['classifier'],
         SupervisedClassifier.get_impls()
     )

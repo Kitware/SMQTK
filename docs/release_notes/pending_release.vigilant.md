@@ -5,6 +5,27 @@ SMQTK VIGILANT Pending Release Notes
 Updates / New Features
 ----------------------
 
+Utilities
+
+* Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
+  Ramifications fixed throughout the codebase.
+
+* Moved some helper functions from ``smqtk.utils.plugin``to
+  ``smqtk.utils.configuration`` as those functions more specifically had to do
+  with configuration dictionary construction and manipulation. Ramifications
+  fixed  throughout the codebase.
+
+* Updated ``smqtk.utils.plugin.get_plugins`` signature and return. Now more
+  simply takes the interface class (previously referred to as the base-class)
+  instead of the original first two positional, string arguments as they could
+  be easily introspected from the interface class object. Ramifications fixed
+  throughout the codebase.
+
+* Added ``ContentTypeValidator`` interface for algorithms that operate on raw
+  ``DataElement`` instances, providing methods for validating reported content
+  types against a sub-class defined set of "valid" types. Applied to
+  ``DescriptorGenerator`` interface.
+
 Fixes
 -----
 
@@ -16,7 +37,7 @@ Tests
 Utils
 
 * Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
-  deprecate this function.
+  added deprecation warning to this function.
 
 Algorithms
 

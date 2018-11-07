@@ -15,8 +15,13 @@ from six import BytesIO
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation import DataElement
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import merge_dict, plugin
+from smqtk.utils import merge_dict
 from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
 
 
 class ItqFunctor (LshFunctor):
@@ -49,7 +54,7 @@ class ItqFunctor (LshFunctor):
 
         # Cache element parameters need to be split out into sub-configurations
         data_element_default_config = \
-            plugin.make_config(DataElement.get_impls())
+            make_default_config(DataElement.get_impls())
         default['mean_vec_cache'] = data_element_default_config
         # Need to deepcopy source to prevent modifications on one sub-config
         # from reflecting in the other.
@@ -83,15 +88,15 @@ class ItqFunctor (LshFunctor):
         mean_vec_cache = None
         if config_dict['mean_vec_cache'] and \
                 config_dict['mean_vec_cache']['type']:
-            mean_vec_cache = plugin.from_plugin_config(
-                config_dict['mean_vec_cache'], data_element_impls)
+            mean_vec_cache = from_config_dict(config_dict['mean_vec_cache'],
+                                              data_element_impls)
         config_dict['mean_vec_cache'] = mean_vec_cache
         # Rotation matrix cache element.
         rotation_cache = None
         if config_dict['rotation_cache'] and \
                 config_dict['rotation_cache']['type']:
-            rotation_cache = plugin.from_plugin_config(
-                config_dict['rotation_cache'], data_element_impls)
+            rotation_cache = from_config_dict(config_dict['rotation_cache'],
+                                              data_element_impls)
         config_dict['rotation_cache'] = rotation_cache
 
         return super(ItqFunctor, cls).from_config(config_dict, False)
@@ -198,10 +203,10 @@ class ItqFunctor (LshFunctor):
         })
         if self.mean_vec_cache_elem:
             c['mean_vec_cache'] = \
-                plugin.to_plugin_config(self.mean_vec_cache_elem)
+                to_config_dict(self.mean_vec_cache_elem)
         if self.rotation_cache_elem:
             c['rotation_cache'] = \
-                plugin.to_plugin_config(self.rotation_cache_elem)
+                to_config_dict(self.rotation_cache_elem)
         return c
 
     def has_model(self):

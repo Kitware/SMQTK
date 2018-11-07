@@ -20,7 +20,9 @@ from smqtk.representation import (
     KeyValueStore,
 )
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin, merge_dict, metrics
+from smqtk.utils import merge_dict, metrics
+from smqtk.utils.configuration import \
+    make_default_config, from_config_dict, to_config_dict
 
 # Requires FAISS bindings
 try:
@@ -74,15 +76,15 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(FaissNearestNeighborsIndex, cls).get_default_config()
 
-        data_element_default_config = plugin.make_config(
-            DataElement.get_impls())
+        data_element_default_config = \
+            make_default_config(DataElement.get_impls())
         default['index_element'] = data_element_default_config
         default['index_param_element'] = deepcopy(data_element_default_config)
 
-        di_default = plugin.make_config(DescriptorIndex.get_impls())
+        di_default = make_default_config(DescriptorIndex.get_impls())
         default['descriptor_set'] = di_default
 
-        kvs_default = plugin.make_config(KeyValueStore.get_impls())
+        kvs_default = make_default_config(KeyValueStore.get_impls())
         default['idx2uid_kvs'] = kvs_default
         default['uid2idx_kvs'] = deepcopy(kvs_default)
 
@@ -115,19 +117,19 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg = config_dict
 
-        cfg['descriptor_set'] = plugin.from_plugin_config(
+        cfg['descriptor_set'] = from_config_dict(
             cfg['descriptor_set'], DescriptorIndex.get_impls()
         )
-        cfg['uid2idx_kvs'] = plugin.from_plugin_config(
+        cfg['uid2idx_kvs'] = from_config_dict(
             cfg['uid2idx_kvs'], KeyValueStore.get_impls()
         )
-        cfg['idx2uid_kvs'] = plugin.from_plugin_config(
+        cfg['idx2uid_kvs'] = from_config_dict(
             cfg['idx2uid_kvs'], KeyValueStore.get_impls()
         )
 
         if (cfg['index_element'] and
                 cfg['index_element']['type']):
-            index_element = plugin.from_plugin_config(
+            index_element = from_config_dict(
                 cfg['index_element'], DataElement.get_impls())
             cfg['index_element'] = index_element
         else:
@@ -135,7 +137,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         if (cfg['index_param_element'] and
                 cfg['index_param_element']['type']):
-            index_param_element = plugin.from_plugin_config(
+            index_param_element = from_config_dict(
                 cfg['index_param_element'], DataElement.get_impls())
             cfg['index_param_element'] = index_param_element
         else:
@@ -246,9 +248,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def get_config(self):
         config = {
-            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
-            "uid2idx_kvs": plugin.to_plugin_config(self._uid2idx_kvs),
-            "idx2uid_kvs": plugin.to_plugin_config(self._idx2uid_kvs),
+            "descriptor_set": to_config_dict(self._descriptor_set),
+            "uid2idx_kvs": to_config_dict(self._uid2idx_kvs),
+            "idx2uid_kvs": to_config_dict(self._idx2uid_kvs),
             "factory_string": self.factory_string,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
@@ -257,10 +259,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "gpu_id": self._gpu_id,
         }
         if self._index_element:
-            config['index_element'] = plugin.to_plugin_config(
+            config['index_element'] = to_config_dict(
                 self._index_element)
         if self._index_param_element:
-            config['index_param_element'] = plugin.to_plugin_config(
+            config['index_param_element'] = to_config_dict(
                 self._index_param_element)
 
         return config

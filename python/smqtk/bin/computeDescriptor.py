@@ -12,14 +12,18 @@ import numpy
 from smqtk.algorithms import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.utils import bin_utils, plugin
+from smqtk.utils import bin_utils
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "content_descriptor":
-            plugin.make_config(DescriptorGenerator.get_impls()),
+            make_default_config(DescriptorGenerator.get_impls()),
     }
 
 
@@ -67,8 +71,8 @@ def main():
 
     factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
     #: :type: smqtk.algorithms.descriptor_generator.DescriptorGenerator
-    cd = plugin.from_plugin_config(config['content_descriptor'],
-                                   DescriptorGenerator.get_impls())
+    cd = from_config_dict(config['content_descriptor'],
+                          DescriptorGenerator.get_impls())
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

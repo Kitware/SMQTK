@@ -1,11 +1,10 @@
 import abc
-import os.path as osp
 
 from smqtk.representation import SmqtkRepresentation, DescriptorElement
-from smqtk.utils import plugin
+from smqtk.utils.plugin import Pluggable
 
 
-class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
+class DescriptorIndex (SmqtkRepresentation, Pluggable):
     """
     Index of descriptors, keyed and query-able by descriptor UUID.
 

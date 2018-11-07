@@ -29,7 +29,7 @@ class TestMRPTIndex (unittest.TestCase):
             MemoryDescriptorIndex(), **kwargs)
 
     def test_impl_findable(self):
-        self.assertIn(MRPTNearestNeighborsIndex.__name__,
+        self.assertIn(MRPTNearestNeighborsIndex,
                       NearestNeighborsIndex.get_impls())
 
     def test_configuration(self):

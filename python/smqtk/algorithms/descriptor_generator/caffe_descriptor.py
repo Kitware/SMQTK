@@ -14,9 +14,9 @@ from six.moves import range, zip
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
-from smqtk.representation.data_element import from_uri
+from smqtk.representation import DataElement
 from smqtk.utils.cli import ProgressReporter
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.configuration import from_config_dict, to_config_dict
 
 try:
     import caffe
@@ -58,11 +58,12 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :param smqtk.representation.DataElement network_prototxt: Data element
             containing the text file defining the network layout.
 
-        :param network_model: URI to the trained ``.caffemodel``
-            file to use.
+        :param smqtk.representation.DataElement network_model: Data element
+            containing the trained ``.caffemodel`` file to use.
 
-        :param image_mean: Optional URI to the image mean ``.binaryproto``
-            or ``.npy`` file.
+        :param smqtk.representation.DataElement image_mean: Optional data
+            element containing the image mean ``.binaryproto`` or ``.npy``
+            file.
 
         :param return_layer: The label of the layer we take data from to compose
             output descriptor vector.
@@ -146,6 +147,16 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # This works because configuration parameters exactly match up with
         # instance attributes.
         self.__dict__.update(state)
+        self.network_prototxt = from_config_dict(
+            self.network_prototxt, DataElement.get_impls()
+        )
+        self.network_model = from_config_dict(
+            self.network_model, DataElement.get_impls()
+        )
+        if self.image_mean is not None:
+            self.image_mean = from_config_dict(
+                self.image_mean, DataElement.get_impls()
+            )
         self._setup_network()
 
     def _set_caffe_mode(self):
@@ -239,10 +250,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :rtype: dict
 
         """
+        if self.image_mean is not None:
+            image_mean_config = to_config_dict(self.image_mean)
+        else:
+            image_mean_config = None
         return {
-            "network_prototxt_uri": self.network_prototxt_uri,
-            "network_model_uri": self.network_model_uri,
-            "image_mean_uri": self.image_mean_uri,
+            "network_prototxt": to_config_dict(self.network_prototxt),
+            "network_model": to_config_dict(self.network_model),
+            "image_mean": image_mean_config,
             "return_layer": self.return_layer,
             "batch_size": self.batch_size,
             "use_gpu": self.use_gpu,

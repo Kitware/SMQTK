@@ -15,7 +15,7 @@
 # ipython==5.1.0
 
 # # PostgreSQL
-# psycopg2==2.6.2
+# psycopg2-binary==2.7.6
 
 # # Caffe
 # protobuf==3.0.0

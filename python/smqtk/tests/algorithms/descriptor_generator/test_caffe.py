@@ -7,6 +7,8 @@ import unittest
 import PIL.Image
 import mock
 import numpy
+import requests
+from matplotlib.cbook import get_sample_data
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
@@ -16,38 +18,58 @@ from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
     _process_load_img_array
 from smqtk.representation.data_element import from_uri
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.tests import TEST_DATA_DIR
+from smqtk.utils.configuration import to_config_dict
+
+
+def _data_element_from_url(url):
+    """Helper function to avoid repeatedly downloading data in tests"""
+    r = requests.get(url)
+    r.raise_for_status()
+    content_type = requests.get(url).headers['content-type']
+    return DataMemoryElement(bytes=r.content, content_type=content_type)
 
 
 if CaffeDescriptorGenerator.is_usable():
 
     class TestCaffeDesctriptorGenerator (unittest.TestCase):
 
-        lenna_image_fp = os.path.join(TEST_DATA_DIR, 'Lenna.png')
-        lenna_alexnet_fc7_descr_fp = \
-            os.path.join(TEST_DATA_DIR, 'Lenna.alexnet_fc7_output.npy')
+        hopper_image_fp = get_sample_data('grace_hopper.png', asfileobj=False)
+        hopper_alexnet_fc7_descr_fp = os.path.join(
+            TEST_DATA_DIR, 'Hopper.alexnet_fc7_output.npy'
+        )
 
         # Dummy Caffe configuration files + weights
         # - weights is actually an empty file (0 bytes), which caffe treats
         #   as random/zero values (not sure exactly what's happening, but
         #   always results in a zero-vector).
-        dummy_net_topo_fp = \
+        dummy_net_topo_fp = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
-        dummy_caffe_model_fp = \
+        )
+        dummy_caffe_model_fp = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
-        dummy_img_mean_fp = \
+        )
+        dummy_img_mean_fp = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
+        )
 
-        www_uri_alexnet_prototxt = \
-            'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c' \
-            '/download'
-        www_uri_alexnet_caffemodel = \
-            'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86' \
-            '/download'
-        www_uri_image_mean_proto = \
-            'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82' \
-            '/download'
+        @classmethod
+        def setup_class(cls):
+            cls.www_uri_alexnet_prototxt = _data_element_from_url(
+                'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c'
+                '/download'
+            )
+            cls.www_uri_alexnet_caffemodel = _data_element_from_url(
+                'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86'
+                '/download'
+            )
+            cls.www_uri_image_mean_proto = _data_element_from_url(
+                'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82'
+                '/download'
+            )
 
         def test_impl_findable(self):
             self.assertIn(CaffeDescriptorGenerator,
@@ -59,9 +81,9 @@ if CaffeDescriptorGenerator.is_usable():
             # Mocking set_network so we don't have to worry about actually
             # initializing any caffe things for this test.
             expected_params = {
-                'network_prototxt_uri': 'some_prototxt_uri',
-                'network_model_uri': 'some_caffemodel_uri',
-                'image_mean_uri': 'some_imagemean_uri',
+                'network_prototxt': DataMemoryElement(),
+                'network_model': DataMemoryElement(),
+                'image_mean': DataMemoryElement(),
                 'return_layer': 'layer name',
                 'batch_size': 777,
                 'use_gpu': False,
@@ -79,6 +101,8 @@ if CaffeDescriptorGenerator.is_usable():
             self.assertSetEqual(set(expected_params.keys()),
                                 expected_param_keys)
             g = CaffeDescriptorGenerator(**expected_params)
+            for key in ('network_prototxt', 'network_model', 'image_mean'):
+                expected_params[key] = to_config_dict(expected_params[key])
             self.assertEqual(g.get_config(), expected_params)
 
         @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
@@ -87,9 +111,9 @@ if CaffeDescriptorGenerator.is_usable():
             # Mocking set_network so we don't have to worry about actually
             # initializing any caffe things for this test.
             expected_params = {
-                'network_prototxt_uri': 'some_prototxt_uri',
-                'network_model_uri': 'some_caffemodel_uri',
-                'image_mean_uri': 'some_imagemean_uri',
+                'network_prototxt': DataMemoryElement(),
+                'network_model': DataMemoryElement(),
+                'image_mean': DataMemoryElement(),
                 'return_layer': 'layer name',
                 'batch_size': 777,
                 'use_gpu': False,
@@ -134,13 +158,13 @@ if CaffeDescriptorGenerator.is_usable():
             # using image shape, meaning no transformation should occur
             test_data_layer = 'data'
             test_transformer = \
-                caffe.io.Transformer({test_data_layer: (1, 3, 512, 512)})
+                caffe.io.Transformer({test_data_layer: (1, 3, 600, 512)})
 
-            lenna_elem = from_uri(self.lenna_image_fp)
-            a_expected = numpy.asarray(PIL.Image.open(self.lenna_image_fp),
+            hopper_elem = from_uri(self.hopper_image_fp)
+            a_expected = numpy.asarray(PIL.Image.open(self.hopper_image_fp),
                                        numpy.float32)
             a = _process_load_img_array((
-                lenna_elem, test_transformer, test_data_layer, None, None
+                hopper_elem, test_transformer, test_data_layer, None, None
             ))
             numpy.testing.assert_allclose(a, a_expected)
 
@@ -171,13 +195,13 @@ if CaffeDescriptorGenerator.is_usable():
                                          self.dummy_caffe_model_fp,
                                          self.dummy_img_mean_fp,
                                          return_layer='fc', use_gpu=False)
-            d = g.compute_descriptor(from_uri(self.lenna_image_fp))
+            d = g.compute_descriptor(from_uri(self.hopper_image_fp))
             self.assertAlmostEqual(d.vector().sum(), 0., 12)
 
         @unittest.skipUnless(DataUrlElement.is_usable(),
                              "URL resolution not functional")
-        def test_compute_descriptor_from_url_lenna_description(self):
-            # Caffe AlexNet interaction test (Lenna image)
+        def test_compute_descriptor_from_url_hopper_description(self):
+            # Caffe AlexNet interaction test (Grace Hopper image)
             # This is a long test since it has to download data for remote URIs
             d = CaffeDescriptorGenerator(
                 self.www_uri_alexnet_prototxt,
@@ -186,9 +210,9 @@ if CaffeDescriptorGenerator.is_usable():
                 return_layer='fc7',
                 use_gpu=False,
             )
-            lenna_elem = from_uri(self.lenna_image_fp)
-            expected_descr = numpy.load(self.lenna_alexnet_fc7_descr_fp)
-            descr = d.compute_descriptor(lenna_elem).vector()
+            hopper_elem = from_uri(self.hopper_image_fp)
+            expected_descr = numpy.load(self.hopper_alexnet_fc7_descr_fp)
+            descr = d.compute_descriptor(hopper_elem).vector()
             numpy.testing.assert_allclose(descr, expected_descr, atol=1e-5)
 
         def test_compute_descriptor_async_no_data(self):

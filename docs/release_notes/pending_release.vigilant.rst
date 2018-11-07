@@ -5,6 +5,30 @@ SMQTK VIGILANT Pending Release Notes
 Updates / New Features
 ----------------------
 
+Algorithms
+
+* Descriptor Generators
+
+  * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``
+    instances rather than URIs.
+
+* Nearest Neighbors
+
+  * FAISS
+
+    * Gracefully handle addition of duplicated descriptors to avoid making
+      index unusable due to an unexpected external failure.
+
+  * LSH Hash Functor
+
+    * Use ``ProgressReporter`` in itq to avoid bugs from deprecated
+      ``report_progress`` function
+
+Compute Functions
+
+* Add ``compute_transformed_descriptors`` function to ``compute_functions.py`` for
+  conducting searches with augmented copies of an image
+
 Misc.
 
 * Resolve python static analysis warnings and errors.
@@ -49,38 +73,8 @@ Utilities
   worth its lack of use).  The ``watchdog`` python package should be used 
   instead.
 
-Compute Functions
-
-* Add ``compute_transformed_descriptors`` function to ``compute_functions.py`` for
-  conducting searches with augmented copies of an image
-
-Algorithms - Descriptor Generator
-
-* Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``s rather than
-  URIs
-
-Algorithms - Nearest Neighbors - LSH Hash Functor
-
-* Use ``ProgressReporter`` in itq to avoid bugs from deprecated ``report_progress``
-  function
-
-Algorithms - Nearest Neighbors - FAISS
-
-* Gracefully handle addition of duplicated descriptors to avoid making index
-  unusable due to an unexpected external failure.
-
 Fixes
 -----
-
-Tests
-
-* Moved ``--cov`` options from pytest.ini file into the runner script.  This
-  fixes debugger breakpointing in some IDEs.
-
-Utils
-
-* Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
-  added deprecation warning to this function.
 
 Algorithms
 
@@ -92,3 +86,13 @@ Algorithms
       to python native integers due to an incompatibility with some
       KeyValueStore implementations (specificially an issue with the PostgreSQL
       implementation).
+
+Tests
+
+* Moved ``--cov`` options from pytest.ini file into the runner script.  This
+  fixes debugger breakpointing in some IDEs.
+
+Utils
+
+* Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
+  added deprecation warning to this function.

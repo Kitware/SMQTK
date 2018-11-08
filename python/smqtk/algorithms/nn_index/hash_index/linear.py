@@ -8,8 +8,7 @@ import numpy
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.representation import DataElement
-from smqtk.utils import merge_dict
-from smqtk.utils.bit_utils import (
+from smqtk.utils.bits import (
     bit_vector_to_int_large,
     int_to_bit_vector_large,
 )
@@ -18,6 +17,7 @@ from smqtk.utils.configuration import (
     make_default_config,
     to_config_dict
 )
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.metrics import hamming_distance
 
 

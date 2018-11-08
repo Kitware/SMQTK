@@ -6,7 +6,7 @@ import numpy as np
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
     SkLearnBallTreeHashIndex
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-from smqtk.utils.bit_utils import int_to_bit_vector_large
+from smqtk.utils.bits import int_to_bit_vector_large
 
 
 class TestBallTreeHashIndex (unittest.TestCase):

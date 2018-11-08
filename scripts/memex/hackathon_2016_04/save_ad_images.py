@@ -20,8 +20,8 @@ import uuid
 
 from tika import detector as tika_detector
 
-from smqtk.utils.bin_utils import initialize_logging
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.cli import initialize_logging
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.parallel import parallel_map
 
 

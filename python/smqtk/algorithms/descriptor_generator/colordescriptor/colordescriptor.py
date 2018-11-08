@@ -19,9 +19,12 @@ import sklearn.cluster
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import file_utils, SimpleTimer, video_utils
-from smqtk.utils.string_utils import partition_string
-from smqtk.utils.video_utils import get_metadata_info
+from smqtk.utils import SimpleTimer, video
+from smqtk.utils.file import (
+    safe_create_dir,
+)
+from smqtk.utils.string import partition_string
+from smqtk.utils.video import get_metadata_info
 
 # Attempt importing utilities module. If not, flag descriptor as unusable.
 from . import utils
@@ -242,19 +245,19 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
     @property
     def codebook_filepath(self):
-        file_utils.safe_create_dir(self._model_dir)
+        safe_create_dir(self._model_dir)
         return osp.join(self._model_dir,
                         "%s.codebook.npy" % (self.descriptor_type(),))
 
     @property
     def flann_index_filepath(self):
-        file_utils.safe_create_dir(self._model_dir)
+        safe_create_dir(self._model_dir)
         return osp.join(self._model_dir,
                         "%s.flann_index.dat" % (self.descriptor_type(),))
 
     @property
     def flann_params_filepath(self):
-        file_utils.safe_create_dir(self._model_dir)
+        safe_create_dir(self._model_dir)
         return osp.join(self._model_dir,
                         "%s.flann_params.json" % (self.descriptor_type(),))
 
@@ -270,8 +273,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
     @property
     def temp_dir(self):
-        return file_utils.safe_create_dir(osp.join(self._work_dir,
-                                                   'temp_files'))
+        return safe_create_dir(osp.join(self._work_dir, 'temp_files'))
 
     @abc.abstractmethod
     def descriptor_type(self):
@@ -311,7 +313,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         """
         d = osp.join(self._work_dir, *partition_string(str(data.uuid()), 10))
-        file_utils.safe_create_dir(d)
+        safe_create_dir(d)
         return d
 
     def _get_standard_info_descriptors_filepath(self, data, frame=None):
@@ -630,7 +632,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         self._log.debug("Saving checkpoint feature file")
         if not osp.isdir(osp.dirname(checkpoint_filepath)):
-            file_utils.safe_create_dir(osp.dirname(checkpoint_filepath))
+            safe_create_dir(osp.dirname(checkpoint_filepath))
         numpy.save(checkpoint_filepath, h)
 
         return h
@@ -960,7 +962,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                 vmd = get_metadata_info(tmp_vid_fp)
                 p['second_offset'] = vmd.duration * p['second_offset']
                 p['max_duration'] = vmd.duration * p['max_duration']
-                fm = video_utils.ffmpeg_extract_frame_map(
+                fm = video.ffmpeg_extract_frame_map(
                     self._work_dir,
                     tmp_vid_fp,
                     parallel=extract_parallel,

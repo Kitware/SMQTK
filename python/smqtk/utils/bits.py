@@ -5,7 +5,7 @@ import numpy
 # noinspection PyUnresolvedReferences
 from six.moves import range
 
-from . import ncr
+from .combinatorics import ncr
 
 try:
     # noinspection PyUnresolvedReferences

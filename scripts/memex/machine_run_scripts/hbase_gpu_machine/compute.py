@@ -25,9 +25,9 @@ from tika import detector as tika_detector
 import time
 
 from smqtk.representation.descriptor_element.local_elements import DescriptorFileElement
-import smqtk.utils.bin_utils
+import smqtk.utils.cli
 import smqtk.utils.factors
-import smqtk.utils.file_utils
+import smqtk.utils.file
 
 
 HBASE_ADDRESS = '127.0.0.1'  # or an actual HBase server address
@@ -404,7 +404,7 @@ class CaffeDescriptorGenerator (multiprocessing.Process):
             self.log.info("Parsing output descriptors")
             pool = multiprocessing.Pool(self.PARALLEL)
             d_elems = pool.map(set_descriptor,
-                               zip(keys, smqtk.utils.file_utils.iter_csv_file(output_csv)))
+                               zip(keys, smqtk.utils.file.iter_csv_file(output_csv)))
             pool.close()
             pool.join()
 
@@ -458,5 +458,5 @@ def run():
 
 
 if __name__ == "__main__":
-    smqtk.utils.bin_utils.initialize_logging(logging.getLogger('compute'), logging.INFO)
+    smqtk.utils.cli.initialize_logging(logging.getLogger('compute'), logging.INFO)
     run()

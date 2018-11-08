@@ -77,7 +77,7 @@ class TestDescriptorFileElement (unittest.TestCase):
     @mock.patch('smqtk.representation.descriptor_element.local_elements'
                 '.numpy.save')
     @mock.patch('smqtk.representation.descriptor_element.local_elements'
-                '.file_utils.safe_create_dir')
+                '.safe_create_dir')
     def test_vector_set(self, mock_scd, mock_save):
         d = DescriptorFileElement('test', 1234, '/base', 4)
         self.assertEqual(d._vec_filepath,

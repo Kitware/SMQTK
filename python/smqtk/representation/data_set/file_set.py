@@ -5,8 +5,8 @@ import re
 from six.moves import cPickle as pickle
 
 from smqtk.representation import DataElement, DataSet
-from smqtk.utils import file_utils
-from smqtk.utils.string_utils import partition_string
+from smqtk.utils.file import safe_create_dir, iter_directory_files
+from smqtk.utils.string import partition_string
 
 
 class DataFileSet (DataSet):
@@ -100,7 +100,7 @@ class DataFileSet (DataSet):
         # Select how far we need to descent into root based on chunk level.
         recurse = (self._uuid_chunk and self._uuid_chunk - 1) or None
 
-        for fp in file_utils.iter_directory_files(self._root_dir, recurse):
+        for fp in iter_directory_files(self._root_dir, recurse):
             m = self.SERIAL_FILE_RE.match(osp.basename(fp))
             if m:
                 # Where file is under root to see if it is a file we care about
@@ -203,7 +203,7 @@ class DataFileSet (DataSet):
                 "Not given a DataElement for addition: '%s'" % e
             uuid = str(e.uuid())
             fp = self._fp_for_uuid(uuid)
-            file_utils.safe_create_dir(osp.dirname(fp))
+            safe_create_dir(osp.dirname(fp))
             with open(fp, 'wb') as f:
                 pickle.dump(e, f, self.pickle_protocol)
             self._log.debug("Wrote out element %s", e)

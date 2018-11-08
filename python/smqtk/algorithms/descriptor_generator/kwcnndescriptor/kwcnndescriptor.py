@@ -16,7 +16,7 @@ from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
                                                    DFLT_DESCRIPTOR_FACTORY)
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.cli import ProgressReporter
 
 try:
     from six.moves import cPickle as pickle

@@ -17,7 +17,7 @@ import os
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
-    bin_utils,
+    cli,
 )
 from smqtk.utils.configuration import (
     from_config_dict,
@@ -37,12 +37,12 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']

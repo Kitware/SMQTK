@@ -5,8 +5,8 @@ from six.moves import cPickle
 from smqtk.representation.classification_element import ClassificationElement
 
 from smqtk.exceptions import NoClassificationError
-from smqtk.utils import file_utils
-from smqtk.utils.string_utils import partition_string
+from smqtk.utils.file import safe_create_dir
+from smqtk.utils.string import partition_string
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -122,6 +122,6 @@ class FileClassificationElement (ClassificationElement):
         """
         m = super(FileClassificationElement, self)\
             .set_classification(m, **kwds)
-        file_utils.safe_create_dir(osp.dirname(self.filepath))
+        safe_create_dir(osp.dirname(self.filepath))
         with open(self.filepath, 'w') as f:
             cPickle.dump(m, f, self.pickle_protocol)

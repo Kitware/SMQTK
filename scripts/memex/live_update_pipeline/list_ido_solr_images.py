@@ -1,17 +1,29 @@
 #!/usr/bin/env python
+"""
+Utility for fetching remotely stored image paths from the JPL Solr index.
 
+Files will be transferred with their entire containing directories. For
+example, if the file was stored in "/data/things/image.png" remotely, it
+will be transferred locally to "<output_dir>/data/things/image.png".
+
+Assumptions:
+    - JPL MEMEX Solr index key structure
+        - `id` == "file:<abs-filepath>"
+        - `mainType` is the first component of the MIMETYPE
+        - `indexedAt` timestamp
+"""
 import logging
 import os
 
+from six.moves import range
 import solr
 
-from smqtk.utils import (
-    bin_utils,
-    file_utils,
-)
+from smqtk.utils import cli
+from smqtk.utils.file import safe_create_dir
 
 
-def solr_image_paths(solr_addr, begin_time, end_time, username, password, batch_size):
+def solr_image_paths(solr_addr, begin_time, end_time, username, password,
+                     batch_size):
     log = logging.getLogger(__name__)
 
     conn = solr.Solr(solr_addr, http_user=username, http_pass=password)
@@ -24,7 +36,7 @@ def solr_image_paths(solr_addr, begin_time, end_time, username, password, batch_
     loops = (num_results // batch_size) + (num_results % batch_size > 0)
     log.debug("Making %d iterations", loops)
 
-    for i in xrange(loops):
+    for i in range(loops):
         r = conn.select(q, fields=['id'], rows=batch_size,
                         start=i * batch_size)
         for doc in r.results:
@@ -42,10 +54,9 @@ def default_config():
 
 def cli_parser():
     """
-    :type parser: argparse.ArgumentParser
     :rtype: argparse.ArgumentParser
     """
-    parser = bin_utils.basic_cli_parser(bin_utils.doc_as_description(__doc__))
+    parser = cli.basic_cli_parser(description=__doc__)
 
     parser.add_argument('--after-time', metavar='TIMESTAMP',
                         help='Optional timestamp to constrain that we look '
@@ -69,21 +80,8 @@ def cli_parser():
 
 
 def main():
-    description = """
-    Utility for fetching remotely stored image paths from the JPL Solr index.
-
-    Files will be transferred with their entire containing directories. For
-    example, if the file was stored in "/data/things/image.png" remotely, it
-    will be transferred locally to "<output_dir>/data/things/image.png".
-
-    Assumptions:
-        - JPL MEMEX Solr index key structure
-            - `id` == "file:<abs-filepath>"
-            - `mainType` is the first component of the MIMETYPE
-            - `indexedAt` timestamp
-    """
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     paths_file = args.paths_file
@@ -97,7 +95,7 @@ def main():
         raise ValueError("Need a file path to to output transferred file "
                          "paths!")
 
-    file_utils.safe_create_dir(os.path.dirname(paths_file))
+    safe_create_dir(os.path.dirname(paths_file))
 
     #
     # Start collection
@@ -111,7 +109,7 @@ def main():
 
     log.info("Writing file paths")
     with open(paths_file, 'w') as of:
-        pr = bin_utils.ProgressReporter(log.info, 1.0).start()
+        pr = cli.ProgressReporter(log.info, 1.0).start()
         for rp in remote_paths:
             of.write(rp + '\n')
             pr.increment_report()

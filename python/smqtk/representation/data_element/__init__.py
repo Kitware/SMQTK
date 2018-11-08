@@ -11,7 +11,7 @@ import tempfile
 from smqtk.exceptions import InvalidUriError, NoUriResolutionError, \
     ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils import file_utils
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.plugin import Pluggable
 
 
@@ -86,7 +86,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
 
         """
         if d:
-            file_utils.safe_create_dir(d)
+            safe_create_dir(d)
         ext = MIMETYPES.guess_extension(self.content_type() or '')
         # Exceptions because mimetypes is apparently REALLY OLD
         if ext in {'.jpe', '.jfif'}:

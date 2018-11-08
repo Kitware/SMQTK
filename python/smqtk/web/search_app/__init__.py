@@ -15,7 +15,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.wsgi import peek_path_info, pop_path_info
 
 from smqtk.utils import DatabaseInfo
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.mongo_sessions import MongoSessionInterface
 from smqtk.web import SmqtkWebApp
 

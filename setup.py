@@ -131,6 +131,7 @@ setuptools.setup(
         'Flask-Cors',
         'imageio',
         'jinja2',
+        'jsmin',
         'matplotlib',
         'numpy',
         'pillow',

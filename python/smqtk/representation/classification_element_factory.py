@@ -2,8 +2,8 @@ from smqtk.representation import (
     SmqtkRepresentation,
     ClassificationElement
 )
-from smqtk.utils import merge_dict
 from smqtk.utils.configuration import make_default_config
+from smqtk.utils.dict import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"

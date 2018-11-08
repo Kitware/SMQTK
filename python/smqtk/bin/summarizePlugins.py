@@ -13,7 +13,7 @@ import smqtk.algorithms
 import smqtk.algorithms.nn_index.hash_index
 import smqtk.algorithms.nn_index.lsh.functors
 import smqtk.representation
-import smqtk.utils.bin_utils
+import smqtk.utils.cli
 from smqtk.utils.configuration import (
     make_default_config,
 )
@@ -42,7 +42,7 @@ def main():
     llevel = logging.INFO
     if args.verbose:
         llevel = logging.DEBUG
-    smqtk.utils.bin_utils.initialize_logging(logging.getLogger("smqtk"), llevel)
+    smqtk.utils.cli.initialize_logging(logging.getLogger("smqtk"), llevel)
 
     collect_defaults = args.defaults
     defaults = {}

@@ -18,7 +18,7 @@ from smqtk.representation import (
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import parallel
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     utility_main_helper,
     ProgressReporter,
     basic_cli_parser,

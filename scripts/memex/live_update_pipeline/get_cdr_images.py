@@ -41,13 +41,13 @@ import requests
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     doc_as_description,
     ProgressReporter,
     utility_main_helper,
 )
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.parallel import parallel_map
 
 

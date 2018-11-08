@@ -2,7 +2,7 @@ import abc
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import (
-    bin_utils,
+    cli,
     parallel,
 )
 
@@ -113,7 +113,7 @@ class Classifier (SmqtkAlgorithm):
 
         pr = None
         if ri:
-            pr = bin_utils.ProgressReporter(self._log.debug, ri).start()
+            pr = cli.ProgressReporter(self._log.debug, ri).start()
 
         d2c_map = {}
         for d, c in classifications:

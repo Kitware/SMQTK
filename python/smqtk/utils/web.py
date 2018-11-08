@@ -2,7 +2,7 @@ import time
 
 import flask
 
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 
 
 def make_response_json(message, return_code=200, **params):

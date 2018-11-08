@@ -26,7 +26,7 @@ from smqtk.utils.configuration import (
     make_default_config,
     to_config_dict
 )
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.mimetype import get_mimetypes
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod

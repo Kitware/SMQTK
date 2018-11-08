@@ -5,7 +5,7 @@ import numpy as np
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.cli import ProgressReporter
 
 
 class SimpleRPFunctor (LshFunctor):

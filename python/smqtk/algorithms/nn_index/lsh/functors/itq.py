@@ -15,13 +15,13 @@ from six import BytesIO
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation import DataElement
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import merge_dict
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.cli import ProgressReporter
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
     to_config_dict
 )
+from smqtk.utils.dict import merge_dict
 
 
 class ItqFunctor (LshFunctor):

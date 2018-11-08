@@ -9,7 +9,8 @@ import time
 
 import six
 
-from smqtk.utils import file_utils, string_utils
+from smqtk.utils import string
+from smqtk.utils.file import exclusive_touch, safe_create_dir
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -45,7 +46,7 @@ def get_metadata_info(video_filepath, ffprobe_exe='ffprobe'):
     :rtype: VideoMetadata
 
     """
-    log = logging.getLogger('smqtk.utils.video_utils.get_metadata_info')
+    log = logging.getLogger('.'.join([__name__, 'get_metadata_info']))
     re_float_match = "[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 
     log.debug("Using ffprobe: %s", ffprobe_exe)
@@ -180,17 +181,17 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
     :rtype: dict[int, str]
 
     """
-    log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map')
+    log = logging.getLogger('.'.join([__name__, 'extract_frame_map']))
 
     video_md = get_metadata_info(video_filepath)
     video_sha1sum = hashlib.sha1(open(video_filepath, 'rb').read()).hexdigest()
     frame_output_dir = os.path.join(
         working_dir,
         "VideoFrameExtraction",
-        *string_utils.partition_string(video_sha1sum, 10)
+        *string.partition_string(video_sha1sum, 10)
         # 40 hex chars split into chunks of 4
     )
-    file_utils.safe_create_dir(frame_output_dir)
+    safe_create_dir(frame_output_dir)
 
     def filename_for_frame(frame, ext):
         """
@@ -211,8 +212,9 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         :rtype: list of int
 
         """
-        _log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map'
-                                 '.iter_frames_for_interval')
+        _log = logging.getLogger('.'.join([__name__,
+                                           'extract_frame_map',
+                                           'iter_frames_for_interval']))
         num_frames = int(video_md.fps * video_md.duration)
         first_frame = second_offset * video_md.fps
         _log.debug("First frame: %f", first_frame)
@@ -250,8 +252,9 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         :rtype: list[int]
 
         """
-        _log = logging.getLogger('smqtk.utils.video_utils.extract_frame_map'
-                                 '.extract_frames')
+        _log = logging.getLogger('.'.join([__name__,
+                                           'extract_frame_map',
+                                           'extract_frames']))
 
         # Setup temp extraction directory
         tmp_extraction_dir = os.path.join(frame_output_dir, ".TMP")
@@ -324,7 +327,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
     #
     lock_file = os.path.join(frame_output_dir, '.lock')
     log.debug("Acquiring file lock in '%s'...", frame_output_dir)
-    while not file_utils.exclusive_touch(lock_file):
+    while not exclusive_touch(lock_file):
         # This is sufficiently small to be fine grained, but not so small to
         # burn the CPU.
         time.sleep(0.01)

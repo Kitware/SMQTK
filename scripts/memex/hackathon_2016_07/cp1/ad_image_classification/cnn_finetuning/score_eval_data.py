@@ -3,7 +3,7 @@ import collections
 import json
 import numpy
 
-from smqtk.utils.bin_utils import logging, initialize_logging
+from smqtk.utils.cli import logging, initialize_logging
 from smqtk.representation.data_set.memory_set import DataMemorySet
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier

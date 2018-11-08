@@ -8,7 +8,7 @@ import logging
 import os
 import time
 
-from smqtk.utils.bin_utils import initialize_logging
+from smqtk.utils.cli import initialize_logging
 
 
 sf_log = logging.getLogger("smqtk.scan_files")

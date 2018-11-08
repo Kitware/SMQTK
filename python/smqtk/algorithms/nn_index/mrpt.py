@@ -14,13 +14,13 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DescriptorIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import merge_dict
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
     to_config_dict
 )
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.dict import merge_dict
+from smqtk.utils.file import safe_create_dir
 
 
 CHUNK_SIZE = 5000

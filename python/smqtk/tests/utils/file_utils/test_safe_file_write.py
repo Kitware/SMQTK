@@ -1,20 +1,20 @@
 import mock
 import unittest
 
-from smqtk.utils.file_utils import safe_file_write
+from smqtk.utils.file import safe_file_write
 
 
 class TestSafeFileWrite (unittest.TestCase):
     """
-    Tests for the ``smqtk.utils.file_utils.safe_file_write`` function.
+    Tests for the ``smqtk.utils.file.safe_file_write`` function.
 
     Mocking out underlying function that would have filesystem side effects.
     """
 
-    @mock.patch('smqtk.utils.file_utils.safe_create_dir')
-    @mock.patch('smqtk.utils.file_utils.os.rename')
-    @mock.patch('smqtk.utils.file_utils.os.remove')
-    @mock.patch('smqtk.utils.file_utils.tempfile.NamedTemporaryFile')
+    @mock.patch('smqtk.utils.file.safe_create_dir')
+    @mock.patch('smqtk.utils.file.os.rename')
+    @mock.patch('smqtk.utils.file.os.remove')
+    @mock.patch('smqtk.utils.file.tempfile.NamedTemporaryFile')
     def test_safe_file_write_relative_simple(
             self, m_NTF, m_remove, m_rename, m_scd):
         # Experimental filepath and content.
@@ -36,10 +36,10 @@ class TestSafeFileWrite (unittest.TestCase):
         self.assertEqual(m_remove.call_count, 0)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
-    @mock.patch('smqtk.utils.file_utils.safe_create_dir')
-    @mock.patch('smqtk.utils.file_utils.os.rename')
-    @mock.patch('smqtk.utils.file_utils.os.remove')
-    @mock.patch('smqtk.utils.file_utils.tempfile.NamedTemporaryFile')
+    @mock.patch('smqtk.utils.file.safe_create_dir')
+    @mock.patch('smqtk.utils.file.os.rename')
+    @mock.patch('smqtk.utils.file.os.remove')
+    @mock.patch('smqtk.utils.file.tempfile.NamedTemporaryFile')
     def test_safe_file_write_relative_subdir(
             self, m_NTF, m_remove, m_rename, m_scd):
         # Experimental filepath and content.
@@ -61,10 +61,10 @@ class TestSafeFileWrite (unittest.TestCase):
         self.assertEqual(m_remove.call_count, 0)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
-    @mock.patch('smqtk.utils.file_utils.safe_create_dir')
-    @mock.patch('smqtk.utils.file_utils.os.rename')
-    @mock.patch('smqtk.utils.file_utils.os.remove')
-    @mock.patch('smqtk.utils.file_utils.tempfile.NamedTemporaryFile')
+    @mock.patch('smqtk.utils.file.safe_create_dir')
+    @mock.patch('smqtk.utils.file.os.rename')
+    @mock.patch('smqtk.utils.file.os.remove')
+    @mock.patch('smqtk.utils.file.tempfile.NamedTemporaryFile')
     def test_safe_file_write_custom_tmp_dir(
             self, m_NTF, m_remove, m_rename, m_scd):
         # Experimental filepath and content.
@@ -87,10 +87,10 @@ class TestSafeFileWrite (unittest.TestCase):
         self.assertEqual(m_remove.call_count, 0)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
-    @mock.patch('smqtk.utils.file_utils.safe_create_dir')
-    @mock.patch('smqtk.utils.file_utils.os.rename')
-    @mock.patch('smqtk.utils.file_utils.os.remove')
-    @mock.patch('smqtk.utils.file_utils.tempfile.NamedTemporaryFile')
+    @mock.patch('smqtk.utils.file.safe_create_dir')
+    @mock.patch('smqtk.utils.file.os.rename')
+    @mock.patch('smqtk.utils.file.os.remove')
+    @mock.patch('smqtk.utils.file.tempfile.NamedTemporaryFile')
     def test_safe_file_write_absolute(
             self, m_NTF, m_remove, m_rename, m_scd):
         # Experimental filepath and content.
@@ -112,10 +112,10 @@ class TestSafeFileWrite (unittest.TestCase):
         self.assertEqual(m_remove.call_count, 0)
         m_rename.assert_called_once_with(test_tmp_fp, fp)
 
-    @mock.patch('smqtk.utils.file_utils.safe_create_dir')
-    @mock.patch('smqtk.utils.file_utils.os.rename')
-    @mock.patch('smqtk.utils.file_utils.os.remove')
-    @mock.patch('smqtk.utils.file_utils.tempfile.NamedTemporaryFile')
+    @mock.patch('smqtk.utils.file.safe_create_dir')
+    @mock.patch('smqtk.utils.file.os.rename')
+    @mock.patch('smqtk.utils.file.os.remove')
+    @mock.patch('smqtk.utils.file.tempfile.NamedTemporaryFile')
     def test_safe_file_write_raising_write(
             self, m_NTF, m_remove, m_rename, m_scd):
         # Test for what happens when file.write raises an exception.

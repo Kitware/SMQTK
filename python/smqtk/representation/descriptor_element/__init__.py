@@ -2,7 +2,7 @@ import abc
 import numpy
 
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 
 from ._io import elements_to_matrix

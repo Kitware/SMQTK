@@ -35,7 +35,7 @@ import requests
 
 from smqtk.representation import DataSet
 from smqtk.representation.data_element.girder import GirderDataElement
-from smqtk.utils import bin_utils
+from smqtk.utils import cli
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
@@ -48,7 +48,7 @@ from smqtk.utils.url import url_join
 # Component Functions
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
     g_girder = parser.add_argument_group('Girder References')
 
     g_girder.add_argument('-F', '--folder',
@@ -278,7 +278,7 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     api_root = config['tool']['girder_api_root']
@@ -309,7 +309,7 @@ def main():
                                 DataSet.get_impls())
 
     batch = collections.deque()
-    pr = bin_utils.ProgressReporter(log.info, 1.0).start()
+    pr = cli.ProgressReporter(log.info, 1.0).start()
     for e in find_girder_files(api_root, ids_folder, ids_item, ids_file,
                                api_key, api_query_batch):
         batch.append(e)

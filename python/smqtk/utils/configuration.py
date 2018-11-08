@@ -33,7 +33,7 @@ import types
 
 import six
 
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 
 
 @six.add_metaclass(abc.ABCMeta)

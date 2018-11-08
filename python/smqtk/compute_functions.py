@@ -12,8 +12,8 @@ import numpy
 import six
 
 from smqtk.utils import (
-    bin_utils,
-    bit_utils,
+    cli,
+    bits,
     parallel,
 )
 
@@ -198,7 +198,7 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
 
     def get_hash(u):
         v = index.get_descriptor(u).vector()
-        return u, bit_utils.bit_vector_to_int_large(functor.get_hash(v))
+        return u, bits.bit_vector_to_int_large(functor.get_hash(v))
 
     # Setup log and reporting function
     log = logging.getLogger(__name__)
@@ -212,7 +212,7 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
         log_func = log.debug
 
     log.debug("Starting computation")
-    reporter = bin_utils.ProgressReporter(log_func, report_interval)
+    reporter = cli.ProgressReporter(log_func, report_interval)
     reporter.start()
     for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
                                                 ordered=ordered,
@@ -275,7 +275,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
         ))
 
     log.info("Collecting iteratively fitting model")
-    pr = bin_utils.ProgressReporter(log.debug, 1.0).start()
+    pr = cli.ProgressReporter(log.debug, 1.0).start()
     for i, k in enumerate(index_keys):
         k_deque.append(k)
         pr.increment_report()
@@ -326,7 +326,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
         d_uv_iter,
         use_multiprocessing=False,
         name="uc-collector")
-    pr = bin_utils.ProgressReporter(log.debug, 1.0).start()
+    pr = cli.ProgressReporter(log.debug, 1.0).start()
     for uuid, c in d_uc_iter:
         d_classes[c].add(uuid)
         pr.increment_report()

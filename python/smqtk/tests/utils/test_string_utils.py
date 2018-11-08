@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import unittest
 
-from smqtk.utils.string_utils import random_characters
+from smqtk.utils.string import random_characters
 
 
 class TestRandomCharacters (unittest.TestCase):

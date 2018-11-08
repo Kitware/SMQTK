@@ -12,7 +12,7 @@ import os
 import sys
 from six.moves import zip
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     utility_main_helper,
 )

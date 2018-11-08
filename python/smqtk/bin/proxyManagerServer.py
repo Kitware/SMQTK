@@ -12,7 +12,7 @@ This takes a simple configuration file that looks like the following:
 # LICENSE.txt for licensing information, or contact General Counsel,
 # Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 
-from smqtk.utils import bin_utils
+from smqtk.utils import cli
 from smqtk.utils.proxy_manager import ProxyManager
 
 
@@ -24,7 +24,7 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def main():
@@ -33,8 +33,8 @@ def main():
 
     # Default config options for this util are technically valid for running,
     # its just a bad authkey.
-    config = bin_utils.utility_main_helper(default_config, args,
-                                           default_config_valid=True)
+    config = cli.utility_main_helper(default_config, args,
+                                     default_config_valid=True)
 
     port = int(config['port'])
     authkey = str(config['authkey'])

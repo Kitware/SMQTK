@@ -26,11 +26,11 @@ from smqtk.representation import (
     DescriptorIndex,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-from smqtk.utils import merge_dict
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
 )
+from smqtk.utils.dict import merge_dict
 from smqtk.web import SmqtkWebApp
 
 

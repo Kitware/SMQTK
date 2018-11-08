@@ -27,14 +27,14 @@ from smqtk.representation import (
     DescriptorIndex,
 )
 from smqtk.utils import (
-    bin_utils,
-    file_utils,
+    cli,
     parallel,
 )
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
 )
+from smqtk.utils.file import safe_create_dir
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -63,7 +63,7 @@ def default_config():
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     g_io = parser.add_argument_group("Input Output Files")
     g_io.add_argument('--uuids-list', metavar='PATH',
@@ -77,7 +77,7 @@ def cli_parser():
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     # - parallel_map UUIDs to load from the configured index
@@ -181,15 +181,15 @@ def main():
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)
-    file_utils.safe_create_dir(os.path.dirname(output_csv_header_filepath))
+    safe_create_dir(os.path.dirname(output_csv_header_filepath))
     with open(output_csv_header_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
         w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
     # CSV file
     log.info("Writing CSV data file: %s", output_csv_filepath)
-    file_utils.safe_create_dir(os.path.dirname(output_csv_filepath))
-    pr = bin_utils.ProgressReporter(log.info, 1.0)
+    safe_create_dir(os.path.dirname(output_csv_filepath))
+    pr = cli.ProgressReporter(log.info, 1.0)
     pr.start()
     with open(output_csv_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)

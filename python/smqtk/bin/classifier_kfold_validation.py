@@ -82,10 +82,8 @@ from smqtk.representation import (
 )
 from smqtk.representation.classification_element.memory import \
     MemoryClassificationElement
-from smqtk.utils import (
-    bin_utils,
-    file_utils,
-)
+from smqtk.utils import cli
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.configuration import (
     from_config_dict,
     make_default_config,
@@ -125,12 +123,12 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def classifier_kfold_validation():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #
@@ -271,7 +269,7 @@ def format_plt(title, x_label, y_label):
 
 
 def save_plt(output_dir, file_name, show):
-    file_utils.safe_create_dir(output_dir)
+    safe_create_dir(output_dir)
     save_path = os.path.join(output_dir, file_name)
     plt.savefig(save_path)
     if show:
@@ -307,7 +305,7 @@ def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
     :param plot_prefix: String prefix for output files.
     :param show: Show the output plots interactively or not.
     """
-    file_utils.safe_create_dir(output_dir)
+    safe_create_dir(output_dir)
 
     log.info("Generating %s curves for per-folds and overall", title_hook)
 

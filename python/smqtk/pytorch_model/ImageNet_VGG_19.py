@@ -27,11 +27,13 @@ class ImageNet_VGG19_def(nn.Module):
     def __init__(self):
         super(ImageNet_VGG19_def, self).__init__()
         self.vgg = models.vgg19(pretrained=True)
-        del self.vgg.features._modules['36']
+        del self.vgg.classifier._modules['6']
+        del self.vgg.classifier._modules['5']
 
     def forward(self, x):
         x = self.vgg.features(x)
-        features = x.view(x.size(0), -1)
+        x = x.view(x.size(0), -1)
+        features = self.vgg.classifier(x)
 
         return (features,)
 

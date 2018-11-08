@@ -38,10 +38,20 @@ Representation
 * Added ``BoundingBox`` class for describing N-dimensional euclidean spatial
   regions.
 
+* Add use of ``smqtk.utils.configuration.cls_conf_from_config_dict`` and
+  ``smqtk.utils.configuration.cls_conf_to_config_dict`` to appropriate
+  methods in factory classes.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
   Ramifications fixed throughout the codebase.
+
+* Added ``cls_conf_from_config_dict`` and ``cls_conf_to_config_dict``
+  intermediate helper functions to ``smqtk.utils.configuration`` for the
+  ``from_config_dict`` and ``to_config_dict`` sub-problems, respectively.
+  This was motivated by duplicated functionality in element factory class
+  ``from_config`` and ``get_config`` methods.
 
 * Moved some helper functions from ``smqtk.utils.plugin``to
   ``smqtk.utils.configuration`` as those functions more specifically had to do

@@ -39,7 +39,7 @@ def cli_parser():
                         type=str, default=0,
                         help="The configuration tab name to generate the model for.")
     parser.add_argument('-v', '--verbose',
-                        action='store_true', default=False,
+                        action='store_true', default=True,
                         help='Show debug logging.')
 
     # parser.add_argument("input_files",
@@ -270,6 +270,7 @@ def main():
         nn_index.build_index(six.itervalues(data2descriptor))
     except RuntimeError:
         # Already built model, so skipping this step
+        log.debug("Already built model, so skipping this step glob")
         pass
 
     rel_index.build_index(six.itervalues(data2descriptor))

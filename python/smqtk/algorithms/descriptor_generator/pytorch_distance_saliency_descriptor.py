@@ -305,7 +305,8 @@ class DisMaskSaliencyDataset(data.Dataset):
         res_sa = torch.sum(cur_filters, dim=0) / count
 
         sa_max = torch.max(res_sa)
-        res_sa = torch.clamp(res_sa, min=sa_max * self._sa_threshold)
+        res_sa /= sa_max
+        res_sa = torch.clamp(res_sa, min=self._sa_threshold)
 
         return res_sa.cpu().numpy()
 

@@ -161,9 +161,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # Cache descriptors if we have an element
         if self._descr_cache_elem and self._descr_cache_elem.writable():
             self._log.debug("Caching descriptors: %s", self._descr_cache_elem)
-            self._descr_cache_elem.set_bytes(
-                cPickle.dumps(self._descr_cache, -1)
-            )
+            try:
+                self._descr_cache_elem.set_bytes(
+                    cPickle.dumps(self._descr_cache, -1))
+            except IOError:
+                self._log.debug("IOError")
+            except Exception as e:
+                self._log.debug("Error : {}".format(e))
 
         n = len(self._descr_cache)
         self._feature_dim = self._descr_cache[0].vector().size

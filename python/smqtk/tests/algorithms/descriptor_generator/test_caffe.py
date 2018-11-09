@@ -46,27 +46,27 @@ if CaffeDescriptorGenerator.is_usable():
         # - weights is actually an empty file (0 bytes), which caffe treats
         #   as random/zero values (not sure exactly what's happening, but
         #   always results in a zero-vector).
-        dummy_net_topo_fp = DataFileElement.from_uri(
+        dummy_net_topo_elem = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
         )
-        dummy_caffe_model_fp = DataFileElement.from_uri(
+        dummy_caffe_model_elem = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
         )
-        dummy_img_mean_fp = DataFileElement.from_uri(
+        dummy_img_mean_elem = DataFileElement.from_uri(
             os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
         )
 
         @classmethod
         def setup_class(cls):
-            cls.www_uri_alexnet_prototxt = _data_element_from_url(
+            cls.alexnet_prototxt_elem = _data_element_from_url(
                 'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c'
                 '/download'
             )
-            cls.www_uri_alexnet_caffemodel = _data_element_from_url(
+            cls.alexnet_caffemodel_elem = _data_element_from_url(
                 'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86'
                 '/download'
             )
-            cls.www_uri_image_mean_proto = _data_element_from_url(
+            cls.image_mean_proto_elem = _data_element_from_url(
                 'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82'
                 '/download'
             )
@@ -204,9 +204,9 @@ if CaffeDescriptorGenerator.is_usable():
             # Caffe AlexNet interaction test (Grace Hopper image)
             # This is a long test since it has to download data for remote URIs
             d = CaffeDescriptorGenerator(
-                self.www_uri_alexnet_prototxt,
-                self.www_uri_alexnet_caffemodel,
-                self.www_uri_image_mean_proto,
+                self.alexnet_prototxt_elem,
+                self.alexnet_caffemodel_elem,
+                self.image_mean_proto_elem,
                 return_layer='fc7',
                 use_gpu=False,
             )

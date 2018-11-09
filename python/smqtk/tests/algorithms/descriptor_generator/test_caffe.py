@@ -46,14 +46,17 @@ if CaffeDescriptorGenerator.is_usable():
         # - weights is actually an empty file (0 bytes), which caffe treats
         #   as random/zero values (not sure exactly what's happening, but
         #   always results in a zero-vector).
-        dummy_net_topo_elem = DataFileElement.from_uri(
-            os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt')
+        dummy_net_topo_elem = DataFileElement(
+            os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt'),
+            read_only=True
         )
-        dummy_caffe_model_elem = DataFileElement.from_uri(
-            os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel')
+        dummy_caffe_model_elem = DataFileElement(
+            os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel'),
+            read_only=True
         )
-        dummy_img_mean_elem = DataFileElement.from_uri(
-            os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy')
+        dummy_img_mean_elem = DataFileElement(
+            os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy'),
+            read_only=True
         )
 
         @classmethod

@@ -48,15 +48,15 @@ if CaffeDescriptorGenerator.is_usable():
         #   always results in a zero-vector).
         dummy_net_topo_elem = DataFileElement(
             os.path.join(TEST_DATA_DIR, 'caffe.dummpy_network.prototxt'),
-            read_only=True
+            readonly=True
         )
         dummy_caffe_model_elem = DataFileElement(
             os.path.join(TEST_DATA_DIR, 'caffe.empty_model.caffemodel'),
-            read_only=True
+            readonly=True
         )
         dummy_img_mean_elem = DataFileElement(
             os.path.join(TEST_DATA_DIR, 'caffe.dummy_mean.npy'),
-            read_only=True
+            readonly=True
         )
 
         @classmethod
@@ -194,9 +194,9 @@ if CaffeDescriptorGenerator.is_usable():
             # Construct network with an empty model just to see that our
             # interaction with the Caffe API is successful. We expect a
             # zero-valued descriptor vector.
-            g = CaffeDescriptorGenerator(self.dummy_net_topo_fp,
-                                         self.dummy_caffe_model_fp,
-                                         self.dummy_img_mean_fp,
+            g = CaffeDescriptorGenerator(self.dummy_net_topo_elem,
+                                         self.dummy_caffe_model_elem,
+                                         self.dummy_img_mean_elem,
                                          return_layer='fc', use_gpu=False)
             d = g.compute_descriptor(from_uri(self.hopper_image_fp))
             self.assertAlmostEqual(d.vector().sum(), 0., 12)
@@ -220,9 +220,9 @@ if CaffeDescriptorGenerator.is_usable():
 
         def test_compute_descriptor_async_no_data(self):
             # Should get a ValueError when given no descriptors to async method
-            g = CaffeDescriptorGenerator(self.dummy_net_topo_fp,
-                                         self.dummy_caffe_model_fp,
-                                         self.dummy_img_mean_fp,
+            g = CaffeDescriptorGenerator(self.dummy_net_topo_elem,
+                                         self.dummy_caffe_model_elem,
+                                         self.dummy_img_mean_elem,
                                          return_layer='fc', use_gpu=False)
             self.assertRaises(
                 ValueError,

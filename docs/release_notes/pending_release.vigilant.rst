@@ -38,6 +38,9 @@ Representation
 * Added ``BoundingBox`` class for describing N-dimensional euclidean spatial
   regions.
 
+* Added ``DetectionElement`` interface, and in-memory implementation, with
+  associated unit tests.
+
 * Add use of ``smqtk.utils.configuration.cls_conf_from_config_dict`` and
   ``smqtk.utils.configuration.cls_conf_to_config_dict`` to appropriate
   methods in factory classes.

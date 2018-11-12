@@ -67,6 +67,23 @@ class TestClassificationElementAbstract (unittest.TestCase):
             # noinspection PyStatementEffect
             e1['some other key']
 
+    def test_bool_cast(self):
+        """
+        Testing that boolean conversion matches has_classifications
+        return.
+        """
+        e = DummyCEImpl('test', 0)
+
+        expected = False
+        e.has_classifications = mock.Mock(return_value=expected)
+        assert bool(e) is expected, "Element did not cast to False when " \
+                                    "has_classifications returned False."
+
+        expected = True
+        e.has_classifications = mock.Mock(return_value=expected)
+        assert bool(e) is expected, "Element did not cast to True when " \
+                                    "has_classifications returned True."
+
     def test_max_label(self):
         e = DummyCEImpl('test', 0)
 

@@ -7,7 +7,6 @@ import unittest
 import PIL.Image
 import mock
 import numpy
-import requests
 from matplotlib.cbook import get_sample_data
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
@@ -17,7 +16,6 @@ from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
 # noinspection PyProtectedMember
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
     _process_load_img_array
-from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
@@ -142,7 +140,9 @@ if CaffeDescriptorGenerator.is_usable():
             # Caffe network setup (above mocking).
             # noinspection PyTypeChecker
             g = CaffeDescriptorGenerator(None, None, None)
-            bad_element = from_uri(os.path.join(TEST_DATA_DIR, 'test_file.dat'))
+            bad_element = DataFileElement(
+                os.path.join(TEST_DATA_DIR, 'test_file.dat'), readonly=True
+            )
             self.assertRaises(
                 ValueError,
                 g.compute_descriptor,
@@ -155,7 +155,7 @@ if CaffeDescriptorGenerator.is_usable():
             test_transformer = \
                 caffe.io.Transformer({test_data_layer: (1, 3, 600, 512)})
 
-            hopper_elem = from_uri(self.hopper_image_fp)
+            hopper_elem = DataFileElement(self.hopper_image_fp, readonly=True)
             a_expected = numpy.asarray(PIL.Image.open(self.hopper_image_fp),
                                        numpy.float32)
             a = _process_load_img_array((
@@ -190,7 +190,9 @@ if CaffeDescriptorGenerator.is_usable():
                                          self.dummy_caffe_model_elem,
                                          self.dummy_img_mean_elem,
                                          return_layer='fc', use_gpu=False)
-            d = g.compute_descriptor(from_uri(self.hopper_image_fp))
+            d = g.compute_descriptor(
+                DataFileElement(self.hopper_image_fp, readonly=True)
+            )
             self.assertAlmostEqual(d.vector().sum(), 0., 12)
 
         @unittest.skipUnless(DataUrlElement.is_usable(),

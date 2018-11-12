@@ -84,6 +84,7 @@ def mock_de():
 
 @pytest.fixture
 def descr_factory():
+    """Mock descriptor factory"""
     descr_factory = mock_DescriptorFactory()
     descr_factory.new_descriptor.return_value = mock_de
     return descr_factory
@@ -98,6 +99,11 @@ def descr_index():
 
 def test_compute_many_descriptors(data_elements, descr_generator, mock_de,
                                   descr_factory, descr_index):
+    """
+    Test that compute_many_descriptors returns the correct number of
+    elements in the correct order and calls wrapped methods the correct number
+    of times when an explicit batch size is not given
+    """
     descriptors = compute_many_descriptors(data_elements,
                                            descr_generator,
                                            descr_factory, descr_index,
@@ -118,6 +124,11 @@ def test_compute_many_descriptors(data_elements, descr_generator, mock_de,
 
 def test_compute_many_descriptors_batched(data_elements, descr_generator,
                                           mock_de, descr_factory, descr_index):
+    """
+    Test that compute_many_descriptors returns the correct number of
+    elements in the correct order and calls wrapped methods the correct number
+    of times when using an explicit batch size
+    """
     batch_size = 2
     descriptors = compute_many_descriptors(data_elements, descr_generator,
                                            descr_factory, descr_index,
@@ -139,6 +150,10 @@ def test_compute_many_descriptors_batched(data_elements, descr_generator,
 
 
 def test_CountedGenerator():
+    """
+    Test that CountedGenerator yields the correct values in the correct
+    order and harvests the correct counts
+    """
     test_data = range(NUM_BASE_ELEMENTS)
     lengths = []
     test_counted_generator = _CountedGenerator(test_data, lengths)()
@@ -151,6 +166,11 @@ def test_CountedGenerator():
 def test_compute_transformed_descriptors(mock_compute_many_descriptors,
                                          data_elements, descr_generator,
                                          mock_de, descr_factory, descr_index):
+    """
+    Test that compute_transformed_descriptors applies the given tranform to
+    each element, preserves order, returns the right total number of
+    descriptors, and calls compute_many_descriptors exactly once
+    """
     mock_compute_many_descriptors.side_effect = dummy_compute_many_descriptors
     descriptors = compute_transformed_descriptors(data_elements,
                                                   descr_generator,

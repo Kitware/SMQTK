@@ -25,14 +25,6 @@ from smqtk.tests import TEST_DATA_DIR
 from smqtk.utils.configuration import to_config_dict
 
 
-def _data_element_from_url(url):
-    """Helper function to avoid repeatedly downloading data in tests"""
-    r = requests.get(url)
-    r.raise_for_status()
-    content_type = requests.get(url).headers['content-type']
-    return DataMemoryElement(bytes=r.content, content_type=content_type)
-
-
 if CaffeDescriptorGenerator.is_usable():
 
     class TestCaffeDesctriptorGenerator (unittest.TestCase):
@@ -61,15 +53,15 @@ if CaffeDescriptorGenerator.is_usable():
 
         @classmethod
         def setup_class(cls):
-            cls.alexnet_prototxt_elem = _data_element_from_url(
+            cls.alexnet_prototxt_elem = DataUrlElement(
                 'https://data.kitware.com/api/v1/file/57e2f3fd8d777f10f26e532c'
                 '/download'
             )
-            cls.alexnet_caffemodel_elem = _data_element_from_url(
+            cls.alexnet_caffemodel_elem = DataUrlElement(
                 'https://data.kitware.com/api/v1/file/57dae22f8d777f10f26a2a86'
                 '/download'
             )
-            cls.image_mean_proto_elem = _data_element_from_url(
+            cls.image_mean_proto_elem = DataUrlElement(
                 'https://data.kitware.com/api/v1/file/57dae0a88d777f10f26a2a82'
                 '/download'
             )
@@ -213,10 +205,10 @@ if CaffeDescriptorGenerator.is_usable():
                 return_layer='fc7',
                 use_gpu=False,
             )
-            hopper_elem = from_uri(self.hopper_image_fp)
+            hopper_elem = DataFileElement(self.hopper_image_fp, readonly=True)
             expected_descr = numpy.load(self.hopper_alexnet_fc7_descr_fp)
             descr = d.compute_descriptor(hopper_elem).vector()
-            numpy.testing.assert_allclose(descr, expected_descr, atol=1e-5)
+            numpy.testing.assert_allclose(descr, expected_descr, atol=1e-4)
 
         def test_compute_descriptor_async_no_data(self):
             # Should get a ValueError when given no descriptors to async method

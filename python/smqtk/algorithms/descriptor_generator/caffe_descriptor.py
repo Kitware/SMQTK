@@ -14,8 +14,9 @@ from six.moves import range, zip
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
-from smqtk.representation.data_element import from_uri
+from smqtk.representation import DataElement
 from smqtk.utils.cli import ProgressReporter
+from smqtk.utils.configuration import from_config_dict, to_config_dict
 
 try:
     import caffe
@@ -45,8 +46,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
-    def __init__(self, network_prototxt_uri, network_model_uri,
-                 image_mean_uri=None, return_layer='fc7',
+    def __init__(self, network_prototxt, network_model,
+                 image_mean=None, return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
                  load_truncated_images=False, pixel_rescale=None,
@@ -54,17 +55,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Create a Caffe CNN descriptor generator
 
-        :param network_prototxt_uri: URI to the text file defining the
-            network layout.
-        :type network_prototxt_uri: str
+        :param smqtk.representation.DataElement network_prototxt: Data element
+            containing the text file defining the network layout.
 
-        :param network_model_uri: URI to the trained ``.caffemodel``
-            file to use.
-        :type network_model_uri: str
+        :param smqtk.representation.DataElement network_model: Data element
+            containing the trained ``.caffemodel`` file to use.
 
-        :param image_mean_uri: Optional URI to the image mean ``.binaryproto``
-            or ``.npy`` file.
-        :type image_mean_uri: str | file | StringIO.StringIO
+        :param smqtk.representation.DataElement image_mean: Optional data
+            element containing the image mean ``.binaryproto`` or ``.npy``
+            file.
 
         :param return_layer: The label of the layer we take data from to compose
             output descriptor vector.
@@ -110,9 +109,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
-        self.network_prototxt_uri = str(network_prototxt_uri)
-        self.network_model_uri = str(network_model_uri)
-        self.image_mean_uri = image_mean_uri
+        self.network_prototxt = network_prototxt
+        self.network_model = network_model
+        self.image_mean = image_mean
 
         self.return_layer = str(return_layer)
         self.batch_size = int(batch_size)
@@ -148,6 +147,16 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # This works because configuration parameters exactly match up with
         # instance attributes.
         self.__dict__.update(state)
+        self.network_prototxt = from_config_dict(
+            self.network_prototxt, DataElement.get_impls()
+        )
+        self.network_model = from_config_dict(
+            self.network_model, DataElement.get_impls()
+        )
+        if self.image_mean is not None:
+            self.image_mean = from_config_dict(
+                self.image_mean, DataElement.get_impls()
+            )
         self._setup_network()
 
     def _set_caffe_mode(self):
@@ -171,14 +180,12 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # Questions:
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
-        network_prototxt_element = from_uri(self.network_prototxt_uri)
-        network_model_element = from_uri(self.network_model_uri)
         self._log.debug("Loading Caffe network from network/model configs")
-        self.network = caffe.Net(network_prototxt_element.write_temp(),
+        self.network = caffe.Net(self.network_prototxt.write_temp(),
                                  caffe.TEST,
-                                 weights=network_model_element.write_temp())
-        network_prototxt_element.clean_temp()
-        network_model_element.clean_temp()
+                                 weights=self.network_model.write_temp())
+        self.network_prototxt.clean_temp()
+        self.network_model.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape
         self.net_data_shape = self.network.blobs[self.data_layer].data.shape
         self._log.debug("Network data shape: %s", self.net_data_shape)
@@ -191,11 +198,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Initializing data transformer -> %s",
                         self.transformer.inputs)
 
-        if self.image_mean_uri is not None:
+        if self.image_mean is not None:
             self._log.debug("Loading image mean (reducing to single pixel "
                             "mean)")
-            image_mean_elem = from_uri(self.image_mean_uri)
-            image_mean_bytes = image_mean_elem.get_bytes()
+            image_mean_bytes = self.image_mean.get_bytes()
             try:
                 a = numpy.load(io.BytesIO(image_mean_bytes))
                 self._log.info("Loaded image mean from numpy bytes")
@@ -244,10 +250,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :rtype: dict
 
         """
+        if self.image_mean is not None:
+            image_mean_config = to_config_dict(self.image_mean)
+        else:
+            image_mean_config = None
         return {
-            "network_prototxt_uri": self.network_prototxt_uri,
-            "network_model_uri": self.network_model_uri,
-            "image_mean_uri": self.image_mean_uri,
+            "network_prototxt": to_config_dict(self.network_prototxt),
+            "network_model": to_config_dict(self.network_model),
+            "image_mean": image_mean_config,
             "return_layer": self.return_layer,
             "batch_size": self.batch_size,
             "use_gpu": self.use_gpu,

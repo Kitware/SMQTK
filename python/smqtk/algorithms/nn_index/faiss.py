@@ -346,13 +346,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
                 # Check that descriptor-set and kvstore instances match up in
                 # size.
-                assert len(self._descriptor_set) == len(self._uid2idx_kvs) == \
-                    len(self._idx2uid_kvs) == self._faiss_index.ntotal, \
-                    "Not all of our storage elements agree on size: " \
-                    "len(dset, uid2idx, idx2uid, faiss_idx) = " \
-                    "(%d, %d, %d, %d)" \
-                    % (len(self._descriptor_set), len(self._uid2idx_kvs),
-                       len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                if not (
+                        len(self._descriptor_set) == len(self._uid2idx_kvs) ==
+                        len(self._idx2uid_kvs) == self._faiss_index.ntotal):
+                    self._log.warn(
+                        "Not all of our storage elements agree on size: "
+                        "len(dset, uid2idx, idx2uid, faiss_idx) = "
+                        "(%d, %d, %d, %d)"
+                        % (len(self._descriptor_set), len(self._uid2idx_kvs),
+                           len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                    )
 
     def _save_faiss_model(self):
         """
@@ -647,7 +650,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             )
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
             s_ids = s_ids.astype(object)
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
+            # s_id (the FAISS index indices) can equal -1 if fewer than the
+            # requested number of nearest neighbors is returned. In this case,
+            # eliminate the -1 entries
+            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids if s_id >= 0]
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

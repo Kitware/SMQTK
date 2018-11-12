@@ -43,6 +43,21 @@ Utilities
 * Renamed various utility modules that included ``_utils`` in their name to not
   include ``_utils`` for the sake of reducing redundancy.
 
+Compute Functions
+
+* Add ``compute_transformed_descriptors`` function to ``compute_functions.py`` for
+  conducting searches with augmented copies of an image
+
+Algorithms - Descriptor Generator
+
+* Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``s rather than
+  URIs
+
+Algorithms - Nearest Neighbors - LSH Hash Functor
+
+* Use ``ProgressReporter`` in itq to avoid bugs from deprecated ``report_progress``
+  function
+
 Fixes
 -----
 

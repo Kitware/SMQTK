@@ -12,6 +12,10 @@ Algorithms
   * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``
     instances rather than URIs.
 
+* Object Detection
+
+  * Added initial abstract interface.
+
 * Nearest Neighbors
 
   * FAISS

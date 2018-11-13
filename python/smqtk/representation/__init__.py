@@ -12,3 +12,4 @@ from .key_value import KeyValueStore
 
 from .classification_element_factory import ClassificationElementFactory
 from .descriptor_element_factory import DescriptorElementFactory
+from .detection_element_factory import DetectionElementFactory

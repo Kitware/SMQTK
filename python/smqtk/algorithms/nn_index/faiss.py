@@ -9,6 +9,7 @@ import numpy as np
 import os
 import six
 import tempfile
+import warnings
 
 from six.moves import zip
 
@@ -481,14 +482,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         If no index exists yet, a new one should be created using the given
         descriptors.
 
+        If any descriptors have already been added, they will be not be
+        re-inserted, but a warning will be raised.
+
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
-
-        :raises RuntimeError: If a given descriptor is already present in this
-            index.  Adding a duplicate descriptor would cause duplicates in
-            a nearest-neighbor return (no de-duplication).
 
         """
         if self.read_only:
@@ -500,18 +500,23 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug('Updating FAISS index')
 
-        # We need to fork the iterator, so stick the elements in a list
-        desc_list = list(descriptors)
-        data, new_uuids = self._descriptors_to_matrix(desc_list)
-        n, d = data.shape
-
         with self._model_lock:
-            # Assert that new descriptors do not intersect with existing
-            # descriptors.
-            for uid in new_uuids:
-                if uid in self._uid2idx_kvs:
-                    raise RuntimeError("Descriptor with UID %s already "
-                                       "present in this index.")
+            # Remove any uids which have already been indexed. This gracefully
+            # handles the unusual case that the underlying FAISS index and the
+            # SMQTK descriptor set have fallen out of sync due to an unexpected
+            # external failure.
+            desc_list = []
+            for descriptor_ in descriptors:
+                if descriptor_.uuid() in self._uid2idx_kvs:
+                    warnings.warn(
+                        "Descriptor with UID {} already present in this"
+                        " index".format(descriptor_.uuid())
+                    )
+                else:
+                    desc_list.append(descriptor_)
+            data, new_uuids = self._descriptors_to_matrix(desc_list)
+
+            n, d = data.shape
 
             old_ntotal = self.count()
 

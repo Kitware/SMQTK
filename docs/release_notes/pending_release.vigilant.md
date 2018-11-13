@@ -58,6 +58,11 @@ Algorithms - Nearest Neighbors - LSH Hash Functor
 * Use ``ProgressReporter`` in itq to avoid bugs from deprecated ``report_progress``
   function
 
+Algorithms - Nearest Neighbors - FAISS
+
+* Gracefully handle addition of duplicated descriptors to avoid making index
+  unusable due to an unexpected external failure.
+
 Fixes
 -----
 

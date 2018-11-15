@@ -5,14 +5,63 @@ SMQTK VIGILANT Pending Release Notes
 Updates / New Features
 ----------------------
 
+Algorithms
+
+* Descriptor Generators
+
+  * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``
+    instances rather than URIs.
+
+* Object Detection
+
+  * Added initial abstract interface.
+
+* Nearest Neighbors
+
+  * FAISS
+
+    * Gracefully handle addition of duplicated descriptors to avoid making
+      index unusable due to an unexpected external failure.
+
+  * LSH Hash Functor
+
+    * Use ``ProgressReporter`` in itq to avoid bugs from deprecated
+      ``report_progress`` function
+
+Compute Functions
+
+* Add ``compute_transformed_descriptors`` function to ``compute_functions.py`` for
+  conducting searches with augmented copies of an image
+
 Misc.
 
 * Resolve python static analysis warnings and errors.
+
+Representation
+
+* Added ``BoundingBox`` class for describing N-dimensional euclidean spatial
+  regions.
+
+* Added ``DetectionElement`` interface, and in-memory implementation, with
+  associated unit tests.
+
+* Added ``DetectionElementFactory`` class for factory construction of
+  ``DetectionElement`` instances.
+
+* Add use of ``smqtk.utils.configuration.cls_conf_from_config_dict`` and
+  ``smqtk.utils.configuration.cls_conf_to_config_dict`` to appropriate
+  methods in factory classes.
 
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
   Ramifications fixed throughout the codebase.
+
+* Added ``cls_conf_from_config_dict`` and ``cls_conf_to_config_dict``
+  intermediate helper functions to ``smqtk.utils.configuration`` for the
+  ``from_config_dict`` and ``to_config_dict`` sub-problems, respectively.
+  This was motivated by duplicated functionality in element factory class
+  ``from_config`` and ``get_config`` methods.
 
 * Moved some helper functions from ``smqtk.utils.plugin``to
   ``smqtk.utils.configuration`` as those functions more specifically had to do
@@ -49,38 +98,8 @@ Utilities
   worth its lack of use).  The ``watchdog`` python package should be used 
   instead.
 
-Compute Functions
-
-* Add ``compute_transformed_descriptors`` function to ``compute_functions.py`` for
-  conducting searches with augmented copies of an image
-
-Algorithms - Descriptor Generator
-
-* Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``s rather than
-  URIs
-
-Algorithms - Nearest Neighbors - LSH Hash Functor
-
-* Use ``ProgressReporter`` in itq to avoid bugs from deprecated ``report_progress``
-  function
-
-Algorithms - Nearest Neighbors - FAISS
-
-* Gracefully handle addition of duplicated descriptors to avoid making index
-  unusable due to an unexpected external failure.
-
 Fixes
 -----
-
-Tests
-
-* Moved ``--cov`` options from pytest.ini file into the runner script.  This
-  fixes debugger breakpointing in some IDEs.
-
-Utils
-
-* Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
-  added deprecation warning to this function.
 
 Algorithms
 
@@ -92,3 +111,13 @@ Algorithms
       to python native integers due to an incompatibility with some
       KeyValueStore implementations (specificially an issue with the PostgreSQL
       implementation).
+
+Tests
+
+* Moved ``--cov`` options from pytest.ini file into the runner script.  This
+  fixes debugger breakpointing in some IDEs.
+
+Utils
+
+* Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
+  added deprecation warning to this function.

@@ -43,6 +43,8 @@ class Configurable (object):
     dictionary consisting of JSON types.
     """
 
+    __slots__ = ()
+
     @classmethod
     def get_default_config(cls):
         """
@@ -171,11 +173,33 @@ def make_default_config(configurable_iter):
     return d
 
 
+def cls_conf_to_config_dict(cls, conf):
+    """
+    Helper function for creating the appropriate "standard" smqtk configuration
+    dictionary given a `Configurable`-implementing class and a configuration
+    for that class.
+
+    :param type[Configurable] cls:
+        `Configurable` interface implementing class.
+
+    :param dict conf:
+        Configuration dictionary for the given class.
+
+    :return: "Standard" SMQTK JSON-compliant configuration dictionary
+    :rtype: dict
+
+    """
+    return {
+        "type": cls.__name__,
+        cls.__name__: conf
+    }
+
+
 def to_config_dict(c_inst):
     """
     Helper function that transforms the configuration dictionary retrieved from
     ``configurable_inst`` into the "standard" SMQTK configuration dictionary
-    format (see above).
+    format (see above module documentation).
 
     :param Configurable c_inst:
         Instance of a class type that subclasses the ``Configurable`` interface.
@@ -185,15 +209,61 @@ def to_config_dict(c_inst):
 
     """
     c_class = c_inst.__class__
-    assert not isinstance(c_inst, type) and \
-        issubclass(c_class, Configurable), \
-        "c_inst must be an instance and its type must subclass from " \
-        "Configurable."
-    c_class_name = c_class.__name__
-    return {
-        "type": c_class_name,
-        c_class_name: c_inst.get_config()
-    }
+    if isinstance(c_inst, type) or not issubclass(c_class, Configurable):
+        raise ValueError("c_inst must be an instance and its type must "
+                         "subclass from Configurable.")
+    return cls_conf_to_config_dict(c_class, c_inst.get_config())
+
+
+def cls_conf_from_config_dict(config, type_iter):
+    """
+    Helper function for getting the appropriate type and configuration
+    sub-dictionary based on the provided "standard" SMQTK configuration
+    dictionary format (see above module documentation).
+
+    :param dict config:
+        Configuration dictionary to draw from.
+
+    :param collections.Iterable[type] type_iter:
+        An iterable of class types to select from.
+
+    :raises ValueError:
+        This may be raised if:
+            - type field not present in ``config``.
+            - type field set to ``None``
+            - type field did not match any available configuration in the given
+              config.
+            - Type field did not specify any implementation key.
+
+    :return: Appropriate class type from ``type_iter`` that matches the
+        configured type as well as the sub-dictionary from the configuration.
+        From this return, ``type.from_config(config)`` should be callable.
+    :rtype: (type, dict)
+    """
+    if 'type' not in config:
+        raise ValueError("Configuration dictionary given does not have an "
+                         "implementation type specification.")
+    conf_type_name = config['type']
+    type_map = dict(map(lambda t: (t.__name__, t), type_iter))
+
+    conf_type_options = set(config.keys()) - {'type'}
+    # Type provided may either by None, not have a matching block in the
+    # config, not have a matching implementation type, or match both.
+    if conf_type_name is None:
+        raise ValueError("No implementation type specified. Options: %s"
+                         % list(conf_type_options))
+    elif conf_type_name not in conf_type_options:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "configuration block was present for that type. "
+                         "Available configuration block options: %s"
+                         % (conf_type_name, list(conf_type_options)))
+    elif conf_type_name not in type_map:
+        raise ValueError("Implementation type specified as '%s', but no "
+                         "plugin implementations are available for that type. "
+                         "Available implementation types options: %s"
+                         % (conf_type_name, list(type_map)))
+    cls = type_map[conf_type_name]
+    return cls, config[conf_type_name]
 
 
 def from_config_dict(config, type_iter, *args):
@@ -208,11 +278,15 @@ def from_config_dict(config, type_iter, *args):
 
     :raises ValueError:
         This may be raised if:
+            - type field not present in ``config``.
             - type field set to ``None``
             - type field did not match any available configuration in the given
               config.
             - Type field did not specify any implementation key.
-
+    :raises AssertionError:
+        This may be raised if the class specified as the configuration `type`,
+        is present in the given ``type_iter`` but is not a subclass of the
+        ``Configurable`` interface.
     :raises TypeError: Insufficient/incorrect initialization parameters were
         specified for the specified ``type``'s constructor.
 
@@ -227,29 +301,8 @@ def from_config_dict(config, type_iter, *args):
     :rtype: smqtk.utils.configuration.Configurable
 
     """
-    if 'type' not in config:
-        raise ValueError("Configuration dictionary given does not have an "
-                         "implementation type specification.")
-    conf_type = config['type']
-    type_map = dict(map(lambda t: (t.__name__, t), type_iter))
-
-    conf_type_options = set(config.keys()) - {'type'}
-    iter_type_options = set(type_map.keys())
-    # Type provided may either by None, not have a matching block in the config,
-    # not have a matching implementation type, or match both.
-    if conf_type is None:
-        raise ValueError("No implementation type specified. Options: %s"
-                         % conf_type_options)
-    elif conf_type not in conf_type_options:
-        raise ValueError("Implementation type specified as '%s', but no "
-                         "configuration block was present for that type. "
-                         "Available configuration block options: %s"
-                         % (conf_type, list(conf_type_options)))
-    elif conf_type not in iter_type_options:
-        raise ValueError("Implementation type specified as '%s', but no "
-                         "plugin implementations are available for that type. "
-                         "Available implementation types options: %s"
-                         % (conf_type, list(iter_type_options)))
-    cls = type_map[conf_type]
-    assert issubclass(cls, Configurable)
-    return cls.from_config(config[conf_type], *args)
+    cls, cls_conf = cls_conf_from_config_dict(config, type_iter)
+    assert issubclass(cls, Configurable), \
+        "Configured class type '%s' does not descend from `Configurable`." \
+        % cls.__name__
+    return cls.from_config(cls_conf, *args)

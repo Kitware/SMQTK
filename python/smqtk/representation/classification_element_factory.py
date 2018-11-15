@@ -2,7 +2,11 @@ from smqtk.representation import (
     SmqtkRepresentation,
     ClassificationElement
 )
-from smqtk.utils.configuration import make_default_config
+from smqtk.utils.configuration import (
+    cls_conf_from_config_dict,
+    cls_conf_to_config_dict,
+    make_default_config,
+)
 from smqtk.utils.dict import merge_dict
 
 
@@ -76,22 +80,15 @@ class ClassificationElementFactory (SmqtkRepresentation):
 
         """
         if merge_default:
-            mc = cls.get_default_config()
-            merge_dict(mc, config_dict)
-            config_dict = mc
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
 
-        ce_type_map = {t.__name__: t
-                       for t in ClassificationElement.get_impls()}
-        ce_type = ce_type_map[config_dict['type']]
-        ce_conf = config_dict[config_dict['type']]
+        ce_type, ce_conf = cls_conf_from_config_dict(
+            config_dict,  ClassificationElement.get_impls()
+        )
         return ClassificationElementFactory(ce_type, ce_conf)
 
     def get_config(self):
-        type_name = self.type.__name__
-        return {
-            "type": type_name,
-            type_name: self.type_config,
-        }
+        return cls_conf_to_config_dict(self.type, self.type_config)
 
     # noinspection PyShadowingBuiltins
     def new_classification(self, type, uuid):

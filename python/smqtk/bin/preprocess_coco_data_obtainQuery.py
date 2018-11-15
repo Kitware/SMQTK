@@ -51,7 +51,7 @@ def cli_parser():
                         default=1.0)
     parser.add_argument('--query_area_min_threshold', type=float,
                         help="query object of query class's bbox should larger than 'query_area threshold' of whole image ",
-                        default=0.6)
+                        default=0.2)
 
     return parser
 

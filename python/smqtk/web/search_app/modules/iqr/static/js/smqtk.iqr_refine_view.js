@@ -523,7 +523,8 @@ IqrRefineView.prototype.iqr_refine = function() {
             },
             success: function (iqr_count_flag){
                 //make sure all the retrieved images are given feedback
-                if (!iqr_count_flag['success']) {
+                if (0) {
+                // if (!iqr_count_flag['success']) {
                     cur_count = iqr_count_flag['count'];
                     var left_count = (self.IQR_round + 1) * self.show_more_step + 1 - cur_count;
                     alert("Please give feedbacks to all query images! only " + left_count + " lefted!");

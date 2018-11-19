@@ -26,6 +26,10 @@ class PostgresClassificationElement (ClassificationElement):
 
     """
 
+    __slots__ = ('table_name', 'type_col', 'uuid_col', 'classification_col',
+                 'db_name', 'db_host', 'db_port', 'db_user', 'db_pass',
+                 'pickle_protocol', 'create_table')
+
     UPSERT_TABLE_TMPL = ' '.join("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
           {type_col:s} TEXT NOT NULL
@@ -159,6 +163,27 @@ class PostgresClassificationElement (ClassificationElement):
 
         self.pickle_protocol = pickle_protocol
         self.create_table = create_table
+
+    def __getstate__(self):
+        s = self.get_config()
+        s['parent'] = super(PostgresClassificationElement, self).__getstate__()
+        return s
+
+    def __setstate__(self, state):
+        super(PostgresClassificationElement, self).__setstate__(
+            state['parent']
+        )
+        self.table_name = state['table_name']
+        self.type_col = state['type_col']
+        self.uuid_col = state['uuid_col']
+        self.classification_col = state['classification_col']
+        self.db_name = state['db_name']
+        self.db_host = state['db_host']
+        self.db_port = state['db_port']
+        self.db_user = state['db_user']
+        self.db_pass = state['db_pass']
+        self.pickle_protocol = state['pickle_protocol']
+        self.create_table = state['create_table']
 
     def get_config(self):
         return {

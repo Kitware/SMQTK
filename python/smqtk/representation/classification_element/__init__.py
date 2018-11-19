@@ -16,14 +16,19 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
     Classification result encapsulation.
 
     Contains a mapping of arbitrary (but hashable) label values to confidence
-    values (floating point in ``[0,1]`` range). If a classifier does no produce
-    continuous confidence values, it may instead assign a value of ``1.0`` to a
-    single label, and ``0.0`` to the rest.
+    values (floating point in ``[0,1]`` range). If a classifier does not
+    produce continuous confidence values, it may instead assign a value of
+    ``1.0`` to a single label, and ``0.0`` to the rest.
 
     UUIDs must maintain unique-ness when transformed into a string.
 
     Element equality based on classification labels and values, not the type or
     UUID.
+
+    Since this base class defines ``__getstate__`` and ``__setstate__`` methods
+    implementing classes must also extend these methods to support
+    serialization. These methods have been marked as abstract to facilitate
+    this requirement.
 
     """
 
@@ -158,11 +163,11 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :rtype: ClassificationElement
 
         """
-        c = {}
-        merge_dict(c, config_dict)
-        c['type_name'] = type_name
-        c['uuid'] = uuid
-        return super(ClassificationElement, cls).from_config(c, merge_default)
+        config_dict['type_name'] = type_name
+        config_dict['uuid'] = uuid
+        return super(ClassificationElement, cls).from_config(
+            config_dict, merge_default=merge_default
+        )
 
     def max_label(self):
         """
@@ -188,6 +193,14 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
     #
     # Abstract methods
     #
+
+    @abc.abstractmethod
+    def __getstate__(self):
+        return self.type_name, self.uuid
+
+    @abc.abstractmethod
+    def __setstate__(self, state):
+        self.type_name, self.uuid = state
 
     @abc.abstractmethod
     def has_classifications(self):
@@ -235,6 +248,8 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :raises ValueError: The given label-confidence map was empty.
 
         """
+        # TODO: Use template method pattern, create ``_set_classification``
+        #       abstract method (removing abstract from this).
         m = m or {}
         m.update(kwds)
         if not m:

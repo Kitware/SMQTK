@@ -42,17 +42,16 @@ class MemoryClassificationElement (ClassificationElement):
 
     def __getstate__(self):
         state = {
-            'type': self.type_name,
-            'uuid': self.uuid
+            'parent': super(MemoryClassificationElement, self).__getstate__(),
         }
         with self._c_lock:
             state['c'] = self._c
         return state
 
     def __setstate__(self, state):
-        self.type_name = state['type']
-        self.uuid = state['uuid']
-        self._c_lock = RLock()
+        super(MemoryClassificationElement, self).__setstate__(state['parent'])
+        if not hasattr(self, '_c_lock') or self._c_lock is None:
+            self._c_lock = RLock()
         with self._c_lock:
             #: :type: None | dict[collections.Hashable, float]
             self._c = state['c']

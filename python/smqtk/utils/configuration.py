@@ -211,7 +211,8 @@ def to_config_dict(c_inst):
     c_class = c_inst.__class__
     if isinstance(c_inst, type) or not issubclass(c_class, Configurable):
         raise ValueError("c_inst must be an instance and its type must "
-                         "subclass from Configurable.")
+                         "subclass from Configurable. Was given '{}'."
+                         .format(type(c_inst)))
     return cls_conf_to_config_dict(c_class, c_inst.get_config())
 
 

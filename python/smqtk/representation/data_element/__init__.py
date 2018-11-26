@@ -290,7 +290,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         invalidate checksum caches.
 
         :param b: bytes to set.
-        :type b: str
+        :type b: bytes
 
         :raises ReadOnlyError: This data element can only be read from / does
             not support writing.

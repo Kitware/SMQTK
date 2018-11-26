@@ -3,6 +3,7 @@ from ._interface import SmqtkAlgorithm
 # Import module abstracts and plugin getter functions
 from .classifier import Classifier, SupervisedClassifier
 from .descriptor_generator import DescriptorGenerator
+from .image_io import ImageReader
 from .object_detection import ObjectDetector
 from .nn_index import NearestNeighborsIndex
 from .nn_index.hash_index import HashIndex

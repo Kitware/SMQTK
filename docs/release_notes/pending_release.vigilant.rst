@@ -7,6 +7,10 @@ Updates / New Features
 
 Algorithms
 
+* Added ``ImageReader`` algorithm interface
+
+  * Added PIL (pillow) implementation with tests.
+
 * Descriptor Generators
 
   * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``
@@ -97,11 +101,11 @@ Utilities
 
 * Renamed various utility modules that included ``_utils`` in their name to not
   include ``_utils`` for the sake of reducing redundancy.
-  
+
 * Removed ``FileModificationMonitor`` utility class due to having no current
-  use anywhere as well as its tests non-deterministically failing (issues 
-  with timing and probably lack of sufficient use of mock, time to fix not 
-  worth its lack of use).  The ``watchdog`` python package should be used 
+  use anywhere as well as its tests non-deterministically failing (issues
+  with timing and probably lack of sufficient use of mock, time to fix not
+  worth its lack of use).  The ``watchdog`` python package should be used
   instead.
 
 Fixes

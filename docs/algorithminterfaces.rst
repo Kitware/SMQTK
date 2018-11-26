@@ -36,6 +36,16 @@ This is given an iterable of ``DataElement`` instances, a single ``DescriptorEle
    :members:
 
 
+ImageReader
++++++++++++
+
+.. autoclass:: smqtk.algorithms.image_io.ImageReader
+   :members:
+
+.. autoclass:: smqtk.algorithms.image_io.pil.PilImageReader
+   :members:
+
+
 HashIndex
 +++++++++
 

@@ -117,4 +117,3 @@ class ObjectDetector (SmqtkAlgorithm, ContentTypeValidator):
                                   dict[collections.Hashable, float])]
 
         """
-

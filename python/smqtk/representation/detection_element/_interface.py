@@ -1,6 +1,7 @@
 import abc
 
 from smqtk.representation import SmqtkRepresentation
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 
 
@@ -10,6 +11,46 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
     """
 
     __slots__ = ('_uuid',)
+
+    @classmethod
+    def get_default_config(cls):
+        # Override from Configurable.
+        default = super(DetectionElement, cls).get_default_config()
+        # Remove runtime positional argument(s).
+        del default['uuid']
+        return default
+
+    # noinspection PyMethodOverriding
+    @classmethod
+    def from_config(cls, config_dict, uuid, merge_default=True):
+        """
+        Override of
+        :meth:`smqtk.utils.configuration.Configurable.from_config` with the
+        added runtime argument ``uuid``. See parent method documentation for
+        details.
+
+        :param config_dict: JSON compliant dictionary encapsulating
+            a configuration.
+        :type config_dict: dict
+
+        :param collections.Hashable uuid:
+            UUID to assign to the produced DetectionElement.
+
+        :param merge_default: Merge the given configuration on top of the
+            default provided by ``get_default_config``.
+        :type merge_default: bool
+
+        :return: Constructed instance from the provided config.
+        :rtype: DetectionElement
+
+        """
+        # Override from Configurable
+        # Handle passing of runtime positional argument(s).
+        if merge_default:
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
+        config_dict['uuid'] = uuid
+        return super(DetectionElement, cls).from_config(config_dict,
+                                                        merge_default=False)
 
     def __init__(self, uuid):
         """
@@ -28,6 +69,10 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         self._uuid = uuid
 
     def __hash__(self):
+        """
+        :return: hash of DetectionElement UUID.
+        :rtype: int
+        """
         return hash(self._uuid)
 
     def __repr__(self):
@@ -51,6 +96,20 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
     def uuid(self):
         return self._uuid
 
+    #
+    # Abstract methods
+    #
+
+    @abc.abstractmethod
+    def __getstate__(self):
+        return {
+            '_uuid': self._uuid,
+        }
+
+    @abc.abstractmethod
+    def __setstate__(self, state):
+        self._uuid = state['_uuid']
+
     @abc.abstractmethod
     def has_detection(self):
         """
@@ -65,7 +124,7 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         """
         :return: The paired spatial bounding box and classification element of
             this detection.
-        :rtype: (smqtk.representation.BoundingBox,
+        :rtype: (smqtk.representation.AxisAlignedBoundingBox,
                  smqtk.representation.ClassificationElement)
 
         :raises NoDetectionError: No detection AxisAlignedBoundingBox and

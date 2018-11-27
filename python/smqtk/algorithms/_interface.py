@@ -9,6 +9,8 @@ class SmqtkAlgorithm (SmqtkObject, Configurable, Pluggable):
     Parent class for all algorithm interfaces.
     """
 
+    __slots__ = ()
+
     @property
     def name(self):
         """

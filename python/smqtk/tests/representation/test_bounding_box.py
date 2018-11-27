@@ -1,3 +1,5 @@
+import pickle
+
 import numpy
 import pytest
 
@@ -35,51 +37,60 @@ def ndim(request):
 ###############################################################################
 # Tests
 
-def test_bbox_construction_2d(seq_type):
+def test_bbox_set_vertices_2d(seq_type):
     """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minp = (1, 1)
-    maxp = (6, 7)
+    minv = (1, 1)
+    maxv = (6, 7)
+    minv_s = seq_type(minv)
+    maxv_s = seq_type(maxv)
 
-    minp_s = seq_type(minp)
-    maxp_s = seq_type(maxp)
-    bb = AxisAlignedBoundingBox(minp_s, maxp_s)
+    # Mock instance so as to not actually construct it.
+    m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
+    # Invoke private method, which should set attributes onto `m_bb`.
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
 
-    assert isinstance(bb.min_vertex, numpy.ndarray)
-    assert isinstance(bb.max_vertex, numpy.ndarray)
-    numpy.testing.assert_allclose(bb.min_vertex, minp)
-    numpy.testing.assert_allclose(bb.max_vertex, maxp)
+    assert isinstance(m_bb.min_vertex, numpy.ndarray)
+    assert isinstance(m_bb.max_vertex, numpy.ndarray)
+    numpy.testing.assert_allclose(m_bb.min_vertex, minv)
+    numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
 
 
-def test_bbox_construction_3d(seq_type):
+def test_bbox_set_vertices_3d(seq_type):
     """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minp = (1, 1, 0)
-    maxp = (6, 7, 10)
+    minv = (1, 1, 0)
+    maxv = (6, 7, 10)
+    minv_s = seq_type(minv)
+    maxv_s = seq_type(maxv)
 
-    minp_s = seq_type(minp)
-    maxp_s = seq_type(maxp)
-    bb = AxisAlignedBoundingBox(minp_s, maxp_s)
+    # Mock instance so as to not actually construct it.
+    m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
+    # Invoke private method, which should set attributes onto `m_bb`.
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
 
-    assert isinstance(bb.min_vertex, numpy.ndarray)
-    assert isinstance(bb.max_vertex, numpy.ndarray)
-    numpy.testing.assert_allclose(bb.min_vertex, minp)
-    numpy.testing.assert_allclose(bb.max_vertex, maxp)
+    assert isinstance(m_bb.min_vertex, numpy.ndarray)
+    assert isinstance(m_bb.max_vertex, numpy.ndarray)
+    numpy.testing.assert_allclose(m_bb.min_vertex, minv)
+    numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
 
 
-def test_bbox_construction_32d(seq_type):
+def test_bbox_set_vertices_32d(seq_type):
     """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minp = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    minv = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
-    maxp = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+    maxv = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+    minv_s = seq_type(minv)
+    maxv_s = seq_type(maxv)
 
-    minp_s = seq_type(minp)
-    maxp_s = seq_type(maxp)
-    bb = AxisAlignedBoundingBox(minp_s, maxp_s)
+    # Mock instance so as to not actually construct it.
+    m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
+    # Invoke private method, which should set attributes onto `m_bb`.
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
 
-    assert isinstance(bb.min_vertex, numpy.ndarray)
-    assert isinstance(bb.max_vertex, numpy.ndarray)
-    numpy.testing.assert_allclose(bb.min_vertex, minp)
-    numpy.testing.assert_allclose(bb.max_vertex, maxp)
+    assert isinstance(m_bb.min_vertex, numpy.ndarray)
+    assert isinstance(m_bb.max_vertex, numpy.ndarray)
+    numpy.testing.assert_allclose(m_bb.min_vertex, minv)
+    numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
 
 
 def test_bbox_construction_incongruous_shape():
@@ -249,6 +260,53 @@ def test_bbox_not_equal(m_bbox_eq):
     bb1 != bb2
 
     m_bbox_eq.assert_called_once_with(bb2)
+
+
+def test_getstate_format():
+    """
+    Test expected __getstate__ format.
+    """
+    min_v = (4.2, 8.9, 1)
+    max_v = (9.2, 9.0, 48)
+    expected_state = (
+        [4.2, 8.9, 1],
+        [9.2, 9.0, 48]
+    )
+
+    bb1 = AxisAlignedBoundingBox(min_v, max_v)
+    assert bb1.__getstate__() == expected_state
+
+
+def test_setstate_format():
+    """
+    Test expected state format compatible with setstate
+    """
+    state = (
+        [4.2, 8.9, 1],
+        [9.2, 9.0, 48]
+    )
+    expected_min_v = (4.2, 8.9, 1)
+    expected_max_v = (9.2, 9.0, 48)
+
+    bb = AxisAlignedBoundingBox([0], [1])
+    bb.__setstate__(state)
+    numpy.testing.assert_allclose(bb.min_vertex, expected_min_v)
+    numpy.testing.assert_allclose(bb.max_vertex, expected_max_v)
+
+
+def test_serialize_deserialize_pickle():
+    """
+    Test expected state representation.
+    """
+    min_v = (4.2, 8.9, 1)
+    max_v = (9.2, 9.0, 48)
+
+    bb1 = AxisAlignedBoundingBox(min_v, max_v)
+    #: :type: AxisAlignedBoundingBox
+    bb2 = pickle.loads(pickle.dumps(bb1))
+
+    numpy.testing.assert_allclose(bb2.min_vertex, min_v)
+    numpy.testing.assert_allclose(bb2.max_vertex, max_v)
 
 
 def test_bbox_get_config_from_config():

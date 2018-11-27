@@ -15,7 +15,6 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
 
 .. autoclass:: smqtk.algorithms.classifier.Classifier
    :members:
-.. autofunction:: smqtk.algorithms.classifier.get_classifier_impls
 
 
 DescriptorGenerator
@@ -35,7 +34,6 @@ This is given an iterable of ``DataElement`` instances, a single ``DescriptorEle
 
 .. autoclass:: smqtk.algorithms.descriptor_generator.DescriptorGenerator
    :members:
-.. autofunction:: smqtk.algorithms.descriptor_generator.get_descriptor_generator_impls
 
 
 HashIndex
@@ -48,7 +46,6 @@ Unlike the ``NearestNeighborsIndex`` interface from which this interface descend
 
 .. autoclass:: smqtk.algorithms.nn_index.hash_index.HashIndex
    :members:
-.. autofunction:: smqtk.algorithms.nn_index.hash_index.get_hash_index_impls
 
 
 LshFunctor
@@ -58,7 +55,6 @@ These are used in :class:`LSHNearestNeighborIndex` instances.
 
 .. autoclass:: smqtk.algorithms.nn_index.lsh.functors.LshFunctor
    :members:
-.. autofunction:: smqtk.algorithms.nn_index.lsh.functors.get_lsh_functor_impls
 
 
 NearestNeighborsIndex
@@ -78,7 +74,16 @@ This interface additionally requires that implementations define a ``count`` met
 
 .. autoclass:: smqtk.algorithms.nn_index.NearestNeighborsIndex
    :members:
-.. autofunction:: smqtk.algorithms.nn_index.get_nn_index_impls
+
+
+ObjectDetector
+++++++++++++++
+This interface defines a method to generate object detections
+(:class:`~smqtk.representation.DetectionElement`) over a given
+:class:`~smqtk.representation.DataElement`.
+
+.. autoclass:: smqtk.algorithms.object_detection.ObjectDetector
+   :members:
 
 
 RelevancyIndex
@@ -90,4 +95,3 @@ The ``rank`` method takes examples of relevant and not-relevant ``DescriptorElem
 
 .. autoclass:: smqtk.algorithms.relevancy_index.RelevancyIndex
    :members:
-.. autofunction:: smqtk.algorithms.relevancy_index.get_relevancy_index_impls

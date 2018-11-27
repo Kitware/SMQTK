@@ -1,5 +1,4 @@
 import mock
-import pytest
 
 from smqtk.representation import DetectionElement
 
@@ -9,7 +8,9 @@ from smqtk.representation import DetectionElement
 
 class DummyDetectionElement (DetectionElement):
     """
-    Dummy implementation for testing abstract methods of DataElement.
+    Dummy implementation for testing methods implemented in abstract parent
+    class (no constructor override). Abstract methods are not implemented
+    beyond declaration.
     """
 
     # Satisfy Pluggable ##################################
@@ -21,33 +22,126 @@ class DummyDetectionElement (DetectionElement):
     # Satisfy Configurable ###############################
 
     def get_config(self):
-        return {}
+        raise NotImplementedError()
 
     # Satisfy DetectionElement ###########################
 
+    def __getstate__(self):
+        raise NotImplementedError()
+
+    def __setstate__(self, state):
+        raise NotImplementedError()
+
     def has_detection(self):
-        pass
+        raise NotImplementedError()
 
     def set_detection(self, bbox, classification_element):
-        pass
+        raise NotImplementedError()
 
     def get_detection(self):
-        pass
+        raise NotImplementedError()
 
 
 ###############################################################################
 # Tests
 
-def test_detection_element_construction():
+def test_construction():
     """
     Test that normal construction sets the correct attributes
     """
-    DummyDetectionElement(0)
+    expected_uuid = 0
+    m = mock.MagicMock(spec_set=DetectionElement)
+    # noinspection PyCallByClass
+    DetectionElement.__init__(m, expected_uuid)
+    assert m._uuid == expected_uuid
 
 
-def test_detection_element_hash():
+def test_get_default_config_override():
     """
-    Test that a DetectionElement is not hashable.
+    Test override of get_default_config s.t. ``uuid`` is not present in the
+    result dict.
+    """
+    default = DetectionElement.get_default_config()
+    assert 'uuid' not in default
+
+
+@mock.patch('smqtk.utils.configuration.Configurable.from_config')
+def test_from_config_override_mdFalse(m_confFromConfig):
+    """
+    Test that ``from_config`` appropriately passes runtime-provided UUID value.
+    """
+    given_conf = {}
+    expected_uuid = 'test uuid'
+    expected_conf = {
+        'uuid': expected_uuid
+    }
+
+    DetectionElement.from_config(given_conf, expected_uuid,
+                                 merge_default=False)
+    m_confFromConfig.assert_called_once_with(expected_conf,
+                                             merge_default=False)
+
+
+@mock.patch('smqtk.utils.configuration.Configurable.from_config')
+def test_from_config_override_mdTrue(m_confFromConfig):
+    """
+    Test that ``from_config`` appropriately passes runtime-provided UUID value.
+    """
+    given_conf = {}
+    expected_uuid = 'test uuid'
+    expected_conf = {
+        'uuid': expected_uuid
+    }
+
+    DetectionElement.from_config(given_conf, expected_uuid,
+                                 merge_default=True)
+    m_confFromConfig.assert_called_once_with(expected_conf,
+                                             merge_default=False)
+
+
+@mock.patch('smqtk.utils.configuration.Configurable.from_config')
+def test_from_config_uuid_preseed_mdFalse(m_confFromConfig):
+    """
+    Test that UUID provided at runtime prevails over any UUID provided
+    through the config.
+    """
+    given_conf = {
+        "uuid": "should not get through",
+    }
+    expected_uuid = "actually expected UUID"
+    expected_conf = {
+        'uuid': expected_uuid
+    }
+
+    DetectionElement.from_config(given_conf, expected_uuid,
+                                 merge_default=False)
+    m_confFromConfig.assert_called_once_with(expected_conf,
+                                             merge_default=False)
+
+
+@mock.patch('smqtk.utils.configuration.Configurable.from_config')
+def test_from_config_uuid_preseed_mdTrue(m_confFromConfig):
+    """
+    Test that UUID provided at runtime prevails over any UUID provided
+    through the config.
+    """
+    given_conf = {
+        "uuid": "should not get through",
+    }
+    expected_uuid = "actually expected UUID"
+    expected_conf = {
+        'uuid': expected_uuid
+    }
+
+    DetectionElement.from_config(given_conf, expected_uuid,
+                                 merge_default=True)
+    m_confFromConfig.assert_called_once_with(expected_conf,
+                                             merge_default=False)
+
+
+def test_hash():
+    """
+    Test that a DetectionElement is hashable based on solely on UUID.
     """
     assert hash(DummyDetectionElement(0)) == hash(0)
     assert hash(DummyDetectionElement('some-str')) == hash('some-str')
@@ -62,6 +156,7 @@ def test_nonzero_has_detection():
     inst = DummyDetectionElement(0)
     inst.has_detection = mock.MagicMock(return_value=expected_val)
     assert bool(inst) is expected_val
+    inst.has_detection.assert_called_once_with()
 
 
 def test_nonzero_no_detection():
@@ -73,6 +168,7 @@ def test_nonzero_no_detection():
     inst = DummyDetectionElement(0)
     inst.has_detection = mock.MagicMock(return_value=expected_val)
     assert bool(inst) is expected_val
+    inst.has_detection.assert_called_once_with()
 
 
 def test_property_uuid():
@@ -84,3 +180,39 @@ def test_property_uuid():
 
     expected_uuid = 'a hashable string'
     assert DummyDetectionElement(expected_uuid).uuid == expected_uuid
+
+
+def test_getstate():
+    """
+    Test that expected "state" representation is returned from __getstate__.
+    """
+    expected_uuid = 'expected-uuid'
+    expected_state = {
+        '_uuid': expected_uuid
+    }
+
+    # Mock an instance of DetectionElement with expected uuid attribute set.
+    m = mock.MagicMock(spec_set=DetectionElement)
+    m._uuid = expected_uuid
+
+    actual_state = DetectionElement.__getstate__(m)
+    assert actual_state == expected_state
+
+
+def test_setstate():
+    """
+    Test that __setstate__ base implementation sets the correct instance
+    attributes.
+    """
+    expected_uuid = 'expected_uuid'
+    expected_state = {
+        '_uuid': expected_uuid
+    }
+
+    # Mock an instance of DetectionElement
+    m = mock.MagicMock(spec_set=DetectionElement)
+
+    # noinspection PyCallByClass
+    # - for testing purposes.
+    DetectionElement.__setstate__(m, expected_state)
+    assert m._uuid == expected_uuid

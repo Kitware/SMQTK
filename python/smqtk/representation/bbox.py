@@ -50,10 +50,7 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
             greater-than-or-equal to ``min_vertex``.
 
         """
-        self.min_vertex = numpy.asarray(min_vertex, dtype=float)
-        self.min_vertex.flags.writeable = False
-        self.max_vertex = numpy.asarray(max_vertex, dtype=float)
-        self.max_vertex.flags.writeable = False
+        self._set_vertices(min_vertex, max_vertex)
 
         if not (self.min_vertex.ndim == self.max_vertex.ndim == 1):
             raise ValueError("One or both vertices provided had more than "
@@ -72,6 +69,12 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
                              "minimum vertex."
                              .format(tuple(self.min_vertex),
                                      tuple(self.max_vertex)))
+
+    def _set_vertices(self, min_v, max_v):
+        self.min_vertex = numpy.asarray(min_v, dtype=float)
+        self.min_vertex.flags.writeable = False
+        self.max_vertex = numpy.asarray(max_v, dtype=float)
+        self.max_vertex.flags.writeable = False
 
     def __hash__(self):
         return hash((tuple(self.min_vertex), tuple(self.max_vertex)))
@@ -99,11 +102,14 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
     def __ne__(self, other):
         return not (self == other)
 
-    # def __getstate__(self):
-    #     return (
-    #         self.min_vertex,
-    #         self.max_vertex,
-    #     )
+    def __getstate__(self):
+        return (
+            self.min_vertex.tolist(),
+            self.max_vertex.tolist(),
+        )
+
+    def __setstate__(self, state):
+        self._set_vertices(*state)
 
     def get_config(self):
         return {

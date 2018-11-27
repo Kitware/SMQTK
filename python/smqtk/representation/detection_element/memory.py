@@ -17,6 +17,12 @@ class MemoryDetectionElement (DetectionElement):
 
     __slots__ = ('_bbox', '_classification')
 
+    @classmethod
+    def is_usable(cls):
+        # In-memory implementation does not require any additional
+        # dependencies.
+        return True
+
     def __init__(self, uuid):
         super(MemoryDetectionElement, self).__init__(uuid)
         #: :type: None | AxisAlignedBoundingBox
@@ -24,11 +30,17 @@ class MemoryDetectionElement (DetectionElement):
         #: :type: None | ClassificationElement
         self._classification = None
 
-    @classmethod
-    def is_usable(cls):
-        # In-memory implementation does not require any additional
-        # dependencies.
-        return True
+    def __getstate__(self):
+        return {
+            'parent': super(MemoryDetectionElement, self).__getstate__(),
+            'bbox': self._bbox,
+            'classification': self._classification,
+        }
+
+    def __setstate__(self, state):
+        super(MemoryDetectionElement, self).__setstate__(state['parent'])
+        self._bbox = state['bbox']
+        self._classification = state['classification']
 
     def get_config(self):
         # No additional constructor parameters for in-memory implementation.
@@ -62,3 +74,4 @@ class MemoryDetectionElement (DetectionElement):
             raise ValueError("Given an empty ClassificationElement instance.")
         self._bbox = bbox
         self._classification = classification_element
+        return self

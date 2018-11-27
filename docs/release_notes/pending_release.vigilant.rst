@@ -11,6 +11,8 @@ Algorithms
 
   * Added PIL (pillow) implementation with tests.
 
+  * Added GDAL implementation with tests
+
 * Descriptor Generators
 
   * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``

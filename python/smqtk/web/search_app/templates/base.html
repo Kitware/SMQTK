@@ -50,6 +50,8 @@
 
         <!-- Local functionality -->
         <script type="text/javascript"
+                src="/static/js/smqtk.vars.js"></script>
+        <script type="text/javascript"
                 src="/static/js/smqtk.alerts.js"></script>
         <script type="text/javascript"
                 src="/static/js/setZeroTimeout.js"></script>
@@ -76,6 +78,14 @@
 
         <script type="text/javascript">
             $(document).ready(function () {
+                // Setup CSRF token to be sent in appropriate ajax requests with
+                // this document scope.
+                // - Only applies to this page.
+                XMLHttpRequest.prototype.origOpen = XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open = function() {
+                    this.origOpen.apply(this, arguments);
+                    this.setRequestHeader(CSRF_HEADER_KEY, "{{ csrf_token_gen() }}");
+                };
 
             {%- with msgs = get_flashed_messages(category_filter=["error"]) %}
             {%- if msgs %}

@@ -627,7 +627,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             get_r.raise_for_status()
             return flask.jsonify(get_r.json())
 
-        @self.route("/reset_iqr_session", methods=["GET"])
+        @self.route("/reset_iqr_session", methods=["POST"])
         @self._parent_app.module_login.login_required
         def reset_iqr_session():
             """

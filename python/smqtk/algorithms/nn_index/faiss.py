@@ -11,7 +11,7 @@ import six
 import tempfile
 import warnings
 
-from six.moves import zip
+from six.moves import zip, filter
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
@@ -658,7 +658,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             # s_id (the FAISS index indices) can equal -1 if fewer than the
             # requested number of nearest neighbors is returned. In this case,
             # eliminate the -1 entries
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids if s_id >= 0]
+            uuids = list(self._idx2uid_kvs.get_many(
+                filter(lambda s_id_: s_id_ >= 0, s_ids)
+            ))
 
             descriptors = self._descriptor_set.get_many_descriptors(uuids)
 

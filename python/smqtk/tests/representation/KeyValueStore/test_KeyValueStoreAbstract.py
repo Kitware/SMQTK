@@ -131,6 +131,18 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         s.get.assert_called_once_with('some-key')
         self.assertEqual(ev, 'expected-value')
 
+    def test_get_many(self):
+        s = DummyKVStore()
+        mock_return_values = ['expected-value', 'other-expected-value']
+        s.get = mock.Mock(
+            side_effect=mock_return_values
+        )
+        ev = list(
+            s.get_many(('some-key', 'some-other-key'))
+        )
+
+        assert ev == mock_return_values
+
     def test_add_when_read_only(self):
         s = DummyKVStore()
         s.TEST_READ_ONLY = True

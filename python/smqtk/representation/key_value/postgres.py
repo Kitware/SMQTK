@@ -575,6 +575,56 @@ class PostgresKeyValueStore (KeyValueStore):
                 return default
         return self._bin_to_py(rows[0][0])
 
+    def get_many(self, keys, default=NO_DEFAULT_VALUE):
+        """
+        Get the values for the given keys.
+
+        *NOTE:* **Implementing sub-classes are responsible for raising a
+        ``KeyError`` where appropriate.**
+
+        :param keys: The keys for which associated values are requested.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :param default: Optional default value if a given key is not present
+            in this store. This may be any value except for the
+            ``NO_DEFAULT_VALUE`` constant (custom anonymous class instance).
+        :type default: object
+
+        :raises KeyError: A given key is not present in this store and no
+            default value given.
+
+        :return: Iterable of deserialized python objects stored for the given
+            keys in the order that the corresponding keys were provided.
+        :rtype: collections.Iterable
+
+        """
+        sql_command_string = self.SqlTemplates.SELECT_MANY_TMPL.format(
+            query=', '.join((self._key_col, self._value_col)),
+            table_name=self._table_name,
+            key_col=self._key_col
+        )
+        keys = list(keys)
+
+        sql_keys = tuple(self._py_to_bin(key_) for key_ in keys)
+        sql_variables = {'key_tuple': sql_keys}
+
+        def postgres_callback(cursor):
+            cursor.execute(sql_command_string, sql_variables)
+
+        retrieved_dict = {
+            self._bin_to_py(row_[0]): self._bin_to_py(row_[1])
+            for row_ in self._psql_helper.single_execute(
+                postgres_callback, yield_result_rows=True
+            )
+        }
+
+        if default is NO_DEFAULT_VALUE:
+            for key_ in keys:
+                yield retrieved_dict[key_]
+        else:
+            for key_ in keys:
+                yield retrieved_dict.get(key_, default)
+
     def clear(self):
         """
         Clear this key-value store.

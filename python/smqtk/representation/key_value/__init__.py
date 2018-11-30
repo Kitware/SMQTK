@@ -202,7 +202,31 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         """
 
-    # TODO: get_many(self, keys, default=NO_DEFAULT_VALUE)
+    def get_many(self, keys, default=NO_DEFAULT_VALUE):
+        """
+        Get the values for the given keys.
+
+        *NOTE:* **Implementing sub-classes are responsible for raising a
+        ``KeyError`` where appropriate.**
+
+        :param keys: The keys for which associated values are requested.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :param default: Optional default value if a given key is not present
+            in this store. This may be any value except for the
+            ``NO_DEFAULT_VALUE`` constant (custom anonymous class instance).
+        :type default: object
+
+        :raises KeyError: A given key is not present in this store and no
+            default value given.
+
+        :return: Iterable of deserialized python objects stored for the given
+            keys in the order that the corresponding keys were provided.
+        :rtype: collections.Iterable
+
+        """
+        for key_ in keys:
+            yield self.get(key_, default=default)
 
     @abc.abstractmethod
     def clear(self):

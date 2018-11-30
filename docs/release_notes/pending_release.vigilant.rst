@@ -22,6 +22,8 @@ Algorithms
 
     * Gracefully handle addition of duplicated descriptors to avoid making
       index unusable due to an unexpected external failure.
+    * Make use of new ``get_many`` method of key-value stores to improve
+      runtime performance.
 
   * LSH Hash Functor
 
@@ -51,6 +53,10 @@ Representation
 * Add use of ``smqtk.utils.configuration.cls_conf_from_config_dict`` and
   ``smqtk.utils.configuration.cls_conf_to_config_dict`` to appropriate
   methods in factory classes.
+
+* Add ``get_many`` method to ``KeyValueStore`` interface class and provide an
+  optimized implementation of it for the ``PostgresKeyValueStore``
+  implementation class.
 
 Utilities
 

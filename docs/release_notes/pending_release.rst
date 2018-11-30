@@ -52,7 +52,7 @@ Docker
           first.
 
     - Caffe image
-    
+
         - Resolved an issue with upgrading pip for a newer version of matplotlib.
 
 Misc.
@@ -62,10 +62,15 @@ Misc.
       GitHub security alert.
 
 Utilities
+
     - Fixed broken large file writing in Python 2, creating parity
       with Python 3.
 
 Web
+
     - IQR Search Demo App
+
         - Fixed input element autocomplete property value being set
           from disabled" to the correct value of "off".
+
+        - Fix CSRF vulnerability in demo web application front-end.

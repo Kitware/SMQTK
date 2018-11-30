@@ -182,6 +182,7 @@ IqrView.prototype.reset_session = function() {
     var self = this;
     return $.ajax({
         url: "reset_iqr_session",
+        method: "POST",
         success: function (data) {
             if ( data.success ) {
                 self.status_inst.update_view();

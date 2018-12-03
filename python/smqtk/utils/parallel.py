@@ -8,18 +8,9 @@ import sys
 import threading
 import traceback
 
-from smqtk.utils import SmqtkObject
-from six.moves import range, zip
-from six.moves import zip_longest
-from six.moves import queue
+from six.moves import queue, range, zip, zip_longest
 
-# handle 2.x/3.x Queue import
-try:
-    # noinspection PyUnresolvedReferences
-    import Queue as Queue
-except ImportError:
-    # noinspection PyUnresolvedReferences
-    import queue as Queue
+from smqtk.utils import SmqtkObject
 
 
 def parallel_map(work_func, *sequences, **kwargs):

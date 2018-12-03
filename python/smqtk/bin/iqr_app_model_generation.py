@@ -157,13 +157,7 @@ def main():
     data2descriptor = descriptor_generator.compute_descriptor_async(
         data_set, descriptor_elem_factory
     )
-
-    try:
-        nn_index.build_index(six.itervalues(data2descriptor))
-    except RuntimeError:
-        # Already built model, so skipping this step
-        pass
-
+    nn_index.build_index(six.itervalues(data2descriptor))
     rel_index.build_index(six.itervalues(data2descriptor))
 
 

@@ -3,7 +3,6 @@ from math import sqrt
 import unittest
 
 import numpy
-
 import six
 from six import BytesIO
 

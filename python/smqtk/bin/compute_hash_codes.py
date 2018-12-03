@@ -28,11 +28,6 @@ from smqtk.utils import (
     plugin,
 )
 
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
-
 
 def uuids_for_processing(uuids, hash2uuids):
     """

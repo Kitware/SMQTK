@@ -1,12 +1,8 @@
 import six
+from six.moves import cPickle as pickle
 
 from smqtk.representation import DescriptorIndex, get_data_element_impls
 from smqtk.utils import merge_dict, plugin, SimpleTimer
-
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
 
 
 class MemoryDescriptorIndex (DescriptorIndex):

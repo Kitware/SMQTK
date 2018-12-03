@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import unittest
 
 import mock
+import pytest
 
 import smqtk.representation
 import smqtk.exceptions
@@ -58,15 +59,13 @@ class TestClassificationElementAbstract (unittest.TestCase):
         e1 = DummyCEImpl('test', 0)
         e1.get_classification = mock.Mock(return_value={1: 1, 2: 0})
 
+        # There should not be a KeyError for accessing the test labels, but
+        # there should for a different label that is not includes in the element
         self.assertEqual(e1[1], 1)
         self.assertEqual(e1[2], 0)
-
-        try:
-            e1[0]
-        except KeyError:
-            pass
-        else:
-            assert False, "Did not raise KeyError on e1[0]"
+        with pytest.raises(KeyError):
+            # noinspection PyStatementEffect
+            e1['some other key']
 
     def test_max_label(self):
         e = DummyCEImpl('test', 0)

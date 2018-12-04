@@ -38,6 +38,11 @@ Algorithms
                 - Fix ``save_model`` and ``load_model`` methods for additional
                   compatibility with scikit-learn version 0.20.0.
 
+        - LSH
+
+            - Fix issue with update and remove methods when constructed with
+              a key-value store structure that use the ``frozenset`` type.
+
 Descriptor Generator Plugins
 
     - Fix issue with ``CaffeDescriptorGenerator`` where the GPU would not be

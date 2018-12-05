@@ -171,7 +171,7 @@ class DataMemoryElement (DataElement):
         Previous content type value is maintained.
 
         :param b: bytes to set.
-        :type b: str
+        :type b: bytes
 
         :raises ReadOnlyError: This data element can only be read from / does
             not support writing.

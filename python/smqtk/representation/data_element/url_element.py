@@ -114,7 +114,7 @@ class DataUrlElement (DataElement):
         ``writable`` method.
 
         :param b: bytes to set.
-        :type b: str
+        :type b: bytes
 
         :raises ReadOnlyError: This data element can only be read from / does
             not support writing.

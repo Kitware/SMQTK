@@ -33,7 +33,7 @@ class ContentTypeValidator (object):
         """
         return data_element.content_type() in self.valid_content_types()
 
-    def raise_valid_element(self, data_element, exception=ValueError,
+    def raise_valid_element(self, data_element, exception_type=ValueError,
                             message=None):
         """
         Check if the given data element matches a reported valid content type,
@@ -41,11 +41,13 @@ class ContentTypeValidator (object):
 
         :param smqtk.representation.DataElement data_element:
              Data element instance to check.
-        :param StandardError exception:
-            Exception to raise if the given element does not report as a valid
-            content type.
+        :param StandardError exception_type:
+            Custom exception type to raise if the given element does not report
+            as a valid content type. By default we raise a ``ValueError``.
         :param str message:
-            Specific message to provide with a raise exception.
+            Specific message to provide with a raise exception. By default
+            we compose a generic message that also reports the given
+            element's content type.
 
         """
         if not self.is_valid_element(data_element):
@@ -57,4 +59,4 @@ class ContentTypeValidator (object):
             # - Leave the handling of whether or not an exception is
             # constructable to the exception class being constructed (user
             # decision repercussion).
-            raise exception(message)
+            raise exception_type(message)

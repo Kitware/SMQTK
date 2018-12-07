@@ -1,12 +1,18 @@
 from __future__ import division, print_function
 
 import os
+import types
 
 import pytest
 # noinspection PyUnresolvedReferences
 from six.moves import mock  # move defined in ``smqtk.tests``
 
-from smqtk.utils.plugin import get_plugins, OS_ENV_PATH_SEP
+# noinspection PyProtectedMember
+from smqtk.utils.plugin import (
+    OS_ENV_PATH_SEP,
+    _get_extension_plugin_modules,
+    get_plugins,
+)
 
 from .test_plugin_dir.internal_plugins.interface import DummyInterface
 
@@ -16,6 +22,9 @@ from .test_plugin_dir.internal_plugins.interface import DummyInterface
 
 ENV_VAR = "TEST_PLUGIN_MODULE_PATH"
 HELP_VAR = "TEST_PLUGIN_CLASS"
+TEST_NAMESPACE_VALID = "smqtk_test_plugins_ns_VALID"
+TEST_NAMESPACE_ERROR = "smqtk_test_plugins_ns_ERROR"
+TEST_NAMESPACE_COMBO = "smqtk_test_plugins_ns_COMBO"
 
 EXT_MOD_1 = 'smqtk.tests.utils.test_plugin_dir.external_1'
 EXT_MOD_2 = 'smqtk.tests.utils.test_plugin_dir.external_2'
@@ -24,12 +33,19 @@ EXT_MOD_INVALID = 'smqtk.tests.utils.test_plugin_dir.external_invalid_helper'
 EXT_MOD_ABSTRACT = 'smqtk.tests.utils.test_plugin_dir.external_still_abstract'
 
 
-def get_plugins_for_class(cls):
+def get_plugins_for_class(cls, warn=False):
     """
     Test standard wrapper on get_plugins call using test constants.
     This is not a fixture due to environment variable mocking.
     """
-    return get_plugins(cls, ENV_VAR, HELP_VAR)
+    # Suppressing warnings for testing purposes.
+    return get_plugins(cls, ENV_VAR, HELP_VAR, warn=warn)
+
+
+def setup():
+    # Remove cache from extensions getter if there is one.
+    if hasattr(_get_extension_plugin_modules, "ext_manager"):
+        delattr(_get_extension_plugin_modules, "ext_manager")
 
 
 ###############################################################################
@@ -62,10 +78,11 @@ def test_get_internal_modules():
     assert 'ImplBar' in class_dict
     assert 'ImplDoExport' in class_dict
     # Classes we do not expect to be discovered
-    assert 'ImplNotUsable' not in class_set
-    assert 'SomethingElse' not in class_set
-    assert 'ImplNoExport' not in class_set
-    assert 'ImplSkipModule' not in class_set
+    assert 'ImplNotUsable' not in class_dict
+    assert 'SomethingElse' not in class_dict
+    assert 'ImplNoExport' not in class_dict
+    assert 'ImplSkipModule' not in class_dict
+    assert 'ImplActuallyValid' not in class_dict
 
     assert class_dict['ImplFoo']().inst_method('a') == 'fooa'
     assert class_dict['ImplBar']().inst_method('b') == 'barb'
@@ -309,3 +326,60 @@ def test_external_abstract_impl():
     assert 'ImplBar' in class_dict
     assert 'ImplDoExport' in class_dict
     assert 'ImplExternal7' not in class_dict
+
+
+@mock.patch.dict('smqtk.utils.plugin.__dict__',
+                 {"EXTENSION_NAMESPACE": TEST_NAMESPACE_VALID})
+def test_extension_plugin_valid():
+    """
+    Test that
+    """
+    class_set = get_plugins_for_class(DummyInterface)
+    class_dict = {t.__name__: t for t in class_set}
+    assert len(class_dict) == 4
+
+    assert 'ImplFoo' in class_dict
+    assert 'ImplBar' in class_dict
+    assert 'ImplDoExport' in class_dict
+    assert 'ValidExtensionPlugin' in class_dict
+    # Thus unusable class should not be discovered in the same extension module.
+    assert 'UnusableExtensionPlugin' not in class_dict
+
+
+@mock.patch.dict('smqtk.utils.plugin.__dict__',
+                 {"EXTENSION_NAMESPACE": TEST_NAMESPACE_ERROR})
+def test_extension_plugin_import_error():
+    """
+    Test that we are robust to someone providing an extension that cannot be
+    loaded due to an exception.
+    """
+    class_set = get_plugins_for_class(DummyInterface)
+    class_dict = {t.__name__: t for t in class_set}
+    assert len(class_dict) == 3
+
+    assert 'ImplFoo' in class_dict
+    assert 'ImplBar' in class_dict
+    assert 'ImplDoExport' in class_dict
+
+    assert 'SomeValidPlugin' not in class_dict
+
+
+@mock.patch.dict('smqtk.utils.plugin.__dict__',
+                 {"EXTENSION_NAMESPACE": TEST_NAMESPACE_COMBO})
+def test_extension_plugin_multi():
+    """
+    Test that an extension can supply multiple modules, handling errors if
+    one provided is bad.
+    """
+    class_set = get_plugins_for_class(DummyInterface)
+    class_dict = {t.__name__: t for t in class_set}
+    assert len(class_dict) == 5
+
+    assert 'ImplFoo' in class_dict
+    assert 'ImplBar' in class_dict
+    assert 'ImplDoExport' in class_dict
+    assert 'ValidExtensionPlugin' in class_dict
+    assert 'ValidExtensionPlugin2' in class_dict
+    # Thus unusable class should not be discovered in the same extension module.
+    assert 'UnusableExtensionPlugin' not in class_dict
+

@@ -22,5 +22,10 @@ then
     rm ${PYCO_FILES}
 fi
 
+# Generate egg_info for the current state to support entry-point extension
+# testing.
+${script_dir}/setup.py egg_info
+export PYTHONPATH="${script_dir}/python:${PYTHONPATH}"
+
 # --cov :: Measure coverage data for this module.
 pytest --cov=smqtk --cov-config pytest.coveragerc "$@"

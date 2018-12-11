@@ -20,7 +20,7 @@ from smqtk.representation import (
     DescriptorIndex,
     KeyValueStore,
 )
-from smqtk.representation.descriptor_element import elements_to_matrix
+from smqtk.representation.descriptor_element import DescriptorElement
 from smqtk.utils import metrics
 from smqtk.utils.configuration import \
     make_default_config, from_config_dict, to_config_dict
@@ -600,17 +600,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (np.ndarray, list[collections.Hashable])
         """
         new_uuids = [desc.uuid() for desc in descriptors]
-        sample_v = descriptors[0].vector()
-        n, d = len(new_uuids), sample_v.size
-        data = np.empty((n, d), dtype=np.float32)
-        elements_to_matrix(
-            descriptors, mat=data,
-            use_multiprocessing=self.use_multiprocessing,
-            report_interval=1.0,
-        )
+        data = np.vstack(
+            DescriptorElement.get_many_vectors(descriptors)
+        ).astype(np.float32)
         self._log.info("data shape, type: %s, %s",
                        data.shape, data.dtype)
-        self._log.info("# uuids: %d", n)
+        self._log.info("# uuids: %d", len(new_uuids))
         return data, new_uuids
 
     def count(self):
@@ -662,13 +657,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 filter(lambda s_id_: s_id_ >= 0, s_ids)
             ))
 
-            descriptors = self._descriptor_set.get_many_descriptors(uuids)
+            descriptors = tuple(
+                self._descriptor_set.get_many_descriptors(uuids)
+            )
 
         self._log.debug("Min and max FAISS distances: %g, %g",
                         min(s_dists), max(s_dists))
 
-        descriptors = tuple(descriptors)
-        d_vectors = elements_to_matrix(descriptors)
+        d_vectors = np.vstack(
+            DescriptorElement.get_many_vectors(descriptors)
+        )
         d_dists = metrics.euclidean_distance(d_vectors, q)
 
         self._log.debug("Min and max descriptor distances: %g, %g",

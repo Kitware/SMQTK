@@ -34,6 +34,20 @@ class DescriptorIndex (SmqtkRepresentation, Pluggable):
             return self.has_descriptor(item.uuid())
         return False
 
+    def get_many_vectors(self, uuids):
+        """
+        Get underlying vectors of descriptors associated with given uuids.
+
+        :param uuids: Iterable of descriptor UUIDs to query for.
+        :type uuids: collections.Iterable[collections.Hashable]
+
+        :return: Iterator of vectors for descriptors associated with given uuid
+            values.
+        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        DescriptorElement.get_many_vectors(self.get_many_descriptors(uuids))
+
     @abc.abstractmethod
     def count(self):
         """

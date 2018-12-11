@@ -1,11 +1,28 @@
 import abc
 import numpy
 
+from collections import defaultdict
+
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
+from smqtk.utils.parallel import parallel_map
 
 from ._io import elements_to_matrix
+
+
+def _uuid_and_vector_from_descriptor(descriptor):
+    """
+    Given a descriptor, return a tuple containing the UUID and associated
+    vector for that descriptor
+
+    :param descriptor: The descriptor to process.
+    :type descriptor: smqtk.representation.descriptor_element.DescriptorElement
+    :return: Tuple containing the UUID and associated vector for the given
+        descriptor
+    :rtype: tuple[collections.Hashable, numpy.ndarray]
+    """
+    return (descriptor.uuid(), descriptor.vector())
 
 
 class DescriptorElement (SmqtkRepresentation, Pluggable):
@@ -142,6 +159,77 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :rtype: str
         """
         return self._type_label
+
+    @classmethod
+    def _get_many_vectors(cls, descriptors):
+        """
+        Internal method to be overridden by subclasses to return many vectors
+        associated with given descriptors.
+
+        :note: Returned vectors are *not* guaranteed to be returned in the
+            order they are requested. Missing vectors may be returned as None
+            or omitted entirely from results. The wrapper function
+            `get_many_vectors` handles re-ordering as necessary and insertion
+            of None for missing values.
+
+        :param descriptors: Iterable of descriptors to query for.
+        :type descriptors: collections.Iterable[
+            smqtk.representation.descriptor_element.DescriptorElement]
+
+        :return: Iterator of tuples containing the descriptor uuid and the
+            vector associated with the given descriptors or None if the
+            descriptor has no associated vector
+        :rtype: collections.Iterable[
+            tuple[collections.Hashable, Union[numpy.ndarray, None]]]
+        """
+        for uuid_vector_pair in parallel_map(
+                _uuid_and_vector_from_descriptor, descriptors,
+                name='retrieve_vectors'):
+            yield uuid_vector_pair
+
+    @classmethod
+    def get_many_vectors(cls, descriptors):
+        """
+        Get an iterator over vectors associated with given descriptors.
+
+        :note: Most subclasses should override internal method
+            `_get_many_vectors` rather than this external wrapper function. If
+            a subclass does override this classmethod, it is responsible for
+            appropriately handling any valid DescriptorElement, regardless of
+            subclass.
+
+        :param descriptors: Iterable of descriptors to query for.
+        :type descriptors: collections.Iterable[
+            smqtk.representation.descriptor_element.DescriptorElement]
+
+        :return: Iterable of vectors associated with the given descriptors or
+            None if the descriptor has no associated vector. Results are
+            returned in the order that descriptors were given.
+        :rtype: collections.Iterable[Union[numpy.ndarray, None]]
+        """
+        batch_dictionary = defaultdict(list)
+        uuid_indices = {}
+        index = -1
+        for index, descriptor_ in enumerate(descriptors):
+            # Divide descriptors up into batches based on their type, since
+            # each DescriptorElement subclass knows best how to optimally
+            # retrieve vectors of its own type.
+            batch_dictionary[type(descriptor_)].append(descriptor_)
+            # Keep track of the order of descriptors to ensure that we return
+            # vectors in the requested order after batching them out.
+            uuid_indices[descriptor_.uuid()] = index
+
+        # Default to None, since _get_many_vectors implementations can ignore
+        # any descriptors that cannot be retrieved
+        ordered_vectors = [None] * (index + 1)
+
+        # Retrieve all the vectors for a given type of descriptor in a single
+        # batch
+        for cls, descriptor_batch in batch_dictionary.items():
+            for uuid, vector in cls._get_many_vectors(descriptor_batch):
+                ordered_vectors[uuid_indices[uuid]] = vector
+
+        return ordered_vectors
 
     ###
     # Abstract methods

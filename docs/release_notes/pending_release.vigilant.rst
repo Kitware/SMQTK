@@ -28,8 +28,12 @@ Algorithms
 
     * Gracefully handle addition of duplicated descriptors to avoid making
       index unusable due to an unexpected external failure.
+
     * Make use of new ``get_many`` method of key-value stores to improve
       runtime performance.
+
+    * Make use of new ``get_many_vectors`` classmethod of DescriptorElement to
+      improve runtime performance.
 
   * LSH Hash Functor
 
@@ -63,6 +67,12 @@ Representation
 * Add ``get_many`` method to ``KeyValueStore`` interface class and provide an
   optimized implementation of it for the ``PostgresKeyValueStore``
   implementation class.
+
+* Add ``get_many_vectors`` classmethod for efficiently retrieving vectors from
+  several descriptor elements at once
+
+* Add efficient implementation of ``_get_many_vectors`` for Postgres descriptor
+  elements.
 
 Utilities
 

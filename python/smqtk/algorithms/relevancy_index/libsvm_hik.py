@@ -8,6 +8,7 @@ from six.moves import range, zip
 from six.moves import cPickle as pickle
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
+from smqtk.representation.descriptor_element import DescriptorElement
 from smqtk.utils.distance_kernel import (
     compute_distance_matrix
 )
@@ -155,26 +156,18 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Reverse mapping of a descriptor's vector to its index in the cache
         # and subsequently in the distance kernel.
         self._descr2index = {}
+
+        descriptors = list(descriptors)
+
         # matrix for creating distance kernel
-        self._descr_matrix = []
-
-        def get_vector(d_elem):
-            return d_elem, d_elem.vector()
-
-        # noinspection PyTypeChecker
-        vector_iter = parallel_map(get_vector, descriptors,
-                                   name='vector_iter',
-                                   use_multiprocessing=self.multiprocess_fetch,
-                                   cores=self.cores,
-                                   ordered=True)
+        self._descr_matrix = numpy.array(
+            DescriptorElement.get_many_vectors(descriptors)
+        )
+        vector_iter = zip(descriptors, self._descr_matrix)
 
         for i, (d, v) in enumerate(vector_iter):
             self._descr_cache.append(d)
-            # ``_descr_matrix`` is a list, currently.
-            # noinspection PyUnresolvedReferences
-            self._descr_matrix.append(v)
             self._descr2index[tuple(v)] = i
-        self._descr_matrix = numpy.array(self._descr_matrix)
 
         # TODO: (?) For when we optimize SVM SV kernel computation
         # self._dist_kernel = \

@@ -88,9 +88,23 @@ class TestDescriptorElementAbstract (unittest.TestCase):
         self.assertFalse(d1 == d2)
         self.assertTrue(d1 != d2)
 
+    def test_get_many_vectors(self):
+        v1 = numpy.random.randint(0, 10, 10)
+        v2 = numpy.random.randint(0, 10, 100)
+
+        d1 = DummyDescriptorElement('a', 'b')
+        d1.vector = mock.Mock(return_value=v1)
+
+        d2 = DummyDescriptorElement('a', 'c')
+        d2.vector = mock.Mock(return_value=v2)
+
+        retrieved_vectors = DummyDescriptorElement.get_many_vectors([d1, d2])
+        for retrieved, expected in zip(retrieved_vectors, [v1, v2]):
+            numpy.testing.assert_array_equal(retrieved, expected)
+
     def test_hash(self):
-        # Hash of a descriptor element is solely based on the UUID value of that
-        # element.
+        # Hash of a descriptor element is solely based on the UUID value of
+        # that element.
         t1 = 'a'
         uuid1 = 'some uuid'
         de1 = DummyDescriptorElement(t1, uuid1)

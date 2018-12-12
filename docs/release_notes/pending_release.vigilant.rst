@@ -79,6 +79,13 @@ Representation
 
 * Removed unnecessary method override in ``DataFileElement``.
 
+Tests
+
+* Moved tests out of main package tree.
+
+* Added use of ``pytest-runner`` in ``setup.py``, removing ``run_tests.sh``
+  script.  New method of running tests is ``python setup.py test``.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.

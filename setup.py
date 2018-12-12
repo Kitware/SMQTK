@@ -122,7 +122,7 @@ setuptools.setup(
     data_files=list_directory_files('etc'),
 
     setup_requires=[
-        'setuptools',
+        'pytest-runner',
     ],
     install_requires=[
         'flask',
@@ -141,6 +141,12 @@ setuptools.setup(
         'scipy',
         'six',
         'stevedore',
+    ],
+    tests_require=[
+        'coverage',
+        'mock',
+        'pytest',
+        'pytest-cov',
     ],
     extras_require={
         # Various optional dependencies for plugins
@@ -174,19 +180,7 @@ setuptools.setup(
         'girder': [
             'girder-client',
         ],
-        'testing': [
-            'coverage',
-            'mock',
-            'pytest',
-            'pytest-cov',
-        ]
     },
-    tests_require=[
-        'coverage',
-        'mock',
-        'pytest',
-        'pytest-cov',
-    ],
 
     # See entry_points/console_scripts as the preferred method for publishing
     #   executable scripts. Might have redesign how scripts are done if that is
@@ -226,16 +220,5 @@ setuptools.setup(
             'smqtk-nearest-neighbors = smqtk.bin.nearest_neighbors:main',
             'smqtk-check-images = smqtk.bin.check_images:main'
         ],
-        # Some entry-points for testing purposes.
-        'smqtk_test_plugins_ns_VALID':
-            'valid-module-with-stuff = '
-            'smqtk.tests.utils.test_plugin_dir.extension_plugins_1',
-        'smqtk_test_plugins_ns_ERROR':
-            'mot-a-module-value = '
-            'smqtk.tests.utils.test_plugin_dir.extension_plugins_1:ValidExtensionPlugin',
-        'smqtk_test_plugins_ns_COMBO': [
-            "ex1 = smqtk.tests.utils.test_plugin_dir.extension_plugins_1",
-            "ex2 = smqtk.tests.utils.test_plugin_dir.extension_plugins_2"
-        ]
     }
 )

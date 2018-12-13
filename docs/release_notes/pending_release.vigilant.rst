@@ -74,6 +74,9 @@ Representation
 * Add efficient implementation of ``_get_many_vectors`` for Postgres descriptor
   elements.
 
+* Updated ``MemoryKeyValueStore.add_many`` to use ``dict.update`` method
+  instead of manually updating keys.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.

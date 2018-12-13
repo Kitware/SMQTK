@@ -100,6 +100,7 @@ class MemoryKeyValueStore (KeyValueStore):
         if self._cache_element:
             c_bytes = self._cache_element.get_bytes()
             if c_bytes:
+                #: :type: dict
                 self._table = pickle.loads(c_bytes)
 
     def __repr__(self):
@@ -203,8 +204,7 @@ class MemoryKeyValueStore (KeyValueStore):
         """
         super(MemoryKeyValueStore, self).add_many(d)
         with self._table_lock:
-            for k, v in six.iteritems(d):
-                self._table[k] = v
+            self._table.update(d)
             self.cache_table()
         return self
 

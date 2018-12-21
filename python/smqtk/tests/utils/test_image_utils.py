@@ -7,9 +7,15 @@ import unittest
 from six.moves import StringIO
 
 from smqtk.bin.check_images import main as check_images_main
+from smqtk.representation import AxisAlignedBoundingBox
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
-from smqtk.utils.image import is_loadable_image, is_valid_element
+
+from smqtk.utils.image import (
+    is_loadable_image,
+    is_valid_element,
+    crop_in_bounds,
+)
 
 
 class TestIsLoadableImage(unittest.TestCase):
@@ -113,3 +119,143 @@ class TestCheckImageCli(unittest.TestCase):
                                                  'test_file.dat'),
                                     'da39a3ee5e6b4b0d3255bfef95601890afd80709'])
             assert 'non-existent-file.jpeg' not in out
+
+
+class TestCropInBounds(object):
+    """
+    Test using the ``crop_in_bounds`` function.
+    """
+
+    def test_in_bounds_inside(self):
+        """
+        Test that ``in_bounds`` passes when crop inside given rectangle bounds.
+
+            +--+
+            |  |
+            |##|  => (4, 6) image, (2,2) crop
+            |##|
+            |  |
+            +--+
+
+        """
+        bb = AxisAlignedBoundingBox([1, 2], [3, 4])
+        assert crop_in_bounds(bb, 4, 8)
+
+    def test_in_bounds_inside_edges(self):
+        """
+        Test that a crop is "in bounds" when contacting the 4 edges of the
+        given rectangular bounds.
+
+            +--+
+            |  |
+            ## |  => (4, 6) image, (2,2) crop
+            ## |
+            |  |
+            +--+
+
+            +##+
+            |##|
+            |  |  => (4, 6) image, (2,2) crop
+            |  |
+            |  |
+            +--+
+
+            +--+
+            |  |
+            | ##  => (4, 6) image, (2,2) crop
+            | ##
+            |  |
+            +--+
+
+            +--+
+            |  |
+            |  |  => (4, 6) image, (2,2) crop
+            |  |
+            |##|
+            +##+
+
+        """
+        # noinspection PyArgumentList
+        bb = AxisAlignedBoundingBox([0, 2], [2, 4])
+        assert crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([1, 0], [3, 2])
+        assert crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([2, 2], [4, 4])
+        assert crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([1, 4], [3, 6])
+        assert crop_in_bounds(bb, 4, 6)
+
+    def test_in_bounds_completely_outside(self):
+        """
+        Test that being completely outside the given bounds causes
+        ``in_bounds`` to return False.
+        """
+        bb = AxisAlignedBoundingBox([100, 100], [102, 102])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([-100, -100], [-98, -98])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([-100, 100], [-98, 102])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([100, -100], [102, -98])
+        assert not crop_in_bounds(bb, 4, 6)
+
+    def test_in_bounds_crossing_edges(self):
+        """
+        Test that ``in_bounds`` returns False when crop crossed the 4 edges.
+
+            +--+
+            |  |
+           ### |  => (4, 6) image, (3,2) crop
+           ### |
+            |  |
+            +--+
+
+            +--+
+            |  |
+            | ###  => (4, 6) image, (3,2) crop
+            | ###
+            |  |
+            +--+
+
+             ##
+            +##+
+            |##|
+            |  |  => (4, 6) image, (2,3) crop
+            |  |
+            |  |
+            +--+
+
+            +--+
+            |  |
+            |  |  => (4, 6) image, (2,3) crop
+            |  |
+            |##|
+            +##+
+             ##
+
+        """
+        bb = AxisAlignedBoundingBox([-1, 2], [2, 4])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([2, 2], [5, 4])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([1, -1], [3, 2])
+        assert not crop_in_bounds(bb, 4, 6)
+
+        bb = AxisAlignedBoundingBox([1, 4], [3, 7])
+        assert not crop_in_bounds(bb, 4, 6)
+
+    def test_in_bounds_zero_crop_area(self):
+        """
+        Test that crop is not ``in_bounds`` when it has zero area (undefined).
+        """
+        # noinspection PyArgumentList
+        bb = AxisAlignedBoundingBox([1, 2], [1, 2])
+        assert not crop_in_bounds(bb, 4, 6)

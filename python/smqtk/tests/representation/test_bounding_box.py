@@ -1,4 +1,5 @@
 import pickle
+import random
 
 import numpy
 import pytest
@@ -37,14 +38,16 @@ def ndim(request):
 ###############################################################################
 # Tests
 
-def test_bbox_set_vertices_2d(seq_type):
-    """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minv = (1, 1)
-    maxv = (6, 7)
+def test_bbox_set_vertices(ndim, seq_type):
+    """
+    Test constructing an AxisAlignedBoundingBox with ``ndim`` coordinates.
+    """
+    minv = [random.randint(0, 9) for _ in range(ndim)]
+    maxv = [random.randint(10, 19) for _ in range(ndim)]
     minv_s = seq_type(minv)
     maxv_s = seq_type(maxv)
 
-    # Mock instance so as to not actually construct it.
+    # Mock instance so as to not actually hit __init__ method.
     m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     # Invoke private method, which should set attributes onto `m_bb`.
     AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
@@ -55,42 +58,63 @@ def test_bbox_set_vertices_2d(seq_type):
     numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
 
 
-def test_bbox_set_vertices_3d(seq_type):
-    """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minv = (1, 1, 0)
-    maxv = (6, 7, 10)
-    minv_s = seq_type(minv)
-    maxv_s = seq_type(maxv)
+def test_bbox_set_vertices_maintain_type_int():
+    """
+    Test that ndarray dtypes inherit from input integer values explicitly.
+    """
+    # Integer input coordinates (1d)
+    minv = [0]
+    maxv = [1]
 
-    # Mock instance so as to not actually construct it.
+    # Mock instance so as to not actually hit __init__ method.
     m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     # Invoke private method, which should set attributes onto `m_bb`.
-    AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv, maxv)
 
-    assert isinstance(m_bb.min_vertex, numpy.ndarray)
-    assert isinstance(m_bb.max_vertex, numpy.ndarray)
-    numpy.testing.assert_allclose(m_bb.min_vertex, minv)
-    numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
+    # BOTH vertices should be integer since input coordinates are integers.
+    assert issubclass(m_bb.min_vertex.dtype.type, numpy.integer)
+    assert issubclass(m_bb.max_vertex.dtype.type, numpy.integer)
 
 
-def test_bbox_set_vertices_32d(seq_type):
-    """ Test construction a AxisAlignedBoundingBox with 2D coordinates. """
-    minv = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
-    maxv = (2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-            2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
-    minv_s = seq_type(minv)
-    maxv_s = seq_type(maxv)
+def test_bbox_set_vertices_maintain_type_float():
+    """
+    Test that ndarray dtypes inherit from input float values explicitly.
+    """
+    # Float input coordinates (1d)
+    minv = [0.]
+    maxv = [1.]
 
-    # Mock instance so as to not actually construct it.
+    # Mock instance so as to not actually hit __init__ method.
     m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     # Invoke private method, which should set attributes onto `m_bb`.
-    AxisAlignedBoundingBox._set_vertices(m_bb, minv_s, maxv_s)
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv, maxv)
 
-    assert isinstance(m_bb.min_vertex, numpy.ndarray)
-    assert isinstance(m_bb.max_vertex, numpy.ndarray)
-    numpy.testing.assert_allclose(m_bb.min_vertex, minv)
-    numpy.testing.assert_allclose(m_bb.max_vertex, maxv)
+    # BOTH vertices should be integer since input coordinates are integers.
+    assert issubclass(m_bb.min_vertex.dtype.type, numpy.float)
+    assert issubclass(m_bb.max_vertex.dtype.type, numpy.float)
+
+
+def test_bbox_set_vertices_maintain_type_mixed():
+    """
+    Test that ndarray dtypes inherit from mixed float and integer values
+    explicitly.
+    """
+    # Mock instance so as to not actually hit __init__ method.
+    m_bb = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
+
+    # Integer/Float coordinates (3d)
+    minv = [0, 1, 2]  # integer
+    maxv = [1, 2.0, 3]  # float
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv, maxv)
+    assert issubclass(m_bb.min_vertex.dtype.type, numpy.integer)
+    assert issubclass(m_bb.max_vertex.dtype.type, numpy.float)
+
+    # Float/Integer coordinates (3d)
+    minv = [0, 1, 2.0]  # float
+    maxv = [1, 2, 3]  # integer
+    AxisAlignedBoundingBox._set_vertices(m_bb, minv, maxv)
+    assert issubclass(m_bb.min_vertex.dtype.type, numpy.float)
+    assert issubclass(m_bb.max_vertex.dtype.type, numpy.integer)
 
 
 def test_bbox_construction_incongruous_shape():
@@ -105,22 +129,22 @@ def test_bbox_construction_incongruous_shape():
     maxp_1dim = (1,)
     maxp_2dim = ((1,), (2,))
 
-    with pytest.raises(ValueError, match="One or both vertices provided had "
-                                         "more than one array dimension "
-                                         "\(min_vertex\.ndim == 2, "
-                                         "max_vertex\.ndim == 1\)\."):
+    with pytest.raises(ValueError, match=r"One or both vertices provided had "
+                                         r"more than one array dimension "
+                                         r"\(min_vertex\.ndim == 2, "
+                                         r"max_vertex\.ndim == 1\)\."):
         # noinspection PyTypeChecker
         AxisAlignedBoundingBox(minp_2dim, maxp_1dim)
-    with pytest.raises(ValueError, match="One or both vertices provided had "
-                                         "more than one array dimension "
-                                         "\(min_vertex\.ndim == 1, "
-                                         "max_vertex\.ndim == 2\)\."):
+    with pytest.raises(ValueError, match=r"One or both vertices provided had "
+                                         r"more than one array dimension "
+                                         r"\(min_vertex\.ndim == 1, "
+                                         r"max_vertex\.ndim == 2\)\."):
         # noinspection PyTypeChecker
         AxisAlignedBoundingBox(minp_1dim, maxp_2dim)
-    with pytest.raises(ValueError, match="One or both vertices provided had "
-                                         "more than one array dimension "
-                                         "\(min_vertex\.ndim == 2, "
-                                         "max_vertex\.ndim == 2\)\."):
+    with pytest.raises(ValueError, match=r"One or both vertices provided had "
+                                         r"more than one array dimension "
+                                         r"\(min_vertex\.ndim == 2, "
+                                         r"max_vertex\.ndim == 2\)\."):
         # noinspection PyTypeChecker
         AxisAlignedBoundingBox(minp_2dim, maxp_2dim)
 
@@ -134,9 +158,9 @@ def test_bbox_construction_incongruous_dimensionality():
     maxp = (1, 1, 1, 1)
 
     with pytest.raises(ValueError,
-                       match="Both vertices provided are not the same "
-                             "dimensionality \(min_vertex = 3, "
-                             "max_vertex = 4\)\."):
+                       match=r"Both vertices provided are not the same "
+                             r"dimensionality \(min_vertex = 3, "
+                             r"max_vertex = 4\)\."):
         AxisAlignedBoundingBox(minp, maxp)
 
 
@@ -147,9 +171,26 @@ def test_bbox_construction_maxp_not_greater():
     minp = (10, 10)
     maxp = (11, 9)
     with pytest.raises(ValueError,
-                       match="The maximum vertex was not strictly >= the "
-                             "minimum vertex\."):
+                       match=r"The maximum vertex was not strictly >= the "
+                             r"minimum vertex\."):
         AxisAlignedBoundingBox(minp, maxp)
+
+
+def test_bbox_str():
+    """
+    Test that __str__ returns without error.
+    """
+    assert str(AxisAlignedBoundingBox([0], [1.2])) == \
+        "<AxisAlignedBoundingBox [[0], [1.2]]>"
+
+
+def test_bbox_repr():
+    """
+    Test that __repr__ returns without error.
+    """
+    assert repr(AxisAlignedBoundingBox([0], [1.2])) == \
+        "<smqtk.representation.bbox.AxisAlignedBoundingBox " \
+        "min_vertex=[0] max_vertex=[1.2]>"
 
 
 def test_bbox_hash():
@@ -335,6 +376,18 @@ def test_bbox_get_config_from_config():
     assert bb2_config == bb1_config
 
 
+def test_bbox_ndim(ndim):
+    """
+    Test that the ``ndim`` property correctly reflects the dimensionality of
+    the coordinates stored.
+
+    :param ndim: Dimension integer fixture result.
+
+    """
+    bb = AxisAlignedBoundingBox([1] * ndim, [2] * ndim)
+    assert bb.ndim == ndim
+
+
 def test_bbox_deltas_1d():
     """
     Test that `deltas` property returns the correct value for an example 1D
@@ -383,7 +436,39 @@ def test_bbox_deltas_4d():
                                   expected)
 
 
-def test_bbox_area_1(ndim):
+def test_bbox_dtype():
+    """
+    Test getting the representative dtype of the bounding box, including mix
+    vertex array types
+    """
+    # int
+    bb = AxisAlignedBoundingBox([0], [1])
+    assert issubclass(bb.dtype.type, numpy.signedinteger)
+
+    bb = AxisAlignedBoundingBox(numpy.array([0], dtype=numpy.uint8),
+                                numpy.array([1], dtype=numpy.uint8))
+    assert issubclass(bb.dtype.type, numpy.uint8)
+
+    bb = AxisAlignedBoundingBox(numpy.array([0], dtype=numpy.uint8),
+                                numpy.array([1], dtype=numpy.uint32))
+    assert issubclass(bb.dtype.type, numpy.uint32)
+
+    # float
+    bb = AxisAlignedBoundingBox([0.], [1.])
+    assert issubclass(bb.dtype.type, numpy.float)
+
+    bb = AxisAlignedBoundingBox(numpy.array([0], dtype=numpy.float32),
+                                numpy.array([1], dtype=numpy.float16))
+    assert issubclass(bb.dtype.type, numpy.float32)
+
+    # mixed
+    bb = AxisAlignedBoundingBox([0], [1.0])
+    assert issubclass(bb.dtype.type, numpy.float)
+    bb = AxisAlignedBoundingBox([0.0], [1])
+    assert issubclass(bb.dtype.type, numpy.float)
+
+
+def test_bbox_hypervolume_1(ndim):
     """
     Test that we get the expected 1-area from various 1-area hyper-cubes.
     """
@@ -393,7 +478,7 @@ def test_bbox_area_1(ndim):
     assert AxisAlignedBoundingBox(minp, maxp).hypervolume == expected_area
 
 
-def test_bbox_area_other():
+def test_bbox_hypervolume_other():
     """
     Test that we get the expected non-trivial area for bboxes of various
     dimensions.

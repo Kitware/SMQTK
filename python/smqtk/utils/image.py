@@ -232,3 +232,52 @@ def image_contrast_intervals(image, n):
     b = numpy.linspace(1, 2, n + 2, endpoint=True, dtype=float)
     for v in b[1:-1]:
         yield v, PIL.ImageEnhance.Contrast(image).enhance(v)
+
+
+def crop_in_bounds(bbox, im_width, im_height):
+    """
+    Check if this crop specification is within a given parent bounds
+    specification.
+
+    Thus function does NOT care if the input bounding box is integer aligned.
+
+    :param smqtk.representation.AxisAlignedBoundingBox bbox:
+        Bounding box representing a sub-region within an image. This must be a
+        2 dimensional bounding box.
+    :param int im_width:
+        Parent image full width in pixels.
+    :param int im_height:
+        Parent image full height in pixels.
+
+    :return: If this crop specification lies fully within the given
+        bounds.  Touching the edge counts as being "fully within".
+    :rtype: bool
+    """
+    bbox_dim = bbox.ndim
+    assert bbox_dim == 2, \
+        "``crop_in_bounds`` requires an image-space bounding box (2 " \
+        "dimensional), given bounding box with dimension {}." \
+        .format(bbox_dim)
+
+    log = logging.getLogger('.'.join((__package__, 'crop_in_bounds')))
+
+    ul_x, ul_y = bbox.min_vertex
+    lr_x, lr_y = bbox.max_vertex
+
+    in_bounds = True
+    if not ((0 <= ul_x <= im_width) and (0 <= ul_y <= im_height)):
+        log.warn("Upper-left coordinate outside image bounds ([w,h] "
+                 "image dimensions: {}, given upper-left: {})"
+                 .format((im_width, im_height), ul_x, ul_y))
+        in_bounds = False
+    if not ((0 <= lr_x <= im_width) and (0 <= lr_y <= im_height)):
+        log.warn("Lower-right coordinate outside image bounds "
+                 "([w, h] image dimensions: {}, given "
+                 "lower-right: {})"
+                 .format((im_width, im_height), (lr_x, lr_y)))
+        in_bounds = False
+    if not (((lr_x - ul_x) > 0) and ((lr_y - ul_y) > 0)):
+        log.warn("Pixel crop region area is zero (ul: {}, lr: {})."
+                 .format((ul_x, ul_y), (lr_x, lr_y)))
+        in_bounds = False
+    return in_bounds

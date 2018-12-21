@@ -50,6 +50,8 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
             greater-than-or-equal to ``min_vertex``.
 
         """
+        # TODO: Default ``max_vertex`` to ``None`` to ease the creation of
+        #       "points".
         self._set_vertices(min_vertex, max_vertex)
 
         if not (self.min_vertex.ndim == self.max_vertex.ndim == 1):
@@ -70,11 +72,14 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
                              .format(tuple(self.min_vertex),
                                      tuple(self.max_vertex)))
 
-    def _set_vertices(self, min_v, max_v):
-        self.min_vertex = numpy.asarray(min_v, dtype=float)
-        self.min_vertex.flags.writeable = False
-        self.max_vertex = numpy.asarray(max_v, dtype=float)
-        self.max_vertex.flags.writeable = False
+    def __str__(self):
+        return "<{} [{}, {}]>"\
+            .format(self.__class__.__name__, self.min_vertex, self.max_vertex)
+
+    def __repr__(self):
+        return "<{}.{} min_vertex={} max_vertex={}>"\
+            .format(self.__class__.__module__, self.__class__.__name__,
+                    self.min_vertex, self.max_vertex)
 
     def __hash__(self):
         return hash((tuple(self.min_vertex), tuple(self.max_vertex)))
@@ -111,11 +116,28 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
     def __setstate__(self, state):
         self._set_vertices(*state)
 
+    def _set_vertices(self, min_v, max_v):
+        self.min_vertex = numpy.asarray(min_v)
+        self.min_vertex.flags.writeable = False
+        self.max_vertex = numpy.asarray(max_v)
+        self.max_vertex.flags.writeable = False
+
     def get_config(self):
         return {
             'min_vertex': self.min_vertex.tolist(),
             'max_vertex': self.max_vertex.tolist(),
         }
+
+    @property
+    def ndim(self):
+        """
+        :return: The number of dimensions this bounding volume covers.
+        :rtype: int
+        """
+        # we know because of assert in constructor that both min and max vertex
+        # must match in coordinate dimensionality, so we can draw this from
+        # either.
+        return self.min_vertex.size
 
     @property
     def deltas(self):
@@ -131,9 +153,18 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
         return self.max_vertex - self.min_vertex
 
     @property
+    def dtype(self):
+        """
+        :return: Most representative data type required to fully express this
+            bounding box.
+        :rtype: numpy.dtype
+        """
+        return self.deltas.dtype
+
+    @property
     def hypervolume(self):
         """
-        :return: The volume of this [hyperdimensional] spatial bounding box.
+        :return: The volume of this [hyper-dimensional] spatial bounding box.
             Unit of volume depends on the dimensionality of the vertices
             provided.
         :rtype: float

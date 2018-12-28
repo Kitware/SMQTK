@@ -216,16 +216,5 @@ class DataFileElement (DataElement):
                 return super(DataFileElement, self).write_temp(temp_dir)
         return self._filepath
 
-    def clean_temp(self):
-        """
-        Clean any temporary files created by this element. This does nothing if
-        no temporary files have been generated for this element.
-
-        For FileElement instance's this does nothing as the ``write_temp()``
-        method doesn't actually write any files.
-        """
-        # does the right thing regardless of what happened in write_temp
-        return super(DataFileElement, self).clean_temp()
-
 
 DATA_ELEMENT_CLASS = DataFileElement

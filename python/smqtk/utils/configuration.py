@@ -100,6 +100,29 @@ class Configurable (object):
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
 
+        This method is usually overriden when a class' constructor takes
+        non-JSON compliant data types, thus requiring some kind of conversion.
+        Such an override usually looks like the following pattern::
+
+            class MyClass (Configurable):
+
+                @classmethod
+                def from_config(cls, config_dict, merge_default=True):
+                    # Optionally guarentee default values are present in the
+                    # configuration dictionary.  This statement pairs with the
+                    # ``merge_default=False`` parameter in the super call.
+                    if merge_default:
+                        config_dict = merge_dict(cls.get_default_config(),
+                                                 config_dict)
+
+                    #
+                    # Perform any overriding here.
+                    #
+
+                    # Create and return an instance using the super method.
+                    return super(MyClass, cls).from_config(config_dict,
+                                                           merge_default=False)
+
         This method should not be called via super unless an instance of the
         class is desired.
 

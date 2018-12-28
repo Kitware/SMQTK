@@ -3,9 +3,11 @@ import errno
 import os
 import numpy
 import re
+import sys
 import tempfile
 import threading
 import time
+import warnings
 
 from smqtk.utils import SmqtkObject
 
@@ -71,12 +73,19 @@ def safe_file_write(path, b, tmp_dir=None):
     # destination. This is due to, on most OSs, a file rename/move being atomic.
     # TODO(paul.tunison): Do something else on windows since moves there are not
     #   guaranteed atomic.
+    if sys.platform == 'win32':
+        warnings.warn("``safe_file_write`` attempts an OS rename operation. "
+                      "This is not atomic on a Windows platform.")
     tmp_dir = file_dir if tmp_dir is None else tmp_dir
     f = tempfile.NamedTemporaryFile(suffix=file_ext, prefix=file_base + '.',
                                     dir=tmp_dir, delete=False)
     try:
         with f:
             f.write(b)
+            # TODO: If we find issues with files not being completely written
+            #       to disk, we may have to perform a ``f.file.flish()`` with
+            #       an ``os.fsync(f.file.fileno())`` to force a full flush to
+            #       disk.
     except Exception:
         # Remove temporary file if anything bad happens.
         os.remove(f.name)

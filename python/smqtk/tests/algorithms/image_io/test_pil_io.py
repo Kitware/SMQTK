@@ -1,17 +1,15 @@
 import os
 import unittest
 
-import mock
+from six.moves import mock
 import numpy
 import pytest
 
 from smqtk.algorithms.image_io.pil_io import PilImageReader
+from smqtk.representation import AxisAlignedBoundingBox
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
-
-
-FP_IMAGE_GRACE_HOPPER = os.path.join(TEST_DATA_DIR, "grace_hopper.png")
 
 
 @pytest.mark.skipif(not PilImageReader.is_usable(),
@@ -24,8 +22,15 @@ class TestPilImageReader (unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.gh_file_element = DataFileElement(FP_IMAGE_GRACE_HOPPER)
+        cls.gh_image_fp = os.path.join(TEST_DATA_DIR, "grace_hopper.png")
+        cls.gh_file_element = DataFileElement(cls.gh_image_fp)
         assert cls.gh_file_element.content_type() == 'image/png'
+
+        cls.gh_cropped_image_fp = \
+            os.path.join(TEST_DATA_DIR, 'grace_hopper.100x100+100+100.png')
+        cls.gh_cropped_file_element = DataFileElement(cls.gh_cropped_image_fp)
+        assert cls.gh_cropped_file_element.content_type() == 'image/png'
+        cls.gh_cropped_bbox = AxisAlignedBoundingBox([100, 100], [200, 200])
 
     def test_init_invalid_mode(self):
         """
@@ -68,7 +73,7 @@ class TestPilImageReader (unittest.TestCase):
         inst = PilImageReader()
         assert len(inst.valid_content_types()) > 0
 
-    def test_get_matrix_no_bytes(self):
+    def test_load_as_matrix_no_bytes(self):
         """
         Test that a data element with no bytes fails to load.
         """
@@ -80,7 +85,7 @@ class TestPilImageReader (unittest.TestCase):
                                  "provided by DataMemoryElement"):
             inst.load_as_matrix(d)
 
-    def test_get_matrix_invalid_bytes(self):
+    def test_load_as_matrix_invalid_bytes(self):
         """
         Test that data element with invalid data bytes fails to load.
         """
@@ -94,7 +99,7 @@ class TestPilImageReader (unittest.TestCase):
             inst.load_as_matrix(d)
 
     @mock.patch('smqtk.algorithms.image_io.pil_io.PIL.Image.open')
-    def test_get_matrix_other_exception(self, m_pil_open):
+    def test_load_as_matrix_other_exception(self, m_pil_open):
         """
         Test that some other exception raised from ``PIL.Image.open`` is
         passed through.
@@ -108,7 +113,7 @@ class TestPilImageReader (unittest.TestCase):
             inst.load_as_matrix(self.gh_file_element)
 
     @mock.patch('smqtk.algorithms.image_io.pil_io.PIL.Image.open')
-    def test_get_matrix_other_io_exception(self, m_pil_open):
+    def test_load_as_matrix_other_io_exception(self, m_pil_open):
         """
         Test that an IOError that does match conditions for alternate raise
         is raised as-is.
@@ -121,7 +126,7 @@ class TestPilImageReader (unittest.TestCase):
         with pytest.raises(IOError, match=str(expected_exception)):
             inst.load_as_matrix(self.gh_file_element)
 
-    def test_get_matrix_hopper(self):
+    def test_load_as_matrix_hopper(self):
         """
         Test loading valid data Grace Hopper image data element (native RGB
         image).
@@ -132,10 +137,11 @@ class TestPilImageReader (unittest.TestCase):
         assert mat.dtype == numpy.uint8
         assert mat.shape == (600, 512, 3)
 
-    def test_get_matrix_explicit_grayscale(self):
+    def test_load_as_matrix_explicit_grayscale(self):
         """
         Test loading valid Grace Hopper image with an explicit conversion
-        type to grayscale.
+        type to grayscale. Should result in a single channel image (only 2
+        dims).
         """
         # 8-bit grayscale
         inst = PilImageReader(explicit_mode="L")
@@ -143,3 +149,72 @@ class TestPilImageReader (unittest.TestCase):
         assert isinstance(mat, numpy.ndarray)
         assert mat.dtype == numpy.uint8
         assert mat.shape == (600, 512)
+
+    def test_load_as_matrix_with_crop(self):
+        """
+        Test that passing valid crop bounding box results in the expected area.
+
+        We load two images: the original with a crop specified, and a
+        pre-cropped image. The results of each load should be the same,
+        indicating the correct region from the source image is extracted.
+        """
+        inst = PilImageReader()
+        mat_expected = inst.load_as_matrix(self.gh_cropped_file_element)
+        mat_actual = inst.load_as_matrix(self.gh_file_element,
+                                         pixel_crop=self.gh_cropped_bbox)
+        numpy.testing.assert_allclose(mat_actual, mat_expected)
+
+    def test_load_as_matrix_with_crop_not_integer(self):
+        """
+        Test passing a bounding box that is not integer aligned, which should
+        raise an error in the super call.
+        """
+        inst = PilImageReader()
+        bb = AxisAlignedBoundingBox([100, 100.6], [200, 200.2])
+
+        with pytest.raises(ValueError, match=r"Crop bounding box must be "
+                                             r"composed of integer "
+                                             r"coordinates\."):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)
+
+    def test_load_as_matrix_with_crop_not_in_bounds(self):
+        """
+        Test that error is raised when crop bbox is not fully within the image
+        bounds.
+        """
+        inst = PilImageReader()
+
+        # Nowhere close
+        bb = AxisAlignedBoundingBox([5000, 6000], [7000, 8000])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)
+
+        # Outside left side
+        bb = AxisAlignedBoundingBox([-1, 1], [2, 2])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)
+
+        # Outside top side
+        bb = AxisAlignedBoundingBox([1, -1], [2, 2])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)
+
+        # Outside right side
+        bb = AxisAlignedBoundingBox([400, 400], [513, 600])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)
+
+        # Outside bottom side
+        bb = AxisAlignedBoundingBox([400, 400], [512, 601])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(self.gh_file_element, pixel_crop=bb)

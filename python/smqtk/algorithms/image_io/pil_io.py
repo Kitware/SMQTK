@@ -3,6 +3,7 @@ import numpy
 from six import BytesIO
 
 from smqtk.algorithms import ImageReader
+from smqtk.utils.image import crop_in_bounds
 
 try:
     import PIL.Image
@@ -17,7 +18,6 @@ class PilImageReader (ImageReader):
 
     This implementation may additionally raise an ``IOError`` when failing to
     to load an image.
-
     """
 
     @classmethod
@@ -64,7 +64,30 @@ class PilImageReader (ImageReader):
         PIL.Image.preinit()
         return set(PIL.Image.MIME.values())
 
-    def _load_as_matrix(self, data_element):
+    def _load_as_matrix(self, data_element, pixel_crop=None):
+        """
+        Internal method to be implemented that attempts loading an image
+        from the given data element and returning it as an image matrix.
+
+        Pre-conditions:
+            - ``pixel_crop`` has a non-zero volume and is composed of integer
+              types.
+
+        :param smqtk.representation.DataElement data_element:
+            DataElement to load image data from.
+        :param None|smqtk.representation.AxisAlignedBoundingBox pixel_crop:
+            Optional pixel crop region to load from the given data.  If this
+            is provided it must represent a valid sub-region within the loaded
+            image, otherwise a RuntimeError is raised.
+
+        :raises RuntimeError: A crop region was specified but did not specify a
+            valid sub-region of the image.
+
+        :return: Numpy ndarray of the image data. Specific return format is
+            implementation dependant.
+        :rtype: numpy.ndarray
+
+        """
         # We may have to add a mode where we use write_temp and load from that
         # if loading large images straight from bytes-in-memory is a problem
         # and that approach actually alleviates anything.
@@ -81,6 +104,14 @@ class PilImageReader (ImageReader):
             else:
                 # pass through other exceptions
                 raise
+
+        if pixel_crop:
+            if not crop_in_bounds(pixel_crop, *img.size):
+                raise RuntimeError("Crop provided not within input image. "
+                                   "Image shape: {}, crop: {}"
+                                   .format(img.size, pixel_crop))
+            img = img.crop(pixel_crop.min_vertex.tolist() +
+                           pixel_crop.max_vertex.tolist())
 
         # If the loaded image is not already the optionally provided
         # explicit mode, convert it.

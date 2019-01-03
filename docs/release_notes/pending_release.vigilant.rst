@@ -79,6 +79,9 @@ Representation
 
 * Removed unnecessary method override in ``DataFileElement``.
 
+* Added ``MatrixDataElement`` representation that stores a ``numpy.ndarray``
+  instance natively, generating bytes on-the-fly when requested.
+
 Tests
 
 * Moved tests out of main package tree.

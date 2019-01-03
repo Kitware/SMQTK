@@ -9,6 +9,9 @@ Algorithms
 
 * Added ``ImageReader`` algorithm interface
 
+  * Added matrix reading short-cut if DataElement instance provided has a
+    ``matrix`` attribute/property.
+
   * Added PIL (pillow) implementation with tests.
 
   * Added GDAL implementation with tests

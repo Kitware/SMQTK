@@ -9,10 +9,18 @@ The ``uuids_list_filepath`` configuration property is optional and should
 be used to specify a sub-set of descriptors in the configured index to
 train on. This only works if the stored descriptors' UUID is a type of
 string.
+
+The ``max_descriptors'' configuration property is optional and can be
+used to cap the number of descriptors used to train the model.  If
+more descriptors are available than requested, they are randomly
+subsampled.
 """
 
 import logging
 import os.path
+
+import numpy
+from six.moves import zip
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation import (
@@ -32,6 +40,7 @@ def default_config():
         "itq_config": ItqFunctor.get_default_config(),
         "uuids_list_filepath": None,
         "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
+        "max_descriptors": None,
     }
 
 
@@ -45,6 +54,7 @@ def main():
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']
+    max_descriptors = config['max_descriptors']
 
     log.info("Initializing ITQ functor")
     #: :type: smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor
@@ -63,12 +73,26 @@ def main():
             with open(uuids_list_filepath) as f:
                 for l in f:
                     yield l.strip()
+        uuids = uuids_iter()
         log.info("Loading UUIDs list from file: %s", uuids_list_filepath)
-        d_iter = descriptor_index.get_many_descriptors(uuids_iter())
+        if max_descriptors:
+            uuids = list(uuids)
+            if max_descriptors < len(uuids):
+                log.info("Subsampling UUIDs (old count=%d, new count=%d)",
+                         len(uuids), max_descriptors)
+                uuids = numpy.random.choice(uuids, max_descriptors, replace=False)
+        d_iter = descriptor_index.get_many_descriptors(uuids)
     else:
+        d_length = len(descriptor_index)
         log.info("Using UUIDs from loaded DescriptorIndex (count=%d)",
-                 len(descriptor_index))
-        d_iter = descriptor_index
+                 d_length)
+        if max_descriptors and max_descriptors < d_length:
+            log.info("Subsampling loaded DescriptorIndex (new count=%d)",
+                     max_descriptors)
+            selected = numpy.random.permutation(numpy.arange(d_length) < max_descriptors)
+            d_iter = (d for d, s in zip(descriptor_index, selected) if s)
+        else:
+            d_iter = descriptor_index
 
     log.info("Fitting ITQ model")
     functor.fit(d_iter)

@@ -5,6 +5,11 @@ SMQTK Pending Release Notes
 Updates / New Features
 ----------------------
 
+Scripts
+    - `train_itq`
+        - Added an optional configuration property
+          ``max_descriptors``.  The descriptors used to train the ITQ
+          model are a random sample of the available descriptors.
 
 Fixes
 -----

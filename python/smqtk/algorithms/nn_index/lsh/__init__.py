@@ -24,11 +24,6 @@ from smqtk.utils.bit_utils import bit_vector_to_int_large
 from smqtk.utils.bin_utils import ProgressReporter
 from smqtk.utils import merge_dict
 
-try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
-
 
 class LSHNearestNeighborIndex (NearestNeighborsIndex):
     """

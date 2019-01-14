@@ -18,7 +18,8 @@ if __name__ == '__main__':
     while True:
         try:
             r = requests.get(url, stream=True)
-        except Exception:
+        except Exception as ex:
+            print("Encountered exception: {}".format(str(ex)))
             sys.exit(3)
 
         if (r.status_code >= 400 and r.status_code < 500):

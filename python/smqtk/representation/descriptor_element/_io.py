@@ -5,10 +5,8 @@ import sys
 import threading
 import time
 
-from six.moves import queue
-from six import next
-
 import numpy
+from six import next
 from six.moves import queue
 
 from smqtk.utils import SmqtkObject
@@ -235,7 +233,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 if self.stopped():
                     break
         except KeyboardInterrupt:
-            pass
+            self._log.debug("FeedQueueThread received KeyboardInterrupt")
         except Exception as ex:
             self._log.error("Feeder thread encountered an exception: %s",
                             str(ex))
@@ -279,7 +277,8 @@ class _ElemVectorExtractorProcess (SmqtkObject, multiprocessing.Process):
                 packet = self.in_q.get()
             self.out_q.put(None)
         except KeyboardInterrupt:
-            pass
+            self._log.debug("ElemVectorExtractorProcess received "
+                            "KeyboardInterrupt")
         except Exception as ex:
             self._log.error("%s%s encountered an exception: %s",
                             self.__class__.__name__, self.name,
@@ -329,7 +328,8 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
                 packet = self.in_q.get()
             self.q_put(None)
         except KeyboardInterrupt:
-            pass
+            self._log.debug("ElemVectorExtractorThread received "
+                            "KeyboardInterrupt")
         except Exception as ex:
             self._log.error("%s%s encountered an exception: %s",
                             self.__class__.__name__, self.name,

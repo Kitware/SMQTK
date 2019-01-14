@@ -5,6 +5,7 @@ import os.path as osp
 import numpy
 import six
 from six.moves import range, zip
+from six.moves import cPickle as pickle
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.distance_kernel import (
@@ -12,11 +13,6 @@ from smqtk.utils.distance_kernel import (
 )
 from smqtk.utils.metrics import histogram_intersection_distance
 from smqtk.utils.parallel import parallel_map
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 try:
     import svm

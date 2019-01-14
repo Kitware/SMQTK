@@ -1,9 +1,8 @@
 import threading
 
-from smqtk.exceptions import ReadOnlyError
-
 from six.moves import cPickle as pickle
 
+from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DataElement, DataSet, get_data_element_impls
 from smqtk.utils import merge_dict, plugin, SimpleTimer
 

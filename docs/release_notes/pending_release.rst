@@ -5,6 +5,11 @@ SMQTK Pending Release Notes
 Updates / New Features
 ----------------------
 
+Documentation
+
+    - Updated IQR Demo Application documentation RST file and images to
+      reflect the current state of SMQTK and that process.
+
 
 Fixes
 -----
@@ -43,6 +48,9 @@ Algorithms
             - Fix issue with update and remove methods when constructed with
               a key-value store structure that use the ``frozenset`` type.
 
+            - Fix issue with on-the-fly linear hash index build which was
+              previously not correctly setting a set of integers.
+
 Descriptor Generator Plugins
 
     - Fix issue with ``CaffeDescriptorGenerator`` where the GPU would not be
@@ -80,6 +88,12 @@ Utilities
     - Fixed broken large file writing in Python 2, creating parity
       with Python 3.
 
+    - Fixed ``iqr_app_model_generation.py`` script for the current state of
+      SMQTK functionality.
+
+    - Fixed double logging issue in ``python/smqtk/bin/classifyFiles.py``
+      tool.
+
 Web
 
     - IQR Search Demo App
@@ -88,3 +102,6 @@ Web
           from disabled" to the correct value of "off".
 
         - Fix CSRF vulnerability in demo web application front-end.
+
+        - Fixed sample configuration files for the current state of
+          associated tools.

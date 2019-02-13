@@ -1,9 +1,9 @@
 # This is an implicit value, here for clarity
 --index-url https://pypi.python.org/simple/
 
-livereload==2.4.1
-sphinx==1.4.1
-sphinx-argparse==0.1.15
+livereload==2.6.0
+sphinx==1.8.4
+sphinx-argparse==0.2.5
 sphinx-prompt==1.0.0
-sphinx_rtd_theme==0.1.9
+sphinx_rtd_theme==0.4.3
 mock==2.0.0

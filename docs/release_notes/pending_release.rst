@@ -60,11 +60,20 @@ Docker
 
         - Resolved an issue with upgrading pip for a newer version of matplotlib.
 
+Documentation
+
+    - Removed module mocking in sphinx ``conf.py`` as it has been shown to be
+      brittle to changes in the source code.  If we isolate and document a
+      use-case where the mocking becomes relevant again we can bring it back.
+
 Misc.
 
     - Update requests and flask package version in ``requirements.txt`` and
       ``devops/docker/smqtk_wrapper_python/requirements.txt`` files due to
       GitHub security alert.
+
+    - Updated package versions for packages in the ``requirements.docs.txt``
+      requirements file.
 
 Utilities
 

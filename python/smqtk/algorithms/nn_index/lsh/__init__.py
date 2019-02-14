@@ -478,7 +478,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
                 hi = LinearHashIndex()
                 # not calling ``build_index`` because we already have the int
                 # hashes.
-                hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
+                hi.index = set(self.hash2uuids_kvstore.keys())
             near_hashes, _ = hi.nn(d_h, n)
 
             self._log.debug("getting UUIDs of descriptors for nearby hashes")

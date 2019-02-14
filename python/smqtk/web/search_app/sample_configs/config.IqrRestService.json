@@ -4,16 +4,11 @@
         "BASIC_AUTH_USERNAME": "demo",
         "SECRET_KEY": "MySuperUltraSecret"
     },
+    "server": {
+        "host": "127.0.0.1",
+        "port": 5001
+    },
     "iqr_service": {
-        "plugin_notes": {
-            "classification_factory": "Selection of the backend in which classifications are stored. The in-memory version is recommended because normal caching mechanisms will not account for the variety of classifiers that can potentially be created via this utility.",
-            "classifier_config": "The configuration to use for training and using classifiers for the /classifier endpoint. When configuring a classifier for use, don't fill out model persistence values as many classifiers may be created and thrown away during this service's operation.",
-            "descriptor_factory": "What descriptor element factory to use when asked to compute a descriptor on data.",
-            "descriptor_generator": "Descriptor generation algorithm to use when requested to describe data.",
-            "descriptor_index": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
-            "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
-            "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
-        },
         "plugins": {
             "classification_factory": {
                 "MemoryClassificationElement": {},
@@ -34,80 +29,63 @@
                 "type": "LibSvmClassifier"
             },
             "descriptor_factory": {
-                "PostgresDescriptorElement": {
-                    "binary_col": "vector",
-                    "create_table": true,
-                    "db_host": "localhost",
-                    "db_name": "postgres",
-                    "db_pass": null,
-                    "db_port": 5432,
-                    "db_user": "postgres",
-                    "table_name": "alexnet_fc7_descriptors",
-                    "type_col": "type_str",
-                    "uuid_col": "uid"
-                },
-                "type": "PostgresDescriptorElement"
+                "DescriptorMemoryElement": {},
+                "type": "DescriptorMemoryElement"
             },
             "descriptor_generator": {
                 "CaffeDescriptorGenerator": {
                     "batch_size": 128,
                     "data_layer": "data",
                     "gpu_device_id": 0,
-                    "image_mean_uri": "/path/to/caffe/ilsvrc12/imagemean.binaryproto",
+                    "image_mean_uri": "~/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
                     "input_scale": null,
                     "load_truncated_images": false,
                     "network_is_bgr": true,
-                    "network_model_uri": "/path/to/caffe/bvlc_alexnet/model.caffemodel",
-                    "network_prototxt_uri": "/path/to/caffe/bvlc_alexnet/deploy.prototxt",
+                    "network_model_uri": "~/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                    "network_prototxt_uri": "~/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
                     "pixel_rescale": null,
                     "return_layer": "fc7",
-                    "use_gpu": false
+                    "use_gpu": true
                 },
                 "type": "CaffeDescriptorGenerator"
             },
             "descriptor_index": {
-                "PostgresDescriptorIndex": {
-                    "create_table": true,
-                    "db_host": "localhost",
-                    "db_name": "postgres",
-                    "db_pass": null,
-                    "db_port": 5432,
-                    "db_user": "postgres",
-                    "element_col": "element",
-                    "multiquery_batch_size": 1000,
-                    "pickle_protocol": -1,
-                    "read_only": false,
-                    "table_name": "alexnet_fc7_descriptor_index",
-                    "uuid_col": "uid"
+                "MemoryDescriptorIndex": {
+                    "cache_element": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "workdir/butterflies_alexnet_fc7/descriptor_index.pickle",
+                            "readonly": false
+                        },
+                        "type": "DataFileElement"
+                    },
+                    "pickle_protocol": -1
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "MemoryDescriptorIndex"
             },
             "neighbor_index": {
                 "FlannNearestNeighborsIndex": {
                     "autotune": false,
-                    "descriptor_cache_uri": "workdir/alexnet_fc7/flann/index.cache",
+                    "descriptor_cache_uri": "workdir/butterflies_alexnet_fc7/flann/index.cache",
                     "distance_method": "hik",
-                    "index_uri": "workdir/alexnet_fc7/flann/index.flann",
-                    "parameters_uri": "workdir/alexnet_fc7/flann/index.parameters",
+                    "index_uri": "workdir/butterflies_alexnet_fc7/flann/index.flann",
+                    "parameters_uri": "workdir/butterflies_alexnet_fc7/flann/index.parameters",
                     "random_seed": 42
                 },
                 "LSHNearestNeighborIndex": {
                     "descriptor_index": {
-                        "PostgresDescriptorIndex": {
-                            "create_table": true,
-                            "db_host": "localhost",
-                            "db_name": "postgres",
-                            "db_pass": null,
-                            "db_port": 5432,
-                            "db_user": "postgres",
-                            "element_col": "element",
-                            "multiquery_batch_size": 1000,
-                            "pickle_protocol": -1,
-                            "read_only": true,
-                            "table_name": "alexnet_fc7_descriptor_index",
-                            "uuid_col": "uid"
+                        "MemoryDescriptorIndex": {
+                            "cache_element": {
+                                "DataFileElement": {
+                                    "explicit_mimetype": null,
+                                    "filepath": "workdir/butterflies_alexnet_fc7/descriptor_index.pickle",
+                                    "readonly": false
+                                },
+                                "type": "DataFileElement"
+                            },
+                            "pickle_protocol": -1
                         },
-                        "type": "PostgresDescriptorIndex"
+                        "type": "MemoryDescriptorIndex"
                     },
                     "distance_method": "cosine",
                     "hash2uuids_kvstore": {
@@ -115,8 +93,8 @@
                             "cache_element": {
                                 "DataFileElement": {
                                     "explicit_mimetype": null,
-                                    "filepath": "workdir/alexnet_fc7/hash2uuids.mem_kvstore.pickle",
-                                    "readonly": true
+                                    "filepath": "workdir/butterflies_alexnet_fc7/hash2uuids.mem_kvstore.pickle",
+                                    "readonly": false
                                 },
                                 "type": "DataFileElement"
                             }
@@ -134,8 +112,8 @@
                             "mean_vec_cache": {
                                 "DataFileElement": {
                                     "explicit_mimetype": null,
-                                    "filepath": "workdir/alexnet_fc7/itqnn/mean_vec.npy",
-                                    "readonly": true
+                                    "filepath": "workdir/butterflies_alexnet_fc7/itqnn/mean_vec.npy",
+                                    "readonly": false
                                 },
                                 "type": "DataFileElement"
                             },
@@ -144,17 +122,17 @@
                             "rotation_cache": {
                                 "DataFileElement": {
                                     "explicit_mimetype": null,
-                                    "filepath": "workdir/alexnet_fc7/itqnn/rotation/npy",
-                                    "readonly": true
+                                    "filepath": "workdir/butterflies_alexnet_fc7/itqnn/rotation.npy",
+                                    "readonly": false
                                 },
                                 "type": "DataFileElement"
                             }
                         },
                         "type": "ItqFunctor"
                     },
-                    "read_only": true
+                    "read_only": false
                 },
-                "type": "FlannNearestNeighborsIndex"
+                "type": "LSHNearestNeighborIndex"
             },
             "relevancy_index_config": {
                 "LibSvmHikRelevancyIndex": {
@@ -174,9 +152,5 @@
                 "session_timeout": 3600
             }
         }
-    },
-    "server": {
-        "host": "127.0.0.1",
-        "port": 5001
     }
 }

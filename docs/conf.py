@@ -12,10 +12,16 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
+import mock
 import os
 import shlex
-from mock import Mock as MagicMock
+import sys
+import warnings
+
+# Without an import of numpy, warnings are issued for numpy.dtype/ufunc size
+# changes.  numpy.__init__ adds filters for these warnings as they are not
+# useful (breaks in numpy ABI would be noticed by other means).
+import numpy
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -23,35 +29,10 @@ from mock import Mock as MagicMock
 sys.path.insert(0, os.path.abspath('../python'))
 # sys.path.insert(0, os.path.abspath('../bin'))
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-            return Mock()
-
-MOCK_MODULES = [
-    'imageio',
-    'matplotlib',
-    'matplotlib.pyplot',
-    'numpy',
-    'numpy.core',
-    'numpy.core.multiarray',
-    'numpy.matrixlib',
-    'numpy.matrixlib.defmatrix',
-    'PIL',
-    'PIL.Image',
-    'PIL.ImageEnhance',
-    'pymongo',
-    'scipy',
-    'scipy.stats',
-    'sklearn',
-    'sklearn.cluster',
-    'sklearn.cross_validation',
-    'sklearn.metrics',
-    'sklearn.neighbors',
-]
-
-
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+# Mock any modules that cannot be imported/used during the documentation
+# generation process.
+MOCK_MODULES = []
+sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
 

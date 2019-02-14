@@ -5,6 +5,12 @@ SMQTK Pending Release Notes
 Updates / New Features
 ----------------------
 
+CI
+
+    - Add python 3.7 to python versions tested.
+
+    - Add documentation building to Travis-CI.
+
 Documentation
 
     - Updated IQR Demo Application documentation RST file and images to

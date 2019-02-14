@@ -18,7 +18,7 @@ addons:
 # "Install" of SMQTK + immediate deps
 install:
   # install python dependencies to environment
-  - pip install -r requirements.txt
+  - pip install -r requirements.txt -r requirements.docs.txt
 
   # Build components of SMQTK
   - mkdir _build
@@ -29,6 +29,10 @@ install:
   # Environment var export
   - source _build/setup_env.build.sh
 
-# Run tests here
 script:
+  # Attempt building documentation
+  - pushd docs
+  - make html
+  - popd
+  # Run unit tests
   - bash ./run_tests.sh

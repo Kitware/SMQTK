@@ -77,10 +77,13 @@ Representation
 * Updated ``MemoryKeyValueStore.add_many`` to use ``dict.update`` method
   instead of manually updating keys.
 
+* Removed unnecessary method override in ``DataFileElement``.
+
 Utilities
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
-  Ramifications fixed throughout the codebase.
+  Ramifications fixed throughout the codebase. Added documentation to
+  doc-strings.
 
 * Added ``cls_conf_from_config_dict`` and ``cls_conf_to_config_dict``
   intermediate helper functions to ``smqtk.utils.configuration`` for the
@@ -124,6 +127,9 @@ Utilities
   instead.
 
 * Added entry-point extension method of plugin discovery.
+
+* Added warning to ``smqtk.utils.file.safe_file_write`` when used on Windows
+  platforms.
 
 Fixes
 -----

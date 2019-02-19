@@ -123,6 +123,8 @@ Utilities
   worth its lack of use).  The ``watchdog`` python package should be used
   instead.
 
+* Added entry-point extension method of plugin discovery.
+
 Fixes
 -----
 

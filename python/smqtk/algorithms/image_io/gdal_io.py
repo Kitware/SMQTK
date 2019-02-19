@@ -8,6 +8,7 @@ import six
 from six.moves import range
 
 from smqtk.algorithms import ImageReader
+from smqtk.utils.image import crop_in_bounds
 
 try:
     import osgeo
@@ -154,7 +155,7 @@ class GdalImageReader (ImageReader):
             return False
         return True
 
-    def __init__(self, load_method=LOAD_METHOD_VSIMEM):
+    def __init__(self, load_method=LOAD_METHOD_TEMPFILE):
         """
         Use GDAL to read raster image pixel data and returns an image matrix in
         the format native to the input data.
@@ -193,7 +194,7 @@ class GdalImageReader (ImageReader):
         # 1. Check that the given load method is one that we support.
         # 2. Check that GDAL version >= 2 if VSIMEM method specified
         if self._load_method not in self.LOAD_METHOD_CONTEXTMANAGERS:
-            raise ValueError("Given `load_method` not a valid value (given "
+            raise ValueError("Load method provided not a valid value (given "
                              "'{}'). Must be one of: {}."
                              .format(load_method,
                                      self.LOAD_METHOD_CONTEXTMANAGERS))
@@ -232,13 +233,24 @@ class GdalImageReader (ImageReader):
         """
         return get_gdal_driver_supported_mimetypes()
 
-    def _load_as_matrix(self, data_element):
+    def _load_as_matrix(self, data_element, pixel_crop=None):
         """
         Internal method to be implemented that attempts loading an image
         from the given data element and returning it as an image matrix.
 
+        Pre-conditions:
+            - ``pixel_crop`` has a non-zero volume and is composed of integer
+              types.
+
         :param smqtk.representation.DataElement data_element:
             DataElement to load image data from.
+        :param None|smqtk.representation.AxisAlignedBoundingBox pixel_crop:
+            Optional pixel crop region to load from the given data.  If this
+            is provided it must represent a valid sub-region within the loaded
+            image, otherwise a RuntimeError is raised.
+
+        :raises RuntimeError: A crop region was specified but did not specify a
+            valid sub-region of the image.
 
         :return: Numpy ndarray of the image data. Specific return format is
             implementation dependant.
@@ -246,9 +258,24 @@ class GdalImageReader (ImageReader):
 
         """
         load_cm = self.LOAD_METHOD_CONTEXTMANAGERS[self._load_method]
-        with load_cm(data_element) as gdal_ds:
-            img_mat = gdal_ds.ReadAsArray()
-        # Simply return matrix from basic GDAL read
+        with load_cm(data_element) as gdal_ds:  # type: gdal.Dataset
+            if pixel_crop:
+                img_width = gdal_ds.RasterXSize
+                img_height = gdal_ds.RasterYSize
+                if not crop_in_bounds(pixel_crop, img_width, img_height):
+                    raise RuntimeError("Crop provided not within input image. "
+                                       "Image shape: {}, crop: {}"
+                                       .format((img_width, img_height),
+                                               pixel_crop))
+                # GDAL wants [x, y, width, height] as the first 4 positional
+                # arguments to ``ReadAsArray``.
+                # - This is actually faster than ``np.concate``.
+                xywh = pixel_crop.min_vertex.tolist() + \
+                       pixel_crop.deltas.tolist()
+                img_mat = gdal_ds.ReadAsArray(*xywh)
+            else:
+                img_mat = gdal_ds.ReadAsArray()
+        # Simply return matrix from basic GDAL read.
         return img_mat
 
 
@@ -294,17 +321,24 @@ class GdalRGBImageReader(GdalImageReader):
             usable = False
         return usable
 
-    def _load_as_matrix(self, data_element):
+    def _load_as_matrix(self, data_element, pixel_crop=None):
         """
         Internal method to be implemented that attempts loading an image
         from the given data element and returning it as an image matrix.
 
+        Pre-conditions:
+            - ``pixel_crop`` has a non-zero volume and is composed of integer
+              types.
+
         :param smqtk.representation.DataElement data_element:
             DataElement to load image data from.
+        :param None|smqtk.representation.AxisAlignedBoundingBox pixel_crop:
+            Optional pixel crop region to load from the given data.  If this
+            is provided it must represent a valid sub-region within the loaded
+            image, otherwise a RuntimeError is raised.
 
-        :raises ValueError: DataElement input represents an image with
-            neither 2 or 3 dimensions, or more than 3 channels (not handily
-            convertible to RGB).
+        :raises RuntimeError: A crop region was specified but did not specify a
+            valid sub-region of the image.
 
         :return: Numpy ndarray of the image data. Specific return format is
             implementation dependant.
@@ -314,7 +348,8 @@ class GdalRGBImageReader(GdalImageReader):
         # Return raster image matrix in a 3-channel RGB representation.
 
         # Load raw raster matrix via GDAL
-        mat = super(GdalRGBImageReader, self)._load_as_matrix(data_element)
+        mat = super(GdalRGBImageReader, self)._load_as_matrix(data_element,
+                                                              pixel_crop)
 
         # if shape is only size 2, we have a monochrome image; convert to RGB
         if mat.ndim == 2 or (mat.ndim == 3 and mat.shape[2] == 1):
@@ -328,13 +363,13 @@ class GdalRGBImageReader(GdalImageReader):
             mat = mat.transpose(1, 2, 0)
         else:
             raise ValueError("Image matrix should have dimensionality "
-                             "[height, width, channel] (ndim = 3), "
-                             "but instead found ndim = {}."
+                             "[height, width] or [height, width, channel] "
+                             "(ndim = 2 or 3), but instead found ndim = {}."
                              .format(mat.ndim))
 
         if mat.shape[2] != 3:
             raise ValueError("Unexpected image channel format (expected 3, "
-                             "found {})".format(mat.shape[2]))
+                             "found {}).".format(mat.shape[2]))
 
         if mat.dtype != numpy.uint8:
             self._log.info("Rescaling input image from source type {} to "

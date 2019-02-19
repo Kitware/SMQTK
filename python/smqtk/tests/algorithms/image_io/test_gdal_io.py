@@ -18,12 +18,39 @@ from smqtk.algorithms.image_io.gdal_io import (
     GdalImageReader,
     GdalRGBImageReader,
 )
-from smqtk.representation import DataElement
+from smqtk.representation import AxisAlignedBoundingBox, DataElement
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.tests import TEST_DATA_DIR
 
 
-IMG_PATH_GRACE_HOPPER = os.path.join(TEST_DATA_DIR, "grace_hopper.png")
+GH_IMAGE_FP = None              # type: str
+GH_FILE_ELEMENT = None          # type: DataFileElement
+GH_CROPPED_IMAGE_FP = None      # type: str
+GH_CROPPED_FILE_ELEMENT = None  # type: DataFileElement
+GH_CROPPED_BBOX = None          # type: AxisAlignedBoundingBox
+
+
+def setup_module():
+    # Initialize test image paths/elements/associated crop boxes.
+    global GH_IMAGE_FP, GH_FILE_ELEMENT, GH_CROPPED_IMAGE_FP, \
+        GH_CROPPED_FILE_ELEMENT, GH_CROPPED_BBOX
+
+    GH_IMAGE_FP = os.path.join(TEST_DATA_DIR, "grace_hopper.png")
+    GH_FILE_ELEMENT = DataFileElement(GH_IMAGE_FP, readonly=True)
+    assert GH_FILE_ELEMENT.content_type() == 'image/png'
+
+    GH_CROPPED_IMAGE_FP = \
+        os.path.join(TEST_DATA_DIR, 'grace_hopper.100x100+100+100.png')
+    GH_CROPPED_FILE_ELEMENT = DataFileElement(GH_CROPPED_IMAGE_FP,
+                                              readonly=True)
+    assert GH_CROPPED_FILE_ELEMENT.content_type() == 'image/png'
+    GH_CROPPED_BBOX = AxisAlignedBoundingBox([100, 100], [200, 200])
+
+
+def teardown_module():
+    # Clean any tempfiles from global elements of not already.
+    GH_FILE_ELEMENT.clean_temp()
+    GH_CROPPED_FILE_ELEMENT.clean_temp()
 
 
 @pytest.mark.skipif(osgeo is None,
@@ -57,8 +84,12 @@ class TestGdalHelperFunctions (unittest.TestCase):
             m_gdal.GetDriverCount.assert_not_called()
             m_gdal.GetDriver.assert_not_called()
 
-    def test_load_dataset_tempfile_actual(self):
-        e = DataFileElement(IMG_PATH_GRACE_HOPPER, readonly=True)
+    def test_load_dataset_tempfile(self):
+        """
+        Test DataElement temporary file based context loader.
+        """
+        # Creating separate element from global so we can mock it up.
+        e = DataFileElement(GH_IMAGE_FP, readonly=True)
         e.write_temp = mock.MagicMock(wraps=e.write_temp)
         e.clean_temp = mock.MagicMock(wraps=e.clean_temp)
         e.get_bytes = mock.MagicMock(wraps=e.get_bytes)
@@ -93,19 +124,18 @@ class TestGdalHelperFunctions (unittest.TestCase):
         Test that VSIMEM loading context
         """
         if LooseVersion(osgeo.__version__).version[0] < 2:
-            pytest.skip("Skipping VSIMEM test because GDAL version < 2",
-                        # allow_module_level=True
-                        )
+            pytest.skip("Skipping VSIMEM test because GDAL version < 2")
 
-        e = DataFileElement(IMG_PATH_GRACE_HOPPER, readonly=True)
+        # Creating separate element from global so we can mock it up.
+        e = DataFileElement(GH_IMAGE_FP, readonly=True)
         e.write_temp = mock.MagicMock(wraps=e.write_temp)
         e.clean_temp = mock.MagicMock(wraps=e.clean_temp)
         e.get_bytes = mock.MagicMock(wraps=e.get_bytes)
 
-        vsimem_path_re = re.compile('^/vsimem/\w+$')
+        vsimem_path_re = re.compile(r'^/vsimem/\w+$')
 
         # Using explicit patcher start/stop in order to avoid using ``patch``
-        # as a decorator because ``osgeo`` might not be defined when
+        # as a *decorator* because ``osgeo`` might not be defined when
         # decorating the method.
         patcher_gdal_open = mock.patch(
             'smqtk.algorithms.image_io.gdal_io.gdal.Open',
@@ -188,8 +218,10 @@ class TestGdalImageReader (unittest.TestCase):
         Test that passing a load_method string that is not one of the
         expected values raises a ValueError.
         """
-        with pytest.raises(ValueError, match="Given `load_method` not a valid "
-                                             "value"):
+        with pytest.raises(ValueError, match=r"Load method provided not a "
+                                             r"valid value \(given 'not a "
+                                             r"valid method'\)\. Must be one "
+                                             r"of: "):
             GdalImageReader(load_method="not a valid method")
 
     @mock.patch("smqtk.algorithms.image_io.gdal_io.osgeo")
@@ -201,9 +233,9 @@ class TestGdalImageReader (unittest.TestCase):
         # Mock a GDAL version less than 2.
         m_osgeo.__version__ = "1.11.0"
         with pytest.raises(RuntimeError,
-                           match="Load method '{}' was specified, "
-                                 "but required GDAL version of 2 is not "
-                                 "satisfied \(imported version: {}\)\."
+                           match=r"Load method '{}' was specified, "
+                                 r"but required GDAL version of 2 is not "
+                                 r"satisfied \(imported version: {}\)\."
                                  .format(GdalImageReader.LOAD_METHOD_VSIMEM,
                                          "1.11.0")):
             GdalImageReader(load_method=GdalImageReader.LOAD_METHOD_VSIMEM)
@@ -241,6 +273,9 @@ class TestGdalImageReader (unittest.TestCase):
         """
         Test that valid_content_types refers to the helper method and
         returns the same thing.
+
+        Mocking (wrapping) `get_gdal_driver_supported_mimetypes` in order check
+        that it is being called under the hood.
         """
         expected_content_types = get_gdal_driver_supported_mimetypes()
 
@@ -249,25 +284,108 @@ class TestGdalImageReader (unittest.TestCase):
         m_ggdsm.assert_called_once_with()
         assert actual_content_types == expected_content_types
 
-    def test_load_as_matrix(self):
+    def test_load_as_matrix_tempfile(self):
         """
-        Test that load func calls the appropriate func in the
-        context-managers dict and returns an appropriate ndarray.
+        Test that whole image is loaded successfully using tempfile loader.
         """
-        mock_elem = mock.MagicMock(spec_set=DataElement)
-        mock_loader = mock.MagicMock()
+        wrapped_temp_loader = mock.MagicMock(wraps=load_dataset_tempfile)
+        wrapped_vsimem_loader = mock.MagicMock(wraps=load_dataset_vsimem)
 
-        reader = GdalImageReader()
-        reader._load_method = 'test-method-name'
+        with mock.patch.dict(GdalImageReader.LOAD_METHOD_CONTEXTMANAGERS, {
+                    GdalImageReader.LOAD_METHOD_TEMPFILE: wrapped_temp_loader,
+                    GdalImageReader.LOAD_METHOD_VSIMEM: wrapped_vsimem_loader
+                }):
+            # Using tempfile load method
+            reader = GdalImageReader(
+                load_method=GdalImageReader.LOAD_METHOD_TEMPFILE
+            )
+            mat = reader._load_as_matrix(GH_FILE_ELEMENT)
+            assert mat.shape == (3, 600, 512)
 
-        with mock.patch.dict(reader.LOAD_METHOD_CONTEXTMANAGERS,
-                             {'test-method-name': mock_loader}):
-            ret = reader._load_as_matrix(mock_elem)
+        wrapped_temp_loader.assert_called_once_with(GH_FILE_ELEMENT)
+        wrapped_vsimem_loader.assert_not_called()
 
-        mock_loader.assert_called_once_with(mock_elem)
-        mock_loader().__enter__.assert_called_once()
-        mock_loader().__enter__().ReadAsArray.assert_called_once()
-        assert ret == mock_loader().__enter__().ReadAsArray()
+    def test_load_as_matrix_vsimem(self):
+        """
+        Test that whole image is loaded successfully using vsimem loader.
+        """
+        if LooseVersion(osgeo.__version__).version[0] < 2:
+            pytest.skip("Skipping VSIMEM test because GDAL version < 2")
+
+        wrapped_temp_loader = mock.MagicMock(wraps=load_dataset_tempfile)
+        wrapped_vsimem_loader = mock.MagicMock(wraps=load_dataset_vsimem)
+
+        with mock.patch.dict(GdalImageReader.LOAD_METHOD_CONTEXTMANAGERS, {
+                    GdalImageReader.LOAD_METHOD_TEMPFILE: wrapped_temp_loader,
+                    GdalImageReader.LOAD_METHOD_VSIMEM: wrapped_vsimem_loader
+                }):
+            # Using VSIMEM load method
+            reader = GdalImageReader(
+                load_method=GdalImageReader.LOAD_METHOD_VSIMEM
+            )
+            mat = reader._load_as_matrix(GH_FILE_ELEMENT)
+            assert mat.shape == (3, 600, 512)
+
+        wrapped_temp_loader.assert_not_called()
+        wrapped_vsimem_loader.assert_called_once_with(GH_FILE_ELEMENT)
+
+    def test_load_as_matrix_with_crop(self):
+        """
+        Test that the image is loaded with the correct crop region.
+
+        We load two images: the original with a crop specified, and a
+        pre-cropped image. The results of each load should be the same,
+        indicating the correct region from the source image is extracted.
+        """
+        reader = GdalImageReader(
+            load_method=GdalImageReader.LOAD_METHOD_TEMPFILE)
+        cropped_actual = reader.load_as_matrix(GH_FILE_ELEMENT,
+                                               pixel_crop=GH_CROPPED_BBOX)
+        cropped_expected = reader.load_as_matrix(GH_CROPPED_FILE_ELEMENT)
+        # noinspection PyTypeChecker
+        numpy.testing.assert_allclose(cropped_actual, cropped_expected)
+
+    def test_load_as_matrix_with_crop_not_in_bounds(self):
+        """
+        Test that error is raised when crop bbox is not fully within the image
+        bounds.
+        """
+        inst = GdalImageReader()
+
+        # Nowhere close
+        bb = AxisAlignedBoundingBox([5000, 6000], [7000, 8000])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(GH_FILE_ELEMENT, pixel_crop=bb)
+
+        # Outside left side
+        bb = AxisAlignedBoundingBox([-1, 1], [2, 2])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(GH_FILE_ELEMENT, pixel_crop=bb)
+
+        # Outside top side
+        bb = AxisAlignedBoundingBox([1, -1], [2, 2])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(GH_FILE_ELEMENT, pixel_crop=bb)
+
+        # Outside right side
+        bb = AxisAlignedBoundingBox([400, 400], [513, 600])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(GH_FILE_ELEMENT, pixel_crop=bb)
+
+        # Outside bottom side
+        bb = AxisAlignedBoundingBox([400, 400], [512, 601])
+        with pytest.raises(RuntimeError,
+                           match=r"Crop provided not within input image\. "
+                                 r"Image shape: \(512, 600\), crop: "):
+            inst.load_as_matrix(GH_FILE_ELEMENT, pixel_crop=bb)
 
 
 def test_GdalRGBImageReader_usable():
@@ -282,7 +400,7 @@ def test_GdalRGBImageReader_usable():
         assert GdalRGBImageReader.is_usable() is True
 
 
-def test_GdalRGBIMageReader_not_usable_missing_osgeo():
+def test_GdalRGBImageReader_not_usable_missing_osgeo():
     """
     Test that GdalRGBImageReader is not usable when ``osgeo`` is not
     importable while OpenCV is.
@@ -297,7 +415,7 @@ def test_GdalRGBIMageReader_not_usable_missing_osgeo():
             assert GdalRGBImageReader.is_usable() is False
 
 
-def test_GdalRGBIMageReader_not_usable_missing_cv2():
+def test_GdalRGBImageReader_not_usable_missing_cv2():
     """
     Test that GdalRGBImageReader is not usable when ``cv2`` is not
     importable while GDAL is.
@@ -312,7 +430,7 @@ def test_GdalRGBIMageReader_not_usable_missing_cv2():
             assert GdalRGBImageReader.is_usable() is False
 
 
-def test_GdalRGBIMageReader_not_usable_missing_osgeo_cv2():
+def test_GdalRGBImageReader_not_usable_missing_osgeo_cv2():
     """
     Test that GdalRGBImageReader is not usable when ``osgeo`` AND ``cv2``
     are not importable.
@@ -341,41 +459,14 @@ class TestGdalRGBImageReader (unittest.TestCase):
                 wraps=numpy.interp)
     @mock.patch('smqtk.algorithms.image_io.gdal_io.GdalImageReader'
                 '._load_as_matrix')
-    def test_load_as_matrix_correct_transpose_uint8(self, m_gir_lam,
-                                                    m_np_interp):
-        """
-        Test that a [channel, height, width] return from GdalImageReader
-        is correctly transposed into [height, width, channel].
-
-        No type casing should happen from uint8 to uint8
-        """
-        with mock.patch('smqtk.algorithms.image_io.gdal_io.cv2.cvtColor',
-                        wraps=cv2.cvtColor) as m_cv2_cvtColor:
-            # 200x100 3-channel test image.
-            base_image_mat = numpy.ones((3, 100, 200), dtype=numpy.uint8)
-            m_gir_lam.return_value = base_image_mat
-
-            expected_mat = numpy.ones((100, 200, 3), dtype=numpy.uint8)
-
-            m_elem = mock.MagicMock(spec_set=DataElement)
-            reader = GdalRGBImageReader()
-            ret_mat = reader._load_as_matrix(m_elem)
-
-            m_cv2_cvtColor.assert_not_called()
-            m_np_interp.assert_not_called()
-            assert ret_mat.dtype == numpy.uint8
-            numpy.testing.assert_allclose(ret_mat, expected_mat)
-
-    @mock.patch('smqtk.algorithms.image_io.gdal_io.numpy.interp',
-                wraps=numpy.interp)
-    @mock.patch('smqtk.algorithms.image_io.gdal_io.GdalImageReader'
-                '._load_as_matrix')
     def test_load_as_matrix_grayscale_convert_uint8(self, m_gir_lam,
                                                     m_np_interp):
         """
         Test that a grayscale-to-RGB conversion occurs when the native GDAL
         read is a grayscale matrix.
         """
+        # Must patch cv2 function within test because ``cv2`` may not be defined
+        # in outer scope as it is an optional dep
         with mock.patch('smqtk.algorithms.image_io.gdal_io.cv2.cvtColor',
                         wraps=cv2.cvtColor) as m_cv2_cvtColor:
             # 200x100 single-channel test image.
@@ -398,11 +489,75 @@ class TestGdalRGBImageReader (unittest.TestCase):
                 wraps=numpy.interp)
     @mock.patch('smqtk.algorithms.image_io.gdal_io.GdalImageReader'
                 '._load_as_matrix')
+    def test_load_as_matrix_correct_transpose_uint8(self, m_gir_lam,
+                                                    m_np_interp):
+        """
+        Test that a [channel, height, width] return from GdalImageReader
+        is correctly transposed into [height, width, channel].
+
+        No type casing should happen from uint8 to uint8
+        """
+        # Must patch cv2 function within test because ``cv2`` may not be defined
+        # in outer scope as it is an optional dep
+        with mock.patch('smqtk.algorithms.image_io.gdal_io.cv2.cvtColor',
+                        wraps=cv2.cvtColor) as m_cv2_cvtColor:
+            # 200x100 3-channel test image.
+            base_image_mat = numpy.ones((3, 100, 200), dtype=numpy.uint8)
+            m_gir_lam.return_value = base_image_mat
+
+            expected_mat = numpy.ones((100, 200, 3), dtype=numpy.uint8)
+
+            m_elem = mock.MagicMock(spec_set=DataElement)
+            reader = GdalRGBImageReader()
+            ret_mat = reader._load_as_matrix(m_elem)
+
+            m_cv2_cvtColor.assert_not_called()
+            m_np_interp.assert_not_called()
+            assert ret_mat.dtype == numpy.uint8
+            numpy.testing.assert_allclose(ret_mat, expected_mat)
+
+    @mock.patch('smqtk.algorithms.image_io.gdal_io.GdalImageReader'
+                '._load_as_matrix')
+    def test_load_as_matrix_incorrect_dims(self, m_gir_lam):
+        """
+        Test that a ValueError is raised if the parent ``_load_as_matrix``
+        method returns a matrix with 1 or more than 4 dimensions (matrix
+        dimensions, not channels).
+        """
+        m_elem = mock.MagicMock(spec_set=DataElement)
+        reader = GdalRGBImageReader()
+
+        # 1-dim matrix (simple vector) return.
+        base_image_mat = numpy.ones(8, dtype=numpy.uint8)
+        m_gir_lam.return_value = base_image_mat
+        with pytest.raises(ValueError, match=r"Image matrix should have "
+                                             r"dimensionality \[height, width\]"
+                                             r" or \[height, width, channel\] "
+                                             r"\(ndim = 2 or 3\), but instead "
+                                             r"found ndim = 1\."):
+            reader._load_as_matrix(m_elem)
+
+        # 4-dim matrix return.
+        base_image_mat = numpy.ones((1, 2, 3, 4), dtype=numpy.uint8)
+        m_gir_lam.return_value = base_image_mat
+        with pytest.raises(ValueError, match=r"Image matrix should have "
+                                             r"dimensionality \[height, width\]"
+                                             r" or \[height, width, channel\] "
+                                             r"\(ndim = 2 or 3\), but instead "
+                                             r"found ndim = 4\."):
+            reader._load_as_matrix(m_elem)
+
+    @mock.patch('smqtk.algorithms.image_io.gdal_io.numpy.interp',
+                wraps=numpy.interp)
+    @mock.patch('smqtk.algorithms.image_io.gdal_io.GdalImageReader'
+                '._load_as_matrix')
     def test_load_as_matrix_too_many_channels(self, m_gir_lam, m_np_interp):
         """
         Test that a ValueError is raised if the base image matrix has more
         than 3 channels of data.
         """
+        # Must patch cv2 function within test because ``cv2`` may not be defined
+        # in outer scope as it is an optional dep
         with mock.patch('smqtk.algorithms.image_io.gdal_io.cv2.cvtColor',
                         wraps=cv2.cvtColor) as m_cv2_cvtColor:
             # 100x200 16-channel test image.
@@ -412,9 +567,9 @@ class TestGdalRGBImageReader (unittest.TestCase):
             m_elem = mock.MagicMock(spec_set=DataElement)
 
             reader = GdalRGBImageReader()
-            with pytest.raises(ValueError, match="Unexpected image channel "
-                                                 "format \(expected 3, "
-                                                 "found 16\)"):
+            with pytest.raises(ValueError, match=r"Unexpected image channel "
+                                                 r"format \(expected 3, "
+                                                 r"found 16\)"):
                 reader._load_as_matrix(m_elem)
 
             m_cv2_cvtColor.assert_not_called()
@@ -430,6 +585,8 @@ class TestGdalRGBImageReader (unittest.TestCase):
         Test that when the base image matrix type is not uint8 (uint16 in
         this case), we interpolate the scale into the uint8 range.
         """
+        # Must patch cv2 function within test because ``cv2`` may not be defined
+        # in outer scope as it is an optional dep
         with mock.patch('smqtk.algorithms.image_io.gdal_io.cv2.cvtColor',
                         wraps=cv2.cvtColor) as m_cv2_cvtColor:
             # 200x100 3-channel test image of uint16 range

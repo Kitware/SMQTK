@@ -51,7 +51,7 @@ Misc.
 
 Representation
 
-* Added ``BoundingBox`` class for describing N-dimensional euclidean spatial
+* Added ``AxisAlignedBoundingBox`` class for describing N-dimensional euclidean spatial
   regions.
 
 * Added ``DetectionElement`` interface, and in-memory implementation, with

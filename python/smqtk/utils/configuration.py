@@ -6,7 +6,8 @@ While this interface and utility methods should be general enough to add
 JSON-compliant dictionary-based configuration to any object, this was created
 in mind with the SMQTK plugin module.
 
-Standard configuration dictionaries take the following general format:
+Standard configuration dictionaries should be JSON compliant take the following
+general format:
 
 .. code-block:: json
 
@@ -25,6 +26,9 @@ Standard configuration dictionaries take the following general format:
 The "type" key is considered a special key that should always be present and it
 specifies one of the other keys within the same dictionary. Each other key in
 the dictionary should be the name of a ``Configurable`` inheriting class type.
+Usually, the classes named within a block inherit from a common interface and
+the "type" value denotes a selection of a specific sub-class for use, though
+this is not required property of these constructs.
 
 """
 import abc
@@ -100,28 +104,41 @@ class Configurable (object):
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
 
-        This method is usually overriden when a class' constructor takes
-        non-JSON compliant data types, thus requiring some kind of conversion.
-        Such an override usually looks like the following pattern::
+        This base method is adequate without modification when a class's
+        constructor argument types are JSON-compliant.  If one or more are not,
+        however, this method then needs to be overridden in order to convert
+        from a JSON-compliant stand-in into the more complex object the
+        constructor requires.  It is recommended that when complex types *are*
+        used they also inherit from the :class:`Configurable` in order to
+        hopefully make easier the conversion to and from JSON-compliant
+        stand-ins.
 
-            class MyClass (Configurable):
+        When this method *does* need to be overridden, this usually looks like
+        the following pattern:
 
-                @classmethod
-                def from_config(cls, config_dict, merge_default=True):
-                    # Optionally guarentee default values are present in the
-                    # configuration dictionary.  This statement pairs with the
-                    # ``merge_default=False`` parameter in the super call.
-                    if merge_default:
-                        config_dict = merge_dict(cls.get_default_config(),
-                                                 config_dict)
+        .. code-block:: python
 
-                    #
-                    # Perform any overriding here.
-                    #
+           class MyClass (Configurable):
 
-                    # Create and return an instance using the super method.
-                    return super(MyClass, cls).from_config(config_dict,
-                                                           merge_default=False)
+               @classmethod
+               def from_config(cls, config_dict, merge_default=True):
+                   # Optionally guarantee default values are present in the
+                   # configuration dictionary.  This statement pairs with the
+                   # ``merge_default=False`` parameter in the super call.
+                   # This also in effect shallow copies the given non-dictionary
+                   # entries of ``config_dict`` due to the merger with the
+                   # default config.
+                   if merge_default:
+                       config_dict = merge_dict(cls.get_default_config(),
+                                                config_dict)
+
+                   #
+                   # Perform any overriding here.
+                   #
+
+                   # Create and return an instance using the super method.
+                   return super(MyClass, cls).from_config(config_dict,
+                                                          merge_default=False)
 
         This method should not be called via super unless an instance of the
         class is desired.
@@ -155,9 +172,15 @@ class Configurable (object):
         ``from_config`` method to produce an instance with identical
         configuration.
 
-        In the common case, this involves naming the keys of the dictionary
+        In the most cases, this involves naming the keys of the dictionary
         based on the initialization argument names as if it were to be passed
-        to the constructor via dictionary expansion.
+        to the constructor via dictionary expansion.  In some cases, where it
+        doesn't make sense to store some object constructor parameters are
+        expected to be supplied at as configuration values (i.e. must be
+        supplied at runtime), this method's returned dictionary may leave those
+        parameters out. In such cases, the object's ``from_config``
+        class-method would also take additional positional arguments to fill in
+        for the parameters that this returned configuration lacks.
 
         :return: JSON type compliant configuration dictionary.
         :rtype: dict
@@ -169,16 +192,31 @@ def make_default_config(configurable_iter):
     """
     Generated default configuration dictionary for the given iterable of
     Configurable-inheriting types.
+    
+    For example, assuming the following simple class that descends from 
+    ``Configurable``, we would expect the following behavior:
 
-    for the given map of configurable class
-    types (as would normally be returned by ``smqtk.utils.plugin.get_plugins``).
+    >>> class ExampleConfigurableType (Configurable):
+    ...     def __init__(self, a, b):
+    ...        ''' Dummy constructor '''
+    >>> make_default_config([ExampleConfigurableType]) == {
+    ...     'type': None,
+    ...     'ExampleConfigurableType': {
+    ...         'a': None,
+    ...         'b': None,
+    ...     }
+    ... }
+    True
 
-    A types parameters, as listed, at the construction parameters for that
-    type. Default values are inserted where possible, otherwise None values are
-    used.
+    Note that technically ``ExampleConfigurableType`` is still abstract as it
+    does not implement ``get_config``.  The above call to
+    ``make_default_config`` still functions because we only use the
+    ``get_default_config`` class method and do not instantiate any types given
+    to this function.  While functionally acceptable, it is generally not
+    recommended to draw configurations from abstract classes.
 
     :param collections.Iterable[type] configurable_iter:
-        A dictionary mapping class names to class types.
+        An iterable of class types class types that sub-class ``Configurable``.
 
     :return: Base configuration dictionary with an empty ``type`` field, and
         containing the types and initialization parameter specification for all
@@ -202,11 +240,24 @@ def cls_conf_to_config_dict(cls, conf):
     dictionary given a `Configurable`-implementing class and a configuration
     for that class.
 
+    This very simple function simply arranges a class, using its __name__
+    property, and an associated dictionary into a normal pattern used for
+    configuration in SMQTK::
+
+    >>> class SomeClass (object):
+    ...     pass
+    >>> cls_conf_to_config_dict(SomeClass, {0: 0, 'a': 'b'}) == {
+    ...     'type': 'SomeClass',
+    ...     'SomeClass': {0: 0, 'a': 'b'}
+    ... }
+    True
+
     :param type[Configurable] cls:
-        `Configurable` interface implementing class.
+        A class type implementing the `Configurable` interface.
 
     :param dict conf:
-        Configuration dictionary for the given class.
+        SMQTK standard type-optioned configuration dictionary for the given
+        class and dictionary pair.
 
     :return: "Standard" SMQTK JSON-compliant configuration dictionary
     :rtype: dict
@@ -223,6 +274,21 @@ def to_config_dict(c_inst):
     Helper function that transforms the configuration dictionary retrieved from
     ``configurable_inst`` into the "standard" SMQTK configuration dictionary
     format (see above module documentation).
+
+    For example, with a simple DataFileElement:
+    >>> from smqtk.representation.data_element.file_element \
+            import DataFileElement
+    >>> e = DataFileElement(filepath='/path/to/file.txt',
+    ...                       readonly=True)
+    >>> to_config_dict(e) == {
+    ...     "type": "DataFileElement",
+    ...     "DataFileElement": {
+    ...         "filepath": "/path/to/file.txt",
+    ...         "readonly": True,
+    ...         "explicit_mimetype": None,
+    ...     }
+    ... }
+    True
 
     :param Configurable c_inst:
         Instance of a class type that subclasses the ``Configurable`` interface.
@@ -299,6 +365,19 @@ def from_config_dict(config, type_iter, *args):
 
     ``args`` are additionally positional arguments to be passed to the type's
     ``from_config`` method on return.
+
+    Example:
+    >>> from smqtk.representation import DescriptorElement
+    >>> example_config = {
+    ...     'type': 'DescriptorMemoryElement',
+    ...     'DescriptorMemoryElement': {},
+    ... }
+    >>> inst = from_config_dict(example_config, DescriptorElement.get_impls(),
+    ...                         'type-str', 'some-uuid')
+    >>> from smqtk.representation.descriptor_element.local_elements \
+            import DescriptorMemoryElement
+    >>> isinstance(inst, DescriptorMemoryElement)
+    True
 
     :raises ValueError:
         This may be raised if:

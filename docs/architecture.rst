@@ -1,7 +1,7 @@
 SMQTK Architecture Overview
 ===========================
 
-SMQTK is mainly comprised of 4 high level components, with additional sub-modules for tests, utilities and other control structures.
+SMQTK is mainly comprised of 4 high level components, with additional sub-modules utilities and other control structures.
 
 .. toctree::
   :maxdepth: 2

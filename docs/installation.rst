@@ -75,7 +75,7 @@ Quick Start
     # Set up SMQTK environment by sourcing file
     . build/setup_env.build.sh
     # Running tests
-    bash source/run_tests.sh
+    python source/setup.py test
 
 
 .. _installation-fromSource-SystemDependencies:

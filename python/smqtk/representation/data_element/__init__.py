@@ -286,8 +286,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         method return).
 
         This base abstract method should be called by sub-class implementations
-        first. We check for mutability based on ``writable()`` method return and
-        invalidate checksum caches.
+        first. We check for mutability based on ``writable()`` method return.
 
         :param b: bytes to set.
         :type b: bytes

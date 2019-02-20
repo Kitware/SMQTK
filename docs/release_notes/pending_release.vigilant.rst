@@ -9,6 +9,9 @@ Algorithms
 
 * Added ``ImageReader`` algorithm interface
 
+  * Added matrix reading short-cut if DataElement instance provided has a
+    ``matrix`` attribute/property.
+
   * Added PIL (pillow) implementation with tests.
 
   * Added GDAL implementation with tests
@@ -78,6 +81,9 @@ Representation
   instead of manually updating keys.
 
 * Removed unnecessary method override in ``DataFileElement``.
+
+* Added ``MatrixDataElement`` representation that stores a ``numpy.ndarray``
+  instance natively, generating bytes on-the-fly when requested.
 
 Tests
 

@@ -1,6 +1,9 @@
 import abc
 from collections import namedtuple
+import types
+
 import numpy
+
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import ContentTypeValidator
 
@@ -17,8 +20,18 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
         """
         Load an image matrix from the given data element.
 
-        Matrix return format is implementation dependant. Implementations of
-        this interface should specify and describe their return type.
+        Matrix Property Shortcut
+        ------------------------
+        If the given DataElement instance defines a ``matrix`` property this
+        method simply returns that.  This is intended to interface with
+        instances of
+        :py:class:`smqtk.representation.data_element.matrix.MatrixDataElement`.
+
+        Loading From Bytes
+        ------------------
+        When not loading from a short-cut matrix, matrix return format is
+        ``ImageReader`` implementation dependant. Implementations of this
+        interface should specify and describe their return type.
 
         Aside from the exceptions documented below, other exceptions may be
         raised when an image fails to load that are implementation dependent.
@@ -34,6 +47,9 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
 
         :raises RuntimeError: A crop region was specified but did not specify a
             valid sub-region of the image.
+        :raises AssertionError: The ``data_element`` provided defined a
+            ``matrix`` attribute/property, but its access did not result in an
+            expected value.
         :raises ValueError:
             This error is raised when:
                 - The given ``data_element`` was not of a valid content type.
@@ -47,7 +63,6 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
         :rtype: numpy.ndarray
 
         """
-        self.raise_valid_element(data_element)
         if pixel_crop:
             if pixel_crop.hypervolume == 0:
                 raise ValueError("Volume of crop bounding box must be greater "
@@ -56,9 +71,20 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
                 raise ValueError("Crop bounding box must be composed of "
                                  "integer coordinates. Given bounding box "
                                  "with dtype {}.".format(pixel_crop.dtype.type))
-        # TODO: Special interaction with ImageMatrixDataElement to
-        #       immediately return encapsulated matrix.
-        return self._load_as_matrix(data_element, pixel_crop)
+
+        try:
+            # If the given data element looks like a MatrixDataElement, simply
+            # return the stored matrix property.
+            mat_property = data_element.matrix
+            assert isinstance(mat_property, (types.NoneType, numpy.ndarray)), \
+                "Element `matrix` property return should either be a matrix " \
+                "or None. Got {}.".format(type(mat_property))
+            return mat_property
+        except AttributeError:
+            # Any other data element type, attempt loading via plugin
+            # implementation.
+            self.raise_valid_element(data_element)
+            return self._load_as_matrix(data_element, pixel_crop=pixel_crop)
 
     @abc.abstractmethod
     def _load_as_matrix(self, data_element, pixel_crop=None):

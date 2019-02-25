@@ -4,7 +4,7 @@ from ._interface import SmqtkAlgorithm
 from .classifier import Classifier, SupervisedClassifier
 from .descriptor_generator import DescriptorGenerator
 from .image_io import ImageReader
-from .object_detection import ObjectDetector
+from .object_detection import ObjectDetector, ImageMatrixObjectDetector
 from .nn_index import NearestNeighborsIndex
 from .nn_index.hash_index import HashIndex
 from .nn_index.lsh.functors import LshFunctor

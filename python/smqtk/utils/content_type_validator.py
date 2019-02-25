@@ -53,8 +53,9 @@ class ContentTypeValidator (object):
         if not self.is_valid_element(data_element):
             if message is None:
                 message = "Data element does not match a content type " \
-                          "reported as valid. Given: \"{}\"." \
-                          .format(data_element.content_type())
+                          "reported as valid. Given: \"{}\". Valid types: {}." \
+                          .format(data_element.content_type(),
+                                  list(self.valid_content_types()))
             # noinspection PyCallingNonCallable
             # - Leave the handling of whether or not an exception is
             # constructable to the exception class being constructed (user

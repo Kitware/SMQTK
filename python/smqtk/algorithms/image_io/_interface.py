@@ -16,6 +16,53 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
 
     __slots__ = ()
 
+    @staticmethod
+    def _get_matrix_property(data_element):
+        """
+        Central method of getting and checking the matrix property of a
+        DataElement.
+
+        :param smqtk.representation.DataElement data_element:
+            SMQTK DataElement instance.
+
+        :raises AttributeError: If the element given does not have a ``matrix``
+            attribute.
+        :raises AssertionError: If the element's matrix property does not match
+            a None or ndarray value type.
+
+        :return: Matrix property value if it is None or an ndarray.
+        """
+        mat_prop = data_element.matrix
+        assert mat_prop is None or isinstance(mat_prop, numpy.ndarray), \
+            "Element `matrix` property return should either be a matrix " \
+            "or None. Got {} instead.".format(type(mat_prop))
+        return mat_prop
+
+    def is_valid_element(self, data_element):
+        """
+        Check if the given DataElement instance reports a content type that
+        matches one of the MIME types reported by ``valid_content_types``.
+
+        This override checks if the ``DataElement`` has the ``matrix`` property
+        as the ``MatrixDataElement`` would provide, and that its value of an
+        expected type.
+
+        :param smqtk.representation.DataElement data_element:
+             Data element instance to check.
+
+        :return: True if the given element has a valid content type as reported
+            by ``valid_content_types``, and False if not.
+        :rtype: bool
+        """
+        try:
+            # If the given data element looks like a MatrixDataElement
+            self._get_matrix_property(data_element)
+            return True
+        except AttributeError:
+            # Otherwise proceed through traditional route.
+            return super(ImageReader, self)\
+                .is_valid_element(data_element)
+
     def load_as_matrix(self, data_element, pixel_crop=None):
         """
         Load an image matrix from the given data element.
@@ -75,11 +122,7 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
         try:
             # If the given data element looks like a MatrixDataElement, simply
             # return the stored matrix property.
-            mat_property = data_element.matrix
-            assert isinstance(mat_property, (types.NoneType, numpy.ndarray)), \
-                "Element `matrix` property return should either be a matrix " \
-                "or None. Got {}.".format(type(mat_property))
-            return mat_property
+            return self._get_matrix_property(data_element)
         except AttributeError:
             # Any other data element type, attempt loading via plugin
             # implementation.

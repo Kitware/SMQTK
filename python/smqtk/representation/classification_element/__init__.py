@@ -11,6 +11,9 @@ from smqtk.utils.plugin import Pluggable
 __author__ = "paul.tunison@kitware.com"
 
 
+NEG_INF = float('-inf')
+
+
 class ClassificationElement(SmqtkRepresentation, Pluggable):
     """
     Classification result encapsulation.
@@ -181,7 +184,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         """
         # Temp (label, confidence) tuple
         #: :type: (collections.Hashable, float)
-        m = (None, 0.)
+        m = (None, NEG_INF)
         for i in six.iteritems(self.get_classification()):
             if i[1] > m[1]:
                 m = i

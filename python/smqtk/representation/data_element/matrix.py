@@ -68,6 +68,13 @@ class MatrixDataElement (DataElement):
 
     @property
     def matrix(self):
+        """
+        :return: Get the matrix stored in this element. This may be None if
+            there is no matrix currently stored in this element (is empty).
+            Alternatively, the matrix may be an "empty" shape, or have zero
+            area.
+        :rtype: None | numpy.ndarray
+        """
         return self._matrix
 
     @matrix.setter

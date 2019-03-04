@@ -219,6 +219,16 @@ class TestClassificationElementAbstract (unittest.TestCase):
             ClassificationElement.max_label, e
         )
 
+    def test_max_label_zero_confidence(self):
+        """
+        Test that if there *are* classifications but the maximum conf is 0 that
+        at least one label is returned.
+        """
+        # Mock classification element instance
+        e = mock.MagicMock(spec_set=ClassificationElement)
+        e.get_classification.return_value = {'a': 0.0}
+        ClassificationElement.max_label(e)
+
     def test_get_default_config(self):
         """
         Test that the default configuration does not include the runtime

@@ -14,7 +14,7 @@ Algorithms
 
   * Added PIL (pillow) implementation with tests.
 
-  * Added GDAL implementation with tests
+  * Added GDAL implementation with tests.
 
 * Descriptor Generators
 
@@ -24,6 +24,10 @@ Algorithms
 * Object Detection
 
   * Added initial abstract interface.
+
+  * Added "ImageMatrixObjectDetector" interface for object detectors that
+    specifically operate on image data and standardizes the use of an
+    "ImageReader" algorithm to provide the pixel matrix as input.
 
 * Nearest Neighbors
 
@@ -83,7 +87,7 @@ Representation
 * Removed unnecessary method override in ``DataFileElement``.
 
 * Added ``MatrixDataElement`` representation that stores a ``numpy.ndarray``
-  instance natively, generating bytes on-the-fly when requested.
+  instance internally, generating bytes on-the-fly when requested.
 
 Tests
 
@@ -93,6 +97,11 @@ Tests
   script.  New method of running tests is ``python setup.py test``.
 
 Utilities
+
+* Added to ``Pluggable`` interface the ``get_impls`` method, replacing the
+  separate ``get_*_impls`` functions defined for each interface type.  Removed
+  previous ``get_*_impls`` functions from algorithm and representation
+  interfaces, adjusting tests and utilities as appropriate.
 
 * Renamed ``smqtk.utils.configurable`` to ``smqtk.utils.configuration``.
   Ramifications fixed throughout the codebase. Added documentation to
@@ -158,12 +167,17 @@ Algorithms
       KeyValueStore implementations (specificially an issue with the PostgreSQL
       implementation).
 
+Representation
+
+* Fixed bug with ``ClassificationElement.max_label`` where an exception would
+  be raised if there was no label with associated confidence greater than 0.
+
 Tests
 
 * Moved ``--cov`` options from pytest.ini file into the runner script.  This
   fixes debugger break-pointing in some IDEs (e.g. PyCharm).
 
-Utils
+Utilities
 
 * Fix ``ZeroDivisionError`` in ``smqtk.utils.bin_utils.report_progress``. Also
   added deprecation warning to this function.

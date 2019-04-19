@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+
+  #
+  # TPL providing images.
+  #
+
+  tpl-faiss-gpu:
+    image: kitware/smqtk/tpl-faiss-gpu:v1.5.1
+    build:
+      context: tpl/faiss
+      dockerfile: gpu/Dockerfile
+      args:
+        # One or more CUDA architectures to compile for.
+        # Using ">-" for multi-line string concatenation with no new-lines.
+        CUDA_ARCH: >-
+          -gencode=arch=compute_35,code=compute_35
+          -gencode=arch=compute_52,code=compute_52
+          -gencode=arch=compute_60,code=compute_60
+          -gencode=arch=compute_61,code=compute_61

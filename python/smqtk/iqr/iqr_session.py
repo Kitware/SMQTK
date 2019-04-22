@@ -189,6 +189,9 @@ class IqrSession (SmqtkObject):
 
         These descriptors may not be a part of our working index.
 
+        TODO: Add ability to "remove" positive/negative external descriptors.
+              See ``adjudicate`` method "un_..." parameters.
+
         :param positive: Iterable of descriptors from external sources to
             consider positive examples.
         :type positive:
@@ -335,20 +338,11 @@ class IqrSession (SmqtkObject):
                             "examples.", len(pos), len(neg))
             element_probability_map = self.rel_index.rank(pos, neg)
 
+            # TODO: Why not just set the ``element_probability_map`` to
+            #       results?
             if self.results is None:
                 self.results = IqrResultsDict()
             self.results.update(element_probability_map)
-
-            # Force adjudicated positives and negatives to be probability 1 and
-            # 0, respectively, since we want to control where they show up in
-            # our results view.
-            # - Not all pos/neg descriptors may be in our working index.
-            for d in pos:
-                if d in self.results:
-                    self.results[d] = 1.0
-            for d in neg:
-                if d in self.results:
-                    self.results[d] = 0.0
 
     def reset(self):
         """ Reset the IQR Search state

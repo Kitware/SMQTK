@@ -9,6 +9,13 @@ Docker
 * Started use of docker-compose YAML file to organize image building.
 * Added FAISS TPL image to be copied from by utilizing images.
 
+IQR
+* Remove forcing of relevancy scores in ``refine`` when a result element is
+  contained in the positive or negative exemplar or adjudication sets. This is
+  because a user of an ``IqrSession`` instance can determine this intersection
+  optionally outside of the class, so this forcing of the values is a loss of
+  information.
+
 
 Fixes
 -----

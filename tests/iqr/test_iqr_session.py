@@ -3,7 +3,6 @@ from six.moves import mock
 
 from smqtk.algorithms import RelevancyIndex
 from smqtk.iqr import IqrSession
-from smqtk.iqr.iqr_session import IqrResultsDict
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
@@ -49,9 +48,6 @@ class TestIqrSession (object):
         to certain values if they were also present in the positive or negative
         adjudicate (internal or external) sets.
         """
-        # If results was -> None: a new IqrResultsDict should be created.
-        #                   something: Should be
-
         # IqrSession instance. No config for rel_index because we will mock
         # that.
         iqrs = IqrSession()
@@ -91,7 +87,7 @@ class TestIqrSession (object):
         # We test that:
         # - ``rel_index.rank`` called with the combination of
         #   external/adjudicated descriptor elements.
-        # - ``results`` attribute now has an IqrResultsDict value
+        # - ``results`` attribute now has a dict value
         # - value of ``results`` attribute is what we expect.
         iqrs.rel_index.rank.assert_called_once_with(
             {test_in_pos_elem, test_ex_pos_elem},
@@ -112,9 +108,6 @@ class TestIqrSession (object):
         Test that the results of RelevancyIndex ranking are directly reflected
         in an existing results dictionary of probability values.
         """
-        # If results was -> None: a new IqrResultsDict should be created.
-        #                   something: Should be
-
         # IqrSession instance. No config for rel_index because we will mock
         # that.
         iqrs = IqrSession()
@@ -138,14 +131,14 @@ class TestIqrSession (object):
 
         # Create a "previous state" of the results dictionary containing
         # results from our "working set" of descriptor elements.
-        iqrs.results = IqrResultsDict({
+        iqrs.results = {
             test_in_pos_elem: 0.2,
             test_in_neg_elem: 0.2,
             test_other_elem: 0.2,
-            # ``refine`` updates the existing dict, so disjoint keys are
-            # retained.
+            # ``refine`` replaces the previous dict, so disjoint keys are
+            # NOT retained.
             'something else': 0.3,
-        })
+        }
 
         # Prepare IQR state for refinement
         # - set dummy internal/external positive negatives.
@@ -162,20 +155,19 @@ class TestIqrSession (object):
         # We test that:
         # - ``rel_index.rank`` called with the combination of
         #   external/adjudicated descriptor elements.
-        # - ``results`` attribute now has an IqrResultsDict value
+        # - ``results`` attribute now has an dict value
         # - value of ``results`` attribute is what we expect.
         iqrs.rel_index.rank.assert_called_once_with(
             {test_in_pos_elem, test_ex_pos_elem},
             {test_in_neg_elem, test_ex_neg_elem},
         )
         assert iqrs.results is not None
-        assert len(iqrs.results) == 4
+        assert len(iqrs.results) == 3
         assert test_other_elem in iqrs.results
         assert test_in_pos_elem in iqrs.results
         assert test_in_neg_elem in iqrs.results
-        assert 'something else' in iqrs.results
+        assert 'something else' not in iqrs.results
 
         assert iqrs.results[test_other_elem] == 0.5
         assert iqrs.results[test_in_pos_elem] == 0.5
         assert iqrs.results[test_in_neg_elem] == 0.5
-        assert iqrs.results['something else'] == 0.3

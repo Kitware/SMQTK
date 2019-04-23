@@ -21,38 +21,6 @@ DFLT_REL_INDEX_CONFIG = {
 }
 
 
-class IqrResultsDict (dict):
-    """
-    Dictionary subclass for containing DescriptorElement-to-float mapping.
-
-    We expect keys to be DescriptorElement instances and the values to be floats
-    between [0,1], inclusive.
-
-    """
-
-    def __setitem__(self, i, v):
-        super(IqrResultsDict, self).__setitem__(i, float(v))
-
-    def update(self, other=None, **kwds):
-        """
-        D.update([E, ]**F) -> None. Update D from dict/iterable E and F.
-        If E present and has a .keys() method, does: for k in E: D[k] = E[k]
-        If E present and lacks .keys() method, does: for (k, v) in E: D[k] = v
-        In either case, this is followed by: for k in F: D[k] = F[k]
-
-        Reimplemented so as to use override __setitem__ method so values are
-        known to be floats.
-        """
-        if hasattr(other, 'keys'):
-            for k in other:
-                self[k] = float(other[k])
-        elif other is not None:
-            for k, v in other:
-                self[k] = float(v)
-        for k in kwds:
-            self[k] = float(kwds[k])
-
-
 class IqrSession (SmqtkObject):
     """
     Encapsulation of IQR Session related data structures with a centralized lock
@@ -336,13 +304,7 @@ class IqrSession (SmqtkObject):
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            element_probability_map = self.rel_index.rank(pos, neg)
-
-            # TODO: Why not just set the ``element_probability_map`` to
-            #       results?
-            if self.results is None:
-                self.results = IqrResultsDict()
-            self.results.update(element_probability_map)
+            self.results = self.rel_index.rank(pos, neg)
 
     def reset(self):
         """ Reset the IQR Search state

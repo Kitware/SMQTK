@@ -4,7 +4,10 @@ import mock
 import os
 import unittest
 
+from smqtk.iqr import IqrSession
 from smqtk.representation import DescriptorElement
+from smqtk.representation.descriptor_element.local_elements \
+    import DescriptorMemoryElement
 from smqtk.utils.plugin import Pluggable
 from smqtk.web.iqr_service import IqrService
 
@@ -601,6 +604,205 @@ class TestIqrService (unittest.TestCase):
                         })
             self.assertStatusCode(r, 404)
             self.assertJsonMessageRegex(r, "session id invalid-sid not found")
+
+    def _test_getter_no_sid(self, endpoint):
+        """
+        Test common getter response to providing no session ID.
+        :param str endpoint: String endpoint of the getter method.
+        """
+        with self.app.test_client() as tc:
+            r = tc.get('/{}'.format(endpoint))
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
+
+    def _test_getter_sid_not_found(self, endpoint):
+        """
+        Test common getter response to when the given session ID is not present
+        in the controller.
+        :param str endpoint: String endpoint of the getter method.
+        """
+        with self.app.test_client() as tc:
+            # Service IQR session controller is empty upon construction, so no
+            # ID is initially valid.
+            r = tc.get('/{}?sid=0'.format(endpoint))
+            self.assertStatusCode(r, 404)
+            self.assertJsonMessageRegex(r, "session id '0' not found")
+
+    def test_get_results_no_sid(self):
+        """
+        Test getting relevancy results without providing a session ID.
+        """
+        self._test_getter_no_sid('get_results')
+
+    def test_get_results_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_results')
+
+    def test_get_results(self):
+        """
+        Test successfully getting results from a requested session.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().ordered_results.return_value = [
+            [d0, 0.3], [d2, 0.2], [d1, 0.1],
+        ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_results?sid={}'.format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Returning result pairs")
+            r_json = r.json
+            assert r_json['total_results'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_positive_adjudication_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_positive_adjudication_relevancy')
+
+    def test_get_positive_adjudication_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_positive_adjudication_relevancy')
+
+    def test_get_positive_adjudication_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_positive_adjudication_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_positive_adjudication_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_negative_adjudication_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_negative_adjudication_relevancy')
+
+    def test_get_negative_adjudication_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_negative_adjudication_relevancy')
+
+    def test_get_negative_adjudication_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_negative_adjudication_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_negative_adjudication_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_unadjudicated_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_unadjudicated_relevancy')
+
+    def test_get_unadjudicated_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_unadjudicated_relevancy')
+
+    def test_get_unadjudicated_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_unadjudicated_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_unadjudicated_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
 
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.

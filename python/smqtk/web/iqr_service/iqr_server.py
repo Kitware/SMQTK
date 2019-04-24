@@ -323,6 +323,15 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/get_results',
                           view_func=self.get_results,
                           methods=['GET'])
+        self.add_url_rule('/get_positive_adjudication_relevancy',
+                          view_func=self.get_positive_adjudication_relevancy,
+                          methods=['GET'])
+        self.add_url_rule('/get_negative_adjudication_relevancy',
+                          view_func=self.get_negative_adjudication_relevancy,
+                          methods=['GET'])
+        self.add_url_rule('/get_unadjudicated_relevancy',
+                          view_func=self.get_unadjudicated_relevancy,
+                          methods=['GET'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['GET'])
@@ -1128,7 +1137,10 @@ class IqrService (SmqtkWebApp):
     # GET /num_results
     def num_results(self):
         """
-        Get the total number of results in the ranking.
+        Get the total number of results that have been ranked.
+
+        This is usually 0 before refinement and the size of the working index
+        after refinement.
 
         URI Args:
             sid
@@ -1164,22 +1176,48 @@ class IqrService (SmqtkWebApp):
     # GET /get_results
     def get_results(self):
         """
-        Get the ordered ranking results between two index positions (inclusive,
-        exclusive).
+        Get the relevancy score for working index descriptor elements between
+        the optionally specified offset and limit indices, ordered by
+        *descending* predicted relevancy values (in [0, 1] range).
 
-        This returns a results slice in the same way that python would handle a
-        list slice.
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
 
-        If the requested session has not been refined yet (no ranking), all
-        result requests will be empty.
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
 
-        URI Args:
-            sid
+        URL Args:
+            sid: str
                 UUID of the session to use
-            i
+            i: int
                 Starting index (inclusive)
-            j
+            j: int
                 Ending index (exclusive)
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Success returns 201 and a JSON object that includes the keys:
+            sid: str
+                String IQR session ID accessed.
+            i: int
+                Index offset used.
+            j: int
+                Index limit used.
+            total_results: int
+                Total number of ranked results with predicted relevancy. This
+                is not necessarily the number of results returned from the
+                call due to the optional use of ``i``  and ``j``.
+            results: list[(str, float)]
+                A list of ``(element_id, probability)`` pairs. The
+                ``element_id`` is the UUID of the data/descriptor the result
+                relevancy probability score is associated do. The
+                ``probability`` value is a float in the [0, 1] range.
 
         """
         sid = flask.request.args.get('sid', None)
@@ -1197,20 +1235,13 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            if not iqrs.results:
-                return make_response_json("Returning result pairs",
-                                          i=0, j=0, total_results=0,
-                                          results=[], sid=sid), 200
-
-            num_results = len(iqrs.results)
-
+            ordered_results = iqrs.ordered_results()
+            num_results = len(ordered_results)
             # int() can raise ValueError, catch
             i = 0 if i is None else int(i)
             j = num_results if j is None else int(j)
-
             # We ensured i, j are valid by this point
-            r = [[d.uuid(), prob] for d, prob in iqrs.ordered_results()[i:j]]
-
+            r = [[d.uuid(), prob] for d, prob in ordered_results[i:j]]
         except ValueError:
             return make_response_json("Invalid bounds index value(s)"), 400
 
@@ -1218,9 +1249,238 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.release()
 
         return make_response_json("Returning result pairs",
-                                  i=i, j=j, total_results=num_results,
-                                  results=r,
-                                  sid=sid), 200
+                                  sid=sid, i=i, j=j,
+                                  total_results=num_results,
+                                  results=r), 200
+
+    # GET /get_positive_adjudication_relevancy
+    def get_positive_adjudication_relevancy(self):
+        """
+        Get the relevancy scores for positively adjudicated elements in the
+        working index between the optionally provided index offset and limit,
+        ordered by *descending* predicted relevancy values (in [0, 1] range).
+
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
+
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
+
+        URI Args:
+            sid: str
+                UUID of the IQR session to use.
+            i: int
+                Starting index (inclusive).
+            j: int
+                Ending index (exclusive).
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Returns 200 and a JSON object that includes the following:
+            sid: str
+                String IQR session ID accessed.
+            i: str
+                Index offset used.
+            j: str
+                Index limit used.
+            total: int
+                Total number of positive adjudications in the current IQR
+                session.
+            results: list[(str, float)]
+                List of ``(uuid, score)`` tuples for positively adjudicated
+                descriptors in the working index, ordered by descending score.
+
+        """
+        sid = flask.request.args.get('sid', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            pos_results = iqrs.get_positive_adjudication_relevancy()
+            num_pos = len(pos_results)
+            # int() can raise ValueError, catch
+            i = 0 if i is None else int(i)
+            j = num_pos if j is None else int(j)
+            r = [[d.uuid(), prob] for d, prob in pos_results[i:j]]
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
+        finally:
+            iqrs.lock.release()
+
+        return make_response_json(
+            "success", sid=sid, i=i, j=j,
+            total=num_pos, results=r
+        ), 200
+
+    # GET /get_negative_adjudication_relevancy
+    def get_negative_adjudication_relevancy(self):
+        """
+        Get the relevancy scores for negatively adjudicated elements in the
+        working index between the optionally provided index offset and limit,
+        ordered by *descending* predicted relevancy values (in [0, 1] range).
+
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
+
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
+
+        URI Args:
+            sid: str
+                UUID of the IQR session to use.
+            i: int
+                Starting index (inclusive).
+            j: int
+                Ending index (exclusive).
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Returns 200 and a JSON object that includes the following:
+            sid: str
+                String IQR session ID accessed.
+            i: int
+                Index offset used.
+            j: int
+                Index limit used.
+            total: int
+                Total number of negative adjudications in the current IQR
+                session.
+            results: list[(str, float)]
+                List of ``(uuid, score)`` tuples for negatively adjudicated
+                descriptors in the working index, ordered by descending score.
+
+        """
+        sid = flask.request.args.get('sid', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            neg_results = iqrs.get_negative_adjudication_relevancy()
+            num_neg = len(neg_results)
+            # int() can raise ValueError, catch
+            i = 0 if i is None else int(i)
+            j = num_neg if j is None else int(j)
+            r = [[d.uuid(), prob] for d, prob in neg_results[i:j]]
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
+        finally:
+            iqrs.lock.release()
+
+        return make_response_json(
+            "success", sid=sid, i=i, j=j,
+            total=num_neg, results=r
+        ), 200
+
+    # GET /get_unadjudicated_relevancy
+    def get_unadjudicated_relevancy(self):
+        """
+        Get the relevancy scores for non-adjudicated elements in the working
+        index between the optionally provided index offset and limit, ordered
+        by descending predicted relevancy value ([0, 1] range).
+
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
+
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
+
+        URI Args:
+            sid: str
+                UUID of the IQR session to use.
+            i: int
+                Starting index (inclusive).
+            j: int
+                Ending index (exclusive).
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Returns 200 and a JSON object that includes the following:
+            sid: str
+                String IQR session ID accessed.
+            i: int
+                Index offset used.
+            j: int
+                Index limit used.
+            total: int
+                Total number of negative adjudications in the current IQR
+                session.
+            results: list[(str, float)]
+                List of ``(uuid, score)`` tuples for negatively adjudicated
+                descriptors in the working index, ordered by descending score.
+
+        """
+        sid = flask.request.args.get('sid', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
+        # TODO: Add optional parameter that is used instead of i/j that causes
+        #       the return of N uniformly distributed examples in this result
+        #       subset based on relevancy score.
+        #       - Add on IqrSession class side?
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            unadj_ordered = iqrs.get_unadjudicated_relevancy()
+            total = len(unadj_ordered)
+            # int() can raise ValueError, catch
+            i = 0 if i is None else int(i)
+            j = total if j is None else int(j)
+            r = [[d.uuid(), prob] for d, prob in unadj_ordered[i:j]]
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
+        finally:
+            iqrs.lock.release()
+
+        return make_response_json(
+            "success", sid=sid, i=i, j=j,
+            total=total, results=r
+        ), 200
 
     # GET /classify
     def classify(self):

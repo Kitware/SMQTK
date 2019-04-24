@@ -15,7 +15,9 @@ IQR
   because a user of an ``IqrSession`` instance can determine this intersection
   optionally outside of the class, so this forcing of the values is a loss of
   information.
-
+* Added accessor functions to specific segments of the relevancy result
+  predictions: positively adjudicated, negatively adjudicated and
+  not-adjudicated elements.
 
 Fixes
 -----

@@ -91,6 +91,7 @@ class IqrSession (SmqtkObject):
         self._wi_seeds_used = set()
 
         # Descriptor elements representing data from external sources.
+        # These may be arbitrary descriptor elements.
         #: :type: set[smqtk.representation.DescriptorElement]
         self.external_positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
@@ -98,6 +99,8 @@ class IqrSession (SmqtkObject):
 
         # Descriptor references from our index (above) that have been
         #   adjudicated.
+        # These should be sub-sets of the descriptors contained in the
+        #   ``working_index``.
         #: :type: set[smqtk.representation.DescriptorElement]
         self.positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
@@ -109,6 +112,21 @@ class IqrSession (SmqtkObject):
         # This is None before any initialization or refinement occurs.
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results = None
+
+        # Cache variables for views of refinement results.
+        # All results as a list in order of relevancy score.
+        #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
+        self._ordered_results = None
+        #: Positively adjudicated descriptors in order of relevancy score.
+        #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
+        self._ordered_pos = None
+        # Negatively adjudicated descriptors in order of relevancy score.
+        #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
+        self._ordered_neg = None
+        # Non-adjudicated descriptors in our working index in order of
+        # relevancy score.
+        #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
+        self._ordered_non_adj = None
 
         #
         # Algorithm Instances [+Config]
@@ -134,22 +152,6 @@ class IqrSession (SmqtkObject):
     # noinspection PyUnusedLocal
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.lock.release()
-
-    def ordered_results(self):
-        """
-        Return a tuple of the current (id, probability) result pairs in
-        order of descending probability score. If there are no results yet, None
-        is returned.
-
-        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
-
-        """
-        with self.lock:
-            if self.results:
-                return tuple(sorted(six.iteritems(self.results),
-                                    key=lambda p: p[1],
-                                    reverse=True))
-            return None
 
     def external_descriptors(self, positive=(), negative=()):
         """
@@ -214,19 +216,35 @@ class IqrSession (SmqtkObject):
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
+        # TODO: Assert that inputs are indeed in the working index?
+
         new_positives = set(new_positives)
         new_negatives = set(new_negatives)
         un_positives = set(un_positives)
         un_negatives = set(un_negatives)
 
         with self.lock:
+            pos_before = set(self.positive_descriptors)
             self.positive_descriptors.update(new_positives)
             self.positive_descriptors.difference_update(un_positives)
             self.positive_descriptors.difference_update(new_negatives)
+            pos_changed = pos_before != self.positive_descriptors
+            if pos_changed:
+                # Reset ordered positives cache if pos adjudications changed.
+                self._ordered_pos = None
 
+            neg_before = set(self.negative_descriptors)
             self.negative_descriptors.update(new_negatives)
             self.negative_descriptors.difference_update(un_negatives)
             self.negative_descriptors.difference_update(new_positives)
+            neg_changed = neg_before != self.negative_descriptors
+            if neg_changed:
+                # Reset ordered negatives cache if neg adjudications changed.
+                self._ordered_neg = None
+
+            if pos_changed or neg_changed:
+                # Reset non-adjudicated cache if anything changed.
+                self._ordered_non_adj = None
 
     def update_working_index(self, nn_index):
         """
@@ -304,7 +322,152 @@ class IqrSession (SmqtkObject):
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            self.results = self.rel_index.rank(pos, neg)
+            element_probability_map = self.rel_index.rank(pos, neg)
+            self.results = element_probability_map
+            # Clear result view caches
+            self._ordered_results = self._ordered_pos = self._ordered_neg = \
+                self._ordered_non_adj = None
+
+    def ordered_results(self):
+        """
+        Return a tuple of all working-set descriptor elements as tuples of
+        ``(element, score)`` in order of descending relevancy score.
+
+        If refinement has not yet occurred since session creation or the last
+        reset, an empty tuple is returned.
+
+        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
+        """
+        with self.lock:
+            try:
+                return list(self._ordered_results)
+            except TypeError:
+                # NoneType is not iterable
+                # Cache did non exist.
+
+                try:
+                    result_items = six.iteritems(self.results)
+                except AttributeError:
+                    # NoneType missing items/iteritems attr
+                    # No results to iterate over.
+                    return list()
+
+                r = self._ordered_results = sorted(
+                    result_items,
+                    key=lambda p: p[1], reverse=True
+                )
+                return list(r)
+
+    def get_positive_adjudication_relevancy(self):
+        """
+        Return a list of the positively adjudicated descriptors as tuples of
+        ``(element, score)`` in order of descending relevancy score.
+
+        This does *not* include external positive adjudications, only
+        positively adjudicated descriptors in the working index.
+
+        If refinement has not yet occurred since session creation or the last
+        reset, an empty list is returned.
+
+        Cache is invalidated when:
+        - A refinement occurs.
+        - Positive adjudications change.
+
+        :rtype: None | list[(smqtk.representation.DescriptorElement, float)]
+        """
+        with self.lock:
+            try:
+                return list(self._ordered_pos)
+            except TypeError:
+                # NoneType is not iterable
+                # No cache yet.
+
+                try:
+                    results_gi = self.results.__getitem__
+                except AttributeError:
+                    # 'NoneType' object has no attribute '__getitem__'
+                    # No results to fetch from.
+                    return list()
+
+                r = self._ordered_pos = sorted(
+                    ((d, results_gi(d)) for d in self.positive_descriptors),
+                    key=lambda p: p[1], reverse=True
+                )
+                # When there are no positive adjudications, r is an empty
+                # list.
+                return list(r)
+
+    def get_negative_adjudication_relevancy(self):
+        """
+        Return a list of the negatively adjudicated descriptors as tuples of
+        ``(element, score)`` in order of descending relevancy score.
+
+        This does *not* include external negative adjudications, only
+        negatively adjudicated descriptors in the working index.
+
+        If refinement has not yet occurred since session creation or the last
+        reset, an empty list is returned.
+
+        Cache is invalidated when:
+        - A refinement occurs.
+        - Negative adjudications change.
+
+        :rtype: None | list[(smqtk.representation.DescriptorElement, float)]
+        """
+        with self.lock:
+            try:
+                return list(self._ordered_neg)
+            except TypeError:
+                # NoneType is not iterable
+                # No cache yet.
+
+                try:
+                    results_gi = self.results.__getitem__
+                except AttributeError:
+                    # 'NoneType' object has no attribute '__getitem__'
+                    # No results to fetch from.
+                    return list()
+
+                r = self._ordered_neg = sorted(
+                    ((d, results_gi(d)) for d in self.negative_descriptors),
+                    key=lambda p: p[1], reverse=True
+                )
+                # When there are no negative adjudications, r is an empty
+                # list.
+                return list(r)
+
+    def get_unadjudicated_relevancy(self):
+        """
+        Return a list of the non-adjudicated descriptor elements as tuples of
+        ``(element, score)`` in order of descending relevancy score.
+
+        If refinement has not yet occurred since session creation or the last
+        reset, an empty list is returned.
+
+        :rtype: None | list[(smqtk.representation.DescriptorElement, float)]
+        """
+        with self.lock:
+            try:
+                return list(self._ordered_non_adj)
+            except TypeError:
+                # NoneType is not iterable
+                # No cache yet
+
+                try:
+                    result_items = six.iteritems(self.results)
+                except AttributeError:
+                    # NoneType missing items/iteritems attr
+                    # No results to iterate over.
+                    return list()
+
+                pos_and_neg = \
+                    self.positive_descriptors | self.negative_descriptors
+                r = self._ordered_non_adj = \
+                    sorted(filter(lambda p: p[0] not in pos_and_neg,
+                                  result_items),
+                           key=lambda p: p[1],
+                           reverse=True)
+                return list(r)
 
     def reset(self):
         """ Reset the IQR Search state
@@ -322,6 +485,8 @@ class IqrSession (SmqtkObject):
 
             self.rel_index = None
             self.results = None
+            self._ordered_results = self._ordered_pos = self._ordered_neg = \
+                self._ordered_non_adj = None
 
     ###########################################################################
     # I/O Methods

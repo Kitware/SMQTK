@@ -18,7 +18,7 @@ function DataView(container, rank, uid, probability, saliency_flag, is_example, 
     this.uid = uid;
     this.probability = probability;
     this.saliency_flag = saliency_flag;
-    this.is_example = is_example === undefined ? false : is_example;
+    this.is_example =  is_example;
     this.gt_label = gt_label === undefined ? 'N/A' : gt_label;
 
     // image ``src`` reference to use for display in an <img>.

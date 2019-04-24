@@ -1,7 +1,7 @@
 """
 IQR Search sub-application module
 """
-
+import base64
 import json
 import os
 import os.path as osp
@@ -10,9 +10,10 @@ import shutil
 from six.moves import StringIO
 from io import BytesIO
 import zipfile
-
+import six
 import flask
 import PIL.Image
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 
 from smqtk.algorithms.descriptor_generator import \
     get_descriptor_generator_impls, DFLT_DESCRIPTOR_FACTORY
@@ -43,7 +44,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 class IqrSearch (SmqtkObject, flask.Flask, Configurable):
     """
     IQR Search Tab blueprint
-
     Components:
         * Data-set, from which base media data is provided
         * Descriptor generator, which provides descriptor generation services
@@ -56,10 +56,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
           iterated over within the same user session. A new instance and model
           is generated every time a new session is created (or new data is
           uploaded by the user).
-
     Assumes:
         * DescriptorElement related to a DataElement have the same UUIDs.
-
     """
 
     # TODO: User access white/black-list? See ``search_app/__init__.py``:L135
@@ -98,17 +96,13 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         """
         Instantiate a new instance of this class given the configuration
         JSON-compliant dictionary encapsulating initialization arguments.
-
         :param config: JSON compliant dictionary encapsulating
             a configuration.
         :type config: dict
-
         :param parent_app: Parent containing flask app instance
         :type parent_app: smqtk.web.search_app.app.search_app
-
         :return: Constructed instance from the provided config.
         :rtype: IqrSearch
-
         """
         merged = cls.get_default_config()
         merged.update(config)
@@ -140,58 +134,44 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         """
         Initialize a generic IQR Search module with a single descriptor and
         indexer.
-
         :param name: Name of this blueprint instance
         :type name: str
-
         :param parent_app: Parent containing flask app instance
         :type parent_app: smqtk.web.search_app.IqrSearchDispatcher
-
         :param data_set: DataSet instance that references indexed data.
         :type data_set: SMQTK.representation.DataSet
-
         :param smap_set: DataSet instance that saliency map of references indexed data.
         :type smap_set: SMQTK.representation.DataSet
-
         :param descr_generator: DescriptorGenerator instance to use in IQR
             sessions for generating descriptors on new data.
         :type descr_generator:
             smqtk.algorithms.descriptor_generator.DescriptorGenerator
-
         :param nn_index: NearestNeighborsIndex instance for sessions to pull
             their review data sets from.
         :type nn_index: smqtk.algorithms.NearestNeighborsIndex
-
         :param rel_index_config: Plugin configuration for the RelevancyIndex to
             use.
         :type rel_index_config: dict
-
         :param working_directory: Directory in which to place working files.
             These may be considered temporary and may be removed between
             executions of this app. Retention of a work directory may speed
             things up in subsequent runs because of caching.
-
         :param descriptor_factory: DescriptorElementFactory for producing new
             DescriptorElement instances when data is uploaded to the server.
         :type descriptor_factory: DescriptorElementFactory
-
         :param url_prefix: Web address prefix for this blueprint.
         :type url_prefix: str
-
         :param pos_seed_neighbors: Number of neighbors to pull from the given
             ``nn_index`` for each positive exemplar when populating the working
             index, i.e. this value determines the size of the working index for
             IQR refinement. By default, we try to get 500 neighbors.
-
             Since there may be partial to significant overlap of near neighbors
             as a result of nn_index queries for positive exemplars, the working
             index may contain anywhere from this value's number of entries, to
             ``N*P``, where ``N`` is this value and ``P`` is the number of
             positive examples at the time of working index initialization.
         :type pos_seed_neighbors: int
-
         :raises ValueError: Invalid Descriptor or indexer type
-
         """
         super(IqrSearch, self).__init__(
             import_name=__name__,
@@ -265,6 +245,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         # Routing
         #
 
+
         @self.route("/")
         @self._parent_app.module_login.login_required
         def index():
@@ -300,13 +281,16 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                         tuple(d.uuid() for d in iqrs.negative_descriptors),
 
                     # UUIDs of example positive descriptors
-                    "ex_pos": tuple(self._iqr_example_pos_descr[iqrs.uuid]),
-                    "ex_neg": (),  # No user negative examples supported yet
+                    "external_pos": tuple(self._iqr_example_pos_descr[iqrs.uuid]),
+                    "external_neg": tuple(self._iqr_example_pos_descr[iqrs.uuid]),
 
                     "initialized": iqrs.working_index.count() > 0,
                     "index_size": iqrs.working_index.count(),
                 })
-
+        def d_set_to_list(d_set):
+            # Convert set of descriptors to list of tuples:
+            #   [..., (uuid, type, vector), ...]
+            return [(d.uuid(), d.type(), d.vector().tolist()) for d in d_set]
         @self.route('/get_iqr_state')
         @self._parent_app.module_login.login_required
         def iqr_session_state():
@@ -315,45 +299,124 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             descriptor vectors.
             """
             with self.get_current_iqr_session() as iqrs:
-                iqrs_uuid = str(iqrs.uuid)
-                pos_elements = list(set(
-                    # Pos user examples
-                    [tuple(d.vector().tolist()) for d
-                     in self._iqr_example_pos_descr[iqrs.uuid].values()] +
-                    # Adjudicated examples
-                    [tuple(d.vector().tolist()) for d
-                     in iqrs.positive_descriptors],
-                ))
-                neg_elements = list(set(
-                    # No negative user example support yet
-                    # Adjudicated examples
-                    [tuple(d.vector().tolist()) for d
-                     in iqrs.negative_descriptors],
-                ))
-
-            z_buffer = BytesIO()
-            z = zipfile.ZipFile(z_buffer, 'w', zipfile.ZIP_DEFLATED)
-            z.writestr(iqrs_uuid, json.dumps({
-                'pos': pos_elements,
-                'neg': neg_elements,
-            }))
-            z.close()
-
-            z_buffer.seek(0)
-
-            return flask.send_file(
-                z_buffer,
+                 print("external_pos1:",self._iqr_example_pos_descr[iqrs.uuid])
+                 state_b64=iqrs.get_state_bytes(self._iqr_example_pos_descr[iqrs.uuid])
+                 #print("state_b6i4",state_b64)
+                 state_bytes=state_b64
+                 #state_bytes = base64.b64(state_b64).decode('utf-8')
+                 state_dict = json.load(
+                zipfile.ZipFile(
+                    BytesIO(state_bytes),
+                    'r',
+                    IqrSession.STATE_ZIP_COMPRESSION
+                ).open(IqrSession.STATE_ZIP_FILENAME)
+            )
+                 working_data = {}                 
+                 sid_data_elems = self._iqr_example_data.get(iqrs, {})
+                 for uid, workingElem in six.iteritems(sid_data_elems):
+                    working_data[uid] = {
+                    'content_type': workingElem.content_type(),
+                    'bytes_base64':
+                        base64.b64encode(workingElem.get_bytes()),
+                }
+                 print("working_data",working_data)
+                 state_dict["working_data"] = working_data
+                 state_json = json.dumps(state_dict)
+                 z_wrapper_buffer = BytesIO()
+                 z_wrapper = zipfile.ZipFile(z_wrapper_buffer, 'w',
+                                        IqrSession.STATE_ZIP_COMPRESSION)
+                 z_wrapper.writestr(IqrSession.STATE_ZIP_FILENAME, state_json)
+                 z_wrapper.close()
+                 z_wrapper_buffer.seek(0)
+                 return flask.send_file(
+                z_wrapper_buffer,
                 mimetype='application/octet-stream',
                 as_attachment=True,
-                attachment_filename="%s.IqrState" % iqrs_uuid,
+ 
+                attachment_filename="%s.IqrState" % str(iqrs.uuid)
             )
+        @self.route('/set_iqr_state',methods=["PUT"])
+        @self._parent_app.module_login.login_required
+        def set_iqr_session_state():
+     
+            """
+            Set the current state based on the given state file.
+            """
+            sid = self.get_current_iqr_session()
+            fid = flask.request.form.get('fid', None)
+            state_base64 = flask.request.form.get('state_base64', None)
+            #data_base64 = flask.request.form.get('base64', None)
+            #data_content_type = flask.request.form.get('content_type', None)
+            #descriptor = describe_base64_data(self,state_base64, data_content_type)
+
+            if fid is None:
+                return_obj['message'] = 'No file ID provided.'
+
+            self._log.debug("[%s::%s] Getting temporary filepath from "
+                            "uploader module", sid, fid)
+            
+            upload_filepath = self.mod_upload.get_path_for_id(fid)
+            self.mod_upload.clear_completed(fid)
+
+            # Load ZIP package back in, then remove the uploaded file.
+            try:
+                z = zipfile.ZipFile(
+                    upload_filepath,
+                    compression=IqrSession.STATE_ZIP_COMPRESSION
+                )
+                with z.open(IqrSession.STATE_ZIP_FILENAME) as f:
+                    state_dict = json.load(f)
+                z.close()
+            finally:
+                os.remove(upload_filepath)
+            reset_iqr_session()
+            #self.reset_session_local(sid)
+            # - Dictionary of data UUID (SHA1) to {'content_type': <str>,
+            #   'bytes_base64': <str>} dictionary.
+            #: :type: dict[str, dict]
+            working_data = state_dict['working_data']
+            del state_dict['working_data']
+
+            for uuid_sha1 in working_data:
+                data_mimetype = working_data[uuid_sha1]['content_type']
+                data_b64 = str(working_data[uuid_sha1]['bytes_base64'])
+                # Output file to working directory on disk.
+                data_filepath = os.path.join(
+                    self._iqr_work_dirs[sid],
+                    '%s%s' % (uuid_sha1, MT.guess_extension(data_mimetype))
+                )
+                with open(data_filepath, 'wb') as f:
+                    f.write(base64.urlsafe_b64decode(data_b64))
+                # Create element reference and store it for the current session.
+                data_elem = DataFileElement(data_filepath, readonly=True)
+                self._iqr_example_data[sid][uuid_sha1] = data_elem
+
+            #
+            # Re-package service state as a ZIP payload.
+            #
+            service_zip_buffer = BytesIO()
+            service_zip = zipfile.ZipFile(service_zip_buffer, 'w',
+                                          IqrSession.STATE_ZIP_COMPRESSION)
+            service_zip.writestr(IqrSession.STATE_ZIP_FILENAME,
+                                 json.dumps(state_dict))
+            service_zip.close()
+            service_zip_base64 = \
+                base64.b64encode(service_zip_buffer.getvalue())
+
+            with self.get_current_iqr_session() as iqrs:
+                 state_bytes = \
+                base64.urlsafe_b64decode(service_zip_base64)
+                 #z_wrapper_buffer=iqrs.set_state_bytes(open(upload_filepath,'rb').read(),self._descr_elem_factory)
+                 z_wrapper_buffer=iqrs.set_state_bytes(state_bytes,self._descr_elem_factory)
+            return flask.jsonify({
+                    "success": True
+                })
 
         @self.route("/check_current_iqr_session")
         @self._parent_app.module_login.login_required
         def check_current_iqr_session():
             """
             Check that the current IQR session exists and is initialized.
-
             :rtype: {
                     success: bool
                 }
@@ -429,12 +492,15 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 with self.get_current_iqr_session() as iqrs:
                     if iqrs.working_index.has_descriptor(uid):
                         desr = iqrs.working_index.get_descriptor(uid)
-
+                        #print("desr",desr)
                         # for testing only: get the saliency map's UUID of the top 1 label
                         #[0] get the top 1 label
                         # sm_d = list(desr.saliency_map().items())[0]
                         # sm_uuid = sm_d[1]
-
+                     
+                        #print("desr.saliency_map():",desr.saliency_map())
+                        #import pdb
+                        #pdb.set_trace()
                         if iqrs.query_uuid not in desr.saliency_map():
                             self._log.debug('desr original dict: {}'.format(desr.saliency_map()))
                             self._log.debug('generate new saliency map for label {}'.format(iqrs.query_uuid))
@@ -446,8 +512,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
                         sm_uuid = desr.saliency_map()[iqrs.query_uuid]
                         sm = self._smap_set.get_data(sm_uuid)
-
-                        # has to put before sm.write_temp(...) since it will
+                        #print("query_f",(iqrs.query_f.tolist()))
+                        #iqrs.lock.acquire()  
+                        #iqrs.external_descriptors(positive=iqrs.query_f.tolist())
+                        #iqrs.lock.release()
+                        # has to put before sm.write_temp(...) since ito will
                         # call clean_temp, which will delete all temp file
                         # generated by sm.write_temp(...)
                         sm_path = self._preview_cache.get_preview_image(sm)
@@ -473,19 +542,22 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Ingest the file with the given UID, getting the path from the
             uploader.
-
             :return: string of data/descriptor element's UUID
             :rtype: str
-
             """
             # TODO: Add status dict with a "GET" method branch for getting that
             #       status information.
 
             # Start the ingest of a FID when POST
+            def describe_base64_data(self, b64, content_type):
+                de = DataMemoryElement.from_base64(b64, content_type)
+                return self._descriptor_generator.compute_descriptor(
+                de, self._descr_elem_factory)
+
             if flask.request.method == "POST":
                 with self.get_current_iqr_session() as iqrs:
                     fid = flask.request.form['fid']
-
+                    sid = flask.request.form.get('sid', None)
                     self._log.debug("[%s::%s] Getting temporary filepath from "
                                     "uploader module", iqrs.uuid, fid)
                     upload_filepath = self.mod_upload.get_path_for_id(fid)
@@ -503,7 +575,16 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     # Extend session ingest -- modifying
                     self._log.debug("[%s::%s] Adding new data to session "
                                     "positives", iqrs.uuid, fid)
-                    # iqrs.add_positive_data(upload_data)
+                    #with self._iqr_controller:
+                    #    if not self._iqr_controller.has_session_uuid(sid):
+                    #        print("No session id")
+                        #iqrs = self.controller.get_session(sid)
+                    #    iqrs.lock.acquire()
+                    #try:
+                    #    iqrs.external_descriptors(positive=[descriptor])
+                    #finally:
+                    #    iqrs.lock.release()
+                    #iqrs.external_descriptors(positive=[upload_data])
                     try:
                         upload_descr = \
                             self._descriptor_generator.compute_descriptor(
@@ -511,6 +592,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                             )
                     except ValueError as ex:
                         return "Input Error: %s" % str(ex), 400
+                    #data_b64 = base64.b64encode(upload_data.get_bytes())
+                    #data_ct = upload_data.content_type()
 
                     self._iqr_example_pos_descr[iqrs.uuid][uuid] = upload_descr
                     self._log.debug('saliency_descr_flag is {}'.format(self._saliency_descr_flag))
@@ -550,12 +633,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Get positive/negative status for a data/descriptor in our example
             set.
-
             :return: {
                     is_pos: <bool>,
                     is_neg: <bool>
                 }
-
             """
             elem_uuid = flask.request.args['uid']
             with self.get_current_iqr_session() as iqrs:
@@ -574,10 +655,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Get the adjudication status of a particular data/descriptor element
             by UUID.
-
             This should only ever return a dict where one of the two, or
             neither, are labeled True.
-
             :return: {
                     is_pos: <bool>,
                     is_neg: <bool>
@@ -605,7 +684,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Update adjudication for this session. This should specify UUIDs of
             data/descriptor elements in our working index.
-
             :return: {
                     success: <bool>,
                     message: <str>
@@ -653,9 +731,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             Classify current IQR session indexer, updating ranking for
             display.
-
             Fails gracefully if there are no positive[/negative] adjudications.
-
             """
             with self.get_current_iqr_session() as iqrs:
                 try:
@@ -678,9 +754,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             Get ordered (UID, probability) pairs in between the given indices,
             [i, j). If j Is beyond the end of available results, only available
             results are returned.
-
             This may be empty if no refinement has yet occurred.
-
             Return format:
             {
                 results: [ (uid, probability), ... ]
@@ -726,7 +800,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             order. If there is currently an active IQR session with elements in
             its extension ingest, then those IDs are included in the random
             list.
-
             :return: {
                     uids: list of int
                 }
@@ -768,9 +841,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
     def get_current_iqr_session(self):
         """
         Get the current IQR Session instance.
-
         :rtype: smqtk.IQR.iqr_session.IqrSession
-
         """
         with self._iqr_controller:
             sid = flask.session.sid
@@ -786,3 +857,4 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 self._iqr_example_pos_descr[iqr_sess.uuid] = {}
 
             return self._iqr_controller.get_session(sid)
+

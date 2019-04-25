@@ -393,9 +393,7 @@ class IqrSession (SmqtkObject):
             pos_d = d_set_to_list(self.positive_descriptors)
             neg_d = d_set_to_list(self.negative_descriptors)
             ext_neg_d = d_set_to_list(self.external_negative_descriptors)
-        print("external_pos2:",ext_pos_d)
         z_buffer = io.BytesIO()
-        print("keys",ext_pos_d[self._query_uuid].type())
         z = zipfile.ZipFile(z_buffer, 'w', self.STATE_ZIP_COMPRESSION)
         z.writestr(self.STATE_ZIP_FILENAME, json.dumps({
             'pos': pos_d,
@@ -459,7 +457,6 @@ class IqrSession (SmqtkObject):
                 for uid, type_str, vector_list in source:
                     e = load_descriptor(uid, type_str, vector_list)
                     target.add(e)
-            print("external_pos after",self.external_positive_descriptors)
             self._query_f=np.array(state['query_f'])
             self._query_uuid=str(state['query_uuid'])
             return self._query_uuid

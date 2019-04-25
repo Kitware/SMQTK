@@ -389,12 +389,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             service_zip.writestr(IqrSession.STATE_ZIP_FILENAME,
                                  json.dumps(state_dict))
             service_zip.close()
-            service_zip_base64 = \
-                base64.b64encode(service_zip_buffer.getvalue())
+            service_zip_base64 = base64.b64encode(service_zip_buffer.getvalue())
 
             with self.get_current_iqr_session() as iqrs:
-                 state_bytes = \
-                base64.urlsafe_b64decode(service_zip_base64)
+                 state_bytes = base64.urlsafe_b64decode(service_zip_base64)
                  z_wrapper_buffer=iqrs.set_state_bytes(state_bytes,self._descr_elem_factory)
             return flask.jsonify({
                     "success": True

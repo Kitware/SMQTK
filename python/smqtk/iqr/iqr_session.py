@@ -392,8 +392,6 @@ class IqrSession (SmqtkObject):
             # Convert session descriptors into basic values.
             pos_d = d_set_to_list(self.positive_descriptors)
             neg_d = d_set_to_list(self.negative_descriptors)
-            print(ext_pos_d)
-            print("self._query_uuid",self._query_uuid)
             ext_neg_d = d_set_to_list(self.external_negative_descriptors)
         print("external_pos2:",ext_pos_d)
         z_buffer = io.BytesIO()
@@ -461,9 +459,7 @@ class IqrSession (SmqtkObject):
                 for uid, type_str, vector_list in source:
                     e = load_descriptor(uid, type_str, vector_list)
                     target.add(e)
-            #external_descriptors(positive=(self._query_f.tolist()))
             print("external_pos after",self.external_positive_descriptors)
             self._query_f=np.array(state['query_f'])
-            #self.external_positive_descriptors.update(state['query_f'])
             self._query_uuid=str(state['query_uuid'])
             return self._query_uuid

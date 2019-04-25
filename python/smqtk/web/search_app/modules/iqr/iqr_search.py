@@ -299,14 +299,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             descriptor vectors.
             """
             with self.get_current_iqr_session() as iqrs:
-                 print("external_pos1:",self._iqr_example_pos_descr[iqrs.uuid])
                  state_b64=iqrs.get_state_bytes(self._iqr_example_pos_descr[iqrs.uuid])
-                 #print("state_b6i4",state_b64)
-                 state_bytes=state_b64
-                 #state_bytes = base64.b64(state_b64).decode('utf-8')
                  state_dict = json.load(
                 zipfile.ZipFile(
-                    BytesIO(state_bytes),
+                    BytesIO(state_b64),
                     'r',
                     IqrSession.STATE_ZIP_COMPRESSION
                 ).open(IqrSession.STATE_ZIP_FILENAME)
@@ -319,7 +315,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                     'bytes_base64':
                         base64.b64encode(workingElem.get_bytes()),
                 }
-                 print("working_data",working_data)
                  state_dict["working_data"] = working_data
                  state_json = json.dumps(state_dict)
                  z_wrapper_buffer = BytesIO()
@@ -400,7 +395,6 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             with self.get_current_iqr_session() as iqrs:
                  state_bytes = \
                 base64.urlsafe_b64decode(service_zip_base64)
-                 #z_wrapper_buffer=iqrs.set_state_bytes(open(upload_filepath,'rb').read(),self._descr_elem_factory)
                  z_wrapper_buffer=iqrs.set_state_bytes(state_bytes,self._descr_elem_factory)
             return flask.jsonify({
                     "success": True

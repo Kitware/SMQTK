@@ -435,17 +435,6 @@ class IqrSession (SmqtkObject):
 
         with self:
             self.reset()
-
-            def load_descriptor(_uid, _type_str, vec_list):
-                _e = descriptor_factory.new_descriptor(_type_str, _uid)
-                if _e.has_vector():
-                    assert _e.vector().tolist() == vec_list, \
-                        "Found existing vector for UUID '%s' but vectors did " \
-                        "not match."
-                else:
-                    _e.set_vector(vec_list)
-                return _e
-
             # Read in raw descriptor data from the state, convert to descriptor
             # element, then store in our descriptor sets.
             for source, target in [(state['external_pos'],
@@ -455,8 +444,17 @@ class IqrSession (SmqtkObject):
                                    (state['pos'], self.positive_descriptors),
                                    (state['neg'], self.negative_descriptors)]:
                 for uid, type_str, vector_list in source:
-                    e = load_descriptor(uid, type_str, vector_list)
-                    target.add(e)
+                    _e = descriptor_factory.new_descriptor(type_str, uid)
+                    try:
+                        if _e.has_vector():
+                             assert _e.vector().tolist() == vector_list, \
+                             "Found existing vector for UUID '%s' but vectors did " \
+                              "not match."
+                        else:
+                             _e.set_vector(vector_list)
+                             target.add(_e)
+                    except:
+                        print("Trying to set a vector that is Incomplete/Invalid")
             self._query_f=np.array(state['query_f'])
             self._query_uuid=str(state['query_uuid'])
             return self._query_uuid

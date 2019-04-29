@@ -546,32 +546,177 @@ Returns 200: {
 
 [GET] /get_results
 ^^^^^^^^^^^^^^^^^^
-Get the ordered results between the optionally specified indices offset and
-limit indices.
+Get the relevancy score for working index descriptor elements between
+the optionally specified offset and limit indices, ordered by
+*descending* predicted relevancy values (in [0, 1] range).
 
-If ``i`` (offset, inclusive) is omitted, we assume a starting index of 0. If
-``j`` (limit, exclusive) is omitted, we assume the ending index is the same as
-the number of results available.
+If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+is the same as the number of results available.
 
-Return probability should be in the [0,1] range, where a value of 1.0 indicates
-maximum relevance and 0.0 indicates the least relevance.
+If the requested session has not been refined yet (no ranking), an
+empty results list is returned.
 
-Form Args:
-    sid
-        Session ID.
-    i [optional]
-        Inclusive starting index in ordered results list (offset).
-    j [optional]
-        Exclusive end index in ordered results list (limit).
+URL Args:
+    sid: str
+        UUID of the session to use
+    i: int
+        Starting index (inclusive)
+    j: int
+        Ending index (exclusive)
 
-Returns 200: {
-    ...
-    sid=<session_id>,
-    total_results=<int>,
-    i=<int>,
-    j=<int>,
-    results=[(str:element_id, float:probability), ...]
-}
+Possible error code returns:
+    400
+        No session ID provided. Offset/limit index values were not
+        valid integers.
+    404
+        No session for the given ID.
+
+Success returns 201 and a JSON object that includes the keys:
+    sid: str
+        String IQR session ID accessed.
+    i: int
+        Index offset used.
+    j: int
+        Index limit used.
+    total_results: int
+        Total number of ranked results with predicted relevancy. This
+        is not necessarily the number of results returned from the
+        call due to the optional use of ``i``  and ``j``.
+    results: list[(str, float)]
+        A list of ``(element_id, probability)`` pairs. The
+        ``element_id`` is the UUID of the data/descriptor the result
+        relevancy probability score is associated do. The
+        ``probability`` value is a float in the [0, 1] range.
+
+
+[GET] /get_positive_adjudication_relevancy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Get the relevancy scores for positively adjudicated elements in the
+working index between the optionally provided index offset and limit,
+ordered by *descending* predicted relevancy values (in [0, 1] range).
+
+If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+is the same as the number of results available.
+
+If the requested session has not been refined yet (no ranking), an
+empty results list is returned.
+
+URI Args:
+    sid: str
+        UUID of the IQR session to use.
+    i: int
+        Starting index (inclusive).
+    j: int
+        Ending index (exclusive).
+
+Possible error code returns:
+    400
+        No session ID provided. Offset/limit index values were not
+        valid integers.
+    404
+        No session for the given ID.
+
+Returns 200 and a JSON object that includes the following:
+    sid: str
+        String IQR session ID accessed.
+    i: str
+        Index offset used.
+    j: str
+        Index limit used.
+    total: int
+        Total number of positive adjudications in the current IQR
+        session.
+    results: list[(str, float)]
+        List of ``(uuid, score)`` tuples for positively adjudicated
+        descriptors in the working index, ordered by descending score.
+
+
+[GET] /get_negative_adjudication_relevancy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Get the relevancy scores for negatively adjudicated elements in the
+working index between the optionally provided index offset and limit,
+ordered by *descending* predicted relevancy values (in [0, 1] range).
+
+If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+is the same as the number of results available.
+
+If the requested session has not been refined yet (no ranking), an
+empty results list is returned.
+
+URI Args:
+    sid: str
+        UUID of the IQR session to use.
+    i: int
+        Starting index (inclusive).
+    j: int
+        Ending index (exclusive).
+
+Possible error code returns:
+    400
+        No session ID provided. Offset/limit index values were not
+        valid integers.
+    404
+        No session for the given ID.
+
+Returns 200 and a JSON object that includes the following:
+    sid: str
+        String IQR session ID accessed.
+    i: int
+        Index offset used.
+    j: int
+        Index limit used.
+    total: int
+        Total number of negative adjudications in the current IQR
+        session.
+    results: list[(str, float)]
+        List of ``(uuid, score)`` tuples for negatively adjudicated
+        descriptors in the working index, ordered by descending score.
+
+
+[GET] /get_unadjudicated_relevancy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Get the relevancy scores for non-adjudicated elements in the working
+index between the optionally provided index offset and limit, ordered
+by descending predicted relevancy value ([0, 1] range).
+
+If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+is the same as the number of results available.
+
+If the requested session has not been refined yet (no ranking), an
+empty results list is returned.
+
+URI Args:
+    sid: str
+        UUID of the IQR session to use.
+    i: int
+        Starting index (inclusive).
+    j: int
+        Ending index (exclusive).
+
+Possible error code returns:
+    400
+        No session ID provided. Offset/limit index values were not
+        valid integers.
+    404
+        No session for the given ID.
+
+Returns 200 and a JSON object that includes the following:
+    sid: str
+        String IQR session ID accessed.
+    i: int
+        Index offset used.
+    j: int
+        Index limit used.
+    total: int
+        Total number of negative adjudications in the current IQR
+        session.
+    results: list[(str, float)]
+        List of ``(uuid, score)`` tuples for negatively adjudicated
+        descriptors in the working index, ordered by descending score.
 
 
 [GET] /classify

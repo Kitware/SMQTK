@@ -435,26 +435,34 @@ class IqrSession (SmqtkObject):
 
         with self:
             self.reset()
+            def load_descriptor(_uid, _type_str, vec_list):
+                _e = descriptor_factory.new_descriptor(_type_str, _uid)
+                if _e.has_vector():
+                    assert _e.vector().tolist() == vec_list, \
+                        "Found existing vector for UUID '%s' but vectors did " \
+                        "not match."
+                else:
+                    _e.set_vector(vec_list)
+                return _e
             # Read in raw descriptor data from the state, convert to descriptor
             # element, then store in our descriptor sets.
+            to_add_ex_pos = set()
+            to_add_ex_neg = set()
+            to_add_pos = set()
+            to_add_neg = set()
             for source, target in [(state['external_pos'],
-                                    self.external_positive_descriptors),
-                                   (state['external_neg'],
-                                    self.external_negative_descriptors),
-                                   (state['pos'], self.positive_descriptors),
-                                   (state['neg'], self.negative_descriptors)]:
+                        to_add_ex_pos),
+                       (state['external_neg'],
+                        to_add_ex_neg),
+                       (state['pos'], to_add_pos),
+                       (state['neg'], to_add_neg)]:
                 for uid, type_str, vector_list in source:
-                    _e = descriptor_factory.new_descriptor(type_str, uid)
-                    try:
-                        if _e.has_vector():
-                             assert _e.vector().tolist() == vector_list, \
-                             "Found existing vector for UUID '%s' but vectors did " \
-                              "not match."
-                        else:
-                             _e.set_vector(vector_list)
-                             target.add(_e)
-                    except:
-                        print("Trying to set a vector that is Incomplete/Invalid")
+                    e = load_descriptor(uid, type_str, vector_list)
+                    target.append(e)
+            self.external_positive_descriptors.update(to_add_ex_pos)
+            self.external_negative_descriptors.update(to_add_ex_neg)
+            self.positive_descriptors.update(to_add_pos)
+            self.negative_descriptors.update(to_add_neg)
             self._query_f=np.array(state['query_f'])
             self._query_uuid=str(state['query_uuid'])
             return self._query_uuid

@@ -238,9 +238,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
         self._log.debug("Loading Caffe network from network/model configs")
-        self.network = caffe.Net(self.network_prototxt.write_temp(),
-                                 caffe.TEST,
-                                 weights=self.network_model.write_temp())
+        self.network = caffe.Net(
+            self.network_prototxt.write_temp().encode(),
+            caffe.TEST,
+            weights=self.network_model.write_temp().encode()
+        )
         self.network_prototxt.clean_temp()
         self.network_model.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape

@@ -32,6 +32,8 @@ Algorithms
     * Fix configuration overrides to correctly handle configuration from JSON.
     * Coerce unicode arguments to Net constructor to strings (or bytes in
       python 3).
+    * Fixed numpy load call to explicitly allow loading pickled components due
+      to a parameter default change in numpy version 1.16.3.
 * HashIndex
   * SkLearnBallTreeHashIndex
     * Fixed numpy load call to explicitly allow loading pickled components due

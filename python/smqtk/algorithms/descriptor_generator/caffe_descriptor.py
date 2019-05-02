@@ -262,7 +262,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                             "mean)")
             image_mean_bytes = self.image_mean.get_bytes()
             try:
-                a = numpy.load(io.BytesIO(image_mean_bytes))
+                # noinspection PyTypeChecker
+                a = numpy.load(io.BytesIO(image_mean_bytes), allow_pickle=True)
                 self._log.info("Loaded image mean from numpy bytes")
             except IOError:
                 self._log.debug("Image mean file not a numpy array, assuming "

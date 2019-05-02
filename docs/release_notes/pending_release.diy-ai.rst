@@ -30,6 +30,10 @@ Algorithms
 * DescriptorGenerator
   * Caffe
     * Fix configuration overrides to correctly handle configuration from JSON.
+* HashIndex
+  * SkLearnBallTreeHashIndex
+    * Fixed numpy load call to explicitly allow loading pickled components due
+      to a parameter default change in numpy version 1.16.3.
 
 Web
 * Classifier Service

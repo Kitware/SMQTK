@@ -30,3 +30,9 @@ Algorithms
 * DescriptorGenerator
   * Caffe
     * Fix configuration overrides to correctly handle configuration from JSON.
+
+Web
+* Classifier Service
+  * Fix configuration of CaffeDescriptorGenerator.
+* IQR Service
+  * Fix configuration of CaffeDescriptorGenerator.

@@ -16,7 +16,9 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 from smqtk.representation import DataElement
 from smqtk.utils.cli import ProgressReporter
-from smqtk.utils.configuration import from_config_dict, to_config_dict
+from smqtk.utils.configuration import from_config_dict, to_config_dict, \
+    make_default_config
+from smqtk.utils.dict import merge_dict
 
 try:
     import caffe
@@ -45,6 +47,49 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         if not valid:
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
+
+    @classmethod
+    def get_default_config(cls):
+        default = super(CaffeDescriptorGenerator, cls).get_default_config()
+
+        data_elem_impl_set = DataElement.get_impls()
+        # Need to make copies of dict so changes to one does not effect others.
+        default['network_prototxt'] = \
+            make_default_config(data_elem_impl_set)
+        default['network_model'] = make_default_config(data_elem_impl_set)
+        default['image_mean'] = make_default_config(data_elem_impl_set)
+
+        return default
+
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        if merge_default:
+            config_dict = merge_dict(cls.get_default_config(),
+                                     config_dict)
+
+        data_elem_impl_set = DataElement.get_impls()
+
+        # Translate prototext and model sub-configs into DataElement instances.
+        config_dict['network_prototxt'] = \
+            from_config_dict(config_dict['network_prototxt'],
+                             data_elem_impl_set)
+        config_dict['network_model'] = \
+            from_config_dict(config_dict['network_model'],
+                             data_elem_impl_set)
+
+        # Translate optionally provided image mean sub-config into a
+        # DataElement instance. May have been provided as ``None`` or a
+        # configuration dictionary with type ``None`.
+        # None, dict[type=None], dict[type=str]
+        if config_dict['image_mean'] is None \
+                or config_dict['image_mean'].get('type', None) is None:
+            config_dict['image_mean'] = None
+        else:
+            config_dict['image_mean'] = \
+                from_config_dict(config_dict['image_mean'], data_elem_impl_set)
+
+        return super(CaffeDescriptorGenerator, cls)\
+            .from_config(config_dict, merge_default=False)
 
     def __init__(self, network_prototxt, network_model,
                  image_mean=None, return_layer='fc7',
@@ -106,6 +151,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             directly multiplied against the pixel values.
         :type input_scale: None | float
 
+        ::raises AssertionError: Optionally provided image mean protobuf
+            consisted of more than one image, or its shape was neither 1 or 3
+            channels.
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
@@ -144,16 +192,21 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         return self.get_config()
 
     def __setstate__(self, state):
-        # This works because configuration parameters exactly match up with
-        # instance attributes.
+        # This ``__dict__.update`` works because configuration parameters
+        # exactly match up with instance attributes currently.
         self.__dict__.update(state)
+        # Translate nested Configurable instance configurations into actual
+        # object instances.
+        # noinspection PyTypeChecker
         self.network_prototxt = from_config_dict(
             self.network_prototxt, DataElement.get_impls()
         )
+        # noinspection PyTypeChecker
         self.network_model = from_config_dict(
             self.network_model, DataElement.get_impls()
         )
         if self.image_mean is not None:
+            # noinspection PyTypeChecker
             self.image_mean = from_config_dict(
                 self.image_mean, DataElement.get_impls()
             )
@@ -174,6 +227,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
     def _setup_network(self):
         """
         Initialize Caffe and the network
+
+        ::raises AssertionError: Optionally provided image mean protobuf
+            consisted of more than one image, or its shape was neither 1 or 3
+            channels.
         """
         self._set_caffe_mode()
 

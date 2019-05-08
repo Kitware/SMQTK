@@ -208,6 +208,7 @@ class ImageMatrixObjectDetector (ObjectDetector):
         super(ImageMatrixObjectDetector, self).__init__()
         self._image_reader = image_reader
 
+    @abc.abstractmethod
     def get_config(self):
         """
         Return a JSON-compliant dictionary that could be passed to this class's

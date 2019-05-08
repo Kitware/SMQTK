@@ -38,6 +38,9 @@ Algorithms
   * SkLearnBallTreeHashIndex
     * Fixed numpy load call to explicitly allow loading pickled components due
       to a parameter default change in numpy version 1.16.3.
+* ImageMatrixObjectDetector
+  * Add ``abstractmethod`` decorator to intermediate implementation of
+    ``get_config`` method.
 
 Web
 * Classifier Service

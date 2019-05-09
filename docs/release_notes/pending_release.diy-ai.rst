@@ -19,6 +19,10 @@ IQR
   predictions: positively adjudicated, negatively adjudicated and
   not-adjudicated elements.
 
+Representation
+* DetectionElement
+  * Added individual component accessors.
+
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
   IqrSession class.

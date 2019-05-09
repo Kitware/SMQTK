@@ -140,6 +140,25 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         """
 
     @abc.abstractmethod
+    def get_bbox(self):
+        """
+        :return: The spatial bounding box of this detection.
+        :rtype: smqtk.representation.AxisAlignedBoundingBox
+
+        :raises NoDetectionError: No detection AxisAlignedBoundingBox set yet.
+        """
+
+    @abc.abstractmethod
+    def get_classification(self):
+        """
+        :return: The classification element of this detection.
+        :rtype: smqtk.representation.ClassificationElement
+
+        :raises NoDetectionError: No detection ClassificationElement set yet or
+            the element is empty.
+        """
+
+    @abc.abstractmethod
     def get_detection(self):
         """
         :return: The paired spatial bounding box and classification element of

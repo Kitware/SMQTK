@@ -52,6 +52,21 @@ class MemoryDetectionElement (DetectionElement):  # lgtm[py/missing-equals]
         return None not in (self._bbox, self._classification) \
                and self._classification.has_classifications()
 
+    def get_bbox(self):
+        if not self._bbox:
+            raise NoDetectionError("Missing detection bounding box for "
+                                   "in-memory detection with UUID {}"
+                                   .format(self.uuid))
+        return self._bbox
+
+    def get_classification(self):
+        if not (self._classification and
+                self._classification.has_classifications()):
+            raise NoDetectionError("Missing or empty classification for "
+                                   "in-memory detection with UUID {}"
+                                   .format(self.uuid))
+        return self._classification
+
     def get_detection(self):
         if not (self._bbox and self._classification.has_classifications()):
             raise NoDetectionError("Missing detection bounding box or "

@@ -23,6 +23,9 @@ Representation
 * DetectionElement
   * Added individual component accessors.
 
+Utils
+* Added additional description capability to ProgressReporter.
+
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
   IqrSession class.

@@ -20,6 +20,8 @@ IQR
   not-adjudicated elements.
 
 Representation
+* AxisAlignedBoundingBox
+  * Added ``intersection`` method.
 * DetectionElement
   * Added individual component accessors.
 

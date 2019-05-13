@@ -35,6 +35,10 @@ def test_config_cycle(m_tcd, m_fcd):
         def is_usable(cls):
             return True
 
+        def get_config(self):
+            """ stub to be mocked """
+            return super(MockIMOD, self).get_config()
+
         def _detect_objects_matrix(self, mat):
             """ stub to be mocked """
             raise NotImplementedError()

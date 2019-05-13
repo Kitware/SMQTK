@@ -506,3 +506,63 @@ def test_bbox_hypervolume_other():
     maxp = [1, 10, 8, 9]
     expected_area = 120  # 1 * 6 * 5 * 4
     assert AxisAlignedBoundingBox(minp, maxp).hypervolume == expected_area
+
+
+def test_bbox_intersection():
+    """
+    Test expected return when there is a valid intersection.
+    """
+    # With self
+    bb = AxisAlignedBoundingBox([1, 1], [2, 2])
+    assert bb.intersection(bb) == bb
+
+    # Diagonal
+    # +---+
+    # | +---+
+    # +-|-+ |
+    #   +---+
+    bb1 = AxisAlignedBoundingBox([0, 0], [2, 2])
+    bb2 = AxisAlignedBoundingBox([1, 1], [3, 3])
+    expected = AxisAlignedBoundingBox([1, 1], [2, 2])
+    assert bb1.intersection(bb2) == expected
+    assert bb2.intersection(bb1) == expected
+
+    # ``other`` fully contained with, and ``other`` fully enclosing
+    # +-----+
+    # | +-+ |
+    # | +-+ |
+    # +-----+
+    bb1 = AxisAlignedBoundingBox([3, 2, 8], [6, 5, 11])
+    bb2 = AxisAlignedBoundingBox([4, 3, 9], [5, 4, 10])
+    expected = bb2
+    assert bb1.intersection(bb2) == expected
+    assert bb2.intersection(bb1) == expected
+
+
+def test_bbox_no_intersection():
+    """
+    Test that the expected conditions result in no intersection.
+    """
+    # +-+
+    # +-+
+    #    +-+
+    #    +-+
+    bb1 = AxisAlignedBoundingBox([0, 0], [1, 1])
+    bb2 = AxisAlignedBoundingBox([3, 3], [4, 4])
+    assert bb1.intersection(bb2) is None
+    assert bb2.intersection(bb1) is None
+
+    # Edge adjacency is not intersection
+    #  +-+-+
+    #  +-+-+
+    bb1 = AxisAlignedBoundingBox([0, 0], [1, 1])
+    bb2 = AxisAlignedBoundingBox([1, 0], [2, 1])
+    assert bb1.intersection(bb2) is None
+    assert bb2.intersection(bb1) is None
+    # +-+
+    # +-+
+    # +-+
+    bb1 = AxisAlignedBoundingBox([0, 0], [1, 1])
+    bb2 = AxisAlignedBoundingBox([0, 1], [1, 2])
+    assert bb1.intersection(bb2) is None
+    assert bb2.intersection(bb1) is None

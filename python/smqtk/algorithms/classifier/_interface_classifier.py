@@ -131,7 +131,8 @@ class Classifier (SmqtkAlgorithm):
     def get_labels(self):
         """
         Get the sequence of class labels that this classifier can classify
-        descriptors into. This includes the negative label.
+        descriptors into. This includes the negative or background label if the
+        classifier embodies such a concept.
 
         :return: Sequence of possible classifier labels.
         :rtype: collections.Sequence[collections.Hashable]

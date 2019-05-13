@@ -128,6 +128,28 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
             'max_vertex': self.max_vertex.tolist(),
         }
 
+    def intersection(self, other):
+        """
+        Get the AxisAlignedBoundingBox that represents the intersection between
+        this box and the given ``other`` box.
+
+        :param AxisAlignedBoundingBox other:
+            An other box to get the intersection of. If there is no
+            intersection ``None`` is returned.
+
+        :return: An AxisAlignedBoundingBox instance if there is an intersection
+            or None if there is no intersection.
+        :rtype: AxisAlignedBoundingBox | None
+        """
+        inter_min_v = numpy.maximum(self.min_vertex, other.min_vertex)
+        inter_max_v = numpy.minimum(self.max_vertex, other.max_vertex)
+        # Constructor allows zero area boxes, but that is not a valid
+        # intersection. Returning None if the minimum of the difference between
+        # the intersection's maximum and minimum vertices is <= 0.
+        if (inter_max_v - inter_min_v).min() <= 0:
+            return None
+        return AxisAlignedBoundingBox(inter_min_v, inter_max_v)
+
     @property
     def ndim(self):
         """

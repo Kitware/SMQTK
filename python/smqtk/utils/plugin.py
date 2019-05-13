@@ -23,12 +23,12 @@ Plugins may be accessed by one of the following ways:
      Or::
 
          ...
-         entry_points = [
+         entry_points = {
              "smqtk_plugins": [
                  "my_package_mode_1 = my_package.mode_1.plugins",
                  "my_package_mode_2 = my_package.mode_2.plugins",
              ]
-         ]
+         }
          ...
 
 """

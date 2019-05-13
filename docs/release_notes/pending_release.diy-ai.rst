@@ -19,6 +19,15 @@ IQR
   predictions: positively adjudicated, negatively adjudicated and
   not-adjudicated elements.
 
+Representation
+* AxisAlignedBoundingBox
+  * Added ``intersection`` method.
+* DetectionElement
+  * Added individual component accessors.
+
+Utils
+* Added additional description capability to ProgressReporter.
+
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
   IqrSession class.
@@ -38,6 +47,9 @@ Algorithms
   * SkLearnBallTreeHashIndex
     * Fixed numpy load call to explicitly allow loading pickled components due
       to a parameter default change in numpy version 1.16.3.
+* ImageMatrixObjectDetector
+  * Add ``abstractmethod`` decorator to intermediate implementation of
+    ``get_config`` method.
 
 Web
 * Classifier Service

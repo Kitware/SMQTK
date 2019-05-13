@@ -208,8 +208,8 @@ Success returns 200: {
 }
 
 
-[POST] /uid_nearest_neighbors
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[GET] /uid_nearest_neighbors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Take in the UID that matches an ingested descriptor and find that
 descriptor's 'k' nearest neighbors according to the current index,
 including their distance values (metric determined by
@@ -223,7 +223,7 @@ This endpoint can be more advantageous compared the
 been ingested (via `add_descriptor_from_data` or otherwise) as a
 potentially new descriptor does not have to be computed.
 
-Form Arguments:
+URL Arguments:
     uid
         UID of the descriptor to get the nearest neighbors for.  This
         should also match the SHA1 checksum of the data being described.

@@ -513,8 +513,8 @@ class TestIqrService (unittest.TestCase):
             # uid='some-uid',
             k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, 'No UID provided')
 
@@ -524,8 +524,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             # k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "No 'k' value provided")
 
@@ -535,8 +535,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k="10.2",  # float string fails an int cast.
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
                                        "integer")
@@ -552,8 +552,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k=3,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to get descriptor for UID "
                                        "some-uid")
@@ -576,8 +576,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.app.descriptor_index.get_descriptor.assert_called_once_with(
             data['uid']
         )

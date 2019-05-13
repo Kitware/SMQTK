@@ -31,6 +31,9 @@ Utils
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
   IqrSession class.
+* Changed IQR web service endpoint to retrieve nearest-neighbors to a GET
+  method instead of the previous POST method, as the previous method did not
+  make sense for the request being made.
 
 Fixes
 -----

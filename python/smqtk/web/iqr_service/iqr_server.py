@@ -283,7 +283,7 @@ class IqrService (SmqtkWebApp):
                           methods=['POST'])
         self.add_url_rule('/uid_nearest_neighbors',
                           view_func=self.uid_nearest_neighbors,
-                          methods=['POST'])
+                          methods=['GET'])
         self.add_url_rule('/session_ids',
                           view_func=self.get_sessions_ids,
                           methods=['GET'])
@@ -618,7 +618,7 @@ class IqrService (SmqtkWebApp):
                                   neighbor_uids=[e.uuid() for e in n_elems],
                                   neighbor_dists=[d for d in n_dists]), 200
 
-    # POST /uid_nearest_neighbors
+    # GET /uid_nearest_neighbors
     def uid_nearest_neighbors(self):
         """
         Take in the UID that matches an ingested descriptor and find that
@@ -634,7 +634,7 @@ class IqrService (SmqtkWebApp):
         been ingested (via `add_descriptor_from_data` or otherwise) as a
         potentially new descriptor does not have to be computed.
 
-        Form Arguments:
+        URL Arguments:
             uid
                 UID of the descriptor to get the nearest neighbors for.  This
                 should also match the SHA1 checksum of the data being
@@ -655,8 +655,8 @@ class IqrService (SmqtkWebApp):
                 'neighbor_uids`.
 
         """
-        uid = flask.request.form.get('uid', None)
-        k_str = flask.request.form.get('k', None)
+        uid = flask.request.values.get('uid', None)
+        k_str = flask.request.values.get('k', None)
         if not uid:
             return make_response_json("No UID provided."), 400
         if not k_str:

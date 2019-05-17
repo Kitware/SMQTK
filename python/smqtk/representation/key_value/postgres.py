@@ -54,21 +54,16 @@ class PostgresKeyValueStore (KeyValueStore):
         """)
 
         UPSERT_TMPL = norm_psql_cmd_string("""
-            WITH upsert AS (
-              UPDATE {table_name:s}
-                SET {value_col:s} = %(val)s
-                WHERE {key_col:s} = %(key)s
-                RETURNING *
-              )
-            INSERT INTO {table_name:s}
-              ({key_col:s}, {value_col:s})
-              SELECT %(key)s, %(val)s
-                WHERE NOT EXISTS (SELECT * FROM upsert)
+            INSERT INTO {table_name:s} ({key_col:s}, {value_col:s})
+                VALUES (%(key)s, %(val)s)
+                ON CONFLICT ({key_col:s})
+                    DO UPDATE
+                        SET {value_col:s} = EXCLUDED.{value_col:s}
         """)
 
         DELETE_LIKE_TMPL = norm_psql_cmd_string("""
             DELETE FROM {table_name:s}
-            WHERE {key_col:s} LIKE %(key_like)s 
+            WHERE {key_col:s} LIKE %(key_like)s
         """)
 
         DELETE_ALL = norm_psql_cmd_string("""

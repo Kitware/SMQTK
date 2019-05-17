@@ -22,6 +22,11 @@ IQR
 Representation
 * AxisAlignedBoundingBox
   * Added ``intersection`` method.
+* Data Element
+  * Added PostgreSQL implementation.
+* DataSet
+  * Added PostgreSQL implementation, storing data representation natively in
+    the database.
 * DetectionElement
   * Added individual component accessors.
 

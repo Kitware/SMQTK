@@ -267,10 +267,6 @@ class PostgresNativeDataSet (DataSet):
         :rtype: smqtk.representation.DataElement
 
         """
-        # Check if there are any rows in our table with this requested UUID.
-        if not self.has_uuid(uuid):
-            raise KeyError(uuid)
-
         # Query for content type recorded in our table to use for PSQL element
         # construction.
         q = "SELECT {ct_col:s} FROM {table_name:s} " \
@@ -284,10 +280,9 @@ class PostgresNativeDataSet (DataSet):
 
         r = list(self._psql_helper.single_execute(cb, yield_result_rows=True))
         if not r:
-            raise RuntimeError("UUID '{}' should have been present in the "
-                               "table but no rows returned with query '{}'."
-                               .format(uuid, q))
-        ct = str(r[0][0])
+            # No rows matching the input uuid were found.
+            raise KeyError(uuid)
 
         # Create and return the PSQL element.
+        ct = str(r[0][0])
         return self._gen_psql_element(uuid, content_type=ct)

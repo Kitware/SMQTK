@@ -30,6 +30,7 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import (
     merge_dict,
     plugin,
+    saliency,
 )
 from smqtk.web import SmqtkWebApp
 
@@ -332,6 +333,78 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/state',
                           view_func=self.set_iqr_state,
                           methods=['PUT'])
+        self.add_url_rule('/saliency_map',
+                          view_func=self.generate_saliency_map,
+                          methods=['GET'])
+        
+    # GET /saliency_map
+    def generate_saliency_map(self):
+        """
+        
+        Form Arguments:
+            img
+                The image for which we want a saliency map. Base64 string?
+            sid
+                ID of the session.
+                
+                :param img: original img
+                :type img: #maybe in bytes or a base64 string? not sure what makes sense here
+                
+                :param stride: Sliding window stride in pixels
+                :type stride: int
+                
+                :param window_size: Sliding window size in pixels
+                :type window_size: int
+                
+                :return: Saliency map overlayed img as Base64 data string.
+                :rtype: str
+
+        JSON return object:
+            s_map
+                The overlayed saliency map image.
+
+        
+        Compute a saliency map from the img and return it.
+        """
+        
+        sid = flask.request.values.get('sid', None)
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        content_type = flask.request.values.get('content_type', None) #do I really need this?
+        img = flask.request.values.get('img', None) #write in some errors for theses if they're none
+        
+        T_img = PIL.Image.open(BytesIO(img))
+        #stride = flask.request.form.get('stride', None)
+        #window_size = flask.request.form.get('window_size', None)
+        #masks = saliency.generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            pos = list(iqrs.positive_descriptors | iqrs.external_positive_descriptors)
+            neg = list(iqrs.negative_descriptors | iqrs.external_negative_descriptors)
+            ADJs = (pos, neg)
+
+        finally:
+            iqrs.lock.release()
+        
+        relevancy_index = #pass an empty relevancy index into it
+        S_img = saliency.generate_saliency_map(T_img, self.descriptor_generator, relevancy_index, ADJs) #can I just call this? Look into relevancy index
+        S_img = #make it into a binary image
+        
+        #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
+        return flask.send_file(
+                    io.BytesIO(image_binary),
+                    mimetype='image/png',
+                    as_attachment=True,
+                    attachment_filename='%s.png' % pid), 200
+        
 
     def describe_base64_data(self, b64, content_type):
         """

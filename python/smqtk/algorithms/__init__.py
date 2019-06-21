@@ -8,3 +8,6 @@ from .nn_index import NearestNeighborsIndex, get_nn_index_impls
 from .nn_index.hash_index import HashIndex, get_hash_index_impls
 from .nn_index.lsh.functors import LshFunctor, get_lsh_functor_impls
 from .relevancy_index import RelevancyIndex, get_relevancy_index_impls
+from .saliency import ImageSaliencyAugmenter, SaliencyBlackbox, \
+                      get_image_saliency_augmenter_impls, \
+                      get_saliency_blackbox_impls

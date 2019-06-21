@@ -36,7 +36,7 @@ from smqtk.algorithms.descriptor_generator.pytorch_distance_saliency_descriptor 
 
 
 __author__ = 'paul.tunison@kitware.com, bo.dong@kitware.com'
-
+##Comments by Alina Barnett to explain Bo's XAI implementation.
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -421,6 +421,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             Return the base64 preview image data for the data file associated
             with the give UID.
             """
+            ##Saliency features are in this function. The function is a class function for IqrSearch
             uid = flask.request.args['uid']
 
             info = {
@@ -463,7 +464,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 # Need to format links by transforming the generated paths to
                 # something usable by webpage:
                 # - make relative to the static directory, and then pre-pending
-                #   the known static url to the
+              ##  #   the known static url to the
                 info["static_preview_link"] = \
                     self._static_data_prefix + '/' + \
                     os.path.relpath(preview_path, self._static_data_dir)
@@ -476,20 +477,24 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             if self._saliency_descr_flag:
                 # obtain saliency map images
                 with self.get_current_iqr_session() as iqrs:
-                    if iqrs.working_index.has_descriptor(uid):
+                    if iqrs.working_index.has_descriptor(uid): 
+                    ##What's the working_index? Are we getting the uid (universal location?) of the working index? 
+                    ##Answer: Working index stores the descriptor elements from the working group. This fetches the descriptor (which is a window to the feature vector) associated with that uid.
                         desr = iqrs.working_index.get_descriptor(uid)
                         if iqrs.query_uuid not in desr.saliency_map():
+                        ##This branch has a custom version of descriptor elements. You can find it in smqtk/representation/descriptor_element/init.py.
                             self._log.debug('desr original dict: {}'.format(desr.saliency_map()))
                             self._log.debug('generate new saliency map for label {}'.format(iqrs.query_uuid))
                             temp_descr = \
                                 self._descriptor_generator.compute_descriptor(
                                     de, self._descr_elem_factory, query_f=iqrs.query_f, query_uuid=iqrs.query_uuid
-                                )
+                                ) ##This is the line that computes the saliency map. 
                             desr.update_saliency_map(temp_descr.saliency_map())
-
+                            
+                        ##sm is the saliency map
                         sm_uuid = desr.saliency_map()[iqrs.query_uuid]
                         sm = self._smap_set.get_data(sm_uuid)
-                        sm_path = self._preview_cache.get_preview_image(sm)
+                        sm_path = self._preview_cache.get_preview_image(sm) ##returns a path to the saliency map overlayed image
 
                         if sm_uuid not in self._static_cache:
                             self._static_cache[sm_uuid] = \
@@ -503,7 +508,9 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                             self._static_data_prefix + '/' + \
                             os.path.relpath(self._static_cache[sm_uuid],
                                             self._static_data_dir)
-
+            
+            ##What's the flask?
+            ##Answer: flask is the web server api. This passes the information in info back to requester. Gives requester the static path to the sm_uuid location.
             return flask.jsonify(info)
 
         @self.route('/iqr_ingest_file', methods=['POST'])

@@ -44,6 +44,7 @@ else:
     from torchvision import transforms
 
 __author__ = 'bo.dong@kitware.com'
+##Comments by Alina Barnett to explain Bo's XAI implementation.
 
 __all__ = [
     "PytorchDisSaliencyDescriptorGenerator",
@@ -84,7 +85,7 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
     else:
         masks = np.fromfile('block_mask_{}_{}.npy'.format(grid_size, stride),
                             dtype=np.float32).reshape(-1, 1, *image_size)
-
+    ##masks is a (25,224,224) tensor for grid_num_r=grid_num_c=5, img_size=(224,224)
     masks = torch.from_numpy(masks).float().to(torch.device("cuda"))
     return masks
 
@@ -92,6 +93,7 @@ def generate_block_masks(grid_size, stride, image_size=(224, 224)):
 class TensorDataset(data.Dataset):
     """
     Apply the N filters/masks onto one input image
+    ##makes a tensor of images multiplied by masks
     """
     def __init__(self, filters, img):
         self._filters = filters
@@ -277,10 +279,13 @@ class DisMaskSaliencyDataset(data.Dataset):
                     TensorDataset(self._filters.to(self._device), img.to(self._device)), batch_size=self._batch_size, **kwargs)
 
             sim = []
+            ##tqdm shows progress bars in the terminal
+            ##m_img is the masked image. Masks are image sized.
             for m_img in tqdm(masked_imgs_loader, total=len(masked_imgs_loader), desc='Predicting masked images'):
                 matched_f = self._classifier(m_img)[0]
 
                 # distance estimation
+                ##distance between masked image features and query image features calculated
                 if self._dis_type is DIS_TYPE.L2:
                     dis_diff = L2_dis(query_f, matched_f, dim=1) - org_dis
                 elif self._dis_type is DIS_TYPE.hik:
@@ -292,20 +297,21 @@ class DisMaskSaliencyDataset(data.Dataset):
 
             return sim
 
+        ##sim = tc.p which is a tensor of similarity scores
         tc_p = obtain_masked_img_targetP(cur_img)
 
-        cur_filters = self._filters.view(-1, cur_img.size(1), cur_img.size(2)).clone()
-        count = self._filters_num - torch.sum(cur_filters, dim=0)
+        cur_filters = self._filters.view(-1, cur_img.size(1), cur_img.size(2)).clone() ##As explained in [1], .clone() makes a copy. .view() explicitly does not make a copy, though has similar usage to .reshape. [1] https://stackoverflow.com/questions/49643225/whats-the-difference-between-reshape-and-view-in-pytorch
+        count = self._filters_num - torch.sum(cur_filters, dim=0) ##Count is the number of times this pixel was masked. Count is a normalizing factor.
 
         # apply the dis diff onto the corresponding masks
         for i in range(len(tc_p)):
-            cur_filters[i] = (1.0 - cur_filters[i]) * torch.clamp(tc_p[i].data, min=0.0)
+            cur_filters[i] = (1.0 - cur_filters[i]) * torch.clamp(tc_p[i].data, min=0.0) ##Changes 1s in the current mask to x where x is the activation
             # cur_filters[i] = (1.0 - cur_filters[i]) * -torch.clamp(tc_p[i].data, max=0.0)
 
         res_sa = torch.sum(cur_filters, dim=0) / count
 
         sa_max = torch.max(res_sa)
-        res_sa = torch.clamp(res_sa, min=sa_max * self._sa_threshold)
+        res_sa = torch.clamp(res_sa, min=sa_max * self._sa_threshold) ##The threshholding hides the low-level saliency and makes it so that only saliency above the threshhold is visible in the image.
 
         return res_sa.cpu().numpy()
 

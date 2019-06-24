@@ -107,7 +107,7 @@ def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy ins
     :type org_img: numpy.array
 
     :return: Overlayed image
-    :rtype: numpy.array
+    :rtype: PIL Image
 
     """
     plt.switch_backend('agg')
@@ -134,7 +134,7 @@ def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy ins
     org_w = im_size[0]
     im = im.resize((org_w, org_h), PIL.Image.BILINEAR)
     plt.close()
-    im = np.asarray(im)
+    #im = np.asarray(im)
 
     return im
 
@@ -166,7 +166,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
 
     :return: An saliency map image which has saliency added onto `T_img`. 
     Same size as T_img.
-    :rtype: np.ndarray #may instead want to make this a uid? At some point.
+    :rtype: PIL image #may instead want to make this a uid? At some point.
 
     [1] Note: 
     """

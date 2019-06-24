@@ -64,7 +64,7 @@ def main():
     
     # Output the overlayed_img
     print("Writing overlayed_img to file: {}".format(out_img_path))
-    overlayed_img = PIL.Image.fromarray(overlayed_img.astype(np.uint8))
+    #overlayed_img = PIL.Image.fromarray(overlayed_img.astype(np.uint8))
     overlayed_img.save(out_img_path)
 
     print("Done")

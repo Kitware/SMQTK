@@ -6,6 +6,8 @@ import multiprocessing
 import time
 import traceback
 import uuid
+import io
+from numpy import random.randint
 
 import flask
 
@@ -340,10 +342,9 @@ class IqrService (SmqtkWebApp):
     # GET /saliency_map
     def generate_saliency_map(self):
         """
-        
         Form Arguments:
             img
-                The image for which we want a saliency map. Base64 string?
+                The image for which we want a saliency map.
             sid
                 ID of the session.
                 
@@ -361,7 +362,7 @@ class IqrService (SmqtkWebApp):
 
         JSON return object:
             s_map
-                The overlayed saliency map image.
+                The overlayed saliency map image. png
 
         
         Compute a saliency map from the img and return it.
@@ -370,14 +371,18 @@ class IqrService (SmqtkWebApp):
         sid = flask.request.values.get('sid', None)
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
-
-        content_type = flask.request.values.get('content_type', None) #do I really need this?
-        img = flask.request.values.get('img', None) #write in some errors for theses if they're none
+        content_type = flask.request.values.get('content_type', None)
+        if content_type is None:
+            return make_response_json("No content_type provided"), 400
         
-        T_img = PIL.Image.open(BytesIO(img))
-        #stride = flask.request.form.get('stride', None)
-        #window_size = flask.request.form.get('window_size', None)
-        #masks = saliency.generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+        img = flask.request.values.get('img', None)
+        if img is None:
+            return make_response_json("No image provided"), 400
+        try:
+            T_img = PIL.Image.open(io.BytesIO(img))
+        except:
+            return make_response_json("Image could not be opened."), 400
+
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -394,13 +399,20 @@ class IqrService (SmqtkWebApp):
         finally:
             iqrs.lock.release()
         
-        relevancy_index = #pass an empty relevancy index into it
-        S_img = saliency.generate_saliency_map(T_img, self.descriptor_generator, relevancy_index, ADJs) #can I just call this? Look into relevancy index
-        S_img = #make it into a binary image
+        sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
+        relevancy_index = iqr_session.IqrSession(pos,
+                                      self.rel_index_config,
+                                      sub_sid)
+        S_img = saliency.generate_saliency_map(T_img, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
+        S_img_container = io.BytesIO()
+        S_img.save(S_img_container, format='PNG')
+        pid = "sa_map"
         
         #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
+        #https://stackoverflow.com/questions/55301037/save-and-send-large-numpy-arrays-with-flask
+        #https://stackoverflow.com/questions/33101935/convert-pil-image-to-byte-array
         return flask.send_file(
-                    io.BytesIO(image_binary),
+                    S_img_container,
                     mimetype='image/png',
                     as_attachment=True,
                     attachment_filename='%s.png' % pid), 200
@@ -770,7 +782,9 @@ class IqrService (SmqtkWebApp):
         with self.controller:
             if not self.controller.has_session_uuid(sid):
                 return make_response_json("session id '%s' not found" % sid,
-                                          sid=sid), 404
+                                          sid=sid), 404iqr_session.IqrSession(self.positive_seed_neighbors,
+                                      self.rel_index_config,
+                                      sid)
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 

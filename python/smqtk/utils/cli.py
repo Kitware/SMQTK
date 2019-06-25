@@ -165,8 +165,9 @@ class ProgressReporter (SmqtkObject):
         :type interval: float
 
         :param str what_per_second:
-            String label about what is happeing or being iterated over per
-            second.
+            String label about what is happening or being iterated over per
+            second. The provided string should make sense when followed by
+            " per second ...".
 
         """
         self.log_func = log_func
@@ -217,12 +218,12 @@ class ProgressReporter (SmqtkObject):
         if not self.started:
             raise RuntimeError("Reporter needs to be started first.")
         self.c += 1
+        self.c_delta = self.c - self.c_last
         self.t = time.time()
         self.t_delta = self.t - self.t_last
         # Only report if its been ``interval`` seconds since the last
         # report.
         if self.t_delta >= self.interval:
-            self.c_delta = self.c - self.c_last
             self.report()
             self.t_last = self.t
             self.c_last = self.c

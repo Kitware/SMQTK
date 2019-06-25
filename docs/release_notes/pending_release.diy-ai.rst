@@ -59,6 +59,10 @@ Algorithms
   * Add ``abstractmethod`` decorator to intermediate implementation of
     ``get_config`` method.
 
+Utilities
+* Fixed issue with ProgressReporter when reporting before the first interval
+  period.
+
 Web
 * Classifier Service
   * Fix configuration of CaffeDescriptorGenerator.

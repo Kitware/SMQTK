@@ -7,7 +7,9 @@ import time
 import traceback
 import uuid
 import io
-from numpy import random.randint
+#from numpy.random import randint
+from PIL import Image
+import numpy as np
 
 import flask
 
@@ -343,29 +345,27 @@ class IqrService (SmqtkWebApp):
     def generate_saliency_map(self):
         """
         Form Arguments:
-            img
-                The image for which we want a saliency map.
+            img_b64
+                The Base64-encoded binary data image for which we want a saliency map.
             sid
                 ID of the session.
-                
-                :param img: original img
-                :type img: #maybe in bytes or a base64 string? not sure what makes sense here
-                
-                :param stride: Sliding window stride in pixels
-                :type stride: int
-                
-                :param window_size: Sliding window size in pixels
-                :type window_size: int
-                
-                :return: Saliency map overlayed img as Base64 data string.
-                :rtype: str
 
-        JSON return object:
-            s_map
-                The overlayed saliency map image. png
+        Returns an attached png image file
 
         
         Compute a saliency map from the img and return it.
+        
+        curl -v 'http://localhost:5000/saliency_map' -X GET -H 'Content-Type: application/json' -d '{"img_b64": "'"$(base64 /home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_flower.jpg)"'"}' -o /home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/curl_output
+        
+        -F 'img_b64=@/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_flower.jpg'
+        myImgStr=$(base64 /home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_flower.jpg)
+        -d img_b64="myImgStr"
+        
+        
+        https://stackoverflow.com/questions/52325679/flask-opencv-send-and-receive-images-in-bytes
+        https://www.baeldung.com/curl-rest
+        https://unix.stackexchange.com/questions/211613/combine-curl-and-base64-into-one-command
+        https://askubuntu.com/questions/907540/how-to-decode-an-image-string-using-base64-in-command-line
         """
         
         sid = flask.request.values.get('sid', None)
@@ -375,14 +375,21 @@ class IqrService (SmqtkWebApp):
         if content_type is None:
             return make_response_json("No content_type provided"), 400
         
-        img = flask.request.values.get('img', None)
-        if img is None:
+        #https://stackoverflow.com/questions/6485790/numpy-array-to-base64-and-back-to-numpy-array-python
+        img_b64 = flask.request.values.get('img_b64', None)
+        
+        if img_b64 is None:
             return make_response_json("No image provided"), 400
         try:
-            T_img = PIL.Image.open(io.BytesIO(img))
+            T_img_string = base64.urlsafe_b64decode(img_b64)
+            #T_img_array = np.fromstring(T_img_string, dtype=np.uint8) #beware of float64 vs uint8
+            img_container = io.BytesIO(T_img_string)
+            T_img_PIL = Image.open(img_container)
+            
+            #T_img_PIL = Image.open(img)
         except:
             return make_response_json("Image could not be opened."), 400
-
+        """
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
@@ -403,14 +410,28 @@ class IqrService (SmqtkWebApp):
         relevancy_index = iqr_session.IqrSession(pos,
                                       self.rel_index_config,
                                       sub_sid)
-        S_img = saliency.generate_saliency_map(T_img, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
+        S_img = saliency.generate_saliency_map(T_img_PIL, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
+        S_img_b64 = base64.b64encode(S_img_container.getvalue()).decode("utf-8") #could use this
         pid = "sa_map"
         
         #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
         #https://stackoverflow.com/questions/55301037/save-and-send-large-numpy-arrays-with-flask
         #https://stackoverflow.com/questions/33101935/convert-pil-image-to-byte-array
+        return flask.send_file(
+                    S_img_container,
+                    mimetype='image/png',
+                    as_attachment=True,
+                    attachment_filename='%s.png' % pid), 200
+        """
+        S_img = T_img_PIL
+        S_img_container = io.BytesIO()
+        S_img.save(S_img_container, format='PNG')
+        S_img_container.seek(0)
+        pid = "sa_map"
+        import ipdb
+        ipdb.set_trace()
         return flask.send_file(
                     S_img_container,
                     mimetype='image/png',
@@ -782,7 +803,8 @@ class IqrService (SmqtkWebApp):
         with self.controller:
             if not self.controller.has_session_uuid(sid):
                 return make_response_json("session id '%s' not found" % sid,
-                                          sid=sid), 404iqr_session.IqrSession(self.positive_seed_neighbors,
+                                          sid=sid), 404
+            iqr_session.IqrSession(self.positive_seed_neighbors,
                                       self.rel_index_config,
                                       sid)
             iqrs = self.controller.get_session(sid)

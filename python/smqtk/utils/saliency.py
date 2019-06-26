@@ -202,7 +202,6 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     print("Computing descriptors...") 
     start=datetime.now()
     des = [from_uri(path) for path in masked_img_paths]
-    #img_fs = [descriptor_generator.compute_descriptor(de) for de in des] ##Need to redo this part so that it uses compute_descriptor_async instead for better speed up.
     m = descriptor_generator.compute_descriptor_async(des)
     print(datetime.now()-start)
     print("Put descriptors into list...") 

@@ -12,7 +12,7 @@ import glob
 import json
 import logging
 import os.path as osp
-import ipdb
+#import ipdb
 
 import six
 
@@ -160,7 +160,7 @@ def main():
     # Generate descriptors of data for building NN index.
     log.info("Computing descriptors for data set with {}"
              .format(descriptor_generator))
-    ipdb.set_trace()
+    #ipdb.set_trace()
     data2descriptor = descriptor_generator.compute_descriptor_async(
         data_set, descriptor_elem_factory
     )

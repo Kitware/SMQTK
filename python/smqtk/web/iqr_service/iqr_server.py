@@ -7,7 +7,8 @@ import time
 import traceback
 import uuid
 import io
-from numpy import random.randint
+from PIL import Image
+import numpy as np
 
 import flask
 
@@ -375,11 +376,13 @@ class IqrService (SmqtkWebApp):
         if content_type is None:
             return make_response_json("No content_type provided"), 400
         
-        img = flask.request.values.get('img', None)
-        if img is None:
+        img_b64 = flask.request.values.get('img_b64', None)
+        if img_b64 is None:
             return make_response_json("No image provided"), 400
         try:
-            T_img = PIL.Image.open(io.BytesIO(img))
+            T_img_string = base64.urlsafe_b64decode(img_b64)
+            img_container = io.BytesIO(T_img_string)
+            T_img_PIL = Image.open(img_container)
         except:
             return make_response_json("Image could not be opened."), 400
 
@@ -403,9 +406,10 @@ class IqrService (SmqtkWebApp):
         relevancy_index = iqr_session.IqrSession(pos,
                                       self.rel_index_config,
                                       sub_sid)
-        S_img = saliency.generate_saliency_map(T_img, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
+        S_img = saliency.generate_saliency_map(T_img_PIL, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
+        S_img_container.seek(0)
         pid = "sa_map"
         
         #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
@@ -782,7 +786,8 @@ class IqrService (SmqtkWebApp):
         with self.controller:
             if not self.controller.has_session_uuid(sid):
                 return make_response_json("session id '%s' not found" % sid,
-                                          sid=sid), 404iqr_session.IqrSession(self.positive_seed_neighbors,
+                                          sid=sid), 404
+            iqr_session.IqrSession(self.positive_seed_neighbors,
                                       self.rel_index_config,
                                       sid)
             iqrs = self.controller.get_session(sid)

@@ -34,7 +34,6 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import (
     merge_dict,
     plugin,
-    saliency,
 )
 from smqtk.web import SmqtkWebApp
 

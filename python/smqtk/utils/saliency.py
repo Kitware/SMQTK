@@ -13,6 +13,7 @@ import PIL.Image
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
+import ipdb
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -209,6 +210,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     img_fs = [m[de.uuid()] for de in des]
     print(datetime.now()-start)
     img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
+    ipdb.set_trace()
     print("Ranking...")
     start = datetime.now()
     relevancy_index.build_index(img_fs) ##to get Bo's method: there is no need for this and the following line because the relveancy index isn't used
@@ -222,7 +224,8 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     #count = np.ones(count.shape)
     # apply the dis diff onto the corresponding masks
     for i in range(len(cur_filters)):
-        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##to get to Bo's method: instead of subtracting relevancy scores, instead take the descriptors/feature vector differences here
+        #diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
+        diff = np.sum(img_fs[i].vector() - img_fs[-1].vector()) ##Bo's method
         cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
 
     res_sa = np.sum(cur_filters, axis=0) / count

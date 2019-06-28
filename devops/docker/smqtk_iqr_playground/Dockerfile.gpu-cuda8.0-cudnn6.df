@@ -55,6 +55,16 @@ RUN useradd -mr -s /bin/bash smqtk \
  && echo "smqtk ALL=(ALL:ALL) NOPASSWD:ALL" >>/etc/sudoers \
  && mkdir /images \
  && chown smqtk:smqtk /images
+
+
+# Configuration for Matplotlib to just use the Agg backend, not Tkinter
+COPY devops/docker/smqtk_iqr_playground/matplotlibrc \
+     /home/smqtk/.config/matplotlib/
+# Seems to need to be owned by the user for it to be considered "usable" by
+# matplotlib.
+RUN chown smqtk:smqtk -R /home/smqtk/.config
+
+
 USER smqtk
 WORKDIR /home/smqtk
 

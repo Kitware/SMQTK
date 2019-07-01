@@ -13,7 +13,6 @@ import PIL.Image
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
-import ipdb
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -144,6 +143,7 @@ def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy ins
 def print_img(img, path='/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/output.jpg'):
     img = PIL.Image.fromarray(img.astype(np.uint8))
     img.save(path)
+    
 
 def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     """
@@ -210,12 +210,97 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     img_fs = [m[de.uuid()] for de in des]
     print(datetime.now()-start)
     img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
-    ipdb.set_trace()
     print("Ranking...")
     start = datetime.now()
-    relevancy_index.build_index(img_fs) ##to get Bo's method: there is no need for this and the following line because the relveancy index isn't used
+    relevancy_index.build_index(img_fs)
     RI_scores = relevancy_index.rank(*ADJs) 
     print(datetime.now()-start)
+    
+    print("Adding up saliency maps...")
+    start=datetime.now()
+    cur_filters = copy.deepcopy(masks)
+    count = masks.shape[0] - np.sum(cur_filters, axis=0)
+    
+    for i in range(len(cur_filters)):
+        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
+        cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
+
+    res_sa = np.sum(cur_filters, axis=0) / count
+    sa_threshhold = 0.2 ##Picked this value to get better looking images.
+    sa_max = np.max(res_sa)
+    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+    print(datetime.now()-start)
+    print("Overlaying saliency map...")
+    start=datetime.now()
+    S_img = overlay_saliency_map(res_sa, T_img)
+    print(datetime.now()-start)
+    
+    return S_img
+
+def generate_saliency_map_Bo(T_img, descriptor_generator, query_img):
+    """
+    Find the saliency map for an image. The context for the saliency map is 
+    score in the relevancy index.
+
+    :param T_img: An image for which we want to generate a saliency map.
+    :type T_img: PIL Image #may instead want to make this a uid? probably in the future, yes
+
+    :param descriptor_generator: The descriptor generator used by the relevancy 
+    index. 
+    :type descriptor_generator: DescriptorGenerator, a custom class
+    
+    :query_img: The query image.
+    :type query_img: PIL Image
+
+    :return: An saliency map image which has saliency added onto `T_img`. 
+    Same size as T_img.
+    :rtype: PIL image #may instead want to make this a uid? At some point.
+
+    [1] Note: 
+    """
+    #temp holding path
+    path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
+        
+    #resize T_img
+    #T_img = (PIL.Image.fromarray(T_img))
+    T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
+    unmasked_img_path = os.path.join(path, "unmasked_img.png")
+    T_img.save(unmasked_img_path)
+    T_img = np.array(T_img)
+    
+    Q_img = query_img.resize((224,224),resample=PIL.Image.BICUBIC)
+    query_img_path = os.path.join(path, "query_img.png")
+    Q_img.save(query_img_path)
+    
+    start=datetime.now()
+    #masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(15,15))
+    masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    masked_imgs = generate_masked_imgs(masks, T_img)
+    masked_img_paths = []
+    print(datetime.now()-start)
+    
+    
+    print("Masks file i/o...")
+    start=datetime.now()
+    for i, masked_img in enumerate(masked_imgs):
+        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
+        save_path = os.path.join(path, "masked_img_{:04d}.png".format(i))
+        img.save(save_path)
+        masked_img_paths.append(save_path)
+    
+    print(datetime.now()-start)
+    
+    print("Computing descriptors...") 
+    start=datetime.now()
+    des = [from_uri(path) for path in masked_img_paths]
+    m = descriptor_generator.compute_descriptor_async(des)
+    print(datetime.now()-start)
+    print("Put descriptors into list...") 
+    start = datetime.now()
+    img_fs = [m[de.uuid()] for de in des]
+    print(datetime.now()-start)
+    img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
+    img_fs.append(descriptor_generator.compute_descriptor(from_uri(query_img_path))) ##Uses query_img instead of unmasked
     
     print("Adding up saliency maps...")
     start=datetime.now()
@@ -224,8 +309,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     #count = np.ones(count.shape)
     # apply the dis diff onto the corresponding masks
     for i in range(len(cur_filters)):
-        #diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
-        diff = np.sum(img_fs[i].vector() - img_fs[-1].vector()) ##Bo's method
+        diff = np.sum(img_fs[i].vector() - img_fs[-1].vector()) - np.sum(img_fs[-2].vector() - img_fs[-1].vector()) ##Bo's method
         cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
 
     res_sa = np.sum(cur_filters, axis=0) / count

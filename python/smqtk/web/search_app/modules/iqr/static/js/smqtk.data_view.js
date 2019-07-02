@@ -87,10 +87,13 @@ function DataView(container, rank, uid, probability, is_example) {
 
     // image container image data and adjudication buttons
     this.image_container = $('<div class="iqr-result-img-container"></div>');
+    this.image_container.css('overflow-y', 'auto');
     this.image_data_view = $('<img src="">');
+    this.saliency_data_view = $('<img src="">');
     // Showing loading GIF by default until image preview actually loaded via
     // ajax call.
     this.image_data_view.attr('src', this.loading_gif);
+    this.saliency_data_view.attr('src', this.loading_gif);
 
     // Assemble result box
     if (! this.is_example) {
@@ -100,6 +103,10 @@ function DataView(container, rank, uid, probability, is_example) {
     this.result.append(this.image_container);
 
     this.image_container.append(this.image_data_view);
+
+    if (window.show_saliency) {
+        this.image_container.append(this.saliency_data_view);
+    }
 
     //
     // Control
@@ -159,16 +166,12 @@ DataView.prototype.update_view = function (server_update) {
     // helper function for display based on explicit settings
     function update_image()
     {
+        if (window.show_saliency) {
+            inst.saliency_data_view.css('max-width', '175px');
+            inst.saliency_data_view.attr('src', 'saliency_map?uid=' + inst.uid);
+        }
         inst.image_data_view.attr('src', inst.image_preview_data);
-        // balance side scaling.
-        if (inst.img_long_side)
-        {
-            inst.image_data_view.css('height', '192px');
-        }
-        else
-        {
-            inst.image_data_view.css('width', '192px');
-        }
+        inst.image_data_view.css('max-width', '175px');
     }
 
     if (server_update)

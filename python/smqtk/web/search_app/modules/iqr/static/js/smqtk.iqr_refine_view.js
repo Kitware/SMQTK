@@ -51,6 +51,10 @@ function IqrRefineView(container) {
     this.button_refine_top.text("Refine");
     this.button_refine_bot = this.button_refine_top.clone();
 
+    window.show_saliency = false;
+    this.button_show_saliency = $('<button class="btn" type="button"></button>');
+    this.button_show_saliency.text("Toggle Saliency");
+
     // To be put in top button container
     this.button_toggle_random = $('<button class="btn" type="button"></button>');
     this.button_toggle_random.text('Toggle Random Results');
@@ -113,6 +117,7 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
+        this.button_show_saliency,
         this.button_toggle_random
     );
 
@@ -137,6 +142,10 @@ IqrRefineView.prototype.construct_refine_pane = function () {
     });
     this.button_toggle_random.click(function () {
         inst.toggle_random_pane();
+    });
+    this.button_show_saliency.click(function () {
+        window.show_saliency = !window.show_saliency;
+        inst.update_refine_pane();
     });
 
     // sets element initial visible/hidden status

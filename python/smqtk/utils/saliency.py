@@ -324,3 +324,96 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     print(datetime.now()-start)
     
     return S_img
+
+def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs):
+    """
+    Find the saliency map for an image. The context for the saliency map is 
+    score in the relevancy index.
+
+    :param T_img: An image for which we want to generate a saliency map.
+    :type T_img: PIL Image #may instead want to make this a uid? probably in the future, yes
+
+    :param descriptor_generator: The descriptor generator used by the relevancy 
+    index. 
+    :type descriptor_generator: DescriptorGenerator, a custom class
+    
+    :param relevancy_index: The relevancy index item.
+    :type relevancy_index: RelevancyIndex, a custom class
+    
+    :param ADJs: Adjudicated images to build the relevancy index with.
+    :type ADJs: tuple containing 2 lists. First list is an iterable of positive 
+    exemplar DescriptorElement instances (type pos: 
+    collections.Iterable[smqtk.representation.DescriptorElement]). Second list is 
+    an iterable of negative exemplar DescriptorElement instances.
+
+    :return: An saliency map image which has saliency added onto `T_img`. 
+    Same size as T_img.
+    :rtype: PIL image #may instead want to make this a uid? At some point.
+
+    [1] Note: 
+    """
+    #temp holding path
+    path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
+        
+    #resize T_img
+    #T_img = (PIL.Image.fromarray(T_img))
+    T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
+    unmasked_img_path = os.path.join(path, "unmasked_img.png")
+    T_img.save(unmasked_img_path)
+    T_img = np.array(T_img)
+    
+    print("Masks generation...")
+    start=datetime.now()
+    masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
+    #masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    masked_imgs = generate_masked_imgs(masks, T_img)
+    masked_img_paths = []
+    print(datetime.now()-start)
+    
+    
+    print("Masks file i/o...")
+    start=datetime.now()
+    for i, masked_img in enumerate(masked_imgs):
+        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
+        save_path = os.path.join(path, "masked_img_{:04d}.png".format(i))
+        img.save(save_path)
+        masked_img_paths.append(save_path)
+    
+    print(datetime.now()-start)
+    
+    print("Computing descriptors...") 
+    start=datetime.now()
+    des = [from_uri(path) for path in masked_img_paths]
+    m = descriptor_generator.compute_descriptor_async(des)
+    print(datetime.now()-start)
+    print("Put descriptors into list...") 
+    start = datetime.now()
+    img_fs = [m[de.uuid()] for de in des]
+    print(datetime.now()-start)
+    img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
+    print("Ranking...")
+    start = datetime.now()
+    relevancy_index.build_index(img_fs)
+    RI_scores = relevancy_index.rank(*ADJs) 
+    print(datetime.now()-start)
+    
+    print("Adding up saliency maps...")
+    start=datetime.now()
+    cur_filters = copy.deepcopy(masks)
+    count = masks.shape[0] - np.sum(cur_filters, axis=0)
+    
+    for i in range(len(cur_filters)):
+        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
+        cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
+
+    res_sa = np.sum(cur_filters, axis=0) / count
+    sa_threshhold = 0.2 ##Picked this value to get better looking images.
+    sa_max = np.max(res_sa)
+    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+    print(datetime.now()-start)
+    print("Overlaying saliency map...")
+    start=datetime.now()
+    S_img = overlay_saliency_map(res_sa, T_img)
+    print(datetime.now()-start)
+    
+    return S_img

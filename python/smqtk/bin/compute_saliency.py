@@ -30,7 +30,7 @@ def main():
 
     T_img_name = 'test_img'
     in_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/' + T_img_name + '.jpg'
-    out_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_SVM.jpg'
+    out_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_SVM_fast.jpg'
     out_img_path_Bo = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_Bo.jpg'
     network_prototxt_uri = '/home/local/KHQ/alina.barnett/AlinaCode/models/caffe_ResNet50/ResNet-50-deploy.prototxt'
     network_model_uri = '/home/local/KHQ/alina.barnett/AlinaCode/models/caffe_ResNet50/ResNet-50-model.caffemodel'
@@ -61,7 +61,7 @@ def main():
     
     ADJs = (pos, neg)
 
-    overlayed_img = saliency.generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs)
+    overlayed_img = saliency.generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs)
     
     #overlayed_img_Bo = saliency.generate_saliency_map_Bo(T_img, descriptor_generator, query_img)
     

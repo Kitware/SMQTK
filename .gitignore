@@ -8,6 +8,9 @@
 # Sphinx compile files
 /docs/_build/
 
+# TEMP files
+*.swp
+
 # Ignore generated files from examples
 /docs/examples/nnss_incremental_update/leedsbutterfly_dataset_v1.0.zip
 /docs/examples/nnss_incremental_update/leedsbutterfly
@@ -69,3 +72,4 @@ __pycache__
 /bin/memex/hackathon_2016_07/scripts/es_config.json
 /bin/memex/hackathon_2016_07/notebooks/.ipynb_checkpoints/
 /bin/memex/hackathon_2016_07/data/
+

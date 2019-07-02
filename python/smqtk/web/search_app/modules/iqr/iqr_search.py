@@ -668,6 +668,39 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 "alive": True,
             })
 
+        @self.route('/saliency_map', methods=['GET'])
+        def get_saliency_map():
+            sid = self.get_current_iqr_session()
+            uid = flask.request.args.get('uid', None)
+            # TODO: support non-preview images to show in full res
+            # preview = flask.request.args.get('preview', 'true') == 'true'
+            if uid is None:
+                return flask.jsonify('Image uid required'), 400
+
+            if self._data_set.has_uuid(uid):
+                #: :type: smqtk.representation.DataElement
+                de = self._data_set.get_data(uid)
+            else:
+                sid = self.get_current_iqr_session()
+                #: :type: smqtk.representation.DataElement | None
+                de = self._iqr_example_data[sid].get(uid, None)
+
+            preview_path = self._preview_cache.get_preview_image(de)
+            # img = PIL.Image.open(preview_path)
+
+            with open(preview_path) as f:
+                img_data = f.read()
+            img_b64 = base64.b64encode(img_data)
+            resp = self._iqr_service.get('saliency_map',
+                                         img_b64=img_b64, sid=sid,
+                                         content_type='image/jpeg')
+            if resp.status_code != 200:
+                flask.current_app.logger.error(img_data)
+                flask.current_app.logger.error(preview_path)
+            assert resp.status_code == 200
+
+            return flask.Response(resp.content, mimetype='image/png')
+
     def __del__(self):
         for wdir in self._iqr_work_dirs.values():
             if os.path.isdir(wdir):

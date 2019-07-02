@@ -63,7 +63,7 @@ def main():
 
     overlayed_img = saliency.generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs)
     
-    overlayed_img_Bo = saliency.generate_saliency_map_Bo(T_img, descriptor_generator, query_img)
+    #overlayed_img_Bo = saliency.generate_saliency_map_Bo(T_img, descriptor_generator, query_img)
     
     # Output the overlayed_img from SVM context
     print("Writing overlayed_img to file: {}".format(out_img_path))
@@ -71,9 +71,9 @@ def main():
     overlayed_img.save(out_img_path)
     
     # Output the overlayed_img
-    print("Writing overlayed_img to file: {}".format(out_img_path_Bo))
+    #print("Writing overlayed_img to file: {}".format(out_img_path_Bo))
     #overlayed_img = PIL.Image.fromarray(overlayed_img.astype(np.uint8))
-    overlayed_img.save(out_img_path_Bo)
+    #overlayed_img.save(out_img_path_Bo)
 
     print("Done")
 

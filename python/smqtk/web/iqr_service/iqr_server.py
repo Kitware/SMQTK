@@ -406,10 +406,9 @@ class IqrService (SmqtkWebApp):
         finally:
             iqrs.lock.release()
         
-        sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
-        relevancy_index = iqr_session.IqrSession(pos,
-                                      self.rel_index_config,
-                                      sub_sid)
+        relevancy_index = plugin.from_plugin_config(
+                self.rel_index_config, get_relevancy_index_impls()
+                )
 
         S_img = saliency.generate_saliency_map(T_img_PIL, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
 
@@ -417,7 +416,6 @@ class IqrService (SmqtkWebApp):
         #https://stackoverflow.com/questions/55301037/save-and-send-large-numpy-arrays-with-flask
         #https://stackoverflow.com/questions/33101935/convert-pil-image-to-byte-array
 
-        S_img = T_img_PIL
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
 

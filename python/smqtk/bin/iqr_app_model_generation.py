@@ -12,6 +12,7 @@ import glob
 import json
 import logging
 import os.path as osp
+import pdb
 
 import six
 
@@ -147,7 +148,7 @@ def main():
             log.debug("Expanding glob: %s" % g)
             for fp in glob.iglob(g):
                 data_set.add_data(DataFileElement(fp, readonly=True))
-
+    
     # Generate a model if the generator defines a known generation method.
     try:
         log.debug("descriptor generator as model to generate?")
@@ -155,14 +156,15 @@ def main():
     except AttributeError as ex:
         log.debug("descriptor generator as model to generate - Nope: {}"
                   .format(str(ex)))
-
+    
     # Generate descriptors of data for building NN index.
     log.info("Computing descriptors for data set with {}"
              .format(descriptor_generator))
+    pdb.set_trace()
     data2descriptor = descriptor_generator.compute_descriptor_async(
         data_set, descriptor_elem_factory
     )
-
+    pdb.set_trace()
     # Possible additional support steps before building NNIndex
     try:
         # Fit the LSH index functor

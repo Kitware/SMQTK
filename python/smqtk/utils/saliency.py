@@ -13,6 +13,7 @@ import PIL.Image
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
+import pdb
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -52,6 +53,57 @@ def generate_block_masks_from_gridsize(image_size, grid_size=(5,5)):
 
     return masks
 
+def get_rc(index, grid_size):
+    
+    r = index // grid_size
+    c = index % grid_size
+    
+    return r, c
+
+def get_index(row, col, grid_size):
+    
+    index = grid_size * row + col
+    
+    return index
+
+def submasks_from_mask(mask_num, grid_size, subgrid_size):
+    """
+    Given the index of the larger mask, finds the submasks beneath it.
+    
+    :param mask_num: the index of the larger mask
+    :type mask_num: int 
+    
+    :param grid_size: the side length of the larger grid size
+    :type grid_size: int 
+    
+    :param subgrid_size: the side length of the subgrid within each segment of the big grid
+    :type subgrid_size: int
+    
+    :return: indices of the submasks
+    :rtype: list of ints
+    """
+    m = mask_num
+    g = grid_size
+    d = subgrid_size
+    
+    if m >= g*g or m < 0:
+        raise ValueError("The mask number is not on the specified grid.")
+    
+    r_m, c_m = get_rc(m,g)
+    
+    r_n0 = d * r_m
+    c_n0 = d * c_m
+
+    submasks = []
+    
+    for sub_row in range(d):
+        for sub_col in range(d):
+            #print("row: {}, col: {}, index: {}".format(r_n0 + sub_row * 1, c_n0 + sub_col * 1, get_index(r_n0 + sub_row * 1, c_n0 + sub_col * 1, g)))
+            submasks.append(get_index(r_n0 + sub_row * 1, c_n0 + sub_col * 1, g * d))
+    
+    return submasks
+
+
 def generate_block_masks(window_size, stride, image_size):
     """
     Generating the sliding window style masks.
@@ -84,6 +136,7 @@ def generate_block_masks(window_size, stride, image_size):
     
     return masks
 
+
 def generate_masked_imgs(masks, img):
     """
     Apply the N filters/masks onto one input image
@@ -96,6 +149,7 @@ def generate_masked_imgs(masks, img):
         masked_imgs.append(masked_img)
 
     return masked_imgs
+
 
 def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy instead of PIL
     """
@@ -362,7 +416,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     T_img.save(unmasked_img_path)
     T_img = np.array(T_img)
     
-    print("Masks generation...")
+    print("Masks generation for first sweep...")
     start=datetime.now()
     masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
     #masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
@@ -378,24 +432,60 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
         save_path = os.path.join(path, "masked_img_{:04d}.png".format(i))
         img.save(save_path)
         masked_img_paths.append(save_path)
-    
     print(datetime.now()-start)
     
-    print("Computing descriptors...") 
+    print("Computing descriptors for first sweep...") 
     start=datetime.now()
     des = [from_uri(path) for path in masked_img_paths]
     m = descriptor_generator.compute_descriptor_async(des)
     print(datetime.now()-start)
+    
     print("Put descriptors into list...") 
     start = datetime.now()
     img_fs = [m[de.uuid()] for de in des]
     print(datetime.now()-start)
     img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
+    
     print("Ranking...")
     start = datetime.now()
     relevancy_index.build_index(img_fs)
-    RI_scores = relevancy_index.rank(*ADJs) 
+    RI_scores = relevancy_index.rank(*ADJs)
     print(datetime.now()-start)
+    
+    print("Selecting elaboration points...")
+    start=datetime.now()
+    diffs = []
+    for i in range(len(masks)):
+        diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
+    l = 0.1
+    second_sweep_size = int(np.floor(l * len(diffs)))
+    diffss = np.array(diffs)
+    indices = (-diffss).argsort()[:second_sweep_size]
+    subs = [submasks_from_mask(i,6,4) for i in indices]
+    print(datetime.now()-start)
+    
+    print("Submasks generation for second sweep...")
+    start=datetime.now()
+    submasks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(24,24))
+    
+    submasked_imgs = generate_masked_imgs(submasks, T_img)
+    submasked_img_paths = []
+    print(datetime.now()-start)
+    
+    
+    print("Submasks file i/o...")
+    start=datetime.now()
+    for i, masked_img in enumerate(masked_imgs):
+        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
+        save_path = os.path.join(path, "submasked_img_{:04d}.png".format(i))
+        img.save(save_path)
+        masked_img_paths.append(save_path)
+    
+    print(datetime.now()-start)
+    
+    pdb.set_trace()
+    
+    print("Reranking...")
     
     print("Adding up saliency maps...")
     start=datetime.now()
@@ -404,8 +494,9 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     for i in range(len(cur_filters)):
         diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
+        #diffs.append(diff)
         cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
-
+    pdb.set_trace()
     res_sa = np.sum(cur_filters, axis=0) / count
     sa_threshhold = 0.2 ##Picked this value to get better looking images.
     sa_max = np.max(res_sa)

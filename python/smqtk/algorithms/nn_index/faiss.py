@@ -394,7 +394,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     "use_multiprocessing": self.use_multiprocessing,
                     "next_index": self._next_index,
                 }
-                self._index_param_element.set_bytes(json.dumps(params))
+                self._index_param_element.set_bytes(json.dumps(params).encode())
 
     def _build_index(self, descriptors):
         """

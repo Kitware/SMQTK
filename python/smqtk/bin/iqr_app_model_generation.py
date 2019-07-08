@@ -12,7 +12,6 @@ import glob
 import json
 import logging
 import os.path as osp
-import pdb
 
 import six
 
@@ -160,11 +159,10 @@ def main():
     # Generate descriptors of data for building NN index.
     log.info("Computing descriptors for data set with {}"
              .format(descriptor_generator))
-    pdb.set_trace()
     data2descriptor = descriptor_generator.compute_descriptor_async(
         data_set, descriptor_elem_factory
     )
-    pdb.set_trace()
+    
     # Possible additional support steps before building NNIndex
     try:
         # Fit the LSH index functor
@@ -172,7 +170,7 @@ def main():
         nn_index.lsh_functor.fit(six.itervalues(data2descriptor))
     except AttributeError as ex:
         log.debug("Has LSH Functor to fit - Nope: {}".format(str(ex)))
-
+    
     log.info("Building nearest neighbors index {}".format(nn_index))
     nn_index.build_index(six.itervalues(data2descriptor))
 

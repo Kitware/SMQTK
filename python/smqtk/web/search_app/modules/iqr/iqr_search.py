@@ -688,7 +688,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             preview_path = self._preview_cache.get_preview_image(de)
             # img = PIL.Image.open(preview_path)
 
-            with open(preview_path) as f:
+            with open(preview_path, 'rb') as f:
                 img_data = f.read()
             img_b64 = base64.b64encode(img_data)
             resp = self._iqr_service.get('saliency_map',

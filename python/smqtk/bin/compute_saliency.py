@@ -52,7 +52,7 @@ def main():
     print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
     descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
                  return_layer='pool5',
-                 batch_size=40, use_gpu=True, gpu_device_id=3)
+                 batch_size=40, use_gpu=True, gpu_device_id=2)
     
     relevancy_index = LibSvmHikRelevancyIndex()
     

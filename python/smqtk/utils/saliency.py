@@ -416,7 +416,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     T_img.save(unmasked_img_path)
     T_img = np.array(T_img)
     
-    print("Masks generation for first sweep...")
+    print("Masks and masked img generation for first sweep...")
     start=datetime.now()
     masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
     #masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
@@ -434,9 +434,12 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
         masked_img_paths.append(save_path)
     print(datetime.now()-start)
     
-    print("Computing descriptors for first sweep...") 
+    print("Data elements from URIs...") 
     start=datetime.now()
     des = [from_uri(path) for path in masked_img_paths]
+    print(datetime.now()-start)
+    print("Computing descriptors for first sweep...") 
+    start=datetime.now()
     m = descriptor_generator.compute_descriptor_async(des)
     print(datetime.now()-start)
     
@@ -457,35 +460,43 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     diffs = []
     for i in range(len(masks)):
         diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
-    l = 0.1
+    l = 0.3
     second_sweep_size = int(np.floor(l * len(diffs)))
     diffss = np.array(diffs)
     indices = (-diffss).argsort()[:second_sweep_size]
-    subs = [submasks_from_mask(i,6,4) for i in indices]
+    rel_subs = [submasks_from_mask(i,6,4) for i in indices]
+    rel_subs = np.unique(np.asarray(rel_subs)).tolist()
     print(datetime.now()-start)
     
     print("Submasks generation for second sweep...")
     start=datetime.now()
     submasks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(24,24))
-    
+    rel_submasks = np.take(submasks, rel_subs, axis=0)
+    pdb.set_trace()
     submasked_imgs = generate_masked_imgs(submasks, T_img)
     submasked_img_paths = []
     print(datetime.now()-start)
     
+    print("Select the relevant submasks...")
+    rel_submasks = np.unique(np.asarray(subs)).tolist()
+    rel_submasked_imgs = np.unique(np.asarray(subs)).tolist()
     
     print("Submasks file i/o...")
     start=datetime.now()
-    for i, masked_img in enumerate(masked_imgs):
+    for i, masked_img in enumerate(rel_masked_imgs):
         img = PIL.Image.fromarray(masked_img.astype(np.uint8))
         save_path = os.path.join(path, "submasked_img_{:04d}.png".format(i))
         img.save(save_path)
         masked_img_paths.append(save_path)
-    
     print(datetime.now()-start)
     
     pdb.set_trace()
     
-    print("Reranking...")
+    print("Subs Reranking...")
+    start = datetime.now()
+    relevancy_index.build_index(img_fs)
+    RI_scores = relevancy_index.rank(*ADJs)
+    print(datetime.now()-start)
     
     print("Adding up saliency maps...")
     start=datetime.now()
@@ -496,7 +507,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
         diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
         #diffs.append(diff)
         cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
-    pdb.set_trace()
+    #pdb.set_trace()
     res_sa = np.sum(cur_filters, axis=0) / count
     sa_threshhold = 0.2 ##Picked this value to get better looking images.
     sa_max = np.max(res_sa)

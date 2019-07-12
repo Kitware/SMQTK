@@ -123,14 +123,13 @@ def generate_block_masks(window_size, stride, image_size):
     :return: the sliding window style masks
     :rtype: numpy array
     """
-    ##I took out the parts where we fetch from file because generating the masks was so fast. Could be put back in I guess.
     grid_num_r = (image_size[0] - window_size) // stride + 1
     grid_num_c = (image_size[1] - window_size) // stride + 1
     mask_num = grid_num_r * grid_num_c
-    print('mask_num {}'.format(mask_num))
+    print('mask_num: {}'.format(mask_num))
     masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.int64)
     i = 0
-    for r in tqdm(np.arange(0, image_size[0] - window_size + 1, stride), total=grid_num_r, desc="Generating mask rows..."):
+    for r in np.arange(0, image_size[0] - window_size + 1, stride):
         for c in np.arange(0, image_size[1] - window_size + 1, stride):
             masks[i, r:r + window_size, c:c + window_size] = 0
             i += 1
@@ -312,7 +311,7 @@ def combine_maps(masks, img_fs, RI_scores):
     filter_sum = np.sum(cur_filters, axis=0)
     res_sa = np.divide(filter_sum, count, casting='unsafe')
     res_sa = np.nan_to_num(res_sa, copy=False) #sets nan to 0
-    sa_threshhold = 0.2 ##Picked this value to get better looking images.
+    sa_threshhold = 0.4 ##Picked this value to get better looking images.
     sa_max = np.max(res_sa)
     res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
 
@@ -403,6 +402,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     [1] Note: 
     """
     #temp holding path
+    big_start = datetime.now()
     path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
     
     T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
@@ -413,7 +413,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     print("Generating masks and masked imgs")
     start=datetime.now()
     #masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(15,15))
-    masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    masks = generate_block_masks(window_size=56, stride=9, image_size=(T_img.shape[1],T_img.shape[0]))
     masked_imgs = generate_masked_imgs(masks, T_img)
     print(datetime.now()-start)
     
@@ -450,6 +450,8 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     S_img = overlay_saliency_map(res_sa, T_img)
     print(datetime.now()-start)
     
+    print("Total time: ")
+    print(datetime.now()-big_start)
     return S_img
 
 
@@ -481,6 +483,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     [1] Note: 
     """
     #temp holding path
+    big_start = datetime.now()
     path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
     
     T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
@@ -490,8 +493,8 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Masks and masked img generation for first sweep...")
     start=datetime.now()
-    masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
-    #masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    #masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
+    masks = generate_block_masks(window_size=56, stride=35, image_size=(T_img.shape[1],T_img.shape[0]))
     masked_imgs = generate_masked_imgs(masks, T_img)
     print(datetime.now()-start)
     
@@ -524,7 +527,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Selecting elaboration region...")
     start=datetime.now()
-    l = 0.1
+    l = 0.05
     #rel_subs = highest_saliency_indices_of_subs(img_fs, RI_scores, l)
     rel_masks_indices = highest_saliency_indices(img_fs, RI_scores, l)
     rel_masks = np.take(masks, rel_masks_indices, axis=0)
@@ -535,7 +538,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Generate submasks for second sweep...")
     start=datetime.now()
-    submasks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    submasks = generate_block_masks(window_size=56, stride=9, image_size=(T_img.shape[1],T_img.shape[0]))
     print(datetime.now()-start)
 
     print("Find intersection...")
@@ -576,7 +579,9 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Adding up saliency maps...")
     start=datetime.now()
-    res_sa = combine_maps(np.asarray(rel_submasks), subimg_fs, sub_RI_scores)#combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores)
+    #res_sa = combine_maps(masks, img_fs, RI_scores)
+    res_sa = combine_maps(np.asarray(rel_submasks), subimg_fs, sub_RI_scores)
+    #res_sa = combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores)
     print(datetime.now()-start)
 
     print("Overlaying saliency map...")
@@ -584,4 +589,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     S_img = overlay_saliency_map(res_sa, T_img)
     print(datetime.now()-start)
     
+    print("Total time: ")
+    print(datetime.now()-big_start)
+
     return S_img

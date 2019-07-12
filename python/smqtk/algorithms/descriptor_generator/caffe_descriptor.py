@@ -339,6 +339,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             'image/tiff',
             'image/png',
             'image/jpeg',
+            'image/bmp',
         }
 
     def _compute_descriptor(self, data):
@@ -429,12 +430,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                         "elements.")
         pr = ProgressReporter(self._log.debug, 1.0).start()
         for data in data_iter:
-            ct = data.content_type()
-            if ct not in self.valid_content_types():
-                self._log.error("Cannot compute descriptor from content type "
-                                "'%s' data: %s)" % (ct, data))
-                raise ValueError("Cannot compute descriptor from content type "
-                                 "'%s' data: %s)" % (ct, data))
+            self.raise_valid_element(data,
+                                     message="Cannot compute descriptor from "
+                                             "content type '{}' data: {})"
+                                             .format(data.content_type(),
+                                                     data))
             data_elements[data.uuid()] = data
             descr_elements[data.uuid()] = \
                 descr_factory.new_descriptor(self.name, data.uuid())

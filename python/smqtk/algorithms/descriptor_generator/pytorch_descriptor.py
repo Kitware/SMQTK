@@ -148,7 +148,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got {})".format(self.batch_size)
 
-        assert (len(self._resize_val) == 2)
+        assert (len(self.resize_val) == 2)
 
         if self.use_gpu:
             gpu_list = [x for x in range(torch.cuda.device_count())]

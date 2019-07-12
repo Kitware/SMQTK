@@ -45,6 +45,11 @@ def cli_parser():
                         help='Use fast saliency map '
                         'generation method. ')
 
+    parser.add_argument('--pytorch',
+                        default=False, action='store_true',
+                        help='Use PyTorch insted of Caffe descriptor'
+                             'generator.')
+
     return parser
 
 def main():
@@ -66,6 +71,7 @@ def main():
     pos_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_flower.jpg'
     neg_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_self.jpg'
     fast = args.fast
+    pytorch = args.pytorch
     out_img_path = os.path.join(args.output_dir, "output.jpg")
     if fast:
         out_img_path = os.path.join(args.output_dir, "output_fast.jpg")
@@ -83,11 +89,12 @@ def main():
     query_img = PIL.Image.open(pos_img_path)
     
     print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
-    # descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
-    #              return_layer='pool5',
-    #              batch_size=10, use_gpu=True, gpu_device_id=2)
-    descriptor_generator = PytorchDescriptorGenerator("ImageNet_ResNet50", model_uri=None, resize_val=(224, 224),
-                                                       batch_size=10, use_gpu=True, in_gpu_device_id=2)
+    descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
+                 return_layer='pool5',
+                 batch_size=10, use_gpu=True, gpu_device_id=2)
+    if pytorch:
+        descriptor_generator = PytorchDescriptorGenerator("ImageNet_ResNet50", model_uri=None,
+                                                           batch_size=10, use_gpu=True, in_gpu_device_id=2)
     
     relevancy_index = LibSvmHikRelevancyIndex()
     

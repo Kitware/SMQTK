@@ -37,7 +37,7 @@ def cli_parser():
                         default='/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/', 
                         metavar='PATH',
                         help='Directory in which we will save the '
-                        	  'output image. ')
+                              'output image. ')
 
     parser.add_argument('--fast',
                         default=False, action='store_true',
@@ -67,7 +67,7 @@ def main():
     fast = args.fast
     out_img_path = os.path.join(args.output_dir, "output.jpg")
     if fast:
-    	out_img_path = os.path.join(args.output_dir, "output_fast.jpg")
+        out_img_path = os.path.join(args.output_dir, "output_fast.jpg")
 
 
     if not os.path.isfile(in_img_path):
@@ -94,9 +94,9 @@ def main():
     ADJs = (pos, neg)
 
     if fast:
-    	overlayed_img = saliency.generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs)
+        overlayed_img = saliency.generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs)
     else:
-    	overlayed_img = saliency.generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs)
+        overlayed_img = saliency.generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs)
 
 
     

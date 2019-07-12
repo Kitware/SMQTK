@@ -291,13 +291,13 @@ def generate_saliency_map_Bo(T_img, descriptor_generator, query_img):
 
 
 def save_imgs_to_file(imgs_list, path, rootname):
-	filepaths = []
-	for i, masked_img in enumerate(imgs_list):
-		img = PIL.Image.fromarray(masked_img.astype(np.uint8))
-		save_path = os.path.join(path, "{}{:04d}.png".format(rootname,i))
-		img.save(save_path)
-		filepaths.append(save_path)
-	return filepaths
+    filepaths = []
+    for i, masked_img in enumerate(imgs_list):
+        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
+        save_path = os.path.join(path, "{}{:04d}.png".format(rootname,i))
+        img.save(save_path)
+        filepaths.append(save_path)
+    return filepaths
 
 
 def combine_maps(masks, img_fs, RI_scores):
@@ -328,9 +328,9 @@ def combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_
         diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]]
         cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
     for i in range(len(rel_submasks)):
-    	j = i + len(masks)
-    	diff = sub_RI_scores[subimg_fs[i]] - sub_RI_scores[subimg_fs[-1]]
-    	cur_filters[j] = (1.0 - cur_filters[j]) * np.clip(16*diff, a_min=0.0, a_max=None)
+        j = i + len(masks)
+        diff = sub_RI_scores[subimg_fs[i]] - sub_RI_scores[subimg_fs[-1]]
+        cur_filters[j] = (1.0 - cur_filters[j]) * np.clip(16*diff, a_min=0.0, a_max=None)
     #pdb.set_trace()
     filter_sum = np.sum(cur_filters, axis=0)
     res_sa = np.divide(filter_sum, count, casting='unsafe')
@@ -342,16 +342,16 @@ def combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_
 
 
 def highest_saliency_indices(img_fs, RI_scores, l):
-	diffs = []
-	for i in range(len(img_fs) - 1):
-		diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
-	second_sweep_size = int(np.floor(l * len(diffs)))
-	diffss = np.array(diffs)
-	indices = (-diffss).argsort()[:second_sweep_size]
-	rel_subs = [submasks_from_mask(i,6,4) for i in indices]
-	rel_subs = np.unique(np.asarray(rel_subs)).tolist()
+    diffs = []
+    for i in range(len(img_fs) - 1):
+        diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
+    second_sweep_size = int(np.floor(l * len(diffs)))
+    diffss = np.array(diffs)
+    indices = (-diffss).argsort()[:second_sweep_size]
+    rel_subs = [submasks_from_mask(i,6,4) for i in indices]
+    rel_subs = np.unique(np.asarray(rel_subs)).tolist()
 
-	return rel_subs
+    return rel_subs
 
 
 def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):

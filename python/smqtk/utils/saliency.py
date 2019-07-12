@@ -311,6 +311,7 @@ def combine_maps(masks, img_fs, RI_scores):
     
     filter_sum = np.sum(cur_filters, axis=0)
     res_sa = np.divide(filter_sum, count, casting='unsafe')
+    res_sa = np.nan_to_num(res_sa, copy=False) #sets nan to 0
     sa_threshhold = 0.2 ##Picked this value to get better looking images.
     sa_max = np.max(res_sa)
     res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
@@ -334,7 +335,8 @@ def combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_
     #pdb.set_trace()
     filter_sum = np.sum(cur_filters, axis=0)
     res_sa = np.divide(filter_sum, count, casting='unsafe')
-    sa_threshhold = 0.4 ##Picked this value to get better looking images.
+    res_sa = np.nan_to_num(res_sa, copy=False) #sets nan to 0
+    sa_threshhold = 0.2 ##Picked this value to get better looking images.
     sa_max = np.max(res_sa)
     res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
 
@@ -342,16 +344,35 @@ def combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_
 
 
 def highest_saliency_indices(img_fs, RI_scores, l):
+    #returns the indices of the l (proportion) most salient masks
     diffs = []
     for i in range(len(img_fs) - 1):
         diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
     second_sweep_size = int(np.floor(l * len(diffs)))
     diffss = np.array(diffs)
     indices = (-diffss).argsort()[:second_sweep_size]
+
+    return indices
+
+
+def highest_saliency_indices_of_subs(img_fs, RI_scores, l):
+    #find the indices of the submasks under the highest saliency masks
+    indices = highest_saliency_indices(img_fs, RI_scores, l)
     rel_subs = [submasks_from_mask(i,6,4) for i in indices]
     rel_subs = np.unique(np.asarray(rel_subs)).tolist()
 
     return rel_subs
+
+
+def find_intersection(masks, region):
+    #returns the masks in masks that intersect with region
+    masked_masks = []
+    for mask in masks:
+        intersection = np.max(np.multiply((1 - mask), (1 - region)))
+        if intersection > 0:
+            masked_masks.append(mask)
+
+    return masked_masks
 
 
 def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
@@ -392,7 +413,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     print("Generating masks and masked imgs")
     start=datetime.now()
     #masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(15,15))
-    masks = generate_block_masks(window_size=56, stride=9, image_size=(T_img.shape[1],T_img.shape[0]))
+    masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
     masked_imgs = generate_masked_imgs(masks, T_img)
     print(datetime.now()-start)
     
@@ -501,17 +522,27 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     RI_scores = relevancy_index.rank(*ADJs)
     print(datetime.now()-start)
     
-    print("Selecting elaboration points...")
+    print("Selecting elaboration region...")
     start=datetime.now()
-    l = 0.03
-    rel_subs = highest_saliency_indices(img_fs, RI_scores, l)
+    l = 0.1
+    #rel_subs = highest_saliency_indices_of_subs(img_fs, RI_scores, l)
+    rel_masks_indices = highest_saliency_indices(img_fs, RI_scores, l)
+    rel_masks = np.take(masks, rel_masks_indices, axis=0)
+    region = np.ones(masks[0].shape, dtype=np.int64)
+    for mask in rel_masks:
+        region = np.multiply(region, mask)
     print(datetime.now()-start)
     
-    print("Relevant submasks generation for second sweep...")
+    print("Generate submasks for second sweep...")
     start=datetime.now()
-    submasks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(24,24))
-    rel_submasks = np.take(submasks, rel_subs, axis=0)
+    submasks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    print(datetime.now()-start)
+
+    print("Find intersection...")
+    start=datetime.now()
+    rel_submasks = find_intersection(submasks, region)
     submasked_imgs = generate_masked_imgs(rel_submasks, T_img)
+    print("{} out of {} masks are relevant.".format(len(rel_submasks), len(submasks)))
     print(datetime.now()-start)
     
     print("Submasks file i/o...")
@@ -545,7 +576,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Adding up saliency maps...")
     start=datetime.now()
-    res_sa = combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores)
+    res_sa = combine_maps(np.asarray(rel_submasks), subimg_fs, sub_RI_scores)#combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores)
     print(datetime.now()-start)
 
     print("Overlaying saliency map...")

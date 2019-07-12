@@ -15,6 +15,7 @@ import logging
 from smqtk.utils.bin_utils import basic_cli_parser
 
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
+from smqtk.algorithms.descriptor_generator.pytorch_descriptor import PytorchDescriptorGenerator
 from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
 from smqtk.representation.data_element import from_uri
 
@@ -82,9 +83,11 @@ def main():
     query_img = PIL.Image.open(pos_img_path)
     
     print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
-    descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
-                 return_layer='pool5',
-                 batch_size=10, use_gpu=True, gpu_device_id=2)
+    # descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
+    #              return_layer='pool5',
+    #              batch_size=10, use_gpu=True, gpu_device_id=2)
+    descriptor_generator = PytorchDescriptorGenerator("ImageNet_ResNet50", model_uri=None, resize_val=(224, 224),
+                                                       batch_size=10, use_gpu=True, in_gpu_device_id=2)
     
     relevancy_index = LibSvmHikRelevancyIndex()
     

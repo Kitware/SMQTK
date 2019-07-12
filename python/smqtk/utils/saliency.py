@@ -42,16 +42,17 @@ def generate_block_masks_from_gridsize(image_size, grid_size=(5,5)):
     grid_num_c = (image_size[1] - window_size[1]) // stride[1] + 1
     mask_num = grid_num_r * grid_num_c
     print('mask_num {}'.format(mask_num))
-    masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.float32)
+    masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.int64)
     i = 0
     for r in np.arange(0, image_size[0] - window_size[0] + 1, stride[0]):
         for c in np.arange(0, image_size[1] - window_size[1] + 1, stride[1]):
-            masks[i, r:r + window_size[0], c:c + window_size[1]] = 0.0
+            masks[i, r:r + window_size[0], c:c + window_size[1]] = 0
             i += 1
 
     masks = masks.reshape(-1, *image_size, 1)
 
     return masks
+
 
 def get_rc(index, grid_size):
     
@@ -60,11 +61,13 @@ def get_rc(index, grid_size):
     
     return r, c
 
+
 def get_index(row, col, grid_size):
     
     index = grid_size * row + col
     
     return index
+
 
 def submasks_from_mask(mask_num, grid_size, subgrid_size):
     """
@@ -125,11 +128,11 @@ def generate_block_masks(window_size, stride, image_size):
     grid_num_c = (image_size[1] - window_size) // stride + 1
     mask_num = grid_num_r * grid_num_c
     print('mask_num {}'.format(mask_num))
-    masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.float32)
+    masks = np.ones((mask_num, image_size[0], image_size[1]), dtype=np.int64)
     i = 0
     for r in tqdm(np.arange(0, image_size[0] - window_size + 1, stride), total=grid_num_r, desc="Generating mask rows..."):
         for c in np.arange(0, image_size[1] - window_size + 1, stride):
-            masks[i, r:r + window_size, c:c + window_size] = 0.0
+            masks[i, r:r + window_size, c:c + window_size] = 0
             i += 1
 
     masks = masks.reshape(-1, *image_size, 1)
@@ -145,7 +148,7 @@ def generate_masked_imgs(masks, img):
     """
     masked_imgs = []
     for mask in masks:
-        masked_img = np.multiply(mask, img)
+        masked_img = np.multiply(mask, img, casting='unsafe')
         masked_imgs.append(masked_img)
 
     return masked_imgs
@@ -194,7 +197,7 @@ def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy ins
     return im
 
 
-def print_img(img, path='/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/output.jpg'):
+def print_img(img, path='/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/print_from_debugger.jpg'):
     img = PIL.Image.fromarray(img.astype(np.uint8))
     img.save(path)
     
@@ -287,6 +290,70 @@ def generate_saliency_map_Bo(T_img, descriptor_generator, query_img):
     return S_img
 
 
+def save_imgs_to_file(imgs_list, path, rootname):
+	filepaths = []
+	for i, masked_img in enumerate(imgs_list):
+		img = PIL.Image.fromarray(masked_img.astype(np.uint8))
+		save_path = os.path.join(path, "{}{:04d}.png".format(rootname,i))
+		img.save(save_path)
+		filepaths.append(save_path)
+	return filepaths
+
+
+def combine_maps(masks, img_fs, RI_scores):
+    cur_filters = copy.deepcopy(masks)
+    count = masks.shape[0] - np.sum(cur_filters, axis=0)
+    cur_filters = cur_filters.astype(np.float64)
+    
+    for i in range(len(cur_filters)):
+        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]]
+        cur_filters[i] = np.multiply((1 - cur_filters[i]), np.clip(diff, a_min=0.0, a_max=None), casting='unsafe')
+    
+    filter_sum = np.sum(cur_filters, axis=0)
+    res_sa = np.divide(filter_sum, count, casting='unsafe')
+    sa_threshhold = 0.2 ##Picked this value to get better looking images.
+    sa_max = np.max(res_sa)
+    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+
+    return res_sa
+
+
+def combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores):
+    all_masks = np.concatenate((masks, rel_submasks),axis=0)
+    cur_filters = copy.deepcopy(all_masks)
+    count = all_masks.shape[0] - np.sum(cur_filters, axis=0)
+    cur_filters = cur_filters.astype(np.float64)
+
+    for i in range(len(masks)):
+        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]]
+        cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
+    for i in range(len(rel_submasks)):
+    	j = i + len(masks)
+    	diff = sub_RI_scores[subimg_fs[i]] - sub_RI_scores[subimg_fs[-1]]
+    	cur_filters[j] = (1.0 - cur_filters[j]) * np.clip(16*diff, a_min=0.0, a_max=None)
+    #pdb.set_trace()
+    filter_sum = np.sum(cur_filters, axis=0)
+    res_sa = np.divide(filter_sum, count, casting='unsafe')
+    sa_threshhold = 0.4 ##Picked this value to get better looking images.
+    sa_max = np.max(res_sa)
+    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+
+    return res_sa
+
+
+def highest_saliency_indices(img_fs, RI_scores, l):
+	diffs = []
+	for i in range(len(img_fs) - 1):
+		diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
+	second_sweep_size = int(np.floor(l * len(diffs)))
+	diffss = np.array(diffs)
+	indices = (-diffss).argsort()[:second_sweep_size]
+	rel_subs = [submasks_from_mask(i,6,4) for i in indices]
+	rel_subs = np.unique(np.asarray(rel_subs)).tolist()
+
+	return rel_subs
+
+
 def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     """
     Find the saliency map for an image. The context for the saliency map is 
@@ -298,7 +365,7 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     :param descriptor_generator: The descriptor generator used by the relevancy 
     index. 
     :type descriptor_generator: DescriptorGenerator, a custom class
-    
+    (
     :param relevancy_index: The relevancy index item.
     :type relevancy_index: RelevancyIndex, a custom class
     
@@ -316,42 +383,36 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     """
     #temp holding path
     path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
-        
-    #resize T_img
-    #T_img = (PIL.Image.fromarray(T_img))
+    
     T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
     unmasked_img_path = os.path.join(path, "unmasked_img.png")
     T_img.save(unmasked_img_path)
     T_img = np.array(T_img)
     
+    print("Generating masks and masked imgs")
     start=datetime.now()
     #masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(15,15))
-    masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
+    masks = generate_block_masks(window_size=56, stride=9, image_size=(T_img.shape[1],T_img.shape[0]))
     masked_imgs = generate_masked_imgs(masks, T_img)
-    masked_img_paths = []
     print(datetime.now()-start)
-    
     
     print("Masks file i/o...")
     start=datetime.now()
-    for i, masked_img in enumerate(masked_imgs):
-        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
-        save_path = os.path.join(path, "masked_img_{:04d}.png".format(i))
-        img.save(save_path)
-        masked_img_paths.append(save_path)
-    
+    masked_img_paths = save_imgs_to_file(masked_imgs, path, "masked_img_")
     print(datetime.now()-start)
     
     print("Computing descriptors...") 
     start=datetime.now()
-    des = [from_uri(path) for path in masked_img_paths]
-    m = descriptor_generator.compute_descriptor_async(des)
+    masked_img_des = [from_uri(path) for path in masked_img_paths]
+    m = descriptor_generator.compute_descriptor_async(masked_img_des)
     print(datetime.now()-start)
+
     print("Put descriptors into list...") 
     start = datetime.now()
-    img_fs = [m[de.uuid()] for de in des]
+    img_fs = [m[de.uuid()] for de in masked_img_des]
     print(datetime.now()-start)
     img_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
+
     print("Ranking...")
     start = datetime.now()
     relevancy_index.build_index(img_fs)
@@ -359,25 +420,17 @@ def generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs):
     print(datetime.now()-start)
     
     print("Adding up saliency maps...")
-    start=datetime.now()
-    cur_filters = copy.deepcopy(masks)
-    count = masks.shape[0] - np.sum(cur_filters, axis=0)
-    
-    for i in range(len(cur_filters)):
-        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
-        cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
-
-    res_sa = np.sum(cur_filters, axis=0) / count
-    sa_threshhold = 0.2 ##Picked this value to get better looking images.
-    sa_max = np.max(res_sa)
-    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+    start = datetime.now()
+    res_sa = combine_maps(masks, img_fs, RI_scores)
     print(datetime.now()-start)
+
     print("Overlaying saliency map...")
     start=datetime.now()
     S_img = overlay_saliency_map(res_sa, T_img)
     print(datetime.now()-start)
     
     return S_img
+
 
 def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs):
     """
@@ -408,9 +461,7 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     """
     #temp holding path
     path = "/home/local/KHQ/alina.barnett/AlinaCode/imgs/TEMP/masked_imgs"
-        
-    #resize T_img
-    #T_img = (PIL.Image.fromarray(T_img))
+    
     T_img = T_img.resize((224,224),resample=PIL.Image.BICUBIC)
     unmasked_img_path = os.path.join(path, "unmasked_img.png")
     T_img.save(unmasked_img_path)
@@ -421,23 +472,18 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     masks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(6,6))
     #masks = generate_block_masks(window_size=56, stride=14, image_size=(T_img.shape[1],T_img.shape[0]))
     masked_imgs = generate_masked_imgs(masks, T_img)
-    masked_img_paths = []
     print(datetime.now()-start)
-    
     
     print("Masks file i/o...")
     start=datetime.now()
-    for i, masked_img in enumerate(masked_imgs):
-        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
-        save_path = os.path.join(path, "masked_img_{:04d}.png".format(i))
-        img.save(save_path)
-        masked_img_paths.append(save_path)
+    masked_img_paths = save_imgs_to_file(masked_imgs, path, "masked_img_")
     print(datetime.now()-start)
     
     print("Data elements from URIs...") 
     start=datetime.now()
     des = [from_uri(path) for path in masked_img_paths]
     print(datetime.now()-start)
+
     print("Computing descriptors for first sweep...") 
     start=datetime.now()
     m = descriptor_generator.compute_descriptor_async(des)
@@ -457,62 +503,51 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     
     print("Selecting elaboration points...")
     start=datetime.now()
-    diffs = []
-    for i in range(len(masks)):
-        diffs.append(RI_scores[img_fs[i]] - RI_scores[img_fs[-1]])
-    l = 0.3
-    second_sweep_size = int(np.floor(l * len(diffs)))
-    diffss = np.array(diffs)
-    indices = (-diffss).argsort()[:second_sweep_size]
-    rel_subs = [submasks_from_mask(i,6,4) for i in indices]
-    rel_subs = np.unique(np.asarray(rel_subs)).tolist()
+    l = 0.03
+    rel_subs = highest_saliency_indices(img_fs, RI_scores, l)
     print(datetime.now()-start)
     
-    print("Submasks generation for second sweep...")
+    print("Relevant submasks generation for second sweep...")
     start=datetime.now()
     submasks = generate_block_masks_from_gridsize(image_size=(T_img.shape[1],T_img.shape[0]), grid_size=(24,24))
     rel_submasks = np.take(submasks, rel_subs, axis=0)
-    pdb.set_trace()
-    submasked_imgs = generate_masked_imgs(submasks, T_img)
-    submasked_img_paths = []
+    submasked_imgs = generate_masked_imgs(rel_submasks, T_img)
     print(datetime.now()-start)
-    
-    print("Select the relevant submasks...")
-    rel_submasks = np.unique(np.asarray(subs)).tolist()
-    rel_submasked_imgs = np.unique(np.asarray(subs)).tolist()
     
     print("Submasks file i/o...")
     start=datetime.now()
-    for i, masked_img in enumerate(rel_masked_imgs):
-        img = PIL.Image.fromarray(masked_img.astype(np.uint8))
-        save_path = os.path.join(path, "submasked_img_{:04d}.png".format(i))
-        img.save(save_path)
-        masked_img_paths.append(save_path)
+    submasked_img_paths = save_imgs_to_file(submasked_imgs, path, "submasked_img_")
     print(datetime.now()-start)
     
-    pdb.set_trace()
+    #pdb.set_trace()
+
+    print("Data elements from URIs...") 
+    start=datetime.now()
+    des = [from_uri(path) for path in submasked_img_paths]
+    print(datetime.now()-start)
+
+    print("Computing descriptors for second sweep...") 
+    start=datetime.now()
+    m = descriptor_generator.compute_descriptor_async(des)
+    print(datetime.now()-start)
+    
+    print("Put descriptors into list...") 
+    start = datetime.now()
+    subimg_fs = [m[de.uuid()] for de in des]
+    print(datetime.now()-start)
+    subimg_fs.append(descriptor_generator.compute_descriptor(from_uri(unmasked_img_path)))
     
     print("Subs Reranking...")
     start = datetime.now()
-    relevancy_index.build_index(img_fs)
-    RI_scores = relevancy_index.rank(*ADJs)
+    relevancy_index.build_index(subimg_fs)
+    sub_RI_scores = relevancy_index.rank(*ADJs)
     print(datetime.now()-start)
     
     print("Adding up saliency maps...")
     start=datetime.now()
-    cur_filters = copy.deepcopy(masks)
-    count = masks.shape[0] - np.sum(cur_filters, axis=0)
-    
-    for i in range(len(cur_filters)):
-        diff = RI_scores[img_fs[i]] - RI_scores[img_fs[-1]] ##SVM method
-        #diffs.append(diff)
-        cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(diff, a_min=0.0, a_max=None)
-    #pdb.set_trace()
-    res_sa = np.sum(cur_filters, axis=0) / count
-    sa_threshhold = 0.2 ##Picked this value to get better looking images.
-    sa_max = np.max(res_sa)
-    res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+    res_sa = combine_maps_subs(masks, rel_submasks, img_fs, subimg_fs, RI_scores, sub_RI_scores)
     print(datetime.now()-start)
+
     print("Overlaying saliency map...")
     start=datetime.now()
     S_img = overlay_saliency_map(res_sa, T_img)

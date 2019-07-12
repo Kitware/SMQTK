@@ -12,6 +12,8 @@ import scipy.misc
 import PIL.Image
 import logging
 
+from smqtk.utils.bin_utils import basic_cli_parser
+
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
 from smqtk.algorithms.relevancy_index.libsvm_hik import LibSvmHikRelevancyIndex
 from smqtk.representation.data_element import from_uri
@@ -22,21 +24,51 @@ from smqtk.utils import saliency
 __author__ = "alina.barnett@kitware.com"
 
 
+def cli_parser():
+    parser = basic_cli_parser(__doc__)
+
+    parser.add_argument('-in', '--input',
+                        default='/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img.jpg', 
+                        metavar='PATH',
+                        help='Path to the image file we will find the '
+                             'saliency map for.')
+
+    parser.add_argument('-out', '--output-dir',
+                        default='/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/', 
+                        metavar='PATH',
+                        help='Directory in which we will save the '
+                        	  'output image. ')
+
+    parser.add_argument('--fast',
+                        default=False, action='store_true',
+                        help='Use fast saliency map '
+                        'generation method. ')
+
+    return parser
+
 def main():
-    
+    parser = cli_parser()
+    args = parser.parse_args()
+
     logging.basicConfig()
     #logging.getLogger('smqtk').setLevel(logging.DEBUG)
     # paths
 
-    T_img_name = 'test_img'
-    in_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/' + T_img_name + '.jpg'
-    out_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_SVM_fast.jpg'
-    out_img_path_Bo = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_Bo.jpg'
+    #T_img_name = 'test_img'
+    #in_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/' + T_img_name + '.jpg'
+    in_img_path = args.input
+    #out_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_SVM_fast.jpg'
+    #out_img_path_Bo = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/sa_imgs/' + T_img_name + '_sa_Bo.jpg'
     network_prototxt_uri = '/home/local/KHQ/alina.barnett/AlinaCode/models/caffe_ResNet50/ResNet-50-deploy.prototxt'
     network_model_uri = '/home/local/KHQ/alina.barnett/AlinaCode/models/caffe_ResNet50/ResNet-50-model.caffemodel'
     image_mean_uri = '/home/local/KHQ/alina.barnett/AlinaCode/models/caffe_ResNet50/ResNet_mean.binaryproto'
     pos_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_flower.jpg'
     neg_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_self.jpg'
+    fast = args.fast
+    out_img_path = os.path.join(args.output_dir, "output.jpg")
+    if fast:
+    	out_img_path = os.path.join(args.output_dir, "output_fast.jpg")
+
 
     if not os.path.isfile(in_img_path):
         print("Given in_img_path did not point to a file at {}.".format(in_img_path))
@@ -52,7 +84,7 @@ def main():
     print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
     descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
                  return_layer='pool5',
-                 batch_size=40, use_gpu=True, gpu_device_id=2)
+                 batch_size=10, use_gpu=True, gpu_device_id=2)
     
     relevancy_index = LibSvmHikRelevancyIndex()
     
@@ -61,7 +93,12 @@ def main():
     
     ADJs = (pos, neg)
 
-    overlayed_img = saliency.generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs)
+    if fast:
+    	overlayed_img = saliency.generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJs)
+    else:
+    	overlayed_img = saliency.generate_saliency_map(T_img, descriptor_generator, relevancy_index, ADJs)
+
+
     
     #overlayed_img_Bo = saliency.generate_saliency_map_Bo(T_img, descriptor_generator, query_img)
     

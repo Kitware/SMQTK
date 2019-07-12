@@ -40,6 +40,12 @@ def cli_parser():
                         help='Directory in which we will save the '
                               'output image. ')
 
+    parser.add_argument('-outname', '--output-name',
+                        default='output.jpg', 
+                        metavar='str',
+                        help='Name for the output image. '
+                              )
+
     parser.add_argument('--fast',
                         default=False, action='store_true',
                         help='Use fast saliency map '
@@ -72,9 +78,7 @@ def main():
     neg_img_path = '/home/local/KHQ/alina.barnett/AlinaCode/imgs/test_imgs/test_img_self.jpg'
     fast = args.fast
     pytorch = args.pytorch
-    out_img_path = os.path.join(args.output_dir, "output.jpg")
-    if fast:
-        out_img_path = os.path.join(args.output_dir, "output_fast.jpg")
+    out_img_path = os.path.join(args.output_dir, args.output_name)
 
 
     if not os.path.isfile(in_img_path):
@@ -88,13 +92,15 @@ def main():
     T_img = PIL.Image.open(in_img_path)
     query_img = PIL.Image.open(pos_img_path)
     
-    print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
-    descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
-                 return_layer='pool5',
-                 batch_size=10, use_gpu=True, gpu_device_id=2)
+    
     if pytorch:
         descriptor_generator = PytorchDescriptorGenerator("ImageNet_ResNet50", model_uri=None,
                                                            batch_size=10, use_gpu=True, in_gpu_device_id=2)
+    else:
+        descriptor_generator = CaffeDescriptorGenerator(network_prototxt_uri, network_model_uri, image_mean_uri,
+                 return_layer='pool5',
+                 batch_size=10, use_gpu=True, gpu_device_id=2)
+        print("Setting up caffe model from files: {}, {}, {}.".format(network_prototxt_uri, network_model_uri, image_mean_uri))
     
     relevancy_index = LibSvmHikRelevancyIndex()
     

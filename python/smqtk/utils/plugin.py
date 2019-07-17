@@ -285,7 +285,10 @@ def make_config(plugin_map):
     :rtype: dict[str, object]
 
     """
-    d = {"type": None}
+    try:
+        d={"type":(list(plugin_map.keys())[0])}
+    except:   
+        d = {"type": None}
     for label, cls in six.iteritems(plugin_map):
         # noinspection PyUnresolvedReferences
         d[label] = cls.get_default_config()

@@ -1,6 +1,6 @@
 from ._interface import SaliencyBlackbox, ImageSaliencyAugmenter
 from smqtk.utils import plugin
-
+import os
 
 def get_saliency_blackbox_impls(reload_modules=False):
     """

@@ -107,7 +107,6 @@ def main():
     # Configure DescriptorGenerator algorithm implementation, parameters and
     # persistent model component locations (if implementation has any).
     descriptor_generator_config = iqr_plugins_config['descriptor_generator']
-
     # Configure NearestNeighborIndex algorithm implementation, parameters and
     # persistent model component locations (if implementation has any).
     nn_index_config = iqr_plugins_config['neighbor_index']

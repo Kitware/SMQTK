@@ -14,9 +14,12 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
 import pdb
+import six
+import matplotlib.pyplot as plt
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element import from_uri
 #from smqtk.utils.image_utils import overlay_saliency_map ##could use this function instead of what's written here for overlaying saliency map.
 
@@ -593,3 +596,103 @@ def generate_saliency_map_fast(T_img, descriptor_generator, relevancy_index, ADJ
     print(datetime.now()-big_start)
 
     return S_img
+
+
+def compute_saliency_map(base_image, descriptor_generator, augmenter,
+                         blackbox):
+    """
+    Compute the saliency map for an image with respect to some black-box
+    algorithm that transforms an image descriptor vector into a scalar
+    value.
+
+    :param np.ndarray base_image:
+        Image to generate the saliency map over.
+    :param smqtk.algorithms.DescriptorGenerator descriptor_generator:
+        Some descriptor generation algorithm to transform an image to a
+        feature space.
+    :param smqtk.algorithms.ImageSaliencyAugmenter augmenter:
+        Image augmentation algorithm to generate augmentation matrices
+    :param smqtk.algorithms.SaliencyBlackbox blackbox:
+        Black-box interface to generating saliency scores for input
+        descriptors.
+
+    :return: Saliency heat-map matrix with the same shape as the input image.
+    :rtype: np.ndarray"""
+    org_hw=base_image.size
+    base_image_PIL=base_image.resize((224,224) ,PIL.Image.BILINEAR)
+    base_image_np=np.array(base_image_PIL)
+    augs, masks = augmenter.augment(base_image_np)
+    
+    import pdb
+    #pdb.set_trace()    
+    idx_to_uuid = []
+    #for i,mask in enumerate(augs):
+        #PIL_mask=Image.fromarray(np.uint8(mask))
+        #PIL_mask.save("/home/local/KHQ/bhavan.vasu/saliency/SMQTK/python/smqtk/algorithms/saliency/masks/mask{}.png".format(i))
+    def iter_aug_img_data_elements():
+        for a in augs:
+            buff = six.BytesIO()
+            (a).save(buff, format="png")
+            de = DataMemoryElement(buff.getvalue(),
+                                   content_type='image/png')
+            idx_to_uuid.append(de.uuid())
+            yield de
+         
+    uuid_to_desc=descriptor_generator.compute_descriptor_async(iter_aug_img_data_elements())
+
+    scalar_vec = blackbox.transform((uuid_to_desc[uuid] for uuid in idx_to_uuid))
+    def overlay_saliency_map(sa_map, org_img): 
+        """
+	overlay the saliency map on top of original image
+	:param sa_map: saliency map
+	:type sa_map: numpy.array
+	:param org_img: Original image
+	:type org_img: numpy.array
+	:return: Overlayed image
+	:rtype: PIL Image
+	"""
+        plt.switch_backend('agg')
+        sizes = np.shape(sa_map)
+        height = float(sizes[0])
+        width = float(sizes[1])
+        sa_map.resize(sizes[0],sizes[1])
+        fig = plt.figure(dpi=int(height))
+        fig.set_size_inches((width / height), 1, forward=False)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(org_img)
+        ax.imshow(sa_map, cmap='jet', alpha=0.5)
+        fig.canvas.draw()
+        np_data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        np_data = np_data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+        im = PIL.Image.fromarray(np_data)
+        im_size = np.shape(im)
+        org_h =  im_size[1]
+        org_w = im_size[0]
+        im = im.resize((org_w, org_h), PIL.Image.BILINEAR)
+        plt.close()
+        return im
+
+    def weighted_avg(scalar_vec,masks):
+        masks = masks.reshape(-1,224,224,1)
+        cur_filters = copy.deepcopy(masks[:,:,:,0])
+        count = masks.shape[0] - np.sum(cur_filters, axis=0)
+        count = np.ones(count.shape)
+
+        for i in range(len(cur_filters)):
+            cur_filters[i] = (1.0 - cur_filters[i]) * np.clip(scalar_vec[i], a_min=0.0, a_max=None)
+        res_sa = np.sum(cur_filters, axis=0) / count
+        sa_threshhold = 0.2 
+        sa_max = np.max(res_sa)
+        res_sa = np.clip(res_sa, a_min=sa_max * sa_threshhold, a_max = None)
+        return res_sa
+    
+    final_sal_map=weighted_avg(scalar_vec,masks)
+    print("Overlaying saliency map...")
+    sal_map_ret=overlay_saliency_map(final_sal_map,base_image_np)
+    #sal_map_ret=Image.fromarray(final_sal_map)
+    sal_map_ret=sal_map_ret.resize((org_hw), PIL.Image.BILINEAR)
+   
+    return sal_map_ret
+

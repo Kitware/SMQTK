@@ -117,8 +117,8 @@ IqrRefineView.prototype.construct_refine_pane = function () {
 
     this.button_container_refine_top.append(
         this.button_refine_top,
-        this.button_show_saliency,
-        this.button_toggle_random
+        this.button_toggle_random,
+        this.button_show_saliency
     );
 
     this.button_container_refine_bot.append(

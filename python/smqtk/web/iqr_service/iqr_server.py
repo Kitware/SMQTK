@@ -9,17 +9,15 @@ import uuid
 import io
 from PIL import Image
 import numpy as np
-
-
 import flask
-
-# import smqtk.algorithms
+from numpy.random import randint
+from smqtk.algorithms.saliency import get_image_saliency_augmenter_impls,get_saliency_blackbox_impls
 from smqtk.algorithms import (
     get_classifier_impls,
     get_descriptor_generator_impls,
     get_nn_index_impls,
     get_relevancy_index_impls,
-    SupervisedClassifier,
+    SupervisedClassifier
 )
 from smqtk.iqr import (
     iqr_controller,
@@ -34,10 +32,15 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import (
     merge_dict,
     plugin,
-    saliency,
+    saliency
 )
 from smqtk.web import SmqtkWebApp
-
+#TODO:Import this from config file and add new saliency section in config
+#DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"image_sizes":224,}}
+#DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
+DFLT_AUG_CONFIG = { "type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
+DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
+#DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
 
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
@@ -215,7 +218,8 @@ class IqrService (SmqtkWebApp):
             json_config['iqr_service']['plugins']['descriptor_generator'],
             get_descriptor_generator_impls(),
         )
-
+        self.sal_augmenter=None
+        self.sal_blackbox=None
         #: :type: smqtk.representation.DescriptorIndex
         self.descriptor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['descriptor_index'],
@@ -228,7 +232,8 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-
+        self.sal_augmenter=plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
+        self.sal_blackbox=plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
 
@@ -382,13 +387,8 @@ class IqrService (SmqtkWebApp):
             return make_response_json("No image provided"), 400
         try:
             T_img_string = base64.b64decode(img_b64)
-            #T_img_array = np.fromstring(T_img_string, dtype=np.uint8) #beware of float64 vs uint8
-            img_container = io.BytesIO(T_img_string)
-            T_img_PIL = Image.open(img_container)
-            
-            #T_img_PIL = Image.open(img)
-        except Exception:
-            flask.current_app.logger.exception('could not open')
+            T_img = Image.open(io.BytesIO(T_img_string))
+        except:  # TODO: specific exception here please
             return make_response_json("Image could not be opened."), 400
 
         with self.controller:
@@ -396,29 +396,18 @@ class IqrService (SmqtkWebApp):
                 return make_response_json("session id '%s' not found" % sid,
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
-            iqrs.lock.acquire()  # lock BEFORE releasing controller
-
+           
+            iqrs.lock.acquire()  # lock BEFORE releasing controller try finally
         try:
-            pos = list(iqrs.positive_descriptors | iqrs.external_positive_descriptors)
-            neg = list(iqrs.negative_descriptors | iqrs.external_negative_descriptors)
-            ADJs = (pos, neg)
-
+            sal_bb=self.sal_blackbox.from_iqr_session(iqrs,self.descriptor_generator,T_img)
         finally:
             iqrs.lock.release()
-        
-        relevancy_index = plugin.from_plugin_config(
-                self.rel_index_config, get_relevancy_index_impls()
-                )
-
-        S_img = saliency.generate_saliency_map(T_img_PIL, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
-
-        #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
-        #https://stackoverflow.com/questions/55301037/save-and-send-large-numpy-arrays-with-flask
-        #https://stackoverflow.com/questions/33101935/convert-pil-image-to-byte-array
-
+        sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
+        S_img = saliency.compute_saliency_map(T_img, self.descriptor_generator,self.sal_augmenter,sal_bb)
+        #S_img=Image.fromarray(S_img)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
-
+        pid = "sa_map"
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')
 
     def describe_base64_data(self, b64, content_type):

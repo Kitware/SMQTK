@@ -7,13 +7,11 @@ This utility generates saliency maps.
 """
 import os
 import numpy as np
-import pdb
 import copy
 import PIL.Image
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 from datetime import datetime
-import pdb
 import six
 import matplotlib.pyplot as plt
 
@@ -23,7 +21,7 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element import from_uri
 #from smqtk.utils.image_utils import overlay_saliency_map ##could use this function instead of what's written here for overlaying saliency map.
 
-__author__ = "alina.barnett@kitware.com"
+__author__ = "alina.barnett@kitware.com, bhavan.vasu@kitware.com"
 
 def generate_block_masks_from_gridsize(image_size, grid_size=(5,5)): 
     """
@@ -618,13 +616,12 @@ def compute_saliency_map(base_image, descriptor_generator, augmenter,
 
     :return: Saliency heat-map matrix with the same shape as the input image.
     :rtype: np.ndarray"""
-    org_hw=base_image.size
-    base_image_PIL=base_image.resize((224,224) ,PIL.Image.BILINEAR)
-    base_image_np=np.array(base_image_PIL)
+    org_hw = base_image.size
+    base_image_PIL = base_image.resize((224,224) ,PIL.Image.BILINEAR)
+    base_image_np = np.array(base_image_PIL)
     augs, masks = augmenter.augment(base_image_np)
     
-    import pdb
-    #pdb.set_trace()    
+       
     idx_to_uuid = []
     #for i,mask in enumerate(augs):
         #PIL_mask=Image.fromarray(np.uint8(mask))
@@ -641,6 +638,7 @@ def compute_saliency_map(base_image, descriptor_generator, augmenter,
     uuid_to_desc=descriptor_generator.compute_descriptor_async(iter_aug_img_data_elements())
 
     scalar_vec = blackbox.transform((uuid_to_desc[uuid] for uuid in idx_to_uuid))
+    
     def overlay_saliency_map(sa_map, org_img): 
         """
 	overlay the saliency map on top of original image

@@ -218,8 +218,7 @@ class IqrService (SmqtkWebApp):
             json_config['iqr_service']['plugins']['descriptor_generator'],
             get_descriptor_generator_impls(),
         )
-        self.sal_augmenter=None
-        self.sal_blackbox=None
+        
         #: :type: smqtk.representation.DescriptorIndex
         self.descriptor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['descriptor_index'],
@@ -232,8 +231,11 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-        self.sal_augmenter=plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
-        self.sal_blackbox=plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
+
+        self.sal_augmenter = plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
+
+        self.sal_blackbox = plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
+
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
 
@@ -356,7 +358,7 @@ class IqrService (SmqtkWebApp):
                 ID of the session.
                 
                 :param img: original img
-                :type img: #maybe in bytes or a base64 string? not sure what makes sense here
+                :type img: base64
                 
                 :param stride: Sliding window stride in pixels
                 :type stride: int
@@ -387,7 +389,7 @@ class IqrService (SmqtkWebApp):
             return make_response_json("No image provided"), 400
         try:
             T_img_string = base64.b64decode(img_b64)
-            T_img = Image.open(io.BytesIO(T_img_string))
+            T_img_PIL = Image.open(io.BytesIO(T_img_string))
         except:  # TODO: specific exception here please
             return make_response_json("Image could not be opened."), 400
 
@@ -396,14 +398,13 @@ class IqrService (SmqtkWebApp):
                 return make_response_json("session id '%s' not found" % sid,
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
-           
             iqrs.lock.acquire()  # lock BEFORE releasing controller try finally
         try:
-            sal_bb=self.sal_blackbox.from_iqr_session(iqrs,self.descriptor_generator,T_img)
+            sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
         finally:
             iqrs.lock.release()
         sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
-        S_img = saliency.compute_saliency_map(T_img, self.descriptor_generator,self.sal_augmenter,sal_bb)
+        S_img = saliency.compute_saliency_map(T_img_PIL, self.descriptor_generator, self.sal_augmenter, sal_bb)
         #S_img=Image.fromarray(S_img)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')

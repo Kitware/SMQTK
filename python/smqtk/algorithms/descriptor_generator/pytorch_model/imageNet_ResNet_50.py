@@ -1,5 +1,5 @@
 import logging
-from smqtk.pytorch_model import PyTorchModelElement
+from smqtk.algorithms.descriptor_generator.pytorch_model import PyTorchModelElement
 
 try:
     import torch

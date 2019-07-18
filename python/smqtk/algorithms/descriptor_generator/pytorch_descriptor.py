@@ -13,7 +13,7 @@ from smqtk.algorithms.descriptor_generator import \
     DFLT_DESCRIPTOR_FACTORY
 
 from smqtk.utils.bin_utils import report_progress
-from smqtk.pytorch_model import get_pytorchmodel_element_impls
+from smqtk.algorithms.descriptor_generator.pytorch_model import get_pytorchmodel_element_impls
 
 try:
     import torch

@@ -11,7 +11,7 @@ from PIL import Image
 import numpy as np
 import flask
 from numpy.random import randint
-from smqtk.algorithms.saliency import get_image_saliency_augmenter_impls,get_saliency_blackbox_impls
+from smqtk.algorithms.saliency import get_image_saliency_augmenter_impls,get_saliency_blackbox_impls,get_saliency_generator_imps
 from smqtk.algorithms import (
     get_classifier_impls,
     get_descriptor_generator_impls,
@@ -36,11 +36,12 @@ from smqtk.utils import (
 )
 from smqtk.web import SmqtkWebApp
 #TODO:Import this from config file and add new saliency section in config
-#DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"image_sizes":224,}}
-#DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
-DFLT_AUG_CONFIG = { "type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
-DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
+DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"image_sizes":224,}}
+DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
+#DFLT_AUG_CONFIG = { "type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
+#DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
 #DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
+DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
 
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
@@ -236,6 +237,8 @@ class IqrService (SmqtkWebApp):
 
         self.sal_blackbox = plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
 
+        self.sal_generator=plugin.from_plugin_config(DFLT_SAL_GEN_CONFIG,get_saliency_generator_imps(),)
+
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
 
@@ -404,7 +407,8 @@ class IqrService (SmqtkWebApp):
         finally:
             iqrs.lock.release()
         sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
-        S_img = saliency.compute_saliency_map(T_img_PIL, self.descriptor_generator, self.sal_augmenter, sal_bb)
+        S_img = self.sal_generator.generate(T_img_PIL, self.sal_augmenter,self.descriptor_generator, sal_bb)
+        #S_img = saliency.compute_saliency_map(T_img_PIL, self.descriptor_generator, self.sal_augmenter, sal_bb)
         #S_img=Image.fromarray(S_img)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')

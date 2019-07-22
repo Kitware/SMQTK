@@ -696,6 +696,8 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             if resp.status_code != 200:
                 flask.current_app.logger.error(img_data)
                 flask.current_app.logger.error(preview_path)
+            import pdb
+            pdb.set_trace()
             assert resp.status_code == 200
 
             return flask.Response(resp.content, mimetype='image/png')

@@ -1,4 +1,5 @@
 import base64
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 import binascii
 import collections
 import json
@@ -28,7 +29,7 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-from smqtk.representation.data_element.memory_element import DataMemoryElement
+SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
 from smqtk.utils import (
     merge_dict,
     plugin,
@@ -36,13 +37,13 @@ from smqtk.utils import (
 )
 from smqtk.web import SmqtkWebApp
 #TODO:Import this from config file and add new saliency section in config
-DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"image_sizes":224,}}
-DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
-#DFLT_AUG_CONFIG = { "type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
-#DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
-#DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"image_sizes":224,}}
-DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
+#DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
+#DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
 
+DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
+DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
+#DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
+DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
         .replace('-', '')
@@ -232,7 +233,6 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-
         self.sal_augmenter = plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
 
         self.sal_blackbox = plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
@@ -406,10 +406,7 @@ class IqrService (SmqtkWebApp):
             sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
         finally:
             iqrs.lock.release()
-        sub_sid = new_uuid() #subsession id. SID for the session with masked imgs.
         S_img = self.sal_generator.generate(T_img_PIL, self.sal_augmenter,self.descriptor_generator, sal_bb)
-        #S_img = saliency.compute_saliency_map(T_img_PIL, self.descriptor_generator, self.sal_augmenter, sal_bb)
-        #S_img=Image.fromarray(S_img)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
         pid = "sa_map"

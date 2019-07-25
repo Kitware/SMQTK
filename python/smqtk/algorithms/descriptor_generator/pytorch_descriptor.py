@@ -232,6 +232,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
             'image/tiff',
             'image/png',
             'image/jpeg',
+            'image/bmp',
         }
 
     def _compute_descriptor(self, data):

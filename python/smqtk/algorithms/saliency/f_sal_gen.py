@@ -151,9 +151,9 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         def iter_aug_img_data_elements():
             for a in augs:
                buff = six.BytesIO()
-               (a).save(buff, format="png")
+               (a).save(buff, format="bmp")
                de = DataMemoryElement(buff.getvalue(),
-                                   content_type='image/png')
+                                   content_type='image/bmp')
                idx_to_uuid.append(de.uuid())
                yield de
 
@@ -180,9 +180,9 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         def iter_aug_img_data_elements():
             for a in augs:
                buff = six.BytesIO()
-               (a).save(buff, format="png")
+               (a).save(buff, format="bmp")
                de = DataMemoryElement(buff.getvalue(),
-                                   content_type='image/png')
+                                   content_type='image/bmp')
                idx_to_uuid.append(de.uuid())
                yield de
 

@@ -213,7 +213,8 @@ class Fast_ImageSaliencyAugmenter(ImageSaliencyAugmenter):
             the input image matrix.
             Returned masks should be in the dimension format
             [index, height, width,channel] with the boolean data type.
-        :rtype: PIL.Image
+        :rtype: (PIL.Image, numpy.ndarray)
+
         """
          
         masked_images = self.generate_masked_imgs(self.masks, image_mat)
@@ -232,7 +233,8 @@ class Fast_ImageSaliencyAugmenter(ImageSaliencyAugmenter):
             the input image matrix.
             Returned masks should be in the dimension format
             [index, height, width,channel] with the boolean data type.
-        :rtype: PIL.Image
+        :rtype: (PIL.Image, numpy.ndarray)
+
         """
         masks = self.generate_block_masks(window_size=self.window_size, stride=self.window_size)
         masked_images = self.generate_masked_imgs(masks, image_mat)

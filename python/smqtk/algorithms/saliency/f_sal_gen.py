@@ -6,6 +6,7 @@ import numpy as np
 import PIL
 import copy
 import logging
+import cv2
 from smqtk.algorithms.saliency import ImageSaliencyMapGenerator
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
@@ -108,8 +109,8 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         Generate an image saliency heat-map matrix given a blackbox's behavior
         over the descriptions of an augmented base image.
         :param PIL Image image_mat:
-            PIL Image of the RGB format that is
-            to be augmented.
+            param numpy.ndarray base_image:
+            Numpy matrix of the format [height, width [,channel]] that is to be augmented.
         :param ImageSaliencyAugmenter augmenter:
             Augmentation algorithm following
             the :py:class:`ImageSaliencyAugmenter` interface.
@@ -140,13 +141,12 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
             sa_max = np.max(res_sa)
             res_sa = np.clip(res_sa, a_min=sa_max * self.thresh, a_max = None)
 
-            return PIL.Image.fromarray(res_sa)
+            return res_sa
 
-        org_hw = base_image.size
-        org_img = copy.deepcopy(base_image)
-        base_image_PIL = base_image.resize((224,224) ,PIL.Image.BILINEAR)
+        org_hw = np.shape(base_image)[0:2]
+        base_image_resized = cv2.resize(base_image,(224,224),interpolation=cv2.INTER_NEAREST)
+        augs, masks = augmenter.augment_roughpass(np.array(base_image_resized))
 
-        augs, masks = augmenter.augment_roughpass(np.array(base_image_PIL))
         idx_to_uuid = []
         def iter_aug_img_data_elements():
             for a in augs:
@@ -169,11 +169,11 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         for mask in rel_masks:
             region = np.multiply(region, mask)
 
-        augs, masks = augmenter.augment(np.array(base_image_PIL))
+        augs, masks = augmenter.augment(base_image_resized)
 
         #find relevant submasks
         rel_submasks = find_intersection(masks, region)
-        augs = augmenter.generate_masked_imgs(rel_submasks, np.asarray(base_image_PIL))
+        augs = augmenter.generate_masked_imgs(rel_submasks, np.asarray(base_image_resized))
         #print("{} out of {} masks are relevant.".format(len(rel_submasks), len(masks)))
 
         idx_to_uuid = []
@@ -191,8 +191,8 @@ class Fast_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         scalar_vec = blackbox.transform((uuid_to_desc[uuid] for uuid in idx_to_uuid))
 
         final_sal_map = weighted_avg(scalar_vec, np.asarray(rel_submasks))
-        final_sal_map_PIL = final_sal_map.resize((org_hw), PIL.Image.BILINEAR)
-        sal_map_ret = overlay_saliency_map(np.array(final_sal_map_PIL), np.array(org_img))
+        final_sal_map_resized = cv2.resize(final_sal_map,(org_hw), interpolation=cv2.INTER_NEAREST)
+        sal_map_ret = overlay_saliency_map(final_sal_map_resized, base_image)
         return sal_map_ret
 
 IMG_SALIENCY_GENERATOR_CLASS=Fast_ImageSaliencyMapGenerator

@@ -406,7 +406,7 @@ class IqrService (SmqtkWebApp):
             sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
         finally:
             iqrs.lock.release()
-        S_img = self.sal_generator.generate(T_img_PIL, self.sal_augmenter,self.descriptor_generator, sal_bb)
+        S_img = self.sal_generator.generate(np.asarray(T_img_PIL), self.sal_augmenter,self.descriptor_generator, sal_bb)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')

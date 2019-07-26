@@ -226,7 +226,7 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-        self.sal_augmenter = plugin.from_plugin_confi(
+        self.sal_augmenter = plugin.from_plugin_config(
 
         json_config['iqr_service']['plugins']['saliency_map_augmenter'],
         get_image_saliency_augmenter_impls(),)

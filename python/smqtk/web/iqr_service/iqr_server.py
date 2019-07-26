@@ -29,17 +29,13 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
 from smqtk.utils import (
     merge_dict,
     plugin,
     saliency
 )
 from smqtk.web import SmqtkWebApp
-#TODO:Import this from config file and add new saliency section in config
-DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
-DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
-DFLT_SAL_GEN_CONFIG={ "type": "Fast_ImageSaliencyMapGenerator","Fast_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+
 
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
@@ -207,7 +203,7 @@ class IqrService (SmqtkWebApp):
             ClassificationElementFactory.from_config(
                 json_config['iqr_service']['plugins']['classification_factory']
             )
-
+        
         self.descriptor_factory = DescriptorElementFactory.from_config(
             json_config['iqr_service']['plugins']['descriptor_factory']
         )
@@ -230,11 +226,21 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-        self.sal_augmenter = plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
+        self.sal_augmenter = plugin.from_plugin_confi(
 
-        self.sal_blackbox = plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
+        json_config['iqr_service']['plugins']['saliency_map_augmenter'],
+        get_image_saliency_augmenter_impls(),)
 
-        self.sal_generator=plugin.from_plugin_config(DFLT_SAL_GEN_CONFIG,get_saliency_generator_imps(),)
+        self.sal_blackbox = plugin.from_plugin_config(
+
+        json_config['iqr_service']['plugins']['saliency_blackbox'],
+        get_saliency_blackbox_impls(),)
+
+        self.sal_generator=plugin.from_plugin_config(
+
+        json_config['iqr_service']['plugins']['saliency_map_generator'],
+
+         get_saliency_generator_imps(),)
 
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']

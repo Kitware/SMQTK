@@ -41,8 +41,8 @@ def overlay_saliency_map(sa_map, org_img):
     np_data = np_data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
     im = PIL.Image.fromarray(np_data)
     im_size = np.shape(im)
-    org_h =  im_size[1]
-    org_w = im_size[0]
+    org_h =  im_size[0]
+    org_w = im_size[1]
     im = im.resize((org_w, org_h), PIL.Image.BILINEAR)
     plt.close()
     return im

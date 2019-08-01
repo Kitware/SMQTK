@@ -70,9 +70,9 @@ class Logit_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
         def iter_aug_img_data_elements():
             for a in augs:
                buff = six.BytesIO()
-               (a).save(buff, format="png")
+               (a).save(buff, format="bmp")
                de = DataMemoryElement(buff.getvalue(),
-                                   content_type='image/png')
+                                   content_type='image/bmp')
                idx_to_uuid.append(de.uuid())
                yield de
 
@@ -106,8 +106,8 @@ class Logit_ImageSaliencyMapGenerator(ImageSaliencyMapGenerator):
             np_data = np_data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
             im = PIL.Image.fromarray(np_data)
             im_size = np.shape(im)
-            org_h =  im_size[1]
-            org_w = im_size[0]
+            org_h =  im_size[0]
+            org_w = im_size[1]
             im = im.resize((org_w, org_h), PIL.Image.BILINEAR)
             plt.close()
             return im

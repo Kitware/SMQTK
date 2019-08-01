@@ -29,7 +29,7 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-SAL_GEN_CONFIG={ "type": "Fast_ImageSaliencyMapGenerator","Fast_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.3,}}
 from smqtk.utils import (
     merge_dict,
     plugin,
@@ -40,10 +40,10 @@ from smqtk.web import SmqtkWebApp
 #DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
 #DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
 
-DFLT_AUG_CONFIG = {"type": "Fast_ImageSaliencyAugmenter","Fast_ImageSaliencyAugmenter":{"window_size":50,"stride":10,}}
-DFLT_BOX_CONFIG = {"type": "Fast_SaliencyBlackbox","Fast_SaliencyBlackbox":{}}
+DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"window_size":45,"stride":15,}}
+DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
 #DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
-DFLT_SAL_GEN_CONFIG={ "type": "Fast_ImageSaliencyMapGenerator","Fast_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.3,}}
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
         .replace('-', '')

@@ -95,9 +95,9 @@ class Logit_SaliencyBlackbox (SaliencyBlackbox):
         """
         uuid_bas=[]
         buff = six.BytesIO()
-        (self.base_image).save(buff, format="png")
+        (self.base_image).save(buff, format="bmp")
         de = DataMemoryElement(buff.getvalue(),
-                               content_type='image/png')
+                               content_type='image/bmp')
         
         #TODO: Expand to multiple queries
         descriptors_list=list(descriptors)

@@ -29,7 +29,7 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+SAL_GEN_CONFIG={ "type": "Batch_ImageSaliencyMapGenerator","Batch_ImageSaliencyMapGenerator":{"threshold":0.3,}}
 from smqtk.utils import (
     merge_dict,
     plugin,
@@ -40,10 +40,10 @@ from smqtk.web import SmqtkWebApp
 #DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
 #DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
 
-DFLT_AUG_CONFIG = {"type": "Logit_ImageSaliencyAugmenter","Logit_ImageSaliencyAugmenter":{"window_size":45,"stride":15,}}
-DFLT_BOX_CONFIG = {"type": "Logit_SaliencyBlackbox","Logit_SaliencyBlackbox":{}}
+DFLT_AUG_CONFIG = {"type": "Batch_ImageSaliencyAugmenter","Batch_ImageSaliencyAugmenter":{"window_size":45,"stride":15,}}
+DFLT_BOX_CONFIG = {"type": "Batch_SaliencyBlackbox","Batch_SaliencyBlackbox":{}}
 #DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
-DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+DFLT_SAL_GEN_CONFIG={ "type": "Batch_ImageSaliencyMapGenerator","Batch_ImageSaliencyMapGenerator":{"threshold":0.3,}}
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
         .replace('-', '')
@@ -406,9 +406,9 @@ class IqrService (SmqtkWebApp):
             sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
         finally:
             iqrs.lock.release()
-        S_img = self.sal_generator.generate(T_img_PIL, self.sal_augmenter,self.descriptor_generator, sal_bb)
+        S_img = self.sal_generator.generate([T_img_PIL], self.sal_augmenter,self.descriptor_generator, sal_bb)
         S_img_container = io.BytesIO()
-        S_img.save(S_img_container, format='PNG')
+        S_img[0].save(S_img_container, format='PNG')
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')
 
     def describe_base64_data(self, b64, content_type):

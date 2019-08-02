@@ -405,10 +405,13 @@ class IqrService (SmqtkWebApp):
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller try finally
+
         try:
             sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
+
         finally:
             iqrs.lock.release()
+
         S_img = self.sal_generator.generate(np.array(T_img_PIL), self.sal_augmenter,self.descriptor_generator, sal_bb)
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')

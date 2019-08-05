@@ -29,21 +29,14 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-SAL_GEN_CONFIG={ "type": "Batch_ImageSaliencyMapGenerator","Batch_ImageSaliencyMapGenerator":{"threshold":0.3,}}
 from smqtk.utils import (
     merge_dict,
     plugin,
     saliency
 )
 from smqtk.web import SmqtkWebApp
-#TODO:Import this from config file and add new saliency section in config
-#DFLT_AUG_CONFIG = {"type": "SBSM_ImageSaliencyAugmenter","SBSM_ImageSaliencyAugmenter":{"window_size":40,"stride":8,}}
-#DFLT_BOX_CONFIG = {"type": "SBSM_SaliencyBlackbox","SBSM_SaliencyBlackbox":{}}
 
-DFLT_AUG_CONFIG = {"type": "Batch_ImageSaliencyAugmenter","Batch_ImageSaliencyAugmenter":{"window_size":45,"stride":15,}}
-DFLT_BOX_CONFIG = {"type": "Batch_SaliencyBlackbox","Batch_SaliencyBlackbox":{}}
-#DFLT_SAL_GEN_CONFIG={ "type": "Logit_ImageSaliencyMapGenerator","Logit_ImageSaliencyMapGenerator":{"threshold":0.2,}}
-DFLT_SAL_GEN_CONFIG={ "type": "Batch_ImageSaliencyMapGenerator","Batch_ImageSaliencyMapGenerator":{"threshold":0.3,}}
+
 def new_uuid():
     return str(uuid.uuid1(clock_seq=int(time.time() * 1000000)))\
         .replace('-', '')
@@ -210,7 +203,7 @@ class IqrService (SmqtkWebApp):
             ClassificationElementFactory.from_config(
                 json_config['iqr_service']['plugins']['classification_factory']
             )
-
+        
         self.descriptor_factory = DescriptorElementFactory.from_config(
             json_config['iqr_service']['plugins']['descriptor_factory']
         )
@@ -233,11 +226,21 @@ class IqrService (SmqtkWebApp):
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-        self.sal_augmenter = plugin.from_plugin_config(DFLT_AUG_CONFIG,get_image_saliency_augmenter_impls(),)
+        self.sal_augmenter = plugin.from_plugin_config(
 
-        self.sal_blackbox = plugin.from_plugin_config(DFLT_BOX_CONFIG,get_saliency_blackbox_impls(),)
+        json_config['iqr_service']['plugins']['saliency_map_augmenter'],
+        get_image_saliency_augmenter_impls(),)
 
-        self.sal_generator=plugin.from_plugin_config(DFLT_SAL_GEN_CONFIG,get_saliency_generator_imps(),)
+        self.sal_blackbox = plugin.from_plugin_config(
+
+        json_config['iqr_service']['plugins']['saliency_blackbox'],
+        get_saliency_blackbox_impls(),)
+
+        self.sal_generator=plugin.from_plugin_config(
+
+        json_config['iqr_service']['plugins']['saliency_map_generator'],
+
+         get_saliency_generator_imps(),)
 
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
@@ -402,13 +405,17 @@ class IqrService (SmqtkWebApp):
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller try finally
+
         try:
             sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
+
         finally:
             iqrs.lock.release()
-        S_img = self.sal_generator.generate([T_img_PIL], self.sal_augmenter,self.descriptor_generator, sal_bb)
+
+        S_img = self.sal_generator.generate(T_img_PIL, self.sal_augmenter,self.descriptor_generator, sal_bb)
         S_img_container = io.BytesIO()
-        S_img[0].save(S_img_container, format='PNG')
+        S_img.save(S_img_container, format='PNG')
+        pid = "sa_map"
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')
 
     def describe_base64_data(self, b64, content_type):

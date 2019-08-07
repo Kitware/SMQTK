@@ -21,7 +21,6 @@ from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element import from_uri
 #from smqtk.utils.image_utils import overlay_saliency_map ##could use this function instead of what's written here for overlaying saliency map.
 
-__author__ = "alina.barnett@kitware.com, bhavan.vasu@kitware.com"
 
 def generate_block_masks_from_gridsize(image_size, grid_size=(5,5)): 
     """
@@ -36,6 +35,7 @@ def generate_block_masks_from_gridsize(image_size, grid_size=(5,5)):
     :return: the sliding window style masks
     :rtype: numpy array 
     """
+
     window_size = (image_size[0]//grid_size[0], image_size[1]//grid_size[1])
     stride = window_size
     
@@ -86,6 +86,7 @@ def submasks_from_mask(mask_num, grid_size, subgrid_size):
     :return: indices of the submasks
     :rtype: list of ints
     """
+
     m = mask_num
     g = grid_size
     d = subgrid_size
@@ -124,6 +125,7 @@ def generate_block_masks(window_size, stride, image_size):
     :return: the sliding window style masks
     :rtype: numpy array
     """
+
     grid_num_r = (image_size[0] - window_size) // stride + 1
     grid_num_c = (image_size[1] - window_size) // stride + 1
     mask_num = grid_num_r * grid_num_c
@@ -146,6 +148,7 @@ def generate_masked_imgs(masks, img):
     :param index: mask index
     :return: masked images
     """
+
     masked_imgs = []
     for mask in masks:
         masked_img = np.multiply(mask, img, casting='unsafe')
@@ -166,8 +169,8 @@ def overlay_saliency_map(sa_map, org_img): #future: rewrite this to be scipy ins
 
     :return: Overlayed image
     :rtype: PIL Image
-
     """
+
     plt.switch_backend('agg')
     sizes = np.shape(sa_map)
     height = float(sizes[0])
@@ -614,8 +617,10 @@ def compute_saliency_map(base_image, descriptor_generator, augmenter,
         Black-box interface to generating saliency scores for input
         descriptors.
 
-    :return: Saliency heat-map matrix with the same shape as the input image.
-    :rtype: np.ndarray"""
+    :return: Saliency heat-map image  with the same shape as the input image.
+    :rtype: PIL Image
+    """
+
     org_hw = base_image.size
     base_image_PIL = base_image.resize((224,224) ,PIL.Image.BILINEAR)
     base_image_np = np.array(base_image_PIL)
@@ -623,9 +628,6 @@ def compute_saliency_map(base_image, descriptor_generator, augmenter,
     
        
     idx_to_uuid = []
-    #for i,mask in enumerate(augs):
-        #PIL_mask=Image.fromarray(np.uint8(mask))
-        #PIL_mask.save("/home/local/KHQ/bhavan.vasu/saliency/SMQTK/python/smqtk/algorithms/saliency/masks/mask{}.png".format(i))
     def iter_aug_img_data_elements():
         for a in augs:
             buff = six.BytesIO()

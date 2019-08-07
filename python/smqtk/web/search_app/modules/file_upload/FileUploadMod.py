@@ -9,7 +9,6 @@ from six.moves import cStringIO as StringIO
 
 from smqtk.utils import SmqtkObject
 from smqtk.utils import file_utils
-from six import BytesIO
 
 
 script_dir = os.path.dirname(os.path.abspath(__file__))

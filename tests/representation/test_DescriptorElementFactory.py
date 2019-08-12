@@ -112,3 +112,17 @@ class TestDescriptorElemFactory (unittest.TestCase):
         d = factory.new_descriptor('test', 'foo')
         self.assertEqual(d.type(), 'test')
         self.assertEqual(d.uuid(), 'foo')
+
+    def test_get_config(self):
+        """
+        We should be able to get the configuration of the current factory.
+        This should look like the same as the
+        """
+        test_params = {
+            'p1': 'some dir',
+            'vec': 1
+        }
+        factory = DescriptorElementFactory(DummyElementImpl, test_params)
+        factory_config = factory.get_config()
+        assert factory_config == {"type": "DummyElementImpl",
+                                  "DummyElementImpl": test_params}

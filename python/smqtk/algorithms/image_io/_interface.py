@@ -65,15 +65,13 @@ class ImageReader (SmqtkAlgorithm, ContentTypeValidator):
         """
         Load an image matrix from the given data element.
 
-        Matrix Property Shortcut
-        ------------------------
+        **Matrix Property Shortcut.**
         If the given DataElement instance defines a ``matrix`` property this
         method simply returns that.  This is intended to interface with
         instances of
         :py:class:`smqtk.representation.data_element.matrix.MatrixDataElement`.
 
-        Loading From Bytes
-        ------------------
+        **Loading From Bytes.**
         When not loading from a short-cut matrix, matrix return format is
         ``ImageReader`` implementation dependant. Implementations of this
         interface should specify and describe their return type.

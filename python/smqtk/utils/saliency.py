@@ -651,7 +651,6 @@ def compute_saliency_map(base_image, descriptor_generator, augmenter,
 	:return: Overlayed image
 	:rtype: PIL Image
 	"""
-        plt.switch_backend('agg')
         sizes = np.shape(sa_map)
         height = float(sizes[0])
         width = float(sizes[1])

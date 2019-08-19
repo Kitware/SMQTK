@@ -287,7 +287,7 @@ def make_config(plugin_map):
 
     """
     if (len(plugin_map) == 1):
-        d={"type":(list(plugin_map.keys())[0])}
+        d={"type": (list(plugin_map.keys())[0])}
     else:   
         d = {"type": None}
     for label, cls in six.iteritems(plugin_map):

@@ -229,6 +229,7 @@ class PytorchDescriptorGenerator (DescriptorGenerator):
         :rtype: set[str]
         """
         return {
+            'image/bmp',
             'image/tiff',
             'image/png',
             'image/jpeg',

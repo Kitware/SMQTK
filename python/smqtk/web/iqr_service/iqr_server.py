@@ -12,7 +12,11 @@ from PIL import Image
 import numpy as np
 import flask
 from numpy.random import randint
-from smqtk.algorithms.saliency import get_image_saliency_augmenter_impls,get_saliency_blackbox_impls,get_saliency_generator_imps
+from smqtk.algorithms.saliency import (
+    get_image_saliency_augmenter_impls,
+    get_saliency_blackbox_impls,
+    get_saliency_generator_imps,
+)
 from smqtk.algorithms import (
     get_classifier_impls,
     get_descriptor_generator_impls,
@@ -404,6 +408,7 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.release()
 
         S_img = self.sal_generator.generate(np.array(T_img_PIL), self.sal_augmenter,self.descriptor_generator, sal_bb)
+
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')

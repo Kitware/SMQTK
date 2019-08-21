@@ -624,8 +624,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
                 params['j'] = int(j)
 
             get_r = self._iqr_service.get('get_results', **params)
-            get_r.raise_for_status()
-            return flask.jsonify(get_r.json())
+            return flask.jsonify(get_r.json()), get_r.status_code
 
         @self.route("/reset_iqr_session", methods=["POST"])
         @self._parent_app.module_login.login_required
@@ -693,10 +692,11 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             img_b64 = base64.b64encode(img_data)
             resp = self._iqr_service.get('saliency_map',
                                          img_b64=img_b64, sid=sid,
-                                         content_type='image/jpeg')
+                                         content_type='image/png')
             if resp.status_code != 200:
                 flask.current_app.logger.error(img_data)
                 flask.current_app.logger.error(preview_path)
+
             assert resp.status_code == 200
 
             return flask.Response(resp.content, mimetype='image/png')

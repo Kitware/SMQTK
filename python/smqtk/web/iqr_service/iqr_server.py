@@ -1,4 +1,5 @@
 import base64
+from smqtk.representation.data_element.memory_element import DataMemoryElement
 import binascii
 import collections
 import json
@@ -9,11 +10,13 @@ import uuid
 import io
 from PIL import Image
 import numpy as np
-
-
 import flask
-
-# import smqtk.algorithms
+from numpy.random import randint
+from smqtk.algorithms.saliency import (
+    get_image_saliency_augmenter_impls,
+    get_saliency_blackbox_impls,
+    get_saliency_generator_imps,
+)
 from smqtk.algorithms import (
     get_classifier_impls,
     get_descriptor_generator_impls,
@@ -30,11 +33,10 @@ from smqtk.representation import (
     DescriptorElementFactory,
     get_descriptor_index_impls,
 )
-from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils import (
     merge_dict,
     plugin,
-    saliency,
+    saliency
 )
 from smqtk.web import SmqtkWebApp
 
@@ -204,31 +206,37 @@ class IqrService (SmqtkWebApp):
         self.classification_factory = \
             ClassificationElementFactory.from_config(
                 json_config['iqr_service']['plugins']['classification_factory']
-            )
-
+            ) 
         self.descriptor_factory = DescriptorElementFactory.from_config(
             json_config['iqr_service']['plugins']['descriptor_factory']
         )
-
         #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['descriptor_generator'],
             get_descriptor_generator_impls(),
         )
-
         #: :type: smqtk.representation.DescriptorIndex
         self.descriptor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['descriptor_index'],
-            get_descriptor_index_impls(),
-        )
-
+            get_descriptor_index_impls(),)
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.neighbor_index = plugin.from_plugin_config(
             json_config['iqr_service']['plugins']['neighbor_index'],
             get_nn_index_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
-
+        self.sal_augmenter = plugin.from_plugin_config(
+            json_config['iqr_service']['plugins']['saliency_map_augmenter'],
+            get_image_saliency_augmenter_impls(),
+        )
+        self.sal_blackbox = plugin.from_plugin_config(
+            json_config['iqr_service']['plugins']['saliency_blackbox'],
+            get_saliency_blackbox_impls(),
+        )
+        self.sal_generator=plugin.from_plugin_config(
+            json_config['iqr_service']['plugins']['saliency_map_generator'],
+            get_saliency_generator_imps(),
+        )
         self.rel_index_config = \
             json_config['iqr_service']['plugins']['relevancy_index_config']
 
@@ -351,7 +359,7 @@ class IqrService (SmqtkWebApp):
                 ID of the session.
                 
                 :param img: original img
-                :type img: #maybe in bytes or a base64 string? not sure what makes sense here
+                :type img: base64
                 
                 :param stride: Sliding window stride in pixels
                 :type stride: int
@@ -382,13 +390,8 @@ class IqrService (SmqtkWebApp):
             return make_response_json("No image provided"), 400
         try:
             T_img_string = base64.b64decode(img_b64)
-            #T_img_array = np.fromstring(T_img_string, dtype=np.uint8) #beware of float64 vs uint8
-            img_container = io.BytesIO(T_img_string)
-            T_img_PIL = Image.open(img_container)
-            
-            #T_img_PIL = Image.open(img)
-        except Exception:
-            flask.current_app.logger.exception('could not open')
+            T_img_PIL = Image.open(io.BytesIO(T_img_string))
+        except:  # TODO: specific exception here please
             return make_response_json("Image could not be opened."), 400
 
         with self.controller:
@@ -396,29 +399,18 @@ class IqrService (SmqtkWebApp):
                 return make_response_json("session id '%s' not found" % sid,
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
-            iqrs.lock.acquire()  # lock BEFORE releasing controller
+            iqrs.lock.acquire()  # lock BEFORE releasing controller try finally
 
         try:
-            pos = list(iqrs.positive_descriptors | iqrs.external_positive_descriptors)
-            neg = list(iqrs.negative_descriptors | iqrs.external_negative_descriptors)
-            ADJs = (pos, neg)
+            sal_bb = self.sal_blackbox.from_iqr_session(iqrs, self.descriptor_generator, T_img_PIL)
 
         finally:
             iqrs.lock.release()
-        
-        relevancy_index = plugin.from_plugin_config(
-                self.rel_index_config, get_relevancy_index_impls()
-                )
 
-        S_img = saliency.generate_saliency_map(T_img_PIL, self.descriptor_generator, relevancy_index, ADJs) #PIL image out
-
-        #https://stackoverflow.com/questions/11017466/flask-to-return-image-stored-in-database/11017839#11017839
-        #https://stackoverflow.com/questions/55301037/save-and-send-large-numpy-arrays-with-flask
-        #https://stackoverflow.com/questions/33101935/convert-pil-image-to-byte-array
+        S_img = self.sal_generator.generate(np.array(T_img_PIL), self.sal_augmenter,self.descriptor_generator, sal_bb)
 
         S_img_container = io.BytesIO()
         S_img.save(S_img_container, format='PNG')
-
         return flask.Response(S_img_container.getvalue(), mimetype='image/png')
 
     def describe_base64_data(self, b64, content_type):

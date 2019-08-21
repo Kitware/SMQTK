@@ -273,8 +273,9 @@ def make_config(plugin_map):
     (which returns a dictionary of labels to class types)
 
     A types parameters, as listed, at the construction parameters for that
-    type. Default values are inserted where possible, otherwise None values are
-    used.
+    type. Default key is used as type in output dict 
+    if the plugin_map contains only one plugin,
+    otherwise None values are used.
 
     :param plugin_map: A dictionary mapping class names to class types.
     :type plugin_map: dict[str, type]
@@ -285,7 +286,10 @@ def make_config(plugin_map):
     :rtype: dict[str, object]
 
     """
-    d = {"type": None}
+    if (len(plugin_map) == 1):
+        d={"type": (list(plugin_map.keys())[0])}
+    else:   
+        d = {"type": None}
     for label, cls in six.iteritems(plugin_map):
         # noinspection PyUnresolvedReferences
         d[label] = cls.get_default_config()

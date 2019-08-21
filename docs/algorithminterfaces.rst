@@ -15,6 +15,7 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
 
 .. autoclass:: smqtk.algorithms.classifier.Classifier
    :members:
+   :private-members:
 
 
 DescriptorGenerator

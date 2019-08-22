@@ -15,6 +15,7 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
 
 .. autoclass:: smqtk.algorithms.classifier.Classifier
    :members:
+   :private-members:
 
 
 DescriptorGenerator
@@ -42,7 +43,7 @@ ImageReader
 .. autoclass:: smqtk.algorithms.image_io.ImageReader
    :members:
 
-.. autoclass:: smqtk.algorithms.image_io.pil.PilImageReader
+.. autoclass:: smqtk.algorithms.image_io.pil_io.PilImageReader
    :members:
 
 

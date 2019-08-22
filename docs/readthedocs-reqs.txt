@@ -7,4 +7,5 @@ flask-login
 flask-basicauth
 requests
 mock
-
+nbsphinx
+ipykernel

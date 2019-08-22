@@ -14,6 +14,7 @@ Python toolkit for pluggable algorithms and data structures for multimedia-based
    :maxdepth: 2
 
    installation
+   quickstarts
    architecture
    examples/overview
    releasing
@@ -24,4 +25,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

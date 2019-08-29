@@ -54,7 +54,7 @@ class PostgresDataElement (DataElement):
     """
 
     # SHA1 checksum of 0-length data (empty bytes)
-    EMPTY_SHA = hashlib.sha1('').hexdigest()
+    EMPTY_SHA = hashlib.sha1(b'').hexdigest()
 
     class CommandTemplates (object):
         """ Encapsulation of command templates. """

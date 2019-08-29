@@ -31,6 +31,7 @@ class TestMemoryClassificationElement (unittest.TestCase):
         assert hasattr(m, '_c')
         assert m._c is None
         assert hasattr(m, '_c_lock')
+        # in python 2, threading.RLock() is threading._RLock, but in 3 its _thread.RLock
         assert isinstance(m._c_lock, type(threading.RLock()))
 
     def test_serialization_empty(self):

@@ -139,8 +139,6 @@ setuptools.setup(
         'scikit-learn',
         'scipy',
         'six',
-        'ubelt',
-        'opencv-python',
     ],
     extras_require={
         # Various optional dependencies for plugins

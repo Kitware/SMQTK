@@ -9,6 +9,7 @@ Algorithms
 * DescriptorGenerator
   * Overhauled interface API to have the abstract method be a many-to-many
     iterator instead of the previous one-to-one signature.
+  * Updated colordescriptor implementation for interface API update.
 
 Docker
 * Started use of docker-compose YAML file to organize image building.
@@ -37,6 +38,11 @@ Representation
     the database.
 * DetectionElement
   * Added individual component accessors.
+
+Tests
+* Updated colordescriptor DescriptorGenerator tests to "skip" when deemed not
+  available so that the tests are not just hidden when the optional
+  dependencies are not present.
 
 Utils
 * Added additional description capability to ProgressReporter.

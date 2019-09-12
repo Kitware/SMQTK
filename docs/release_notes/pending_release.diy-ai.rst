@@ -5,6 +5,11 @@ SMQTK DIY-AI Pending Release Notes
 Updates / New Features
 ----------------------
 
+Algorithms
+* DescriptorGenerator
+  * Overhauled interface API to have the abstract method be a many-to-many
+    iterator instead of the previous one-to-one signature.
+
 Docker
 * Started use of docker-compose YAML file to organize image building.
 * Added FAISS TPL image to be copied from by utilizing images.
@@ -35,6 +40,8 @@ Representation
 
 Utils
 * Added additional description capability to ProgressReporter.
+* Added a return of self in the ``ContentTypeValidator.raise_valid_element()``
+  method.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

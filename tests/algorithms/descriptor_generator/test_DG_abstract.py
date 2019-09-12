@@ -1,20 +1,13 @@
 from __future__ import division, print_function
 import unittest
 
-import mock
 import numpy
+import pytest
+from six.moves import mock
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 import smqtk.representation
-
-
-class TestGetDescriptorGeneratorImpls (unittest.TestCase):
-
-    def test_get_descriptors(self):
-        m = DescriptorGenerator.get_impls()
-        # Currently no types that are guaranteed available
-        self.assertIsInstance(m, set, "Should return a set of "
-                                      "DescriptorGenerator class types")
+from smqtk.representation import DescriptorElement, DescriptorElementFactory
 
 
 class DummyDescriptorGenerator (DescriptorGenerator):
@@ -33,8 +26,35 @@ class DummyDescriptorGenerator (DescriptorGenerator):
     def valid_content_types(self):
         return {}
 
-    def _compute_descriptor(self, data):
-        return
+    def _generate_arrays(self, data_iter):
+        # Make sure we go through iter, yielding "arrays"
+        for i, d in enumerate(data_iter):
+            yield [i]
+        self._post_iterator_check()
+
+    def _post_iterator_check(self):
+        """ Stub method for testing functionality is called post-final-yield.
+        """
+
+    def _generate_too_many_arrays(self, data_iter):
+        """
+        Swap-in generator to test error checking on over generation.
+        """
+        for i, d in enumerate(data_iter):
+            yield [i]
+        yield [-1]
+        yield [-2]
+        self._post_iterator_check()
+
+    def _generate_too_few_arrays(self, data_iter):
+        """
+        Swap-in generator to test error checking on under generation.
+        """
+        # yield all but one data element.
+        data_list = list(data_iter)
+        for i in range(len(data_list) - 1):
+            yield [i]
+        self._post_iterator_check()
 
 
 class TestDescriptorGeneratorAbstract (unittest.TestCase):
@@ -45,183 +65,349 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
     Test abstract super-class functionality where there is any
     """
 
-    def test_compute_descriptor_invlaid_type(self):
-        cd = DummyDescriptorGenerator()
-        cd.valid_content_types = mock.Mock(return_value={'image/png'})
+    def setUp(self):
+        self.inst = DummyDescriptorGenerator()
+        self.inst.valid_content_types = mock.Mock(return_value={'image/png'})
+        self.inst._post_iterator_check = mock.Mock()
 
-        mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-        m_d = mDataElement()
+    def test_generate_arrays_invalid_type(self):
+        """ Test that the raise-valid-element method catches an invalid input
+        data type. """
+        # Using dummy to pull in integrated mixin class functionality.
+        inst = self.inst
+
+        m_d = mock.Mock(spec=smqtk.representation.DataElement)
         m_d.content_type.return_value = 'image/jpeg'
 
-        mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
-        mDescriptorFactory = mock.Mock(
-            spec=smqtk.representation.DescriptorElementFactory)
-        m_factory = mDescriptorFactory()
-        m_factory.new_descriptor.return_value = mDescrElement()
+        with pytest.raises(ValueError,
+                           match="Data element does not match a content type "
+                                 "reported as valid."):
+            # list(inst.generate_arrays([m_d]))
+            list(DescriptorGenerator.generate_arrays(inst, [m_d]))
 
-        self.assertRaises(ValueError, cd.compute_descriptor, m_d, m_factory)
+        # No or incomplete iteration should have occurred, so post-yield
+        # function should not be expected to have been called.
+        inst._post_iterator_check.assert_not_called()
 
-    def test_computeDescriptor_validType_newVector(self):
-        expected_image_type = 'image/png'
-        expected_vector = numpy.random.randint(0, 100, 10)
-        expected_uuid = "a unique ID"
+    def test_generate_arrays_valid_type(self):
+        """ Test passing "valid" data elements causing dummy array returns."""
+        # Using dummy to pull in integrated mixin class functionality.
+        inst = self.inst
 
-        # Set up mock classes/responses
-        cd = DummyDescriptorGenerator()
-        cd.valid_content_types = mock.Mock(return_value={expected_image_type})
-        cd._compute_descriptor = mock.Mock(return_value=expected_vector)
+        data_list = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_list:
+            # match "valid_content_types"
+            d.content_type.return_value = 'image/png'
 
-        mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-        m_data = mDataElement()
-        m_data.content_type.return_value = expected_image_type
-        m_data.uuid.return_value = expected_uuid
+        expected_vectors = [[0], [1], [2]]
+        actual_vectors = list(inst.generate_arrays(data_list))
+        assert numpy.allclose(
+            actual_vectors,
+            expected_vectors
+        )
 
-        mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
-        mDescrElement().has_vector.return_value = False
+        # Complete iteration should cause post-yield method to be called.
+        inst._post_iterator_check.assert_called_once()
 
-        mDescriptorFactory = mock.Mock(
-            spec=smqtk.representation.DescriptorElementFactory)
-        m_factory = mDescriptorFactory()
-        m_factory.new_descriptor.return_value = mDescrElement()
+    def test_generate_arrays_empty_iter(self):
+        """ Test that we correctly return an empty generator if an empty
+        iterable is provided. """
+        # Using dummy to pull in integrated mixin class functionality.
+        inst = self.inst
 
-        # Call: matching content types, no existing descriptor for data
-        d = cd.compute_descriptor(m_data, m_factory, overwrite=False)
+        expected_vectors = []
+        actual_vectors = list(inst.generate_arrays([]))
+        assert actual_vectors == expected_vectors
 
-        m_factory.new_descriptor.assert_called_once_with(cd.name, expected_uuid)
-        self.assertTrue(cd._compute_descriptor.called)
-        mDescrElement().set_vector.assert_called_once_with(expected_vector)
-        self.assertIs(d, mDescrElement())
+        # Complete iteration should cause post-yield method to be called.
+        inst._post_iterator_check.assert_called_once()
 
-    def test_computeDescriptor_validType_existingVector(self):
-        expected_image_type = 'image/png'
-        expected_existing_vector = numpy.random.randint(0, 100, 10)
-        expected_new_vector = numpy.random.randint(0, 100, 10)
-        expected_uuid = "a unique ID"
+    def test_generate_elements_empty_iter(self):
+        """ Test that we correctly return an empty generator if an empty
+        iterable is provided. """
+        expected_elems = []
+        actual_elems = list(self.inst.generate_elements([]))
+        assert actual_elems == expected_elems
 
-        # Set up mock classes/responses
-        mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-        m_data = mDataElement()
-        m_data.content_type.return_value = expected_image_type
-        m_data.uuid.return_value = expected_uuid
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
 
-        mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
-        mDescrElement().has_vector.return_value = True
-        mDescrElement().vector.return_value = expected_existing_vector
+    def test_generate_elements_bad_content_type(self):
+        """ Test that a ValueError occurs if one or more data elements passed
+        are not considered to have valid content types. """
+        d = mock.Mock(spec=smqtk.representation.DataElement)
+        d.content_type.return_value = "image/jpeg"
 
-        mDescriptorFactory = mock.Mock(
-            spec=smqtk.representation.DescriptorElementFactory)
-        m_factory = mDescriptorFactory()
-        m_factory.new_descriptor.return_value = mDescrElement()
+        with pytest.raises(ValueError,
+                           match="Data element does not match a content type "
+                                 "reported as valid."):
+            list(self.inst.generate_elements([d]))
 
-        cd = DummyDescriptorGenerator()
-        cd.valid_content_types = mock.Mock(return_value={expected_image_type})
-        cd._compute_descriptor = mock.Mock(return_value=expected_new_vector)
+        # Incomplete iteration should have occurred, so post-yield
+        # function should not be expected to have been called.
+        self.inst._post_iterator_check.assert_not_called()
 
-        # Call: matching content types, existing descriptor for data
-        d = cd.compute_descriptor(m_data, m_factory, overwrite=False)
+    def test_generate_elements_impl_over_generate_elements(self):
+        """
+        Test that an error is thrown when an implementation that returns more
+        vectors than data elements (IndexError).
+        """
+        # Mock data element input
+        data_iter = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_iter:
+            d.content_type.return_value = 'image/png'
 
-        self.assertTrue(mDescrElement().has_vector.called)
-        self.assertFalse(cd._compute_descriptor.called)
-        self.assertFalse(mDescrElement().set_vector.called)
-        self.assertIs(d, mDescrElement())
+        # Mock generated descriptor elements that *don't* have vectors
+        m_descr_elem = mock.MagicMock(spec=DescriptorElement)
+        m_descr_elem.has_vector.return_value = False
 
-    def test_computeDescriptor_validType_existingVector_overwrite(self):
-        expected_image_type = 'image/png'
-        expected_existing_vector = numpy.random.randint(0, 100, 10)
-        expected_new_vector = numpy.random.randint(0, 100, 10)
-        expected_uuid = "a unique ID"
+        # Mock factory to return some descriptor element mock
+        m_fact = mock.MagicMock(spec=DescriptorElementFactory)
+        m_fact.new_descriptor.return_value = m_descr_elem
 
-        # Set up mock classes/responses
-        mDataElement = mock.Mock(spec=smqtk.representation.DataElement)
-        m_data = mDataElement()
-        m_data.content_type.return_value = expected_image_type
-        m_data.uuid.return_value = expected_uuid
+        # Mock generator instance to return
+        self.inst._generate_arrays = self.inst._generate_too_many_arrays
 
-        mDescrElement = mock.Mock(spec=smqtk.representation.DescriptorElement)
-        mDescrElement().has_vector.return_value = True
-        mDescrElement().vector.return_value = expected_existing_vector
+        # TODO: Check index error message when fail
+        with pytest.raises(IndexError):
+            list(self.inst.generate_elements(data_iter, descr_factory=m_fact,
+                                             overwrite=False))
 
-        mDescriptorFactory = mock.Mock(
-            spec=smqtk.representation.DescriptorElementFactory)
-        m_factory = mDescriptorFactory()
-        m_factory.new_descriptor.return_value = mDescrElement()
+        # Incomplete iteration should have occurred, so post-yield
+        # function should not be expected to have been called.
+        self.inst._post_iterator_check.assert_not_called()
 
-        cd = DummyDescriptorGenerator()
-        cd.valid_content_types = mock.Mock(return_value={expected_image_type})
-        cd._compute_descriptor = mock.Mock(return_value=expected_new_vector)
+    def test_generate_elements_impl_under_generate_elements(self):
+        """
+        Test that an error is thrown when an implementation that returns less
+        vectors than data elements.
+        """
+        # Mock data element input
+        data_iter = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_iter:
+            d.content_type.return_value = 'image/png'
 
-        # Call: matching content types, existing descriptor for data
-        d = cd.compute_descriptor(m_data, m_factory, overwrite=True)
+        # Mock generated descriptor elements that *don't* have vectors
+        m_descr_elem = mock.MagicMock(spec=DescriptorElement)
+        m_descr_elem.has_vector.return_value = False
+        m_descr_elem.uuid.return_value = "test_uuid"
 
-        self.assertFalse(mDescrElement().has_vector.called)
-        self.assertTrue(cd._compute_descriptor.called)
-        cd._compute_descriptor.assert_called_once_with(m_data)
-        self.assertTrue(mDescrElement().set_vector.called)
-        mDescrElement().set_vector.assert_called_once_with(expected_new_vector)
-        self.assertIs(d, mDescrElement())
+        # Mock factory to return some descriptor element mock
+        m_fact = mock.MagicMock(spec=DescriptorElementFactory)
+        m_fact.new_descriptor.return_value = m_descr_elem
 
-    def test_computeDescriptorAsync(self):
-        # Only using threading because mock.Mock can't be serialized (pickled)
-        # for multiprocessing IPC.
+        # Mock generator instance to return
+        self.inst._generate_arrays = self.inst._generate_too_few_arrays
 
-        # Mock input data
-        m_d0 = mock.Mock(name='data-0',
-                         spec=smqtk.representation.DataElement)()
-        m_d1 = mock.Mock(name='data-1',
-                         spec=smqtk.representation.DataElement)()
+        with pytest.raises(IndexError):
+            list(self.inst.generate_elements(data_iter, descr_factory=m_fact,
+                                             overwrite=False))
 
-        m_d0.uuid.return_value = 'uuid-0'
-        m_d1.uuid.return_value = 'uuid-1'
+        # Under-yielding generator should have completed iteration, so the
+        # post-yield method should have been called.
+        self.inst._post_iterator_check.assert_called_once()
 
-        m_factory = \
-            mock.Mock(spec=smqtk.representation.DescriptorElementFactory)()
+    def test_generate_elements_non_preexisting(self):
+        """ Test generating descriptor elements where none produced by the
+        factory have existing vectors, i.e. all data elements are passed to
+        underlying generation method. """
+        # Mock data element input
+        data_iter = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_iter:
+            d.content_type.return_value = 'image/png'
 
-        def mock_compute(d, *_):
-            if d is m_d0:
-                return 1
-            elif d is m_d1:
-                return 2
+        # Mock element type
+        m_de_type = mock.MagicMock(name="DescrElemType")
+
+        # Mock factory
+        fact = smqtk.representation.DescriptorElementFactory(
+            m_de_type, {}
+        )
+
+        # Mock element instance
+        m_de_inst = m_de_type.from_config()  # from factory
+        # !!! Mock that elements all have *no* vector set
+        m_de_inst.has_vector.return_value = False
+
+        # Default factor is the in-memory descriptor element.
+        list(self.inst.generate_elements(data_iter, descr_factory=fact,
+                                         overwrite=False))
+        assert m_de_inst.has_vector.call_count == 3
+        assert m_de_inst.set_vector.call_count == 3
+        # We know the dummy vectors that should have been iterated out
+        m_de_inst.set_vector.assert_any_call([0])
+        m_de_inst.set_vector.assert_any_call([1])
+        m_de_inst.set_vector.assert_any_call([2])
+
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
+
+    def test_generate_elements_all_preexisting(self):
+        """ Test that no descriptors are computed if all generated descriptor
+        elements report as having a vector and overwrite is False. """
+        # Mock data element input
+        data_iter = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_iter:
+            d.content_type.return_value = 'image/png'
+
+        # Mock element type
+        m_de_type = mock.MagicMock(name="DescrElemType")
+
+        # Mock factory
+        fact = smqtk.representation.DescriptorElementFactory(
+            m_de_type, {}
+        )
+
+        # Mock element instance
+        m_de_inst = m_de_type.from_config()  # from factory
+        # !!! Mock that elements all *have* a vector set
+        m_de_inst.has_vector.return_value = True
+
+        # Default factor is the in-memory descriptor element.
+        list(self.inst.generate_elements(data_iter, descr_factory=fact,
+                                         overwrite=False))
+        assert m_de_inst.has_vector.call_count == 3
+        assert m_de_inst.set_vector.call_count == 0
+
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
+
+    def test_generate_elements_all_preexisting_overwrite(self):
+        """ Test that descriptors are computed even though the generated
+        elements (mocked) report as having a vector.
+        """
+        # Mock data element input
+        data_iter = [
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+            mock.Mock(spec=smqtk.representation.DataElement),
+        ]
+        for d in data_iter:
+            d.content_type.return_value = 'image/png'
+
+        # Mock element type
+        m_de_type = mock.MagicMock(name="DescrElemType")
+
+        # Mock factory
+        fact = smqtk.representation.DescriptorElementFactory(
+            m_de_type, {}
+        )
+
+        # Mock element instance
+        m_de_inst = m_de_type.from_config()  # from factory
+        # !!! Mock that elements all *have* a vector set
+        m_de_inst.has_vector.return_value = True
+
+        # Default factor is the in-memory descriptor element.
+        list(self.inst.generate_elements(data_iter, descr_factory=fact,
+                                         overwrite=True))
+        # expect no has-vec checks because its after overwrite short-circuit.
+        assert m_de_inst.has_vector.call_count == 0
+        assert m_de_inst.set_vector.call_count == 3
+
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
+
+    def test_generate_elements_mixed_precomp(self):
+        """ Test that a setup of factory-produced elements having and not
+        having pre-existing vectors results in all returns. """
+        # Mock data/descriptor element pairs, storing state for testing.
+        # - content type matching above ``inst.valid_content_types()``
+        # - marking indices 2, 3, 5 as NOT having prior vec stored
+        data_iter = []
+        m_descr_elems = []
+        for i in range(8):
+            data = mock.Mock(spec=smqtk.representation.DataElement)
+            data.uuid.return_value = i
+            data.content_type.return_value = 'image/png'
+            data_iter.append(data)
+
+            desc = mock.Mock(spec=smqtk.representation.DescriptorElement)
+            if i in [2, 3, 5]:  # !!!
+                desc.has_vector.return_value = False
             else:
-                return None
+                desc.has_vector.return_value = True
+            m_descr_elems.append(desc)
 
-        generator = DummyDescriptorGenerator()
-        generator.compute_descriptor = mock.Mock(
-            side_effect=mock_compute
+        # Mock factory since we want to control has-vec return logic.
+        def m_fact_newdesc(_, uuid):
+            return dict(enumerate(m_descr_elems))[uuid]
+
+        m_fact = \
+            mock.MagicMock(spec=smqtk.representation.DescriptorElementFactory)
+        m_fact.new_descriptor.side_effect = m_fact_newdesc
+
+        actual_ret = list(
+            self.inst.generate_elements(data_iter, descr_factory=m_fact,
+                                        overwrite=False)
         )
 
-        m = generator.compute_descriptor_async([m_d0, m_d1], m_factory,
-                                               overwrite=False, use_mp=False)
+        # Everything should have been checked for has-vec because overwrite was
+        # not set.
+        for e in m_descr_elems:
+            e.has_vector.assert_called_once()
 
-        self.assertEqual(len(m), 2)
-        self.assertIn(m_d0.uuid(), m)
-        self.assertIn(m_d1.uuid(), m)
-        self.assertEqual(m[m_d0.uuid()], 1)
-        self.assertEqual(m[m_d1.uuid()], 2)
+        # Check that the appropriate elements have been set vectors
+        m_descr_elems[0].set_vector.assert_not_called()
+        m_descr_elems[1].set_vector.assert_not_called()
+        m_descr_elems[2].set_vector.assert_called_once_with([0])
+        m_descr_elems[3].set_vector.assert_called_once_with([1])
+        m_descr_elems[4].set_vector.assert_not_called()
+        m_descr_elems[5].set_vector.assert_called_once_with([2])
+        m_descr_elems[6].set_vector.assert_not_called()
+        m_descr_elems[7].set_vector.assert_not_called()
 
-        self.assertTrue(generator.compute_descriptor.called)
-        self.assertEqual(generator.compute_descriptor.call_count, 2)
-        generator.compute_descriptor.assert_any_call(m_d0, m_factory, False)
-        generator.compute_descriptor.assert_any_call(m_d1, m_factory, False)
+        # Check that returned elements are the expected elements from
+        assert actual_ret == m_descr_elems
 
-    def test_computeDescriptorAsync_failure(self):
-        # Only using threading because mock.Mock can't be serialized (pickled)
-        # for multiprocessing IPC.
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
 
-        m_d0 = mock.Mock(spec=smqtk.representation.DataElement)()
-        m_d1 = mock.Mock(spec=smqtk.representation.DataElement)()
+    def test_generate_one_array(self):
+        """ Test that the one-array wrapper performs as expected.
+        """
+        m_d = mock.Mock(spec=smqtk.representation.DataElement)
+        m_d.content_type.return_value = 'image/png'
 
-        m_factory = \
-            mock.Mock(spec=smqtk.representation.DescriptorElementFactory)()
+        actual_v = self.inst.generate_one_array(m_d)
+        expected_v = [0]
+        numpy.testing.assert_allclose(actual_v, expected_v)
 
-        generator = DummyDescriptorGenerator()
-        generator.compute_descriptor = mock.Mock(
-            side_effect=RuntimeError("Intended exception")
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()
+
+    def test_generate_one_element(self):
+        """ Test that the one-element wrapper performs as expected.
+        Using default factory/overwrite params (memory, False).
+        """
+        m_d = mock.Mock(spec=smqtk.representation.DataElement)
+        m_d.content_type.return_value = 'image/png'
+
+        actual_e = self.inst.generate_one_element(m_d)
+        expected_v = [0]
+        numpy.testing.assert_allclose(
+            actual_e.vector(), expected_v
         )
 
-        self.assertRaises(
-            RuntimeError,
-            generator.compute_descriptor_async,
-            [m_d0, m_d1], m_factory,
-            procs=2,
-            overwrite=False, use_mp=False
-        )
+        # Complete iteration should cause post-yield method to be called.
+        self.inst._post_iterator_check.assert_called_once()

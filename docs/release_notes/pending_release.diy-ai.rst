@@ -45,6 +45,8 @@ Tests
 * Updated colordescriptor DescriptorGenerator tests to "skip" when deemed not
   available so that the tests are not just hidden when the optional
   dependencies are not present.
+* Updated dummy classes used in classifier service unit tests to match the new
+  DescriptorGenerator API.
 
 Utils
 * Added additional description capability to ProgressReporter.
@@ -57,6 +59,8 @@ Web
 * Changed IQR web service endpoint to retrieve nearest-neighbors to a GET
   method instead of the previous POST method, as the previous method did not
   make sense for the request being made.
+* Fixed usage of DescriptorGenerator instances in the classifier service for
+  the API update.
 
 Fixes
 -----

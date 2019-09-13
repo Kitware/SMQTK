@@ -47,6 +47,8 @@ Tests
   dependencies are not present.
 * Updated dummy classes used in classifier service unit tests to match the new
   DescriptorGenerator API.
+* Update IQR service unit tests stub class for the new DescriptorGenerator API
+  and iteration properties.
 
 Utils
 * Added additional description capability to ProgressReporter.

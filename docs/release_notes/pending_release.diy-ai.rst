@@ -10,6 +10,7 @@ Algorithms
   * Overhauled interface API to have the abstract method be a many-to-many
     iterator instead of the previous one-to-one signature.
   * Updated colordescriptor implementation for interface API update.
+  * Updated caffe implementation for interface API update.
 
 Docker
 * Started use of docker-compose YAML file to organize image building.
@@ -82,6 +83,8 @@ Tests
 Utilities
 * Fixed issue with ProgressReporter when reporting before the first interval
   period.
+* Fixed issue with ``smqtk.utils.parallel.parallel_map`` function where it
+  could hang during threading-mode when a keyboard interrupt occurred.
 
 Web
 * Classifier Service

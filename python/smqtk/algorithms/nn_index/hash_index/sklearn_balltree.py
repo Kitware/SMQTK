@@ -209,7 +209,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
         if len(vec_list) > 0:
             # If distance metric ever changes, need to update save/load model
             # functions.
-            self.bt = BallTree(vec_list, self.leaf_size,
+            self.bt = BallTree(np.asarray(vec_list), self.leaf_size,
                                metric='hamming')
         else:
             self.bt = None

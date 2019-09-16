@@ -15,7 +15,8 @@ numpy==1.17.3; python_version >= "3"
 Pillow==6.2.0
 pymongo==3.7.2
 requests==2.20.0
-scikit-learn==0.20.0
+scikit-learn==0.20.4; python_version < "3"
+scikit-learn==0.21.3; python_version >= "3"
 scipy==1.1.0
 six==1.11.0
 stevedore==1.29.0

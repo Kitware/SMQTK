@@ -20,6 +20,18 @@ Compute Functions
 Docker
 * Started use of docker-compose YAML file to organize image building.
 * Added FAISS TPL image to be copied from by utilizing images.
+* IQR "Playground"
+  * Fixed compute test scripts to use updated DescriptorGenerator API.
+
+Documentation
+* Updated ``docs/algorithminterfaces.rst`` to reflect the new
+  DescriptorGenerator API.
+* Updated ``docs/algorithmmodels.rst`` to reflect the new DescriptorGenerator
+  API.
+* Updated the ``docs/examples/caffe_build_index.rst`` example to use the new
+  DescriptorGenerator API.
+* Updated the ``docs/examples/simple_feature_computation.rst`` example to use
+  the new DescriptorGenerator API.
 
 IQR
 * Remove forcing of relevancy scores in ``refine`` when a result element is
@@ -54,6 +66,15 @@ Tests
 * Update IQR service unit tests stub class for the new DescriptorGenerator API
   and iteration properties.
 
+Tools / Scripts
+* Updated the ``smqtk.bin.classifyFiles`` tool to use the new
+  DescriptorGenerator API.
+* Updated the ``smqtk.bin.computeDescriptor`` tool to use the new
+  DescriptorGenerator API.
+* Updated the ``smqtk.bin.iqr_app_model_generation`` tool to use the new
+  DescriptorGenerator API.
+* Updated some old MEMEX scripts to use the new DescriptorGenerator API.
+
 Utils
 * Added additional description capability to ProgressReporter.
 * Added a return of self in the ``ContentTypeValidator.raise_valid_element()``
@@ -67,6 +88,11 @@ Web
   make sense for the request being made.
 * Fixed usage of DescriptorGenerator instances in the classifier service for
   the API update.
+* Updated ``smqtk.web.descriptor_service`` to use the new DescriptorGenerator
+  API.
+* Updated ``smqtk.web.iqr_service`` to use the new DescriptorGenerator API.
+* Updated ``smqtk.web.nearestneighbor_service`` to use the new
+  DescriptorGenerator API.
 
 Fixes
 -----

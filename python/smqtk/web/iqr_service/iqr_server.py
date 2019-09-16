@@ -360,8 +360,8 @@ class IqrService (SmqtkWebApp):
         :rtype: smqtk.representation.DescriptorElement
         """
         de = DataMemoryElement.from_base64(b64, content_type)
-        return self.descriptor_generator.compute_descriptor(
-            de, self.descriptor_factory
+        return self.descriptor_generator.generate_one_element(
+            de, descr_factory=self.descriptor_factory
         )
 
     # GET /is_ready

@@ -3,6 +3,8 @@ import collections
 import json
 import numpy
 
+from six.moves import zip
+
 from smqtk.utils.cli import logging, initialize_logging
 from smqtk.representation.data_set.memory_set import DataMemorySet
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
@@ -59,7 +61,7 @@ for data in eval_data_set:
         eval_data2descr[data] = img_prob_descr_index[data.uuid()]
 if d_to_proc:
     eval_data2descr.update(
-        img_prob_gen.compute_descriptor_async(d_to_proc)
+        zip(d_to_proc, img_prob_gen.generate_elements(d_to_proc))
     )
     d_to_proc.clear()
 assert len(eval_data2descr) == eval_data_set.count()

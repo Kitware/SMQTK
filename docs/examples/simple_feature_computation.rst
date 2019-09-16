@@ -23,7 +23,7 @@ The following is a concrete example of performing feature computation for a set 
     factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 
     # Compute features on the first image
-    result = cd.compute_descriptor(el[0], factory)
+    result = cd.generate_one_element(el[0], factory)
     result.vector()
 
     # array([ 0.        ,  0.01254855,  0.        , ...,  0.0035853 ,

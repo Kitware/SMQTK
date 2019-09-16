@@ -153,14 +153,15 @@ def classify_files(config, label, file_globs):
     descriptor_generator = \
         from_config_dict(config['descriptor_generator'],
                          DescriptorGenerator.get_impls())
-    descr_map = descriptor_generator\
-        .compute_descriptor_async(data_elements, descriptor_factory)
+    descr_iter = descriptor_generator.generate_elements(
+        data_elements, descr_factory=descriptor_factory
+    )
 
     log.info("Classifying descriptors")
     classification_factory = ClassificationElementFactory \
         .from_config(config['classification_factory'])
     classification_map = classifier\
-        .classify_async(list(descr_map.values()), classification_factory)
+        .classify_async(descr_iter, classification_factory)
 
     log.info("Printing input file paths that classified as the given label.")
     # map of UUID to filepath:

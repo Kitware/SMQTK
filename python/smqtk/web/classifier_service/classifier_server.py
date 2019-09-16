@@ -421,9 +421,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self._log.debug("Length of byte data: %d" % len(data_bytes))
 
         data_elem = DataMemoryElement(data_bytes, content_type, readonly=True)
-        descr_elem = list(self.descriptor_gen.generate_elements(
-            [data_elem], self.descriptor_factory
-        ))[0]
+        descr_elem = self.descriptor_gen.generate_one_element(
+            data_elem, descr_factory=self.descriptor_factory
+        )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 
         try:

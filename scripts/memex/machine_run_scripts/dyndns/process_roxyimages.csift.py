@@ -71,7 +71,7 @@ def process_file(file_path):
     data = DataFileElement(file_path)
     # disregarding returned descriptor object
     try:
-        DESCR_GENERATOR.compute_descriptor(data, DESCR_FACTORY)
+        DESCR_GENERATOR.generate_one_element(data, DESCR_FACTORY)
     except Exception, ex:
         l.error("Exception occurred (%s) for image %s: %s\n"
                 "%s",

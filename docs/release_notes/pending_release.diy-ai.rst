@@ -13,6 +13,10 @@ Algorithms
   * Updated caffe implementation for interface API update.
   * Updated KWCNN implementation for interface API update.
 
+Compute Functions
+* Updated ``smqtk.compute_functions.compute_many_descriptors`` to utilize new
+  DescriptorGenerator API.
+
 Docker
 * Started use of docker-compose YAML file to organize image building.
 * Added FAISS TPL image to be copied from by utilizing images.

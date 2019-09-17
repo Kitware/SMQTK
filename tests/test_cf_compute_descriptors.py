@@ -59,15 +59,18 @@ def descr_generator():
     """Mock descriptor generator"""
     mock_vector = numpy.random.randint(0, 100, 10)
 
-    def dummy_cd_async(elems, *args, **kwargs):
-        # Note: Cannot simply mock this because we must run through iterator
-        collections.deque(elems, maxlen=0)
-        return {i: mock_vector for i in range(NUM_BASE_ELEMENTS)}
+    def dummy_gen_elements(elems, *args, **kwargs):
+        # Reflect "element" input uuid.
+        for e in elems:
+            m = mock.Mock(spec=smqtk.representation.DescriptorElement)
+            m.uuid.return_value = e.uuid()
+            m.vector.return_value = mock_vector
+            yield m
 
     descr_generator = mock_DescriptorGenerator()
     descr_generator.is_usable = mock.Mock(return_value=True)
-    descr_generator.compute_descriptor_async = mock.Mock(
-        side_effect=dummy_cd_async)
+    descr_generator.generate_elements = mock.Mock(
+        side_effect=dummy_gen_elements)
 
     return descr_generator
 
@@ -110,15 +113,15 @@ def test_compute_many_descriptors(data_elements, descr_generator, mock_de,
                                            batch_size=None)
 
     descriptors_count = 0
-    for desc, uuid in zip(descriptors, range(NUM_BASE_ELEMENTS)):
+    for expected_uuid, desc in enumerate(descriptors):
         # Make sure order is preserved
-        assert desc[0].uuid() == uuid
+        assert desc[0].uuid() == expected_uuid
         descriptors_count += 1
     # Make sure correct number of elements returned
     assert descriptors_count == NUM_BASE_ELEMENTS
 
     # Since batch_size is None, these should only be called once
-    assert descr_generator.compute_descriptor_async.call_count == 1
+    assert descr_generator.generate_elements.call_count == 1
     assert descr_index.add_many_descriptors.call_count == 1
 
 
@@ -145,7 +148,7 @@ def test_compute_many_descriptors_batched(data_elements, descr_generator,
     # Check number of calls
     num_calls = NUM_BASE_ELEMENTS // batch_size + [0, 1][
         bool(NUM_BASE_ELEMENTS % batch_size)]
-    assert descr_generator.compute_descriptor_async.call_count == num_calls
+    assert descr_generator.generate_elements.call_count == num_calls
     assert descr_index.add_many_descriptors.call_count == num_calls
 
 

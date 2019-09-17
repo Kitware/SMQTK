@@ -63,13 +63,12 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         into the generated DescriptorElement.
     :type overwrite: bool
 
-    :param procs: Tell the DescriptorGenerator to use a specific number of
-        threads/cores.
+    :param procs: Deprecated parameter. Parallelism in batch computation is now
+        controlled on a per implementation basis.
     :type procs: None | int
 
-    :param kwds: Remaining keyword-arguments that are to be passed into the
-        ``compute_descriptor_async`` function on the descriptor generator.
-    :type kwds: dict
+    :param kwds: Deprecated parameter. Extra keyword arguments are no longer
+        passed down to the batch generation method on the descriptor generator.
 
     :return: Generator that yields (DataElement, DescriptorElement) for each
         data element given, in the order they were provided.
@@ -84,16 +83,39 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
     de_deque = collections.deque()
 
     # Counts for logging
-    total = 0
-    unique = 0
+    total = [0]
+    unique = set()
 
     def iter_capture_elements():
         for d in data_elements:
             de_deque.append(d)
             yield d
 
+    # TODO: Re-write this method to more simply tee the input data elem iter
+    #       and yield with paired generated descriptors::
+    #           data_iter1, data_iter2 = itertools.tee(data_elements, 2)
+    #           descr_iter = descr_generator.generate_elements(
+    #               data_iter1, descr_factory, overwrite
+    #           )
+    #           return zip(data_iter2, descr_iter)
+
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
+
+        def iterate_batch_results():
+            descr_list_ = list(descr_generator.generate_elements(
+                de_deque, descr_factory, overwrite
+            ))
+            total[0] += len(de_deque)
+            unique.update(d.uuid() for d in descr_list_)
+            log.debug("-- Processed %d so far (%d total data elements "
+                      "input)", len(unique), total[0])
+            log.debug("-- adding to index")
+            descr_index.add_many_descriptors(descr_list_)
+            log.debug("-- yielding generated descriptor elements")
+            for data_, descr_ in zip(de_deque, descr_list_):
+                yield data_, descr_
+            de_deque.clear()
 
         batch_i = 0
 
@@ -102,62 +124,32 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
             if len(de_deque) == batch_size:
                 batch_i += 1
-                log.debug("Computing batch %d", batch_i)
-
-                total += len(de_deque)
-                m = descr_generator.compute_descriptor_async(
-                    de_deque, descr_factory, overwrite, procs, **kwds
-                )
-                unique += len(m)
-                log.debug("-- Processed %d so far (%d total data elements "
-                          "input)", unique, total)
-
-                log.debug("-- adding to index")
-                descr_index.add_many_descriptors(six.itervalues(m))
-
-                log.debug("-- yielding generated descriptor elements")
-                for e in de_deque:
-                    # noinspection PyProtectedMember
-                    yield e, m[e.uuid()]
-
-                de_deque.clear()
+                log.debug("Computing batch {}".format(batch_i))
+                for data_e, descr_e in iterate_batch_results():
+                    yield data_e, descr_e
 
         if len(de_deque):
             log.debug("Computing final batch of size %d",
                       len(de_deque))
-
-            total += len(de_deque)
-            m = descr_generator.compute_descriptor_async(
-                de_deque, descr_factory, overwrite, procs, **kwds
-            )
-            unique += len(m)
-            log.debug("-- Processed %d so far (%d total data elements "
-                      "input)", unique, total)
-
-            log.debug("-- adding to index")
-            descr_index.add_many_descriptors(six.itervalues(m))
-
-            log.debug("-- yielding generated descriptor elements")
-            for de in de_deque:
-                # noinspection PyProtectedMember
-                yield de, m[de.uuid()]
+            for data_e, descr_e in iterate_batch_results():
+                yield data_e, descr_e
 
     else:
-        log.debug("Using single async call")
+        log.debug("Using single generate call")
 
         # Just do everything in one call
         log.debug("Computing descriptors")
-        m = descr_generator.compute_descriptor_async(
+        descr_list = list(descr_generator.generate_elements(
             iter_capture_elements(), descr_factory,
-            overwrite, procs, **kwds
-        )
+            overwrite
+        ))
 
         log.debug("Adding to index")
-        descr_index.add_many_descriptors(six.itervalues(m))
+        descr_index.add_many_descriptors(descr_list)
 
         log.debug("yielding generated elements")
-        for de in de_deque:
-            yield de, m[de.uuid()]
+        for data, descr in zip(de_deque, descr_list):
+            yield data, descr
 
 
 class _CountedGenerator(object):

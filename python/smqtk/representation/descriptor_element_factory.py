@@ -33,7 +33,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :type type_config: dict
 
         """
-        #: :type: smqtk.representation.DescriptorElement
+        #: :type: type | smqtk.representation.DescriptorElement
         self._d_type = d_type
         self._d_type_config = type_config
 
@@ -83,7 +83,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         return DescriptorElementFactory(de_type, de_conf)
 
     def get_config(self):
-        return cls_conf_to_config_dict(self.type, self.type_config)
+        return cls_conf_to_config_dict(self._d_type, self._d_type_config)
 
     def new_descriptor(self, type_str, uuid):
         """

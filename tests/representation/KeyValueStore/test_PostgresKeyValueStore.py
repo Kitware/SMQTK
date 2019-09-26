@@ -1,5 +1,8 @@
 import mock
+import re
 import unittest
+
+import pytest
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value.postgres import PostgresKeyValueStore
@@ -67,8 +70,8 @@ if PostgresKeyValueStore.is_usable():
             mock_execute.assert_called_once()
             # Call should have been with provided key as converted to postgres
             # bytea type.
-            self.assertRegexpMatches(mock_execute.call_args[0][0],
-                                     "DELETE FROM .+ WHERE .+ LIKE .+")
+            assert re.match("DELETE FROM .+ WHERE .+ LIKE .+",
+                            mock_execute.call_args[0][0])
             self.assertEqual(set(mock_execute.call_args[0][1].keys()),
                              {'key_like'})
             self.assertEqual(
@@ -103,25 +106,20 @@ if PostgresKeyValueStore.is_usable():
             # rows being found by the first call to the method when checking
             # for key presence in table.
             s._check_contained_keys = mock.Mock(return_value={0, 1})
-            PY2_SET_KEY_ERROR_RE = "set\(\[(?:0|1), (?:0|1)\]\)"
-            PY3_SET_KEY_ERROR_RE = "{(?:0|1), (?:0|1)}"
-            self.assertRaisesRegexp(
-                KeyError, '^(?:{}|{})$'.format(PY2_SET_KEY_ERROR_RE,
-                                               PY3_SET_KEY_ERROR_RE),
-                s.remove_many, [0, 1]
-            )
+            PY2_SET_KEY_ERROR_RE = r"set\(\[(?:0|1), (?:0|1)\]\)"
+            PY3_SET_KEY_ERROR_RE = r"{(?:0|1), (?:0|1)}"
+            SET_KEY_ERROR_RE = r'^(?:{}|{})$'.format(PY2_SET_KEY_ERROR_RE,
+                                                     PY3_SET_KEY_ERROR_RE)
+            with pytest.raises(KeyError, match=SET_KEY_ERROR_RE):
+                s.remove_many([0, 1])
 
             # Simulate only one of the keys existing in the table.
             s._check_contained_keys = mock.Mock(return_value={1})
-            self.assertRaisesRegexp(
-                KeyError, '^1$',
-                s.remove_many, [0, 1]
-            )
+            with pytest.raises(KeyError, match=r'^1$'):
+                s.remove_many([0, 1])
             s._check_contained_keys = mock.Mock(return_value={0})
-            self.assertRaisesRegexp(
-                KeyError, '^0$',
-                s.remove_many, [0, 1]
-            )
+            with pytest.raises(KeyError, match=r'^0$'):
+                s.remove_many([0, 1])
 
         # noinspection PyUnusedLocal
         # - purposefully not used mock objects
@@ -140,14 +138,14 @@ if PostgresKeyValueStore.is_usable():
             exp_key_2_bytea = PostgresKeyValueStore._py_to_bin(expected_key_2)
 
             # Skip table creation calls for simplicity.
-            s = PostgresKeyValueStore(create_table=False)
+            s = PostgresKeyValueStore(create_table=False, batch_size=5)
 
             # Mock PSQL cursor stuff because we aren't actually connecting to a
             # database.
             # - `get_psql_connection` uses `smqtk.utils.postgres.
             #   get_connection_pool`, so the return is a mock object.
-            # - Cursor is created via a context (i.e. __enter__()) when utilized
-            #   in `PsqlConnectionHelper` execute methods.
+            # - Cursor is created via a context (i.e. __enter__()) when
+            #   utilized in `PsqlConnectionHelper` execute methods.
             #: :type: mock.Mock
             mock_cursor = s._psql_helper.get_psql_connection().cursor() \
                 .__enter__()
@@ -176,7 +174,8 @@ if PostgresKeyValueStore.is_usable():
             psqlExecBatch_kwargs = m_psqlExecBatch.call_args[1]
             self.assertEqual(psqlExecBatch_call_args[0], mock_cursor)
             self.assertEqual(psqlExecBatch_call_args[1], expected_del_q)
-            # 3rd argument is a list of dictionaries for 'key_like' replacements
+            # 3rd argument is a list of dictionaries for 'key_like'
+            # replacements
             # - dictionary values are `psycopg2.extensions.Binary` type, which
             #   are not directly comparable (different instances). Have to
             #   convert to bytes representation in order to compare.
@@ -188,4 +187,5 @@ if PostgresKeyValueStore.is_usable():
             )
             self.assertIn('page_size', psqlExecBatch_kwargs)
             self.assertEqual(psqlExecBatch_kwargs['page_size'], s._batch_size)
-            self.assertEqual(psqlExecBatch_kwargs['page_size'], 1000)  # default
+            # Batch size as specified in the constructor above.
+            self.assertEqual(psqlExecBatch_kwargs['page_size'], 5)

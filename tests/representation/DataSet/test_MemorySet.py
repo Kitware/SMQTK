@@ -49,7 +49,7 @@ class TestDataFileSet (unittest.TestCase):
         self.assertEqual(i._element_map, {})
 
     def test_from_config_with_cache(self):
-        # Use a cache element with bytes defining pickle of map to use.
+        # Use a cache element with content defining pickle of map to use.
         expected_map = dict(a=1, b=2, c=3)
 
         c = DataMemorySet.get_default_config()

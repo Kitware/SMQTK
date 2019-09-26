@@ -63,6 +63,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_from_config(self):
         # Configured cache with some picked bytes
+        # Then convert to "string" (decode -> unicode) for python version used.
         expected_table = dict(a=1, b=2, c=3)
         expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
         expected_cache_json_str = \

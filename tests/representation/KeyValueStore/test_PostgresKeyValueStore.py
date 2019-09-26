@@ -140,14 +140,14 @@ if PostgresKeyValueStore.is_usable():
             exp_key_2_bytea = PostgresKeyValueStore._py_to_bin(expected_key_2)
 
             # Skip table creation calls for simplicity.
-            s = PostgresKeyValueStore(create_table=False)
+            s = PostgresKeyValueStore(create_table=False, batch_size=5)
 
             # Mock PSQL cursor stuff because we aren't actually connecting to a
             # database.
             # - `get_psql_connection` uses `smqtk.utils.postgres.
             #   get_connection_pool`, so the return is a mock object.
-            # - Cursor is created via a context (i.e. __enter__()) when utilized
-            #   in `PsqlConnectionHelper` execute methods.
+            # - Cursor is created via a context (i.e. __enter__()) when
+            #   utilized in `PsqlConnectionHelper` execute methods.
             #: :type: mock.Mock
             mock_cursor = s._psql_helper.get_psql_connection().cursor() \
                 .__enter__()
@@ -176,7 +176,8 @@ if PostgresKeyValueStore.is_usable():
             psqlExecBatch_kwargs = m_psqlExecBatch.call_args[1]
             self.assertEqual(psqlExecBatch_call_args[0], mock_cursor)
             self.assertEqual(psqlExecBatch_call_args[1], expected_del_q)
-            # 3rd argument is a list of dictionaries for 'key_like' replacements
+            # 3rd argument is a list of dictionaries for 'key_like'
+            # replacements
             # - dictionary values are `psycopg2.extensions.Binary` type, which
             #   are not directly comparable (different instances). Have to
             #   convert to bytes representation in order to compare.
@@ -188,4 +189,5 @@ if PostgresKeyValueStore.is_usable():
             )
             self.assertIn('page_size', psqlExecBatch_kwargs)
             self.assertEqual(psqlExecBatch_kwargs['page_size'], s._batch_size)
-            self.assertEqual(psqlExecBatch_kwargs['page_size'], 1000)  # default
+            # Batch size as specified in the constructor above.
+            self.assertEqual(psqlExecBatch_kwargs['page_size'], 5)

@@ -19,6 +19,9 @@ IQR
   predictions: positively adjudicated, negatively adjudicated and
   not-adjudicated elements.
 
+Misc.
+* Cleaned up various test warnings.
+
 Representation
 * AxisAlignedBoundingBox
   * Added ``intersection`` method.
@@ -58,6 +61,10 @@ Algorithms
 * ImageMatrixObjectDetector
   * Add ``abstractmethod`` decorator to intermediate implementation of
     ``get_config`` method.
+
+Tests
+* Fixed PostgreSQL KeyValueStore implementation unit test that became
+  non-deterministic in Python 3+.
 
 Utilities
 * Fixed issue with ProgressReporter when reporting before the first interval

@@ -1,5 +1,8 @@
 import mock
+import re
 import unittest
+
+import pytest
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.key_value.postgres import PostgresKeyValueStore
@@ -67,8 +70,8 @@ if PostgresKeyValueStore.is_usable():
             mock_execute.assert_called_once()
             # Call should have been with provided key as converted to postgres
             # bytea type.
-            self.assertRegexpMatches(mock_execute.call_args[0][0],
-                                     "DELETE FROM .+ WHERE .+ LIKE .+")
+            assert re.match("DELETE FROM .+ WHERE .+ LIKE .+",
+                            mock_execute.call_args[0][0])
             self.assertEqual(set(mock_execute.call_args[0][1].keys()),
                              {'key_like'})
             self.assertEqual(
@@ -103,25 +106,20 @@ if PostgresKeyValueStore.is_usable():
             # rows being found by the first call to the method when checking
             # for key presence in table.
             s._check_contained_keys = mock.Mock(return_value={0, 1})
-            PY2_SET_KEY_ERROR_RE = "set\(\[(?:0|1), (?:0|1)\]\)"
-            PY3_SET_KEY_ERROR_RE = "{(?:0|1), (?:0|1)}"
-            self.assertRaisesRegexp(
-                KeyError, '^(?:{}|{})$'.format(PY2_SET_KEY_ERROR_RE,
-                                               PY3_SET_KEY_ERROR_RE),
-                s.remove_many, [0, 1]
-            )
+            PY2_SET_KEY_ERROR_RE = r"set\(\[(?:0|1), (?:0|1)\]\)"
+            PY3_SET_KEY_ERROR_RE = r"{(?:0|1), (?:0|1)}"
+            SET_KEY_ERROR_RE = r'^(?:{}|{})$'.format(PY2_SET_KEY_ERROR_RE,
+                                                     PY3_SET_KEY_ERROR_RE)
+            with pytest.raises(KeyError, match=SET_KEY_ERROR_RE):
+                s.remove_many([0, 1])
 
             # Simulate only one of the keys existing in the table.
             s._check_contained_keys = mock.Mock(return_value={1})
-            self.assertRaisesRegexp(
-                KeyError, '^1$',
-                s.remove_many, [0, 1]
-            )
+            with pytest.raises(KeyError, match=r'^1$'):
+                s.remove_many([0, 1])
             s._check_contained_keys = mock.Mock(return_value={0})
-            self.assertRaisesRegexp(
-                KeyError, '^0$',
-                s.remove_many, [0, 1]
-            )
+            with pytest.raises(KeyError, match=r'^0$'):
+                s.remove_many([0, 1])
 
         # noinspection PyUnusedLocal
         # - purposefully not used mock objects

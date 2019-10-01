@@ -19,7 +19,7 @@ from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
-from smqtk.utils.configuration import to_config_dict
+from smqtk.utils.configuration import to_config_dict, configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -158,24 +158,20 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
                                       pixel_rescale=(0.2, 0.3),
                                       input_scale=8.9,
                                       threads=7)
-        g1_config = g1.get_config()
-        g2 = CaffeDescriptorGenerator.from_config(g1_config)
-        expected_config = {
-            'network_prototxt': to_config_dict(self.dummy_net_topo_elem),
-            'network_model': to_config_dict(self.dummy_caffe_model_elem),
-            'image_mean': to_config_dict(self.dummy_img_mean_elem),
-            'return_layer': 'foobar',
-            'batch_size': 9,
-            'use_gpu': True,
-            'gpu_device_id': 99,
-            'network_is_bgr': False,
-            'data_layer': 'maybe data',
-            'load_truncated_images': True,
-            'pixel_rescale': (0.2, 0.3),
-            'input_scale': 8.9,
-            'threads': 7,
-        }
-        assert g1_config == g2.get_config() == expected_config
+        for inst in configuration_test_helper(g1):  # type: CaffeDescriptorGenerator
+            assert inst.network_prototxt == self.dummy_net_topo_elem
+            assert inst.network_model == self.dummy_caffe_model_elem
+            assert inst.image_mean == self.dummy_img_mean_elem
+            assert inst.return_layer == 'foobar'
+            assert inst.batch_size == 9
+            assert inst.use_gpu == True
+            assert inst.gpu_device_id == 99
+            assert inst.network_is_bgr == False
+            assert inst.data_layer == 'maybe data'
+            assert inst.load_truncated_images == True
+            assert inst.pixel_rescale == (0.2, 0.3)
+            assert inst.input_scale == 8.9
+            assert inst.threads == 7
 
     @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                 '.CaffeDescriptorGenerator._setup_network')

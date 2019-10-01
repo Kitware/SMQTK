@@ -13,6 +13,7 @@ from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestMRPTIndex (unittest.TestCase):
@@ -36,21 +37,22 @@ class TestMRPTIndex (unittest.TestCase):
         index_filepath = osp.abspath(osp.expanduser('index_filepath'))
         para_filepath = osp.abspath(osp.expanduser('param_fp'))
 
-        # Make configuration based on default
-        c = MRPTNearestNeighborsIndex.get_default_config()
-        c['index_filepath'] = index_filepath
-        c['parameters_filepath'] = para_filepath
-        c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-
-        # Build based on configuration
-        index = MRPTNearestNeighborsIndex.from_config(c)
-        self.assertEqual(index._index_filepath, index_filepath)
-        self.assertEqual(index._index_param_filepath, para_filepath)
-
-        # Test that constructing a new instance from ``index``'s config yields
-        # an index with the same configuration (idempotent).
-        index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
-        self.assertEqual(index.get_config(), index2.get_config())
+        i = MRPTNearestNeighborsIndex(
+            descriptor_set=MemoryDescriptorIndex(),
+            index_filepath=index_filepath, parameters_filepath=para_filepath,
+            read_only=True, num_trees=9, depth=2, random_seed=8,
+            pickle_protocol=0, use_multiprocessing=True,
+        )
+        for inst in configuration_test_helper(i):  # type: MRPTNearestNeighborsIndex
+            assert isinstance(inst._descriptor_set, MemoryDescriptorIndex)
+            assert inst._index_filepath == index_filepath
+            assert inst._index_param_filepath == para_filepath
+            assert inst._read_only == True
+            assert inst._num_trees == 9
+            assert inst._depth == 2
+            assert inst._rand_seed == 8
+            assert inst._pickle_protocol == 0
+            assert inst._use_multiprocessing == True
 
     def test_read_only(self):
         v = np.zeros(5, float)

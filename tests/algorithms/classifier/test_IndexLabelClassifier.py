@@ -8,6 +8,7 @@ from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -32,6 +33,11 @@ class TestIndexLabelClassifier (unittest.TestCase):
     def test_impl_findable(self):
         self.assertIn(IndexLabelClassifier,
                       Classifier.get_impls())
+
+    def test_configurable(self):
+        c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)
+        for inst in configuration_test_helper(c):
+            assert inst.index_to_label_uri == self.FILEPATH_TEST_LABELS
 
     def test_new(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)

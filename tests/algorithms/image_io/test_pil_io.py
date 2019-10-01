@@ -9,6 +9,7 @@ from smqtk.algorithms.image_io.pil_io import PilImageReader
 from smqtk.representation import AxisAlignedBoundingBox
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -61,11 +62,9 @@ class TestPilImageReader (unittest.TestCase):
         Test getting and constructing from configuration.
         """
         expected_exmode = 'L'
-        inst1 = PilImageReader(explicit_mode=expected_exmode)
-        inst1_config = inst1.get_config()
-
-        inst2 = PilImageReader.from_config(inst1_config)
-        assert inst2.get_config() == inst1_config
+        i = PilImageReader(explicit_mode=expected_exmode)
+        for inst in configuration_test_helper(i):  # type: PilImageReader
+            assert inst._explicit_mode == expected_exmode
 
     def test_valid_content_types(self):
         """

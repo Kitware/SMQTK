@@ -65,6 +65,8 @@ Tests
   DescriptorGenerator API.
 * Update IQR service unit tests stub class for the new DescriptorGenerator API
   and iteration properties.
+* Updated various class unit tests to make use of new configuration test helper
+  function.
 
 Tools / Scripts
 * Updated the ``smqtk.bin.classifyFiles`` tool to use the new
@@ -79,6 +81,7 @@ Utils
 * Added additional description capability to ProgressReporter.
 * Added a return of self in the ``ContentTypeValidator.raise_valid_element()``
   method.
+* Added helper function for testing Configurable mixing instance functionality.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

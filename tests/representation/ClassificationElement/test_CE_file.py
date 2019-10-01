@@ -5,6 +5,7 @@ from six.moves import mock
 
 from smqtk.representation.classification_element.file \
     import FileClassificationElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 def test_is_usable():
@@ -119,9 +120,9 @@ def test_serialize_deserialize_pickle():
     assert e2.filepath == expected_filepath
 
 
-def test_get_config():
+def test_configuration():
     """
-    Test that get_config returns an expected configuration.
+    Test file-based impl's configuration reflection
     """
     expected_typename = 'test'
     expected_uuid = 235246
@@ -129,16 +130,14 @@ def test_get_config():
     expected_pp = 1
     expected_subdir_split = 2
 
-    e = FileClassificationElement(expected_typename, expected_uuid,
-                                  expected_save_dir, expected_subdir_split,
-                                  expected_pp)
-
-    expected_conf = {
-        'save_dir': '/foo/bar/thing',
-        'subdir_split': 2,
-        'pickle_protocol': 1,
-    }
-    assert e.get_config() == expected_conf
+    inst = FileClassificationElement(expected_typename, expected_uuid,
+                                     expected_save_dir, expected_subdir_split,
+                                     expected_pp)
+    for i in configuration_test_helper(inst, {"type_name", "uuid"},
+                                       (expected_typename, expected_uuid)):  # type: FileClassificationElement
+        assert i.save_dir == expected_save_dir
+        assert i.pickle_protocol == expected_pp
+        assert i.subdir_split == expected_subdir_split
 
 
 @mock.patch('os.path.isfile')

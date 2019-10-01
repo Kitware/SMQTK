@@ -22,6 +22,7 @@ from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class DummyHashFunctor (LshFunctor):
@@ -59,30 +60,19 @@ class TestLshIndex (unittest.TestCase):
         assert LSHNearestNeighborIndex in NearestNeighborsIndex.get_impls()
 
     def test_configuration(self):
-        c = LSHNearestNeighborIndex.get_default_config()
-
-        # Check that default is in JSON format and is decoded to the same
-        # result.
-        self.assertEqual(json.loads(json.dumps(c)), c)
-
-        # Make a simple configuration
-        # - ItqFunctor should always be available since it has no dependencies.
-        c['lsh_functor']['type'] = 'ItqFunctor'
-        c['descriptor_index']['type'] = 'MemoryDescriptorIndex'
-        c['hash2uuids_kvstore']['type'] = 'MemoryKeyValueStore'
-        c['hash_index']['type'] = 'LinearHashIndex'
-        index = LSHNearestNeighborIndex.from_config(c)
-
-        self.assertIsInstance(index.lsh_functor, ItqFunctor)
-        self.assertIsInstance(index.descriptor_index, MemoryDescriptorIndex)
-        self.assertIsInstance(index.hash_index, LinearHashIndex)
-        self.assertIsInstance(index.hash2uuids_kvstore, MemoryKeyValueStore)
-
-        # Can convert instance config to JSON
-        self.assertEqual(
-            json.loads(json.dumps(index.get_config())),
-            index.get_config()
+        i = LSHNearestNeighborIndex(
+            lsh_functor=ItqFunctor(), descriptor_index=MemoryDescriptorIndex(),
+            hash2uuids_kvstore=MemoryKeyValueStore(),
+            hash_index=LinearHashIndex(), distance_method='euclidean',
+            read_only=True
         )
+        for inst in configuration_test_helper(i):
+            assert isinstance(inst.lsh_functor, LshFunctor)
+            assert isinstance(inst.descriptor_index, MemoryDescriptorIndex)
+            assert isinstance(inst.hash_index, LinearHashIndex)
+            assert isinstance(inst.hash2uuids_kvstore, MemoryKeyValueStore)
+            assert inst.distance_method == 'euclidean'
+            assert inst.read_only is True
 
     def test_configuration_none_HI(self):
         c = LSHNearestNeighborIndex.get_default_config()

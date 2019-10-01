@@ -159,6 +159,8 @@ class DescriptorFileElement (DescriptorElement):
 
         # Generate filepath from parameters
         if self._subdir_split and int(self._subdir_split) > 1:
+            # TODO: If uuid is an integer, create string with left-padded 0's
+            #       to expand out the "length" before partitioning.
             save_dir = osp.join(
                 self._save_dir,
                 *partition_string(str(self.uuid()).replace('-', ''),

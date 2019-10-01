@@ -6,6 +6,7 @@ import unittest
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_set.file_set import DataFileSet
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -13,19 +14,12 @@ from tests import TEST_DATA_DIR
 class TestDataFileSet (unittest.TestCase):
 
     def test_configuration(self):
-        default_config = DataFileSet.get_default_config()
-        self.assertEqual(default_config, {
-            'root_directory': None,
-            'uuid_chunk': 10,
-            'pickle_protocol': -1,
-        })
-
-        default_config['root_directory'] = '/some/dir'
-        inst1 = DataFileSet.from_config(default_config)
-        self.assertEqual(default_config, inst1.get_config())
-
-        inst2 = DataFileSet.from_config(inst1.get_config())
-        self.assertEqual(inst1, inst2)
+        inst = DataFileSet(root_directory='/some/dir', uuid_chunk=10,
+                           pickle_protocol=-1)
+        for i in configuration_test_helper(inst):  # type: DataFileSet
+            assert i._root_dir == '/some/dir'
+            assert i._uuid_chunk == 10
+            assert i.pickle_protocol == -1
 
     def test_new_invalid_uuid_chunk(self):
         self.assertRaises(

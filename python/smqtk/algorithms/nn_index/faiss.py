@@ -29,7 +29,9 @@ from smqtk.utils.dict import merge_dict
 # Requires FAISS bindings
 try:
     import faiss
-except ImportError:
+except ImportError as ex:
+    warnings.warn("FaissNearestNeighborsIndex is not usable due to the faiss "
+                  "module not being importable: {}".format(str(ex)))
     faiss = None
 
 
@@ -241,6 +243,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                                "support GPU functionality.")
 
         # Lock for accessing FAISS model components.
+        # - GPU index access is NOT thread-safe
+        #   https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls#thread-safety
         self._model_lock = multiprocessing.RLock()
         # Placeholder for FAISS model instance.
         self._faiss_index = None
@@ -684,4 +688,4 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         return descriptors, tuple(d_dists)
 
 
-NN_INDEX_CLASS = FaissNearestNeighborsIndex
+SMQTK_PLUGIN_CLASS = FaissNearestNeighborsIndex

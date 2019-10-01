@@ -51,10 +51,10 @@ from stevedore.extension import ExtensionManager
 
 
 # Template for checking validity of sub-module files
-VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
+VALID_MODULE_FILE_RE = re.compile(r"^[a-zA-Z]\w*(?:\.py)?$")
 
 # Template for checking validity of module attributes
-VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
+VALUE_ATTRIBUTE_RE = re.compile(r"^[a-zA-Z]\w*$")
 
 # Environment variable *PATH separator for the current platform.
 OS_ENV_PATH_SEP = os.pathsep

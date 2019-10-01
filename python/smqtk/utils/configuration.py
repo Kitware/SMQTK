@@ -192,8 +192,8 @@ def make_default_config(configurable_iter):
     """
     Generated default configuration dictionary for the given iterable of
     Configurable-inheriting types.
-    
-    For example, assuming the following simple class that descends from 
+
+    For example, assuming the following simple class that descends from
     ``Configurable``, we would expect the following behavior:
 
     >>> class ExampleConfigurableType (Configurable):
@@ -398,6 +398,10 @@ def from_config_dict(config, type_iter, *args):
 
     :param collections.Iterable[type] type_iter:
         An iterable of class types to select from.
+
+    :param object args:
+        Other positional arguments to pass to the configured class'
+        ``from_config`` class method.
 
     :return: Instance of the configured class type as specified in ``config``
         and as available in ``type_iter``.

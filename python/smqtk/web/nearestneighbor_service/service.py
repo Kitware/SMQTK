@@ -265,6 +265,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         """
         Given the URI to some data, resolve it down to a DataElement instance.
 
+        TODO: More simply use ``smqtk.representation.data_element.from_uri``
+              function, which should cover these cases as well as others.
+
         :raises ValueError: Issue with the given URI regarding either URI source
             resolution or data resolution.
 

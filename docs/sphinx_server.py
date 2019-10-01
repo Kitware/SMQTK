@@ -36,9 +36,7 @@ for d in watch_dirs:
     for g in watch_globs:
         server.watch(os.path.join(d, g), rebuild_cmd)
 # Watch source python files.
-os.path.walk('../python/smqtk',
-             lambda arg, dirname, fnames: server.watch(dirname+'/*.py',
-                                                       rebuild_cmd),
-             None)
+for dirpath, dirnames, filenames in os.walk('../python/smqtk'):
+    server.watch(os.path.join(dirpath, '*.py'), rebuild_cmd)
 # Optionally change to host="0.0.0.0" to make available outside localhost.
 server.serve(root='_build/html')

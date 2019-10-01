@@ -23,6 +23,7 @@ from smqtk.utils import SimpleTimer, video
 from smqtk.utils.file import (
     safe_create_dir,
 )
+from smqtk.utils.parallel import parallel_map
 from smqtk.utils.string import partition_string
 from smqtk.utils.video import get_metadata_info
 
@@ -473,7 +474,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
         # save generation results to class for immediate feature computation use
         self._codebook = codebook
 
-    def _compute_descriptor(self, data):
+    def _compute_one_descriptor(self, data):
         """
         Given some kind of data, process and return a feature vector as a Numpy
         array.
@@ -490,8 +491,6 @@ class ColorDescriptor_Base (DescriptorGenerator):
         :rtype: numpy.ndarray
 
         """
-        super(ColorDescriptor_Base, self)._compute_descriptor(data)
-
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         # if osp.isfile(checkpoint_filepath):
         #     return numpy.load(checkpoint_filepath)
@@ -636,6 +635,28 @@ class ColorDescriptor_Base (DescriptorGenerator):
         numpy.save(checkpoint_filepath, h)
 
         return h
+
+    def _generate_arrays(self, data_iter):
+        """
+        Inner template method that defines the generation of descriptor vectors
+        for a given iterable of data elements.
+
+        Pre-conditions:
+          - Data elements input to this method have been validated to be of at
+            least one of this class's reported ``valid_content_types``.
+
+        :param collections.Iterable[DataElement] data_iter:
+            Iterable of data element instances to be described.
+
+        :raises RuntimeError: Descriptor extraction failure of some kind.
+
+        :return: Iterable of numpy arrays in parallel association with the
+            input data elements.
+        :rtype: collections.Iterable[numpy.ndarray]
+        """
+        return parallel_map(self._compute_one_descriptor, data_iter,
+                            cores=self.parallel, use_multiprocessing=True,
+                            ordered=True)
 
     @staticmethod
     def _build_sp_hist(feas, bins):

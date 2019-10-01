@@ -88,8 +88,9 @@ class StubDescrGenerator (DescriptorGenerator):
     def valid_content_types(self):
         pass
 
-    def _compute_descriptor(self, data):
-        pass
+    def _generate_arrays(self, data_iter):
+        for _ in data_iter:
+            yield None
 
 
 class StubNearestNeighborIndex (NearestNeighborsIndex):

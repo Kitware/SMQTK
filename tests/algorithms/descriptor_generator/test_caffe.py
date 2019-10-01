@@ -7,6 +7,7 @@ import unittest
 import PIL.Image
 import mock
 import numpy
+import pytest
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
@@ -74,38 +75,32 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
         Test that the class fails to construct and initialize if no
         network prototext or model are provided.
         """
-        self.assertRaisesRegexp(
-            AttributeError,
-            r"'NoneType' object has no attribute",
-            CaffeDescriptorGenerator,
-            network_prototxt=None, network_model=None
-        )
+        with pytest.raises(AttributeError,
+                           match="'NoneType' object has no attribute"):
+            # noinspection PyTypeChecker
+            CaffeDescriptorGenerator(network_prototxt=None, network_model=None)
 
     def test_init_no_model(self):
         """
         Test that the class fails to construct and initialize if only no
         prototext DataElement is provided.
         """
-        self.assertRaisesRegexp(
-            AttributeError,
-            r"'NoneType' object has no attribute",
-            CaffeDescriptorGenerator,
-            network_prototxt=self.dummy_net_topo_elem,
-            network_model=None
-        )
+        with pytest.raises(AttributeError,
+                           match="'NoneType' object has no attribute"):
+            # noinspection PyTypeChecker
+            CaffeDescriptorGenerator(network_prototxt=self.dummy_net_topo_elem,
+                                     network_model=None)
 
     def test_init_no_prototxt(self):
         """
         Test that the class fails to construct and initialize if only no
         model DataElement is provided.
         """
-        self.assertRaisesRegexp(
-            AttributeError,
-            r"'NoneType' object has no attribute",
-            CaffeDescriptorGenerator,
-            network_prototxt=None,
-            network_model=self.dummy_caffe_model_elem
-        )
+        with pytest.raises(AttributeError,
+                           match="'NoneType' object has no attribute"):
+            # noinspection PyTypeChecker
+            CaffeDescriptorGenerator(network_prototxt=None,
+                                     network_model=self.dummy_caffe_model_elem)
 
     @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                 '.CaffeDescriptorGenerator._setup_network')
@@ -125,18 +120,18 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             'load_truncated_images': True,
             'pixel_rescale': (.2, .8),
             'input_scale': 1.5,
+            'threads': 14,
         }
         # make sure that we're considering all constructor parameter
         # options
-        expected_param_keys = \
-            set(inspect.getargspec(CaffeDescriptorGenerator.__init__)
-                       .args[1:])
-        self.assertSetEqual(set(expected_params.keys()),
-                            expected_param_keys)
+        default_params = CaffeDescriptorGenerator.get_default_config()
+        assert set(default_params) == set(expected_params)
         g = CaffeDescriptorGenerator(**expected_params)
+
+        # Shift to expecting sub-configs for DataElement params
         for key in ('network_prototxt', 'network_model', 'image_mean'):
             expected_params[key] = to_config_dict(expected_params[key])
-        self.assertEqual(g.get_config(), expected_params)
+        assert g.get_config() == expected_params
 
     @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                 '.CaffeDescriptorGenerator._setup_network')
@@ -161,7 +156,8 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
                                       data_layer='maybe data',
                                       load_truncated_images=True,
                                       pixel_rescale=(0.2, 0.3),
-                                      input_scale=8.9)
+                                      input_scale=8.9,
+                                      threads=7)
         g1_config = g1.get_config()
         g2 = CaffeDescriptorGenerator.from_config(g1_config)
         expected_config = {
@@ -177,6 +173,7 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             'load_truncated_images': True,
             'pixel_rescale': (0.2, 0.3),
             'input_scale': 8.9,
+            'threads': 7,
         }
         assert g1_config == g2.get_config() == expected_config
 
@@ -212,6 +209,7 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             'load_truncated_images': False,
             'pixel_rescale': None,
             'input_scale': None,
+            'threads': None,
         }
         assert g1_config == g2.get_config() == expected_config
 
@@ -248,6 +246,7 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             'load_truncated_images': False,
             'pixel_rescale': None,
             'input_scale': None,
+            'threads': None,
         }
         assert g1_config == g2.get_config() == expected_config
 
@@ -269,6 +268,7 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             'load_truncated_images': True,
             'pixel_rescale': (.2, .8),
             'input_scale': 1.5,
+            'threads': 9,
         }
         g = CaffeDescriptorGenerator(**expected_params)
         # Initialization sets up the network on construction.
@@ -286,8 +286,11 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
     @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
                 '.CaffeDescriptorGenerator._setup_network')
     def test_invalid_datatype(self, _m_cdg_setupNetwork):
-        # Test that a data element with an incorrect content type raises an
-        # exception.
+        # Test that a data element with an incorrect content type for this
+        # implementation raises an exception.
+        # TODO: This probably doesn't need to exist because this is mostly
+        #       testing the parent class functionality that should already be
+        #       covered by parent class unit tests.
 
         # Passing purposefully bag constructor parameters and ignoring
         # Caffe network setup (above mocking).
@@ -296,11 +299,8 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
         bad_element = DataFileElement(
             os.path.join(TEST_DATA_DIR, 'test_file.dat'), readonly=True
         )
-        self.assertRaises(
-            ValueError,
-            g.compute_descriptor,
-            bad_element
-        )
+        with pytest.raises(ValueError):
+            list(g.generate_arrays([bad_element]))
 
     def test_process_load_img(self):
         # using image shape, meaning no transformation should occur
@@ -316,25 +316,8 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
         ))
         numpy.testing.assert_allclose(a, a_expected)
 
-    @mock.patch('smqtk.algorithms.descriptor_generator.caffe_descriptor'
-                '.CaffeDescriptorGenerator._setup_network')
-    def test_no_internal_compute_descriptor(self, _m_cdg_setupNetwork):
-        # This implementation's descriptor computation logic sits in async
-        # method override due to caffe's natural multi-element computation
-        # interface. Thus, ``_compute_descriptor`` should not be
-        # implemented.
-
-        # Passing purposefully bag constructor parameters and ignoring
-        # Caffe network setup (above mocking).
-        # noinspection PyTypeChecker
-        g = CaffeDescriptorGenerator(0, 0, 0)
-        self.assertRaises(
-            NotImplementedError,
-            g._compute_descriptor, None
-        )
-
-    def test_compute_descriptor_dummy_model(self):
-        # Caffe dummy network interaction test Lenna image)
+    def test_generate_arrays_dummy_model(self):
+        # Caffe dummy network interaction test Grace Hopper image)
 
         # Construct network with an empty model just to see that our
         # interaction with the Caffe API is successful. We expect a
@@ -343,14 +326,26 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
                                      self.dummy_caffe_model_elem,
                                      self.dummy_img_mean_elem,
                                      return_layer='fc', use_gpu=False)
-        d = g.compute_descriptor(
-            DataFileElement(self.hopper_image_fp, readonly=True)
-        )
-        self.assertAlmostEqual(d.vector().sum(), 0., 12)
+        d_list = list(g._generate_arrays(
+            [DataFileElement(self.hopper_image_fp, readonly=True)]
+        ))
+        assert len(d_list) == 1
+        d = d_list[0]
+        self.assertAlmostEqual(d.sum(), 0., 12)
+
+    def test_generate_arrays_no_data(self):
+        """ Test that generation method correctly returns an empty iterable
+        when no data is passed. """
+        g = CaffeDescriptorGenerator(self.dummy_net_topo_elem,
+                                     self.dummy_caffe_model_elem,
+                                     self.dummy_img_mean_elem,
+                                     return_layer='fc', use_gpu=False)
+        r = list(g._generate_arrays([]))
+        assert r == []
 
     @unittest.skipUnless(DataUrlElement.is_usable(),
                          "URL resolution not functional")
-    def test_compute_descriptor_from_url_hopper_description(self):
+    def test_generate_arrays_from_url_hopper_description(self):
         # Caffe AlexNet interaction test (Grace Hopper image)
         # This is a long test since it has to download data for remote URIs
         d = CaffeDescriptorGenerator(
@@ -362,16 +357,7 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
         )
         hopper_elem = DataFileElement(self.hopper_image_fp, readonly=True)
         expected_descr = numpy.load(self.hopper_alexnet_fc7_descr_fp)
-        descr = d.compute_descriptor(hopper_elem).vector()
+        descr_list = list(d._generate_arrays([hopper_elem]))
+        assert len(descr_list) == 1
+        descr = descr_list[0]
         numpy.testing.assert_allclose(descr, expected_descr, atol=1e-4)
-
-    def test_compute_descriptor_async_no_data(self):
-        # Should get a ValueError when given no descriptors to async method
-        g = CaffeDescriptorGenerator(self.dummy_net_topo_elem,
-                                     self.dummy_caffe_model_elem,
-                                     self.dummy_img_mean_elem,
-                                     return_layer='fc', use_gpu=False)
-        self.assertRaises(
-            ValueError,
-            g.compute_descriptor_async, []
-        )

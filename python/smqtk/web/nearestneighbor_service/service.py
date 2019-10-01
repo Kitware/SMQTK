@@ -325,8 +325,8 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             descriptor = self.descr_index[uri[7:]]
         else:
             de = self.resolve_data_element(uri)
-            descriptor = self.descriptor_generator_inst.compute_descriptor(
-                de, self.descr_elem_factory
+            descriptor = self.descriptor_generator_inst.generate_one_element(
+                de, descr_factory=self.descr_elem_factory
             )
             if self.update_index:
                 self._log.info("Updating index with new descriptor")

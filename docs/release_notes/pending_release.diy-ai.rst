@@ -5,9 +5,33 @@ SMQTK DIY-AI Pending Release Notes
 Updates / New Features
 ----------------------
 
+Algorithms
+* DescriptorGenerator
+  * Overhauled interface API to have the abstract method be a many-to-many
+    iterator instead of the previous one-to-one signature.
+  * Updated colordescriptor implementation for interface API update.
+  * Updated caffe implementation for interface API update.
+  * Updated KWCNN implementation for interface API update.
+
+Compute Functions
+* Updated ``smqtk.compute_functions.compute_many_descriptors`` to utilize new
+  DescriptorGenerator API.
+
 Docker
 * Started use of docker-compose YAML file to organize image building.
 * Added FAISS TPL image to be copied from by utilizing images.
+* IQR "Playground"
+  * Fixed compute test scripts to use updated DescriptorGenerator API.
+
+Documentation
+* Updated ``docs/algorithminterfaces.rst`` to reflect the new
+  DescriptorGenerator API.
+* Updated ``docs/algorithmmodels.rst`` to reflect the new DescriptorGenerator
+  API.
+* Updated the ``docs/examples/caffe_build_index.rst`` example to use the new
+  DescriptorGenerator API.
+* Updated the ``docs/examples/simple_feature_computation.rst`` example to use
+  the new DescriptorGenerator API.
 
 IQR
 * Remove forcing of relevancy scores in ``refine`` when a result element is
@@ -33,8 +57,28 @@ Representation
 * DetectionElement
   * Added individual component accessors.
 
+Tests
+* Updated colordescriptor DescriptorGenerator tests to "skip" when deemed not
+  available so that the tests are not just hidden when the optional
+  dependencies are not present.
+* Updated dummy classes used in classifier service unit tests to match the new
+  DescriptorGenerator API.
+* Update IQR service unit tests stub class for the new DescriptorGenerator API
+  and iteration properties.
+
+Tools / Scripts
+* Updated the ``smqtk.bin.classifyFiles`` tool to use the new
+  DescriptorGenerator API.
+* Updated the ``smqtk.bin.computeDescriptor`` tool to use the new
+  DescriptorGenerator API.
+* Updated the ``smqtk.bin.iqr_app_model_generation`` tool to use the new
+  DescriptorGenerator API.
+* Updated some old MEMEX scripts to use the new DescriptorGenerator API.
+
 Utils
 * Added additional description capability to ProgressReporter.
+* Added a return of self in the ``ContentTypeValidator.raise_valid_element()``
+  method.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
@@ -42,6 +86,13 @@ Web
 * Changed IQR web service endpoint to retrieve nearest-neighbors to a GET
   method instead of the previous POST method, as the previous method did not
   make sense for the request being made.
+* Fixed usage of DescriptorGenerator instances in the classifier service for
+  the API update.
+* Updated ``smqtk.web.descriptor_service`` to use the new DescriptorGenerator
+  API.
+* Updated ``smqtk.web.iqr_service`` to use the new DescriptorGenerator API.
+* Updated ``smqtk.web.nearestneighbor_service`` to use the new
+  DescriptorGenerator API.
 
 Fixes
 -----
@@ -69,6 +120,8 @@ Tests
 Utilities
 * Fixed issue with ProgressReporter when reporting before the first interval
   period.
+* Fixed issue with ``smqtk.utils.parallel.parallel_map`` function where it
+  could hang during threading-mode when a keyboard interrupt occurred.
 
 Web
 * Classifier Service

@@ -46,12 +46,9 @@ code:
     factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 
     # Compute features on the first image
-    descriptors = []
-    for item in el:
-        d = cd.compute_descriptor(item, factory)
-        descriptors.append(d)
+    descriptor_iter = cd.generate_elements(el, descr_factory=factory)
     index = FlannNearestNeighborsIndex(distance_method="euclidean",
                                        random_seed=42, index_filepath="nn.index",
                                        parameters_filepath="nn.params",
                                        descriptor_cache_filepath="nn.cache")
-    index.build_index(descriptors)
+    index.build_index(descriptor_iter)

@@ -21,6 +21,7 @@ from smqtk.algorithms.image_io import gdal_io
 from smqtk.representation import AxisAlignedBoundingBox, DataElement
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -361,6 +362,18 @@ class TestGdalImageReader (unittest.TestCase):
             GdalImageReader(channel_order=[3, 99, 5])
         with pytest.raises(ValueError, match=msg):
             GdalImageReader(channel_order=[99, 4, 5])
+
+    def test_configuration(self):
+        """
+        Test configuration using helper
+        """
+        expected_load_method = GdalImageReader.LOAD_METHOD_TEMPFILE
+        expected_channel_order = [3, 5, 4]
+        i = GdalImageReader(load_method=expected_load_method,
+                            channel_order=expected_channel_order)
+        for inst in configuration_test_helper(i):  # type: GdalImageReader
+            assert inst._load_method == expected_load_method
+            assert inst._channel_order == expected_channel_order
 
     def test_serialization(self):
         """

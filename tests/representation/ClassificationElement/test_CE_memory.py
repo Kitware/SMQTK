@@ -7,6 +7,7 @@ from six.moves import cPickle, mock
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation.classification_element.memory \
     import MemoryClassificationElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestMemoryClassificationElement (unittest.TestCase):
@@ -33,6 +34,16 @@ class TestMemoryClassificationElement (unittest.TestCase):
         assert hasattr(m, '_c_lock')
         # in python 2, threading.RLock() is threading._RLock, but in 3 its _thread.RLock
         assert isinstance(m._c_lock, type(threading.RLock()))
+
+    def test_configuration(self):
+        """
+        Test standard configuration
+        """
+        ex_tname = 'test'
+        ex_uuid = 0
+        inst = MemoryClassificationElement(ex_tname, ex_uuid)
+        configuration_test_helper(inst, {'type_name', 'uuid'},
+                                  (ex_tname, ex_uuid))
 
     def test_serialization_empty(self):
         e = MemoryClassificationElement('test', 0)

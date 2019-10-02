@@ -33,6 +33,7 @@ this is not required property of these constructs.
 """
 import abc
 import inspect
+import json
 import types
 
 import six
@@ -413,3 +414,94 @@ def from_config_dict(config, type_iter, *args):
         "Configured class type '%s' does not descend from `Configurable`." \
         % cls.__name__
     return cls.from_config(cls_conf, *args)
+
+
+def configuration_test_helper(inst, config_ignored_params=frozenset(),
+                              from_config_args=()):
+    """
+    Helper function for testing the get_default_config/from_config/get_config
+    methods for class types that in part implement the Configurable mixin
+    class.  This function also tests that ``inst``'s parent class type's
+    ``get_default_config`` returns a dictionary whose keys' match the
+    constructor's inspected parameters (except "self" of course).
+
+    This constructs 3 additional instances based on the given instance
+    following the pattern::
+
+         inst-1  ->  inst-2  ->  inst-3
+                 ->  inst-4
+
+    This refers to ``inst-2`` and ``inst-4`` being constructed from the config
+    from ``inst``, and ``inst-3`` being constructed from the config of
+    ``inst-2``.  The equivalence of each instance's config is cross-checked
+    with the other instances.  This is intended to check that a configuration
+    yields the same class configurations and that the config does not get
+    mutated by nested instance construction.
+
+    This function uses assert calls to check for consistency.
+
+    We return all instances constructed in case the caller wants to make
+    additional instance integrity checks.
+
+    :param Configurable inst:
+        Configurable-mixin inheriting class to test.
+    :param set[str] config_ignored_params:
+        Set of parameter names in the instance type's constructor that are
+        ignored by ``get_default_config`` and ``from_config``. This is empty
+        by default.
+    :param tuple from_config_args:
+        Optional additional positional arguments to the input
+        ``inst.from_config`` method after the configuration dictionary.
+    :returns: Instance 2, 3, and 4 as described above.
+    :rtype: (Configurable,Configurable,Configurable)
+    """
+    assert not isinstance(inst, type), "Passed a type, expected instance."
+    inst_T = inst.__class__
+
+    # Patent class default config keys should match constructor keys.
+    dflt_cfg = inst_T.get_default_config()
+    argspec = inspect.getargspec(inst_T.__init__)
+    # Check that keys returned in default config is equivalent to parameters
+    # requested by the constructor, minus explicitly provided parameter names
+    # to disregard.
+    # - Disregarded params are usually for when some arguments are also
+    #   required by ``from_config``, i.e. runtime required.
+    args_intersect = \
+        set(dflt_cfg) == (set(argspec.args[1:]) - config_ignored_params)
+    assert args_intersect, \
+        "Default configuration dictionary keys does not match the class' " \
+        "constructor parameter."
+    del args_intersect
+    # Should be JSON serializable.
+    try:
+        assert json.loads(json.dumps(dflt_cfg)) == dflt_cfg, \
+            "Default config JSON Serialize -> Deserialize did not match " \
+            "original config."
+    except TypeError:
+        # dumps error
+        raise AssertionError("Failed to serialize default config return for "
+                             "type {}.".format(inst_T.__name__))
+    except ValueError:
+        # loads error
+        raise AssertionError("Failed to load serialized default config.")
+
+    # Instance config / from_config construction cycle equivalence test.
+    # - Checking that configurations are JSON serializable at each step.
+    inst_config = inst.get_config()
+
+    # Keys in default and instance configurations should also match.
+    assert set(dflt_cfg) == set(inst_config)
+
+    inst2 = inst_T.from_config(inst_config, *from_config_args)
+    inst2_config = inst2.get_config()
+    inst3 = inst_T.from_config(inst_config, *from_config_args)
+    inst3_config = inst3.get_config()
+    inst4 = inst_T.from_config(inst2_config, *from_config_args)
+    inst4_config = inst4.get_config()
+    assert inst_config == inst2_config
+    assert inst_config == inst3_config
+    assert inst2_config == inst3_config
+    assert inst_config == inst4_config
+    assert inst3_config == inst4_config
+
+    return inst2, inst3, inst4

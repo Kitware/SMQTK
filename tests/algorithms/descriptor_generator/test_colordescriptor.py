@@ -7,6 +7,7 @@ import pytest
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.algorithms.descriptor_generator.colordescriptor.colordescriptor \
     import ColorDescriptor_Image_csift  # arbitrary leaf class
+from smqtk.utils.configuration import configuration_test_helper
 
 
 @pytest.mark.skipif(not ColorDescriptor_Image_csift.is_usable(),
@@ -18,27 +19,26 @@ class TestColorDescriptor (unittest.TestCase):
                       DescriptorGenerator.get_impls())
 
     @mock.patch('smqtk.algorithms.descriptor_generator'
-                '.colordescriptor.colordescriptor'
-                '.file.safe_create_dir')
+                '.colordescriptor.colordescriptor.safe_create_dir')
     def test_configuration(self, _mock_scd):
-        default_config = ColorDescriptor_Image_csift.get_default_config()
-        default_config['model_directory'] = '/some/path/models/'
-        default_config['work_directory'] = '/some/path/work/'
-
-        inst = ColorDescriptor_Image_csift.from_config(default_config)
-        self.assertEqual(
-            default_config,
-            inst.get_config()
+        i = ColorDescriptor_Image_csift(
+            model_directory='test model dir',
+            work_directory='test work dir',
+            model_gen_descriptor_limit=123764,
+            kmeans_k=42, flann_distance_metric='hik',
+            flann_target_precision=0.92, flann_sample_fraction=0.71,
+            flann_autotune=True, random_seed=7, use_spatial_pyramid=True,
+            parallel=3,
         )
-        inst2 = ColorDescriptor_Image_csift.from_config(inst.get_config())
-        self.assertEqual(inst.get_config(), inst2.get_config())
-        self.assertEqual(inst._model_dir, inst2._model_dir)
-        self.assertEqual(inst._work_dir, inst2._work_dir)
-        self.assertEqual(inst._kmeans_k, inst2._kmeans_k)
-        self.assertEqual(inst._flann_target_precision,
-                         inst2._flann_target_precision)
-        self.assertEqual(inst._flann_sample_fraction,
-                         inst2._flann_sample_fraction)
-        self.assertEqual(inst._flann_autotune, inst2._flann_autotune)
-        self.assertEqual(inst._use_sp, inst2._use_sp)
-        self.assertEqual(inst._rand_seed, inst2._rand_seed)
+        for inst in configuration_test_helper(i):
+            assert inst._model_dir == 'test model dir'
+            assert inst._work_dir == 'test work dir'
+            assert inst._model_gen_descriptor_limit == 123764
+            assert inst._kmeans_k == 42
+            assert inst._flann_distance_metric == 'hik'
+            assert inst._flann_target_precision == 0.92
+            assert inst._flann_sample_fraction == 0.71
+            assert inst._flann_autotune == True
+            assert inst._rand_seed == 7
+            assert inst._use_sp == True
+            assert inst.parallel == 3

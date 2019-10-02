@@ -4,6 +4,7 @@ import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 def random_string(length):
@@ -26,21 +27,15 @@ class TestDataMemoryElement (unittest.TestCase):
                              cls.VALID_BASE64
 
     def test_configuration(self):
-        default_config = DataMemoryElement.get_default_config()
-        self.assertEqual(default_config,
-                         {'bytes': None, 'content_type': None,
-                          'readonly': False})
-
-        default_config['bytes'] = 'Hello World.'
-        default_config['content_type'] = 'text/plain'
-        #: :type: DataMemoryElement
-        inst1 = DataMemoryElement.from_config(default_config)
-        self.assertEqual(default_config, inst1.get_config())
-        self.assertEqual(inst1._bytes, b'Hello World.')
-        self.assertEqual(inst1._content_type, 'text/plain')
-
-        inst2 = DataMemoryElement.from_config(inst1.get_config())
-        self.assertEqual(inst1, inst2)
+        inst = DataMemoryElement(
+            bytes=b'Hello World.',
+            content_type='text/plain',
+            readonly=True,
+        )
+        for i in configuration_test_helper(inst):  # type: DataMemoryElement
+            assert i._bytes == b'Hello World.'
+            assert i._content_type == 'text/plain'
+            assert i._readonly is True
 
     #
     # from_base64 tests

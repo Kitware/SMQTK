@@ -85,9 +85,6 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         hi_default = make_default_config(HashIndex.get_impls())
         default['hash_index'] = hi_default
-        default['hash_index_comment'] = "'hash_index' may also be null to " \
-                                        "default to a linear index built at " \
-                                        "query time."
 
         h2u_default = make_default_config(KeyValueStore.get_impls())
         default['hash2uuids_kvstore'] = h2u_default

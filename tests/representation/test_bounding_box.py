@@ -8,6 +8,7 @@ import pytest
 from six.moves import mock  # move defined in ``tests`` top module
 
 from smqtk.representation.bbox import AxisAlignedBoundingBox
+from smqtk.utils.configuration import configuration_test_helper
 
 
 ###############################################################################
@@ -37,6 +38,14 @@ def ndim(request):
 
 ###############################################################################
 # Tests
+
+def test_configuration():
+    """ test standard instance configuration """
+    inst = AxisAlignedBoundingBox([0, 1], [1, 2])
+    for i in configuration_test_helper(inst):  # type: AxisAlignedBoundingBox
+        numpy.testing.assert_allclose(i.min_vertex, (0, 1))
+        numpy.testing.assert_allclose(i.max_vertex, (1, 2))
+
 
 def test_bbox_set_vertices(ndim, seq_type):
     """

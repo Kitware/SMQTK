@@ -7,6 +7,7 @@ from smqtk.representation.data_element.memory_element \
 from smqtk.representation.data_set.kvstore_backed \
     import KVSDataSet, DFLT_KVSTORE
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestKeyValueDataSet (unittest.TestCase):
@@ -35,14 +36,12 @@ class TestKeyValueDataSet (unittest.TestCase):
             DFLT_KVSTORE.get_config()
         )
 
-    def test_from_config_empty_with_merge(self):
-        # This should create the same as a default constructed instance.
-        kvds_fc = KVSDataSet.from_config({})
-        kvds_df = KVSDataSet()
-        self.assertEqual(
-            kvds_fc.get_config(),
-            kvds_df.get_config(),
-        )
+    def test_configuration(self):
+        """ Test instance standard configuration """
+        inst = KVSDataSet(self.MEM_STORE)
+        for i in configuration_test_helper(inst):  # type: KVSDataSet
+            assert isinstance(i._kvstore, MemoryKeyValueStore)
+            assert i._kvstore.get_config() == self.MEM_STORE.get_config()
 
     def test_iter(self):
         kvds = KVSDataSet(self.MEM_STORE)

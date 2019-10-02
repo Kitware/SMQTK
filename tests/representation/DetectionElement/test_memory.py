@@ -9,6 +9,7 @@ from smqtk.representation.classification_element.memory \
     import MemoryClassificationElement
 from smqtk.representation.detection_element.memory \
     import MemoryDetectionElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 def test_is_usable():
@@ -50,7 +51,9 @@ def test_serialize_deserialize_pickle():
 
 def test_get_config():
     """ Test that configuration for memory element is empty. """
-    assert MemoryDetectionElement(0).get_config() == {}
+    inst = MemoryDetectionElement(0)
+    for i in configuration_test_helper(inst, {'uuid'}, (0,)):  # type: MemoryDetectionElement
+        assert i.uuid == 0
 
 
 def test_has_detection():

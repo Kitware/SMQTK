@@ -5,6 +5,7 @@ import unittest
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element.url_element import DataUrlElement
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -35,6 +36,13 @@ class TestDataUrlElement (unittest.TestCase):
         # Should always be available, because local/intranet networks are a
         # thing.
         self.assertTrue(DataUrlElement.is_usable())
+
+    @mock.patch('smqtk.representation.data_element.url_element.requests.get')
+    def test_configuration(self, m_req_get):
+        # Mocking requests usage to no actually head into the network.
+        inst = DataUrlElement(self.EXAMPLE_URL)
+        for i in configuration_test_helper(inst):  # type: DataUrlElement
+            assert i._url == self.EXAMPLE_URL
 
     @unittest.skipUnless(internet_available, "Internet not accessible")
     def test_new_from_internet(self):

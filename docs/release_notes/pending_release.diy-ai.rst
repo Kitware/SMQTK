@@ -84,6 +84,8 @@ Utils
 * Added helper function for testing Configurable mixing instance functionality.
 * Promoted service proxy helper class from IQR service server to a general web
   utility.
+* Update random character generator to use ``random.SystemRandom`` which, at
+  least for Posix systems, uses a source suitable for cryptographic purposes.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

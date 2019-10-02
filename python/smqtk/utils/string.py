@@ -104,4 +104,5 @@ def random_characters(n, char_set=DEFAULT_CHAR_SET):
     L = len(char_set)
     if L == 0:
         raise ValueError("Empty char_set given.")
-    return ''.join(char_set[random.randint(0, L - 1)] for _ in range(n))
+    sr = random.SystemRandom()
+    return ''.join(char_set[sr.randint(0, L - 1)] for _ in range(n))

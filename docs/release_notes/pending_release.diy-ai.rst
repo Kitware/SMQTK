@@ -82,6 +82,8 @@ Utils
 * Added a return of self in the ``ContentTypeValidator.raise_valid_element()``
   method.
 * Added helper function for testing Configurable mixing instance functionality.
+* Promoted service proxy helper class from IQR service server to a general web
+  utility.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

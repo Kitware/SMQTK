@@ -1,6 +1,7 @@
 import time
 
 import flask
+import requests
 
 from smqtk.utils.dict import merge_dict
 
@@ -31,3 +32,44 @@ def make_response_json(message, return_code=200, **params):
     }
     merge_dict(r, params)
     return flask.jsonify(**r), return_code
+
+
+class ServiceProxy (object):
+    """
+    Helper class for interacting with an external service.
+    """
+
+    def __init__(self, url):
+        """
+        Parameters
+        ---
+            url : str
+                URL to base requests on.
+        """
+        # Append http:// to the head of the URL if neither http(s) are present
+        if not (url.startswith('http://') or url.startswith('https://')):
+            url = 'http://' + url
+        self.url = url
+
+    def _compose(self, endpoint):
+        return '/'.join([self.url, endpoint])
+
+    def get(self, endpoint, **params):
+        # Make params None if its empty.
+        params = params and params or None
+        return requests.get(self._compose(endpoint), params)
+
+    def post(self, endpoint, **params):
+        # Make params None if its empty.
+        params = params and params or None
+        return requests.post(self._compose(endpoint), data=params)
+
+    def put(self, endpoint, **params):
+        # Make params None if its empty.
+        params = params and params or None
+        return requests.put(self._compose(endpoint), data=params)
+
+    def delete(self, endpoint, **params):
+        # Make params None if its empty.
+        params = params and params or None
+        return requests.delete(self._compose(endpoint), params=params)

@@ -20,7 +20,7 @@ from smqtk.algorithms import (
 )
 from smqtk.compute_functions import compute_hash_codes
 from smqtk.representation import (
-    DescriptorIndex,
+    DescriptorSet,
     KeyValueStore,
 )
 from smqtk.utils import (
@@ -67,8 +67,8 @@ def default_config():
             "use_multiprocessing": False,
         },
         "plugins": {
-            "descriptor_index":
-                make_default_config(DescriptorIndex.get_impls()),
+            "descriptor_set":
+                make_default_config(DescriptorSet.get_impls()),
             "lsh_functor": make_default_config(LshFunctor.get_impls()),
             "hash2uuid_kvstore":
                 make_default_config(KeyValueStore.get_impls()),
@@ -113,10 +113,10 @@ def main():
     # Loading stuff
     #
     log.info("Loading descriptor index")
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
     log.info("Loading LSH functor")
     #: :type: smqtk.algorithms.LshFunctor
@@ -141,7 +141,7 @@ def main():
                     yield l.strip()
         else:
             log.info("Using all UUIDs resent in descriptor index")
-            for k in descriptor_index.keys():
+            for k in descriptor_set.keys():
                 yield k
 
     #
@@ -152,7 +152,7 @@ def main():
     for uuid, hash_int in \
             compute_hash_codes(uuids_for_processing(iter_uuids(),
                                                     hash2uuids_kvstore),
-                               descriptor_index, lsh_functor,
+                               descriptor_set, lsh_functor,
                                report_interval,
                                use_multiprocessing, True):
         # Get original value in KV-store if not in update dict.

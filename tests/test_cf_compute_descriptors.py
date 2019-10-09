@@ -22,7 +22,6 @@ mock_DescriptorGenerator = mock.Mock(
     spec=smqtk.algorithms.descriptor_generator.DescriptorGenerator)
 mock_DescriptorFactory = mock.Mock(
     spec=smqtk.representation.DescriptorElementFactory)
-mock_DescriptorIndex = mock.Mock(spec=smqtk.representation.descriptor_index)
 
 
 def dummy_transform(data_element):
@@ -96,7 +95,7 @@ def descr_factory():
 @pytest.fixture
 def descr_index():
     """Mock descriptor index"""
-    descr_index = mock.Mock(smqtk.representation.DescriptorIndex)
+    descr_index = mock.Mock(smqtk.representation.DescriptorSet)
     return descr_index
 
 

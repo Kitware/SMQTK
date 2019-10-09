@@ -1,7 +1,7 @@
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation import DataElement, DescriptorIndex
+from smqtk.representation import DataElement, DescriptorSet
 from smqtk.utils import SimpleTimer
 from smqtk.utils.configuration import (
     from_config_dict,
@@ -11,7 +11,7 @@ from smqtk.utils.configuration import (
 from smqtk.utils.dict import merge_dict
 
 
-class MemoryDescriptorIndex (DescriptorIndex):
+class MemoryDescriptorSet (DescriptorSet):
     """
     In-memory descriptor index with file caching.
 
@@ -55,7 +55,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         :rtype: dict
 
         """
-        c = super(MemoryDescriptorIndex, cls).get_default_config()
+        c = super(MemoryDescriptorSet, cls).get_default_config()
         c['cache_element'] = make_default_config(DataElement.get_impls())
         return c
 
@@ -74,7 +74,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         :type merge_default: bool
 
         :return: Constructed instance from the provided config.
-        :rtype: MemoryDescriptorIndex
+        :rtype: MemoryDescriptorSet
 
         """
         if merge_default:
@@ -89,7 +89,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         else:
             config_dict['cache_element'] = None
 
-        return super(MemoryDescriptorIndex, cls).from_config(config_dict, False)
+        return super(MemoryDescriptorSet, cls).from_config(config_dict, False)
 
     def __init__(self, cache_element=None, pickle_protocol=-1):
         """
@@ -107,7 +107,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         :type pickle_protocol: int
 
         """
-        super(MemoryDescriptorIndex, self).__init__()
+        super(MemoryDescriptorSet, self).__init__()
 
         # Mapping of descriptor UUID to the DescriptorElement instance.
         #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
@@ -278,4 +278,4 @@ class MemoryDescriptorIndex (DescriptorIndex):
         return six.iteritems(self._table)
 
 
-DESCRIPTOR_INDEX_CLASS = MemoryDescriptorIndex
+SMQTK_PLUGIN_CLASS = MemoryDescriptorSet

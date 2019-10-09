@@ -10,9 +10,9 @@
             "classifier_config": "The configuration to use for training and using classifiers for the /classifier endpoint. When configuring a classifier for use, don't fill out model persistence values as many classifiers may be created and thrown away during this service's operation.",
             "descriptor_factory": "What descriptor element factory to use when asked to compute a descriptor on data.",
             "descriptor_generator": "Descriptor generation algorithm to use when requested to describe data.",
-            "descriptor_index": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
-            "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
-            "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
+            "descriptor_set": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
+            "neighbor_set": "This is the neighbor index to pull initial near-positive descriptors from.",
+            "relevancy_set_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
         },
         "plugins": {
             "classification_factory": {
@@ -86,8 +86,8 @@
                 },
                 "type": "CaffeDescriptorGenerator"
             },
-            "descriptor_index": {
-                "PostgresDescriptorIndex": {
+            "descriptor_set": {
+                "PostgresDescriptorSet": {
                     "create_table": false,
                     "db_host": "/dev/shm",
                     "db_name": "postgres",
@@ -98,15 +98,15 @@
                     "multiquery_batch_size": 1000,
                     "pickle_protocol": -1,
                     "read_only": false,
-                    "table_name": "descriptor_index_resnet50_pool5",
+                    "table_name": "descriptor_set_resnet50_pool5",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "PostgresDescriptorSet"
             },
-            "neighbor_index": {
+            "neighbor_set": {
                 "LSHNearestNeighborIndex": {
-                    "descriptor_index": {
-                        "PostgresDescriptorIndex": {
+                    "descriptor_set": {
+                        "PostgresDescriptorSet": {
                             "create_table": false,
                             "db_host": "/dev/shm",
                             "db_name": "postgres",
@@ -117,10 +117,10 @@
                             "multiquery_batch_size": 1000,
                             "pickle_protocol": -1,
                             "read_only": false,
-                            "table_name": "descriptor_index_resnet50_pool5",
+                            "table_name": "descriptor_set_resnet50_pool5",
                             "uuid_col": "uid"
                         },
-                        "type": "PostgresDescriptorIndex"
+                        "type": "PostgresDescriptorSet"
                     },
                     "distance_method": "cosine",
                     "hash2uuids_kvstore": {

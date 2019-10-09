@@ -8,7 +8,7 @@ import zipfile
 import six
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
 from smqtk.utils.configuration import from_config_dict
 
@@ -23,8 +23,8 @@ DFLT_REL_INDEX_CONFIG = {
 
 class IqrSession (SmqtkObject):
     """
-    Encapsulation of IQR Session related data structures with a centralized lock
-    for multi-thread access.
+    Encapsulation of IQR Session related data structures with a centralized
+    lock for multi-thread access.
 
     This object is compatible with the python with-statement, so when elements
     are to be used or modified, it should be within a with-block so race
@@ -44,7 +44,7 @@ class IqrSession (SmqtkObject):
         """
         Initialize the IQR session
 
-        This does not initialize the working index for ranking as there are no
+        This does not initialize the working set for ranking as there are no
         known positive descriptor examples at this time.
 
         Adjudications
@@ -55,14 +55,14 @@ class IqrSession (SmqtkObject):
 
         :param pos_seed_neighbors: Number of neighbors to pull from the given
             ``nn_index`` for each positive exemplar when populating the working
-            index, i.e. this value determines the size of the working index for
+            set, i.e. this value determines the size of the working set for
             IQR refinement. By default, we try to get 500 neighbors.
 
             Since there may be partial to significant overlap of near neighbors
             as a result of nn_index queries for positive exemplars, the working
-            index may contain anywhere from this value's number of entries, to
+            set may contain anywhere from this value's number of entries, to
             ``N*P``, where ``N`` is this value and ``P`` is the number of
-            positive examples at the time of working index initialization.
+            positive examples at the time of working set initialization.
         :type pos_seed_neighbors: int
 
         :param rel_index_config: Plugin configuration dictionary for the
@@ -82,10 +82,10 @@ class IqrSession (SmqtkObject):
 
         self.pos_seed_neighbors = int(pos_seed_neighbors)
 
-        # Local descriptor index for ranking, populated by a query to the
+        # Local descriptor set for ranking, populated by a query to the
         #   nn_index instance.
-        # Added external data/descriptors not added to this index.
-        self.working_index = MemoryDescriptorIndex()
+        # Added external data/descriptors not added to this set.
+        self.working_set = MemoryDescriptorSet()
 
         # Book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.
@@ -99,17 +99,17 @@ class IqrSession (SmqtkObject):
         #: :type: set[smqtk.representation.DescriptorElement]
         self.external_negative_descriptors = set()
 
-        # Descriptor references from our index (above) that have been
+        # Descriptor references from our set (above) that have been
         #   adjudicated.
         # These should be sub-sets of the descriptors contained in the
-        #   ``working_index``.
+        #   ``working_set``.
         #: :type: set[smqtk.representation.DescriptorElement]
         self.positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
         self.negative_descriptors = set()
 
         # Mapping of a DescriptorElement in our relevancy search index (not the
-        #   index that the nn_index uses) to the relevancy score given the
+        #   set that the nn_index uses) to the relevancy score given the
         #   recorded positive and negative adjudications.
         # This is None before any initialization or refinement occurs.
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
@@ -125,7 +125,7 @@ class IqrSession (SmqtkObject):
         # Negatively adjudicated descriptors in order of relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
         self._ordered_neg = None
-        # Non-adjudicated descriptors in our working index in order of
+        # Non-adjudicated descriptors in our working set in order of
         # relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
         self._ordered_non_adj = None
@@ -159,7 +159,7 @@ class IqrSession (SmqtkObject):
         """
         Add positive/negative descriptors from external data.
 
-        These descriptors may not be a part of our working index.
+        These descriptors may not be a part of our working set.
 
         TODO: Add ability to "remove" positive/negative external descriptors.
               See ``adjudicate`` method "un_..." parameters.
@@ -187,7 +187,7 @@ class IqrSession (SmqtkObject):
     def adjudicate(self, new_positives=(), new_negatives=(),
                    un_positives=(), un_negatives=()):
         """
-        Update current state of working index positive and negative
+        Update current state of working set positive and negative
         adjudications based on descriptor UUIDs.
 
         If the same descriptor element is listed in both new positives and
@@ -197,28 +197,28 @@ class IqrSession (SmqtkObject):
         The given iterables must be re-traversable. Otherwise the given
         descriptors will not be properly registered.
 
-        :param new_positives: Descriptors of elements in our working index to
+        :param new_positives: Descriptors of elements in our working set to
             now be considered to be positively relevant.
         :type new_positives:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param new_negatives: Descriptors of elements in our working index to
+        :param new_negatives: Descriptors of elements in our working set to
             now be considered to be negatively relevant.
         :type new_negatives:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param un_positives: Descriptors of elements in our working index to now
+        :param un_positives: Descriptors of elements in our working set to now
             be considered not positive any more.
         :type un_positives:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
-        :param un_negatives: Descriptors of elements in our working index to now
+        :param un_negatives: Descriptors of elements in our working set to now
             be considered not negative any more.
         :type un_negatives:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
-        # TODO: Assert that inputs are indeed in the working index?
+        # TODO: Assert that inputs are indeed in the working set?
 
         new_positives = set(new_positives)
         new_negatives = set(new_negatives)
@@ -248,9 +248,9 @@ class IqrSession (SmqtkObject):
                 # Reset non-adjudicated cache if anything changed.
                 self._ordered_non_adj = None
 
-    def update_working_index(self, nn_index):
+    def update_working_set(self, nn_index):
         """
-        Initialize or update our current working index using the given
+        Initialize or update our current working set using the given
         :class:`.NearestNeighborsIndex` instance given our current positively
         labeled descriptor elements.
 
@@ -270,12 +270,12 @@ class IqrSession (SmqtkObject):
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
 
-        # Not clearing working index because this step is intended to be
+        # Not clearing working set because this step is intended to be
         # additive.
         updated = False
 
-        # adding to working index
-        self._log.info("Building working index using %d positive examples "
+        # adding to working set
+        self._log.info("Building working set using %d positive examples "
                        "(%d external, %d adjudicated)",
                        len(pos_examples),
                        len(self.external_positive_descriptors),
@@ -284,7 +284,7 @@ class IqrSession (SmqtkObject):
         for p in pos_examples:
             if p.uuid() not in self._wi_seeds_used:
                 self._log.debug("Querying neighbors to: %s", p)
-                self.working_index.add_many_descriptors(
+                self.working_set.add_many_descriptors(
                     nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
                 self._wi_seeds_used.add(p.uuid())
@@ -292,18 +292,18 @@ class IqrSession (SmqtkObject):
 
         # Make new relevancy index
         if updated:
-            self._log.info("Creating new relevancy index over working index.")
+            self._log.info("Creating new relevancy index over working set.")
             #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
             self.rel_index = from_config_dict(
                 self.rel_index_config, RelevancyIndex.get_impls()
             )
-            self.rel_index.build_index(self.working_index.iterdescriptors())
+            self.rel_index.build_index(self.working_set.iterdescriptors())
 
     def refine(self):
         """ Refine current model results based on current adjudication state
 
-        :raises RuntimeError: No working index has been initialized.
-            :meth:`update_working_index` should have been called after
+        :raises RuntimeError: No working set has been initialized.
+            :meth:`update_working_set` should have been called after
             adjudicating some positive examples.
         :raises RuntimeError: There are no adjudications to run on. We must
             have at least one positive adjudication.
@@ -312,7 +312,7 @@ class IqrSession (SmqtkObject):
         with self.lock:
             if not self.rel_index:
                 raise RuntimeError("No relevancy index yet. Must not have "
-                                   "initialized session (no working index).")
+                                   "initialized session (no working set).")
 
             # combine pos/neg adjudications + added external data descriptors
             pos = self.positive_descriptors | self.external_positive_descriptors
@@ -366,7 +366,7 @@ class IqrSession (SmqtkObject):
         ``(element, score)`` in order of descending relevancy score.
 
         This does *not* include external positive adjudications, only
-        positively adjudicated descriptors in the working index.
+        positively adjudicated descriptors in the working set.
 
         If refinement has not yet occurred since session creation or the last
         reset, an empty list is returned.
@@ -405,7 +405,7 @@ class IqrSession (SmqtkObject):
         ``(element, score)`` in order of descending relevancy score.
 
         This does *not* include external negative adjudications, only
-        negatively adjudicated descriptors in the working index.
+        negatively adjudicated descriptors in the working set.
 
         If refinement has not yet occurred since session creation or the last
         reset, an empty list is returned.
@@ -478,7 +478,7 @@ class IqrSession (SmqtkObject):
 
         """
         with self.lock:
-            self.working_index.clear()
+            self.working_set.clear()
             self._wi_seeds_used.clear()
             self.positive_descriptors.clear()
             self.negative_descriptors.clear()

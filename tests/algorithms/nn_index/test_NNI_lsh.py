@@ -20,7 +20,7 @@ from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 from smqtk.utils.configuration import configuration_test_helper
 
@@ -61,14 +61,14 @@ class TestLshIndex (unittest.TestCase):
 
     def test_configuration(self):
         i = LSHNearestNeighborIndex(
-            lsh_functor=ItqFunctor(), descriptor_index=MemoryDescriptorIndex(),
+            lsh_functor=ItqFunctor(), descriptor_set=MemoryDescriptorSet(),
             hash2uuids_kvstore=MemoryKeyValueStore(),
             hash_index=LinearHashIndex(), distance_method='euclidean',
             read_only=True
         )
-        for inst in configuration_test_helper(i):
+        for inst in configuration_test_helper(i):  # type: LSHNearestNeighborIndex
             assert isinstance(inst.lsh_functor, LshFunctor)
-            assert isinstance(inst.descriptor_index, MemoryDescriptorIndex)
+            assert isinstance(inst.descriptor_set, MemoryDescriptorSet)
             assert isinstance(inst.hash_index, LinearHashIndex)
             assert isinstance(inst.hash2uuids_kvstore, MemoryKeyValueStore)
             assert inst.distance_method == 'euclidean'
@@ -83,13 +83,13 @@ class TestLshIndex (unittest.TestCase):
 
         # Make a simple configuration
         c['lsh_functor']['type'] = 'ItqFunctor'
-        c['descriptor_index']['type'] = 'MemoryDescriptorIndex'
+        c['descriptor_set']['type'] = 'MemoryDescriptorSet'
         c['hash2uuids_kvstore']['type'] = 'MemoryKeyValueStore'
         c['hash_index']['type'] = None
         index = LSHNearestNeighborIndex.from_config(c)
 
         self.assertIsInstance(index.lsh_functor, ItqFunctor)
-        self.assertIsInstance(index.descriptor_index, MemoryDescriptorIndex)
+        self.assertIsInstance(index.descriptor_set, MemoryDescriptorSet)
         self.assertIsNone(index.hash_index)
         self.assertIsInstance(index.hash2uuids_kvstore, MemoryKeyValueStore)
 
@@ -147,7 +147,7 @@ class TestLshIndex (unittest.TestCase):
         Test that an empty hash-to-uid mapping results in a 0 return regardless
         of descriptor-set state.
         """
-        descr_set = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         self.assertEqual(descr_set.count(), 0)
         self.assertEqual(hash_kvs.count(), 0)
@@ -156,31 +156,31 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(lsh.count(), 0)
 
         # Additions to the descriptor-set should not impact LSH index "size"
-        lsh.descriptor_index.add_descriptor(DescriptorMemoryElement('t', 0))
-        self.assertEqual(lsh.descriptor_index.count(), 1)
+        lsh.descriptor_set.add_descriptor(DescriptorMemoryElement('t', 0))
+        self.assertEqual(lsh.descriptor_set.count(), 1)
         self.assertEqual(lsh.hash2uuids_kvstore.count(), 0)
         self.assertEqual(lsh.count(), 0)
 
-        lsh.descriptor_index.add_descriptor(DescriptorMemoryElement('t', 1))
-        self.assertEqual(lsh.descriptor_index.count(), 2)
+        lsh.descriptor_set.add_descriptor(DescriptorMemoryElement('t', 1))
+        self.assertEqual(lsh.descriptor_set.count(), 2)
         self.assertEqual(lsh.hash2uuids_kvstore.count(), 0)
         self.assertEqual(lsh.count(), 0)
 
         lsh.hash2uuids_kvstore.add(0, {0})
-        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.descriptor_set.count(), 2)
         self.assertEqual(lsh.count(), 1)
 
         lsh.hash2uuids_kvstore.add(0, {0, 1})
-        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.descriptor_set.count(), 2)
         self.assertEqual(lsh.count(), 2)
 
         lsh.hash2uuids_kvstore.add(0, {0, 1, 2})
-        self.assertEqual(lsh.descriptor_index.count(), 2)
+        self.assertEqual(lsh.descriptor_set.count(), 2)
         self.assertEqual(lsh.count(), 3)
 
     def test_build_index_read_only(self):
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        MemoryDescriptorIndex(),
+                                        MemoryDescriptorSet(),
                                         MemoryKeyValueStore(), read_only=True)
         self.assertRaises(
             ReadOnlyError,
@@ -188,10 +188,10 @@ class TestLshIndex (unittest.TestCase):
         )
 
     def test_build_index_fresh_build(self):
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
 
         descriptors = [
             DescriptorMemoryElement('t', 0),
@@ -205,21 +205,22 @@ class TestLshIndex (unittest.TestCase):
             d.set_vector(np.ones(1, float) * i)
         index.build_index(descriptors)
 
-        # Make sure descriptors are now in attached index and in key-value-store
-        self.assertEqual(descr_index.count(), 5)
+        # Make sure descriptors are now in attached index and in
+        # key-value-store.
+        self.assertEqual(descr_set.count(), 5)
         for d in descriptors:
-            self.assertIn(d, descr_index)
+            self.assertIn(d, descr_set)
         # Dummy hash function bins sum of descriptor vectors.
         self.assertEqual(hash_kvs.count(), 5)
         for i in range(5):
             self.assertSetEqual(hash_kvs.get(i), {i})
 
     def test_build_index_fresh_build_with_hash_index(self):
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         linear_hi = LinearHashIndex()  # simplest hash index, heap-sorts.
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs, linear_hi)
+                                        descr_set, hash_kvs, linear_hi)
 
         descriptors = [
             DescriptorMemoryElement('t', 0),
@@ -238,7 +239,7 @@ class TestLshIndex (unittest.TestCase):
 
     def test_update_index_read_only(self):
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        MemoryDescriptorIndex(),
+                                        MemoryDescriptorSet(),
                                         MemoryKeyValueStore(), read_only=True)
         self.assertRaises(
             ReadOnlyError,
@@ -249,10 +250,10 @@ class TestLshIndex (unittest.TestCase):
         # Test that calling update_index with no existing index acts like
         # building the index fresh.  This test is basically the same as
         # test_build_index_fresh_build but using update_index instead.
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
 
         descriptors = [
             DescriptorMemoryElement('t', 0),
@@ -267,9 +268,9 @@ class TestLshIndex (unittest.TestCase):
         index.update_index(descriptors)
 
         # Make sure descriptors are now in attached index and in key-value-store
-        self.assertEqual(descr_index.count(), 5)
+        self.assertEqual(descr_set.count(), 5)
         for d in descriptors:
-            self.assertIn(d, descr_index)
+            self.assertIn(d, descr_set)
         # Dummy hash function bins sum of descriptor vectors.
         self.assertEqual(hash_kvs.count(), 5)
         for i in range(5):
@@ -278,10 +279,10 @@ class TestLshIndex (unittest.TestCase):
     def test_update_index_add_new_descriptors(self):
         # Test that calling update index after a build index causes index
         # components to be properly updated.
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
         descriptors1 = [
             DescriptorMemoryElement('t', 0),
             DescriptorMemoryElement('t', 1),
@@ -299,11 +300,11 @@ class TestLshIndex (unittest.TestCase):
 
         # Build initial index.
         index.build_index(descriptors1)
-        self.assertEqual(descr_index.count(), 5)
+        self.assertEqual(descr_set.count(), 5)
         for d in descriptors1:
-            self.assertIn(d, descr_index)
+            self.assertIn(d, descr_set)
         for d in descriptors2:
-            self.assertNotIn(d, descr_index)
+            self.assertNotIn(d, descr_set)
         # Dummy hash function bins sum of descriptor vectors.
         self.assertEqual(hash_kvs.count(), 5)
         for i in range(5):
@@ -311,9 +312,9 @@ class TestLshIndex (unittest.TestCase):
 
         # Update index and check that components have new data.
         index.update_index(descriptors2)
-        self.assertEqual(descr_index.count(), 7)
+        self.assertEqual(descr_set.count(), 7)
         for d in descriptors1 + descriptors2:
-            self.assertIn(d, descr_index)
+            self.assertIn(d, descr_set)
         # Dummy hash function bins sum of descriptor vectors.
         self.assertEqual(hash_kvs.count(), 7)
         for i in range(7):
@@ -324,10 +325,10 @@ class TestLshIndex (unittest.TestCase):
         Test that updating a built index with the same descriptors results in
         idempotent behavior.
         """
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
 
         # Identical Descriptors to build and update on (different instances)
         descriptors1 = [
@@ -348,12 +349,12 @@ class TestLshIndex (unittest.TestCase):
         index.build_index(descriptors1)
         index.update_index(descriptors2)
 
-        assert descr_index.count() == 5
+        assert descr_set.count() == 5
         # Above descriptors should be considered "in" the descriptor set now.
         for d in descriptors1:
-            assert d in descr_index
+            assert d in descr_set
         for d in descriptors2:
-            assert d in descr_index
+            assert d in descr_set
         # Known hashes of the above descriptors should be in the KVS
         assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
         assert hash_kvs.get(0) == {0}
@@ -368,10 +369,10 @@ class TestLshIndex (unittest.TestCase):
         vectors, different UUIDs) results in contained structures having an
         expected state.
         """
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
 
         # Similar Descriptors to build and update on (different instances)
         descriptors1 = [
@@ -392,12 +393,12 @@ class TestLshIndex (unittest.TestCase):
         index.build_index(descriptors1)
         index.update_index(descriptors2)
 
-        assert descr_index.count() == 10
+        assert descr_set.count() == 10
         # Above descriptors should be considered "in" the descriptor set now.
         for d in descriptors1:
-            assert d in descr_index
+            assert d in descr_set
         for d in descriptors2:
-            assert d in descr_index
+            assert d in descr_set
         # Known hashes of the above descriptors should be in the KVS
         assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
         assert hash_kvs.get(0) == {0, 5}
@@ -428,8 +429,8 @@ class TestLshIndex (unittest.TestCase):
             DescriptorMemoryElement('t', 9).set_vector([4]),
         ]
 
-        descr_index = MemoryDescriptorIndex()
-        descr_index.add_many_descriptors(descriptors1)
+        descr_set = MemoryDescriptorSet()
+        descr_set.add_many_descriptors(descriptors1)
 
         hash_kvs = MemoryKeyValueStore()
         hash_kvs.add(0, frozenset({0}))
@@ -439,15 +440,15 @@ class TestLshIndex (unittest.TestCase):
         hash_kvs.add(4, frozenset({4}))
 
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs)
+                                        descr_set, hash_kvs)
         index.update_index(descriptors2)
 
-        assert descr_index.count() == 10
+        assert descr_set.count() == 10
         # Above descriptors should be considered "in" the descriptor set now.
         for d in descriptors1:
-            assert d in descr_index
+            assert d in descr_set
         for d in descriptors2:
-            assert d in descr_index
+            assert d in descr_set
         # Known hashes of the above descriptors should be in the KVS
         assert set(hash_kvs.keys()) == {0, 1, 2, 3, 4}
         assert hash_kvs.get(0) == {0, 5}
@@ -459,11 +460,11 @@ class TestLshIndex (unittest.TestCase):
     def test_update_index_with_hash_index(self):
         # Similar test to `test_update_index_add_new_descriptors` but with a
         # linear hash index.
-        descr_index = MemoryDescriptorIndex()
+        descr_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         linear_hi = LinearHashIndex()  # simplest hash index, heap-sorts.
         index = LSHNearestNeighborIndex(DummyHashFunctor(),
-                                        descr_index, hash_kvs, linear_hi)
+                                        descr_set, hash_kvs, linear_hi)
 
         descriptors1 = [
             DescriptorMemoryElement('t', 0),
@@ -492,7 +493,7 @@ class TestLshIndex (unittest.TestCase):
         self.assertSetEqual(linear_hi.index, {0, 1, 2, 3, 4, 5, 6})
 
     def test_remove_from_index_read_only(self):
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs,
                                       read_only=True)
@@ -506,7 +507,7 @@ class TestLshIndex (unittest.TestCase):
         # Test that attempting to remove from an instance with no existing
         # index (meaning empty descriptor-set and key-value-store) results in
         # a key error.
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
         self.assertRaisesRegexp(
@@ -548,12 +549,12 @@ class TestLshIndex (unittest.TestCase):
             4: {4},
         }
 
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
         idx.build_index(descriptors)
         # Assert we have the correct expected values
-        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.descriptor_set._table, expected_dset_table)
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove descriptor with a UID we did not build with.
@@ -562,7 +563,7 @@ class TestLshIndex (unittest.TestCase):
             idx.remove_from_index, [5]
         )
         # Index should not have been modified.
-        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.descriptor_set._table, expected_dset_table)
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove multiple UIDs, one valid and one invalid
@@ -571,7 +572,7 @@ class TestLshIndex (unittest.TestCase):
             idx.remove_from_index, [2, 5]
         )
         # Index should not have been modified.
-        self.assertEqual(idx.descriptor_index._table, expected_dset_table)
+        self.assertEqual(idx.descriptor_set._table, expected_dset_table)
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
     def test_remove_from_index(self):
@@ -588,14 +589,14 @@ class TestLshIndex (unittest.TestCase):
         # Vectors of length 1 for easy dummy hashing prediction.
         for d in descriptors:
             d.set_vector(np.ones(1, float) * d.uuid())
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
         idx.build_index(descriptors)
 
         # Attempt removing 1 uid.
         idx.remove_from_index([3])
-        self.assertEqual(idx.descriptor_index._table, {
+        self.assertEqual(idx.descriptor_set._table, {
             0: descriptors[0],
             1: descriptors[1],
             2: descriptors[2],
@@ -617,7 +618,7 @@ class TestLshIndex (unittest.TestCase):
         hash_func = DummyHashFunctor()
         hash_func.get_hash = mock.Mock(return_value=np.asarray([0], bool))
 
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         hash2uids_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(hash_func, d_set, hash2uids_kvs)
 
@@ -685,7 +686,7 @@ class TestLshIndex (unittest.TestCase):
             side_effect=lambda vec: [vec.sum() % 2]
         )
 
-        d_set = MemoryDescriptorIndex()
+        d_set = MemoryDescriptorSet()
         d_set._table = {
             0: descriptors[0],
             1: descriptors[1],
@@ -763,7 +764,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
 
         ftor_train_hook(td)
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         kvstore = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(hash_ftor, di, kvstore,
                                         hash_index=hash_idx,
@@ -832,7 +833,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
 
         ftor_train_hook(test_descriptors)
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         kvstore = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(hash_ftor, di, kvstore,
                                         hash_index=hash_idx,
@@ -903,7 +904,7 @@ class TestLshIndexAlgorithms (unittest.TestCase):
 
         ftor_train_hook(test_descriptors)
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         kvstore = MemoryKeyValueStore()
         index = LSHNearestNeighborIndex(hash_ftor, di, kvstore,
                                         hash_index=hash_idx,

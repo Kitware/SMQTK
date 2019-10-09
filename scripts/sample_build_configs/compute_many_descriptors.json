@@ -31,8 +31,8 @@
         },
         "type": "CaffeDescriptorGenerator"
     },
-    "descriptor_index": {
-        "PostgresDescriptorIndex": {
+    "descriptor_set": {
+        "PostgresDescriptorSet": {
             "create_table": true,
             "db_host": "localhost",
             "db_name": "postgres",
@@ -43,10 +43,10 @@
             "multiquery_batch_size": 1000,
             "pickle_protocol": -1,
             "read_only": false,
-            "table_name": "descriptor_index_alexnet_fc7",
+            "table_name": "descriptor_set_alexnet_fc7",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorIndex"
+        "type": "PostgresDescriptorSet"
     },
     "optional_data_set": {
         "DataMemorySet": {

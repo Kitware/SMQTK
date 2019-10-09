@@ -58,12 +58,12 @@ echo "#####################"
 python -c "
 import logging, json
 from smqtk.algorithms.nn_index.flann import FlannNearestNeighborsIndex
-from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
+from smqtk.representation.descriptor_set.postgres import PostgresDescriptorSet
 
 with open('${NNSS_CONFIG}') as f:
     c = json.load(f)
 
-index = PostgresDescriptorIndex.from_config(c['descriptor_index']['PostgresDescriptorIndex'])
+index = PostgresDescriptorSet.from_config(c['descriptor_set']['PostgresDescriptorSet'])
 flann = FlannNearestNeighborsIndex.from_config(c['nn_index']['FlannNearestNeighborsIndex'])
 flann.build_index(index)
 " 2>&1 | tee "${FLANN_LOG}"

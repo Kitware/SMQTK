@@ -56,6 +56,9 @@ Representation
     the database.
 * DetectionElement
   * Added individual component accessors.
+* Renamed "DescriptorIndex" to "DescriptorSet" in order to better represent
+  what the structure and API represents. "Index" can carry the connotation that
+  more is happening within the structure than actually is.
 
 Tests
 * Updated colordescriptor DescriptorGenerator tests to "skip" when deemed not

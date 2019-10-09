@@ -8,7 +8,7 @@
         "plugin_notes": {
             "classification_factory": "Selection of the backend in which classifications are stored. The in-memory version is recommended because normal caching mechanisms will not account for the variety of classifiers that can potentially be created via this utility.",
             "classifier_config": "The configuration to use for training and using classifiers for the /classifier endpoint. When configuring a classifier for use, don't fill out model persistence values as many classifiers may be created and thrown away during this service's operation.",
-            "descriptor_index": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
+            "descriptor_set": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
             "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
             "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
         },
@@ -31,8 +31,8 @@
                 },
                 "type": "LibSvmClassifier"
             },
-            "descriptor_index": {
-                "PostgresDescriptorIndex": {
+            "descriptor_set": {
+                "PostgresDescriptorSet": {
                     "db_host": "smqtk-postgres",
                     "db_name": "postgres",
                     "db_pass": null,
@@ -42,10 +42,10 @@
                     "multiquery_batch_size": 1000,
                     "pickle_protocol": -1,
                     "read_only": true,
-                    "table_name": "descriptor_index",
+                    "table_name": "descriptor_set",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "PostgresDescriptorSet"
             },
             "neighbor_index": {
                 "FlannNearestNeighborsIndex": {
@@ -59,8 +59,8 @@
                     "target_precision": 0.95
                 },
                 "LSHNearestNeighborIndex": {
-                    "descriptor_index": {
-                        "PostgresDescriptorIndex": {
+                    "descriptor_set": {
+                        "PostgresDescriptorSet": {
                             "db_host": "smqtk-postgres",
                             "db_name": "postgres",
                             "db_pass": null,
@@ -70,10 +70,10 @@
                             "multiquery_batch_size": 1000,
                             "pickle_protocol": -1,
                             "read_only": true,
-                            "table_name": "descriptor_index",
+                            "table_name": "descriptor_set",
                             "uuid_col": "uid"
                         },
-                        "type": "PostgresDescriptorIndex"
+                        "type": "PostgresDescriptorSet"
                     },
                     "distance_method": "euclidean",
                     "hash2uuid_cache_filepath": "/app/models/lsh/hash2uuids.32bit.pickle",

@@ -10,7 +10,7 @@ from smqtk.algorithms import (
 )
 from smqtk.representation import (
     DescriptorElementFactory,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -69,9 +69,9 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             "descriptor_generator":
                 make_default_config(DescriptorGenerator.get_impls()),
             "nn_index": make_default_config(NearestNeighborsIndex.get_impls()),
-            "descriptor_index":
-                make_default_config(DescriptorIndex.get_impls()),
-            "update_descriptor_index": False,
+            "descriptor_set":
+                make_default_config(DescriptorSet.get_impls()),
+            "update_descriptor_set": False,
         })
         return c
 
@@ -85,7 +85,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         """
         super(NearestNeighborServiceServer, self).__init__(json_config)
 
-        self.update_index = json_config['update_descriptor_index']
+        self.update_index = json_config['update_descriptor_set']
 
         # Descriptor factory setup
         self._log.info("Initializing DescriptorElementFactory")
@@ -93,14 +93,14 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             self.json_config['descriptor_factory']
         )
 
-        #: :type: smqtk.representation.DescriptorIndex | None
+        #: :type: smqtk.representation.DescriptorSet | None
         self.descr_index = None
         if self.update_index:
-            self._log.info("Initializing DescriptorIndex to update")
-            #: :type: smqtk.representation.DescriptorIndex | None
+            self._log.info("Initializing DescriptorSet to update")
+            #: :type: smqtk.representation.DescriptorSet | None
             self.descr_index = from_config_dict(
-                json_config['descriptor_index'],
-                DescriptorIndex.get_impls()
+                json_config['descriptor_set'],
+                DescriptorSet.get_impls()
             )
 
         #: :type: smqtk.algorithms.NearestNeighborsIndex

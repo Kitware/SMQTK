@@ -3,7 +3,7 @@ import time
 
 from six.moves import cPickle, range
 
-from smqtk.representation.descriptor_index import DescriptorIndex
+from smqtk.representation.descriptor_set import DescriptorSet
 
 # Try to import required module
 try:
@@ -15,9 +15,9 @@ except ImportError:
 __author__ = "paul.tunison@kitware.com"
 
 
-class SolrDescriptorIndex (DescriptorIndex):
+class SolrDescriptorSet (DescriptorSet):
     """
-    Descriptor index that uses a Solr instance as a backend storage medium.
+    Descriptor set that uses a Solr instance as a backend storage medium.
 
     Fields where components are stored within a document are specified at
     construction time. We optionally set the ``id`` field to a string UUID.
@@ -33,34 +33,34 @@ class SolrDescriptorIndex (DescriptorIndex):
     def is_usable(cls):
         return solr is not None
 
-    def __init__(self, solr_conn_addr, index_uuid,
-                 index_uuid_field, d_uid_field, descriptor_field,
+    def __init__(self, solr_conn_addr, set_uuid,
+                 set_uuid_field, d_uid_field, descriptor_field,
                  timestamp_field, solr_params=None,
                  commit_on_add=True, max_boolean_clauses=1024,
                  pickle_protocol=-1):
         """
-        Construct a descriptor index pointing to a Solr instance.
+        Construct a descriptor set pointing to a Solr instance.
 
-        :param solr_conn_addr: HTTP(S) address for the Solr index to use
+        :param solr_conn_addr: HTTP(S) address for the Solr set to use
         :type solr_conn_addr: str
 
-        :param index_uuid: Unique ID for the descriptor index to use within the
-            configured Solr index.
-        :type index_uuid: str
+        :param set_uuid: Unique ID for the descriptor set to use within the
+            configured Solr set.
+        :type set_uuid: str
 
-        :param index_uuid_field: Solr index field to store/locate index UUID
+        :param set_uuid_field: Solr set field to store/locate set UUID
             value.
-        :type index_uuid_field: str
+        :type set_uuid_field: str
 
-        :param d_uid_field: Solr index field to store/locate descriptor UUID
+        :param d_uid_field: Solr set field to store/locate descriptor UUID
             values
         :type d_uid_field: str
 
-        :param descriptor_field: Solr index field to store the code-associated
+        :param descriptor_field: Solr set field to store the code-associated
             descriptor object.
         :type descriptor_field: str
 
-        :param timestamp_field: Solr index field to store floating-point UNIX
+        :param timestamp_field: Solr set field to store floating-point UNIX
             timestamps.
         :type timestamp_field: str
 
@@ -85,11 +85,11 @@ class SolrDescriptorIndex (DescriptorIndex):
         :type pickle_protocol: int
 
         """
-        super(SolrDescriptorIndex, self).__init__()
+        super(SolrDescriptorSet, self).__init__()
 
-        self.index_uuid = index_uuid
+        self.set_uuid = set_uuid
 
-        self.index_uuid_field = index_uuid_field
+        self.set_uuid_field = set_uuid_field
         self.d_uid_field = d_uid_field
         self.descriptor_field = descriptor_field
         self.timestamp_field = timestamp_field
@@ -119,16 +119,16 @@ class SolrDescriptorIndex (DescriptorIndex):
         """
         uuid = d.uuid()
         return {
-            'id': '-'.join([self.index_uuid,  uuid]),
-            self.index_uuid_field: self.index_uuid,
+            'id': '-'.join([self.set_uuid, uuid]),
+            self.set_uuid_field: self.set_uuid,
             self.d_uid_field: uuid,
         }
 
     def get_config(self):
         return {
             "solr_conn_addr": self.solr.url,
-            "index_uuid": self.index_uuid,
-            "index_uuid_field": self.index_uuid_field,
+            "set_uuid": self.set_uuid,
+            "set_uuid_field": self.set_uuid_field,
             "d_uid_field": self.d_uid_field,
             "descriptor_field": self.descriptor_field,
             "timestamp_field": self.timestamp_field,
@@ -140,32 +140,32 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def count(self):
         """
-        :return: Number of descriptor elements stored in this index.
+        :return: Number of descriptor elements stored in this set.
         :rtype: int
         """
         return int(self.solr.
                    select("%s:%s AND %s:*"
-                          % (self.index_uuid_field, self.index_uuid,
+                          % (self.set_uuid_field, self.set_uuid,
                              self.descriptor_field))
                    .numFound)
 
     def clear(self):
         """
-        Clear this descriptor index's entries.
+        Clear this descriptor set's entries.
         """
         self.solr.delete_query("%s:%s"
-                               % (self.index_uuid_field, self.index_uuid))
+                               % (self.set_uuid_field, self.set_uuid))
         self.solr.commit()
 
     def has_descriptor(self, uuid):
         """
-        Check if a DescriptorElement with the given UUID exists in this index.
+        Check if a DescriptorElement with the given UUID exists in this set.
 
         :param uuid: UUID to query for
         :type uuid: collections.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
-            index, or False if not.
+            set, or False if not.
         :rtype: bool
 
         """
@@ -173,19 +173,19 @@ class SolrDescriptorIndex (DescriptorIndex):
         # TODO: Probably a better way of doing this that's more efficient.
         return bool(
             self.solr.select("%s:%s AND %s:%s"
-                             % (self.index_uuid_field, self.index_uuid,
+                             % (self.set_uuid_field, self.set_uuid,
                                 self.d_uid_field, uuid)).numFound
         )
 
     def add_descriptor(self, descriptor):
         """
-        Add a descriptor to this index.
+        Add a descriptor to this set.
 
         Adding the same descriptor multiple times should not add multiple copies
-        of the descriptor in the index (based on UUID). Added descriptors
-        overwrite indexed descriptors based on UUID.
+        of the descriptor in the set (based on UUID). Added descriptors
+        overwrite set descriptors based on UUID.
 
-        :param descriptor: Descriptor to index.
+        :param descriptor: Descriptor to add to this set.
         :type descriptor: smqtk.representation.DescriptorElement
 
         """
@@ -200,11 +200,11 @@ class SolrDescriptorIndex (DescriptorIndex):
         Add multiple descriptors at one time.
 
         Adding the same descriptor multiple times should not add multiple copies
-        of the descriptor in the index (based on UUID). Added descriptors
-        overwrite indexed descriptors based on UUID.
+        of the descriptor in the set (based on UUID). Added descriptors
+        overwrite set descriptors based on UUID.
 
         :param descriptors: Iterable of descriptor instances to add to this
-            index.
+            set.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
@@ -221,13 +221,13 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def get_descriptor(self, uuid):
         """
-        Get the descriptor in this index that is associated with the given UUID.
+        Get the descriptor in this set that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
         :type uuid: collections.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         :return: DescriptorElement associated with the queried UUID.
         :rtype: smqtk.representation.DescriptorElement
@@ -243,7 +243,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         :type uuids: collections.Hashable
 
         :raises KeyError: A given UUID doesn't associate with a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
         :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
@@ -259,7 +259,7 @@ class SolrDescriptorIndex (DescriptorIndex):
             query = ' OR '.join([self.d_uid_field + (':%s' % _uid)
                                  for _uid in _batch])
             r = self.solr.select("%s:%s AND (%s)"
-                                 % (self.index_uuid_field, self.index_uuid,
+                                 % (self.set_uuid_field, self.set_uuid,
                                     query))
             # result batches come in chunks of 10
             for doc in r.results:
@@ -287,39 +287,39 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def remove_descriptor(self, uuid):
         """
-        Remove a descriptor from this index by the given UUID.
+        Remove a descriptor from this set by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
         :type uuid: collections.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         """
         self.remove_many_descriptors([uuid])
 
     def remove_many_descriptors(self, uuids):
         """
-        Remove descriptors associated to given descriptor UUIDs from this index.
+        Remove descriptors associated to given descriptor UUIDs from this set.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
         :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         """
         # Chunk up operation based on max clauses available to us
 
         def batch_op(_batch):
             """
-            :param _batch: UIDs to remove from index.
+            :param _batch: UIDs to remove from set.
             :type _batch: collections.Iterable[collections.Hashable]
             """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
                                       for _uid in _batch])
             self.solr.delete("%s:%s AND (%s)"
-                             % (self.index_uuid_field, self.index_uuid,
+                             % (self.set_uuid_field, self.set_uuid,
                                 uuid_query))
 
         batch = collections.deque()
@@ -337,10 +337,10 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def iterkeys(self):
         """
-        Return an iterator over indexed descriptor keys, which are their UUIDs.
+        Return an iterator over set descriptor keys, which are their UUIDs.
         """
         r = self.solr.select('%s:%s %s:*'
-                             % (self.index_uuid_field, self.index_uuid,
+                             % (self.set_uuid_field, self.set_uuid,
                                 self.d_uid_field))
         for doc in r.results:
             yield doc[self.d_uid_field]
@@ -351,10 +351,10 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def iterdescriptors(self):
         """
-        Return an iterator over indexed descriptor element instances.
+        Return an iterator over set descriptor element instances.
         """
         r = self.solr.select('%s:%s %s:*'
-                             % (self.index_uuid_field, self.index_uuid,
+                             % (self.set_uuid_field, self.set_uuid,
                                 self.descriptor_field))
         for doc in r.results:
             yield cPickle.loads(doc[self.descriptor_field])
@@ -365,10 +365,10 @@ class SolrDescriptorIndex (DescriptorIndex):
 
     def iteritems(self):
         """
-        Return an iterator over indexed descriptor key and instance pairs.
+        Return an iterator over set descriptor key and instance pairs.
         """
         r = self.solr.select('%s:%s %s:* %s:*'
-                             % (self.index_uuid_field, self.index_uuid,
+                             % (self.set_uuid_field, self.set_uuid,
                                 self.d_uid_field, self.descriptor_field))
         for doc in r.results:
             d = cPickle.loads(doc[self.descriptor_field])

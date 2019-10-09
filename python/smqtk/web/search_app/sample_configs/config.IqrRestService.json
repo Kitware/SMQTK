@@ -49,19 +49,19 @@
                 },
                 "type": "CaffeDescriptorGenerator"
             },
-            "descriptor_index": {
-                "MemoryDescriptorIndex": {
+            "descriptor_set": {
+                "MemoryDescriptorSet": {
                     "cache_element": {
                         "DataFileElement": {
                             "explicit_mimetype": null,
-                            "filepath": "workdir/butterflies_alexnet_fc7/descriptor_index.pickle",
+                            "filepath": "workdir/butterflies_alexnet_fc7/descriptor_set.pickle",
                             "readonly": false
                         },
                         "type": "DataFileElement"
                     },
                     "pickle_protocol": -1
                 },
-                "type": "MemoryDescriptorIndex"
+                "type": "MemoryDescriptorSet"
             },
             "neighbor_index": {
                 "FlannNearestNeighborsIndex": {
@@ -73,19 +73,19 @@
                     "random_seed": 42
                 },
                 "LSHNearestNeighborIndex": {
-                    "descriptor_index": {
-                        "MemoryDescriptorIndex": {
+                    "descriptor_set": {
+                        "MemoryDescriptorSet": {
                             "cache_element": {
                                 "DataFileElement": {
                                     "explicit_mimetype": null,
-                                    "filepath": "workdir/butterflies_alexnet_fc7/descriptor_index.pickle",
+                                    "filepath": "workdir/butterflies_alexnet_fc7/descriptor_set.pickle",
                                     "readonly": false
                                 },
                                 "type": "DataFileElement"
                             },
                             "pickle_protocol": -1
                         },
-                        "type": "MemoryDescriptorIndex"
+                        "type": "MemoryDescriptorSet"
                     },
                     "distance_method": "cosine",
                     "hash2uuids_kvstore": {

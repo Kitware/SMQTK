@@ -7,7 +7,7 @@ In this example, we will show how to initially set up an instance of the :class:
 We will also show how to perform incremental updates and confirm that the service recognizes this new data.
 
 For this example, we will use the :class:`.LSHNearestNeighborIndex` implementation as it is one that currently supports live-reloading its component model files.
-Along with it, we will use the :class:`.ItqFunctor` and :class:`.PostgresDescriptorIndex` implementations as the components of the :class:`.LSHNearestNeighborIndex`.
+Along with it, we will use the :class:`.ItqFunctor` and :class:`.PostgresDescriptorSet` implementations as the components of the :class:`.LSHNearestNeighborIndex`.
 For simplicity, we will not use a specific :class:`.HashIndex`, which causes a :class:`.LinearHashIndex` to be constructed and used at query time.
 
 All scripts used in this example's proceedure have a command line interface that uses dash options.
@@ -20,20 +20,20 @@ This example assumes that you have a basic understanding of:
     - how to use the :file:`bin/runApplication.py`
     - SMQTK's NearestNeighborServiceServer application and algorithmic/data-structure components.
         - :class:`.NearestNeighborsIndex`, specific the implementation :class:`.LSHNearestNeighborIndex`
-        - :class:`.DescriptorIndex` abstract and implementations with an updatable persistance storage mechanism (e.g. :class:`.PostgresDescriptorIndex`).
+        - :class:`.DescriptorSet` abstract and implementations with an updatable persistance storage mechanism (e.g. :class:`.PostgresDescriptorSet`).
         - :class:`.LshFunctor` abstract and implementations
 
 Dependencies
 ````````````
-Due to our use of the :class:`.PostgresDescriptorIndex` in this example, a minimum installed version of PostgreSQL 9.4 is required, as is the ``psycopg2`` python module (``conda`` and ``pip`` installable).
+Due to our use of the :class:`.PostgresDescriptorSet` in this example, a minimum installed version of PostgreSQL 9.4 is required, as is the ``psycopg2`` python module (``conda`` and ``pip`` installable).
 Please check and modify the configuration files for this example to be able to connect to the database of your choosing.
 
-Take a look at the :file:`etc/smqtk/postgres/descriptor_element/example_table_init.sql` and :file:`etc/smqtk/postgres/descriptor_index/example_table_init.sql` files, located from the root of the source tree, for table creation examples for element and index storage:
+Take a look at the :file:`etc/smqtk/postgres/descriptor_element/example_table_init.sql` and :file:`etc/smqtk/postgres/descriptor_set/example_table_init.sql` files, located from the root of the source tree, for table creation examples for element and index storage:
 
 .. code-block:: bash
 
    $ psql postgres -f etc/smqtk/postgres/descriptor_element/example_table_init.sql
-   $ psql postgres -f etc/smqtk/postgres/descriptor_index/example_table_init.sql
+   $ psql postgres -f etc/smqtk/postgres/descriptor_set/example_table_init.sql
 
 
 Proceedure
@@ -173,7 +173,7 @@ A default configuration may be generated using the generic :file:`bin/runApplica
     $ runApplication.py -a NearestNeighborServiceServer -g 2d.config.nnss_app.json
 
 An example configuration has been provided in :file:`2d.config.nnss_app.json`.
-The :class:`.DescriptorIndex`, :class:`.DescriptorGenerator` and :class:`.LshFunctor` configuration sections should be the same as used in the preceeding sections.
+The :class:`.DescriptorSet`, :class:`.DescriptorGenerator` and :class:`.LshFunctor` configuration sections should be the same as used in the preceeding sections.
 
 Before configuring, we are copying :file:`2c.hash2uuids.pickle` to :file:`2d.hash2uuids.pickle`.
 Since we will be overwriting this file (the ``2d`` version) in steps to come, we want to separate it from the results of `step 2c`_.
@@ -190,7 +190,7 @@ Emphasized line explanations:
 
     - On line ``55``, we are using the ``hik`` distance method, or histogram intersection distance, as it has been experimentally shown to out perform other distance metrics for AlexNet descriptors.
     - On line ``56``, we are using the output generated during `step 2c`_.
-      This file will be updated during incremental updates, along with the configured :class:`.DescriptorIndex`.
+      This file will be updated during incremental updates, along with the configured :class:`.DescriptorSet`.
     - On line ``58``, we are choosing not to use a pre-computed :class:`.HashIndex`.
       This means that a :class:`.LinearHashIndex` will be created and used at query time.
       Other implementations in the future may incorporate live-reload functionality.

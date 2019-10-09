@@ -3,13 +3,13 @@ Stub abstract class implementations.
 """
 from smqtk.algorithms import Classifier, DescriptorGenerator, \
     NearestNeighborsIndex
-from smqtk.representation import DescriptorIndex
+from smqtk.representation import DescriptorSet
 
 
 STUB_MODULE_PATH = __name__
 
 
-class StubDescriptorIndex (DescriptorIndex):
+class StubDescriptorSet (DescriptorSet):
     @classmethod
     def is_usable(cls):
         return True

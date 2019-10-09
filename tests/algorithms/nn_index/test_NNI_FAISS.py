@@ -17,7 +17,7 @@ from smqtk.representation.data_element.memory_element import (
 from smqtk.representation.descriptor_element.local_elements import (
     DescriptorMemoryElement,
 )
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 from smqtk.utils.configuration import configuration_test_helper
 
@@ -37,7 +37,7 @@ class TestFAISSIndex (unittest.TestCase):
         if 'random_seed' not in kwargs:
             kwargs.update(random_seed=self.RAND_SEED)
         if descriptor_set is None:
-            descriptor_set = MemoryDescriptorIndex()
+            descriptor_set = MemoryDescriptorSet()
         if idx2uid_kvs is None:
             idx2uid_kvs = MemoryKeyValueStore()
         if uid2idx_kvs is None:
@@ -50,21 +50,21 @@ class TestFAISSIndex (unittest.TestCase):
                       NearestNeighborsIndex.get_impls())
 
     def test_configuration(self):
-        ex_descr_index = MemoryDescriptorIndex()
+        ex_descr_set = MemoryDescriptorSet()
         ex_i2u_kvs = MemoryKeyValueStore()
         ex_u2i_kvs = MemoryKeyValueStore()
         ex_index_elem = DataMemoryElement()
         ex_index_param_elem = DataMemoryElement()
 
         i = FaissNearestNeighborsIndex(
-            descriptor_set=ex_descr_index, idx2uid_kvs=ex_i2u_kvs,
+            descriptor_set=ex_descr_set, idx2uid_kvs=ex_i2u_kvs,
             uid2idx_kvs=ex_u2i_kvs, index_element=ex_index_elem,
             index_param_element=ex_index_param_elem,
             read_only=True, factory_string=u'some fact str',
             use_multiprocessing=False, use_gpu=False, gpu_id=99, random_seed=8,
         )
         for inst in configuration_test_helper(i):
-            assert isinstance(inst._descriptor_set, MemoryDescriptorIndex)
+            assert isinstance(inst._descriptor_set, MemoryDescriptorSet)
             assert isinstance(inst._idx2uid_kvs, MemoryKeyValueStore)
             assert isinstance(inst._uid2idx_kvs, MemoryKeyValueStore)
             assert isinstance(inst._index_element, DataMemoryElement)
@@ -80,7 +80,7 @@ class TestFAISSIndex (unittest.TestCase):
     def test_configuration_null_persistence(self):
         # Make configuration based on default
         c = FaissNearestNeighborsIndex.get_default_config()
-        c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
+        c['descriptor_set']['type'] = 'MemoryDescriptorSet'
         c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
         c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
 
@@ -118,13 +118,13 @@ class TestFAISSIndex (unittest.TestCase):
     def test_update_index_new_index(self):
         n = 100
         dim = 8
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
 
         index = self._make_inst()
-        index.update_index(d_index)
+        index.update_index(d_set)
         self.assertEqual(index.count(), 100)
-        for d in d_index:
+        for d in d_set:
             self.assertIn(d, index._descriptor_set)
 
         # Check that NN can return stuff from the set used.
@@ -133,7 +133,7 @@ class TestFAISSIndex (unittest.TestCase):
         random.seed(self.RAND_SEED)
         for _ in range(10):
             i = random.randint(0, n-1)
-            q = d_index[i]
+            q = d_set[i]
             n_elems, n_dists = index.nn(q)
             self.assertEqual(n_elems[0], q)
 
@@ -333,13 +333,13 @@ class TestFAISSIndex (unittest.TestCase):
         n = 10 ** 4
         dim = 256
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
         faiss_index = self._make_inst()
-        faiss_index.build_index(d_index)
+        faiss_index.build_index(d_set)
 
         nbrs, dists = faiss_index.nn(q, 10)
         self.assertEqual(len(nbrs), len(dists))
@@ -353,12 +353,12 @@ class TestFAISSIndex (unittest.TestCase):
         n = 10 ** 4
         dim = 256
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        faiss_index.build_index(d_index)
+        faiss_index.build_index(d_set)
 
         nbrs, dists = faiss_index.nn(q, 10)
         self.assertEqual(len(nbrs), len(dists))
@@ -372,12 +372,12 @@ class TestFAISSIndex (unittest.TestCase):
         n = 10 ** 4
         dim = 256
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        faiss_index.build_index(d_index)
+        faiss_index.build_index(d_set)
 
         nbrs, dists = faiss_index.nn(q, 10)
         self.assertEqual(len(nbrs), len(dists))

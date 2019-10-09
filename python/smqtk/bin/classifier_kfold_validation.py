@@ -11,7 +11,7 @@ Configuration
             should not be set to use a persistent model if able (this utility
             will repeatedly train a new model for each fold).
 
-        - descriptor_index
+        - descriptor_set
             Index to draw descriptors to classify from.
 
     - cross_validation
@@ -78,7 +78,7 @@ import six
 from smqtk.algorithms.classifier import SupervisedClassifier
 from smqtk.representation import (
     ClassificationElementFactory,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.representation.classification_element.memory import \
     MemoryClassificationElement
@@ -98,8 +98,8 @@ def default_config():
         "plugins": {
             "supervised_classifier":
                 make_default_config(SupervisedClassifier.get_impls()),
-            "descriptor_index":
-                make_default_config(DescriptorIndex.get_impls()),
+            "descriptor_set":
+                make_default_config(DescriptorSet.get_impls()),
         },
         "cross_validation": {
             "truth_labels": None,
@@ -146,12 +146,12 @@ def classifier_kfold_validation():
     roc_file_prefix = config['roc_curves']['file_prefix'] or ''
     roc_show = config['roc_curves']['show']
 
-    log.info("Initializing DescriptorIndex (%s)",
-             config['plugins']['descriptor_index']['type'])
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    log.info("Initializing DescriptorSet (%s)",
+             config['plugins']['descriptor_set']['type'])
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
     log.info("Loading classifier configuration")
     #: :type: dict
@@ -225,7 +225,7 @@ def classifier_kfold_validation():
             if truth_labels[idx] not in pos_map:
                 pos_map[truth_labels[idx]] = []
             pos_map[truth_labels[idx]].append(
-                descriptor_index.get_descriptor(uuids[idx])
+                descriptor_set.get_descriptor(uuids[idx])
             )
 
         log.info("-- Training classifier")
@@ -233,7 +233,7 @@ def classifier_kfold_validation():
 
         log.info("-- Classifying test set")
         m = classifier.classify_async(
-            (descriptor_index.get_descriptor(uuids[idx]) for idx in test),
+            (descriptor_set.get_descriptor(uuids[idx]) for idx in test),
             classification_factory,
             use_multiprocessing=use_mp, ri=1.0
         )

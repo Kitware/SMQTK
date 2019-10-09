@@ -30,7 +30,7 @@
 # It is possible (even probable) that the number of remote files fetched
 # from the Solr index (listed in the ``file_list.local.txt``) will be greater
 # than the number of descriptors actually generated and inserted into the
-# configured DescriptorIndex. This is due to multiple points at which an image
+# configured DescriptorSet. This is due to multiple points at which an image
 # may be invalidated or considered unfit for processing. The following are
 # things to look for in the ``log.2.cmd.txt`` file to trace why fewer
 # descriptors were possibly generated than input files:

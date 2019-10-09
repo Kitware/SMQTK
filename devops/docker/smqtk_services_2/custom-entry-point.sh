@@ -18,7 +18,7 @@ if [ '!' -d "$lock_dir" ] ; then
     ${PSQL} << EOSQL
 $(cat \
   /smqtk/install/etc/smqtk/postgres/descriptor_element/example_table_init.sql \
-  /smqtk/install/etc/smqtk/postgres/descriptor_index/example_table_init.sql)
+  /smqtk/install/etc/smqtk/postgres/descriptor_set/example_table_init.sql)
 EOSQL
 
     mkdir "$lock_dir"

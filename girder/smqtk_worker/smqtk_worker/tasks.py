@@ -11,7 +11,7 @@ from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.algorithms.descriptor_generator.caffe_descriptor import CaffeDescriptorGenerator
 from girder_worker.app import app
 from .utils import (iter_valid_elements, getCreateFolder, createOverwriteItem,
-                    initializeItemWithFile, smqtkFileIdFromName, descriptorIndexFromFolderId,
+                    initializeItemWithFile, smqtkFileIdFromName, descriptorSetFromFolderId,
                     getSetting)
 
 
@@ -49,7 +49,7 @@ def compute_descriptors(task, folderId, dataElementUris, **kwargs):
         'db_pass': getSetting(task.girder_client, 'db_pass')
     })
 
-    index = descriptorIndexFromFolderId(task.girder_client, folderId)
+    index = descriptorSetFromFolderId(task.girder_client, folderId)
 
     valid_elements = iter_valid_elements([x[1] for x in dataElementUris], generator.valid_content_types())
 
@@ -83,7 +83,7 @@ def itq(task, folderId, **kwargs):
         infer the descriptor index.
     """
     task.job_manager.updateProgress(message='Training ITQ', forceFlush=True)
-    index = descriptorIndexFromFolderId(task.girder_client, folderId)
+    index = descriptorSetFromFolderId(task.girder_client, folderId)
 
     if not index.count():
         # TODO SMQTK should account for this?
@@ -115,7 +115,7 @@ def compute_hash_codes(task, folderId, **kwargs):
     """
     task.job_manager.updateProgress(message='Computing Hash Codes', forceFlush=True)
 
-    index = descriptorIndexFromFolderId(task.girder_client, folderId)
+    index = descriptorSetFromFolderId(task.girder_client, folderId)
 
     smqtkFolder = getCreateFolder(task.girder_client, folderId, '.smqtk')
 
@@ -159,7 +159,7 @@ def process_images(task, folderId, dataElementUris, **kwargs):
     # but we run into a weird issue when they're running at the same time, see
     # https://www.postgresql.org/message-id/4B967376.7050300%40opinioni.net
     # To work around it, create the table before mapping the jobs.
-    index = descriptorIndexFromFolderId(task.girder_client, folderId)
+    index = descriptorSetFromFolderId(task.girder_client, folderId)
 
     with index.psql_helper.get_psql_connection() as conn:
         with conn.cursor() as cursor:

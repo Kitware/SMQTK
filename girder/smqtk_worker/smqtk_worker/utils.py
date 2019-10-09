@@ -4,7 +4,7 @@ import os
 
 from smqtk.utils.image import is_valid_element
 from smqtk.utils import parallel
-from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
+from smqtk.representation.descriptor_set.postgres import PostgresDescriptorSet
 from smqtk.representation.data_element.girder import GirderDataElement
 
 from girder_client import HttpError
@@ -23,12 +23,12 @@ def getSetting(gc, key=None):
         return settings.get(key, None)
 
 
-def descriptorIndexFromFolderId(gc, folderId):
-    return PostgresDescriptorIndex('descriptor_index_%s' % folderId,
-                                   db_name=getSetting(gc, 'db_name'),
-                                   db_host=getSetting(gc, 'db_host'),
-                                   db_user=getSetting(gc, 'db_user'),
-                                   db_pass=getSetting(gc, 'db_pass'))
+def descriptorSetFromFolderId(gc, folderId):
+    return PostgresDescriptorSet('descriptor_set_%s' % folderId,
+                                 db_name=getSetting(gc, 'db_name'),
+                                 db_host=getSetting(gc, 'db_host'),
+                                 db_user=getSetting(gc, 'db_user'),
+                                 db_pass=getSetting(gc, 'db_pass'))
 
 
 def smqtkFileIdFromName(gc, smqtkFolder, name):

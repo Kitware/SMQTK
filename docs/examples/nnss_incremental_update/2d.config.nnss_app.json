@@ -36,8 +36,8 @@
     },
     "nn_index": {
         "LSHNearestNeighborIndex": {
-            "descriptor_index": {
-                "PostgresDescriptorIndex": {
+            "descriptor_set": {
+                "PostgresDescriptorSet": {
                     "db_host": "/dev/shm",
                     "db_name": "postgres",
                     "db_pass": null,
@@ -47,10 +47,10 @@
                     "multiquery_batch_size": 1000,
                     "pickle_protocol": -1,
                     "read_only": false,
-                    "table_name": "descriptor_index",
+                    "table_name": "descriptor_set",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "PostgresDescriptorSet"
             },
             "distance_method": "hik",
             "hash2uuid_cache_filepath": "2d.hash2uuids.pickle",

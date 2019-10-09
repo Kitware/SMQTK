@@ -17,7 +17,7 @@ from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import (
     DataElement,
-    DescriptorIndex,
+    DescriptorSet,
     KeyValueStore,
 )
 from smqtk.representation.descriptor_element import DescriptorElement
@@ -85,7 +85,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         default['index_element'] = data_element_default_config
         default['index_param_element'] = deepcopy(data_element_default_config)
 
-        di_default = make_default_config(DescriptorIndex.get_impls())
+        di_default = make_default_config(DescriptorSet.get_impls())
         default['descriptor_set'] = di_default
 
         kvs_default = make_default_config(KeyValueStore.get_impls())
@@ -122,7 +122,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             cfg = config_dict
 
         cfg['descriptor_set'] = from_config_dict(
-            cfg['descriptor_set'], DescriptorIndex.get_impls()
+            cfg['descriptor_set'], DescriptorSet.get_impls()
         )
         cfg['uid2idx_kvs'] = from_config_dict(
             cfg['uid2idx_kvs'], KeyValueStore.get_impls()
@@ -161,7 +161,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param descriptor_set: Index in which DescriptorElements will be
             stored.
-        :type descriptor_set: smqtk.representation.DescriptorIndex
+        :type descriptor_set: smqtk.representation.DescriptorSet
 
         :param idx2uid_kvs: Key-value storage mapping FAISS indexed vector
             index to descriptor UID.  This should be the inverse of

@@ -36,10 +36,10 @@ DescriptorElement
 .. autoclass:: smqtk.representation.DescriptorElement
    :members:
 
-DescriptorIndex
+DescriptorSet
 +++++++++++++++
 
-.. autoclass:: smqtk.representation.DescriptorIndex
+.. autoclass:: smqtk.representation.DescriptorSet
    :members:
 
 DetectionElement

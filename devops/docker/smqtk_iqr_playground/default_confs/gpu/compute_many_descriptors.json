@@ -52,8 +52,8 @@
         },
         "type": "CaffeDescriptorGenerator"
     },
-    "descriptor_index": {
-        "PostgresDescriptorIndex": {
+    "descriptor_set": {
+        "PostgresDescriptorSet": {
             "create_table": false,
             "db_host": "/dev/shm",
             "db_name": "postgres",
@@ -64,10 +64,10 @@
             "multiquery_batch_size": 1000,
             "pickle_protocol": -1,
             "read_only": false,
-            "table_name": "descriptor_index_resnet50_pool5",
+            "table_name": "descriptor_set_resnet50_pool5",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorIndex"
+        "type": "PostgresDescriptorSet"
     },
     "optional_data_set": {
         "DataMemorySet": {

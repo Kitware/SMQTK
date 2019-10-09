@@ -23,7 +23,7 @@ from smqtk.iqr import (
 from smqtk.representation import (
     ClassificationElementFactory,
     DescriptorElementFactory,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils.configuration import (
@@ -98,9 +98,9 @@ class IqrService (SmqtkWebApp):
     """
     Configuration Notes
     -------------------
-    ``descriptor_index`` will currently be configured twice: once for the
-    global index and once for the nearest neighbors index. These will probably
-    be the set to the same index. In more detail, the global descriptor index
+    ``descriptor_set`` will currently be configured twice: once for the
+    global set and once for the nearest neighbors index. These will probably
+    be the set to the same set. In more detail, the global descriptor set
     is used when the "refine" endpoint is given descriptor UUIDs
     """
 
@@ -141,11 +141,11 @@ class IqrService (SmqtkWebApp):
                     "descriptor_generator":
                         "Descriptor generation algorithm to use when "
                         "requested to describe data.",
-                    "descriptor_index":
-                        "This is the index from which given positive and "
+                    "descriptor_set":
+                        "This is the set from which given positive and "
                         "negative example descriptors are retrieved from. "
                         "Not used for nearest neighbor querying. "
-                        "This index must contain all descriptors that could "
+                        "This set must contain all descriptors that could "
                         "possibly be used as positive/negative examples and "
                         "updated accordingly.",
                     "neighbor_index":
@@ -173,8 +173,8 @@ class IqrService (SmqtkWebApp):
                     "descriptor_generator": make_default_config(
                         DescriptorGenerator.get_impls()
                     ),
-                    "descriptor_index": make_default_config(
-                        DescriptorIndex.get_impls()
+                    "descriptor_set": make_default_config(
+                        DescriptorSet.get_impls()
                     ),
                     "neighbor_index":
                         make_default_config(NearestNeighborsIndex.get_impls()),
@@ -211,10 +211,10 @@ class IqrService (SmqtkWebApp):
             DescriptorGenerator.get_impls(),
         )
 
-        #: :type: smqtk.representation.DescriptorIndex
-        self.descriptor_index = from_config_dict(
-            json_config['iqr_service']['plugins']['descriptor_index'],
-            DescriptorIndex.get_impls(),
+        #: :type: smqtk.representation.DescriptorSet
+        self.descriptor_set = from_config_dict(
+            json_config['iqr_service']['plugins']['descriptor_set'],
+            DescriptorSet.get_impls(),
         )
 
         #: :type: smqtk.algorithms.NearestNeighborsIndex
@@ -381,7 +381,7 @@ class IqrService (SmqtkWebApp):
 
         Accept base64 data (with content type), describe it via the configured
         descriptor generator and add the resulting descriptor element to the
-        configured descriptor index.
+        configured descriptor set.
 
         Form Arguments:
             data_b64
@@ -417,10 +417,10 @@ class IqrService (SmqtkWebApp):
             raise
         # Concurrent updating of descriptor set should be handled by underlying
         # implementation.
-        self.descriptor_index.add_descriptor(descriptor)
+        self.descriptor_set.add_descriptor(descriptor)
         return make_response_json("Success",
                                   uid=descriptor.uuid(),
-                                  size=self.descriptor_index.count()), 201
+                                  size=self.descriptor_set.count()), 201
 
     # GET /nn_index
     def get_nn_index_status(self):
@@ -480,14 +480,14 @@ class IqrService (SmqtkWebApp):
             try:
                 # KeyError may not occur until returned iterator is iterated.
                 descr_elems = \
-                    self.descriptor_index.get_many_descriptors(descr_uid_list)
+                    self.descriptor_set.get_many_descriptors(descr_uid_list)
                 self.neighbor_index.update_index(descr_elems)
             except KeyError:
                 # Some UIDs are not present in the current index.  Isolate
                 # which UIDs are not contained.
                 uids_not_ingested = []
                 for uid in descr_uid_list:
-                    if not self.descriptor_index.has_descriptor(uid):
+                    if not self.descriptor_set.has_descriptor(uid):
                         uids_not_ingested.append(uid)
                 return make_response_json("Some provided UIDs do not exist in "
                                           "the current index.",
@@ -669,7 +669,7 @@ class IqrService (SmqtkWebApp):
                                       "integer: %s" % str(ex)), 400
 
         try:
-            descriptor = self.descriptor_index.get_descriptor(uid)
+            descriptor = self.descriptor_set.get_descriptor(uid)
         except KeyError:
             return make_response_json("Failed to get descriptor for UID %s"
                                       % uid), 400
@@ -715,7 +715,7 @@ class IqrService (SmqtkWebApp):
             uuids_neg = [d.uuid() for d in iqrs.negative_descriptors]
             uuids_neg_external = [d.uuid() for d in
                                   iqrs.external_negative_descriptors]
-            wi_count = iqrs.working_index.count()
+            wi_count = iqrs.working_set.count()
 
         finally:
             iqrs.lock.release()
@@ -983,7 +983,7 @@ class IqrService (SmqtkWebApp):
         cancel each other out (remains neutral).
 
         Descriptor uuids that may be provided must be available in the
-        configured descriptor index.
+        configured descriptor set.
 
         Form Args:
             sid
@@ -1021,13 +1021,13 @@ class IqrService (SmqtkWebApp):
             self._log.debug("Getting the descriptors for UUIDs")
             # get_many_descriptors can raise KeyError
             pos_d = set(
-                self.descriptor_index.get_many_descriptors(pos_uuids)
+                self.descriptor_set.get_many_descriptors(pos_uuids)
             )
             neg_d = set(
-                self.descriptor_index.get_many_descriptors(neg_uuids)
+                self.descriptor_set.get_many_descriptors(neg_uuids)
             )
             neu_d = set(
-                self.descriptor_index.get_many_descriptors(neu_uuids)
+                self.descriptor_set.get_many_descriptors(neu_uuids)
             )
 
             # Record previous pos/neg descriptors for determining if an
@@ -1052,7 +1052,7 @@ class IqrService (SmqtkWebApp):
             self._log.warn(traceback.format_exc())
             return make_response_json(
                 "Descriptor UUID '%s' cannot be found in the "
-                "configured descriptor index."
+                "configured descriptor set."
                 % err_uuid,
                 sid=sid,
                 uuid=err_uuid,
@@ -1069,7 +1069,7 @@ class IqrService (SmqtkWebApp):
     # POST /initialize
     def initialize(self):
         """
-        Update the working index based on the currently positive examples and
+        Update the working set based on the currently positive examples and
         adjudications.
 
         Form Arguments:
@@ -1089,7 +1089,7 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            iqrs.update_working_index(self.neighbor_index)
+            iqrs.update_working_set(self.neighbor_index)
         except RuntimeError as ex:
             if "No positive descriptors to query" in str(ex):
                 return make_response_json("Failed to initialize, no positive "
@@ -1105,7 +1105,7 @@ class IqrService (SmqtkWebApp):
     # POST /refine
     def refine(self):
         """
-        (Re)Create ranking of working index content by order of relevance to
+        (Re)Create ranking of working set content by order of relevance to
         examples and adjudications.
 
         Form args:
@@ -1139,7 +1139,7 @@ class IqrService (SmqtkWebApp):
         """
         Get the total number of results that have been ranked.
 
-        This is usually 0 before refinement and the size of the working index
+        This is usually 0 before refinement and the size of the working set
         after refinement.
 
         URI Args:
@@ -1176,7 +1176,7 @@ class IqrService (SmqtkWebApp):
     # GET /get_results
     def get_results(self):
         """
-        Get the relevancy score for working index descriptor elements between
+        Get the relevancy score for working set descriptor elements between
         the optionally specified offset and limit indices, ordered by
         *descending* predicted relevancy values (in [0, 1] range).
 
@@ -1257,7 +1257,7 @@ class IqrService (SmqtkWebApp):
     def get_positive_adjudication_relevancy(self):
         """
         Get the relevancy scores for positively adjudicated elements in the
-        working index between the optionally provided index offset and limit,
+        working set between the optionally provided index offset and limit,
         ordered by *descending* predicted relevancy values (in [0, 1] range).
 
         If ``i`` (offset, inclusive) is omitted, we assume a starting index of
@@ -1332,7 +1332,7 @@ class IqrService (SmqtkWebApp):
     def get_negative_adjudication_relevancy(self):
         """
         Get the relevancy scores for negatively adjudicated elements in the
-        working index between the optionally provided index offset and limit,
+        working set between the optionally provided offset and limit,
         ordered by *descending* predicted relevancy values (in [0, 1] range).
 
         If ``i`` (offset, inclusive) is omitted, we assume a starting index of
@@ -1369,7 +1369,7 @@ class IqrService (SmqtkWebApp):
                 session.
             results: list[(str, float)]
                 List of ``(uuid, score)`` tuples for negatively adjudicated
-                descriptors in the working index, ordered by descending score.
+                descriptors in the working set, ordered by descending score.
 
         """
         sid = flask.request.args.get('sid', None)
@@ -1407,7 +1407,7 @@ class IqrService (SmqtkWebApp):
     def get_unadjudicated_relevancy(self):
         """
         Get the relevancy scores for non-adjudicated elements in the working
-        index between the optionally provided index offset and limit, ordered
+        set between the optionally provided index offset and limit, ordered
         by descending predicted relevancy value ([0, 1] range).
 
         If ``i`` (offset, inclusive) is omitted, we assume a starting index of
@@ -1444,7 +1444,7 @@ class IqrService (SmqtkWebApp):
                 session.
             results: list[(str, float)]
                 List of ``(uuid, score)`` tuples for negatively adjudicated
-                descriptors in the working index, ordered by descending score.
+                descriptors in the working set, ordered by descending score.
 
         """
         sid = flask.request.args.get('sid', None)
@@ -1497,7 +1497,7 @@ class IqrService (SmqtkWebApp):
                 UUID of the session to utilize
             uuids
                 List of descriptor UUIDs to classify. These UUIDs must
-                associate to descriptors in the configured descriptor index.
+                associate to descriptors in the configured descriptor set.
 
         TODO: Optionally take in a list of JSON objects encoding base64 bytes
               and content type of raw data to describe and then classify, thus
@@ -1547,7 +1547,7 @@ class IqrService (SmqtkWebApp):
 
             # Get descriptor elements for classification
             # get_many_descriptors can raise KeyError
-            descriptors = list(self.descriptor_index
+            descriptors = list(self.descriptor_set
                                .get_many_descriptors(uuids))
 
             classifier = self.session_classifiers.get(sid, None)
@@ -1592,7 +1592,7 @@ class IqrService (SmqtkWebApp):
             self._log.warn(traceback.format_exc())
             return make_response_json(
                 "Descriptor UUID '%s' cannot be found in the "
-                "configured descriptor index."
+                "configured descriptor set."
                 % err_uuid,
                 sid=sid,
                 uuid=err_uuid,

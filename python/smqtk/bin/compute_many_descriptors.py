@@ -14,7 +14,7 @@ from smqtk.compute_functions import compute_many_descriptors
 from smqtk.representation import (
     DescriptorElementFactory,
     DataSet,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import parallel
@@ -35,8 +35,8 @@ def default_config():
         "descriptor_generator":
             make_default_config(DescriptorGenerator.get_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
-        "descriptor_index":
-            make_default_config(DescriptorIndex.get_impls()),
+        "descriptor_set":
+            make_default_config(DescriptorSet.get_impls()),
         "optional_data_set":
             make_default_config(DataSet.get_impls())
     }
@@ -78,9 +78,9 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
 
     log.info("Making descriptor index")
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(c['descriptor_index'],
-                                        DescriptorIndex.get_impls())
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(c['descriptor_set'],
+                                      DescriptorSet.get_impls())
 
     # ``data_set`` added to within the ``iter_valid_elements`` function.
     data_set = None
@@ -134,7 +134,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     m = compute_many_descriptors(iter_valid_elements(),
                                  generator,
                                  factory,
-                                 descriptor_index,
+                                 descriptor_set,
                                  batch_size=batch_size,
                                  )
 

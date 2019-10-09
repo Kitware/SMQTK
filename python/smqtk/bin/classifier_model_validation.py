@@ -55,7 +55,7 @@ from smqtk.algorithms import (
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.utils import (
     cli,
@@ -77,8 +77,8 @@ def default_config():
                 make_default_config(SupervisedClassifier.get_impls()),
             'classification_factory':
                 ClassificationElementFactory.get_default_config(),
-            'descriptor_index':
-                make_default_config(DescriptorIndex.get_impls())
+            'descriptor_set':
+                make_default_config(DescriptorSet.get_impls())
         },
         'utility': {
             'train': False,
@@ -118,10 +118,10 @@ def main():
     classification_factory = ClassificationElementFactory.from_config(
         config['plugins']['classification_factory']
     )
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
 
     uuid2label_filepath = config['utility']['csv_filepath']
@@ -151,7 +151,7 @@ def main():
     def get_descr(r):
         """ Fetch descriptors from configured index """
         uuid, truth_label = r
-        return truth_label, descriptor_index.get_descriptor(uuid)
+        return truth_label, descriptor_set.get_descriptor(uuid)
 
     tlabel_element_iter = parallel.parallel_map(
         get_descr, iter_uuid_label(),

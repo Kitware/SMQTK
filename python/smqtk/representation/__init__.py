@@ -6,7 +6,7 @@ from .classification_element import ClassificationElement
 from .data_element import DataElement
 from .data_set import DataSet
 from .descriptor_element import DescriptorElement
-from .descriptor_index import DescriptorIndex
+from .descriptor_set import DescriptorSet
 from .detection_element import DetectionElement
 from .key_value import KeyValueStore
 

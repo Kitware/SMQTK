@@ -13,7 +13,7 @@ from smqtk.web.iqr_service import IqrService
 
 from tests.web.iqr_service.stubs import \
     STUB_MODULE_PATH, \
-    StubDescriptorIndex, StubDescrGenerator, StubNearestNeighborIndex
+    StubDescriptorSet, StubDescrGenerator, StubNearestNeighborIndex
 
 
 class TestIqrService (unittest.TestCase):
@@ -37,7 +37,7 @@ class TestIqrService (unittest.TestCase):
             'MemoryClassificationElement'
         plugin_config['descriptor_factory']['type'] = \
             'DescriptorMemoryElement'
-        plugin_config['descriptor_index']['type'] = 'StubDescriptorIndex'
+        plugin_config['descriptor_set']['type'] = 'StubDescriptorSet'
 
         # Set up dummy algorithm types
         plugin_config['classifier_config']['type'] = 'StubClassifier'
@@ -68,7 +68,7 @@ class TestIqrService (unittest.TestCase):
         r = self.app.test_client().get('/is_ready')
         self.assertStatusCode(r, 200)
         self.assertJsonMessageRegex(r, "Yes, I'm alive.")
-        self.assertIsInstance(self.app.descriptor_index, StubDescriptorIndex)
+        self.assertIsInstance(self.app.descriptor_set, StubDescriptorSet)
         self.assertIsInstance(self.app.descriptor_generator, StubDescrGenerator)
         self.assertIsInstance(self.app.neighbor_index, StubNearestNeighborIndex)
 
@@ -118,7 +118,7 @@ class TestIqrService (unittest.TestCase):
         self.app.describe_base64_data = mock.Mock(
             return_value=expected_descriptor
         )
-        self.app.descriptor_index.add_descriptor = mock.Mock()
+        self.app.descriptor_set.add_descriptor = mock.Mock()
 
         query_data = {
             "data_b64": expected_base64,
@@ -130,7 +130,7 @@ class TestIqrService (unittest.TestCase):
         self.app.describe_base64_data.assert_called_once_with(
             expected_base64, expected_contenttype
         )
-        self.app.descriptor_index.add_descriptor.assert_called_once_with(
+        self.app.descriptor_set.add_descriptor.assert_called_once_with(
             expected_descriptor
         )
 
@@ -204,11 +204,11 @@ class TestIqrService (unittest.TestCase):
         def key_error_raise(*_, **__):
             raise KeyError('test-key')
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             side_effect=key_error_raise
         )
         # Pretend any UID except 2 and "hello" are not contained.
-        self.app.descriptor_index.has_descriptor = mock.Mock(
+        self.app.descriptor_set.has_descriptor = mock.Mock(
             side_effect=lambda k: k == 2 or k == "hello"
         )
 
@@ -219,14 +219,14 @@ class TestIqrService (unittest.TestCase):
                                         data=dict(
                                             descriptor_uids=expected_list_json,
                                         ))
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_list
         )
-        self.app.descriptor_index.has_descriptor.assert_any_call(0)
-        self.app.descriptor_index.has_descriptor.assert_any_call(1)
-        self.app.descriptor_index.has_descriptor.assert_any_call(2)
-        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
-        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.app.descriptor_set.has_descriptor.assert_any_call(0)
+        self.app.descriptor_set.has_descriptor.assert_any_call(1)
+        self.app.descriptor_set.has_descriptor.assert_any_call(2)
+        self.app.descriptor_set.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_set.has_descriptor.assert_any_call("foobar")
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
@@ -235,7 +235,7 @@ class TestIqrService (unittest.TestCase):
 
     def test_update_nn_index_delayed_key_error(self):
         """
-        Some DescriptorIndex implementations of get_many_descriptors use the
+        Some DescriptorSet implementations of get_many_descriptors use the
         yield statement and thus won't potentially generate key errors until
         actually iterated within the update call.  Test that this is correctly
         caught.
@@ -248,11 +248,11 @@ class TestIqrService (unittest.TestCase):
             # noinspection PyUnreachableCode
             yield
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             side_effect=generator_key_error
         )
         # Pretend any UID except 2 and "hello" are not contained.
-        self.app.descriptor_index.has_descriptor = mock.Mock(
+        self.app.descriptor_set.has_descriptor = mock.Mock(
             side_effect=lambda k: k == 2 or k == "hello"
         )
 
@@ -263,14 +263,14 @@ class TestIqrService (unittest.TestCase):
                                         data=dict(
                                             descriptor_uids=expected_list_json,
                                         ))
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_list
         )
-        self.app.descriptor_index.has_descriptor.assert_any_call(0)
-        self.app.descriptor_index.has_descriptor.assert_any_call(1)
-        self.app.descriptor_index.has_descriptor.assert_any_call(2)
-        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
-        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.app.descriptor_set.has_descriptor.assert_any_call(0)
+        self.app.descriptor_set.has_descriptor.assert_any_call(1)
+        self.app.descriptor_set.has_descriptor.assert_any_call(2)
+        self.app.descriptor_set.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_set.has_descriptor.assert_any_call("foobar")
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
@@ -287,7 +287,7 @@ class TestIqrService (unittest.TestCase):
         expected_uid_list_json = json.dumps(expected_uid_list)
         expected_new_index_count = 10
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             return_value=expected_descriptors
         )
         self.app.neighbor_index.update_index = mock.Mock()
@@ -300,7 +300,7 @@ class TestIqrService (unittest.TestCase):
         )
         r = self.app.test_client().post('/nn_index', data=data)
 
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_uid_list
         )
         self.app.neighbor_index.update_index.assert_called_once_with(
@@ -544,7 +544,7 @@ class TestIqrService (unittest.TestCase):
     def test_uid_nearest_neighbors_no_elem_for_uid(self):
         def raise_keyerror(*_):
             raise KeyError("invalid-key")
-        self.app.descriptor_index.get_descriptor = mock.Mock(
+        self.app.descriptor_set.get_descriptor = mock.Mock(
             side_effect=raise_keyerror
         )
 
@@ -567,7 +567,7 @@ class TestIqrService (unittest.TestCase):
             expected_neighbors.append(e)
         expected_dists = [1, 2, 3]
 
-        self.app.descriptor_index.get_descriptor = mock.Mock()
+        self.app.descriptor_set.get_descriptor = mock.Mock()
         self.app.neighbor_index.nn = mock.Mock(
             return_value=[expected_neighbors, expected_dists]
         )
@@ -578,11 +578,11 @@ class TestIqrService (unittest.TestCase):
         )
         r = self.app.test_client().get('/uid_nearest_neighbors',
                                        data=data)
-        self.app.descriptor_index.get_descriptor.assert_called_once_with(
+        self.app.descriptor_set.get_descriptor.assert_called_once_with(
             data['uid']
         )
         self.app.neighbor_index.nn.assert_called_once_with(
-            self.app.descriptor_index.get_descriptor(), data['k']
+            self.app.descriptor_set.get_descriptor(), data['k']
         )
 
         self.assertStatusCode(r, 200)

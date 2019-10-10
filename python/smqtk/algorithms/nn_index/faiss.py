@@ -151,8 +151,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
                  read_only=False, factory_string='IVF1,Flat',
-                 use_multiprocessing=True, use_gpu=False, gpu_id=0,
-                 random_seed=None):
+                 use_gpu=False, gpu_id=0, random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
@@ -188,10 +187,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             see the documentation [1] on this feature for more details.
         :type factory_string: str | unicode
 
-        :param use_multiprocessing: Whether or not to use discrete processes
-            as the parallelization agent vs python threads.
-        :type use_multiprocessing: bool
-
         :param use_gpu: Use a GPU index if GPU support is available.  A
             RuntimeError is thrown during instance construction if GPU support
             is not available and this flag is true.  See the following for
@@ -225,7 +220,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._index_param_element = index_param_element
         self.read_only = read_only
         self.factory_string = str(factory_string)
-        self.use_multiprocessing = use_multiprocessing
         self._use_gpu = use_gpu
         self._gpu_id = gpu_id
         self.random_seed = None
@@ -259,7 +253,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "factory_string": self.factory_string,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
-            "use_multiprocessing": self.use_multiprocessing,
             "use_gpu": self._use_gpu,
             "gpu_id": self._gpu_id,
         }
@@ -345,7 +338,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 self.factory_string = state["factory_string"]
                 self.read_only = state["read_only"]
                 self.random_seed = state["random_seed"]
-                self.use_multiprocessing = state["use_multiprocessing"]
                 self._next_index = state["next_index"]
 
                 # Check that descriptor-set and kvstore instances match up in
@@ -399,7 +391,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     "factory_string": self.factory_string,
                     "read_only": self.read_only,
                     "random_seed": self.random_seed,
-                    "use_multiprocessing": self.use_multiprocessing,
                     "next_index": self._next_index,
                 }
                 # Using UTF-8 due to recommendation (of either 8, 16 or 32) by

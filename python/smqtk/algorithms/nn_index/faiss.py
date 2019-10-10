@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division
-from __future__ import print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import collections
 from copy import deepcopy
@@ -159,7 +158,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         until one is built via the ``build_index`` method, or loaded from
         existing model files.
 
-        :param descriptor_set: Index in which DescriptorElements will be
+        :param descriptor_set: Set in which indexed DescriptorElements will be
             stored.
         :type descriptor_set: smqtk.representation.DescriptorSet
 
@@ -354,7 +353,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 if not (
                         len(self._descriptor_set) == len(self._uid2idx_kvs) ==
                         len(self._idx2uid_kvs) == self._faiss_index.ntotal):
-                    self._log.warn(
+                    self._log.warning(
                         "Not all of our storage elements agree on size: "
                         "len(dset, uid2idx, idx2uid, faiss_idx) = "
                         "(%d, %d, %d, %d)"

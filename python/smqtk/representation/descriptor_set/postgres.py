@@ -53,9 +53,9 @@ class PostgresDescriptorSet (DescriptorSet):
     #
     # The following are SQL query templates. The string formatting using {}'s
     # is used to fill in the query before using it in an execute with instance
-    # specific values. The ``%()s`` formatting is special for the execute where-
-    # by psycopg2 will fill in the values appropriately as specified in a second
-    # dictionary argument to ``cursor.execute(query, value_dict)``.
+    # specific values. The ``%()s`` formatting is special for the execute
+    # where-by psycopg2 will fill in the values appropriately as specified in a
+    # second dictionary argument to ``cursor.execute(query, value_dict)``.
     #
     UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
@@ -401,7 +401,7 @@ class PostgresDescriptorSet (DescriptorSet):
                                    % (uuid, c.rowcount))
 
         r = list(self.psql_helper.single_execute(eh, yield_result_rows=True))
-        return pickle.loads(str(r[0][0]))
+        return pickle.loads(bytes(r[0][0]))
 
     def get_many_descriptors(self, uuids):
         """
@@ -450,7 +450,7 @@ class PostgresDescriptorSet (DescriptorSet):
                                            yield_result_rows=True)
         i = 0
         for r, expected_uuid in zip(g, uuid_order):
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(bytes(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)
             yield d
@@ -548,7 +548,7 @@ class PostgresDescriptorSet (DescriptorSet):
             execute, yield_result_rows=True, named=True
         )
         for r in execution_results:
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(bytes(r[0]))
             yield d
 
     def iteritems(self):

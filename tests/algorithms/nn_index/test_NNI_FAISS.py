@@ -61,7 +61,7 @@ class TestFAISSIndex (unittest.TestCase):
             uid2idx_kvs=ex_u2i_kvs, index_element=ex_index_elem,
             index_param_element=ex_index_param_elem,
             read_only=True, factory_string=u'some fact str',
-            use_multiprocessing=False, use_gpu=False, gpu_id=99, random_seed=8,
+            use_gpu=False, gpu_id=99, random_seed=8,
         )
         for inst in configuration_test_helper(i):
             assert isinstance(inst._descriptor_set, MemoryDescriptorSet)
@@ -72,7 +72,6 @@ class TestFAISSIndex (unittest.TestCase):
             assert inst.read_only is True
             assert isinstance(inst.factory_string, six.string_types)
             assert inst.factory_string == 'some fact str'
-            assert inst.use_multiprocessing is False
             assert inst._use_gpu is False
             assert inst._gpu_id == 99
             assert inst.random_seed == 8

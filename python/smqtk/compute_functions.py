@@ -196,8 +196,13 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
     # TODO: parallel map fetch elements from index?
     #       -> separately from compute
 
-    def get_hash(u):
-        v = index.get_descriptor(u).vector()
+    #def get_hash(u):
+    #    v = index.get_descriptor(u).vector()
+    #    return u, bit_utils.bit_vector_to_int_large(functor.get_hash(v))
+
+    def get_hash(d):
+        u = d.uuid()
+        v = d.vector()
         return u, bit_utils.bit_vector_to_int_large(functor.get_hash(v))
 
     # Setup log and reporting function
@@ -214,7 +219,8 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
     log.debug("Starting computation")
     reporter = bin_utils.ProgressReporter(log_func, report_interval)
     reporter.start()
-    for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
+    #for uuid, hash_int in parallel.parallel_map(get_hash, uuids,
+    for uuid, hash_int in parallel.parallel_map(get_hash, index.iterdescriptors(),
                                                 ordered=ordered,
                                                 use_multiprocessing=use_mp):
         yield (uuid, hash_int)

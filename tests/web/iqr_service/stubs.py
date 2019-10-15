@@ -1,7 +1,7 @@
 """
 Stub abstract class implementations.
 """
-from smqtk.algorithms import Classifier, DescriptorGenerator, \
+from smqtk.algorithms import SupervisedClassifier, DescriptorGenerator, \
     NearestNeighborsIndex
 from smqtk.representation import DescriptorSet
 
@@ -54,7 +54,7 @@ class StubDescriptorSet (DescriptorSet):
         pass
 
 
-class StubClassifier (Classifier):
+class StubClassifier (SupervisedClassifier):
     """
     Classifier stub for testing IqrService.
     """
@@ -70,6 +70,13 @@ class StubClassifier (Classifier):
         pass
 
     def _classify(self, d):
+        pass
+
+    def has_model(self):
+        # To allow training.
+        return False
+
+    def _train(self, class_examples, **extra_params):
         pass
 
 

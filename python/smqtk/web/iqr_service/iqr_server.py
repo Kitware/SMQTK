@@ -8,6 +8,7 @@ import traceback
 import uuid
 
 import flask
+import six
 
 from smqtk.algorithms import (
     Classifier,
@@ -231,6 +232,14 @@ class IqrService (SmqtkWebApp):
         # modifications locked under the parent session's global lock.
         #: :type: dict[collections.Hashable, SupervisedClassifier | None]
         self.session_classifiers = {}
+        # Cache of IQR session classification results on descriptors with the
+        # recorded UIDs.
+        # This session cache contents are purged when a classifier retrains for
+        # a session.
+        # Only "positive" class confidence values are retained due to the
+        # binary nature of IQR-based classifiers.
+        #: :type: dict[collections.Hashable, dict[collections.Hashable, float]]
+        self.session_classification_results = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
@@ -244,6 +253,7 @@ class IqrService (SmqtkWebApp):
             with session:
                 self._log.debug("Removing session %s classifier", session.uuid)
                 del self.session_classifiers[session.uuid]
+                del self.session_classification_results[session.uuid]
                 del self.session_classifier_dirty[session.uuid]
 
         self.controller = iqr_controller.IqrController(
@@ -756,6 +766,7 @@ class IqrService (SmqtkWebApp):
             with iqrs:  # because classifier maps locked by session
                 self.controller.add_session(iqrs, self.session_timeout)
                 self.session_classifiers[sid] = None
+                self.session_classification_results[sid] = {}
                 self.session_classifier_dirty[sid] = True
 
         return make_response_json("Created new session with ID '%s'" % sid,
@@ -787,6 +798,7 @@ class IqrService (SmqtkWebApp):
         try:
             iqrs.reset()
             self.session_classifiers[sid] = None
+            self.session_classification_results[sid] = {}
             self.session_classifier_dirty[sid] = True
 
         finally:
@@ -821,6 +833,7 @@ class IqrService (SmqtkWebApp):
             with self.controller.get_session(sid) as iqrs:
                 iqrs.reset()
                 del self.session_classifiers[sid]
+                del self.session_classification_results[sid]
                 del self.session_classifier_dirty[sid]
             self.controller.remove_session(sid)
         return make_response_json("Cleaned session resources for '%s'" % sid,
@@ -1482,6 +1495,62 @@ class IqrService (SmqtkWebApp):
             total=total, results=r
         ), 200
 
+    def _ensure_session_classifier(self, iqrs):
+        """
+        Return the binary pos/neg classifier for this session.
+
+        If no classifier exists yet for this session, or it has been marked
+        dirty, retrain the classifier based on the input classifier
+        configuration.
+
+        This method assumes its being executed within an IQR session lock.
+
+        :param smqtk.iqr.IqrSession iqrs:
+            UUID of the IQR session to use.
+
+        :return:
+            Binary classifier for the given IQR session, the positive
+            classification label and the negative classification label.
+        :rtype: (smqtk.algorithms.SupervisedClassifier, str, str)
+        """
+        sid = iqrs.uuid
+
+        all_pos = (iqrs.external_positive_descriptors |
+                   iqrs.positive_descriptors)
+        if not all_pos:
+            raise RuntimeError("No positive labels in current IQR session. "
+                               "Required for a supervised classifier.")
+        all_neg = (iqrs.external_negative_descriptors |
+                   iqrs.negative_descriptors)
+        if not all_neg:
+            raise RuntimeError("No negative labels in current IQR session. "
+                               "Required for a supervised classifier.")
+
+        classifier = self.session_classifiers.get(sid, None)
+
+        pos_label = "positive"
+        neg_label = "negative"
+
+        if self.session_classifier_dirty[sid] or classifier is None:
+            self._log.debug("Training new classifier for current "
+                            "adjudication state...")
+
+            #: :type: SupervisedClassifier
+            classifier = from_config_dict(
+                self.classifier_config,
+                SupervisedClassifier.get_impls()
+            )
+            classifier.train(
+                {pos_label: all_pos,
+                 neg_label: all_neg}
+            )
+
+            self.session_classifiers[sid] = classifier
+            self.session_classification_results[sid] = {}
+            self.session_classifier_dirty[sid] = False
+
+        return classifier, pos_label, neg_label
+
     # GET /classify
     def classify(self):
         """
@@ -1522,74 +1591,52 @@ class IqrService (SmqtkWebApp):
 
         with self.controller:
             if not self.controller.has_session_uuid(sid):
+                self._log.warning("No IQR Session with UID '{}' found."
+                                  .format(sid))
                 return make_response_json("session id '%s' not found" % sid,
                                           sid=sid), 404
             iqrs = self.controller.get_session(sid)
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            all_pos = (iqrs.external_positive_descriptors |
-                       iqrs.positive_descriptors)
-            if not all_pos:
+            try:
+                classifier, pos_label, neg_label = \
+                    self._ensure_session_classifier(iqrs)
+            except RuntimeError as ex:
+                # Classification training may have failed.
                 return make_response_json(
-                    "No positive labels in current session. Required for a "
-                    "supervised classifier.",
-                    sid=sid
-                ), 400
-            all_neg = (iqrs.external_negative_descriptors |
-                       iqrs.negative_descriptors)
-            if not all_neg:
-                return make_response_json(
-                    "No negative labels in current session. Required for a "
-                    "supervised classifier.",
-                    sid=sid
+                    str(ex), sid=sid
                 ), 400
 
-            # Get descriptor elements for classification
-            # get_many_descriptors can raise KeyError
-            descriptors = list(self.descriptor_set
-                               .get_many_descriptors(uuids))
-
-            classifier = self.session_classifiers.get(sid, None)
-
-            pos_label = "positive"
-            neg_label = "negative"
-            if self.session_classifier_dirty[sid] or classifier is None:
-                self._log.debug("Training new classifier for current "
-                                "adjudication state...")
-
-                #: :type: SupervisedClassifier
-                classifier = from_config_dict(
-                    self.classifier_config,
-                    SupervisedClassifier.get_impls()
-                )
-                classifier.train(
-                    {pos_label: all_pos,
-                     neg_label: all_neg}
+            # Reduce descriptors actively classified to those not represented
+            # in the results cache.
+            c_cache = self.session_classification_results[sid]
+            uuid_for_clsify = set(uuids) - set(c_cache)
+            if uuid_for_clsify:
+                # Get descriptor elements for classification
+                # get_many_descriptors can raise KeyError
+                descriptors = list(self.descriptor_set
+                                   .get_many_descriptors(uuid_for_clsify))
+                classifications = classifier.classify_async(
+                    descriptors, self.classification_factory,
+                    # TODO: overwrite? ensure memory only elements?
+                    use_multiprocessing=True, ri=1.0
                 )
 
-                self.session_classifiers[sid] = classifier
-                self.session_classifier_dirty[sid] = False
-
-            classifications = classifier.classify_async(
-                descriptors, self.classification_factory,
-                use_multiprocessing=True, ri=1.0
-            )
+                # Update cache
+                for c in six.itervalues(classifications):
+                    c_cache[c.uuid] = c[pos_label]
+            elif uuids:
+                self._log.info("No classifications necessary, using cache.")
 
             # Format output to be parallel lists of UUIDs input and
             # positive class classification scores.
-            o_uuids = []
-            o_proba = []
-            for d in descriptors:
-                o_uuids.append(d.uuid())
-                o_proba.append(classifications[d][pos_label])
-
-            assert uuids == o_uuids, \
-                "Output UUID list is not congruent with INPUT list."
+            o_uuids = uuids
+            o_proba = [c_cache[uid] for uid in uuids]
 
         except KeyError as ex:
             err_uuid = str(ex)
-            self._log.warn(traceback.format_exc())
+            self._log.warning(traceback.format_exc())
             return make_response_json(
                 "Descriptor UUID '%s' cannot be found in the "
                 "configured descriptor set."

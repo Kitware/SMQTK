@@ -6,6 +6,8 @@ import unittest
 
 from smqtk.iqr import IqrSession
 from smqtk.representation import DescriptorElement
+from smqtk.representation.classification_element.memory \
+    import MemoryClassificationElement
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 from smqtk.utils.plugin import Pluggable
@@ -13,7 +15,8 @@ from smqtk.web.iqr_service import IqrService
 
 from tests.web.iqr_service.stubs import \
     STUB_MODULE_PATH, \
-    StubDescriptorSet, StubDescrGenerator, StubNearestNeighborIndex
+    StubClassifier, StubDescriptorSet, StubDescrGenerator, \
+    StubNearestNeighborIndex
 
 
 class TestIqrService (unittest.TestCase):
@@ -803,6 +806,80 @@ class TestIqrService (unittest.TestCase):
             assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
 
         self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    @mock.patch('smqtk.web.iqr_service.iqr_server.SupervisedClassifier'
+                '.get_impls')
+    def test_classify(self, m_sc_get_impls):
+        """
+        Test calling the GET /classify endpoint under nominal conditions.
+        """
+        # Mock classifier instantiation to return stub classifier class
+        # instance.
+        m_sc_get_impls.return_value = {StubClassifier}
+
+        # Setup descriptor set to have descriptors we test query for
+        mock_descriptors = [
+            DescriptorMemoryElement('', 'a').set_vector([0.4]),
+            DescriptorMemoryElement('', 'b').set_vector([0.5]),
+            DescriptorMemoryElement('', 'c').set_vector([0.6]),
+        ]
+        self.app.descriptor_set.get_many_descriptors = mock.MagicMock(
+            return_value=mock_descriptors
+        )
+        # Mock stub classifier return
+        mock_classifications = [
+            MemoryClassificationElement('', 'a'),
+            MemoryClassificationElement('', 'b'),
+            MemoryClassificationElement('', 'c'),
+        ]
+        mock_classifications[0].set_classification(
+            {'positive': 0.6, 'negative': 0.4})
+        mock_classifications[1].set_classification(
+            {'positive': 0.5, 'negative': 0.5})
+        mock_classifications[2].set_classification(
+            {'positive': 0.4, 'negative': 0.6})
+        StubClassifier.classify_async = mock.MagicMock(
+            return_value=dict(zip(mock_descriptors, mock_classifications))
+        )
+
+        with self.app.test_client() as tc:
+            # Initialize a new session.
+            tc.post("/session",
+                    data=dict(
+                        sid="0"
+                    ))
+
+            # Setup nominal IQR Session state for classifier generation and
+            # application.
+            iqr_session = self.app.controller.get_session("0")
+            # Mock descriptors on IQR session
+            iqr_session.external_positive_descriptors.add(
+                DescriptorMemoryElement('', 0).set_vector([0.0])
+            )
+            iqr_session.positive_descriptors.add(
+                DescriptorMemoryElement('', 1).set_vector([0.1])
+            )
+            iqr_session.external_negative_descriptors.add(
+                DescriptorMemoryElement('', 2).set_vector([1.0])
+            )
+            iqr_session.negative_descriptors.add(
+                DescriptorMemoryElement('', 3).set_vector([0.9])
+            )
+
+            #: :type: flask.Response
+            r = tc.get('/classify',
+                       query_string=dict(
+                           sid=0,
+                           uuids=json.dumps(['a', 'b', 'c'])
+                       ))
+            self.assertStatusCode(r, 200)
+            # We expect the UIDs returned to be in the same order as input and
+            # for the expected classification "positive" probabilities as in
+            # the mocked classification results.
+            r_json = r.json
+            assert r_json['sid'] == '0'
+            assert r_json['uuids'] == ['a', 'b', 'c']
+            assert r_json['proba'] == [0.6, 0.5, 0.4]
 
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.

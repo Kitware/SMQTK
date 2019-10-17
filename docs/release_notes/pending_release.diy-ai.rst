@@ -89,6 +89,7 @@ Utils
   utility.
 * Update random character generator to use ``random.SystemRandom`` which, at
   least for Posix systems, uses a source suitable for cryptographic purposes.
+* Expanded debug logging enabling options in ``runApplication`` tool.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

@@ -89,6 +89,7 @@ Utils
   utility.
 * Update random character generator to use ``random.SystemRandom`` which, at
   least for Posix systems, uses a source suitable for cryptographic purposes.
+* Expanded debug logging enabling options in ``runApplication`` tool.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to
@@ -132,6 +133,8 @@ Utilities
   period.
 * Fixed issue with ``smqtk.utils.parallel.parallel_map`` function where it
   could hang during threading-mode when a keyboard interrupt occurred.
+* Fixed incorrectly calling the module-level debug logging function to use the
+  locally passed logger, cleaning up a duplicate logging issue.
 
 Web
 * Classifier Service

@@ -95,8 +95,8 @@ def _get_local_plugin_modules(log, interface_type, warn=True):
     # Containing directory of the module ``interface_class`` is defined in.
     t_module_fp = inspect.getsourcefile(t_module) or inspect.getfile(t_module)
     t_module_dir = os.path.abspath(os.path.dirname(t_module_fp))
-    logging.debug("Looking for python modules parallel to {} in directory '{}'."
-                  .format(interface_type.__name__, t_module_dir))
+    log.debug("Looking for python modules parallel to {} in directory '{}'."
+              .format(interface_type.__name__, t_module_dir))
 
     # Discover sibling modules to interface type's module.
     for importer, module_name, ispackage \

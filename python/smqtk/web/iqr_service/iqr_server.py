@@ -1,6 +1,7 @@
 import base64
 import binascii
 import collections
+import itertools
 import json
 import multiprocessing
 import time
@@ -8,6 +9,7 @@ import traceback
 import uuid
 
 import flask
+import numpy as np
 import six
 
 from smqtk.algorithms import (
@@ -1031,20 +1033,71 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            self._log.debug("Getting the descriptors for UUIDs")
-            # get_many_descriptors can raise KeyError
-            pos_d = set(
-                self.descriptor_set.get_many_descriptors(pos_uuids)
-            )
-            neg_d = set(
-                self.descriptor_set.get_many_descriptors(neg_uuids)
-            )
-            neu_d = set(
-                self.descriptor_set.get_many_descriptors(neu_uuids)
-            )
+            self._log.debug("Determining UIDs for query.")
+            # Reduce number of UIDs we query the descriptor set for based on
+            # what we already have in our pos/neg adjudication sets.
+            have_elems = iqrs.positive_descriptors | iqrs.negative_descriptors
+            have_elem_map = {e.uuid(): e for e in have_elems}
+            have_uuids = set(have_elem_map.keys())
+            # UIDs for elements we don't have yet
+            q_pos_uids = pos_uuids.difference(have_uuids)
+            q_neg_uids = neg_uuids.difference(have_uuids)
+            q_neu_uids = neu_uuids.difference(have_uuids)
+            # Elements for UIDs we do already have
+            have_pos_elems = {have_elem_map[uid] for uid
+                              in pos_uuids.intersection(have_uuids)}
+            have_neg_elems = {have_elem_map[uid] for uid
+                              in neg_uuids.intersection(have_uuids)}
+            have_neu_elems = {have_elem_map[uid] for uid
+                              in neu_uuids.intersection(have_uuids)}
 
-            # Record previous pos/neg descriptors for determining if an
-            # existing classifier is dirty after this adjudication.
+            # Combine UID sets into one in order to make a single
+            # descriptor-set query
+            # - get_many_descriptors can raise KeyError
+            self._log.debug("Getting the descriptors for UUIDs")
+            descr_iter = self.descriptor_set.get_many_descriptors(
+                itertools.chain(q_pos_uids, q_neg_uids, q_neu_uids)
+            )
+            self._log.debug("- Slicing out positive descriptors...")
+            pos_d = set(itertools.chain(
+                have_pos_elems,
+                itertools.islice(descr_iter, len(q_pos_uids)))
+            )
+            assert len(pos_d) == len(pos_uuids), \
+                "Input pos UIDs doesn't match result descriptors set: " \
+                "{} != {}".format(len(pos_d), len(pos_uuids))
+            assert set(d.uuid() for d in pos_d) == pos_uuids, \
+                "Result positive descriptor element UIDs don't match input " \
+                "uids."
+
+            self._log.debug("- Slicing out negative descriptors...")
+            neg_d = set(itertools.chain(
+                have_neg_elems,
+                itertools.islice(descr_iter, len(q_neg_uids))
+            ))
+            assert len(neg_d) == len(neg_uuids), \
+                "Input neg UIDs doesn't match result descriptors set: " \
+                "{} != {}".format(len(neg_d), len(neg_uuids))
+            assert set(d.uuid() for d in neg_d) == neg_uuids, \
+                "Result negative descriptor element UIDs don't match input " \
+                "uids."
+
+            self._log.debug("- Slicing out neutral descriptors...")
+            neu_d = set(itertools.chain(
+                have_neu_elems,
+                itertools.islice(descr_iter, len(q_neu_uids))
+            ))
+            assert len(neu_d) == len(neu_uuids), \
+                "Input neu UIDs doesn't match result descriptors set: " \
+                "{} != {}".format(len(neu_d), len(neu_uuids))
+            assert set(d.uuid() for d in neu_d) == neu_uuids, \
+                "Result neutral descriptor element UIDs don't match input " \
+                "uids."
+            self._log.debug("Getting the descriptors for UUIDs -- Done")
+
+            # Record previous pos/neg descriptors via shallow copy for
+            # determining if an existing classifier is dirty after this
+            # adjudication.
             orig_pos = set(iqrs.positive_descriptors)
             orig_neg = set(iqrs.negative_descriptors)
 
@@ -1062,7 +1115,7 @@ class IqrService (SmqtkWebApp):
 
         except KeyError as ex:
             err_uuid = str(ex)
-            self._log.warn(traceback.format_exc())
+            self._log.warning(traceback.format_exc())
             return make_response_json(
                 "Descriptor UUID '%s' cannot be found in the "
                 "configured descriptor set."

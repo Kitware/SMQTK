@@ -708,6 +708,39 @@ class IqrService (SmqtkWebApp):
         URL Arguments:
             sid
                 ID of the session.
+
+        Return JSON:
+            sid (str):
+                Input IQR Session UID.
+            uuids_pos (list[str]):
+                List of working-set descriptor UIDs that are currently
+                adjudicated positive.
+            uuids_neg (list[str]):
+                List of working-set descriptor UIDs that are currently
+                adjudicated negative.
+            uuids_pos_ext (list[str]):
+                List of descriptor UIDs from external data that are currently
+                adjudicated positive.
+            uuids_neg_ext (list[str]):
+                List of descriptor UIDs from external data that are currently
+                adjudicated negative.
+            uuids_pos_in_model (list[str]):
+                List of working-set descriptor UIDs that adjudicated positive
+                at the time of this session's last refinement.
+            uuids_neg_in_model (list[str]):
+                List of working-set descriptor UIDs that adjudicated negative
+                at the time of this session's last refinement.
+            uuids_pos_ext_in_model (list[str]):
+                List of descriptor UIDs from external data that were
+                adjudicated positive at the time of this session's last
+                refinement.
+            uuids_neg_ext_in_model (list[str]):
+                List of descriptor UIDs from external data that were
+                adjudicated negative at the time of this session's last
+                refinement.
+            wi_count (int):
+                Number of elements currently in the working index to be ranked
+                by session refinement.
         """
         sid = flask.request.args.get('sid', None)
         if sid is None:
@@ -727,8 +760,13 @@ class IqrService (SmqtkWebApp):
             uuids_neg = [d.uuid() for d in iqrs.negative_descriptors]
             uuids_neg_external = [d.uuid() for d in
                                   iqrs.external_negative_descriptors]
+            uids_pos_in_model = [d.uuid() for d in iqrs.rank_contrib_pos]
+            uids_pos_ext_in_model = [d.uuid() for d
+                                     in iqrs.rank_contrib_pos_ext]
+            uids_neg_in_model = [d.uuid() for d in iqrs.rank_contrib_neg]
+            uids_neg_ext_in_model = [d.uuid() for d
+                                     in iqrs.rank_contrib_neg_ext]
             wi_count = iqrs.working_set.count()
-
         finally:
             iqrs.lock.release()
 
@@ -738,6 +776,10 @@ class IqrService (SmqtkWebApp):
                                   uuids_neg=uuids_neg,
                                   uuids_pos_ext=uuids_pos_external,
                                   uuids_neg_ext=uuids_neg_external,
+                                  uuids_pos_in_model=uids_pos_in_model,
+                                  uuids_pos_ext_in_model=uids_pos_ext_in_model,
+                                  uuids_neg_in_model=uids_neg_in_model,
+                                  uuids_neg_ext_in_model=uids_neg_ext_in_model,
                                   wi_count=wi_count), 200
 
     # POST /session

@@ -10,6 +10,7 @@ from collections import deque
 import multiprocessing
 from threading import current_thread
 import time
+import warnings
 
 
 class ReaderUpdateException (Exception):
@@ -444,6 +445,9 @@ class ContextualReadWriteLock (object):
     """
 
     def __init__(self):
+        warnings.warn("This lock's unit tests are currently being skipped. "
+                      "If this is being used again, address unit tests!",
+                      UserWarning)
         self._service_lock = multiprocessing.Lock()
         self._resource_lock = multiprocessing.Lock()
         self._reader_count_lock = multiprocessing.Lock()

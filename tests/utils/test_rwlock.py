@@ -4,6 +4,8 @@ import threading
 import time
 import unittest
 
+import pytest
+
 from smqtk.utils.read_write_lock import \
     ContextualReadWriteLock
 
@@ -34,6 +36,8 @@ def wait_for_value(f, timeout):
                 raise
 
 
+@pytest.mark.skip(msg="These tests are unstable and fail "
+                      "non-deterministically.")
 class TestContextualReadWriteLock (unittest.TestCase):
 
     def setUp(self):

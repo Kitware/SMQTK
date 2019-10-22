@@ -70,6 +70,10 @@ Tests
   and iteration properties.
 * Updated various class unit tests to make use of new configuration test helper
   function.
+* Added a skip mark to ``ContextualReadWriteLock`` class unit tests which
+  currently fail non-deterministically. This class is currently not used within
+  SMQTK and a user-warning is now emitted when an attempted construction of
+  this class occurs.
 
 Tools / Scripts
 * Updated the ``smqtk.bin.classifyFiles`` tool to use the new

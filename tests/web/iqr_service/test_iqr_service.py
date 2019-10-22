@@ -54,7 +54,7 @@ class TestIqrService (unittest.TestCase):
         :type r: :type: flask.wrappers.Response
         :type code: int
         """
-        self.assertEqual(r.status_code, code)
+        self.assertEqual(code, r.status_code)
 
     def assertJsonMessageRegex(self, r, regex):
         """
@@ -592,6 +592,74 @@ class TestIqrService (unittest.TestCase):
         r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['neighbor_uids'], expected_uids)
         self.assertListEqual(r_json['neighbor_dists'], expected_dists)
+
+    def test_get_session_info_no_session_id(self):
+        """
+        Test that passing no session ID results in a 400 error.
+        """
+        self._test_getter_no_sid('session')
+
+    def test_get_session_info_invalid_session_id(self):
+        """
+        Test that passing an ID that does not map to any current session
+        returns a 400 error.
+        """
+        # There are no sessions on server initialization.
+        self._test_getter_sid_not_found('session')
+
+        iqrs = IqrSession(session_uid='1')  # not '0', which is queried for.
+        self.app.controller.add_session(iqrs)
+        self._test_getter_sid_not_found('session')
+
+    def test_get_session_info(self):
+        """
+        Test a valid retrieval of a complex IQR session state.
+        """
+        iqrs = IqrSession(session_uid='abc')
+
+        ep, en, p1, p2, p3, n1, n2, d1, d2, n3 = [
+            DescriptorMemoryElement('test', uid) for uid in
+            ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
+            # ep   en   p1   p2   p3   n1   n2   d1   d2   n3
+        ]   # C              C         C    C    C    C
+        #     ^Contributing^
+
+        # Current adjudications
+        iqrs.external_positive_descriptors = {ep}
+        iqrs.positive_descriptors = {p1, p2, p3}
+        iqrs.external_negative_descriptors = {en}
+        iqrs.negative_descriptors = {n1, n2, n3}
+        # "Last Refine" adjudications
+        # - simulating that "currently" neutral descriptors were previous
+        #   adjudicated.
+        iqrs.rank_contrib_pos = {p2, d1}
+        iqrs.rank_contrib_pos_ext = {ep}
+        iqrs.rank_contrib_neg = {n1, n3, d2}
+        iqrs.rank_contrib_neg_ext = set()
+        # mock working set with
+        iqrs.working_set.add_many_descriptors([p1, p2, p3, n1, n2, d1, d2, n3])
+
+        self.app.controller.add_session(iqrs)
+
+        with self.app.test_client() as tc:
+            #: :type: flask.wrappers.Response
+            r = tc.get('/session?sid=abc')
+            self.assertStatusCode(r, 200)
+            r_json = r.json
+            assert r_json['sid'] == 'abc'
+            # That everything included in "current" adjudications is included
+            # here.
+            assert set(r_json['uuids_pos_ext']) == {'a'}
+            assert set(r_json['uuids_pos']) == {'c', 'd', 'e'}
+            assert set(r_json['uuids_neg_ext']) == {'b'}
+            assert set(r_json['uuids_neg']) == {'f', 'g', 'j'}
+            # That those marked as "contributing" are included here
+            assert set(r_json['uuids_pos_in_model']) == {'d', 'h'}
+            assert set(r_json['uuids_pos_ext_in_model']) == {'a'}
+            assert set(r_json['uuids_neg_in_model']) == {'f', 'j', 'i'}
+            assert set(r_json['uuids_neg_ext_in_model']) == set()
+            # IQR working set expected size
+            assert r_json['wi_count'] == 8
 
     def test_refine_no_session_id(self):
         with self.app.test_client() as tc:

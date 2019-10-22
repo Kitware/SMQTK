@@ -576,10 +576,10 @@ class TestIqrSession (object):
         d2 = DescriptorMemoryElement('', 2).set_vector([2])
         d3 = DescriptorMemoryElement('', 3).set_vector([3])
 
-        # Simulate a populated adjudication state (there must be some positives
-        # for a simulated post-refine state to be valid).
-        iqrs.positive_descriptors = {d1, d3}
-        iqrs.negative_descriptors = {d0}
+        # Simulate a populated contributing adjudication state (there must be
+        # some positives for a simulated post-refine state to be valid).
+        iqrs.rank_contrib_pos = {d1, d3}
+        iqrs.rank_contrib_neg = {d0}
 
         # Simulate post-refine results map.
         iqrs.results = {
@@ -645,10 +645,10 @@ class TestIqrSession (object):
         d2 = DescriptorMemoryElement('', 2).set_vector([2])
         d3 = DescriptorMemoryElement('', 3).set_vector([3])
 
-        # Simulate a populated adjudication state (there must be some positives
-        # for a simulated post-refine state to be valid).
-        iqrs.positive_descriptors = {d1}
-        iqrs.negative_descriptors = {d0, d2}
+        # Simulate a populated contributing adjudication state (there must be
+        # some positives for a simulated post-refine state to be valid).
+        iqrs.rank_contrib_pos = {d1}
+        iqrs.rank_contrib_neg = {d0, d2}
 
         # Simulate post-refine results map.
         iqrs.results = {
@@ -714,10 +714,10 @@ class TestIqrSession (object):
         d2 = DescriptorMemoryElement('', 2).set_vector([2])
         d3 = DescriptorMemoryElement('', 3).set_vector([3])
 
-        # Simulate a populated adjudication state (there must be some positives
-        # for a simulated post-refine state to be valid).
-        iqrs.positive_descriptors = {d1}
-        iqrs.negative_descriptors = {d0}
+        # Simulate a populated contributing adjudication state (there must be
+        # some positives for a simulated post-refine state to be valid).
+        iqrs.rank_contrib_pos = {d1}
+        iqrs.rank_contrib_neg = {d0}
 
         # Simulate post-refine results map.
         iqrs.results = {

@@ -93,13 +93,14 @@ class IqrSession (SmqtkObject):
         self._wi_seeds_used = set()
 
         # Descriptor elements representing data from external sources.
-        # These may be arbitrary descriptor elements.
+        # These may be arbitrary descriptor elements not present in
+        #   ``working_index``.
         #: :type: set[smqtk.representation.DescriptorElement]
         self.external_positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
         self.external_negative_descriptors = set()
 
-        # Descriptor references from our set (above) that have been
+        # Descriptor references from ``working_set`` that have been
         #   adjudicated.
         # These should be sub-sets of the descriptors contained in the
         #   ``working_set``.
@@ -107,6 +108,20 @@ class IqrSession (SmqtkObject):
         self.positive_descriptors = set()
         #: :type: set[smqtk.representation.DescriptorElement]
         self.negative_descriptors = set()
+
+        # Sets of descriptor elements that were used in the last refinement
+        #   to achieve the currently cached results, i.e. "contributed" to the
+        #   current results state.
+        # These sets are empty before the first refine after construction or a
+        #   reset.
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.rank_contrib_pos = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.rank_contrib_pos_ext = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.rank_contrib_neg = set()
+        #: :type: set[smqtk.representation.DescriptorElement]
+        self.rank_contrib_neg_ext = set()
 
         # Mapping of a DescriptorElement in our relevancy search index (not the
         #   set that the nn_index uses) to the relevancy score given the
@@ -326,6 +341,12 @@ class IqrSession (SmqtkObject):
                             "examples.", len(pos), len(neg))
             element_probability_map = self.rel_index.rank(pos, neg)
             self.results = element_probability_map
+            # Record UIDs of elements used for relevancy ranking.
+            # - shallow copy for separate container instance
+            self.rank_contrib_pos = set(self.positive_descriptors)
+            self.rank_contrib_pos_ext = set(self.external_positive_descriptors)
+            self.rank_contrib_neg = set(self.negative_descriptors)
+            self.rank_contrib_neg_ext = set(self.external_negative_descriptors)
             # Clear result view caches
             self._ordered_results = self._ordered_pos = self._ordered_neg = \
                 self._ordered_non_adj = None
@@ -358,6 +379,7 @@ class IqrSession (SmqtkObject):
                     result_items,
                     key=lambda p: p[1], reverse=True
                 )
+                # Shallow copy of the list to protect against external mutation
                 return list(r)
 
     def get_positive_adjudication_relevancy(self):
@@ -384,19 +406,14 @@ class IqrSession (SmqtkObject):
                 # NoneType is not iterable
                 # No cache yet.
 
-                try:
-                    results_gi = self.results.__getitem__
-                except AttributeError:
-                    # 'NoneType' object has no attribute '__getitem__'
-                    # No results to fetch from.
-                    return list()
-
-                r = self._ordered_pos = sorted(
-                    ((d, results_gi(d)) for d in self.positive_descriptors),
-                    key=lambda p: p[1], reverse=True
+                rank_contrib_pos = \
+                    self.rank_contrib_pos | self.rank_contrib_pos_ext
+                # Results already ordered, so only filter
+                r = self._ordered_pos = list(
+                    filter(lambda t: t[0] in rank_contrib_pos,
+                           self.ordered_results())
                 )
-                # When there are no positive adjudications, r is an empty
-                # list.
+                # Shallow copy of the list to protect against external mutation
                 return list(r)
 
     def get_negative_adjudication_relevancy(self):
@@ -423,19 +440,14 @@ class IqrSession (SmqtkObject):
                 # NoneType is not iterable
                 # No cache yet.
 
-                try:
-                    results_gi = self.results.__getitem__
-                except AttributeError:
-                    # 'NoneType' object has no attribute '__getitem__'
-                    # No results to fetch from.
-                    return list()
-
-                r = self._ordered_neg = sorted(
-                    ((d, results_gi(d)) for d in self.negative_descriptors),
-                    key=lambda p: p[1], reverse=True
+                rank_contrib_neg = \
+                    self.rank_contrib_neg | self.rank_contrib_neg_ext
+                # Results already ordered, so only filter
+                r = self._ordered_neg = list(
+                    filter(lambda t: t[0] in rank_contrib_neg,
+                           self.ordered_results())
                 )
-                # When there are no negative adjudications, r is an empty
-                # list.
+                # Shallow copy of the list to protect against external mutation
                 return list(r)
 
     def get_unadjudicated_relevancy(self):
@@ -454,21 +466,16 @@ class IqrSession (SmqtkObject):
             except TypeError:
                 # NoneType is not iterable
                 # No cache yet
-
-                try:
-                    result_items = six.iteritems(self.results)
-                except AttributeError:
-                    # NoneType missing items/iteritems attr
-                    # No results to iterate over.
-                    return list()
-
                 pos_and_neg = \
-                    self.positive_descriptors | self.negative_descriptors
-                r = self._ordered_non_adj = \
-                    sorted(filter(lambda p: p[0] not in pos_and_neg,
-                                  result_items),
-                           key=lambda p: p[1],
-                           reverse=True)
+                    self.rank_contrib_pos | self.rank_contrib_pos_ext | \
+                    self.rank_contrib_neg | self.rank_contrib_neg_ext
+
+                # Results already ordered, so only filter
+                r = self._ordered_non_adj = list(
+                    filter(lambda t: t[0] not in pos_and_neg,
+                           self.ordered_results())
+                )
+                # Shallow copy of the list to protect against external mutation
                 return list(r)
 
     def reset(self):
@@ -484,6 +491,10 @@ class IqrSession (SmqtkObject):
             self.negative_descriptors.clear()
             self.external_positive_descriptors.clear()
             self.external_negative_descriptors.clear()
+            self.rank_contrib_pos.clear()
+            self.rank_contrib_pos_ext.clear()
+            self.rank_contrib_neg.clear()
+            self.rank_contrib_neg_ext.clear()
 
             self.rel_index = None
             self.results = None

@@ -5,6 +5,7 @@ Runs conforming SMQTK Web Applications.
 import logging
 
 from flask_basicauth import BasicAuth
+from flask_cors import CORS
 import six
 
 from smqtk.utils import cli
@@ -47,6 +48,12 @@ def cli_parser():
                               action="store_true", default=False,
                               help="Use global basic authentication as "
                                    "configured.")
+    group_server.add_argument('--use-simple-cors',
+                              action='store_true', default=False,
+                              help="Allow CORS for all domains on all routes. "
+                                   "This follows the \"Simple Usage\" of "
+                                   "flask-cors: https://flask-cors.readthedocs"
+                                   ".io/en/latest/#simple-usage")
 
     # Other options
     group_other = parser.add_argument_group("Other options")
@@ -151,6 +158,7 @@ def main():
     use_reloader = args.reload
     use_threading = args.threaded
     use_basic_auth = args.use_basic_auth
+    use_simple_cors = args.use_simple_cors
 
     # noinspection PyUnresolvedReferences
     #: :type: smqtk.web.SmqtkWebApp
@@ -158,6 +166,9 @@ def main():
     if use_basic_auth:
         app.config["BASIC_AUTH_FORCE"] = True
         BasicAuth(app)
+    if use_simple_cors:
+        log.debug("Enabling CORS for all domains on all routes.")
+        CORS(app)
     app.config['DEBUG'] = debug_server
 
     log.info("Starting application")

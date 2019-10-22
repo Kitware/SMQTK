@@ -94,6 +94,8 @@ Utils
 * Update random character generator to use ``random.SystemRandom`` which, at
   least for Posix systems, uses a source suitable for cryptographic purposes.
 * Expanded debug logging enabling options in ``runApplication`` tool.
+* Added ``--use-simple-cors`` option to the ``runApplication`` tool to enable
+  CORS for all domains on all routes.
 
 Web
 * Added endpoints IQR headless service for expanded getter methods added to

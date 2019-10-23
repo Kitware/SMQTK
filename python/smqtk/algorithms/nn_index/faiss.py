@@ -34,6 +34,15 @@ except ImportError as ex:
     faiss = None
 
 
+# TODO: Add metric constructor option, append to ``faiss.METRIC_{}`` for
+#       library constant.
+# TODO: Add flag for optional memory mapping of index file.
+# TODO: Options to "train" with up to configured N descriptors instead of
+#       everything (maybe too many input).
+# TODO: Add parameter for updating index in batches for when loading all
+#       descriptors as a matrix into memory is too much.
+
+
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FAISS library.
@@ -150,8 +159,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
-                 read_only=False, factory_string='IVF1,Flat',
-                 use_gpu=False, gpu_id=0, random_seed=None):
+                 read_only=False, factory_string='IDMap,Flat',
+                 ivf_nprobe=1, use_gpu=False, gpu_id=0, random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
@@ -187,6 +196,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             see the documentation [1] on this feature for more details.
         :type factory_string: str | unicode
 
+        :param int ivf_nprobe:
+            If an IVF-type index is loaded, optionally use this as the
+            ``nprobe`` value at query time.
+            This should be an integer greater than 1 to be effective.
+            This parameter is ignore if the loaded index is not IVF-based.
+            When this is None the FAISS IVF default value for ``nprobe`` is
+            used (1).
+
         :param use_gpu: Use a GPU index if GPU support is available.  A
             RuntimeError is thrown during instance construction if GPU support
             is not available and this flag is true.  See the following for
@@ -220,6 +237,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._index_param_element = index_param_element
         self.read_only = read_only
         self.factory_string = str(factory_string)
+        self._ivf_nprobe = int(ivf_nprobe)
+        if self._ivf_nprobe < 1:
+            raise ValueError("ivf_nprobe must be >= 1.")
         self._use_gpu = use_gpu
         self._gpu_id = gpu_id
         self.random_seed = None
@@ -240,6 +260,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         #   https://github.com/facebookresearch/faiss/wiki/Threads-and-asynchronous-calls#thread-safety
         self._model_lock = multiprocessing.RLock()
         # Placeholder for FAISS model instance.
+        #: :type: None | faiss.Index
         self._faiss_index = None
 
         # Load the index/parameters if one exists
@@ -251,6 +272,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "uid2idx_kvs": to_config_dict(self._uid2idx_kvs),
             "idx2uid_kvs": to_config_dict(self._idx2uid_kvs),
             "factory_string": self.factory_string,
+            "ivf_nprobe": self._ivf_nprobe,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
             "use_gpu": self._use_gpu,
@@ -428,12 +450,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         # Build a faiss index but don't internalize it until we have a lock.
 
         faiss_index = self._index_factory_wrapper(d, self.factory_string)
+        self._log.info("Training FAISS index")
         # noinspection PyArgumentList
         faiss_index.train(data)
         # TODO(john.moeller): This will raise an exception on flat indexes.
         # There's a solution which involves wrapping the index in an
         # IndexIDMap, but it doesn't work because of a bug in FAISS. So for
         # now we don't support flat indexes.
+        self._log.info("Adding data to index")
         # noinspection PyArgumentList
         faiss_index.add_with_ids(data, idx_ids)
 
@@ -524,6 +548,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
             assert self._faiss_index.d == d, \
                 "FAISS index dimension doesn't match data dimension"
+            # noinspection PyArgumentList
             self._faiss_index.add_with_ids(data, new_ids)
             assert self._faiss_index.ntotal == old_ntotal + n, \
                 "New FAISS index size doesn't match old + data size"
@@ -619,6 +644,49 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             else:
                 return 0
 
+    def _idx_has_nprobe(self):
+        """
+        Determine if the current index supports setting the nprobe parameter
+        :return:
+        """
+
+    def _set_index_nprobe(self):
+        """
+        Try to set the currently configured nprobe value to the current faiss
+        index.
+
+        :returns: True if nprobe was actually set and False if it wasn't (not
+            an appropriate index type).
+        """
+        with self._model_lock:
+            idx = self._faiss_index
+            idx_name = idx.__class__.__name__
+            try:
+                # Attempting to use GpuParameterSpace doesn't error and seems
+                # to function even when there is no GPU available, so the usual
+                # pythonic EAFP doesn't cause an exception to catch when doing
+                # the "improper" thing first.
+                if isinstance(idx, faiss.GpuIndex):
+                    ps = faiss.GpuParameterSpace()
+                else:
+                    ps = faiss.ParameterSpace()
+                ps.set_index_parameter(
+                    idx, 'nprobe', self._ivf_nprobe
+                )
+                self._log.debug("Set nprobe={} to index, instance of {}"
+                                .format(self._ivf_nprobe, idx_name))
+                return True
+            except RuntimeError as sip_ex:
+                s_ex = str(sip_ex)
+                if "could not set parameter nprobe" in s_ex:
+                    # OK, index does not support nprobe parameter
+                    self._log.debug("Current index ({}) does not support the "
+                                    "nprobe parameter."
+                                    .format(idx_name))
+                    return False
+                # Otherwise re-raise
+                raise
+
     def _nn(self, d, n=1):
         """
         Internal method to be implemented by sub-classes to return the nearest
@@ -638,44 +706,55 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (tuple[smqtk.representation.DescriptorElement], tuple[float])
 
         """
+        log = self._log
         q = d.vector()[np.newaxis, :].astype(np.float32)
-
-        self._log.debug("Received query for %d nearest neighbors", n)
+        log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:
+            # Attempt to set n-probe of an IVF index
+            self._set_index_nprobe()
+
+            # noinspection PyArgumentList
             s_dists, s_ids = self._faiss_index.search(
-                q, min(n, self._faiss_index.ntotal)
+                q, k=min(n, self._faiss_index.ntotal)
             )
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
             s_ids = s_ids.astype(object)
             # s_id (the FAISS index indices) can equal -1 if fewer than the
             # requested number of nearest neighbors is returned. In this case,
             # eliminate the -1 entries
+            self._log.debug("Getting descriptor UIDs from idx2uid mapping.")
             uuids = list(self._idx2uid_kvs.get_many(
                 filter(lambda s_id_: s_id_ >= 0, s_ids)
             ))
+            if len(uuids) < n:
+                warnings.warn("Less than n={} neighbors were retrieved from "
+                              "the FAISS index instance. Maybe increase "
+                              "nprobe if this is an IVF index?"
+                              .format(n), RuntimeWarning)
 
             descriptors = tuple(
                 self._descriptor_set.get_many_descriptors(uuids)
             )
 
-        self._log.debug("Min and max FAISS distances: %g, %g",
-                        min(s_dists), max(s_dists))
+        log.debug("Min and max FAISS distances: %g, %g",
+                  min(s_dists), max(s_dists))
 
         d_vectors = np.vstack(
             DescriptorElement.get_many_vectors(descriptors)
         )
         d_dists = metrics.euclidean_distance(d_vectors, q)
 
-        self._log.debug("Min and max descriptor distances: %g, %g",
-                        min(d_dists), max(d_dists))
+        log.debug("Min and max descriptor distances: %g, %g",
+                  min(d_dists), max(d_dists))
 
         order = d_dists.argsort()
         uuids, d_dists = zip(*((uuids[oidx], d_dists[oidx]) for oidx in order))
 
-        self._log.debug("Returning query result of size %g", len(uuids))
+        log.debug("Returning query result of size %g", len(uuids))
 
         return descriptors, tuple(d_dists)
 
 
 SMQTK_PLUGIN_CLASS = FaissNearestNeighborsIndex
+

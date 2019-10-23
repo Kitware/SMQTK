@@ -12,6 +12,10 @@ Algorithms
   * Updated colordescriptor implementation for interface API update.
   * Updated caffe implementation for interface API update.
   * Updated KWCNN implementation for interface API update.
+* NearestNeighborsIndex
+  * FAISS
+    * Exposed ``nprobe`` parameter for when using IVF type indices to be
+      utilized at query time.
 
 Compute Functions
 * Updated ``smqtk.compute_functions.compute_many_descriptors`` to utilize new

@@ -61,7 +61,7 @@ class TestFAISSIndex (unittest.TestCase):
             uid2idx_kvs=ex_u2i_kvs, index_element=ex_index_elem,
             index_param_element=ex_index_param_elem,
             read_only=True, factory_string=u'some fact str',
-            use_gpu=False, gpu_id=99, random_seed=8,
+            ivf_nprobe=88, use_gpu=False, gpu_id=99, random_seed=8,
         )
         for inst in configuration_test_helper(i):
             assert isinstance(inst._descriptor_set, MemoryDescriptorSet)
@@ -72,9 +72,20 @@ class TestFAISSIndex (unittest.TestCase):
             assert inst.read_only is True
             assert isinstance(inst.factory_string, six.string_types)
             assert inst.factory_string == 'some fact str'
+            assert inst._ivf_nprobe == 88
             assert inst._use_gpu is False
             assert inst._gpu_id == 99
             assert inst.random_seed == 8
+
+    def test_init_invalid_nprobe(self):
+        """
+        Test that the nprobe value must be a positive integer.
+        """
+        with pytest.raises(ValueError, match=r"ivf_nprobe must be >= 1."):
+            self._make_inst(ivf_nprobe=-1)
+
+        with pytest.raises(TypeError):
+            self._make_inst(ivf_nprobe=None)
 
     def test_configuration_null_persistence(self):
         # Make configuration based on default
@@ -85,7 +96,7 @@ class TestFAISSIndex (unittest.TestCase):
 
         # # Build based on configuration
         index = FaissNearestNeighborsIndex.from_config(c)
-        self.assertEqual(index.factory_string, 'IVF1,Flat')
+        self.assertEqual(index.factory_string, 'IDMap,Flat')
         self.assertIsInstance(index.factory_string, six.string_types)
 
         # Test that constructing a new instance from ``index``'s config
@@ -455,3 +466,63 @@ class TestFAISSIndex (unittest.TestCase):
         for j, d, dist in zip(range(i), r, dists):
             self.assertEqual(d.uuid(), j)
             np.testing.assert_equal(d.vector(), [j, j*2])
+
+    def test_nn_ivf_nprobe_parametrization(self):
+        """
+        Test that increasing the nprobe parameter affects the nn query return.
+        """
+        # Create descriptor elements to build index with.
+        np.random.seed(0)  # for "consistent" random results.
+        descr_elems = [
+            DescriptorMemoryElement('test', i).set_vector(v)
+            for i, v in enumerate(np.random.rand(512, 2048))
+        ]
+
+        # Build an under-populated index for the parameterized IVF nlists
+        # value (256). Creating 512 (~2 per cell).
+        index = self._make_inst(factory_string='IVF256,Flat')
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        assert index._faiss_index.nprobe == 1
+        assert len(q_results) < 64
+
+        # Try again on a new index but with the nprobe param set to a value
+        # much higher than the faiss default (1).
+        # - 48 *should* be enough cells to get to at least 64 elements assuming
+        #   ~2 average elements per cell.
+        index = self._make_inst(factory_string='IVF256,Flat', ivf_nprobe=48)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        assert index._faiss_index.nprobe == 48
+        assert len(q_results) == 64
+
+        # Single nesting
+        index = self._make_inst(factory_string="PCAR8,IVF256,Flat",
+                                ivf_nprobe=48)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        assert len(q_results) == 64
+
+        # Double nesting
+        index = self._make_inst(factory_string="PCAR8,IDMap,IVF256,Flat",
+                                ivf_nprobe=48)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        assert len(q_results) == 64
+
+        # Shouldn't do anything for non-IVF indices
+        # -- IDMap,HNSW32
+        index = self._make_inst(factory_string="IDMap,HNSW32",
+                                ivf_nprobe=2)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        # -- PCAR8,IDMap,HNSW32
+        index = self._make_inst(factory_string="PCAR8,IDMap,HNSW32",
+                                ivf_nprobe=2)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)
+        # -- PCAR8,IDMap,Flat
+        index = self._make_inst(factory_string="PCAR8,IDMap,Flat",
+                                ivf_nprobe=2)
+        index.build_index(descr_elems)
+        q_results, q_dists = index.nn(descr_elems[0], n=64)

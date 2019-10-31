@@ -927,7 +927,8 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs.external_descriptors(positive=[descriptor])
-
+            self._log.debug("[%s] session Classifier dirty", sid)
+            self.session_classifier_dirty[sid] = True
         finally:
             iqrs.lock.release()
 
@@ -978,7 +979,8 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs.external_descriptors(negative=[descriptor])
-
+            self._log.debug("[%s] session Classifier dirty", sid)
+            self.session_classifier_dirty[sid] = True
         finally:
             iqrs.lock.release()
 

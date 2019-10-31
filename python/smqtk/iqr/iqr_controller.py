@@ -41,12 +41,12 @@ class IqrController (SmqtkObject):
             when the session expires and just before it is removed from this
             controller.
 
-            The provided function, when called, will be within this controller's
-            lock.
+            The provided function, when called, will be within this
+            controller's lock.
 
             If expiration is NOT enabled, or if a session is not given a
             timeout, this callback function is not used.
-        :type expire_callback: (collections.Hashable) -> None
+        :type expire_callback: (smqtk.iqr.IqrSession) -> None
 
         """
         # Map of uuid to the search state

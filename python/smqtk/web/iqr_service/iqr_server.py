@@ -1238,7 +1238,12 @@ class IqrService (SmqtkWebApp):
         try:
             self._log.info("[%s] Refining", sid)
             iqrs.refine()
-
+        except RuntimeError as ex:
+            ex_s = str(ex)
+            if "No relevancy index yet." in ex_s:
+                return make_response_json("No initialization has occurred yet "
+                                          "for this IQR session."), 400
+            raise
         finally:
             iqrs.lock.release()
 

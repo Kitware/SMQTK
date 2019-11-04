@@ -13,7 +13,7 @@ import numpy
 from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
-from smqtk.representation import get_data_element_impls
+from smqtk.representation import DataElement
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import merge_dict, plugin
 from smqtk.utils.bin_utils import ProgressReporter
@@ -49,7 +49,7 @@ class ItqFunctor (LshFunctor):
 
         # Cache element parameters need to be split out into sub-configurations
         data_element_default_config = \
-            plugin.make_config(get_data_element_impls())
+            plugin.make_config(DataElement.get_impls())
         default['mean_vec_cache'] = data_element_default_config
         # Need to deepcopy source to prevent modifications on one sub-config
         # from reflecting in the other.
@@ -78,7 +78,7 @@ class ItqFunctor (LshFunctor):
         if merge_default:
             config_dict = merge_dict(cls.get_default_config(), config_dict)
 
-        data_element_impls = get_data_element_impls()
+        data_element_impls = DataElement.get_impls()
         # Mean vector cache element.
         mean_vec_cache = None
         if config_dict['mean_vec_cache'] and \

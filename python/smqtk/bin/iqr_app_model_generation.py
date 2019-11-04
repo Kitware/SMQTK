@@ -122,18 +122,19 @@ def main():
     #: :type: representation.DataSet
     data_set = \
         plugin.from_plugin_config(data_set_config,
-                                  representation.get_data_set_impls())
+                                  representation.DataSet.get_impls())
     descriptor_elem_factory = \
         representation.DescriptorElementFactory \
         .from_config(descriptor_elem_factory_config)
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
         plugin.from_plugin_config(descriptor_generator_config,
-                                  algorithms.get_descriptor_generator_impls())
+                                  algorithms.DescriptorGenerator.get_impls())
+
     #: :type: algorithms.NearestNeighborsIndex
     nn_index = \
         plugin.from_plugin_config(nn_index_config,
-                                  algorithms.get_nn_index_impls())
+                                  algorithms.NearestNeighborsIndex.get_impls())
 
     #
     # Build models

@@ -14,6 +14,7 @@ from smqtk.algorithms import Classifier
 from smqtk.iqr import IqrSession
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.utils.plugin import Pluggable, OS_ENV_PATH_SEP
 from smqtk.web.classifier_service.classifier_server import \
     SmqtkClassifierService
 
@@ -25,9 +26,11 @@ class TestClassifierService (unittest.TestCase):
 
     # noinspection PyUnresolvedReferences
     @mock.patch.dict(os.environ, {
-        'CLASSIFIER_PATH': STUB_CLASSIFIER_MOD_PATH,
-        'DESCRIPTOR_GENERATOR_PATH':
-            'smqtk.tests.web.classifier_service.dummy_descriptor_generator'
+        Pluggable.PLUGIN_ENV_VAR:
+            OS_ENV_PATH_SEP.join([
+                STUB_CLASSIFIER_MOD_PATH,
+                'smqtk.tests.web.classifier_service.dummy_descriptor_generator',
+            ])
     })
     def setUp(self):
         super(TestClassifierService, self).setUp()

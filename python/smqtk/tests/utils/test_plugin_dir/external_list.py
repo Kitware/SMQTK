@@ -1,38 +1,34 @@
-"""
-Example where classes are found in module by introspecting parent classes.
-"""
 from smqtk.tests.utils.test_plugin_dummy_interface import DummyInterface
 
 
-class ImplFoo (DummyInterface):
+class ImplExternal4 (DummyInterface):
 
     @classmethod
     def is_usable(cls):
         return True
 
     def inst_method(self, val):
-        return 'foo'+str(val)
+        return 'external4'+str(val)
 
 
-class ImplBar (DummyInterface):
+class ImplExternal5 (DummyInterface):
 
     @classmethod
     def is_usable(cls):
         return True
 
     def inst_method(self, val):
-        return 'bar'+str(val)
+        return 'external5'+str(val)
 
 
-class ImplNotUsable (DummyInterface):
+class ImplExternal6 (DummyInterface):
 
     @classmethod
     def is_usable(cls):
-        return False
+        return True
 
     def inst_method(self, val):
-        return 'notUsable'+str(val)
+        return 'external6'+str(val)
 
 
-class SomethingElse (list):
-    pass
+TEST_PLUGIN_CLASS = [ImplExternal4, ImplExternal5]

@@ -28,9 +28,7 @@ from six.moves import zip
 
 import six
 
-from smqtk.representation import (
-    get_descriptor_index_impls,
-)
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
     bin_utils,
     plugin,
@@ -41,7 +39,7 @@ def default_config():
     return {
         'plugins': {
             'descriptor_index':
-                plugin.make_config(get_descriptor_index_impls()),
+                plugin.make_config(DescriptorIndex.get_impls()),
         }
     }
 
@@ -70,7 +68,7 @@ def main():
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     labels_filepath = args.f

@@ -5,7 +5,7 @@ import os
 import flask
 import requests
 
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.algorithms import DescriptorGenerator
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -71,7 +71,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         merge_dict(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generators": {
-                "example": plugin.make_config(get_descriptor_generator_impls())
+                "example": plugin.make_config(DescriptorGenerator.get_impls())
             }
         })
         return c
@@ -276,7 +276,7 @@ class DescriptorServiceServer (SmqtkWebApp):
                 self.descriptor_cache[label] = \
                     plugin.from_plugin_config(
                     self.generator_label_configs[label],
-                        get_descriptor_generator_impls()
+                        DescriptorGenerator.get_impls()
                     )
 
             return self.descriptor_cache[label]

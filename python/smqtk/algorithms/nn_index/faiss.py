@@ -15,9 +15,9 @@ from six.moves import zip
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import (
-    get_data_element_impls,
-    get_descriptor_index_impls,
-    get_key_value_store_impls,
+    DataElement,
+    DescriptorIndex,
+    KeyValueStore,
 )
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import plugin, merge_dict, metrics
@@ -75,14 +75,14 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         default = super(FaissNearestNeighborsIndex, cls).get_default_config()
 
         data_element_default_config = plugin.make_config(
-            get_data_element_impls())
+            DataElement.get_impls())
         default['index_element'] = data_element_default_config
         default['index_param_element'] = deepcopy(data_element_default_config)
 
-        di_default = plugin.make_config(get_descriptor_index_impls())
+        di_default = plugin.make_config(DescriptorIndex.get_impls())
         default['descriptor_set'] = di_default
 
-        kvs_default = plugin.make_config(get_key_value_store_impls())
+        kvs_default = plugin.make_config(KeyValueStore.get_impls())
         default['idx2uid_kvs'] = kvs_default
         default['uid2idx_kvs'] = deepcopy(kvs_default)
 
@@ -116,19 +116,19 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             cfg = config_dict
 
         cfg['descriptor_set'] = plugin.from_plugin_config(
-            cfg['descriptor_set'], get_descriptor_index_impls()
+            cfg['descriptor_set'], DescriptorIndex.get_impls()
         )
         cfg['uid2idx_kvs'] = plugin.from_plugin_config(
-            cfg['uid2idx_kvs'], get_key_value_store_impls()
+            cfg['uid2idx_kvs'], KeyValueStore.get_impls()
         )
         cfg['idx2uid_kvs'] = plugin.from_plugin_config(
-            cfg['idx2uid_kvs'], get_key_value_store_impls()
+            cfg['idx2uid_kvs'], KeyValueStore.get_impls()
         )
 
         if (cfg['index_element'] and
                 cfg['index_element']['type']):
             index_element = plugin.from_plugin_config(
-                cfg['index_element'], get_data_element_impls())
+                cfg['index_element'], DataElement.get_impls())
             cfg['index_element'] = index_element
         else:
             cfg['index_element'] = None
@@ -136,7 +136,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         if (cfg['index_param_element'] and
                 cfg['index_param_element']['type']):
             index_param_element = plugin.from_plugin_config(
-                cfg['index_param_element'], get_data_element_impls())
+                cfg['index_param_element'], DataElement.get_impls())
             cfg['index_param_element'] = index_param_element
         else:
             cfg['index_param_element'] = None
@@ -181,8 +181,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param factory_string: String to pass to FAISS' `index_factory`;
             see the documentation [1] on this feature for more details.
-            TODO(john.moeller): Flat indexes are not supported, so set the
-            default to 'IVF1,Flat', which is essentially a flat index.
         :type factory_string: str | unicode
 
         :param use_multiprocessing: Whether or not to use discrete processes

@@ -7,7 +7,7 @@ import zipfile
 
 import six
 
-from smqtk.algorithms.relevancy_index import get_relevancy_index_impls
+from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
 from smqtk.utils import SmqtkObject
 from smqtk.utils import plugin
@@ -303,7 +303,7 @@ class IqrSession (SmqtkObject):
             self._log.info("Creating new relevancy index over working index.")
             #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
             self.rel_index = plugin.from_plugin_config(
-                self.rel_index_config, get_relevancy_index_impls()
+                self.rel_index_config, RelevancyIndex.get_impls()
             )
             self.rel_index.build_index(self.working_index.iterdescriptors())
 

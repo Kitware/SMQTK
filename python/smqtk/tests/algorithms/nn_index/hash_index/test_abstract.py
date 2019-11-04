@@ -3,7 +3,7 @@ import unittest
 
 import six
 
-from smqtk.algorithms.nn_index.hash_index import HashIndex, get_hash_index_impls
+from smqtk.algorithms.nn_index.hash_index import HashIndex
 
 
 class DummyHI (HashIndex):
@@ -34,7 +34,7 @@ class DummyHI (HashIndex):
 class TestHashIndex (unittest.TestCase):
 
     def test_get_impls(self):
-        m = get_hash_index_impls()
+        m = HashIndex.get_impls()
         self.assertIsInstance(m, dict)
         for cls in six.itervalues(m):
             self.assertTrue(issubclass(cls, HashIndex))

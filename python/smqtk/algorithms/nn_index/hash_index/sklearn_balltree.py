@@ -6,7 +6,7 @@ from six.moves import map
 from sklearn.neighbors import BallTree, DistanceMetric
 
 from smqtk.algorithms.nn_index.hash_index import HashIndex
-from smqtk.representation import get_data_element_impls
+from smqtk.representation import DataElement
 from smqtk.utils import merge_dict, plugin
 
 
@@ -46,7 +46,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         c = super(SkLearnBallTreeHashIndex, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        c['cache_element'] = plugin.make_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -79,7 +79,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 config_dict['cache_element']['type']:
             cache_element = \
                 plugin.from_plugin_config(config_dict['cache_element'],
-                                          get_data_element_impls())
+                                          DataElement.get_impls())
         config_dict['cache_element'] = cache_element
 
         return super(SkLearnBallTreeHashIndex, cls).from_config(config_dict,

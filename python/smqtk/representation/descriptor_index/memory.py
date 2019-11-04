@@ -1,7 +1,7 @@
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation import DescriptorIndex, get_data_element_impls
+from smqtk.representation import DataElement, DescriptorIndex
 from smqtk.utils import merge_dict, plugin, SimpleTimer
 
 
@@ -50,7 +50,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
 
         """
         c = super(MemoryDescriptorIndex, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        c['cache_element'] = plugin.make_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -78,7 +78,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         if config_dict['cache_element'] \
                 and config_dict['cache_element']['type']:
             e = plugin.from_plugin_config(config_dict['cache_element'],
-                                          get_data_element_impls())
+                                          DataElement.get_impls())
             config_dict['cache_element'] = e
         else:
             config_dict['cache_element'] = None

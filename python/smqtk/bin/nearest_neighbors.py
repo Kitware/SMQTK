@@ -17,8 +17,8 @@ from smqtk.utils.bin_utils import (
     utility_main_helper,
 )
 
-from smqtk.algorithms.nn_index import get_nn_index_impls
-from smqtk.representation import get_descriptor_index_impls
+from smqtk.algorithms import NearestNeighborsIndex
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import plugin
 
 
@@ -45,8 +45,8 @@ def get_cli_parser():
 def get_default_config():
     return {
         'plugins': {
-            'descriptor_set': plugin.make_config(get_descriptor_index_impls()),
-            'nn_index': plugin.make_config(get_nn_index_impls())
+            'descriptor_set': plugin.make_config(DescriptorIndex.get_impls()),
+            'nn_index': plugin.make_config(NearestNeighborsIndex.get_impls())
         }
     }
 
@@ -65,11 +65,11 @@ def main():
 
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_set = plugin.from_plugin_config(
-        config['plugins']['descriptor_set'], get_descriptor_index_impls()
+        config['plugins']['descriptor_set'], DescriptorIndex.get_impls()
     )
     #: :type: smqtk.algorithms.NearestNeighborsIndex
     nearest_neighbor_index = plugin.from_plugin_config(
-        config['plugins']['nn_index'], get_nn_index_impls()
+        config['plugins']['nn_index'], NearestNeighborsIndex.get_impls()
     )
 
     # noinspection PyShadowingNames

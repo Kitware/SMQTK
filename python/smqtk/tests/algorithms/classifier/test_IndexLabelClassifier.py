@@ -4,7 +4,7 @@ import unittest
 import six
 from six.moves import map
 
-from smqtk.algorithms.classifier import get_classifier_impls
+from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -30,7 +30,7 @@ class TestIndexLabelClassifier (unittest.TestCase):
 
     def test_impl_findable(self):
         self.assertIn(IndexLabelClassifier.__name__,
-                      get_classifier_impls())
+                      Classifier.get_impls())
 
     def test_new(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)

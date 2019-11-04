@@ -9,12 +9,12 @@ import csv
 import logging
 import os
 
-from smqtk.algorithms import get_descriptor_generator_impls
+from smqtk.algorithms import DescriptorGenerator
 from smqtk.compute_functions import compute_many_descriptors
 from smqtk.representation import (
     DescriptorElementFactory,
-    get_data_set_impls,
-    get_descriptor_index_impls,
+    DataSet,
+    DescriptorIndex,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils.bin_utils import (
@@ -29,12 +29,12 @@ from smqtk.utils import plugin, parallel
 def default_config():
     return {
         "descriptor_generator":
-            plugin.make_config(get_descriptor_generator_impls()),
+            plugin.make_config(DescriptorGenerator.get_impls()),
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "descriptor_index":
-            plugin.make_config(get_descriptor_index_impls()),
+            plugin.make_config(DescriptorIndex.get_impls()),
         "optional_data_set":
-            plugin.make_config(get_data_set_impls())
+            plugin.make_config(DataSet.get_impls())
     }
 
 
@@ -76,7 +76,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     log.info("Making descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
     descriptor_index = plugin.from_plugin_config(c['descriptor_index'],
-                                                 get_descriptor_index_impls())
+                                                 DescriptorIndex.get_impls())
 
     data_set = None
     if c['optional_data_set']['type'] is None:
@@ -85,13 +85,13 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
         log.info("Initializing data set to append to")
         #: :type: smqtk.representation.DataSet
         data_set = plugin.from_plugin_config(c['optional_data_set'],
-                                             get_data_set_impls())
+                                             DataSet.get_impls())
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
     #: :type: smqtk.algorithms.DescriptorGenerator
     generator = plugin.from_plugin_config(c['descriptor_generator'],
-                                          get_descriptor_generator_impls())
+                                          DescriptorGenerator.get_impls())
 
     def iter_valid_elements():
         def is_valid(file_path):

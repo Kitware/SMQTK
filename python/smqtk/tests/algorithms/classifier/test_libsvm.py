@@ -8,7 +8,7 @@ import numpy
 import six
 from six.moves import cPickle
 
-from smqtk.algorithms.classifier import get_classifier_impls
+from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.libsvm import LibSvmClassifier
 from smqtk.representation import \
     ClassificationElementFactory, \
@@ -24,8 +24,7 @@ if LibSvmClassifier.is_usable():
     class TestLibSvmClassifier (unittest.TestCase):
 
         def test_impl_findable(self):
-            self.assertIn(LibSvmClassifier.__name__,
-                          get_classifier_impls())
+            self.assertIn(LibSvmClassifier.__name__, Classifier.get_impls())
 
         def test_no_save_model_pickle(self):
             # Test model preservation across pickling even without model cache

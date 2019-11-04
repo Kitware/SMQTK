@@ -131,7 +131,7 @@ class TestClassificationElementAbstractImplGetter (unittest.TestCase):
         # always be available:
         #   MemoryClassificationElement
         #   FileClassificationElement
-        m = smqtk.representation.get_classification_element_impls()
+        m = smqtk.representation.ClassificationElement.get_impls()
         assert len(m) >= 2
         self.assertIn('MemoryClassificationElement', m)
         self.assertIn('FileClassificationElement', m)

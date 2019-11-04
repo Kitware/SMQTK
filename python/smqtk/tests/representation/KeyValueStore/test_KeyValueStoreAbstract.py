@@ -3,8 +3,7 @@ import mock
 import unittest
 
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE, \
-    get_key_value_store_impls
+from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 
@@ -208,7 +207,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
 def test_kvstore_impl_getter():
     # At least the in-memory implementation should always be available, so make
     # sure at least that is returned from the getter.
-    d = get_key_value_store_impls()
+    d = KeyValueStore.get_impls()
     assert isinstance(d, dict)
     assert 'MemoryKeyValueStore' in d
     assert d['MemoryKeyValueStore'] == MemoryKeyValueStore

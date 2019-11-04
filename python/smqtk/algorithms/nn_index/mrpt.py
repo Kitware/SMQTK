@@ -12,7 +12,7 @@ from six import next
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation import get_descriptor_index_impls
+from smqtk.representation import DescriptorIndex
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import plugin, merge_dict
 from smqtk.utils.file_utils import safe_create_dir
@@ -81,7 +81,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(MRPTNearestNeighborsIndex, cls).get_default_config()
 
-        di_default = plugin.make_config(get_descriptor_index_impls())
+        di_default = plugin.make_config(DescriptorIndex.get_impls())
         default['descriptor_set'] = di_default
 
         return default
@@ -115,7 +115,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         cfg['descriptor_set'] = \
             plugin.from_plugin_config(cfg['descriptor_set'],
-                                      get_descriptor_index_impls())
+                                      DescriptorIndex.get_impls())
 
         return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
 

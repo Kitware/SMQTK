@@ -17,7 +17,7 @@ import PIL.Image
 import requests
 
 from smqtk.iqr import IqrSession
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import Configurable
 from smqtk.utils import SmqtkObject
@@ -69,7 +69,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         d['iqr_service_url'] = None
 
         # fill in plugin configs
-        d['data_set'] = plugin.make_config(get_data_set_impls())
+        d['data_set'] = plugin.make_config(DataSet.get_impls())
 
         return d
 
@@ -97,7 +97,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         # construct nested objects via configurations
         merged['data_set'] = \
             plugin.from_plugin_config(merged['data_set'],
-                                      get_data_set_impls())
+                                      DataSet.get_impls())
 
         return cls(parent_app, **merged)
 

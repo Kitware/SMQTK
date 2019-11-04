@@ -5,14 +5,13 @@ import mock
 import numpy
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
 import smqtk.representation
 
 
 class TestGetDescriptorGeneratorImpls (unittest.TestCase):
 
     def test_get_descriptors(self):
-        m = get_descriptor_generator_impls()
+        m = DescriptorGenerator.get_impls()
         # Currently no types that are guaranteed available
         self.assertIsInstance(m, dict, "Should return a dictionary of "
                                        "class label-to-types")

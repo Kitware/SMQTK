@@ -6,7 +6,6 @@ import six
 
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.representation import get_descriptor_element_impls
 
 
 class CachingDescriptorElement (DescriptorElement):
@@ -48,7 +47,7 @@ class CachingDescriptorElement (DescriptorElement):
             # include ourselves in the list of nestable classes else an infinite
             # recursion will occur.
 
-            de_impls = get_descriptor_element_impls()
+            de_impls = DescriptorElement.get_impls()
             # Remove ourselves
             del de_impls[cls.__name__]
 

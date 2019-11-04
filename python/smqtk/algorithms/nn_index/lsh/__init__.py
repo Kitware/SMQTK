@@ -11,12 +11,11 @@ import numpy
 from six.moves import map, zip
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
-from smqtk.algorithms.nn_index.hash_index import get_hash_index_impls
+from smqtk.algorithms.nn_index.hash_index import HashIndex
 from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
-from smqtk.algorithms.nn_index.lsh.functors import get_lsh_functor_impls
+from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation import get_descriptor_index_impls, \
-    get_key_value_store_impls
+from smqtk.representation import DescriptorIndex, KeyValueStore
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils import metrics
 from smqtk.utils import plugin
@@ -74,19 +73,19 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         """
         default = super(LSHNearestNeighborIndex, cls).get_default_config()
 
-        lf_default = plugin.make_config(get_lsh_functor_impls())
+        lf_default = plugin.make_config(LshFunctor.get_impls())
         default['lsh_functor'] = lf_default
 
-        di_default = plugin.make_config(get_descriptor_index_impls())
+        di_default = plugin.make_config(DescriptorIndex.get_impls())
         default['descriptor_index'] = di_default
 
-        hi_default = plugin.make_config(get_hash_index_impls())
+        hi_default = plugin.make_config(HashIndex.get_impls())
         default['hash_index'] = hi_default
         default['hash_index_comment'] = "'hash_index' may also be null to " \
                                         "default to a linear index built at " \
                                         "query time."
 
-        h2u_default = plugin.make_config(get_key_value_store_impls())
+        h2u_default = plugin.make_config(KeyValueStore.get_impls())
         default['hash2uuids_kvstore'] = h2u_default
 
         return default
@@ -122,16 +121,16 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         merged['lsh_functor'] = \
             plugin.from_plugin_config(merged['lsh_functor'],
-                                      get_lsh_functor_impls())
+                                      LshFunctor.get_impls())
         merged['descriptor_index'] = \
             plugin.from_plugin_config(merged['descriptor_index'],
-                                      get_descriptor_index_impls())
+                                      DescriptorIndex.get_impls())
 
         # Hash index may be None for a default at-query-time linear indexing
         if merged['hash_index'] and merged['hash_index']['type']:
             merged['hash_index'] = \
                 plugin.from_plugin_config(merged['hash_index'],
-                                          get_hash_index_impls())
+                                          HashIndex.get_impls())
         else:
             cls.get_logger().debug("No HashIndex impl given. Passing ``None``.")
             merged['hash_index'] = None
@@ -142,7 +141,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
         merged['hash2uuids_kvstore'] = \
             plugin.from_plugin_config(merged['hash2uuids_kvstore'],
-                                      get_key_value_store_impls())
+                                      KeyValueStore.get_impls())
 
         return super(LSHNearestNeighborIndex, cls).from_config(merged, False)
 

@@ -3,8 +3,8 @@ import threading
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation.data_element import get_data_element_impls
-from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
+from smqtk.representation import DataElement, KeyValueStore
+from smqtk.representation.key_value import NO_DEFAULT_VALUE
 from smqtk.utils.plugin import make_config, from_plugin_config, to_plugin_config
 
 
@@ -43,7 +43,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
         """
         default = super(MemoryKeyValueStore, cls).get_default_config()
-        default['cache_element'] = make_config(get_data_element_impls())
+        default['cache_element'] = make_config(DataElement.get_impls())
         return default
 
     @classmethod
@@ -75,7 +75,7 @@ class MemoryKeyValueStore (KeyValueStore):
             # Create from nested config.
             c['cache_element'] = \
                 from_plugin_config(config_dict['cache_element'],
-                                   get_data_element_impls())
+                                   DataElement.get_impls())
         return super(MemoryKeyValueStore, cls).from_config(c)
 
     def __init__(self, cache_element=None):
@@ -128,7 +128,7 @@ class MemoryKeyValueStore (KeyValueStore):
             elem_config = to_plugin_config(self._cache_element)
         else:
             # No cache element, output default config with no type.
-            elem_config = make_config(get_data_element_impls())
+            elem_config = make_config(DataElement.get_impls())
         return {
             'cache_element': elem_config
         }

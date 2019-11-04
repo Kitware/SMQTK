@@ -7,14 +7,14 @@ import glob
 import logging
 import os.path as osp
 
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import bin_utils, plugin
 
 
 def default_config():
     return {
-        "data_set": plugin.make_config(get_data_set_impls())
+        "data_set": plugin.make_config(DataSet.get_impls())
     }
 
 
@@ -44,7 +44,7 @@ def main():
 
     log.info("Adding elements to data set")
     #: :type: smqtk.representation.DataSet
-    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls())
+    ds = plugin.from_plugin_config(config['data_set'], DataSet.get_impls())
     ds.add_data(*iter_input_elements())
 
 

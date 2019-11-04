@@ -7,7 +7,7 @@ import six
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.algorithms.nn_index import NearestNeighborsIndex, get_nn_index_impls
+from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.utils.iter_validation import check_empty_iterable
 
 
@@ -41,7 +41,7 @@ class TestNNIndexAbstract (unittest.TestCase):
 
     def test_get_impls(self):
         # Some implementations should be returned
-        m = get_nn_index_impls()
+        m = NearestNeighborsIndex.get_impls()
         self.assertTrue(m)
         for cls in six.itervalues(m):
             self.assertTrue(issubclass(cls, NearestNeighborsIndex))

@@ -22,6 +22,7 @@ Plugin configuration dictionaries take the following general format:
 import abc
 import collections
 import importlib
+import inspect
 import logging
 import os
 import re
@@ -37,6 +38,7 @@ VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
 # Template for checking validity of module attributes
 VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
 
+# Environment variable *PATH separator for the current platform.
 OS_ENV_PATH_SEP = (sys.platform == "win32" and ';') or ':'
 
 
@@ -52,6 +54,60 @@ class Pluggable (object):
     """
     Interface for classes that have plugin implementations
     """
+
+    PLUGIN_ENV_VAR = "SMQTK_PLUGIN_PATH"
+    PLUGIN_HELPER_VAR = "SMQTK_PLUGIN_CLASS"
+
+    @classmethod
+    def get_impls(cls, reload_modules=False):
+        """
+        Discover and return a dictionary of classes that implement the calling
+        class.  Keys in the returned map are the string names of the discovered
+        classes and the paired values are the actual class type objects.
+
+        We search for implementing classes in:
+            - modules in the same package as the calling class that start with
+              an alphanumeric character)
+            - python modules listed in the ``SMQTK_PLUGIN_PATH`` environment
+              variable.
+              - This environment variable should contain a sequence of
+                importable python module paths, separated by the platform
+                specific PATH separator character (``;`` for Windows, ``:`` for
+                Unix).
+
+        Within a module we first look for a helper variable by the name
+        ``SMQTK_PLUGIN_CLASS``, which can either be a single class object or an
+        iterable of class objects to be specifically exported.  If the variable
+        is set to ``None``, we skip that module and do not import anything.  If
+        the variable is not present, we look at attributes defined in that
+        module for classes that descend from the given base class type.  If none
+        of the above are found, or if an exception occurs, the module is
+        skipped.
+
+        The class-level variables ``PLUGIN_ENV_VAR`` and ``PLUGIN_HELPER_VAR``
+        may be overridden to change what environment and helper variable are
+        looked for, respectively.
+
+        :param reload_modules: Explicitly reload discovered modules from source.
+        :type reload_modules: bool
+
+        :return: Map of discovered class objects of type descending from, and
+            fully implementing abstract methods of, the calling class.  The keys
+            are the string names of the classes and the values are the concrete
+            class types.
+        :rtype: dict[str, type]
+
+        """
+        # __package__ resolves to the containing module of this module
+        # This should do the right thing regardless of whether inheriting class
+        # is in an ``__init__.py`` file or "normal" python module file.
+        module_path = inspect.getmodule(cls).__package__
+        cls_dir = os.path.abspath(os.path.dirname(inspect.getfile(cls)))
+        # TODO: If reload is False, cache result or use cache
+        # TODO: If True, re-cache new result.
+        return get_plugins(module_path, cls_dir,
+                           cls.PLUGIN_ENV_VAR, cls.PLUGIN_HELPER_VAR,
+                           cls, reload_modules=reload_modules)
 
     @classmethod
     @abc.abstractmethod
@@ -86,10 +142,10 @@ class Pluggable (object):
 def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 baseclass_type, warn=True, reload_modules=False):
     """
-    Discover and return classes found in the SMQTK internal plugin directory and
+    Discover and return classes found in an internal plugin directory and
     any additional directories specified via an environment variable.
 
-    In order to specify additional out-of-SMQTK python modules containing
+    In order to specify additional out-of-scope python modules containing
     base-class implementations, additions to the given environment variable must
     be made. Entries must be separated by either a ';' (for windows) or ':' (for
     everything else). This is the same as for the PATH environment variable on
@@ -215,7 +271,9 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",
                           module_path, len(classes))
-            elif issubclass(classes, baseclass_type):
+            # Thus, non-iterable value.
+            elif isinstance(classes, type) \
+                    and issubclass(classes, baseclass_type):
                 log.debug("[%s] Loaded class type: %s",
                           module_path, classes.__name__)
                 classes = [classes]

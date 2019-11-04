@@ -5,12 +5,12 @@ import flask
 import requests
 
 from smqtk.algorithms import (
-    get_descriptor_generator_impls,
-    get_nn_index_impls
+    DescriptorGenerator,
+    NearestNeighborsIndex
 )
 from smqtk.representation import (
     DescriptorElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
@@ -64,10 +64,10 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         merge_dict(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generator":
-                plugin.make_config(get_descriptor_generator_impls()),
-            "nn_index": plugin.make_config(get_nn_index_impls()),
+                plugin.make_config(DescriptorGenerator.get_impls()),
+            "nn_index": plugin.make_config(NearestNeighborsIndex.get_impls()),
             "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
+                plugin.make_config(DescriptorIndex.get_impls()),
             "update_descriptor_index": False,
         })
         return c
@@ -97,19 +97,19 @@ class NearestNeighborServiceServer (SmqtkWebApp):
             #: :type: smqtk.representation.DescriptorIndex | None
             self.descr_index = plugin.from_plugin_config(
                 json_config['descriptor_index'],
-                get_descriptor_index_impls()
+                DescriptorIndex.get_impls()
             )
 
         #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.nn_index = plugin.from_plugin_config(
             json_config['nn_index'],
-            get_nn_index_impls()
+            NearestNeighborsIndex.get_impls()
         )
 
         #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator_inst = plugin.from_plugin_config(
             self.json_config['descriptor_generator'],
-            get_descriptor_generator_impls()
+            DescriptorGenerator.get_impls()
         )
 
         @self.route("/count", methods=['GET'])

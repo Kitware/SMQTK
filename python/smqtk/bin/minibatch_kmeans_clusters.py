@@ -14,7 +14,7 @@ from six.moves import cPickle
 from sklearn.cluster import MiniBatchKMeans
 
 from smqtk.compute_functions import mb_kmeans_build_apply
-from smqtk.representation.descriptor_index import get_descriptor_index_impls
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import Configurable
 from smqtk.utils.bin_utils import utility_main_helper, basic_cli_parser
 from smqtk.utils.file_utils import safe_create_dir
@@ -33,7 +33,7 @@ def default_config():
 
     c = {
         "minibatch_kmeans_params": MBKTemp.get_default_config(),
-        "descriptor_index": make_config(get_descriptor_index_impls()),
+        "descriptor_index": make_config(DescriptorIndex.get_impls()),
         # Number of descriptors to run an initial fit with. This brings the
         # advantage of choosing a best initialization point from multiple.
         "initial_fit_size": 0,
@@ -72,7 +72,7 @@ def main():
 
     #: :type: smqtk.representation.DescriptorIndex
     index = from_plugin_config(config['descriptor_index'],
-                               get_descriptor_index_impls())
+                               DescriptorIndex.get_impls())
     mbkm = MiniBatchKMeans(verbose=args.verbose,
                            compute_labels=False,
                            **config['minibatch_kmeans_params'])

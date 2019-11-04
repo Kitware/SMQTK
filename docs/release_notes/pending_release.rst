@@ -1,5 +1,18 @@
-SMQTK VIGILANT Pending Release Notes
-====================================
+SMQTK Pending Release Notes
+===========================
+This release incorporates updates and fixes performed on the VIGILANT project
+and approved for public release (case number 88ABW-2019-5287).
+Some of the major updates and fixes in this include:
+
+- Object detection algorithm interface and supporting DetectionElement
+  interface and implementations.
+- Revised plugin implementation accessor via the mixin class instead what used
+  to be manually implemented side-car functions for every interface. Also moved
+  some configuration specific functions out of the plugin utility module and
+  into a configuration utility submodule, where the ``Configurable`` mixin
+  class has also moved to.
+- Moves unit tests out of the installed SMQTK package and into a dedicated
+  sub-directory in the repository.
 
 
 Updates / New Features

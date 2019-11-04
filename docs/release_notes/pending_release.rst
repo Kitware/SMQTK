@@ -34,6 +34,13 @@ Algorithms
   * Change ``CaffeDescriptorGenerator`` constructor to take ``DataElement``
     instances rather than URIs.
 
+* HashIndex
+
+  * SkLearnBallTreeHashIndex
+
+    * Fixed numpy load call to explicitly allow loading pickled components due
+      to a parameter default change in numpy version 1.16.3.
+
 * Object Detection
 
   * Added initial abstract interface.
@@ -66,6 +73,9 @@ Compute Functions
   conducting searches with augmented copies of an image
 
 Misc.
+
+* Updated numpy version in requirements.txt to current versions. Also split
+  versioning between python 2 and 3 due to split availability.
 
 * Resolve python static analysis warnings and errors.
 
@@ -101,6 +111,12 @@ Representation
 
 * Added ``MatrixDataElement`` representation that stores a ``numpy.ndarray``
   instance internally, generating bytes on-the-fly when requested.
+
+* ``DataMemoryElement`` now raises a TypeError if a non-bytes-line object is
+  passed during construction or setting of bytes. Configuration mixin hooks
+  have been updated to convert to and from strings for JSON-compliant
+  dictionary input and output. Fixed various usages of DataMemoryElement to
+  actually pass bytes.
 
 Tests
 
@@ -185,10 +201,16 @@ Representation
 * Fixed bug with ``ClassificationElement.max_label`` where an exception would
   be raised if there was no label with associated confidence greater than 0.
 
+* Fix some postgres test comparisons due to not being able to ``byte`` case
+  Binary instances in python 3. Instead using the ``getquoted`` conversion for
+  the sake of actual/expected comparisons.
+
 Tests
 
 * Moved ``--cov`` options from pytest.ini file into the runner script.  This
   fixes debugger break-pointing in some IDEs (e.g. PyCharm).
+
+* Fix various minor testing errors.
 
 Utilities
 

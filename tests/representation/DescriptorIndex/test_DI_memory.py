@@ -4,7 +4,10 @@ import numpy
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.memory_element import (
+    BYTES_CONFIG_ENCODING,
+    DataMemoryElement,
+)
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
@@ -62,10 +65,12 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         # Configured cache with some picked bytes
         expected_table = dict(a=1, b=2, c=3)
         expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
+        expected_cache_json_str = \
+            expected_cache.get_bytes().decode(BYTES_CONFIG_ENCODING)
         inst = MemoryDescriptorIndex.from_config({
             'cache_element': {
                 'type': 'DataMemoryElement',
-                'DataMemoryElement': {'bytes': expected_cache.get_bytes()}
+                'DataMemoryElement': {'bytes': expected_cache_json_str}
             }
         })
         self.assertEqual(inst.cache_element, expected_cache)
@@ -114,13 +119,14 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         )
 
         dict_pickle_bytes = pickle.dumps({1: 1, 2: 2, 3: 3}, -1)
+        dict_pickle_bytes_str = dict_pickle_bytes.decode(BYTES_CONFIG_ENCODING)
         cache_elem = DataMemoryElement(bytes=dict_pickle_bytes)
         self.assertEqual(
             MemoryDescriptorIndex(cache_elem).get_config(),
             merge_dict(MemoryDescriptorIndex.get_default_config(), {
                 'cache_element': {
                     'DataMemoryElement': {
-                        'bytes': dict_pickle_bytes
+                        'bytes': dict_pickle_bytes_str
                     },
                     'type': 'DataMemoryElement'
                 }

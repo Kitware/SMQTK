@@ -428,7 +428,7 @@ if FaissNearestNeighborsIndex.is_usable():
             self.assertEqual(len(dists), 1)
             # Distance should be zero
             self.assertEqual(dists[0], 0.)
-            self.assertItemsEqual(r[0].vector(), vectors[0])
+            np.testing.assert_allclose(r[0].vector(), vectors[0])
 
         def test_nn_known_descriptors_euclidean_ordered(self):
             index = self._make_inst()

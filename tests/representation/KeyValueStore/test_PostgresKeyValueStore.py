@@ -48,8 +48,8 @@ if PostgresKeyValueStore.is_usable():
             the mock cursor.
             """
             expected_key = 'test_remove_key'
-            expected_key_bytea = bytes(
-                PostgresKeyValueStore._py_to_bin(expected_key))
+            expected_key_bytea_quoted = \
+                PostgresKeyValueStore._py_to_bin(expected_key).getquoted()
 
             # Cut out create table calls.
             s = PostgresKeyValueStore(create_table=False)
@@ -71,8 +71,10 @@ if PostgresKeyValueStore.is_usable():
                                      "DELETE FROM .+ WHERE .+ LIKE .+")
             self.assertEqual(set(mock_execute.call_args[0][1].keys()),
                              {'key_like'})
-            self.assertEqual(bytes(mock_execute.call_args[0][1]['key_like']),
-                             expected_key_bytea)
+            self.assertEqual(
+                mock_execute.call_args[0][1]['key_like'].getquoted(),
+                expected_key_bytea_quoted
+            )
 
         # noinspection PyUnusedLocal
         # - purposefully not used mock objects
@@ -179,9 +181,10 @@ if PostgresKeyValueStore.is_usable():
             #   are not directly comparable (different instances). Have to
             #   convert to bytes representation in order to compare.
             self.assertEqual(len(psqlExecBatch_call_args[2]), 2)
-            self.assertListEqual(
-                [bytes(d['key_like']) for d in psqlExecBatch_call_args[2]],
-                [bytes(exp_key_1_bytea), bytes(exp_key_2_bytea)]
+            self.assertSetEqual(
+                {d['key_like'].getquoted()
+                 for d in psqlExecBatch_call_args[2]},
+                {exp_key_1_bytea.getquoted(), exp_key_2_bytea.getquoted()}
             )
             self.assertIn('page_size', psqlExecBatch_kwargs)
             self.assertEqual(psqlExecBatch_kwargs['page_size'], s._batch_size)

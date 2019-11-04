@@ -5,7 +5,10 @@ import six
 from six.moves import cPickle as pickle
 
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.memory_element import (
+    BYTES_CONFIG_ENCODING,
+    DataMemoryElement,
+)
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 
@@ -51,13 +54,13 @@ class TestMemoryKeyValueStore (unittest.TestCase):
     def test_from_config_with_cache_element(self):
         # Pickled dictionary with a known entry
         expected_table = {'some_key': 'some_value'}
-        empty_dict_pickle = \
-            six.b("(dp1\nS'some_key'\np2\nS'some_value'\np3\ns.")
+        empty_dict_pickle_str = \
+            pickle.dumps(expected_table).decode(BYTES_CONFIG_ENCODING)
 
         # Test construction with memory data element.
         config = {'cache_element': {
             'DataMemoryElement': {
-                'bytes': empty_dict_pickle,
+                'bytes': empty_dict_pickle_str,
             },
             'type': 'DataMemoryElement'
         }}
@@ -148,11 +151,11 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         set.
         """
         s = MemoryKeyValueStore()
-        s._cache_element = DataMemoryElement(six.b('someBytes'), 'text/plain',
+        s._cache_element = DataMemoryElement(b'someBytes', 'text/plain',
                                              readonly=False)
         expected_config = {'cache_element': {
             "DataMemoryElement": {
-                'bytes': six.b('someBytes'),
+                'bytes': 'someBytes',
                 'content_type': 'text/plain',
                 'readonly': False,
             },

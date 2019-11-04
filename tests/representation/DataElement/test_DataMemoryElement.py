@@ -36,7 +36,7 @@ class TestDataMemoryElement (unittest.TestCase):
         #: :type: DataMemoryElement
         inst1 = DataMemoryElement.from_config(default_config)
         self.assertEqual(default_config, inst1.get_config())
-        self.assertEqual(inst1._bytes, 'Hello World.')
+        self.assertEqual(inst1._bytes, b'Hello World.')
         self.assertEqual(inst1._content_type, 'text/plain')
 
         inst2 = DataMemoryElement.from_config(inst1.get_config())
@@ -158,11 +158,11 @@ class TestDataMemoryElement (unittest.TestCase):
     # Content tests
     #
     def test_is_empty_zero_bytes(self):
-        e = DataMemoryElement('')
+        e = DataMemoryElement(b'')
         self.assertTrue(e.is_empty())
 
     def test_is_empty_nonzero_bytes(self):
-        e = DataMemoryElement('some bytes')
+        e = DataMemoryElement(b'some bytes')
         self.assertFalse(e.is_empty())
 
     def test_get_bytes_none_bytes(self):
@@ -170,25 +170,25 @@ class TestDataMemoryElement (unittest.TestCase):
         self.assertEqual(e.get_bytes(), six.b(''))
 
     def test_get_bytes_empty_bytes(self):
-        e = DataMemoryElement('')
-        self.assertEqual(e.get_bytes(), six.b(''))
+        e = DataMemoryElement(b'')
+        self.assertEqual(e.get_bytes(), b'')
 
     def test_get_bytes_some_bytes(self):
-        expected_bytes = 'some bytes'
+        expected_bytes = b'some bytes'
         e = DataMemoryElement(expected_bytes)
         self.assertEqual(e.get_bytes(), expected_bytes)
 
     def test_writable_default(self):
-        v = 'foo'
+        v = b'foo'
         e = DataMemoryElement(v)
         self.assertTrue(e.writable())
 
     def test_writable_when_readonly(self):
-        e = DataMemoryElement('', readonly=True)
+        e = DataMemoryElement(b'', readonly=True)
         self.assertFalse(e.writable())
 
     def test_writable_when_not_readonly(self):
-        e = DataMemoryElement('', readonly=False)
+        e = DataMemoryElement(b'', readonly=False)
         self.assertTrue(e.writable())
 
     def test_set_bytes(self):

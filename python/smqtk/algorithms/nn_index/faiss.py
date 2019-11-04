@@ -399,7 +399,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     "use_multiprocessing": self.use_multiprocessing,
                     "next_index": self._next_index,
                 }
-                self._index_param_element.set_bytes(json.dumps(params))
+                # Using UTF-8 due to recommendation (of either 8, 16 or 32) by
+                # the ``json.loads`` method documentation.
+                self._index_param_element.set_bytes(
+                    json.dumps(params).encode("utf-8")
+                )
 
     def _build_index(self, descriptors):
         """

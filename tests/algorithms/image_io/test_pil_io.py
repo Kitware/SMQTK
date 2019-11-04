@@ -91,7 +91,7 @@ class TestPilImageReader (unittest.TestCase):
         Test that data element with invalid data bytes fails to load.
         """
         d = DataMemoryElement(content_type='image/png')
-        d.set_bytes("not valid bytes")
+        d.set_bytes(b"not valid bytes")
 
         inst = PilImageReader()
         with pytest.raises(IOError,

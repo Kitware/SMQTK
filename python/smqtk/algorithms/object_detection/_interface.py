@@ -54,7 +54,7 @@ class ObjectDetector (SmqtkAlgorithm, ContentTypeValidator):
             '{}{}{}{}'.format(*(bbox.min_vertex.tolist() +
                                 bbox.max_vertex.tolist())) + \
             ''.join(sorted(map(str, labels)))
-        return hashlib.sha1(hashable).hexdigest()
+        return hashlib.sha1(six.b(hashable)).hexdigest()
 
     def detect_objects(self, data_element,
                        de_factory=DFLT_DETECTION_FACTORY,

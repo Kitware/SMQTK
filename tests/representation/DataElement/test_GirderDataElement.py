@@ -262,11 +262,12 @@ if GirderDataElement.is_usable():
             self.assertRaises(girder_client.HttpError, gde.set_bytes, b=b'foo')
 
         @mock.patch('girder_client.GirderClient.downloadFile')
-        @mock.patch('six.BytesIO.getvalue')
-        def test_get_bytes(self, m_getvalue, _m_downloadFile):
-            m_getvalue.return_value = 'foo'
+        def test_get_bytes(self, m_downloadFile):
+            # Simulate actually downloading something bytes.
+            m_downloadFile.side_effect = \
+                lambda _if, _bytesio: _bytesio.write(b'foo')
 
             e = GirderDataElement('someId')
             actual_bytes = e.get_bytes()
 
-            self.assertEqual(actual_bytes, bytes('foo'))
+            self.assertEqual(actual_bytes, b'foo')

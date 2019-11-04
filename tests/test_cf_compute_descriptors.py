@@ -143,7 +143,7 @@ def test_compute_many_descriptors_batched(data_elements, descr_generator,
     assert descriptors_count == NUM_BASE_ELEMENTS
 
     # Check number of calls
-    num_calls = NUM_BASE_ELEMENTS / batch_size + [0, 1][
+    num_calls = NUM_BASE_ELEMENTS // batch_size + [0, 1][
         bool(NUM_BASE_ELEMENTS % batch_size)]
     assert descr_generator.compute_descriptor_async.call_count == num_calls
     assert descr_index.add_many_descriptors.call_count == num_calls

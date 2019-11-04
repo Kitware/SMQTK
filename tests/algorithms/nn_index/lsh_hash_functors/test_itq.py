@@ -7,7 +7,8 @@ import six
 from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
-from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.memory_element import \
+    DataMemoryElement, BYTES_CONFIG_ENCODING
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils.dict import merge_dict
@@ -30,23 +31,25 @@ class TestItqFunctor (unittest.TestCase):
         expected_mean_vec_bytes = BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
-        expected_mean_vec_bytes = expected_mean_vec_bytes.getvalue()
+        expected_mean_vec_str = \
+            expected_mean_vec_bytes.getvalue().decode(BYTES_CONFIG_ENCODING)
 
         expected_rotation_bytes = BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
-        expected_rotation_bytes = expected_rotation_bytes.getvalue()
+        expected_rotation_str = \
+            expected_rotation_bytes.getvalue().decode(BYTES_CONFIG_ENCODING)
 
         new_parts = {
             'mean_vec_cache': {
                 'DataMemoryElement': {
-                    'bytes': expected_mean_vec_bytes
+                    'bytes': expected_mean_vec_str
                 },
                 'type': 'DataMemoryElement'
             },
             'rotation_cache': {
                 'DataMemoryElement': {
-                    'bytes': expected_rotation_bytes
+                    'bytes': expected_rotation_str
                 },
                 'type': 'DataMemoryElement'
             },
@@ -109,8 +112,8 @@ class TestItqFunctor (unittest.TestCase):
     def test_get_config_with_cache_elements(self):
         itq = ItqFunctor(bit_length=5, itq_iterations=6, normalize=7,
                          random_seed=8)
-        itq.mean_vec_cache_elem = DataMemoryElement('cached vec bytes')
-        itq.rotation_cache_elem = DataMemoryElement('cached rot bytes')
+        itq.mean_vec_cache_elem = DataMemoryElement(b'cached vec bytes')
+        itq.rotation_cache_elem = DataMemoryElement(b'cached rot bytes')
 
         c = itq.get_config()
         self.assertEqual(c['bit_length'], 5)
@@ -118,6 +121,7 @@ class TestItqFunctor (unittest.TestCase):
         self.assertEqual(c['normalize'], 7)
         self.assertEqual(c['random_seed'], 8)
         self.assertEqual(c['mean_vec_cache']['type'], "DataMemoryElement")
+        # Check using string encodings of set bytes (JSON compliant).
         self.assertEqual(c['mean_vec_cache']['DataMemoryElement']['bytes'],
                          'cached vec bytes')
         self.assertEqual(c['rotation_cache']['DataMemoryElement']['bytes'],

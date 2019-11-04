@@ -163,7 +163,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
                     self._log.debug("Saving model: Done")
                 else:
                     # No ball tree, empty cache.
-                    self.cache_element.set_bytes('')
+                    self.cache_element.set_bytes(b'')
 
     def load_model(self):
         """
@@ -176,7 +176,8 @@ class SkLearnBallTreeHashIndex (HashIndex):
                 self._log.debug("Loading model from cache: %s",
                                 self.cache_element)
                 buff = BytesIO(self.cache_element.get_bytes())
-                with np.load(buff) as cache:
+                # noinspection PyTypeChecker
+                with np.load(buff, allow_pickle=True) as cache:
                     tail = tuple(cache['tail'])
                     s = [cache['data_arr'], cache['idx_array_arr'],
                          cache['node_data_arr'], cache['node_bounds_arr']]

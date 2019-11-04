@@ -6,7 +6,10 @@ import unittest
 import six
 
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.data_element.memory_element import (
+    BYTES_CONFIG_ENCODING,
+    DataMemoryElement,
+)
 from smqtk.representation.data_set.memory_set import DataMemorySet
 
 
@@ -52,7 +55,7 @@ class TestDataFileSet (unittest.TestCase):
         c = DataMemorySet.get_default_config()
         c['cache_element']['type'] = 'DataMemoryElement'
         c['cache_element']['DataMemoryElement']['bytes'] = \
-            pickle.dumps(expected_map)
+            pickle.dumps(expected_map).decode(BYTES_CONFIG_ENCODING)
 
         i = DataMemorySet.from_config(c)
 

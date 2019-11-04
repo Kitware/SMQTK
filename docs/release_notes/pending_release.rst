@@ -15,3 +15,4 @@ Docker
 
 Misc
 * Update requirements versions for: Flask, Flask-Cors
+* Update Travis-CI conviguration to assume less default values.

@@ -16,41 +16,64 @@ Create and merge version update branch
 
 Patch Release
 ^^^^^^^^^^^^^
+A patch release should only contain fixes for bugs or issues with an existing
+release.
+No new features or functionality should be introduced in a patch release.
+As such, patch releases should only ever be based on an existing release point.
+
 1. Create a new branch off of the ``release`` branch named something like
    ``release-patch-{NEW_VERSION}``.
-    - Increment patch value in ``VERSION`` file.
-    - Rename the ``docs/release_notes/pending_patch.rst`` file to
-      ``docs/release_notes/v{VERSION}.rst``, matching the value in the
-      ``VERSION`` file.  Add a descriptive paragraph under the title section
-      summarizing this release.
-    - Add new release notes RST file reference to ``docs/release_notes.rst``.
-2. Merge version bump branch into ``release`` and ``master`` branches.
+
+  - Increment patch value in ``VERSION`` file.
+  - Rename the ``docs/release_notes/pending_patch.rst`` file to
+    ``docs/release_notes/v{VERSION}.rst``, matching the value in the
+    ``VERSION`` file.  Add a descriptive paragraph under the title section
+    summarizing this release.
+  - Add new release notes RST file reference to ``docs/release_notes.rst``.
+
+2. Tag branch (see `Tag new version`_ below ).
+3. Merge version bump branch into ``release`` and ``master`` branches.
 
 Major and Minor Releases
 ^^^^^^^^^^^^^^^^^^^^^^^^
-1. Create a new branch off of the ``master`` branch named something like
-   ``release-[major,minor]-{NEW_VERSION}``.
-    - Increment patch value in ``VERSION`` file.
-    - Rename the ``docs/release_notes/pending_release.rst`` file to
-      ``docs/release_notes/v{VERSION}.rst``, matching the value in the
-      ``VERSION`` file.  Add a descriptive paragraph under the title section
-      summarizing this release.
-    - Add new release notes RST file reference to ``docs/release_notes.rst``.
-2. Merge version bump branch into the ``master`` branch.
-3. Reset the release branch (--hard) to point to the new master.
+Major and minor releases may add one or more trivial or non-trivial features
+and functionalities.
+
+1. Create a new branch off of the ``master`` or ``release`` named something
+   like ``release-[major,minor]-{NEW_VERSION}``.
+
+  a) Increment patch value in ``VERSION`` file.
+  b) Rename the ``docs/release_notes/pending_release.rst`` file to
+     ``docs/release_notes/v{VERSION}.rst``, matching the value in the
+     ``VERSION`` file.  Add a descriptive paragraph under the title section
+     summarizing this release.
+  c) Add new release notes RST file reference to ``docs/release_notes.rst``.
+
+2. Create a pull/merge request for this branch with master as the merge target.
+   This is to ensure that everything passes CI testing before making the
+   release. If there is an issue then branches should be made and merged into
+   this branch until the issue is resolved.
+3. Tag branch (see `Tag new version`_ below).
+4. Reset the release branch (--hard) to point to the new branch/tag.
+5. Merge version bump branch into the ``master`` branch.
 
 Tag new version
 ---------------
+Release branches should be tagged in order to record where in the git tree a
+particular release refers to.
+The branch off of ``master`` or ``release`` is usually the target of such tags.
+
 Currently the ``From GitHub`` method is preferred as it creates a "verified"
 release.
 
 From GitHub
 ^^^^^^^^^^^
 Navigate to the `releases page on GitHub`_ and click the ``Draft a new
-release`` button in upper right
+release`` button in upper right.
 
 Fill in the new version in the ``Tag version`` text box (e.g. ``v#.#.#``)
 and use the same string in the ``Release title`` text box.
+The "@" target should be the release branch created above.
 
 Copy and past this version's release notes into the ``Describe this release``
 text box.

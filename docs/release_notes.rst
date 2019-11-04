@@ -19,3 +19,4 @@ Release Notes
    release_notes/v0.9.0
    release_notes/v0.10.0
    release_notes/v0.11.0
+   release_notes/v0.12.0

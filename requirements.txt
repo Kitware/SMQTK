@@ -10,7 +10,7 @@ imageio==2.3.0
 jinja2==2.10.1
 matplotlib==2.2.3
 numpy==1.15.3
-Pillow==5.3.0
+Pillow==6.2.0
 pymongo==3.7.2
 requests==2.20.0
 scikit-learn==0.20.0

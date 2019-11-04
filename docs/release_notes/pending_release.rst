@@ -16,3 +16,8 @@ Docker
 Misc
 * Update requirements versions for: Flask, Flask-Cors
 * Update Travis-CI conviguration to assume less default values.
+
+Web
+* IQR Service
+  * Broaden base64 parsing error catch. Specific message of the error changed
+    with python 3.7.

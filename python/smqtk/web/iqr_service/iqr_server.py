@@ -927,7 +927,8 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs.external_descriptors(positive=[descriptor])
-
+            self._log.debug("[%s] session Classifier dirty", sid)
+            self.session_classifier_dirty[sid] = True
         finally:
             iqrs.lock.release()
 
@@ -978,7 +979,8 @@ class IqrService (SmqtkWebApp):
 
         try:
             iqrs.external_descriptors(negative=[descriptor])
-
+            self._log.debug("[%s] session Classifier dirty", sid)
+            self.session_classifier_dirty[sid] = True
         finally:
             iqrs.lock.release()
 
@@ -1236,7 +1238,12 @@ class IqrService (SmqtkWebApp):
         try:
             self._log.info("[%s] Refining", sid)
             iqrs.refine()
-
+        except RuntimeError as ex:
+            ex_s = str(ex)
+            if "No relevancy index yet." in ex_s:
+                return make_response_json("No initialization has occurred yet "
+                                          "for this IQR session."), 400
+            raise
         finally:
             iqrs.lock.release()
 

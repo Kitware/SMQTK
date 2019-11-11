@@ -67,24 +67,28 @@ def safe_file_write(path, b, tmp_dir=None):
     # Make sure containing directory exists
     safe_create_dir(file_dir)
 
+    fd = os.open(path,os.O_RDWR|os.CREAT)
+    os.write(fd, b)
+    os.close(fd)
+
     # Write to a temporary file first, then OS move the temp file to the final
     # destination. This is due to, on most OSs, a file rename/move being atomic.
     # TODO(paul.tunison): Do something else on windows since moves there are not
     #   guaranteed atomic.
-    tmp_dir = file_dir if tmp_dir is None else tmp_dir
-    fd, fp = tempfile.mkstemp(suffix=file_ext, prefix=file_base + '.',
+    #tmp_dir = file_dir if tmp_dir is None else tmp_dir
+    #fd, fp = tempfile.mkstemp(suffix=file_ext, prefix=file_base + '.',
                               dir=tmp_dir)
-    try:
-        c = os.write(fd, b)
-        if c != len(b):
-            raise RuntimeError("Failed to write all bytes to file.")
-    except Exception:
-        # Remove temporary file if anything bad happens.
-        os.remove(fp)
-        raise
-    finally:
-        os.close(fd)
-    os.rename(fp, path)
+    #try:
+    #    c = os.write(fd, b)
+    #    if c != len(b):
+    #        raise RuntimeError("Failed to write all bytes to file.")
+    #except Exception:
+    #    # Remove temporary file if anything bad happens.
+    #    os.remove(fp)
+    #    raise
+    #finally:
+    #    os.close(fd)
+    #os.rename(fp, path)
 
 
 def make_tempfile(suffix="", prefix="tmp", directory=None, text=False):

@@ -1,11 +1,10 @@
 import abc
-import os.path as osp
 
 from smqtk.representation import SmqtkRepresentation, DescriptorElement
-from smqtk.utils import plugin
+from smqtk.utils.plugin import Pluggable
 
 
-class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
+class DescriptorIndex (SmqtkRepresentation, Pluggable):
     """
     Index of descriptors, keyed and query-able by descriptor UUID.
 
@@ -34,6 +33,20 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
             # Testing for UUID inclusion since element hash based on UUID value.
             return self.has_descriptor(item.uuid())
         return False
+
+    def get_many_vectors(self, uuids):
+        """
+        Get underlying vectors of descriptors associated with given uuids.
+
+        :param uuids: Iterable of descriptor UUIDs to query for.
+        :type uuids: collections.Iterable[collections.Hashable]
+
+        :return: Iterator of vectors for descriptors associated with given uuid
+            values.
+        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        """
+        DescriptorElement.get_many_vectors(self.get_many_descriptors(uuids))
 
     @abc.abstractmethod
     def count(self):
@@ -180,40 +193,3 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         """ alias for iteritems """
         return self.iteritems()
 
-
-def get_descriptor_index_impls(reload_modules=False):
-    """
-    Discover and return discovered ``DescriptorIndex`` classes. Keys in the
-    returned map are the names of the discovered classes, and the paired values
-    are the actual class type objects.
-
-    We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
-        - python modules listed in the environment variable
-          ``DESCRIPTOR_INDEX_PATH``
-            - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
-
-    Within a module we first look for a helper variable by the name
-    ``DESCRIPTOR_INDEX_CLASS``, which can either be a single class object or
-    an iterable of class objects, to be specifically exported. If the variable
-    is set to None, we skip that module and do not import anything. If the
-    variable is not present, we look at attributes defined in that module for
-    classes that descend from the given base class type. If none of the above
-    are found, or if an exception occurs, the module is skipped.
-
-    :param reload_modules: Explicitly reload discovered modules from source.
-    :type reload_modules: bool
-
-    :return: Map of discovered class object of type ``DescriptorIndex``
-        whose keys are the string names of the classes.
-    :rtype: dict[str, type]
-
-    """
-    this_dir = osp.abspath(osp.dirname(__file__))
-    env_var = 'DESCRIPTOR_INDEX_PATH'
-    helper_var = 'DESCRIPTOR_INDEX_CLASS'
-    return plugin.get_plugins(__name__, this_dir, env_var, helper_var,
-                              DescriptorIndex, reload_modules=reload_modules)

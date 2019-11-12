@@ -7,12 +7,12 @@ import logging
 from flask_basicauth import BasicAuth
 import six
 
-from smqtk.utils import bin_utils
+from smqtk.utils import cli
 import smqtk.web
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     # Application options
     group_application = parser.add_argument_group("Application Selection")
@@ -67,15 +67,16 @@ def main():
     debug_smqtk = args.debug_smqtk or args.verbose
     debug_server = args.debug_server or args.verbose
 
-    bin_utils.initialize_logging(logging.getLogger("__main__"),
-                                 logging.INFO - (10 * debug_smqtk))
-    bin_utils.initialize_logging(logging.getLogger("smqtk"),
-                                 logging.INFO - (10*debug_smqtk))
-    bin_utils.initialize_logging(logging.getLogger("werkzeug"),
-                                 logging.WARN - (20*debug_server))
+    cli.initialize_logging(logging.getLogger("__main__"),
+                           logging.INFO - (10 * debug_smqtk))
+    cli.initialize_logging(logging.getLogger("smqtk"),
+                           logging.INFO - (10*debug_smqtk))
+    cli.initialize_logging(logging.getLogger("werkzeug"),
+                           logging.WARN - (20*debug_server))
     log = logging.getLogger(__name__)
 
-    web_applications = smqtk.web.get_web_applications()
+    webapp_types = smqtk.web.SmqtkWebApp.get_impls()
+    web_applications = {t.__name__: t for t in webapp_types}
 
     if args.list:
         log.info("")
@@ -103,8 +104,8 @@ def main():
     #: :type: smqtk.web.SmqtkWebApp
     app_class = web_applications[application_name]
 
-    config = bin_utils.utility_main_helper(app_class.get_default_config, args,
-                                           skip_logging_init=True)
+    config = cli.utility_main_helper(app_class.get_default_config, args,
+                                     skip_logging_init=True)
 
     host = args.host
     port = args.port and int(args.port)

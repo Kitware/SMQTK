@@ -17,7 +17,6 @@ import logging
 import os
 
 from smqtk.algorithms import SupervisedClassifier
-from smqtk.algorithms import get_classifier_impls
 
 from smqtk.iqr import IqrSession
 
@@ -25,12 +24,14 @@ from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     utility_main_helper,
 )
-from smqtk.utils.plugin import make_config
-from smqtk.utils.plugin import from_plugin_config
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def get_cli_parser():
@@ -42,15 +43,15 @@ def get_cli_parser():
 
 def get_default_config():
     return {
-        "classifier": make_config(get_classifier_impls()),
+        "classifier": make_default_config(SupervisedClassifier.get_impls()),
     }
 
 
 def train_classifier_iqr(config, iqr_state_fp):
     #: :type: smqtk.algorithms.SupervisedClassifier
-    classifier = from_plugin_config(
+    classifier = from_config_dict(
         config['classifier'],
-        get_classifier_impls(sub_interface=SupervisedClassifier)
+        SupervisedClassifier.get_impls()
     )
 
     # Load state into an empty IqrSession instance.

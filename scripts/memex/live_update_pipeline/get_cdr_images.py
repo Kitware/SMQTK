@@ -41,13 +41,13 @@ import requests
 
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     doc_as_description,
-    report_progress,
+    ProgressReporter,
     utility_main_helper,
 )
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.parallel import parallel_map
 
 
@@ -323,17 +323,15 @@ def fetch_cdr_query_images(q, output_dir, scan_record, cores=None,
 
     # Write out
     log.info("Starting iteration/file-write")
-    rp_state = [0] * 7
     with open(scan_record, 'w') as record_file:
+        pr = ProgressReporter(log.debug, 1.0).start()
         for r in img_dl_records:
             if r is not None:
                 cdr_id, local_path, uuid = r
                 record_file.write('%s,%s,%s\n'
                                   % (cdr_id, local_path, uuid))
-            report_progress(log.debug, rp_state, 1.0)
-        # Final report
-        rp_state[1] -= 1
-        report_progress(log.debug, rp_state, 0)
+            pr.increment_report()
+        pr.report()
 
 
 def default_config():

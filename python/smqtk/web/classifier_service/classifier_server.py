@@ -10,8 +10,7 @@ from six.moves import cPickle as pickle
 from six.moves import urllib, zip
 
 from smqtk.algorithms import (
-    get_classifier_impls,
-    get_descriptor_generator_impls,
+    DescriptorGenerator,
     SupervisedClassifier
 )
 from smqtk.algorithms.classifier import (
@@ -24,8 +23,11 @@ from smqtk.representation import (
     DescriptorElementFactory,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-import smqtk.utils.plugin
-from smqtk.utils import prob_utils
+from smqtk.utils import probability
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 from smqtk.utils.web import make_response_json
 import smqtk.web
 
@@ -40,6 +42,7 @@ else:
     if six.PY2:
         JSON_DECODE_EXCEPTION = ValueError
     else:
+        # noinspection PyUnresolvedReferences
         JSON_DECODE_EXCEPTION = json.JSONDecodeError
 
 
@@ -103,17 +106,15 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         c[cls.CONFIG_CLASSIFICATION_FACTORY] = \
             ClassificationElementFactory.get_default_config()
         # Descriptor generator for new content
-        c[cls.CONFIG_DESCRIPTOR_GENERATOR] = smqtk.utils.plugin.make_config(
-            get_descriptor_generator_impls()
+        c[cls.CONFIG_DESCRIPTOR_GENERATOR] = make_default_config(
+            DescriptorGenerator.get_impls()
         )
         # Descriptor factory for new content descriptors
         c[cls.CONFIG_DESCRIPTOR_FACTORY] = \
             DescriptorElementFactory.get_default_config()
         # from-IQR-state *supervised* classifier configuration
-        c[cls.CONFIG_IQR_CLASSIFIER] = smqtk.utils.plugin.make_config(
-            get_classifier_impls(
-                sub_interface=SupervisedClassifier
-            )
+        c[cls.CONFIG_IQR_CLASSIFIER] = make_default_config(
+            SupervisedClassifier.get_impls()
         )
         c[cls.CONFIG_IMMUTABLE_LABELS] = []
 
@@ -151,9 +152,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             json_config[self.CONFIG_DESCRIPTOR_FACTORY]
         )
         #: :type: smqtk.algorithms.DescriptorGenerator
-        self.descriptor_gen = smqtk.utils.plugin.from_plugin_config(
+        self.descriptor_gen = from_config_dict(
             json_config[self.CONFIG_DESCRIPTOR_GENERATOR],
-            smqtk.algorithms.get_descriptor_generator_impls()
+            smqtk.algorithms.DescriptorGenerator.get_impls()
         )
 
         # Classifier config for uploaded IQR states.
@@ -318,8 +319,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 (Optional) JSON-encoded dictionary of labels to floats. Higher
                 values lower the gain on the class and therefore correspond to
                 higher precision (and lower recall) for the class (and higher
-                recall/lower precision for other classes). This translates git to
-                calling ``smqtk.utils.prob_utils.adjust_proba``.
+                recall/lower precision for other classes). This translates git
+                to calling ``smqtk.utils.probability.adjust_proba``.
 
         Possible error codes:
             400
@@ -447,7 +448,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 # Use opposite of adjustments, because we already set the
                 # convention of "higher: precision, lower: recall"
                 adj = [-adjustments.get(label, 0.0) for label in proba_labels]
-                adj_proba = prob_utils.adjust_proba(proba, adj)
+                adj_proba = probability.adjust_proba(proba, adj)
                 prediction = dict(zip(proba_labels, adj_proba[0]))
             c_json[classifier_label] = prediction
 
@@ -606,9 +607,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Make a classifier instance from the stored config for IQR
         # session-based classifiers.
         #: :type: SupervisedClassifier
-        classifier = smqtk.utils.plugin.from_plugin_config(
+        classifier = from_config_dict(
             self.iqr_state_classifier_config,
-            get_classifier_impls(sub_interface=SupervisedClassifier)
+            SupervisedClassifier.get_impls()
         )
         classifier.train(class_examples={'positive': pos, 'negative': neg})
 

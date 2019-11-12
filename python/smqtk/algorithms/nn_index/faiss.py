@@ -9,18 +9,22 @@ import numpy as np
 import os
 import six
 import tempfile
+import warnings
 
-from six.moves import zip
+from six.moves import zip, filter
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import (
-    get_data_element_impls,
-    get_descriptor_index_impls,
-    get_key_value_store_impls,
+    DataElement,
+    DescriptorIndex,
+    KeyValueStore,
 )
-from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import plugin, merge_dict, metrics
+from smqtk.representation.descriptor_element import DescriptorElement
+from smqtk.utils import metrics
+from smqtk.utils.configuration import \
+    make_default_config, from_config_dict, to_config_dict
+from smqtk.utils.dict import merge_dict
 
 # Requires FAISS bindings
 try:
@@ -74,15 +78,15 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(FaissNearestNeighborsIndex, cls).get_default_config()
 
-        data_element_default_config = plugin.make_config(
-            get_data_element_impls())
+        data_element_default_config = \
+            make_default_config(DataElement.get_impls())
         default['index_element'] = data_element_default_config
         default['index_param_element'] = deepcopy(data_element_default_config)
 
-        di_default = plugin.make_config(get_descriptor_index_impls())
+        di_default = make_default_config(DescriptorIndex.get_impls())
         default['descriptor_set'] = di_default
 
-        kvs_default = plugin.make_config(get_key_value_store_impls())
+        kvs_default = make_default_config(KeyValueStore.get_impls())
         default['idx2uid_kvs'] = kvs_default
         default['uid2idx_kvs'] = deepcopy(kvs_default)
 
@@ -115,28 +119,28 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             cfg = config_dict
 
-        cfg['descriptor_set'] = plugin.from_plugin_config(
-            cfg['descriptor_set'], get_descriptor_index_impls()
+        cfg['descriptor_set'] = from_config_dict(
+            cfg['descriptor_set'], DescriptorIndex.get_impls()
         )
-        cfg['uid2idx_kvs'] = plugin.from_plugin_config(
-            cfg['uid2idx_kvs'], get_key_value_store_impls()
+        cfg['uid2idx_kvs'] = from_config_dict(
+            cfg['uid2idx_kvs'], KeyValueStore.get_impls()
         )
-        cfg['idx2uid_kvs'] = plugin.from_plugin_config(
-            cfg['idx2uid_kvs'], get_key_value_store_impls()
+        cfg['idx2uid_kvs'] = from_config_dict(
+            cfg['idx2uid_kvs'], KeyValueStore.get_impls()
         )
 
         if (cfg['index_element'] and
                 cfg['index_element']['type']):
-            index_element = plugin.from_plugin_config(
-                cfg['index_element'], get_data_element_impls())
+            index_element = from_config_dict(
+                cfg['index_element'], DataElement.get_impls())
             cfg['index_element'] = index_element
         else:
             cfg['index_element'] = None
 
         if (cfg['index_param_element'] and
                 cfg['index_param_element']['type']):
-            index_param_element = plugin.from_plugin_config(
-                cfg['index_param_element'], get_data_element_impls())
+            index_param_element = from_config_dict(
+                cfg['index_param_element'], DataElement.get_impls())
             cfg['index_param_element'] = index_param_element
         else:
             cfg['index_param_element'] = None
@@ -181,8 +185,6 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param factory_string: String to pass to FAISS' `index_factory`;
             see the documentation [1] on this feature for more details.
-            TODO(john.moeller): Flat indexes are not supported, so set the
-            default to 'IVF1,Flat', which is essentially a flat index.
         :type factory_string: str | unicode
 
         :param use_multiprocessing: Whether or not to use discrete processes
@@ -248,9 +250,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def get_config(self):
         config = {
-            "descriptor_set": plugin.to_plugin_config(self._descriptor_set),
-            "uid2idx_kvs": plugin.to_plugin_config(self._uid2idx_kvs),
-            "idx2uid_kvs": plugin.to_plugin_config(self._idx2uid_kvs),
+            "descriptor_set": to_config_dict(self._descriptor_set),
+            "uid2idx_kvs": to_config_dict(self._uid2idx_kvs),
+            "idx2uid_kvs": to_config_dict(self._idx2uid_kvs),
             "factory_string": self.factory_string,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
@@ -259,10 +261,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "gpu_id": self._gpu_id,
         }
         if self._index_element:
-            config['index_element'] = plugin.to_plugin_config(
+            config['index_element'] = to_config_dict(
                 self._index_element)
         if self._index_param_element:
-            config['index_param_element'] = plugin.to_plugin_config(
+            config['index_param_element'] = to_config_dict(
                 self._index_param_element)
 
         return config
@@ -345,13 +347,16 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
                 # Check that descriptor-set and kvstore instances match up in
                 # size.
-                assert len(self._descriptor_set) == len(self._uid2idx_kvs) == \
-                    len(self._idx2uid_kvs) == self._faiss_index.ntotal, \
-                    "Not all of our storage elements agree on size: " \
-                    "len(dset, uid2idx, idx2uid, faiss_idx) = " \
-                    "(%d, %d, %d, %d)" \
-                    % (len(self._descriptor_set), len(self._uid2idx_kvs),
-                       len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                if not (
+                        len(self._descriptor_set) == len(self._uid2idx_kvs) ==
+                        len(self._idx2uid_kvs) == self._faiss_index.ntotal):
+                    self._log.warn(
+                        "Not all of our storage elements agree on size: "
+                        "len(dset, uid2idx, idx2uid, faiss_idx) = "
+                        "(%d, %d, %d, %d)"
+                        % (len(self._descriptor_set), len(self._uid2idx_kvs),
+                           len(self._idx2uid_kvs), self._faiss_index.ntotal)
+                    )
 
     def _save_faiss_model(self):
         """
@@ -394,7 +399,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     "use_multiprocessing": self.use_multiprocessing,
                     "next_index": self._next_index,
                 }
-                self._index_param_element.set_bytes(json.dumps(params))
+                # Using UTF-8 due to recommendation (of either 8, 16 or 32) by
+                # the ``json.loads`` method documentation.
+                self._index_param_element.set_bytes(
+                    json.dumps(params).encode("utf-8")
+                )
 
     def _build_index(self, descriptors):
         """
@@ -449,6 +458,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == n, \
                 "New descriptor set size doesn't match data size"
+            idx_ids = idx_ids.astype(object)
 
             self._uid2idx_kvs.clear()
             self._uid2idx_kvs.add_many(
@@ -476,14 +486,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         If no index exists yet, a new one should be created using the given
         descriptors.
 
+        If any descriptors have already been added, they will be not be
+        re-inserted, but a warning will be raised.
+
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
-
-        :raises RuntimeError: If a given descriptor is already present in this
-            index.  Adding a duplicate descriptor would cause duplicates in
-            a nearest-neighbor return (no de-duplication).
 
         """
         if self.read_only:
@@ -495,18 +504,23 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         self._log.debug('Updating FAISS index')
 
-        # We need to fork the iterator, so stick the elements in a list
-        desc_list = list(descriptors)
-        data, new_uuids = self._descriptors_to_matrix(desc_list)
-        n, d = data.shape
-
         with self._model_lock:
-            # Assert that new descriptors do not intersect with existing
-            # descriptors.
-            for uid in new_uuids:
-                if uid in self._uid2idx_kvs:
-                    raise RuntimeError("Descriptor with UID %s already "
-                                       "present in this index.")
+            # Remove any uids which have already been indexed. This gracefully
+            # handles the unusual case that the underlying FAISS index and the
+            # SMQTK descriptor set have fallen out of sync due to an unexpected
+            # external failure.
+            desc_list = []
+            for descriptor_ in descriptors:
+                if descriptor_.uuid() in self._uid2idx_kvs:
+                    warnings.warn(
+                        "Descriptor with UID {} already present in this"
+                        " index".format(descriptor_.uuid())
+                    )
+                else:
+                    desc_list.append(descriptor_)
+            data, new_uuids = self._descriptors_to_matrix(desc_list)
+
+            n, d = data.shape
 
             old_ntotal = self.count()
 
@@ -526,6 +540,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self._descriptor_set.add_many_descriptors(desc_list)
             assert len(self._descriptor_set) == old_ntotal + n, \
                 "New descriptor set size doesn't match old + data size"
+
+            new_ids = new_ids.astype(object)
 
             self._uid2idx_kvs.add_many(
                 dict(zip(new_uuids, new_ids))
@@ -588,17 +604,12 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :rtype: (np.ndarray, list[collections.Hashable])
         """
         new_uuids = [desc.uuid() for desc in descriptors]
-        sample_v = descriptors[0].vector()
-        n, d = len(new_uuids), sample_v.size
-        data = np.empty((n, d), dtype=np.float32)
-        elements_to_matrix(
-            descriptors, mat=data,
-            use_multiprocessing=self.use_multiprocessing,
-            report_interval=1.0,
-        )
+        data = np.vstack(
+            DescriptorElement.get_many_vectors(descriptors)
+        ).astype(np.float32)
         self._log.info("data shape, type: %s, %s",
                        data.shape, data.dtype)
-        self._log.info("# uuids: %d", n)
+        self._log.info("# uuids: %d", len(new_uuids))
         return data, new_uuids
 
     def count(self):
@@ -638,17 +649,28 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:
-            s_dists, s_ids = self._faiss_index.search(q, n)
+            s_dists, s_ids = self._faiss_index.search(
+                q, min(n, self._faiss_index.ntotal)
+            )
             s_dists, s_ids = np.sqrt(s_dists[0, :]), s_ids[0, :]
-            uuids = [self._idx2uid_kvs[s_id] for s_id in s_ids]
+            s_ids = s_ids.astype(object)
+            # s_id (the FAISS index indices) can equal -1 if fewer than the
+            # requested number of nearest neighbors is returned. In this case,
+            # eliminate the -1 entries
+            uuids = list(self._idx2uid_kvs.get_many(
+                filter(lambda s_id_: s_id_ >= 0, s_ids)
+            ))
 
-            descriptors = self._descriptor_set.get_many_descriptors(uuids)
+            descriptors = tuple(
+                self._descriptor_set.get_many_descriptors(uuids)
+            )
 
         self._log.debug("Min and max FAISS distances: %g, %g",
                         min(s_dists), max(s_dists))
 
-        descriptors = tuple(descriptors)
-        d_vectors = elements_to_matrix(descriptors)
+        d_vectors = np.vstack(
+            DescriptorElement.get_many_vectors(descriptors)
+        )
         d_dists = metrics.euclidean_distance(d_vectors, q)
 
         self._log.debug("Min and max descriptor distances: %g, %g",

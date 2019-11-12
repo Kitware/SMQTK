@@ -6,6 +6,12 @@ class NoClassificationError (Exception):
     """
 
 
+class NoDetectionError (Exception):
+    """
+    When a DetectionElement has no stored data (paired bounding box and classification
+    """
+
+
 class ReadOnlyError (Exception):
     """
     For when an attempt at modifying an immutable container is made.

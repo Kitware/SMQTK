@@ -3,7 +3,6 @@ Data abstraction interface for general key-value storage.
 """
 import abc
 import collections
-import os
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import SmqtkRepresentation
@@ -69,7 +68,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         """
         :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: collections.Iterator[object]
+        :rtype: collections.Iterator
         """
         for k in self.keys():
             yield self.get(k)
@@ -203,7 +202,31 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         """
 
-    # TODO: get_many(self, keys, default=NO_DEFAULT_VALUE)
+    def get_many(self, keys, default=NO_DEFAULT_VALUE):
+        """
+        Get the values for the given keys.
+
+        *NOTE:* **Implementing sub-classes are responsible for raising a
+        ``KeyError`` where appropriate.**
+
+        :param keys: The keys for which associated values are requested.
+        :type keys: collections.Iterable[collections.Hashable]
+
+        :param default: Optional default value if a given key is not present
+            in this store. This may be any value except for the
+            ``NO_DEFAULT_VALUE`` constant (custom anonymous class instance).
+        :type default: object
+
+        :raises KeyError: A given key is not present in this store and no
+            default value given.
+
+        :return: Iterable of deserialized python objects stored for the given
+            keys in the order that the corresponding keys were provided.
+        :rtype: collections.Iterable
+
+        """
+        for key_ in keys:
+            yield self.get(key_, default=default)
 
     @abc.abstractmethod
     def clear(self):
@@ -223,42 +246,3 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
         if self.is_read_only():
             raise ReadOnlyError("Cannot clear a read-only %s instance."
                                 % self.__class__.__name__)
-
-
-def get_key_value_store_impls(reload_modules=False):
-    """
-    Discover and return discovered ``KeyValueStore`` classes. Keys in the
-    returned map are the names of the discovered classes, and the paired values
-    are the actual class type objects.
-
-    We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
-        - python modules listed in the environment variable
-          ``KEY_VALUE_STORE_PATH``
-            - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
-
-    Within a module we first look for a helper variable by the name
-    ``KEY_VALUE_STORE_CLASS``, which can either be a single class object or
-    an iterable of class objects, to be specifically exported. If the variable
-    is set to None, we skip that module and do not import anything. If the
-    variable is not present, we look at attributes defined in that module for
-    classes that descend from the given base class type. If none of the above
-    are found, or if an exception occurs, the module is skipped.
-
-    :param reload_modules: Explicitly reload discovered modules from source.
-    :type reload_modules: bool
-
-    :return: Map of discovered class object of type ``KeyValueStore``
-        whose keys are the string names of the classes.
-    :rtype: dict[str, type]
-
-    """
-    from smqtk.utils.plugin import get_plugins
-    this_dir = os.path.abspath(os.path.dirname(__file__))
-    env_var = "KEY_VALUE_STORE_PATH"
-    helper_var = "KEY_VALUE_STORE_CLASS"
-    return get_plugins(__name__, this_dir, env_var, helper_var,
-                       KeyValueStore, reload_modules=reload_modules)

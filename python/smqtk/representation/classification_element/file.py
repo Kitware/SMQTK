@@ -5,14 +5,13 @@ from six.moves import cPickle
 from smqtk.representation.classification_element import ClassificationElement
 
 from smqtk.exceptions import NoClassificationError
-from smqtk.utils import file_utils
-from smqtk.utils.string_utils import partition_string
-
-
-__author__ = "paul.tunison@kitware.com"
+from smqtk.utils.file import safe_create_dir
+from smqtk.utils.string import partition_string
 
 
 class FileClassificationElement (ClassificationElement):
+
+    __slots__ = ('save_dir', 'pickle_protocol', 'subdir_split', 'filepath')
 
     @classmethod
     def is_usable(cls):
@@ -38,10 +37,10 @@ class FileClassificationElement (ClassificationElement):
         :param subdir_split: If a positive integer, this will cause us to store
             the vector file in a subdirectory under the ``save_dir`` that was
             specified. The integer value specifies the number of splits that we
-            will make in the stringification of this descriptor's UUID. If there
-            happen to be dashes in this stringification, we will remove them
-            (as would happen if given an uuid.UUID instance as the uuid
-            element).
+            will make in the stringification of this descriptor's UUID. If
+            there happen to be dashes in this stringification, we will
+            remove them (as would happen if given an uuid.UUID instance as
+            the uuid element).
         :type subdir_split: None | int
 
         :param pickle_protocol: Pickling protocol to use. We will use -1 by
@@ -51,6 +50,7 @@ class FileClassificationElement (ClassificationElement):
         """
         super(FileClassificationElement, self).__init__(type_name, uuid)
 
+        # TODO: Remove absolute path conversion (allow relative)
         self.save_dir = osp.abspath(osp.expanduser(save_dir))
         self.pickle_protocol = pickle_protocol
 
@@ -70,6 +70,23 @@ class FileClassificationElement (ClassificationElement):
         self.filepath = osp.join(save_dir,
                                  "%s.%s.classification.pickle"
                                  % (self.type_name, str(self.uuid)))
+
+    def __getstate__(self):
+        return (
+            super(FileClassificationElement, self).__getstate__(),
+            self.save_dir,
+            self.pickle_protocol,
+            self.subdir_split,
+            self.filepath,
+        )
+
+    def __setstate__(self, state):
+        super(FileClassificationElement, self).__setstate__(state[0])
+        self.save_dir, \
+            self.pickle_protocol, \
+            self.subdir_split, \
+            self.filepath \
+            = state[1:]
 
     def get_config(self):
         return {
@@ -122,6 +139,6 @@ class FileClassificationElement (ClassificationElement):
         """
         m = super(FileClassificationElement, self)\
             .set_classification(m, **kwds)
-        file_utils.safe_create_dir(osp.dirname(self.filepath))
+        safe_create_dir(osp.dirname(self.filepath))
         with open(self.filepath, 'w') as f:
             cPickle.dump(m, f, self.pickle_protocol)

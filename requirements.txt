@@ -8,17 +8,14 @@ Flask-login==0.4.1
 Flask-Cors==3.0.7
 imageio==2.3.0
 jinja2==2.10.1
+jsmin==2.2.2
 matplotlib==2.2.3
-numpy==1.15.3
+numpy==1.16.5; python_version < "3"
+numpy==1.17.3; python_version >= "3"
 Pillow==6.2.0
 pymongo==3.7.2
 requests==2.20.0
 scikit-learn==0.20.0
 scipy==1.1.0
 six==1.11.0
-
-# Testing deps
-coverage==4.5.1
-mock==2.0.0
-pytest==3.9.3
-pytest-cov==2.6.0
+stevedore==1.29.0

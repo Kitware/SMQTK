@@ -7,19 +7,23 @@ import glob
 import logging
 import os.path as osp
 
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import bin_utils, plugin
+from smqtk.utils import cli
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def default_config():
     return {
-        "data_set": plugin.make_config(get_data_set_impls())
+        "data_set": make_default_config(DataSet.get_impls())
     }
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
     parser.add_argument("input_files", metavar='GLOB', nargs='*')
     return parser
 
@@ -27,7 +31,7 @@ def cli_parser():
 def main():
     parser = cli_parser()
     args = parser.parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     log.debug("Script arguments:\n%s" % args)
@@ -44,7 +48,7 @@ def main():
 
     log.info("Adding elements to data set")
     #: :type: smqtk.representation.DataSet
-    ds = plugin.from_plugin_config(config['data_set'], get_data_set_impls())
+    ds = from_config_dict(config['data_set'], DataSet.get_impls())
     ds.add_data(*iter_input_elements())
 
 

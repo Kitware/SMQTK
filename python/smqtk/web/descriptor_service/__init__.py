@@ -5,14 +5,17 @@ import os
 import flask
 import requests
 
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
+from smqtk.algorithms import DescriptorGenerator
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
 from smqtk.utils import SimpleTimer
-from smqtk.utils import plugin
-from smqtk.utils import merge_dict
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
+from smqtk.utils.dict import merge_dict
 from smqtk.web import SmqtkWebApp
 
 
@@ -71,7 +74,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         merge_dict(c, {
             "descriptor_factory": DescriptorElementFactory.get_default_config(),
             "descriptor_generators": {
-                "example": plugin.make_config(get_descriptor_generator_impls())
+                "example": make_default_config(DescriptorGenerator.get_impls())
             }
         })
         return c
@@ -274,9 +277,9 @@ class DescriptorServiceServer (SmqtkWebApp):
             if label not in self.descriptor_cache:
                 self._log.debug("Caching descriptor '%s'", label)
                 self.descriptor_cache[label] = \
-                    plugin.from_plugin_config(
-                    self.generator_label_configs[label],
-                        get_descriptor_generator_impls()
+                    from_config_dict(
+                        self.generator_label_configs[label],
+                        DescriptorGenerator.get_impls()
                     )
 
             return self.descriptor_cache[label]

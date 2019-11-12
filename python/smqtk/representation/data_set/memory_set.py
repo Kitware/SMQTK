@@ -3,8 +3,14 @@ import threading
 from six.moves import cPickle as pickle
 
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation import DataElement, DataSet, get_data_element_impls
-from smqtk.utils import merge_dict, plugin, SimpleTimer
+from smqtk.representation import DataElement, DataSet
+from smqtk.utils import SimpleTimer
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
+from smqtk.utils.dict import merge_dict
 
 
 class DataMemorySet (DataSet):
@@ -55,7 +61,7 @@ class DataMemorySet (DataSet):
 
         """
         c = super(DataMemorySet, cls).get_default_config()
-        c['cache_element'] = plugin.make_config(get_data_element_impls())
+        c['cache_element'] = make_default_config(DataElement.get_impls())
         return c
 
     @classmethod
@@ -84,8 +90,8 @@ class DataMemorySet (DataSet):
 
         cache_element = None
         if c['cache_element'] and c['cache_element']['type']:
-            cache_element = plugin.from_plugin_config(c['cache_element'],
-                                                      get_data_element_impls())
+            cache_element = from_config_dict(c['cache_element'],
+                                             DataElement.get_impls())
         c['cache_element'] = cache_element
 
         return super(DataMemorySet, cls).from_config(c, False)
@@ -168,7 +174,7 @@ class DataMemorySet (DataSet):
         if self.cache_element:
             c['cache_element'] = merge_dict(
                 c['cache_element'],
-                plugin.to_plugin_config(self.cache_element)
+                to_config_dict(self.cache_element)
             )
         return c
 

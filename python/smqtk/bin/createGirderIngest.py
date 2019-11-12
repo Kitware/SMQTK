@@ -33,9 +33,13 @@ import logging
 
 import requests
 
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.girder import GirderDataElement
-from smqtk.utils import bin_utils, plugin
+from smqtk.utils import cli
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 from smqtk.utils.girder import GirderTokenManager
 from smqtk.utils.url import url_join
 
@@ -44,7 +48,7 @@ from smqtk.utils.url import url_join
 # Component Functions
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
     g_girder = parser.add_argument_group('Girder References')
 
     g_girder.add_argument('-F', '--folder',
@@ -78,7 +82,7 @@ def default_config():
             'dataset_insert_batch_size': None,
         },
         'plugins': {
-            'data_set': plugin.make_config(get_data_set_impls()),
+            'data_set': make_default_config(DataSet.get_impls()),
         }
     }
 
@@ -274,7 +278,7 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     api_root = config['tool']['girder_api_root']
@@ -301,18 +305,19 @@ def main():
             ids_file.extend([fid.strip() for fid in f])
 
     #: :type: smqtk.representation.DataSet
-    data_set = plugin.from_plugin_config(config['plugins']['data_set'],
-                                         get_data_set_impls())
+    data_set = from_config_dict(config['plugins']['data_set'],
+                                DataSet.get_impls())
 
     batch = collections.deque()
-    rps = [0]*7
+    pr = cli.ProgressReporter(log.info, 1.0).start()
     for e in find_girder_files(api_root, ids_folder, ids_item, ids_file,
                                api_key, api_query_batch):
         batch.append(e)
         if insert_batch_size and len(batch) >= insert_batch_size:
             data_set.add_data(*batch)
             batch.clear()
-        bin_utils.report_progress(log.info, rps, 1.0)
+        pr.increment_report()
+    pr.report()
 
     if batch:
         data_set.add_data(*batch)

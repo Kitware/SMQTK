@@ -132,6 +132,9 @@ class SolrDescriptorElement (DescriptorElement):
                          )
 
     def _base_doc(self):
+        """
+        :rtype: dict[str, any]
+        """
         t = self.type()
         suuid = str(self.uuid())
         return {

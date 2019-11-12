@@ -15,7 +15,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.wsgi import peek_path_info, pop_path_info
 
 from smqtk.utils import DatabaseInfo
-from smqtk.utils import merge_dict
+from smqtk.utils.dict import merge_dict
 from smqtk.utils.mongo_sessions import MongoSessionInterface
 from smqtk.web import SmqtkWebApp
 
@@ -135,9 +135,10 @@ class IqrSearchDispatcher (SmqtkWebApp):
         def index():
             # self._log.info("Session: %s", flask.session.items())
             # noinspection PyUnresolvedReferences
-            return flask.render_template("index.html",
-                                         instance_keys=list(self.instances.keys()),
-                                         debug=self.debug)
+            return flask.render_template(
+                "index.html", instance_keys=list(self.instances.keys()),
+                debug=self.debug
+            )
 
         @self.route('/', methods=['POST'])
         @cross_origin(origins='*', vary_header=True)

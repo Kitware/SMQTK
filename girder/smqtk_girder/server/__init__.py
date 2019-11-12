@@ -10,6 +10,8 @@ from girder import logger
 
 from .constants import PluginSettings
 
+from smqtk_worker.tasks import process_images
+
 import itertools
 
 SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
@@ -69,7 +71,7 @@ class SmqtkAPI(Resource):
         credentials. This endpoint is intended to only be called from remote workers
         which has been registered with the task queue with their respective credentials.
 
-        The only place tokens with this scope are assigned is within _processImages.
+        The only place tokens with this scope are assigned is within processImages.
         """
         setting_results = list(ModelImporter.model('setting').find({
             'key': {
@@ -79,48 +81,7 @@ class SmqtkAPI(Resource):
 
         return dict([(x['key'].replace('smqtk_girder.', ''), x['value']) for x in setting_results])
 
-    @staticmethod
-    def _processImages(folder, itemFilePairs):
-        """
-        Create and schedule a Girder job for processing images.
-
-        :param folder: Folder to process images for.
-        :param fileIds: File IDs to process, these are converted into Girder data elemnts.
-        """
-        jobModel = ModelImporter.model('job', 'jobs')
-
-        # TODO Use a more granular token.
-        # Ideally this would be scoped to only allow:
-        # - Job Updates
-        # - Data management of folder
-        # - Retrieval of SMQTK settings
-        token = ModelImporter.model('token').createToken(user=getCurrentUser(),
-                                                         days=1,
-                                                         scope=(TokenScope.USER_AUTH,
-                                                                SMQTK_SETTING_READ))
-
-        dataElementUris = [(itemId, 'girder://token:%s@%s/file/%s' % (token['_id'],
-                                                                      getWorkerApiUrl(),
-                                                                      fileId))
-                           for (itemId, fileId) in itemFilePairs]
-
-        job = jobModel.createJob(title='Processing Images',
-                                 type='GPU',
-                                 handler='worker_handler',
-                                 user=getCurrentUser(),
-                                 args=(str(folder['_id']), dataElementUris),
-                                 otherFields={'celeryTaskName': 'smqtk_worker.tasks.process_images',
-                                              'celeryQueue': 'process-images'})
-
-        job['token'] = token
-
-        logger.info('assigning token %s' % token['_id'])
-
-        jobModel.save(job)
-        jobModel.scheduleJob(job)
-
     @access.user
-    @filtermodel(model='folder')
     @autoDescribeRoute(Description('Compute descriptors on a given folder.')
                        .modelParam('id', model='folder', level=AccessType.READ))
     def processImages(self, folder, params):
@@ -145,12 +106,28 @@ class SmqtkAPI(Resource):
             except Exception:
                 return (False, False)
 
+        # TODO Use a more granular token.
+        # Ideally this would be scoped to only allow:
+        # - Job Updates
+        # - Data management of folder
+        # - Retrieval of SMQTK settings
+        token = ModelImporter.model('token').createToken(user=getCurrentUser(),
+                                                         days=1,
+                                                         scope=(TokenScope.USER_AUTH,
+                                                                SMQTK_SETTING_READ))
+
         # TODO Filter items by supported mime types for SMQTK
         items = itertools.ifilter(lambda item: 'smqtk_uuid' not in item.get('meta', {}),
                                   ModelImporter.model('folder').childItems(folder))
+        itemFileIds = itertools.ifilter(None, itertools.imap(oldestFileId, items))
+        dataElementUris = [(itemId, 'girder://token:%s@%s/file/%s' % (token['_id'],
+                                                                      getWorkerApiUrl(),
+                                                                      fileId))
+                           for (itemId, fileId) in itemFileIds]
 
-        self._processImages(folder, itertools.ifilter(None,
-                                                      itertools.imap(oldestFileId, items)))
+        return process_images.delay(str(folder['_id']), dataElementUris,
+                                    girder_job_title='Processing Images',
+                                    girder_job_type='GPU', girder_client_token=str(token['_id']))
 
 
 def load(info):

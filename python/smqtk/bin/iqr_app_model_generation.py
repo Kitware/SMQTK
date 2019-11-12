@@ -18,15 +18,17 @@ import six
 from smqtk import algorithms
 from smqtk import representation
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import bin_utils, jsmin, plugin
-from smqtk.web.iqr_service import IqrService
+from smqtk.utils import cli
+from smqtk.utils.configuration import (
+    from_config_dict,
+)
 
 
 __author__ = 'paul.tunison@kitware.com'
 
 
 def cli_parser():
-    # Forgoing the ``bin_utils.basic_cli_parser`` due to our use of dual
+    # Forgoing the ``cli.basic_cli_parser`` due to our use of dual
     # configuration files for this utility.
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -66,16 +68,16 @@ def main():
     tab = args.tab
     input_files_globs = args.input_files
 
-    # Not using `bin_utils.utility_main_helper`` due to deviating from single-
+    # Not using `cli.utility_main_helper`` due to deviating from single-
     # config-with-default usage.
-    bin_utils.initialize_logging(logging.getLogger('smqtk'), llevel)
-    bin_utils.initialize_logging(logging.getLogger('__main__'), llevel)
+    cli.initialize_logging(logging.getLogger('smqtk'), llevel)
+    cli.initialize_logging(logging.getLogger('__main__'), llevel)
     log = logging.getLogger(__name__)
 
     log.info("Loading UI config: '{}'".format(ui_config_filepath))
-    ui_config, ui_config_loaded = bin_utils.load_config(ui_config_filepath)
+    ui_config, ui_config_loaded = cli.load_config(ui_config_filepath)
     log.info("Loading IQR config: '{}'".format(iqr_config_filepath))
-    iqr_config, iqr_config_loaded = bin_utils.load_config(iqr_config_filepath)
+    iqr_config, iqr_config_loaded = cli.load_config(iqr_config_filepath)
     if not (ui_config_loaded and iqr_config_loaded):
         raise RuntimeError("One or both configuration files failed to load.")
 
@@ -121,19 +123,19 @@ def main():
     log.info("Instantiating plugins")
     #: :type: representation.DataSet
     data_set = \
-        plugin.from_plugin_config(data_set_config,
-                                  representation.get_data_set_impls())
+        from_config_dict(data_set_config, representation.DataSet.get_impls())
     descriptor_elem_factory = \
         representation.DescriptorElementFactory \
         .from_config(descriptor_elem_factory_config)
     #: :type: algorithms.DescriptorGenerator
     descriptor_generator = \
-        plugin.from_plugin_config(descriptor_generator_config,
-                                  algorithms.get_descriptor_generator_impls())
+        from_config_dict(descriptor_generator_config,
+                         algorithms.DescriptorGenerator.get_impls())
+
     #: :type: algorithms.NearestNeighborsIndex
     nn_index = \
-        plugin.from_plugin_config(nn_index_config,
-                                  algorithms.get_nn_index_impls())
+        from_config_dict(nn_index_config,
+                         algorithms.NearestNeighborsIndex.get_impls())
 
     #
     # Build models

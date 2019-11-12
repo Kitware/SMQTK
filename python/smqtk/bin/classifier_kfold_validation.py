@@ -71,40 +71,35 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy
-import six
 import sklearn.model_selection
 import sklearn.metrics
 import six
 
-from smqtk.algorithms import get_classifier_impls
 from smqtk.algorithms.classifier import SupervisedClassifier
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.representation.classification_element.memory import \
     MemoryClassificationElement
-from smqtk.utils import (
-    bin_utils,
-    file_utils,
-    plugin,
+from smqtk.utils import cli
+from smqtk.utils.file import safe_create_dir
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
 __author__ = "paul.tunison@kitware.com"
 
 
-def get_supervised_classifier_impls():
-    return get_classifier_impls(sub_interface=SupervisedClassifier)
-
-
 def default_config():
     return {
         "plugins": {
             "supervised_classifier":
-                plugin.make_config(get_supervised_classifier_impls()),
+                make_default_config(SupervisedClassifier.get_impls()),
             "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
+                make_default_config(DescriptorIndex.get_impls()),
         },
         "cross_validation": {
             "truth_labels": None,
@@ -128,12 +123,12 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def classifier_kfold_validation():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #
@@ -154,9 +149,9 @@ def classifier_kfold_validation():
     log.info("Initializing DescriptorIndex (%s)",
              config['plugins']['descriptor_index']['type'])
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
     log.info("Loading classifier configuration")
     #: :type: dict
@@ -218,9 +213,9 @@ def classifier_kfold_validation():
 
         log.info("-- creating classifier")
         #: :type: SupervisedClassifier
-        classifier = plugin.from_plugin_config(
+        classifier = from_config_dict(
             classifier_config,
-            get_supervised_classifier_impls()
+            SupervisedClassifier.get_impls()
         )
 
         log.info("-- gathering descriptors")
@@ -274,7 +269,7 @@ def format_plt(title, x_label, y_label):
 
 
 def save_plt(output_dir, file_name, show):
-    file_utils.safe_create_dir(output_dir)
+    safe_create_dir(output_dir)
     save_path = os.path.join(output_dir, file_name)
     plt.savefig(save_path)
     if show:
@@ -310,7 +305,7 @@ def make_curves(log, skl_curve_func, title_hook, x_label, y_label, fold_data,
     :param plot_prefix: String prefix for output files.
     :param show: Show the output plots interactively or not.
     """
-    file_utils.safe_create_dir(output_dir)
+    safe_create_dir(output_dir)
 
     log.info("Generating %s curves for per-folds and overall", title_hook)
 

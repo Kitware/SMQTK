@@ -4,8 +4,8 @@ import os.path as osp
 from six import BytesIO
 
 from smqtk.representation import DescriptorElement
-from smqtk.utils import file_utils
-from smqtk.utils.string_utils import partition_string
+from smqtk.utils.file import safe_create_dir
+from smqtk.utils.string import partition_string
 
 
 class DescriptorMemoryElement (DescriptorElement):
@@ -226,7 +226,7 @@ class DescriptorFileElement (DescriptorElement):
         :rtype: DescriptorFileElement
 
         """
-        file_utils.safe_create_dir(osp.dirname(self._vec_filepath))
+        safe_create_dir(osp.dirname(self._vec_filepath))
         numpy.save(self._vec_filepath, new_vec)
         return self
 

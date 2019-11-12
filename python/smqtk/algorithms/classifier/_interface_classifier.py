@@ -2,7 +2,7 @@ import abc
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.utils import (
-    bin_utils,
+    cli,
     parallel,
 )
 
@@ -111,18 +111,15 @@ class Classifier (SmqtkAlgorithm):
             use_multiprocessing=use_multiprocessing,
         )
 
-        r_state = [0] * 7
+        pr = None
         if ri:
-            r_progress = bin_utils.report_progress
-        else:
-            def r_progress(*_):
-                return
+            pr = cli.ProgressReporter(self._log.debug, ri).start()
 
         d2c_map = {}
         for d, c in classifications:
             d2c_map[d] = c
-
-            r_progress(self._log.debug, r_state, ri)
+            pr and pr.increment_report()
+        pr and pr.report()
 
         return d2c_map
 

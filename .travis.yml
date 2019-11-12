@@ -60,4 +60,4 @@ install:
 
 # Run tests here
 script:
-  - bash ./run_tests.sh
+  - python setup.py test

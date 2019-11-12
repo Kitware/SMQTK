@@ -17,12 +17,16 @@ import PIL.Image
 import requests
 
 from smqtk.iqr import IqrSession
-from smqtk.representation import get_data_set_impls
+from smqtk.representation import DataSet
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils import Configurable
 from smqtk.utils import SmqtkObject
-from smqtk.utils import plugin
-from smqtk.utils.file_utils import safe_create_dir
+from smqtk.utils.configuration import (
+    Configurable,
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.mimetype import get_mimetypes
 from smqtk.utils.preview_cache import PreviewCache
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
@@ -69,7 +73,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         d['iqr_service_url'] = None
 
         # fill in plugin configs
-        d['data_set'] = plugin.make_config(get_data_set_impls())
+        d['data_set'] = make_default_config(DataSet.get_impls())
 
         return d
 
@@ -96,8 +100,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         # construct nested objects via configurations
         merged['data_set'] = \
-            plugin.from_plugin_config(merged['data_set'],
-                                      get_data_set_impls())
+            from_config_dict(merged['data_set'], DataSet.get_impls())
 
         return cls(parent_app, **merged)
 
@@ -677,7 +680,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         return {
             'iqr_service_url': self._iqr_service.url,
             'working_directory': self._working_dir,
-            'data_set': plugin.to_plugin_config(self._data_set),
+            'data_set': to_config_dict(self._data_set),
         }
 
     @property

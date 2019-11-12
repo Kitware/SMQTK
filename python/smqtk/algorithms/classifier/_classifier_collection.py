@@ -3,9 +3,11 @@ import threading
 import six
 
 from smqtk.exceptions import MissingLabelError
-from smqtk.utils import Configurable, SmqtkObject, merge_dict, plugin
+from smqtk.utils import SmqtkObject
+from smqtk.utils.configuration \
+    import Configurable, make_default_config, from_config_dict, to_config_dict
+from smqtk.utils.dict import merge_dict
 
-from . import get_classifier_impls
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 from ._interface_classifier import Classifier
 
@@ -31,7 +33,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         del c['classifiers']
 
         # Add slot of a list of classifier plugin specifications
-        c[cls.EXAMPLE_KEY] = plugin.make_config(get_classifier_impls())
+        c[cls.EXAMPLE_KEY] = make_default_config(Classifier.get_impls())
 
         return c
 
@@ -68,8 +70,8 @@ class ClassifierCollection (SmqtkObject, Configurable):
                 continue
 
             classifier_config = config_dict[label]
-            classifier = plugin.from_plugin_config(classifier_config,
-                                                   get_classifier_impls())
+            classifier = from_config_dict(classifier_config,
+                                          Classifier.get_impls())
             classifier_map[label] = classifier
 
         # Don't merge back in "example" default
@@ -124,7 +126,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
 
     def get_config(self):
         with self._label_to_classifier_lock:
-            c = dict((label, plugin.to_plugin_config(classifier))
+            c = dict((label, to_config_dict(classifier))
                      for label, classifier
                      in six.iteritems(self._label_to_classifier))
         return c

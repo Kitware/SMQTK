@@ -51,17 +51,19 @@ from six.moves import range
 import sklearn.metrics
 
 from smqtk.algorithms import (
-    get_classifier_impls,
     SupervisedClassifier,
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.utils import (
-    bin_utils,
+    cli,
     parallel,
-    plugin,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -72,11 +74,11 @@ def default_config():
     return {
         'plugins': {
             'classifier':
-                plugin.make_config(get_classifier_impls()),
+                make_default_config(SupervisedClassifier.get_impls()),
             'classification_factory':
                 ClassificationElementFactory.get_default_config(),
             'descriptor_index':
-                plugin.make_config(get_descriptor_index_impls())
+                make_default_config(DescriptorIndex.get_impls())
         },
         'utility': {
             'train': False,
@@ -96,30 +98,30 @@ def default_config():
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #
     # Initialize stuff from configuration
     #
     #: :type: smqtk.algorithms.Classifier
-    classifier = plugin.from_plugin_config(
+    classifier = from_config_dict(
         config['plugins']['classifier'],
-        get_classifier_impls()
+        SupervisedClassifier.get_impls()
     )
     #: :type: ClassificationElementFactory
     classification_factory = ClassificationElementFactory.from_config(
         config['plugins']['classification_factory']
     )
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     uuid2label_filepath = config['utility']['csv_filepath']
@@ -167,13 +169,9 @@ def main():
     # Train classifier if the one given has a ``train`` method and training
     # was turned enabled.
     if do_train:
-        if isinstance(classifier, SupervisedClassifier):
-            log.info("Training classifier model")
-            classifier.train(tlabel2descriptors)
-            exit(0)
-        else:
-            ValueError("Configured classifier is not a SupervisedClassifier "
-                       "type and does not support training.")
+        log.info("Training supervised classifier model")
+        classifier.train(tlabel2descriptors)
+        exit(0)
 
     #
     # Apply classifier to descriptors for predictions
@@ -214,8 +212,9 @@ def main():
             uuid_cm[tlabel] = collections.defaultdict(set)
             for c in tlabel2classifications[tlabel]:
                 uuid_cm[tlabel][c.max_label()].add(c.uuid)
-            # convert sets to lists
+            # convert sets to lists for JSON output.
             for plabel in uuid_cm[tlabel]:
+                # noinspection PyTypeChecker
                 uuid_cm[tlabel][plabel] = list(uuid_cm[tlabel][plabel])
         with open(output_uuid_cm, 'w') as f:
             log.info("Saving UUID Confusion Matrix: %s", output_uuid_cm)
@@ -255,7 +254,8 @@ def gen_confusion_matrix(tlabel2classifications):
     for true_label in tlabel2classifications:
         for c in tlabel2classifications[true_label]:
             true_classes.append(true_label)
-            pred_classes.append(c.max_label())
+            # Assuming classifier labels are strings (true labels are strings).
+            pred_classes.append(str(c.max_label()))
 
     labels = sorted(set(true_classes).union(pred_classes))
     confusion_mat = sklearn.metrics.confusion_matrix(true_classes,
@@ -278,7 +278,9 @@ def log_cm(p_func, conf_mat, labels):
     # get col max widths
     col_max_lens = []
     for x in range(print_mat.shape[1]):
-        col_max_lens.append(max(list(map(len, print_mat[:, x].flatten().tolist()))))
+        col_max_lens.append(max(list(
+            map(len, print_mat[:, x].flatten().tolist())
+        )))
 
     # Construct printed rows based on column max width
     p_func("Confusion Matrix (Counts)")

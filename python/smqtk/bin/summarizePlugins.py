@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Print out information about what plugins are currently usable and the
 documentation headers for each implementation.
@@ -12,8 +13,10 @@ import smqtk.algorithms
 import smqtk.algorithms.nn_index.hash_index
 import smqtk.algorithms.nn_index.lsh.functors
 import smqtk.representation
-import smqtk.utils.bin_utils
-import smqtk.utils.plugin
+import smqtk.utils.cli
+from smqtk.utils.configuration import (
+    make_default_config,
+)
 
 
 def cli():
@@ -39,62 +42,60 @@ def main():
     llevel = logging.INFO
     if args.verbose:
         llevel = logging.DEBUG
-    smqtk.utils.bin_utils.initialize_logging(logging.getLogger("smqtk"), llevel)
+    smqtk.utils.cli.initialize_logging(logging.getLogger("smqtk"), llevel)
 
     collect_defaults = args.defaults
     defaults = {}
 
-    def collect_configs(name, impl_map):
+    def collect_configs(name, impl_set):
         """
         :type name: str
-        :type impl_map: dict
+        :type impl_set: set[type]
         """
         if collect_defaults:
-            defaults[name] = smqtk.utils.plugin.make_config(impl_map)
+            defaults[name] = make_default_config(impl_set)
 
     log = logging.getLogger("smqtk.checkPlugins")
 
     # Key is the interface type name
+    #: :type: dict[str, set[type]]
     plugin_info = {}
     # List of plugin_info keys in order they were added
     plugin_type_list = []
 
-    def collect_plugins(type_name, impl_getter_fn):
+    def collect_plugins(interface_t):
+        """
+        Record discoverable implementations for an interface class type.
+
+        :param interface_t: Interface class type.
+
+        """
+        type_name = interface_t.__name__
         log.info("Checking %s plugins", type_name)
         plugin_type_list.append(type_name)
-        impl_map = impl_getter_fn()
-        plugin_info[plugin_type_list[-1]] = impl_map
-        collect_configs(type_name, impl_map)
+        #: :type: set[type]
+        impl_set = interface_t.get_impls()
+        plugin_info[plugin_type_list[-1]] = impl_set
+        collect_configs(type_name, impl_set)
 
     #
     # smqtk.representation
     #
-    collect_plugins('DataElement',
-                    smqtk.representation.get_data_element_impls)
-    collect_plugins('DataSet',
-                    smqtk.representation.get_data_set_impls)
-    collect_plugins('DescriptorElement',
-                    smqtk.representation.get_descriptor_element_impls)
-    collect_plugins('DescriptorIndex',
-                    smqtk.representation.get_descriptor_index_impls)
-    collect_plugins('KeyValueStore',
-                    smqtk.representation.get_key_value_store_impls)
+    collect_plugins(smqtk.representation.DataElement)
+    collect_plugins(smqtk.representation.DataSet)
+    collect_plugins(smqtk.representation.DescriptorElement)
+    collect_plugins(smqtk.representation.DescriptorIndex)
+    collect_plugins(smqtk.representation.KeyValueStore)
 
     #
     # smqtk.algorithms
     #
-    collect_plugins('Classifier',
-                    smqtk.algorithms.get_classifier_impls)
-    collect_plugins('DescriptorGenerator',
-                    smqtk.algorithms.get_descriptor_generator_impls)
-    collect_plugins('HashIndex',
-                    smqtk.algorithms.get_hash_index_impls)
-    collect_plugins('LshFunctor',
-                    smqtk.algorithms.get_lsh_functor_impls)
-    collect_plugins('NearestNeighborIndex',
-                    smqtk.algorithms.get_nn_index_impls)
-    collect_plugins('RelevancyIndex',
-                    smqtk.algorithms.get_relevancy_index_impls)
+    collect_plugins(smqtk.algorithms.Classifier)
+    collect_plugins(smqtk.algorithms.DescriptorGenerator)
+    collect_plugins(smqtk.algorithms.HashIndex)
+    collect_plugins(smqtk.algorithms.LshFunctor)
+    collect_plugins(smqtk.algorithms.NearestNeighborsIndex)
+    collect_plugins(smqtk.algorithms.RelevancyIndex)
 
     #
     # Print-out
@@ -105,10 +106,10 @@ def main():
         print("[Type]", k)
         print('=' * (7 + len(k)))
         print()
-        for l, t in plugin_info[k].items():
-            print(":: " + l)
+        for t in plugin_info[k]:
+            print(":: " + t.__name__)
             if t.__doc__:
-                print(t.__doc__.rstrip())
+                print(t.__doc__.rstrip().encode('utf-8'))
                 print()
         print()
         print()

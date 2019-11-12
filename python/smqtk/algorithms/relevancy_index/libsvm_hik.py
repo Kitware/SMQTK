@@ -8,11 +8,11 @@ from six.moves import range, zip
 from six.moves import cPickle as pickle
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
+from smqtk.representation.descriptor_element import DescriptorElement
 from smqtk.utils.distance_kernel import (
     compute_distance_matrix
 )
 from smqtk.utils.metrics import histogram_intersection_distance
-from smqtk.utils.parallel import parallel_map
 
 try:
     import svm
@@ -116,7 +116,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         """
         Return w1 weight parameter based on pos and neg exemplars
         """
-        return max(1.0, num_neg/float(num_pos))
+        return max(1.0, num_neg / float(num_pos))
 
     @classmethod
     def _gen_svm_parameter_string(cls, num_pos, num_neg):
@@ -155,26 +155,18 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # Reverse mapping of a descriptor's vector to its index in the cache
         # and subsequently in the distance kernel.
         self._descr2index = {}
+
+        descriptors = list(descriptors)
+
         # matrix for creating distance kernel
-        self._descr_matrix = []
-
-        def get_vector(d_elem):
-            return d_elem, d_elem.vector()
-
-        # noinspection PyTypeChecker
-        vector_iter = parallel_map(get_vector, descriptors,
-                                   name='vector_iter',
-                                   use_multiprocessing=self.multiprocess_fetch,
-                                   cores=self.cores,
-                                   ordered=True)
+        self._descr_matrix = numpy.array(
+            DescriptorElement.get_many_vectors(descriptors)
+        )
+        vector_iter = zip(descriptors, self._descr_matrix)
 
         for i, (d, v) in enumerate(vector_iter):
             self._descr_cache.append(d)
-            # ``_descr_matrix`` is a list, currently.
-            # noinspection PyUnresolvedReferences
-            self._descr_matrix.append(v)
             self._descr2index[tuple(v)] = i
-        self._descr_matrix = numpy.array(self._descr_matrix)
 
         # TODO: (?) For when we optimize SVM SV kernel computation
         # self._dist_kernel = \
@@ -216,10 +208,12 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         pos = set(pos)
         # Creating training matrix and labels
         train_labels = []
+        #: :type: list[list]
         train_vectors = []
         num_pos = 0
         for d in pos:
             train_labels.append(+1)
+            # noinspection PyTypeChecker
             train_vectors.append(d.vector().tolist())
             num_pos += 1
         self._log.debug("Positives given: %d", num_pos)
@@ -266,6 +260,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         for n_iterable in (neg, neg_autoselect):
             for d in n_iterable:
                 train_labels.append(-1)
+                # noinspection PyTypeChecker
                 train_vectors.append(d.vector().tolist())
                 num_neg += 1
 

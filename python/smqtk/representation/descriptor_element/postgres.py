@@ -1,4 +1,5 @@
 import multiprocessing
+from collections import defaultdict
 
 import numpy
 
@@ -44,6 +45,14 @@ class PostgresDescriptorElement (DescriptorElement):
           FROM {table_name:s}
           WHERE {type_col:s} = %(type_val)s
             AND {uuid_col:s} = %(uuid_val)s
+        ;
+    """)
+
+    SELECT_MANY_TMPL = norm_psql_cmd_string("""
+        SELECT {uuid_col:s}, {binary_col:s}
+          FROM {table_name:s}
+          WHERE {type_col:s} = %(type_val)s
+            AND {uuid_col:s} IN %(uuids_tuple)s
         ;
     """)
 
@@ -198,33 +207,93 @@ class PostgresDescriptorElement (DescriptorElement):
         self.db_pass = state['db_pass']
         self._psql_helper = None
 
+    @classmethod
+    def _create_psql_helper(
+            cls, db_name, db_host, db_port, db_user, db_pass, table_name,
+            uuid_col, type_col, binary_col, itersize=1000, create_table=True):
+        """
+        Internal helper function for creating PSQL connection helpers for class
+        instances.
+
+        :param db_name: The name of the database to connect to.
+        :type db_name: str
+
+        :param db_host: Host address of the Postgres server. If None, we
+            assume the server is on the local machine and use the UNIX socket.
+            This might be a required field on Windows machines (not tested yet).
+        :type db_host: str | None
+
+        :param db_port: Port the Postgres server is exposed on. If None, we
+            assume the default port (5423).
+        :type db_port: int | None
+
+        :param db_user: Postgres user to connect as. If None, postgres
+            defaults to using the current accessing user account name on the
+            operating system.
+        :type db_user: str | None
+
+        :param db_pass: Password for the user we're connecting as. This may be
+            None if no password is to be used.
+        :type db_pass: str | None
+
+        :param table_name: String label of the database table to use.
+        :type table_name: str
+
+        :param uuid_col: The column label for descriptor UUID storage
+        :type uuid_col: str
+
+        :param type_col: The column label for descriptor type string storage.
+        :type type_col: str
+
+        :param binary_col: The column label for descriptor vector binary
+            storage.
+        :type binary_col: str
+
+        :param itersize: Number of records fetched per network round trip when
+            iterating over a named cursor. This parameter only does anything if
+            a named cursor is used.
+        :type itersize: int
+
+        :param create_table: Whether to try to create the storing table before
+            returning the connection helper. If the configured user does not
+            have sufficient permissions to create the table and it does not
+            currently exist, an exception will be raised.
+        :type create_table: bool
+
+        :return: PsqlConnectionHelper utility.
+        :rtype: PsqlConnectionHelper
+        """
+        helper = PsqlConnectionHelper(
+            db_name, db_host, db_port, db_user, db_pass,
+            itersize=itersize, table_upsert_lock=PSQL_TABLE_CREATE_RLOCK
+        )
+
+        if create_table:
+            helper.set_table_upsert_sql(
+                cls.UPSERT_TABLE_TMPL.format(
+                    table_name=table_name,
+                    type_col=type_col,
+                    uuid_col=uuid_col,
+                    binary_col=binary_col
+                )
+            )
+
+        return helper
+
     def _get_psql_helper(self):
         """
         Internal method to create on demand the PSQL connection helper class.
         :return: PsqlConnectionHelper utility.
         :rtype: PsqlConnectionHelper
         """
-        # `hasattr` check used for backwards compatibility when interacting with
-        # databases containing elements serialized before the inclusion of this
-        # helper class.
         if self._psql_helper is None:
             # Only using a transport iteration size of 1 since this element is
             # only meant to refer to a single entry in the associated table.
-            self._psql_helper = PsqlConnectionHelper(
+            self._psql_helper = self._create_psql_helper(
                 self.db_name, self.db_host, self.db_port, self.db_user,
-                self.db_pass, itersize=1,
-                table_upsert_lock=PSQL_TABLE_CREATE_RLOCK
+                self.db_pass, self.table_name, self.type_col, self.uuid_col,
+                self.binary_col, itersize=1, create_table=self.create_table
             )
-            # Register table upsert command
-            if self.create_table:
-                self._psql_helper.set_table_upsert_sql(
-                    self.UPSERT_TABLE_TMPL.format(
-                        table_name=self.table_name,
-                        type_col=self.type_col,
-                        uuid_col=self.uuid_col,
-                        binary_col=self.binary_col,
-                    )
-                )
         return self._psql_helper
 
     def get_config(self):
@@ -319,6 +388,88 @@ class PostgresDescriptorElement (DescriptorElement):
             b = r[0][0]
             v = numpy.frombuffer(b, self.ARRAY_DTYPE)
             return v
+
+    @classmethod
+    def _sql_vector_query_options(cls, descriptor):
+        """
+        Internal helper method to construct tuple of options used to construct
+        sql query for given descriptor's vector.
+
+        :return: Tuple of elements used to construct a SQL query
+        :rtype: tuple
+        """
+        return (
+            descriptor.db_name,
+            descriptor.db_host,
+            descriptor.db_port,
+            descriptor.db_user,
+            descriptor.db_pass,
+            descriptor.table_name,
+            descriptor.type_col,
+            descriptor.uuid_col,
+            descriptor.binary_col,
+            descriptor.type()
+        )
+
+    @classmethod
+    def _get_many_vectors(cls, descriptors):
+        """
+        Internal method to be overridden by subclasses to return many vectors
+        associated with given descriptors.
+
+        :note: Returned vectors are *not* guaranteed to be returned in the
+            order they are requested. Missing vectors may be returned as None
+            or omitted entirely from results. The wrapper function
+            `get_many_vectors` handles re-ordering as necessary and insertion
+            of None for missing values.
+
+        :param descriptors: Iterable of descriptors to query for.
+        :type descriptors: collections.Iterable[
+            smqtk.representation.descriptor_element.DescriptorElement]
+
+        :return: Iterator of tuples containing the descriptor uuid and the
+            vector associated with the given descriptors or None if the
+            descriptor has no associated vector
+        :rtype: collections.Iterable[
+            tuple[collections.Hashable, Union[numpy.ndarray, None]]]
+        """
+        batch_dictionary = defaultdict(list)
+        # For each given descriptor...
+        for descriptor_ in descriptors:
+            # Extract options for constructing SQL query used to
+            # retrieve descriptor vectors
+            batch_dictionary[
+                cls._sql_vector_query_options(descriptor_)
+            ].append(descriptor_.uuid())
+
+        # For each unique set of SQL query options...
+        for query_options, uuids in batch_dictionary.items():
+            psql_helper = cls._create_psql_helper(
+                *query_options[:-1], create_table=False)
+
+            sql_query = cls.SELECT_MANY_TMPL.format(
+                table_name=query_options[5],
+                type_col=query_options[6],
+                uuid_col=query_options[7],
+                binary_col=query_options[8],
+            )
+
+            sql_values = {
+                "type_val": query_options[9],
+                "uuids_tuple": tuple(uuids)
+            }
+
+            def query_callback(cursor):
+                cursor.execute(sql_query, sql_values)
+
+            # Perform a SQL query to retrieve all vectors in this batch
+            sql_return = psql_helper.single_execute(
+                query_callback, yield_result_rows=True
+            )
+
+            # Construct numpy array from buffer and return uuid, vector pairs
+            for uuid, vector_buffer in sql_return:
+                yield (uuid, numpy.frombuffer(vector_buffer, cls.ARRAY_DTYPE))
 
     def set_vector(self, new_vec):
         """

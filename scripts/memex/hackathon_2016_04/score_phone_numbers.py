@@ -12,7 +12,7 @@ from smqtk.algorithms import get_classifier_impls
 from smqtk.representation import ClassificationElementFactory
 from smqtk.representation.classification_element.memory import MemoryClassificationElement
 from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
-from smqtk.utils.bin_utils import initialize_logging
+from smqtk.utils.cli import initialize_logging
 from smqtk.utils.plugin import from_plugin_config
 
 

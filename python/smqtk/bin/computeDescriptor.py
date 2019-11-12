@@ -9,22 +9,26 @@ import os
 
 import numpy
 
+from smqtk.algorithms import DescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.algorithms.descriptor_generator import get_descriptor_generator_impls
-from smqtk.utils import bin_utils, plugin
+from smqtk.utils import cli
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
 
 
 def default_config():
     return {
         "descriptor_factory": DescriptorElementFactory.get_default_config(),
         "content_descriptor":
-            plugin.make_config(get_descriptor_generator_impls()),
+            make_default_config(DescriptorGenerator.get_impls()),
     }
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     parser.add_argument('--overwrite',
                         action='store_true', default=False,
@@ -49,7 +53,7 @@ def cli_parser():
 def main():
     parser = cli_parser()
     args = parser.parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     output_filepath = args.output_filepath
@@ -67,8 +71,8 @@ def main():
 
     factory = DescriptorElementFactory.from_config(config['descriptor_factory'])
     #: :type: smqtk.algorithms.descriptor_generator.DescriptorGenerator
-    cd = plugin.from_plugin_config(config['content_descriptor'],
-                                   get_descriptor_generator_impls())
+    cd = from_config_dict(config['content_descriptor'],
+                          DescriptorGenerator.get_impls())
     descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
     vec = descr_elem.vector()
 

@@ -122,7 +122,7 @@ setuptools.setup(
     data_files=list_directory_files('etc'),
 
     setup_requires=[
-        'setuptools',
+        'pytest-runner',
     ],
     install_requires=[
         'flask',
@@ -131,6 +131,7 @@ setuptools.setup(
         'Flask-Cors',
         'imageio',
         'jinja2',
+        'jsmin',
         'matplotlib',
         'numpy',
         'pillow',
@@ -139,6 +140,13 @@ setuptools.setup(
         'scikit-learn',
         'scipy',
         'six',
+        'stevedore',
+    ],
+    tests_require=[
+        'coverage',
+        'mock',
+        'pytest',
+        'pytest-cov',
     ],
     extras_require={
         # Various optional dependencies for plugins
@@ -164,21 +172,15 @@ setuptools.setup(
             'file-magic',
         ],
         'postgres': [
-            'psycopg2',
+            'psycopg2-binary',
         ],
         'solr': [
             'solrpy',
         ],
         'girder': [
             'girder-client',
-        ]
+        ],
     },
-    tests_require=[
-        'coverage',
-        'mock',
-        'pytest',
-        'pytest-cov',
-    ],
 
     # See entry_points/console_scripts as the preferred method for publishing
     #   executable scripts. Might have redesign how scripts are done if that is
@@ -217,6 +219,6 @@ setuptools.setup(
             'smqtk-make-train-test-sets = smqtk.bin.make_train_test_sets:main',
             'smqtk-nearest-neighbors = smqtk.bin.nearest_neighbors:main',
             'smqtk-check-images = smqtk.bin.check_images:main'
-        ]
+        ],
     }
 )

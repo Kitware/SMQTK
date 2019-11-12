@@ -9,12 +9,11 @@ import uuid
 
 import flask
 
-# import smqtk.algorithms
 from smqtk.algorithms import (
-    get_classifier_impls,
-    get_descriptor_generator_impls,
-    get_nn_index_impls,
-    get_relevancy_index_impls,
+    Classifier,
+    DescriptorGenerator,
+    NearestNeighborsIndex,
+    RelevancyIndex,
     SupervisedClassifier,
 )
 from smqtk.iqr import (
@@ -24,13 +23,14 @@ from smqtk.iqr import (
 from smqtk.representation import (
     ClassificationElementFactory,
     DescriptorElementFactory,
-    get_descriptor_index_impls,
+    DescriptorIndex,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
-from smqtk.utils import (
-    merge_dict,
-    plugin,
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
+from smqtk.utils.dict import merge_dict
 from smqtk.web import SmqtkWebApp
 
 
@@ -112,8 +112,8 @@ class IqrService (SmqtkWebApp):
     def get_default_config(cls):
         c = super(IqrService, cls).get_default_config()
 
-        c_rel_index = plugin.make_config(
-            get_relevancy_index_impls()
+        c_rel_index = make_default_config(
+            RelevancyIndex.get_impls()
         )
         merge_dict(c_rel_index, iqr_session.DFLT_REL_INDEX_CONFIG)
 
@@ -170,16 +170,16 @@ class IqrService (SmqtkWebApp):
                     "relevancy_index_config": c_rel_index,
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
-                    "descriptor_generator": plugin.make_config(
-                        get_descriptor_generator_impls()
+                    "descriptor_generator": make_default_config(
+                        DescriptorGenerator.get_impls()
                     ),
-                    "descriptor_index": plugin.make_config(
-                        get_descriptor_index_impls()
+                    "descriptor_index": make_default_config(
+                        DescriptorIndex.get_impls()
                     ),
                     "neighbor_index":
-                        plugin.make_config(get_nn_index_impls()),
+                        make_default_config(NearestNeighborsIndex.get_impls()),
                     "classifier_config":
-                        plugin.make_config(get_classifier_impls()),
+                        make_default_config(Classifier.get_impls()),
                     "classification_factory":
                         ClassificationElementFactory.get_default_config(),
                 },
@@ -206,21 +206,21 @@ class IqrService (SmqtkWebApp):
         )
 
         #: :type: smqtk.algorithms.DescriptorGenerator
-        self.descriptor_generator = plugin.from_plugin_config(
+        self.descriptor_generator = from_config_dict(
             json_config['iqr_service']['plugins']['descriptor_generator'],
-            get_descriptor_generator_impls(),
+            DescriptorGenerator.get_impls(),
         )
 
         #: :type: smqtk.representation.DescriptorIndex
-        self.descriptor_index = plugin.from_plugin_config(
+        self.descriptor_index = from_config_dict(
             json_config['iqr_service']['plugins']['descriptor_index'],
-            get_descriptor_index_impls(),
+            DescriptorIndex.get_impls(),
         )
 
         #: :type: smqtk.algorithms.NearestNeighborsIndex
-        self.neighbor_index = plugin.from_plugin_config(
+        self.neighbor_index = from_config_dict(
             json_config['iqr_service']['plugins']['neighbor_index'],
-            get_nn_index_impls(),
+            NearestNeighborsIndex.get_impls(),
         )
         self.neighbor_index_lock = multiprocessing.RLock()
 
@@ -1299,9 +1299,9 @@ class IqrService (SmqtkWebApp):
                                 "adjudication state...")
 
                 #: :type: SupervisedClassifier
-                classifier = plugin.from_plugin_config(
+                classifier = from_config_dict(
                     self.classifier_config,
-                    get_classifier_impls(sub_interface=SupervisedClassifier)
+                    SupervisedClassifier.get_impls()
                 )
                 classifier.train(
                     {pos_label: all_pos,

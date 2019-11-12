@@ -6,7 +6,7 @@ import six
 
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
-from smqtk.utils.file_utils import safe_file_write
+from smqtk.utils.file import safe_file_write
 
 
 STR_NONE_TYPES = six.string_types + (type(None),)
@@ -156,7 +156,9 @@ class DataFileElement (DataElement):
         :return: Get the byte stream for this data element.
         :rtype: bytes
         """
-        return (not self.is_empty() and open(self._filepath, 'rb').read()) or six.b("")
+        # Either read from the non-empty file, or return empty bytes.
+        return (not self.is_empty() and open(self._filepath, 'rb').read()) \
+            or six.b("")
 
     def writable(self):
         """
@@ -173,7 +175,7 @@ class DataFileElement (DataElement):
         ``writable`` method.
 
         :param b: bytes to set.
-        :type b: str
+        :type b: bytes
 
         :raises ReadOnlyError: This data element can only be read from / does
             not support writing.
@@ -213,17 +215,6 @@ class DataFileElement (DataElement):
             if abs_temp_dir != osp.dirname(self._filepath):
                 return super(DataFileElement, self).write_temp(temp_dir)
         return self._filepath
-
-    def clean_temp(self):
-        """
-        Clean any temporary files created by this element. This does nothing if
-        no temporary files have been generated for this element.
-
-        For FileElement instance's this does nothing as the ``write_temp()``
-        method doesn't actually write any files.
-        """
-        # does the right thing regardless of what happened in write_temp
-        return super(DataFileElement, self).clean_temp()
 
 
 DATA_ELEMENT_CLASS = DataFileElement

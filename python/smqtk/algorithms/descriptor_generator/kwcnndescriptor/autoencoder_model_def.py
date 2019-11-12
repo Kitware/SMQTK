@@ -19,7 +19,7 @@ if kwcnn is not None:
         def _input_shape(self):
             return (64, 64, 1) if self.greyscale else (64, 64, 3)
 
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnusedLocal
         def architecture(self, batch_size, in_width, in_height,
                          in_channels, out_classes):
             """FCNN architecture."""

@@ -16,16 +16,19 @@ import logging
 import os
 
 from smqtk.algorithms import (
-    get_lsh_functor_impls,
+    LshFunctor,
 )
 from smqtk.compute_functions import compute_hash_codes
 from smqtk.representation import (
-    get_descriptor_index_impls,
-    get_key_value_store_impls,
+    DescriptorIndex,
+    KeyValueStore,
 )
 from smqtk.utils import (
-    bin_utils,
-    plugin,
+    cli,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -65,16 +68,16 @@ def default_config():
         },
         "plugins": {
             "descriptor_index":
-                plugin.make_config(get_descriptor_index_impls()),
-            "lsh_functor": plugin.make_config(get_lsh_functor_impls()),
+                make_default_config(DescriptorIndex.get_impls()),
+            "lsh_functor": make_default_config(LshFunctor.get_impls()),
             "hash2uuid_kvstore":
-                plugin.make_config(get_key_value_store_impls()),
+                make_default_config(KeyValueStore.get_impls()),
         },
     }
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     g_io = parser.add_argument_group("I/O")
     g_io.add_argument("--uuids-list",
@@ -89,7 +92,7 @@ def cli_parser():
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #
@@ -111,21 +114,21 @@ def main():
     #
     log.info("Loading descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
     log.info("Loading LSH functor")
     #: :type: smqtk.algorithms.LshFunctor
-    lsh_functor = plugin.from_plugin_config(
+    lsh_functor = from_config_dict(
         config['plugins']['lsh_functor'],
-        get_lsh_functor_impls()
+        LshFunctor.get_impls()
     )
     log.info("Loading Key/Value store")
     #: :type: smqtk.representation.KeyValueStore
-    hash2uuids_kvstore = plugin.from_plugin_config(
+    hash2uuids_kvstore = from_config_dict(
         config['plugins']['hash2uuid_kvstore'],
-        get_key_value_store_impls()
+        KeyValueStore.get_impls()
     )
 
     # Iterate either over what's in the file given, or everything in the

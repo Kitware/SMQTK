@@ -9,12 +9,12 @@ import sys
 
 from six.moves import map
 
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     basic_cli_parser,
     initialize_logging,
 )
 from smqtk.representation.data_element.file_element import DataFileElement
-from smqtk.utils.image_utils import is_valid_element
+from smqtk.utils.image import is_valid_element
 from smqtk.utils import parallel
 
 
@@ -30,7 +30,7 @@ def get_cli_parser():
 
     g_required = parser.add_argument_group("Required Arguments")
     g_required.add_argument('-f', '--file-list',
-                            type=str, default=None, metavar='PATH',
+                            default=None, metavar='PATH',
                             help='Path to a file that lists data file paths.')
     return parser
 

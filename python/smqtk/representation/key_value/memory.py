@@ -3,9 +3,10 @@ import threading
 import six
 from six.moves import cPickle as pickle
 
-from smqtk.representation.data_element import get_data_element_impls
-from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
-from smqtk.utils.plugin import make_config, from_plugin_config, to_plugin_config
+from smqtk.representation import DataElement, KeyValueStore
+from smqtk.representation.key_value import NO_DEFAULT_VALUE
+from smqtk.utils.configuration \
+    import make_default_config, from_config_dict, to_config_dict
 
 
 class MemoryKeyValueStore (KeyValueStore):
@@ -43,7 +44,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
         """
         default = super(MemoryKeyValueStore, cls).get_default_config()
-        default['cache_element'] = make_config(get_data_element_impls())
+        default['cache_element'] = make_default_config(DataElement.get_impls())
         return default
 
     @classmethod
@@ -74,8 +75,8 @@ class MemoryKeyValueStore (KeyValueStore):
         else:
             # Create from nested config.
             c['cache_element'] = \
-                from_plugin_config(config_dict['cache_element'],
-                                   get_data_element_impls())
+                from_config_dict(config_dict['cache_element'],
+                                 DataElement.get_impls())
         return super(MemoryKeyValueStore, cls).from_config(c)
 
     def __init__(self, cache_element=None):
@@ -99,6 +100,7 @@ class MemoryKeyValueStore (KeyValueStore):
         if self._cache_element:
             c_bytes = self._cache_element.get_bytes()
             if c_bytes:
+                #: :type: dict
                 self._table = pickle.loads(c_bytes)
 
     def __repr__(self):
@@ -125,10 +127,10 @@ class MemoryKeyValueStore (KeyValueStore):
     def get_config(self):
         # Recursively get config from data element if we have one.
         if hasattr(self._cache_element, 'get_config'):
-            elem_config = to_plugin_config(self._cache_element)
+            elem_config = to_config_dict(self._cache_element)
         else:
             # No cache element, output default config with no type.
-            elem_config = make_config(get_data_element_impls())
+            elem_config = make_default_config(DataElement.get_impls())
         return {
             'cache_element': elem_config
         }
@@ -202,8 +204,7 @@ class MemoryKeyValueStore (KeyValueStore):
         """
         super(MemoryKeyValueStore, self).add_many(d)
         with self._table_lock:
-            for k, v in six.iteritems(d):
-                self._table[k] = v
+            self._table.update(d)
             self.cache_table()
         return self
 

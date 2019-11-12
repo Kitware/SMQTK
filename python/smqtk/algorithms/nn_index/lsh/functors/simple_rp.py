@@ -5,7 +5,7 @@ import numpy as np
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils.bin_utils import report_progress
+from smqtk.utils.cli import ProgressReporter
 
 
 class SimpleRPFunctor (LshFunctor):
@@ -90,10 +90,11 @@ class SimpleRPFunctor (LshFunctor):
         if not hasattr(descriptors, "__len__"):
             self._log.info("Creating sequence from iterable")
             descriptors_l = []
-            rs = [0]*7
+            pr = ProgressReporter(self._log.debug, dbg_report_interval).start()
             for d in descriptors:
                 descriptors_l.append(d)
-                report_progress(self._log.debug, rs, dbg_report_interval)
+                dbg_report_interval and pr.increment_report()
+            dbg_report_interval and pr.report()
             descriptors = descriptors_l
         self._log.info("Creating matrix of descriptors for fitting")
         x = elements_to_matrix(

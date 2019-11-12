@@ -1,9 +1,13 @@
 from smqtk.representation import (
     SmqtkRepresentation,
-    get_classification_element_impls
+    ClassificationElement
 )
-from smqtk.utils.plugin import make_config
-from smqtk.utils import merge_dict
+from smqtk.utils.configuration import (
+    cls_conf_from_config_dict,
+    cls_conf_to_config_dict,
+    make_default_config,
+)
+from smqtk.utils.dict import merge_dict
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -52,7 +56,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         :rtype: dict
 
         """
-        return make_config(get_classification_element_impls())
+        return make_default_config(ClassificationElement.get_impls())
 
     @classmethod
     def from_config(cls, config_dict, merge_default=True):
@@ -76,21 +80,15 @@ class ClassificationElementFactory (SmqtkRepresentation):
 
         """
         if merge_default:
-            mc = cls.get_default_config()
-            merge_dict(mc, config_dict)
-            config_dict = mc
+            config_dict = merge_dict(cls.get_default_config(), config_dict)
 
-        return ClassificationElementFactory(
-            get_classification_element_impls()[config_dict['type']],
-            config_dict[config_dict['type']]
+        ce_type, ce_conf = cls_conf_from_config_dict(
+            config_dict,  ClassificationElement.get_impls()
         )
+        return ClassificationElementFactory(ce_type, ce_conf)
 
     def get_config(self):
-        type_name = self.type.__name__
-        return {
-            "type": type_name,
-            type_name: self.type_config,
-        }
+        return cls_conf_to_config_dict(self.type, self.type_config)
 
     # noinspection PyShadowingBuiltins
     def new_classification(self, type, uuid):

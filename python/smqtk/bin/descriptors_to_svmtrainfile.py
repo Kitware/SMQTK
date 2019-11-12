@@ -23,17 +23,17 @@ libSVM source tree. For example:
 
 import csv
 import logging
-import six
 from six.moves import zip
 
 import six
 
-from smqtk.representation import (
-    get_descriptor_index_impls,
-)
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
-    bin_utils,
-    plugin,
+    cli,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -41,13 +41,13 @@ def default_config():
     return {
         'plugins': {
             'descriptor_index':
-                plugin.make_config(get_descriptor_index_impls()),
+                make_default_config(DescriptorIndex.get_impls()),
         }
     }
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     g_io = parser.add_argument_group("IO Options")
     g_io.add_argument('-f', metavar='PATH',
@@ -64,13 +64,13 @@ def cli_parser():
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     labels_filepath = args.f

@@ -7,15 +7,14 @@ import os
 
 import flask
 
-import smqtk.utils
 from smqtk.utils import SmqtkObject
-from smqtk.utils import plugin
-from smqtk.utils import merge_dict
+from smqtk.utils.configuration import Configurable
+from smqtk.utils.dict import merge_dict
+from smqtk.utils.plugin import Pluggable
 
 
 # noinspection PyAbstractClass
-class SmqtkWebApp (SmqtkObject, flask.Flask,
-                   smqtk.utils.Configurable, plugin.Pluggable):
+class SmqtkWebApp (SmqtkObject, flask.Flask, Configurable, Pluggable):
     """
     Base class for SMQTK web applications
     """
@@ -108,37 +107,3 @@ class SmqtkWebApp (SmqtkObject, flask.Flask,
                  port=(port or self.json_config['server']['port']),
                  debug=debug,
                  **options)
-
-
-def get_web_applications(reload_modules=False):
-    """
-    Discover and return SmqtkWebApp implementation classes found in the plugin
-    directory. Keys in the returned map are the names of the discovered classes
-    and the paired values are the actual class type objects.
-
-    We look for modules (directories or files) that start with and alphanumeric
-    character ('_' prefixed files/directories are hidden, but not recommended).
-
-    Within a module, we first look for a helper variable by the name
-    ``APPLICATION_CLASS``, which can either be a single class object or
-    an iterable of class objects, to be exported. If the variable is set to
-    None, we skip that module and do not import anything. If the variable is not
-    present, we look for a class by the same na e and casing as the module's
-    name. If neither are found, the module is skipped.
-
-    :param reload_modules: Explicitly reload discovered modules from source.
-    :type reload_modules: bool
-
-    :return: Map of discovered class objects of type ``SmqtkWebApp`` whose
-        keys are the string names of the classes.
-    :rtype: dict[str, type]
-
-    """
-    import os
-    from smqtk.utils.plugin import get_plugins
-
-    this_dir = os.path.abspath(os.path.dirname(__file__))
-    env_var = "APPLICATION_PATH"
-    helper_var = "APPLICATION_CLASS"
-    return get_plugins(__name__, this_dir, env_var, helper_var, SmqtkWebApp,
-                       reload_modules=reload_modules)

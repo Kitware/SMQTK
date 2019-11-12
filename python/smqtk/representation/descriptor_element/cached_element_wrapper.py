@@ -1,12 +1,9 @@
 import threading
 import time
-import six
-
-import six
 
 from smqtk.representation import DescriptorElement
 from smqtk.representation import DescriptorElementFactory
-from smqtk.representation import get_descriptor_element_impls
+from smqtk.utils.configuration import make_default_config
 
 
 class CachingDescriptorElement (DescriptorElement):
@@ -48,16 +45,12 @@ class CachingDescriptorElement (DescriptorElement):
             # include ourselves in the list of nestable classes else an infinite
             # recursion will occur.
 
-            de_impls = get_descriptor_element_impls()
+            de_impls = DescriptorElement.get_impls()
             # Remove ourselves
-            del de_impls[cls.__name__]
+            de_impls.remove(cls)
 
             # Construct config block DescriptorElementFactory wants
-            c_def = {"type": None}
-            for label, de_cls in six.iteritems(de_impls):
-                # noinspection PyUnresolvedReferences
-                c_def[label] = de_cls.get_default_config()
-            c['wrapped_element_factory'] = c_def
+            c['wrapped_element_factory'] = make_default_config(de_impls)
         else:
             c['wrapped_element_factory'] = \
                 c['wrapped_element_factory'].get_config()

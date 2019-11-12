@@ -1,30 +1,21 @@
 import abc
 import numpy
-import os
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.utils import ContentTypeValidator
 from smqtk.utils.parallel import parallel_map
-from smqtk.utils.plugin import get_plugins
 
 
 DFLT_DESCRIPTOR_FACTORY = DescriptorElementFactory(DescriptorMemoryElement, {})
 
 
-class DescriptorGenerator (SmqtkAlgorithm):
+class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
     """
     Base abstract Feature Descriptor interface
     """
-
-    @abc.abstractmethod
-    def valid_content_types(self):
-        """
-        :return: A set valid MIME type content types that this descriptor can
-            handle.
-        :rtype: set[str]
-        """
 
     def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
                            overwrite=False):
@@ -44,7 +35,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
             ``DescriptorMemoryElement`` instances by default.
         :type descr_factory: smqtk.representation.DescriptorElementFactory
 
-        :param ot staverwrite: Whether or not to force re-computation of a descriptor
+        :param overwrite: Whether or not to force re-computation of a descriptor
             vector for the given data even when there exists a precomputed
             vector in the generated DescriptorElement as generated from the
             provided factory. This will overwrite the persistently stored vector
@@ -157,41 +148,3 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :rtype: numpy.core.multiarray.ndarray
 
         """
-
-
-def get_descriptor_generator_impls(reload_modules=False):
-    """
-    Discover and return discovered ``DescriptorGenerator`` classes. Keys in the
-    returned map are the names of the discovered classes, and the paired values
-    are the actual class type objects.
-
-    We search for implementation classes in:
-        - modules next to this file this function is defined in (ones that begin
-          with an alphanumeric character),
-        - python modules listed in the environment variable
-          ``DESCRIPTOR_GENERATOR_PATH``
-            - This variable should contain a sequence of python module
-              specifications, separated by the platform specific PATH separator
-              character (``;`` for Windows, ``:`` for unix)
-
-    Within a module we first look for a helper variable by the name
-    ``DESCRIPTOR_GENERATOR_CLASS``, which can either be a single class object or
-    an iterable of class objects, to be specifically exported. If the variable
-    is set to None, we skip that module and do not import anything. If the
-    variable is not present, we look at attributes defined in that module for
-    classes that descend from the given base class type. If none of the above
-    are found, or if an exception occurs, the module is skipped.
-
-    :param reload_modules: Explicitly reload discovered modules from source.
-    :type reload_modules: bool
-
-    :return: Map of discovered class object of type ``DescriptorGenerator``
-        whose keys are the string names of the classes.
-    :rtype: dict[str, type]
-
-    """
-    this_dir = os.path.abspath(os.path.dirname(__file__))
-    env_var = "DESCRIPTOR_GENERATOR_PATH"
-    helper_var = "DESCRIPTOR_GENERATOR_CLASS"
-    return get_plugins(__name__, this_dir, env_var, helper_var,
-                       DescriptorGenerator, reload_modules=reload_modules)

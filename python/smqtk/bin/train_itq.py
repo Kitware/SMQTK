@@ -12,15 +12,16 @@ string.
 """
 
 import logging
-import os.path
+import os
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
-from smqtk.representation import (
-    get_descriptor_index_impls,
-)
+from smqtk.representation import DescriptorIndex
 from smqtk.utils import (
-    bin_utils,
-    plugin,
+    cli,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -31,17 +32,17 @@ def default_config():
     return {
         "itq_config": ItqFunctor.get_default_config(),
         "uuids_list_filepath": None,
-        "descriptor_index": plugin.make_config(get_descriptor_index_impls()),
+        "descriptor_index": make_default_config(DescriptorIndex.get_impls()),
     }
 
 
 def cli_parser():
-    return bin_utils.basic_cli_parser(__doc__)
+    return cli.basic_cli_parser(__doc__)
 
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     uuids_list_filepath = config['uuids_list_filepath']
@@ -53,9 +54,9 @@ def main():
     log.info("Initializing DescriptorIndex [type=%s]",
              config['descriptor_index']['type'])
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['descriptor_index'],
-        get_descriptor_index_impls(),
+        DescriptorIndex.get_impls(),
     )
 
     if uuids_list_filepath and os.path.isfile(uuids_list_filepath):

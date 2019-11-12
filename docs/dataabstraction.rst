@@ -21,35 +21,49 @@ Note:
 DataElement
 +++++++++++
 
-.. automodule:: smqtk.representation.data_element
+.. autoclass:: smqtk.representation.DataElement
    :members:
 
 DataSet
 +++++++
 
-.. automodule:: smqtk.representation.data_set
+.. autoclass:: smqtk.representation.DataSet
    :members:
 
 DescriptorElement
 +++++++++++++++++
 
-.. automodule:: smqtk.representation.descriptor_element
+.. autoclass:: smqtk.representation.DescriptorElement
    :members:
 
 DescriptorIndex
 +++++++++++++++
 
-.. automodule:: smqtk.representation.descriptor_index
+.. autoclass:: smqtk.representation.DescriptorIndex
    :members:
 
+DetectionElement
+++++++++++++++++
+
+.. autoclass:: smqtk.representation.DetectionElement
+   :members:
 
 Data Support Structures
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Other data structures are provided in the [``smqtk.representation``](/python/smqtk/representation) module to assist with the use of the above described structures:
 
+ClassificationElementFactory
+++++++++++++++++++++++++++++
+.. autoclass:: smqtk.representation.ClassificationElementFactory
+   :members:
+
 DescriptorElementFactory
 ++++++++++++++++++++++++
+.. autoclass:: smqtk.representation.DescriptorElementFactory
+   :members:
 
-.. automodule:: smqtk.representation.descriptor_element_factory
+DetectionElementFactory
++++++++++++++++++++++++
+.. autoclass:: smqtk.representation.DetectionElementFactory
    :members:

@@ -5,7 +5,8 @@ import shutil
 
 import six
 
-from smqtk.utils import file_utils, video_utils
+from smqtk.utils import video
+from smqtk.utils.file import safe_create_dir
 from smqtk.utils.mimetype import get_mimetypes
 
 
@@ -72,7 +73,7 @@ class PreviewCache (object):
         if elem.content_type() in self.PREVIEW_GEN_METHOD:
             self._log.debug("Generating preview image based on content type: "
                             "%s", elem.content_type)
-            file_utils.safe_create_dir(self._cache_dir)
+            safe_create_dir(self._cache_dir)
             fp = self.PREVIEW_GEN_METHOD[elem.content_type()](self, elem,
                                                               self._cache_dir)
         else:
@@ -80,7 +81,7 @@ class PreviewCache (object):
             if content_class in self.PREVIEW_GEN_METHOD:
                 self._log.debug("Generating preview image based on content "
                                 "class: %s", content_class)
-                file_utils.safe_create_dir(self._cache_dir)
+                safe_create_dir(self._cache_dir)
                 fp = self.PREVIEW_GEN_METHOD[content_class](self, elem,
                                                             self._cache_dir)
             else:
@@ -129,7 +130,7 @@ class PreviewCache (object):
         if not os.path.isfile(output_fp):
             tmp_vid_fp = elem.write_temp()
             interval = 0.5  # ~2fps gif
-            fm = video_utils.ffmpeg_extract_frame_map(
+            fm = video.ffmpeg_extract_frame_map(
                 self._video_work_dir, tmp_vid_fp,
                 second_interval=interval
             )

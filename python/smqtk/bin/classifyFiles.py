@@ -13,18 +13,21 @@ import os
 
 import six
 
-from smqtk.algorithms import get_classifier_impls
-from smqtk.algorithms import get_descriptor_generator_impls
+from smqtk.algorithms import Classifier
+from smqtk.algorithms import DescriptorGenerator
 
 from smqtk.representation import ClassificationElementFactory
 from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 
-from smqtk.utils import plugin
-from smqtk.utils.bin_utils import (
+from smqtk.utils.cli import (
     initialize_logging,
     output_config,
     basic_cli_parser,
+)
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
 )
 
 
@@ -37,7 +40,7 @@ def get_cli_parser():
                               help='When generating a configuration file, '
                                    'overwrite an existing file.')
     g_classifier.add_argument('-l', '--label',
-                              type=str, default=None,
+                              default=None,
                               help='The class to filter by. This is based on '
                                    'the classifier configuration/model used. '
                                    'If this is not provided, we will list the '
@@ -59,11 +62,11 @@ def get_default_config():
         "descriptor_factory":
             DescriptorElementFactory.get_default_config(),
         "descriptor_generator":
-            plugin.make_config(get_descriptor_generator_impls()),
+            make_default_config(DescriptorGenerator.get_impls()),
         "classification_factory":
             ClassificationElementFactory.get_default_config(),
         "classifier":
-            plugin.make_config(get_classifier_impls()),
+            make_default_config(Classifier.get_impls()),
     }
 
 
@@ -109,8 +112,7 @@ def classify_files(config, label, file_globs):
 
     #: :type: smqtk.algorithms.Classifier
     classifier = \
-        plugin.from_plugin_config(config['classifier'],
-                                  get_classifier_impls())
+        from_config_dict(config['classifier'], Classifier.get_impls())
 
     def log_avaialable_labels():
         log.info("Available classifier labels:")
@@ -149,8 +151,8 @@ def classify_files(config, label, file_globs):
         DescriptorElementFactory.from_config(config['descriptor_factory'])
     #: :type: smqtk.algorithms.DescriptorGenerator
     descriptor_generator = \
-        plugin.from_plugin_config(config['descriptor_generator'],
-                                  get_descriptor_generator_impls())
+        from_config_dict(config['descriptor_generator'],
+                         DescriptorGenerator.get_impls())
     descr_map = descriptor_generator\
         .compute_descriptor_async(data_elements, descriptor_factory)
 

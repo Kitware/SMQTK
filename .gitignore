@@ -31,9 +31,11 @@ errors.log
 /build
 /dist
 /python/smqtk.egg-info
+/.eggs
 
 # Py.test cache directory
 /.cache
+/.pytest_cache
 __pycache__
 
 #

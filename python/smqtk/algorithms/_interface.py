@@ -1,11 +1,15 @@
-from smqtk.utils import Configurable, plugin, SmqtkObject
+from smqtk.utils import SmqtkObject
+from smqtk.utils.configuration import Configurable
+from smqtk.utils.plugin import Pluggable
 
 
 # noinspection PyAbstractClass
-class SmqtkAlgorithm (SmqtkObject, Configurable, plugin.Pluggable):
+class SmqtkAlgorithm (SmqtkObject, Configurable, Pluggable):
     """
     Parent class for all algorithm interfaces.
     """
+
+    __slots__ = ()
 
     @property
     def name(self):

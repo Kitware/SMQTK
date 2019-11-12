@@ -1,12 +1,15 @@
-from smqtk.utils import merge_dict
-from smqtk.utils import plugin
 from smqtk.representation import (
     DataElement,
     DataSet,
     KeyValueStore,
-    get_key_value_store_impls
 )
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
+from smqtk.utils.dict import merge_dict
 
 
 DFLT_KVSTORE = MemoryKeyValueStore()
@@ -44,8 +47,8 @@ class KVSDataSet (DataSet):
         """
         c = super(KVSDataSet, cls).get_default_config()
         c['kvstore'] = merge_dict(
-            plugin.make_config(get_key_value_store_impls()),
-            plugin.to_plugin_config(c['kvstore'])
+            make_default_config(KeyValueStore.get_impls()),
+            to_config_dict(c['kvstore'])
         )
         return c
 
@@ -70,8 +73,8 @@ class KVSDataSet (DataSet):
             config_dict = merge_dict(cls.get_default_config(), config_dict)
 
         # Convert KVStore config to instance for constructor.
-        kvs_inst = plugin.from_plugin_config(config_dict['kvstore'],
-                                             get_key_value_store_impls())
+        kvs_inst = from_config_dict(config_dict['kvstore'],
+                                    KeyValueStore.get_impls())
         config_dict['kvstore'] = kvs_inst
 
         return super(KVSDataSet, cls).from_config(config_dict, False)
@@ -93,7 +96,7 @@ class KVSDataSet (DataSet):
 
     def get_config(self):
         return {
-            'kvstore': plugin.to_plugin_config(self._kvstore)
+            'kvstore': to_config_dict(self._kvstore)
         }
 
     def __iter__(self):

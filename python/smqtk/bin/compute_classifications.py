@@ -19,19 +19,22 @@ import logging
 import os
 
 from smqtk.algorithms import (
-    get_classifier_impls
+    Classifier
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    get_classification_element_impls,
-    get_descriptor_index_impls,
+    ClassificationElement,
+    DescriptorIndex,
 )
 from smqtk.utils import (
-    bin_utils,
-    file_utils,
+    cli,
     parallel,
-    plugin,
 )
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+)
+from smqtk.utils.file import safe_create_dir
 
 
 __author__ = "paul.tunison@kitware.com"
@@ -48,19 +51,19 @@ def default_config():
             }
         },
         "plugins": {
-            "classifier": plugin.make_config(get_classifier_impls()),
-            "classification_factory": plugin.make_config(
-                get_classification_element_impls()
+            "classifier": make_default_config(Classifier.get_impls()),
+            "classification_factory": make_default_config(
+                ClassificationElement.get_impls()
             ),
-            "descriptor_index": plugin.make_config(
-                get_descriptor_index_impls()
+            "descriptor_index": make_default_config(
+                DescriptorIndex.get_impls()
             ),
         }
     }
 
 
 def cli_parser():
-    parser = bin_utils.basic_cli_parser(__doc__)
+    parser = cli.basic_cli_parser(__doc__)
 
     g_io = parser.add_argument_group("Input Output Files")
     g_io.add_argument('--uuids-list', metavar='PATH',
@@ -74,7 +77,7 @@ def cli_parser():
 
 def main():
     args = cli_parser().parse_args()
-    config = bin_utils.utility_main_helper(default_config, args)
+    config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
     # - parallel_map UUIDs to load from the configured index
@@ -107,9 +110,9 @@ def main():
 
     log.info("Initializing descriptor index")
     #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = plugin.from_plugin_config(
+    descriptor_index = from_config_dict(
         config['plugins']['descriptor_index'],
-        get_descriptor_index_impls()
+        DescriptorIndex.get_impls()
     )
 
     log.info("Initializing classification factory")
@@ -119,8 +122,8 @@ def main():
 
     log.info("Initializing classifier")
     #: :type: smqtk.algorithms.Classifier
-    classifier = plugin.from_plugin_config(
-        config['plugins']['classifier'], get_classifier_impls()
+    classifier = from_config_dict(
+        config['plugins']['classifier'], Classifier.get_impls()
     )
 
     #
@@ -178,24 +181,22 @@ def main():
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)
-    file_utils.safe_create_dir(os.path.dirname(output_csv_header_filepath))
+    safe_create_dir(os.path.dirname(output_csv_header_filepath))
     with open(output_csv_header_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
         w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
     # CSV file
     log.info("Writing CSV data file: %s", output_csv_filepath)
-    file_utils.safe_create_dir(os.path.dirname(output_csv_filepath))
-    r_state = [0] * 7
+    safe_create_dir(os.path.dirname(output_csv_filepath))
+    pr = cli.ProgressReporter(log.info, 1.0)
+    pr.start()
     with open(output_csv_filepath, 'wb') as f_csv:
         w = csv.writer(f_csv)
         for c in classification_iter:
             w.writerow(make_row(c))
-            bin_utils.report_progress(log.info, r_state, 1.0)
-
-    # Final report
-    r_state[1] -= 1
-    bin_utils.report_progress(log.info, r_state, 0)
+            pr.increment_report()
+        pr.report()
 
     log.info("Done")
 

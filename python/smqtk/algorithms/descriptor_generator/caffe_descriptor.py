@@ -9,14 +9,14 @@ import numpy
 import PIL.Image
 import PIL.ImageFile
 import six
-# noinspection PyUnresolvedReferences
 from six.moves import range, zip
 
 from smqtk.algorithms.descriptor_generator import \
     DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
-from smqtk.representation.data_element import from_uri
-from smqtk.utils.bin_utils import report_progress
+from smqtk.representation import DataElement
+from smqtk.utils.cli import ProgressReporter
+from smqtk.utils.configuration import from_config_dict, to_config_dict
 
 try:
     import caffe
@@ -46,8 +46,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
-    def __init__(self, network_prototxt_uri, network_model_uri, image_mean_uri,
-                 return_layer='fc7',
+    def __init__(self, network_prototxt, network_model,
+                 image_mean=None, return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
                  load_truncated_images=False, pixel_rescale=None,
@@ -55,17 +55,15 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         Create a Caffe CNN descriptor generator
 
-        :param network_prototxt_uri: URI to the text file defining the
-            network layout.
-        :type network_prototxt_uri: str
+        :param smqtk.representation.DataElement network_prototxt: Data element
+            containing the text file defining the network layout.
 
-        :param network_model_uri: URI to the trained ``.caffemodel``
-            file to use.
-        :type network_model_uri: str
+        :param smqtk.representation.DataElement network_model: Data element
+            containing the trained ``.caffemodel`` file to use.
 
-        :param image_mean_uri: URI to the image mean ``.binaryproto`` or
-            ``.npy`` file.
-        :type image_mean_uri: str | file | StringIO.StringIO
+        :param smqtk.representation.DataElement image_mean: Optional data
+            element containing the image mean ``.binaryproto`` or ``.npy``
+            file.
 
         :param return_layer: The label of the layer we take data from to compose
             output descriptor vector.
@@ -111,9 +109,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
-        self.network_prototxt_uri = str(network_prototxt_uri)
-        self.network_model_uri = str(network_model_uri)
-        self.image_mean_uri = image_mean_uri
+        self.network_prototxt = network_prototxt
+        self.network_model = network_model
+        self.image_mean = image_mean
 
         self.return_layer = str(return_layer)
         self.batch_size = int(batch_size)
@@ -149,6 +147,16 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # This works because configuration parameters exactly match up with
         # instance attributes.
         self.__dict__.update(state)
+        self.network_prototxt = from_config_dict(
+            self.network_prototxt, DataElement.get_impls()
+        )
+        self.network_model = from_config_dict(
+            self.network_model, DataElement.get_impls()
+        )
+        if self.image_mean is not None:
+            self.image_mean = from_config_dict(
+                self.image_mean, DataElement.get_impls()
+            )
         self._setup_network()
 
     def _set_caffe_mode(self):
@@ -172,14 +180,12 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         # Questions:
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
-        network_prototxt_element = from_uri(self.network_prototxt_uri)
-        network_model_element = from_uri(self.network_model_uri)
         self._log.debug("Loading Caffe network from network/model configs")
-        self.network = caffe.Net(network_prototxt_element.write_temp(),
+        self.network = caffe.Net(self.network_prototxt.write_temp(),
                                  caffe.TEST,
-                                 weights=network_model_element.write_temp())
-        network_prototxt_element.clean_temp()
-        network_model_element.clean_temp()
+                                 weights=self.network_model.write_temp())
+        self.network_prototxt.clean_temp()
+        self.network_model.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape
         self.net_data_shape = self.network.blobs[self.data_layer].data.shape
         self._log.debug("Network data shape: %s", self.net_data_shape)
@@ -192,33 +198,34 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._log.debug("Initializing data transformer -> %s",
                         self.transformer.inputs)
 
-        self._log.debug("Loading image mean")
-        image_mean_elem = from_uri(self.image_mean_uri)
-        image_mean_bytes = image_mean_elem.get_bytes()
-        try:
-            a = numpy.load(io.BytesIO(image_mean_bytes))
-            self._log.info("Loaded image mean from numpy bytes")
-        except IOError:
-            self._log.debug("Image mean file not a numpy array, assuming "
-                            "URI to protobuf binary.")
-            # noinspection PyUnresolvedReferences
-            blob = caffe.proto.caffe_pb2.BlobProto()
-            blob.ParseFromString(image_mean_bytes)
-            a = numpy.array(caffe.io.blobproto_to_array(blob))
-            assert a.shape[0] == 1, \
-                "Input image mean blob protobuf consisted of more than one " \
-                "image. Not sure how to handle this yet."
-            a = a.reshape(a.shape[1:])
-            self._log.info("Loaded image mean from protobuf bytes")
-        assert a.shape[0] in [1, 3], \
-            "Currently asserting that we either get 1 or 3 channel images. " \
-            "Got a %d channel image." % a[0]
-        # TODO: Instead of always using pixel mean, try to use image-mean if
-        #       given. Might have to rescale if image/data layer shape is
-        #       different.
-        a_mean = a.mean(1).mean(1)
-        self._log.debug("Initializing data transformer -- mean")
-        self.transformer.set_mean(self.data_layer, a_mean)
+        if self.image_mean is not None:
+            self._log.debug("Loading image mean (reducing to single pixel "
+                            "mean)")
+            image_mean_bytes = self.image_mean.get_bytes()
+            try:
+                a = numpy.load(io.BytesIO(image_mean_bytes))
+                self._log.info("Loaded image mean from numpy bytes")
+            except IOError:
+                self._log.debug("Image mean file not a numpy array, assuming "
+                                "URI to protobuf binary.")
+                # noinspection PyUnresolvedReferences
+                blob = caffe.proto.caffe_pb2.BlobProto()
+                blob.ParseFromString(image_mean_bytes)
+                a = numpy.array(caffe.io.blobproto_to_array(blob))
+                assert a.shape[0] == 1, \
+                    "Input image mean blob protobuf consisted of more than " \
+                    "one image. Not sure how to handle this yet."
+                a = a.reshape(a.shape[1:])
+                self._log.info("Loaded image mean from protobuf bytes")
+            assert a.shape[0] in [1, 3], \
+                "Currently asserting that we either get 1 or 3 channel " \
+                "images. Got a %d channel image." % a[0]
+            # TODO: Instead of always using pixel mean, try to use image-mean
+            #       if given. Might have to rescale if image/data layer shape
+            #       is different.
+            a_mean = a.mean(1).mean(1)
+            self._log.debug("Initializing data transformer -- mean")
+            self.transformer.set_mean(self.data_layer, a_mean)
 
         self._log.debug("Initializing data transformer -- transpose")
         self.transformer.set_transpose(self.data_layer, (2, 0, 1))
@@ -243,10 +250,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :rtype: dict
 
         """
+        if self.image_mean is not None:
+            image_mean_config = to_config_dict(self.image_mean)
+        else:
+            image_mean_config = None
         return {
-            "network_prototxt_uri": self.network_prototxt_uri,
-            "network_model_uri": self.network_model_uri,
-            "image_mean_uri": self.image_mean_uri,
+            "network_prototxt": to_config_dict(self.network_prototxt),
+            "network_model": to_config_dict(self.network_model),
+            "image_mean": image_mean_config,
             "return_layer": self.return_layer,
             "batch_size": self.batch_size,
             "use_gpu": self.use_gpu,
@@ -352,13 +363,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self._set_caffe_mode()
 
         # Create DescriptorElement instances for each data elem.
-        #: :type: dict[collections.Hashable, smqtk.representation.DataElement]
         data_elements = {}
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
         descr_elements = {}
         self._log.debug("Checking content types; aggregating data/descriptor "
                         "elements.")
-        prog_rep_state = [0] * 7
+        pr = ProgressReporter(self._log.debug, 1.0).start()
         for data in data_iter:
             ct = data.content_type()
             if ct not in self.valid_content_types():
@@ -369,7 +378,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             data_elements[data.uuid()] = data
             descr_elements[data.uuid()] = \
                 descr_factory.new_descriptor(self.name, data.uuid())
-            report_progress(self._log.debug, prog_rep_state, 1.0)
+            pr.increment_report()
+        pr.report()
         self._log.debug("Given %d unique data elements", len(data_elements))
 
         # Reduce procs down to the number of elements to process if its smaller
@@ -383,7 +393,6 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
 
         def check_get_uuid(descriptor_elem):
             if overwrite or not descriptor_elem.has_vector():
-                # noinspection PyUnresolvedReferences
                 uuid4proc.append(descriptor_elem.uuid())
 
         # Using thread-pool due to in-line function + updating local deque
@@ -507,19 +516,25 @@ def _process_load_img_array(input_tuple):
     """
     Helper function for multiprocessing image data loading
 
-    :param data_element: DataElement providing the bytes
-    :type data_element: smqtk.representation.DataElement
+    Expected input argument tuple contents (in tuple order):
+        * data_element: DataElement providing bytes
+        * transformer: Caffe Transformer instance for pre-processing.
+        * data_layer: String label of the network's data layer
+        * load_truncated_images: Boolean of whether loading truncated images is
+          allowed (See PIL.ImageFile.LOAD_TRUNCATED_IMAGES attribute).
+        * pixel_rescale: Pair of floating point values to recale image values
+          into, i.e. [0, 255] (the default).
 
-    :param transformer: Caffe Transformer instance for pre-processing
-    :type transformer: caffe.io.Transformer
-
-    :param load_truncated_images: If PIL should be allowed to load truncated
-        image data. If false, and exception will be raised when encountering
-        such imagery.
+    :param input_tuple:
+        Tuple of input arguments as we expect to be called by a multiprocessing
+        map function. See above for content details.
 
     :return: Pre-processed numpy array.
 
     """
+    # data_element: DataElement providing bytes
+    # transformer: Caffe Transformer instance for pre-processing.
+    # data_layer: String label of the data layer
     (data_element, transformer, data_layer, load_truncated_images,
      pixel_rescale) = input_tuple
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images

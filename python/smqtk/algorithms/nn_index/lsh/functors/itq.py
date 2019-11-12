@@ -13,10 +13,15 @@ import numpy
 from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
-from smqtk.representation import get_data_element_impls
+from smqtk.representation import DataElement
 from smqtk.representation.descriptor_element import elements_to_matrix
-from smqtk.utils import merge_dict, plugin
-from smqtk.utils.bin_utils import ProgressReporter
+from smqtk.utils.cli import ProgressReporter
+from smqtk.utils.configuration import (
+    from_config_dict,
+    make_default_config,
+    to_config_dict
+)
+from smqtk.utils.dict import merge_dict
 
 
 class ItqFunctor (LshFunctor):
@@ -49,7 +54,7 @@ class ItqFunctor (LshFunctor):
 
         # Cache element parameters need to be split out into sub-configurations
         data_element_default_config = \
-            plugin.make_config(get_data_element_impls())
+            make_default_config(DataElement.get_impls())
         default['mean_vec_cache'] = data_element_default_config
         # Need to deepcopy source to prevent modifications on one sub-config
         # from reflecting in the other.
@@ -78,20 +83,20 @@ class ItqFunctor (LshFunctor):
         if merge_default:
             config_dict = merge_dict(cls.get_default_config(), config_dict)
 
-        data_element_impls = get_data_element_impls()
+        data_element_impls = DataElement.get_impls()
         # Mean vector cache element.
         mean_vec_cache = None
         if config_dict['mean_vec_cache'] and \
                 config_dict['mean_vec_cache']['type']:
-            mean_vec_cache = plugin.from_plugin_config(
-                config_dict['mean_vec_cache'], data_element_impls)
+            mean_vec_cache = from_config_dict(config_dict['mean_vec_cache'],
+                                              data_element_impls)
         config_dict['mean_vec_cache'] = mean_vec_cache
         # Rotation matrix cache element.
         rotation_cache = None
         if config_dict['rotation_cache'] and \
                 config_dict['rotation_cache']['type']:
-            rotation_cache = plugin.from_plugin_config(
-                config_dict['rotation_cache'], data_element_impls)
+            rotation_cache = from_config_dict(config_dict['rotation_cache'],
+                                              data_element_impls)
         config_dict['rotation_cache'] = rotation_cache
 
         return super(ItqFunctor, cls).from_config(config_dict, False)
@@ -198,10 +203,10 @@ class ItqFunctor (LshFunctor):
         })
         if self.mean_vec_cache_elem:
             c['mean_vec_cache'] = \
-                plugin.to_plugin_config(self.mean_vec_cache_elem)
+                to_config_dict(self.mean_vec_cache_elem)
         if self.rotation_cache_elem:
             c['rotation_cache'] = \
-                plugin.to_plugin_config(self.rotation_cache_elem)
+                to_config_dict(self.rotation_cache_elem)
         return c
 
     def has_model(self):
@@ -333,7 +338,8 @@ class ItqFunctor (LshFunctor):
                              "result being bound by number of features.")
 
         self._log.info("Creating matrix of descriptors for fitting")
-        x = elements_to_matrix(descriptors, report_interval=dbg_report_interval,
+        x = elements_to_matrix(descriptors,
+                               report_interval=dbg_report_interval,
                                use_multiprocessing=use_multiprocessing)
         self._log.debug("descriptor matrix shape: %s", x.shape)
 
@@ -352,20 +358,20 @@ class ItqFunctor (LshFunctor):
         # thus we need the transpose here.
         c = numpy.cov(x.transpose())
 
-        if True:
-            # Direct translation from UNC matlab code
-            # - eigen vectors are the columns of ``pc``
-            self._log.debug('-- computing linalg.eig')
-            l, pc = numpy.linalg.eig(c)
-            self._log.debug('-- ordering eigen vectors by descending eigen '
-                            'value')
-        else:
-            # Harry translation -- Uses singular values / vectors, not eigen
-            # - singular vectors are the columns of pc
-            self._log.debug('-- computing linalg.svd')
-            pc, l, _ = numpy.linalg.svd(c)
-            self._log.debug('-- ordering singular vectors by descending '
-                            'singular value')
+        # Direct translation from UNC matlab code
+        # - eigen vectors are the columns of ``pc``
+        self._log.debug('-- computing linalg.eig')
+        l, pc = numpy.linalg.eig(c)
+        self._log.debug('-- ordering eigen vectors by descending eigen '
+                        'value')
+
+        # # Harry translation of original matlab code
+        # # - Uses singular values / vectors, not eigen
+        # # - singular vectors are the columns of pc
+        # self._log.debug('-- computing linalg.svd')
+        # pc, l, _ = numpy.linalg.svd(c)
+        # self._log.debug('-- ordering singular vectors by descending '
+        #                 'singular value')
 
         # Same ordering method for both eig/svd sources.
         l_pc_ordered = sorted(zip(l, pc.transpose()), key=lambda _p: _p[0],
@@ -400,6 +406,11 @@ class ItqFunctor (LshFunctor):
         :rtype: numpy.ndarray[bool]
 
         """
+        if self.mean_vec is None:
+            raise Exception("Can't compute hash code: mean vector is none.")
+        elif self.rotation is None:
+            raise Exception("Can't compute hash code: rotation matrix is none.")
+
         z = numpy.dot(self._norm_vector(descriptor) - self.mean_vec,
                       self.rotation)
         b = numpy.zeros(z.shape, dtype=bool)

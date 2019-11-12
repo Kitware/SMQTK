@@ -53,7 +53,8 @@ and functionalities.
    This is to ensure that everything passes CI testing before making the
    release. If there is an issue then branches should be made and merged into
    this branch until the issue is resolved.
-3. Tag branch (see `Tag new version`_ below).
+3. Tag branch (see `Tag new version`_ below) after resolving issues and before
+   merging into ``master``.
 4. Reset the release branch (--hard) to point to the new branch/tag.
 5. Merge version bump branch into the ``master`` branch.
 
@@ -103,7 +104,7 @@ Create new version release to PYPI
 Make sure the source is checked out on the newest version tag, the repo is
 clean (no uncommited files/edits), and the ``build`` and ``dist`` directories
 are removed::
-    $ git check <VERSION_TAG>
+    $ git checkout <VERSION_TAG>
     $ rm -r dist python/smqtk.egg-info
 
 Create the ``build`` and ``dist`` files for the current version with the

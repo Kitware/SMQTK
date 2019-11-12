@@ -1,5 +1,6 @@
 import abc
 
+from smqtk.exceptions import NoDetectionError
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
@@ -68,12 +69,31 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         super(DetectionElement, self).__init__()
         self._uuid = uuid
 
-    def __hash__(self):
+    __hash__ = None
+
+    def __eq__(self, other):
         """
-        :return: hash of DetectionElement UUID.
-        :rtype: int
+        Equality of two detections is defined by their equal spatial overlap
+        AND their equivalent classification.
+
+        When one element does not contain detection information but the other
+        does, the two elements are of course considered NOT equal.
+        If *neither* elements contain detection information, they are defined
+        as NOT equal (undefined).
+
+        :param DetectionElement other: Other detection element.
+        :return: True if the two detections are equal in spacial overlap and
+            classification.
         """
-        return hash(self._uuid)
+        try:
+            s_bb, s_ce = self.get_detection()
+            o_bb, o_ce = other.get_detection()
+            return s_bb == o_bb and s_ce == o_ce
+        except NoDetectionError:
+            return False
+
+    def __ne__(self, other):
+        return not (self == other)
 
     def __repr__(self):
         # using "{{...}}" to skip .format activation.

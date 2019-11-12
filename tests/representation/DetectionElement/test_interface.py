@@ -1,5 +1,7 @@
 import mock
+import pytest
 
+from smqtk.exceptions import NoDetectionError
 from smqtk.representation import DetectionElement
 
 
@@ -143,8 +145,79 @@ def test_hash():
     """
     Test that a DetectionElement is hashable based on solely on UUID.
     """
-    assert hash(DummyDetectionElement(0)) == hash(0)
-    assert hash(DummyDetectionElement('some-str')) == hash('some-str')
+    with pytest.raises(TypeError, match="unhashable type"):
+        hash(DummyDetectionElement(0))
+
+
+def test_eq_both_no_detections():
+    """
+    Test that two elements with no detection info set are considered not equal.
+    """
+    d1 = DummyDetectionElement(0)
+    d2 = DummyDetectionElement(1)
+    d1.get_detection = d2.get_detection = \
+        mock.MagicMock(side_effect=NoDetectionError)
+    assert (d1 == d2) is False
+    assert (d2 == d1) is False
+    assert (d1 != d2) is True
+    assert (d2 != d1) is True
+
+
+def test_eq_one_no_detection():
+    """
+    Test that when one element has no detection info then they are considered
+    NOT equal.
+    """
+    d_without = DummyDetectionElement(0)
+    d_without.get_detection = mock.MagicMock(side_effect=NoDetectionError)
+    d_with = DummyDetectionElement(1)
+    d_with.get_detection = mock.MagicMock(return_value=(1, 2))
+
+    assert (d_with == d_without) is False
+    assert (d_without == d_with) is False
+    assert (d_with != d_without) is True
+    assert (d_without != d_with) is True
+
+
+def test_eq_unequal_detections():
+    """
+    Test that two detections, with valid, but different contents, test out not
+    equal.
+    """
+    d1 = DummyDetectionElement(0)
+    d2 = DummyDetectionElement(1)
+    d1.get_detection = mock.Mock(return_value=('a', 1))
+    d2.get_detection = mock.Mock(return_value=('b', 2))
+    assert (d1 == d2) is False
+
+
+def test_eq_unequal_just_one():
+    """
+    Test inequality where just one of the two sub-components of detections (bb,
+    classification) are different.
+    """
+    d1 = DummyDetectionElement(0)
+    d2 = DummyDetectionElement(1)
+
+    d1.get_detection = mock.Mock(return_value=('a', 1))
+    d2.get_detection = mock.Mock(return_value=('a', 2))
+    assert (d1 == d2) is False
+
+    d1.get_detection = mock.Mock(return_value=('a', 1))
+    d2.get_detection = mock.Mock(return_value=('b', 1))
+    assert (d1 == d2) is False
+
+
+def test_eq_success():
+    """
+    Test when two different detection instances returns the same value pair
+    from ``get_detection()``.
+    """
+    d1 = DummyDetectionElement(0)
+    d2 = DummyDetectionElement(1)
+    d1.get_detection = d2.get_detection = \
+        mock.MagicMock(return_value=('a', 0))
+    assert d1 == d2
 
 
 def test_nonzero_has_detection():

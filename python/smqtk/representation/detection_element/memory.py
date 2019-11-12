@@ -6,7 +6,7 @@ from smqtk.representation import (
 )
 
 
-class MemoryDetectionElement (DetectionElement):
+class MemoryDetectionElement (DetectionElement):  # lgtm[py/missing-equals]
     """
     In-memory backend of the DetectionElement representation interface.  This
     implementation has no persistence.

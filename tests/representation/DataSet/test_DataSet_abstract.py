@@ -87,13 +87,13 @@ class TestDataSetAbstract (unittest.TestCase):
         ds.has_uuid = mock.MagicMock(side_effect=expected_has_uuid_effect)
 
         # noinspection PyTypeChecker
-        # - Using a mock object on purpose in conjuction with ``has_uuid``
+        # - Using a mock object on purpose in conjunction with ``has_uuid``
         #   override.
-        self.assertTrue(mock_data_element in ds)
+        self.assertIn(mock_data_element, ds)
         ds.has_uuid.assert_called_once_with(expected_uuid)
 
         mock_data_element.uuid.return_value = 'not expected uuid'
         # noinspection PyTypeChecker
-        # - Using a mock object on purpose in conjuction with ``has_uuid``
+        # - Using a mock object on purpose in conjunction with ``has_uuid``
         #   override.
-        self.assertFalse(mock_data_element in ds)
+        self.assertNotIn(mock_data_element, ds)

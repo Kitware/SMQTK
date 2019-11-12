@@ -13,7 +13,6 @@ import json
 import logging
 import os.path as osp
 
-import jsmin
 import six
 
 from smqtk import algorithms

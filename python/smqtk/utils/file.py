@@ -5,11 +5,7 @@ import numpy
 import re
 import sys
 import tempfile
-import threading
-import time
 import warnings
-
-from smqtk.utils import SmqtkObject
 
 
 def safe_create_dir(d):

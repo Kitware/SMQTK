@@ -2,7 +2,6 @@ from __future__ import division, print_function
 
 import os
 import pkg_resources
-import types
 
 import pytest
 # noinspection PyUnresolvedReferences
@@ -12,7 +11,6 @@ from six.moves import mock  # move defined in ``smqtk.tests``
 from smqtk.utils.plugin import (
     EXTENSION_NAMESPACE,
     OS_ENV_PATH_SEP,
-    ExtensionManager,
     _get_extension_plugin_modules,
     get_plugins,
 )

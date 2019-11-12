@@ -1,9 +1,6 @@
-import hashlib
-
 import numpy as np
 import pytest
 from six import BytesIO
-from six.moves import mock
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.matrix import MatrixDataElement

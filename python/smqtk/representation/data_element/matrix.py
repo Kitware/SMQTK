@@ -1,5 +1,3 @@
-import hashlib
-
 import numpy
 from six import BytesIO
 
@@ -7,7 +5,7 @@ from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import DataElement
 
 
-class MatrixDataElement (DataElement):
+class MatrixDataElement (DataElement):  # lgtm[py/missing-equals]
     """
     DataElement whose data is represented in memory by a ``numpy.ndarray``
     instance.
@@ -62,7 +60,7 @@ class MatrixDataElement (DataElement):
         self._readonly = bool(readonly)
 
     def __repr__(self):
-        return super(DataElement, self).__repr__() + \
+        return super(MatrixDataElement, self).__repr__() + \
             "{{shape: {}}}" \
             .format(self._matrix.shape,)
 
@@ -86,9 +84,8 @@ class MatrixDataElement (DataElement):
         :raises ReadOnlyError: This data element can only be read from / does
             not support writing.
         """
-        # Invoking super ``set_bytes`` for common ReadOnlyError functionality
-        # based on ``writable`` method.
-        super(MatrixDataElement, self).set_bytes(b'')
+        if not self.writable():
+            raise ReadOnlyError("This %s element is read only." % self)
         self._matrix = numpy.asarray(m)
 
     def get_config(self):
@@ -176,5 +173,3 @@ class MatrixDataElement (DataElement):
             self._matrix = numpy.load(buf)
         else:
             self._matrix = None
-
-

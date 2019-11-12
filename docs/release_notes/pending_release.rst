@@ -196,6 +196,10 @@ Algorithms
       KeyValueStore implementations (specificially an issue with the PostgreSQL
       implementation).
 
+Misc.
+
+* Removed some unused imports.
+
 Representation
 
 * Fixed bug with ``ClassificationElement.max_label`` where an exception would

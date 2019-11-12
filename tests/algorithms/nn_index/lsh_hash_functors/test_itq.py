@@ -4,7 +4,6 @@ import unittest
 
 import numpy
 import six
-from six import BytesIO
 
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation.data_element.memory_element import \
@@ -28,13 +27,13 @@ class TestItqFunctor (unittest.TestCase):
         expected_mean_vec = numpy.array([1, 2, 3])
         expected_rotation = numpy.eye(3)
 
-        expected_mean_vec_bytes = BytesIO()
+        expected_mean_vec_bytes = six.BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
         expected_mean_vec_str = \
             expected_mean_vec_bytes.getvalue().decode(BYTES_CONFIG_ENCODING)
 
-        expected_rotation_bytes = BytesIO()
+        expected_rotation_bytes = six.BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
         expected_rotation_str = \
@@ -190,12 +189,12 @@ class TestItqFunctor (unittest.TestCase):
         expected_mean_vec = numpy.array([1, 2, 3])
         expected_rotation = numpy.eye(3)
 
-        expected_mean_vec_bytes = BytesIO()
+        expected_mean_vec_bytes = six.BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_mean_vec_bytes, expected_mean_vec)
         expected_mean_vec_bytes = expected_mean_vec_bytes.getvalue()
 
-        expected_rotation_bytes = BytesIO()
+        expected_rotation_bytes = six.BytesIO()
         # noinspection PyTypeChecker
         numpy.save(expected_rotation_bytes, expected_rotation)
         expected_rotation_bytes = expected_rotation_bytes.getvalue()
@@ -286,13 +285,13 @@ class TestItqFunctor (unittest.TestCase):
                                                                [1 / sqrt(2)]])
         self.assertIsNotNone(itq.mean_vec_cache_elem)
         numpy.testing.assert_array_almost_equal(
-            numpy.load(BytesIO(itq.mean_vec_cache_elem.get_bytes())),
+            numpy.load(six.BytesIO(itq.mean_vec_cache_elem.get_bytes())),
             [0, 0]
         )
 
         self.assertIsNotNone(itq.rotation_cache_elem)
         numpy.testing.assert_array_almost_equal(
-            numpy.load(BytesIO(itq.rotation_cache_elem.get_bytes())),
+            numpy.load(six.BytesIO(itq.rotation_cache_elem.get_bytes())),
             [[1 / sqrt(2)],
              [1 / sqrt(2)]]
         )

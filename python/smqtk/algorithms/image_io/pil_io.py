@@ -8,7 +8,7 @@ from smqtk.utils.image import crop_in_bounds
 try:
     import PIL.Image
     IMPORT_SUCCESS = True
-except ImageReader:
+except ImportError:
     IMPORT_SUCCESS = False
 
 

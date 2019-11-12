@@ -2,7 +2,6 @@ import collections
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 import tempfile
-import types
 import warnings
 
 import numpy as np
@@ -171,9 +170,11 @@ def load_dataset_vsimem(data_element):
     :rtype: gdal.Dataset
 
     """
+    # Unguarded next() call is OK in this case because the generator returned
+    # by ``_get_candidate_names()`` does not terminate.
     # noinspection PyProtectedMember
     tmp_vsimem_path = '/vsimem/{}'.format(
-        six.next(tempfile._get_candidate_names())
+        six.next(tempfile._get_candidate_names())  # lgtm[py/unguarded-next-in-generator]
     )
     gdal.FileFromMemBuffer(tmp_vsimem_path, data_element.get_bytes())
     try:

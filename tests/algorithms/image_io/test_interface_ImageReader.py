@@ -178,7 +178,7 @@ def test_load_as_matrix_success():
     m_reader._get_matrix_property = \
         mock.MagicMock(wraps=ImageReader._get_matrix_property)
     m_reader._load_as_matrix = mock.MagicMock()
-    ret = ImageReader.load_as_matrix(m_reader, m_elem, pixel_crop=crop_bb)
+    ImageReader.load_as_matrix(m_reader, m_elem, pixel_crop=crop_bb)
 
     m_reader._load_as_matrix.assert_called_once_with(m_elem,
                                                      pixel_crop=crop_bb)

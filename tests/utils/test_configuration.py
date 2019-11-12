@@ -290,12 +290,12 @@ def test_cls_conf_from_config_dict():
         'NotAnImpl': {}
     }
     cls, cls_conf = cls_conf_from_config_dict(test_config, T_CLASS_SET)
-    assert cls is T1
+    assert cls == T1
     assert cls_conf == {'foo': 256, 'bar': 'Some string value'}
 
     test_config['type'] = 'T2'
     cls, cls_conf = cls_conf_from_config_dict(test_config, T_CLASS_SET)
-    assert cls is T2
+    assert cls == T2
     assert cls_conf == {
         'child': {'foo': -1, 'bar': 'some other value'},
         'alpha': 1.0,

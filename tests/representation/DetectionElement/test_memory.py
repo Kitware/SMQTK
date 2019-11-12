@@ -40,7 +40,8 @@ def test_serialize_deserialize_pickle():
     assert e2.uuid == expected_uuid
 
     e2_bbox, e2_ce = e2.get_detection()
-    assert e2_bbox is not expected_bbox
+    # Intentionally checking e2_bbox is not the same instance
+    assert e2_bbox is not expected_bbox  # lgtm[py/comparison-using-is]
     assert e2_bbox == expected_bbox
     assert e2_ce is not expected_ce
     assert e2_ce == expected_ce

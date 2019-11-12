@@ -66,7 +66,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         inst2.get_classification = mock.MagicMock(return_value=expected_map)
 
         assert inst1 == inst2
-        assert not (inst1 != inst2)
+        assert not (inst1 != inst2)  # lgtm[py/redundant-comparison]
 
     def test_equality_other_not_element(self):
         """
@@ -92,7 +92,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         inst2.get_classification = mock.Mock(return_value={'a': 0.0, 'b': 1.0})
 
         assert not (inst1 == inst2)
-        assert inst1 != inst2
+        assert inst1 != inst2  # lgtm[py/redundant-comparison]
 
     def test_equality_other_no_classification(self):
         """
@@ -109,7 +109,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         inst2.get_classification = mock.Mock(side_effect=NoClassificationError)
 
         assert not (inst1 == inst2)
-        assert inst1 != inst2
+        assert inst1 != inst2  # lgtm[py/redundant-comparison]
 
     def test_equality_both_no_classification(self):
         """
@@ -126,7 +126,7 @@ class TestClassificationElementAbstract (unittest.TestCase):
         inst2.get_classification = mock.Mock(side_effect=NoClassificationError)
 
         assert inst1 == inst2
-        assert not (inst1 != inst2)
+        assert not (inst1 != inst2)  # lgtm[py/redundant-comparison]
 
     def test_get_items(self):
         e1 = DummyCEImpl('test', 0)
@@ -201,7 +201,8 @@ class TestClassificationElementAbstract (unittest.TestCase):
         buff = pickle.dumps(inst1)
         #: :type: ClassificationElement
         inst2 = pickle.loads(buff)
-        assert inst2 is not inst1
+        # Intentionally checking not the same instance
+        assert inst2 is not inst1  # lgtm[py/comparison-using-is]
         assert inst2.type_name == expected_typename
         assert inst2.uuid == expected_uuid
 
@@ -234,13 +235,6 @@ class TestClassificationElementAbstract (unittest.TestCase):
         Test that the default configuration does not include the runtime
         specific parameters.
         """
-        # Showing that the parent class (Configurable) does reflect constructor
-        # parameters in default config.
-        default = super(ClassificationElement,
-                        ClassificationElement).get_default_config()
-        assert 'type_name' in default
-        assert 'uuid' in default
-
         # Shows that override in ClassificationElement removes those
         # runtime-specific parameters.
         default = ClassificationElement.get_default_config()

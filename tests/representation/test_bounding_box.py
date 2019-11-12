@@ -208,7 +208,7 @@ def test_bbox_equality_with_self():
     Test that a bounding box is equal to itself.
     """
     bb = AxisAlignedBoundingBox([0], [0])
-    assert bb == bb
+    assert bb == bb  # lgtm[py/comparison-of-identical-expressions]
 
 
 def test_bbox_equality_other_is_copy():

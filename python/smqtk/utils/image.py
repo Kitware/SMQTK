@@ -266,18 +266,18 @@ def crop_in_bounds(bbox, im_width, im_height):
 
     in_bounds = True
     if not ((0 <= ul_x <= im_width) and (0 <= ul_y <= im_height)):
-        log.warn("Upper-left coordinate outside image bounds ([w,h] "
-                 "image dimensions: {}, given upper-left: {})"
-                 .format((im_width, im_height), ul_x, ul_y))
+        log.warning("Upper-left coordinate outside image bounds ([w,h] "
+                    "image dimensions: {}, given upper-left: {})"
+                    .format((im_width, im_height), (ul_x, ul_y)))
         in_bounds = False
     if not ((0 <= lr_x <= im_width) and (0 <= lr_y <= im_height)):
-        log.warn("Lower-right coordinate outside image bounds "
-                 "([w, h] image dimensions: {}, given "
-                 "lower-right: {})"
-                 .format((im_width, im_height), (lr_x, lr_y)))
+        log.warning("Lower-right coordinate outside image bounds "
+                    "([w, h] image dimensions: {}, given "
+                    "lower-right: {})"
+                    .format((im_width, im_height), (lr_x, lr_y)))
         in_bounds = False
     if not (((lr_x - ul_x) > 0) and ((lr_y - ul_y) > 0)):
-        log.warn("Pixel crop region area is zero (ul: {}, lr: {})."
-                 .format((ul_x, ul_y), (lr_x, lr_y)))
+        log.warning("Pixel crop region area is zero (ul: {}, lr: {})."
+                    .format((ul_x, ul_y), (lr_x, lr_y)))
         in_bounds = False
     return in_bounds

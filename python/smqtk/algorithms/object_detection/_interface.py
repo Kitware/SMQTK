@@ -1,7 +1,6 @@
 import abc
 import hashlib
 
-import numpy as np
 import six
 
 from smqtk.algorithms import SmqtkAlgorithm, ImageReader
@@ -264,7 +263,7 @@ class ImageMatrixObjectDetector (ObjectDetector):
         and classification maps for detected objects in the given data.
 
         This ``ImageMatrixObjectDetector`` implementation ensures that the data
-        element is converted to a :class:`np.ndarray` before passing the result
+        element is converted to a :class:`numpy.ndarray` before passing the result
         matrix along to the :func:`_detect_objects_matrix` method for the
         implementing class to define.
 
@@ -293,7 +292,7 @@ class ImageMatrixObjectDetector (ObjectDetector):
         bounding boxes and classification maps for detected objects in the given
         image matrix data.
 
-        :param np.ndarray mat:
+        :param numpy.ndarray mat:
             Image pixel matrix to detect objects within.
 
         :return: Iterable over paired ``AxisAlignedBoundingBox`` and

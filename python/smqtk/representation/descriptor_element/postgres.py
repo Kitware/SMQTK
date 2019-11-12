@@ -2,7 +2,6 @@ import multiprocessing
 from collections import defaultdict
 
 import numpy
-from six.moves import zip
 
 from smqtk.representation import DescriptorElement
 from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper

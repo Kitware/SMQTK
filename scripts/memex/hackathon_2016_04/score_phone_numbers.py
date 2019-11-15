@@ -6,6 +6,7 @@ import logging
 
 from matplotlib import pyplot as plt
 import numpy
+import six
 from sklearn.metrics import auc, confusion_matrix, precision_recall_curve, roc_curve
 
 from smqtk.algorithms import get_classifier_impls
@@ -139,9 +140,10 @@ else:
                 % (p, phone2shas[p], indexed_shas))
 
         descriptor_elems = descriptor_set.get_many_descriptors(*indexed_shas)
-        e2c = classifier.classify_async(descriptor_elems, c_factory,
-                                        use_multiprocessing=True, ri=1.)
-        pos_scores = [c['positive'] for c in e2c.values()]
+        pos_scores = [c['positive'] for c
+                      in classifier.classify_elements(
+                          descriptor_elems, c_factory,
+                      )]
 
         # Max of pool
         phone2score[p] = max(pos_scores)
@@ -150,7 +152,7 @@ else:
 
     log.info("Saving score map")
     csv.writer(open(PHONE2SCORE_OUTPUT_FILEPATH, 'w')) \
-        .writerows(sorted(phone2score.iteritems()))
+        .writerows(sorted(six.iteritems(phone2score)))
 
 
 log.info("Done")

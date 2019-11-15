@@ -64,10 +64,12 @@ inheriting from this interface:
             except AttributeError:
                 raise RuntimeError("No model yet fit.")
 
-        def _classify(self, d):
+        def _classify_arrays(self, array_iter):
             # Required by the ``smqtk.algorithms.Classifier`` parent
-            proba = self.predict_proba([d.vector()])
-            return zip(self.classes_, proba)
+            x = numpy.asarray(list(array_iter))
+            proba_arr = self.predict_proba(x)
+            for proba in proba_arr:
+                yield dict(zip(self.classes_, proba))
 
 Since our source material happens to be a class itself, our implementation can
 inherit from the Scikit-learn base classifier as well as from the SMQTK
@@ -82,10 +84,11 @@ data-types as well as any exception conditions that are expected.
 For example, the :class:`~smqtk.algorithms.classifier.Classifier` interface
 documents ``get_labels`` as raising a ``RuntimeError`` specifically if no model
 is loaded to access class labels.
-Alternatively, :class:`~smqtk.algorithms.classifier.Classifier` documents for
-the ``_classify`` method that the input parameter ``d`` will be an instance
-of the :class:`~smqtk.representation.DescriptorElement` class and should return
-a specifically formatted dictionary.
+Additionally, :class:`~smqtk.algorithms.classifier.Classifier` documents for
+the ``_classify_arrays`` method that the input parameter ``array_iter`` should
+be an iterable type containing instances of the
+:class:`~smqtk.representation.DescriptorElement` class and should return
+an iterable type (usually a generator) of specifically formatted dictionaries.
 
 This implementation happens to be compliant with the defaults of the
 :class:`~smqtk.utils.configuration.Configurable` interface because all of its

@@ -160,12 +160,12 @@ def classify_files(config, label, file_globs):
     log.info("Classifying descriptors")
     classification_factory = ClassificationElementFactory \
         .from_config(config['classification_factory'])
-    classification_map = classifier\
-        .classify_async(descr_iter, classification_factory)
+    classification_iter = \
+        classifier.classify_elements(descr_iter, classification_factory)
 
     log.info("Printing input file paths that classified as the given label.")
     # map of UUID to filepath:
-    uuid2c = dict((c.uuid, c) for c in six.itervalues(classification_map))
+    uuid2c = {c.uuid: c for c in classification_iter}
     for data in data_elements:
         d_uuid = data.uuid()
         log.debug("'{}' classification map: {}".format(

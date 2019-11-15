@@ -146,7 +146,8 @@ def main():
         :type d: smqtk.representation.DescriptorElement
         :rtype: smqtk.representation.ClassificationElement
         """
-        return classifier.classify(d, c_factory, classify_overwrite)
+        return classifier.classify_one_element(d, c_factory,
+                                               classify_overwrite)
 
     log.info("Initializing uuid-to-descriptor parallel map")
     #: :type: collections.Iterable[smqtk.representation.DescriptorElement]

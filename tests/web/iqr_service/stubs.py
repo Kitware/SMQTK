@@ -69,7 +69,7 @@ class StubClassifier (SupervisedClassifier):
     def get_labels(self):
         pass
 
-    def _classify(self, d):
+    def _classify_arrays(self, array_iter):
         pass
 
     def has_model(self):

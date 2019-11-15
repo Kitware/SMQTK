@@ -232,13 +232,12 @@ def classifier_kfold_validation():
         classifier.train(pos_map)
 
         log.info("-- Classifying test set")
-        m = classifier.classify_async(
+        c_iter = classifier.classify_elements(
             (descriptor_set.get_descriptor(uuids[idx]) for idx in test),
             classification_factory,
-            use_multiprocessing=use_mp, ri=1.0
         )
-        uuid2c = dict((d.uuid(), c.get_classification())
-                      for d, c in six.iteritems(m))
+        uuid2c = dict((c.uuid, c.get_classification())
+                      for c in c_iter)
 
         log.info("-- Pairing truth and computed probabilities")
         # Only considering positive labels

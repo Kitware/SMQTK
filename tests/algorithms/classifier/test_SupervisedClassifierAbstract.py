@@ -18,8 +18,10 @@ class DummySupervisedClassifier (SupervisedClassifier):
     def get_labels(self):
         return self.EXPECTED_LABELS
 
-    def _classify(self, d):
-        return {d.uuid(): d.vector().tolist()}
+    def _classify_arrays(self, array_iter):
+        # Some deterministic dummy impl
+        for i, v in enumerate(array_iter):
+            yield {'test': i}
 
     def has_model(self):
         return self.EXPECTED_HAS_MODEL

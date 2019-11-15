@@ -8,7 +8,7 @@ import multiprocessing.pool
 import numpy
 import pytest
 import six
-from six.moves import cPickle
+from six.moves import cPickle, zip
 
 from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.libsvm import LibSvmClassifier
@@ -98,10 +98,10 @@ class TestLibSvmClassifier (unittest.TestCase):
         classifier.train({POS_LABEL: d_pos, NEG_LABEL: d_neg})
 
         # Test original classifier
+        # - Using classification method implemented by the subclass directly
+        #   in order to test simplest scope possible.
         t_v = numpy.random.rand(DIM)
-        t = d_factory.new_descriptor('query', 0)
-        t.set_vector(t_v)
-        c_expected = classifier.classify(t, c_factory)
+        c_expected = list(classifier._classify_arrays([t_v]))[0]
 
         # Should see __LOCAL__ content in pickle state now
         p_state = classifier.__getstate__()
@@ -115,7 +115,7 @@ class TestLibSvmClassifier (unittest.TestCase):
         # same
         #: :type: LibSvmClassifier
         classifier2 = cPickle.loads(cPickle.dumps(classifier))
-        c_post_pickle = classifier2.classify(t, c_factory)
+        c_post_pickle = list(classifier2._classify_arrays([t_v]))[0]
         # There may be floating point error, so extract actual confidence
         # values and check post round
         c_pp_positive = c_post_pickle[POS_LABEL]
@@ -138,9 +138,6 @@ class TestLibSvmClassifier (unittest.TestCase):
         NEG_LABEL = 'negative'
         p = multiprocessing.pool.ThreadPool()
         d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-        c_factory = ClassificationElementFactory(
-            MemoryClassificationElement, {}
-        )
 
         def make_element(iv):
             i, v = iv
@@ -173,58 +170,19 @@ class TestLibSvmClassifier (unittest.TestCase):
         x_pos = x[x[:, 1] <= 0.45]
         x_neg = x[x[:, 1] >= 0.55]
 
-        d_pos = p.map(make_element, enumerate(x_pos, N))
-        d_neg = p.map(make_element, enumerate(x_neg, N + N//2))
+        # Test that examples expected to classify to the positive class are,
+        # and same for those expected to be in the negative class.
+        c_map_pos = list(classifier._classify_arrays(x_pos))
+        for v, c_map in zip(x_pos, c_map_pos):
+            assert c_map[POS_LABEL] > c_map[NEG_LABEL], \
+                "Found False positive: {} :: {}" \
+                .format(v, c_map)
 
-        d_pos_sync = {}  # for comparing to async
-        for d in d_pos:
-            c = classifier.classify(d, c_factory)
-            self.assertEqual(POS_LABEL, c.max_label(),
-                             "Found False positive: %s :: %s" %
-                             (d.vector(), c.get_classification()))
-            d_pos_sync[d] = c
-
-        d_neg_sync = {}
-        for d in d_neg:
-            c = classifier.classify(d, c_factory)
-            self.assertEqual(NEG_LABEL, c.max_label(),
-                             "Found False negative: %s :: %s" %
-                             (d.vector(), c.get_classification()))
-            d_neg_sync[d] = c
-
-        # test that async classify produces the same results
-        # -- d_pos
-        m_pos = classifier.classify_async(d_pos, c_factory)
-        self.assertEqual(d_pos_sync, m_pos,
-                         "Async computation of pos set did not yield "
-                         "the same results as synchronous "
-                         "classification.")
-        # -- d_neg
-        m_neg = classifier.classify_async(d_neg, c_factory)
-        self.assertEqual(d_neg_sync, m_neg,
-                         "Async computation of neg set did not yield "
-                         "the same results as synchronous "
-                         "classification.")
-        # -- combined -- threaded
-        combined_truth = dict(six.iteritems(d_pos_sync))
-        combined_truth.update(d_neg_sync)
-        m_combined = classifier.classify_async(
-            d_pos + d_neg, c_factory,
-            use_multiprocessing=False,
-        )
-        self.assertEqual(combined_truth, m_combined,
-                         "Async computation of all test descriptors "
-                         "did not yield the same results as "
-                         "synchronous classification.")
-        # -- combined -- multiprocess
-        m_combined = classifier.classify_async(
-            d_pos + d_neg, c_factory,
-            use_multiprocessing=True,
-        )
-        self.assertEqual(combined_truth, m_combined,
-                         "Async computation of all test descriptors "
-                         "(mixed order) did not yield the same results "
-                         "as synchronous classification.")
+        c_map_neg = list(classifier._classify_arrays(x_neg))
+        for v, c_map in zip(x_neg, c_map_neg):
+            assert c_map[NEG_LABEL] > c_map[POS_LABEL], \
+                "Found False negative: {} :: {}" \
+                .format(v, c_map)
 
         # Closing resources
         p.close()
@@ -244,9 +202,6 @@ class TestLibSvmClassifier (unittest.TestCase):
         P3_LABEL = 'p3'
         p = multiprocessing.pool.ThreadPool()
         d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-        c_factory = ClassificationElementFactory(
-            MemoryClassificationElement, {}
-        )
         di = 0
 
         def make_element(iv):
@@ -286,77 +241,21 @@ class TestLibSvmClassifier (unittest.TestCase):
         x_p2 = x[(x[:, 1] >= 0.36) & (x[:, 1] <= 0.63)]
         x_p3 = x[x[:, 1] >= 0.69]
 
-        d_p1 = p.map(make_element, enumerate(x_p1, di))
-        di += len(d_p1)
-        d_p2 = p.map(make_element, enumerate(x_p2, di))
-        di += len(d_p2)
-        d_p3 = p.map(make_element, enumerate(x_p3, di))
-        di += len(d_p3)
+        # Test that examples expected to classify to certain classes are.
+        c_map_p1 = list(classifier._classify_arrays(x_p1))
+        for v, c_map in zip(x_p1, c_map_p1):
+            assert c_map[P1_LABEL] > max(c_map[P2_LABEL], c_map[P3_LABEL]), \
+                "Incorrect {} label: {} :: {}".format(P1_LABEL, v, c_map)
 
-        d_p1_sync = {}
-        for d in d_p1:
-            c = classifier.classify(d, c_factory)
-            self.assertEqual(c.max_label(),
-                             P1_LABEL,
-                             "Incorrect %s label: %s :: %s" %
-                             (P1_LABEL, d.vector(), c.get_classification()))
-            d_p1_sync[d] = c
+        c_map_p2 = list(classifier._classify_arrays(x_p2))
+        for v, c_map in zip(x_p2, c_map_p2):
+            assert c_map[P2_LABEL] > max(c_map[P1_LABEL], c_map[P3_LABEL]), \
+                "Incorrect {} label: {} :: {}".format(P2_LABEL, v, c_map)
 
-        d_p2_sync = {}
-        for d in d_p2:
-            c = classifier.classify(d, c_factory)
-            self.assertEqual(c.max_label(),
-                             P2_LABEL,
-                             "Incorrect %s label: %s :: %s" %
-                             (P2_LABEL, d.vector(), c.get_classification()))
-            d_p2_sync[d] = c
-
-        d_neg_sync = {}
-        for d in d_p3:
-            c = classifier.classify(d, c_factory)
-            self.assertEqual(c.max_label(),
-                             P3_LABEL,
-                             "Incorrect %s label: %s :: %s" %
-                             (P3_LABEL, d.vector(), c.get_classification()))
-            d_neg_sync[d] = c
-
-        # test that async classify produces the same results
-        # -- p1
-        async_p1 = classifier.classify_async(d_p1, c_factory)
-        self.assertEqual(async_p1, d_p1_sync,
-                         "Async computation of p1 set did not yield "
-                         "the same results as synchronous computation.")
-        # -- p2
-        async_p2 = classifier.classify_async(d_p2, c_factory)
-        self.assertEqual(async_p2, d_p2_sync,
-                         "Async computation of p2 set did not yield "
-                         "the same results as synchronous computation.")
-        # -- neg
-        async_neg = classifier.classify_async(d_p3, c_factory)
-        self.assertEqual(async_neg, d_neg_sync,
-                         "Async computation of neg set did not yield "
-                         "the same results as synchronous computation.")
-        # -- combined -- threaded
-        sync_combined = dict(six.iteritems(d_p1_sync))
-        sync_combined.update(d_p2_sync)
-        sync_combined.update(d_neg_sync)
-        async_combined = classifier.classify_async(
-            d_p1 + d_p2 + d_p3, c_factory,
-            use_multiprocessing=False
-        )
-        self.assertEqual(async_combined, sync_combined,
-                         "Async computation of all test descriptors "
-                         "did not yield the same results as "
-                         "synchronous classification.")
-        # -- combined -- multiprocess
-        async_combined = classifier.classify_async(
-            d_p1 + d_p2 + d_p3, c_factory,
-            use_multiprocessing=True
-        )
-        self.assertEqual(async_combined, sync_combined,
-                         "Async computation of all test descriptors "
-                         "(mixed order) did not yield the same results "
-                         "as synchronous classification.")
+        c_map_p3 = list(classifier._classify_arrays(x_p3))
+        for v, c_map in zip(x_p3, c_map_p3):
+            assert c_map[P3_LABEL] > max(c_map[P1_LABEL], c_map[P2_LABEL]), \
+                "Incorrect {} label: {} :: {}".format(P3_LABEL, v, c_map)
 
         # Closing resources
         p.close()

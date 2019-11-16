@@ -466,10 +466,13 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             hi = self.hash_index
             if hi is None:
                 # Make on-the-fly linear index
+                print("[[ SMQTK ]] - Creating LinearHashIndex on-the-fly.")
                 hi = LinearHashIndex()
                 # not calling ``build_index`` because we already have the int
                 # hashes.
                 hi.index = numpy.array(list(self.hash2uuids_kvstore.keys()))
+            else:
+                print("[[ SMQTK ]] - Using existing index {}".format(hi))
             near_hashes, _ = hi.nn(d_h, n)
 
             self._log.debug("getting UUIDs of descriptors for nearby hashes")

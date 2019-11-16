@@ -28,6 +28,12 @@ from smqtk.utils import (
     plugin,
 )
 
+# FOR HACK TO "BUILD" LinearHashIndex IN-LINE
+from smqtk.algorithms.nn_index.hash_index.linear import LinearHashIndex
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.utils.bit_utils import int_to_bit_vector_large
+import itertools
+
 try:
     from six.moves import cPickle as pickle
 except ImportError:
@@ -165,6 +171,10 @@ def main():
     if kv_update:
         log.info("Updating KV store... (%d keys)" % len(kv_update))
         hash2uuids_kvstore.add_many(kv_update)
+        
+    lhi = LinearHashIndex(cache_element=DataFileElement(filepath="database/ITQ/linearhashindex.npy"))
+    bits = 256
+    lhi.build_index(map(int_to_bit_vector_large, kv_update.keys(), itertools.repeat(bits)))
 
     log.info("Done")
 

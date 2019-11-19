@@ -67,7 +67,10 @@ def safe_file_write(path, b, tmp_dir=None):
     # Make sure containing directory exists
     safe_create_dir(file_dir)
 
-    fd = os.open(path,os.O_WRONLY|os.O_CREAT)
+    if os.name == 'nt':
+        fd = os.open(path,os.O_WRONLY|os.O_CREAT|os.O_BINARY)
+    else:
+        fd = os.open(path,os.O_WRONLY|os.O_CREAT)
     os.write(fd, b)
     os.close(fd)
 

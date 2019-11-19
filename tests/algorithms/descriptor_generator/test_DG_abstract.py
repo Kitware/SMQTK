@@ -245,7 +245,7 @@ class TestDescriptorGeneratorAbstract (unittest.TestCase):
         # !!! Mock that elements all have *no* vector set
         m_de_inst.has_vector.return_value = False
 
-        # Default factor is the in-memory descriptor element.
+        # Default factory is the in-memory descriptor element.
         list(self.inst.generate_elements(data_iter, descr_factory=fact,
                                          overwrite=False))
         assert m_de_inst.has_vector.call_count == 3

@@ -6,6 +6,10 @@ Updates / New Features
 ----------------------
 
 Algorithms
+* Classifier
+  * Overhauled interface API to have the abstract method be a many-to-many
+    iterator instead of the previous one-to-one signature.
+  * Updated implementations and usages of this interface throughout SMQTK.
 * DescriptorGenerator
   * Overhauled interface API to have the abstract method be a many-to-many
     iterator instead of the previous one-to-one signature.

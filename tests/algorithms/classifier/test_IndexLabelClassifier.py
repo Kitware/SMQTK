@@ -1,8 +1,11 @@
 from __future__ import division, print_function
 import os
 import unittest
+
+import numpy
 import six
 from six.moves import map
+import pytest
 
 from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier
@@ -55,9 +58,9 @@ class TestIndexLabelClassifier (unittest.TestCase):
         c = IndexLabelClassifier.from_config(cfg)
         self.assertEqual(c.get_config(), cfg)
 
-    def test_classify(self):
+    def test_classify_arrays(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)
-        m_expected = {
+        c_expected = {
             six.b('label_1'): 1,
             six.b('label_2'): 2,
             six.b('negative'): 3,
@@ -66,26 +69,20 @@ class TestIndexLabelClassifier (unittest.TestCase):
             six.b('label_4'): 6,
         }
 
-        d = DescriptorMemoryElement('test', 0)
-        d.set_vector([1, 2, 3, 4, 5, 6])
+        a = numpy.array([1, 2, 3, 4, 5, 6])
+        c = list(c._classify_arrays([a]))[0]
+        self.assertEqual(c, c_expected)
 
-        m = c._classify(d)
-        self.assertEqual(m, m_expected)
-
-    def test_classify_invalid_descriptor_dimensions(self):
+    def test_classify_arrays_invalid_descriptor_dimensions(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)
         d = DescriptorMemoryElement('test', 0)
 
         # One less
-        d.set_vector([1, 2, 3, 4, 5])
-        self.assertRaises(
-            RuntimeError,
-            c._classify, d
-        )
+        a = numpy.array([1, 2, 3, 4, 5])
+        with pytest.raises(RuntimeError):
+            list(c._classify_arrays([a]))
 
         # One more
-        d.set_vector([1, 2, 3, 4, 5, 6, 7])
-        self.assertRaises(
-            RuntimeError,
-            c._classify, d
-        )
+        a = numpy.array([1, 2, 3, 4, 5, 6, 7])
+        with pytest.raises(RuntimeError):
+            list(c._classify_arrays([a]))

@@ -250,14 +250,16 @@ class ClassifierCollection (SmqtkObject, Configurable):
 
                 for label in labels:
                     classifier = self._label_to_classifier[label]
-                    d_classifications[label] = classifier.classify(
-                        descriptor, factory=factory, overwrite=overwrite)
+                    d_classifications[label] = classifier.classify_one_element(
+                        descriptor, factory=factory, overwrite=overwrite
+                    )
             else:
                 for label, classifier in six.iteritems(
                         self._label_to_classifier):
-                    d_classifications[label] = classifier.classify(
-                        descriptor, factory=factory, overwrite=overwrite)
+                    d_classifications[label] = classifier.classify_one_element(
+                        descriptor, factory=factory, overwrite=overwrite
+                    )
         return d_classifications
 
     # TODO(paul.tunison): Classify many descriptors method when the need
-    #   arises.
+    #   arises (see updated vectorized Classifier API).

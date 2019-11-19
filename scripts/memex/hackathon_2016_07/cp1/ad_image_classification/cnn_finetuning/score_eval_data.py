@@ -76,7 +76,9 @@ for data in d_to_proc:
 print("Adding %d new descriptors to prob index" % len(index_additions))
 img_prob_descr_set.add_many_descriptors(index_additions)
 
-eval_descr2class = img_prob_classifier.classify_async(eval_data2descr.values(), img_c_mem_factory)
+eval_classifications = \
+    img_prob_classifier.classify_elements(eval_data2descr.values(),
+                                          img_c_mem_factory)
 
 ###############################################################################
 
@@ -107,7 +109,7 @@ assert len(sha2ads) == len(computed_shas)
 
 print("Collecting scores for SHA1s")
 sha2score = {}
-for c in eval_descr2class.values():
+for c in eval_classifications:
     sha2score[c.uuid] = c['positive']
 
 print("Collecting scores for ads (MAX and AVG)")

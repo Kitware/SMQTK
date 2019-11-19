@@ -162,7 +162,7 @@ class abstract methods in order for the class to satisfy the definition of an
         def get_labels(self):
             ...
 
-        def _classify(self, d):
+        def _classify_arrays(self, array_iter):
             ...
 
 With all abstract methods defined, this implementation should now be included

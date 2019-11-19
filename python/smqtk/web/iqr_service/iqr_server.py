@@ -1719,14 +1719,13 @@ class IqrService (SmqtkWebApp):
                 # get_many_descriptors can raise KeyError
                 descriptors = list(self.descriptor_set
                                    .get_many_descriptors(uuid_for_clsify))
-                classifications = classifier.classify_async(
+                classifications = classifier.classify_elements(
                     descriptors, self.classification_factory,
                     # TODO: overwrite? ensure memory only elements?
-                    use_multiprocessing=True, ri=1.0
                 )
 
                 # Update cache
-                for c in six.itervalues(classifications):
+                for c in classifications:
                     c_cache[c.uuid] = c[pos_label]
             elif uuids:
                 self._log.info("No classifications necessary, using cache.")

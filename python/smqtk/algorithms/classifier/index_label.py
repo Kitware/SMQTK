@@ -1,3 +1,5 @@
+from six.moves import zip
+
 from smqtk.algorithms import Classifier
 from smqtk.representation.data_element import from_uri
 
@@ -58,31 +60,15 @@ class IndexLabelClassifier (Classifier):
         # copying container
         return list(self.label_vector)
 
-    def _classify(self, d):
-        """
-        Internal method that constructs the label-to-confidence map (dict) for
-        a given DescriptorElement.
-
-        The passed descriptor element is guaranteed to have a vector to extract.
-        It is not extracted yet due to the philosophy of waiting until the
-        vector is immediately needed. This moment is thus determined by the
-        implementing algorithm.
-
-        :param d: DescriptorElement containing the vector to classify.
-        :type d: smqtk.representation.DescriptorElement
-
-        :raises RuntimeError: Could not perform classification for some reason
-            (see message in raised exception).
-
-        :return: Dictionary mapping trained labels to classification confidence
-            values.
-        :rtype: dict[str, float]
-
-        """
-        d_vector = d.vector()
-        if len(self.label_vector) != len(d_vector):
-            raise RuntimeError("Failed to apply label vector to input "
-                               "descriptor of incongruous dimensionality (%d "
-                               "labels != %d vector dimension)"
-                               % tuple(map(len, [self.label_vector, d_vector])))
-        return dict(zip(self.label_vector, d_vector))
+    def _classify_arrays(self, array_iter):
+        check_dim = True
+        for d_vector in array_iter:
+            if check_dim:
+                if len(self.label_vector) != len(d_vector):
+                    raise RuntimeError(
+                        "Failed to apply label vector to input descriptor of "
+                        "incongruous dimensionality ({} labels != {} vector "
+                        "shape)".format(len(self.label_vector), d_vector.shape)
+                    )
+                check_dim = False
+            yield dict(zip(self.label_vector, d_vector))

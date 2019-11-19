@@ -87,17 +87,18 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         For situations when it is desired to access specific generator returns,
         like when only one data element is provided in order to get a single
         element out, it is strongly recommended to expand the returned
-        generator into a sequence type first. For example, expanding out the
-        generator's returns into a list (``list(g.generate_elements([e]))[0]``)
-        is recommended over just getting the "next" element of the returned
-        generator (``next(g.generate_elements([e]))``).
+        generator into a sequence type first.
+        For example, expanding out the generator's returns into a list
+        (``list(g.generate_elements([e]))[0]``) is recommended over just
+        getting the "next" element of the returned generator
+        (``next(g.generate_elements([e]))``).
         Expansion into a sequence allows the generator to fully execute, which
         includes any functionality after the final ``yield`` statement in any
-        of the underlying iterators.
+        of the underlying iterators that may perform required clean-up.
 
         **Non-redundant Processing**
         Certain descriptor element implementations, as dictated by the input
-        factor, may be connected to persistent storage in the background.
+        factory, may be connected to persistent storage in the background.
         Because of this, some descriptor elements may already "have" a vector
         on construction.
         This method, by default, only computes new descriptor vectors for data
@@ -200,11 +201,14 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
 
             # Forwarding the iterator of the ``descr_vec_iter`` generator will,
             # probably, forward the ``iter_tocompute_data`` iterator, thus
-            # populating the ``descr_elem_q`` to some degree. The current
+            # populating the ``elem_and_status_q`` to some degree. The current
             # ``v`` should be be used to populate the next DescriptorElement
             # with an associated "already_computed" flag of False.
             while v_already_computed:
                 yield v_descr_elem
+                # We clearly have a descriptor vector from the result of
+                # computation so there should logically be some future element
+                # in which to store this result.
                 v_descr_elem, v_already_computed = elem_and_status_q.popleft()
 
             # Assign the current computed descriptor vector to the current
@@ -275,7 +279,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         case.
 
         See documentation for the
-        :meth:`DescriptorElement.generate_elements` method for more
+        :meth:`DescriptorGenerator.generate_elements` method for more
         information
 
         :param DataElement data_elem:

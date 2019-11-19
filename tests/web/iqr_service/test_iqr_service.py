@@ -906,8 +906,8 @@ class TestIqrService (unittest.TestCase):
             {'positive': 0.5, 'negative': 0.5})
         mock_classifications[2].set_classification(
             {'positive': 0.4, 'negative': 0.6})
-        StubClassifier.classify_async = mock.MagicMock(
-            return_value=dict(zip(mock_descriptors, mock_classifications))
+        StubClassifier.classify_elements = mock.MagicMock(
+            return_value=iter(mock_classifications)
         )
 
         with self.app.test_client() as tc:

@@ -42,6 +42,7 @@ import collections
 import csv
 import json
 import logging
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy
@@ -92,6 +93,7 @@ def default_config():
         },
         "parallelism": {
             "descriptor_fetch_cores": 4,
+            # DEPRECATED
             "classification_cores": None,
         },
     }
@@ -105,6 +107,15 @@ def main():
     args = cli_parser().parse_args()
     config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
+
+    # Deprecations
+    if (config.get('parallelism', {})
+              .get('classification_cores', None) is not None):
+        warnings.warn("Usage of 'classification_cores' is deprecated. "
+                      "Classifier parallelism is not defined on a "
+                      "per-implementation basis. See classifier "
+                      "implementation parameterization.",
+                      category=DeprecationWarning)
 
     #
     # Initialize stuff from configuration
@@ -182,12 +193,8 @@ def main():
     tlabel2classifications = {}
     for tlabel, descriptors in six.iteritems(tlabel2descriptors):
         tlabel2classifications[tlabel] = \
-            set(classifier.classify_async(
-                descriptors, classification_factory,
-                use_multiprocessing=True,
-                procs=config['parallelism']['classification_cores'],
-                ri=1.0,
-            ).values())
+            set(classifier.classify_elements(descriptors,
+                                             classification_factory))
     log.info("Truth label counts:")
     for l in sorted(tlabel2classifications):
         log.info("  %s :: %d", l, len(tlabel2classifications[l]))

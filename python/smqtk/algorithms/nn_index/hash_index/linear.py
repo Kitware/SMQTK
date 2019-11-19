@@ -119,7 +119,7 @@ class LinearHashIndex (HashIndex):
         with self._model_lock:
             if self.cache_element and not self.cache_element.is_empty():
                 buff = BytesIO(self.cache_element.get_bytes())
-                self.index = set(numpy.load(buff))
+                self.index = set(numpy.load(buff, allow_pickle=True))
 
     def save_cache(self):
         """

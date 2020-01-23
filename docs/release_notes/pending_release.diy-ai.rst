@@ -10,6 +10,7 @@ Algorithms
   * Overhauled interface API to have the abstract method be a many-to-many
     iterator instead of the previous one-to-one signature.
   * Updated implementations and usages of this interface throughout SMQTK.
+  * Added wrapper for scikit-learn LogisticRegression classifier.
 * DescriptorGenerator
   * Overhauled interface API to have the abstract method be a many-to-many
     iterator instead of the previous one-to-one signature.
@@ -20,6 +21,11 @@ Algorithms
   * FAISS
     * Exposed ``nprobe`` parameter for when using IVF type indices to be
       utilized at query time.
+* RelevancyIndex
+  * Added ``NoIndexError`` exception for when attempting to perform ranking
+    before an index is built.
+  * Added ``SupervisedClassifierRelevancyIndex`` to enable using any available
+    supervised classifier implementation to satisfy the RelevancyIndex API.
 
 Compute Functions
 * Updated ``smqtk.compute_functions.compute_many_descriptors`` to utilize new

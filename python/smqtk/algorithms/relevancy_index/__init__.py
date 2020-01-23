@@ -3,6 +3,13 @@ import abc
 from smqtk.algorithms import SmqtkAlgorithm
 
 
+class NoIndexError (Exception):
+    """
+    When a RelevancyIndex does not yet have a index built yet when one is
+    needed.
+    """
+
+
 class RelevancyIndex (SmqtkAlgorithm):
     """
     Abstract class for IQR index implementations.
@@ -52,6 +59,9 @@ class RelevancyIndex (SmqtkAlgorithm):
         :param neg: Iterable of negative exemplar DescriptorElement instances.
             This may be optional for some implementations.
         :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
+
+        :raises NoIndexError:
+            If index ranking is requested without an index to rank.
 
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0

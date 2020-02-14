@@ -47,6 +47,42 @@ def parallel_map(work_func, *sequences, **kwargs):
     Input data given to ``sequences`` must be picklable in order to transport
     to worker threads/processes.
 
+    Input Iteration and Results Buffering
+    -------------------------------------
+    The buffer factor, ``F``, operates with the number of utilized cores,
+    ``C``, to create an upper bound on the times the input sequences are
+    iterated and the number of work function outputs are held in memory at any
+    given time.
+
+    The maximum number of input sequence items loaded at a time is
+    ``floor(C * F) + C``.
+    This is due to the input work queue ``maxsize`` being set to ``floor(C*F)``
+    while there can be ``C`` workers could be utilizing their inputs to
+    complete their work instances.
+
+    The maximum number of results queued is ``floor(C * F) + C``.
+    This is similarly due to the output result queue maxsize being set to
+    ``floor(C * F)`` while there can be ``C`` workers blocked on putting values
+    into a full results queue.
+
+    Sometimes its important to know how much farther ahead the input
+    iterator(s) have yielded compared to the number of output results from the
+    ``ParallelResultsIterator``.
+    For some yielded result at index ``N``, the input iterator(s) next yielded
+    item should be their index ``N + (2 * floor(C * F) + C)``. This is
+    derived from the input work and output result queues maximally filled with
+    at most ``floor(C * F)`` items and there being ``C`` workers working on, or
+    attempting to queue results for, their current inputs.
+    For example, if we have use ``C=4`` and ``F=1.5``, if result index N has just
+    been yielded, then the input iterators are ready to yield their
+    ``N + 16``-th indexed item (``2 * floor(4*1.5) + 4 = 2 * 6 + 4 = 16``).
+
+    The above is only guaranteed no the ``ordered`` option is ``False``,
+    otherwise non-determinism in processing order can cause results for input
+    items to return out of order, causing additional buffering in the heap used
+    to ensure ordered output which, necessarily, has no size limits so as to
+    not dead-lock.
+
     :param work_func:
         Function that performs some work on input data, resulting in some
         returned value.
@@ -469,7 +505,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 if self.stopped():
                     self._log.log(1, "Told to stop prematurely")
                     break
-        except Exception as ex:
+        # Transport back any exceptions raised
+        # - Using BaseException to also catch things like KeyboardInterrupt
+        #   and other exceptions that do not descend from Exception.
+        except BaseException as ex:
             self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
@@ -561,7 +600,9 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        except Exception as ex:
+        # - Using BaseException to also catch things like KeyboardInterrupt
+        #   and other exceptions that do not descend from Exception.
+        except BaseException as ex:
             self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()

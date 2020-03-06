@@ -61,11 +61,12 @@ class Configurable (object):
         of those arguments have defaults, we will add those values into the
         configuration dictionary appropriately. The dictionary returned should
         only contain JSON compliant value types. If the default arguments are
-        not json compliant then the function should be overriden to convert
-        the convert the default to a json-compliant stand in.
+        not JSON compliant then the function should be overriden to convert
+        the convert the default to a JSON compliant stand in.
 
         It is not be guaranteed that the configuration dictionary returned
         from this method is valid for construction of an instance of this class.
+        >>> import math
         >>> class NonCompliantDefault(Configurable):
         ...     def __init__(self, power_func=math.pow):
         ...         self.power_func=power_func

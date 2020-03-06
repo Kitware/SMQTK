@@ -60,10 +60,26 @@ class Configurable (object):
         turning those argument names into configuration dictionary keys. If any
         of those arguments have defaults, we will add those values into the
         configuration dictionary appropriately. The dictionary returned should
-        only contain JSON compliant value types.
+        only contain JSON compliant value types. If the default arguments are
+        not json compliant then the function should be overriden to convert
+        the convert the default to a json-compliant stand in.
 
         It is not be guaranteed that the configuration dictionary returned
         from this method is valid for construction of an instance of this class.
+        >>> class NonCompliantDefault(Configurable):
+        ...     def __init__(self, power_func=math.pow):
+        ...         self.power_func=power_func
+        ...     @classmethod
+        ...     def get_default_config(cls):
+        ...         default = super(NonCompliantDefault, cls).get_default_config()
+        ...         default['power_func'] = {'module': 'math',
+        ...                                  'attribute': 'pow'}
+        ...         return default
+        >>> NonCompliantDefault.get_default_config()
+        {'power_func': {'module': 'math', 'attribute': 'pow'}}
+        >>> import json
+        >>> json.dumps(NonCompliantDefault.get_default_config())
+        '{"power_func": {"module": "math", "attribute": "pow"}}'
 
         :return: Default configuration dictionary for the class.
         :rtype: dict
@@ -106,7 +122,7 @@ class Configurable (object):
 
         This base method is adequate without modification when a class's
         constructor argument types are JSON-compliant.  If one or more are not,
-        however, this method then needs to be overridden in order to convert
+        this method then needs to be overridden in order to convert
         from a JSON-compliant stand-in into the more complex object the
         constructor requires.  It is recommended that when complex types *are*
         used they also inherit from the :class:`Configurable` in order to

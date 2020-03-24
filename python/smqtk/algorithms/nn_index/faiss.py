@@ -43,6 +43,25 @@ except ImportError as ex:
 #       descriptors as a matrix into memory is too much.
 
 
+def metric_label_to_const():
+    """
+    :return: Dictionary mapping a string label to the FAISS metric constant
+        integer value for the associated label. This is introspected from the
+        ``faiss.METRIC_*`` attributes. Labels will be in lowercase.
+    :rtype: dict[str, int]
+    """
+    try:
+        m = metric_label_to_const.cache
+    except AttributeError:
+        m = metric_label_to_const.cache = {
+            # Key starting after "METRIC_"
+            k[7:].lower(): getattr(faiss, k)
+            for k in faiss.__dict__
+            if k.startswith("METRIC_")
+        }
+    return m
+
+
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     """
     Nearest-neighbor computation using the FAISS library.
@@ -160,7 +179,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
                  read_only=False, factory_string='IDMap,Flat',
-                 ivf_nprobe=1, use_gpu=False, gpu_id=0, random_seed=None):
+                 metric_type="l2", ivf_nprobe=1, use_gpu=False, gpu_id=0,
+                 random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
@@ -196,6 +216,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             see the documentation [1] on this feature for more details.
         :type factory_string: str | unicode
 
+        :param str|int metric_type:
+            String label of the FAISS metric type to use, or the integer
+            constant value for a valid type. A value error if the label or
+            integer does match a valid metric type.
+
         :param int ivf_nprobe:
             If an IVF-type index is loaded, optionally use this as the
             ``nprobe`` value at query time.
@@ -230,6 +255,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             raise ValueError('The factory_string parameter must be a '
                              'recognized string type.')
 
+        m_l2c = metric_label_to_const()
+
         self._descriptor_set = descriptor_set
         self._idx2uid_kvs = idx2uid_kvs
         self._uid2idx_kvs = uid2idx_kvs
@@ -237,6 +264,22 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         self._index_param_element = index_param_element
         self.read_only = read_only
         self.factory_string = str(factory_string)
+        self._metric_type = metric_type
+        try:
+            self._metric_type_const = m_l2c[metric_type.lower()]
+        except (KeyError, AttributeError):
+            # Value provided did not match one of the keys, or was not a string
+            # (no `.lower()` attribute). If not a valid integer value in the
+            # map, the input is invalid.
+            if metric_type not in set(m_l2c.values()):
+                raise ValueError("Given metric type value of '{}' ({}) did "
+                                 "not match a valid key nor a valid integer "
+                                 "constant value. Valid labels are {} and "
+                                 "valid integers are {}."
+                                 .format(metric_type, type(metric_type),
+                                         list(m_l2c.keys()),
+                                         list(m_l2c.values())))
+            self._metric_type_const = int(metric_type)
         self._ivf_nprobe = int(ivf_nprobe)
         if self._ivf_nprobe < 1:
             raise ValueError("ivf_nprobe must be >= 1.")
@@ -272,6 +315,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             "uid2idx_kvs": to_config_dict(self._uid2idx_kvs),
             "idx2uid_kvs": to_config_dict(self._idx2uid_kvs),
             "factory_string": self.factory_string,
+            "metric_type": self._metric_type,
             "ivf_nprobe": self._ivf_nprobe,
             "read_only": self.read_only,
             "random_seed": self.random_seed,
@@ -309,12 +353,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                                                  self._gpu_id, faiss_index)
         return faiss_index
 
-    def _index_factory_wrapper(self, d, factory_string):
+    def _index_factory_wrapper(self, d, factory_string, metric_type_int):
         """
-        Create a FAISS index for the given descriptor dimensionality and
-        factory string.
-
-        This *always* produces an index using the L2 metric.
+        Create a FAISS index for the given descriptor dimensionality,
+        factory string and configured metric type.
 
         :param d: Integer indexed vector dimensionality.
         :type d: int
@@ -322,11 +364,13 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param factory_string: Factory string to drive index generation.
         :type factory_string: str
 
+        :param int metric_type_int: FAISS metric constant to
+
         :return: Constructed index.
         :rtype: faiss.Index | faiss.GpuIndex
         """
         self._log.debug("Creating index by factory: '%s'", factory_string)
-        index = faiss.index_factory(d, factory_string, faiss.METRIC_L2)
+        index = faiss.index_factory(d, factory_string, metric_type_int)
         return self._convert_index(index)
 
     def _has_model_data(self):
@@ -449,7 +493,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         # Build a faiss index but don't internalize it until we have a lock.
 
-        faiss_index = self._index_factory_wrapper(d, self.factory_string)
+        faiss_index = self._index_factory_wrapper(d, self.factory_string,
+                                                  self._metric_type_const)
         self._log.info("Training FAISS index")
         # noinspection PyArgumentList
         faiss_index.train(data)

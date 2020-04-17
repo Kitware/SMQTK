@@ -7,7 +7,7 @@ services:
   #
 
   tpl-faiss-gpu:
-    image: kitware/smqtk/tpl-faiss-gpu:v1.5.1
+    image: ${SMQTK_REGISTRY}/tpl-faiss-gpu:v1.5.1
     build:
       context: tpl/faiss
       dockerfile: gpu/Dockerfile
@@ -19,3 +19,24 @@ services:
           -gencode=arch=compute_52,code=compute_52
           -gencode=arch=compute_60,code=compute_60
           -gencode=arch=compute_61,code=compute_61
+
+  bvlc-caffe-cpu:
+    image: ${SMQTK_REGISTRY}/caffe:1.0-cpu
+    build:
+      context: smqtk_caffe
+      dockerfile: Dockerfile.cpu.df
+
+  bvlc-caffe-gpu:
+    image: ${SMQTK_REGISTRY}/caffe:1.0-gpu-cuda8.0-cudnn6
+    build:
+      context: smqtk_caffe
+      dockerfile: Dockerfile.gpu_cuda_cuDNNv6.df
+
+  iqr-playground-gpu:
+    image: ${SMQTK_REGISTRY}/iqr_playground:latest-gpu-cuda8-cudnn6
+    depends_on:
+      - bvlc-caffe-gpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile.gpu-cuda8.0-cudnn6.df

@@ -21,6 +21,7 @@ RUN apt-get -y update \
     >/etc/apt/sources.list.d/mongodb-org-3.2.list \
  && apt-get -y update \
  && apt-get -y install mongodb-org \
+      --allow-unauthenticated \
  # Some additional system+python packages for convenience and SMQTK optional
  # deps.
  && pip install ipython psycopg2 file-magic \

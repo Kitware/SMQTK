@@ -16,7 +16,7 @@ RUN rm /bin/sh \
  && rm -rf /var/lib/apt/lists/*
 
 # Python dependencies for pycaffe
-RUN pip install --upgrade pip 
+RUN pip install --upgrade pip
 RUN pip install numpy scikit-image protobuf
 
 #

@@ -1,0 +1,2 @@
+from .pytorch_model_descriptors import PytorchModelDescriptor
+DESCRIPTOR_GENERATOR_CLASS = PytorchModelDescriptor

@@ -1,13 +1,17 @@
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
+
+import torch
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
-from .utils import PytorchImagedataset  
-import torch
-import torchvision 
-from collections import deque
 from torch.autograd import Variable
+import torchvision 
+
+from .utils import PytorchImagedataset
+
+from collections import deque
 import multiprocessing
+import six
 
 try:
     import torch
@@ -92,22 +96,15 @@ class PytorchModelDescriptor (DescriptorGenerator):
         try:
             if return_key is not '':
                 assert (getattr(model,"__dict__")).get("_modules")[return_key]
-                #model_dict = getattr(model,"__dict__")
-                #model = model_dict.get("_modules")[return_key]
         except KeyError:
-            self._log.info("KeyError: Given return layer is \
+            raise KeyError("KeyError: Given return layer is \
                                                not present in model")
 
     def __init__(self, 
-                 model_name = 'resnet18',
-                 return_layer = 'avgpool', 
-                 custom_model_arch = None, 
-                 weights_filepath = None, 
-                 norm_mean = None, 
-                 norm_std = None, 
-                 use_gpu = True,
-                 batch_size = 32,
-                 pretrained = True):
+                 model_name = 'resnet18', return_layer = 'avgpool', 
+                 custom_model_arch = None, weights_filepath = None, 
+                 norm_mean = None, norm_std = None, use_gpu = True,
+                 batch_size = 32, pretrained = True):
         """
         Create a PyTorch CNN descriptor generator
         :param model_name: Name of model on PyTorch library,
@@ -168,9 +165,9 @@ class PytorchModelDescriptor (DescriptorGenerator):
                 assert new_model
                 model = new_model
             except AssertionError:
-                self._log.info("Invalid return layer label selected model:{}"\
-                                                            .format(model))
-                raise AssertionError
+                self._log.info("Selected model{}".format(model))
+                raise AssertionError("Invalid return layer label selected \
+                                                                  model")
         else:
              model = custom_model_arch
         if (not self.pretrained) and (self.weights_filepath):
@@ -305,16 +302,31 @@ class PytorchModelDescriptor (DescriptorGenerator):
             self.data_elements[d.uuid()] = d
             self.descr_elements[d.uuid()] = descriptor_elem_factory \
                                .new_descriptor(self.name, d.uuid()) 
-            self.uuid4proc.append(d.uuid())       
-        self._log.debug("Given %d unique data elements", len(self.data_elements))
+            #self.uuid4proc.append(d.uuid())       
+        def check_get_uuid(descriptor_elem):
+            if overwrite or not descriptor_elem.has_vector():
+                self.uuid4proc.append(descriptor_elem.uuid()) 
+        procs = multiprocessing.cpu_count()
+        if len(self.data_elements) < procs:
+            procs = len(self.data_elements)
+        # Using thread-pool due to in-line function + updating local deque
+        p = multiprocessing.pool.ThreadPool(procs)
+        try:
+            p.map(check_get_uuid, six.itervalues(self.descr_elements))
+        finally:
+            p.close()
+            p.join()
+        del p
+        self._log.debug("%d descriptors already computed",
+                     len(self.data_elements) - len(self.uuid4proc))
+        self._log.debug("Given %d unique data elements", \
+                                     len(self.data_elements))
         if len(self.data_elements) == 0:
             raise ValueError("No data elements provided") 
         if self.uuid4proc:
-            self._log.debug("Converting deque to tuple for segmentation")
-            kwargs = {'num_workers': multiprocessing.cpu_count(), 
-                                              'pin_memory': True}
+            kwargs = {'num_workers': procs, 'pin_memory': True}
             data_loader_cls = PytorchImagedataset(self.data_elements, 
-                                             self.uuid4proc, self.transforms)
+                                   self.uuid4proc, self.transforms)
             data_loader = DataLoader(data_loader_cls, 
                          batch_size=self.batch_size, shuffle=False, **kwargs)
             self._log.debug("Extracting PyTorch features")

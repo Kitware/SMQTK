@@ -2,7 +2,6 @@ from smqtk.algorithms.descriptor_generator import DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 
 import torch
-from torchvision import models, transforms
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import torchvision 
@@ -150,14 +149,14 @@ class PytorchModelDescriptor (DescriptorGenerator):
         self.custom_model_arch = custom_model_arch 
         if not custom_model_arch:
             try: 
-                assert model_name in models.__dict__.keys()
+                assert model_name in torchvision.models.__dict__.keys()
             except AssertionError:
                 self._log.info("Invalid model name, model not present \
                              in torchvision. Please load network architecture")
                 self._log.info("Available models include:{}"
-                       .format([s for s in models.__dict__.keys() \
+                       .format([s for s in torchvision.models.__dict__.keys() \
                                               if not "__" in s])) 
-            model = getattr(models, self.model_name)(self.pretrained)
+            model = getattr(torchvision.models, self.model_name)(self.pretrained)
             ret_para = [k for k in self.return_layer.split('.')]
             self.check_model_dict(model, ret_para[0])
             try:

@@ -302,7 +302,6 @@ class PytorchModelDescriptor (DescriptorGenerator):
             self.data_elements[d.uuid()] = d
             self.descr_elements[d.uuid()] = descriptor_elem_factory \
                                .new_descriptor(self.name, d.uuid()) 
-            #self.uuid4proc.append(d.uuid())       
         def check_get_uuid(descriptor_elem):
             if overwrite or not descriptor_elem.has_vector():
                 self.uuid4proc.append(descriptor_elem.uuid()) 
@@ -333,7 +332,6 @@ class PytorchModelDescriptor (DescriptorGenerator):
             for (d, uuids) in data_loader:
                 if self.use_gpu:
                     d = d.cuda()
-                # Test for speed Variable and no_grad 
                 pytorch_f = self.model(Variable(d)).squeeze()
                 if len(pytorch_f.shape) < 2:
                     pytorch_f = pytorch_f.unsqueeze(0)

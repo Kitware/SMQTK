@@ -3,19 +3,11 @@ from smqtk.algorithms.descriptor_generator import DescriptorGenerator, \
 from torchvision import models, transforms
 from torch.utils.data import DataLoader
 from .utils import PytorchImagedataset  
-import glob
 import torch
-import sys
 import torchvision 
 from collections import deque
 from torch.autograd import Variable
-import pdb
-from collections import OrderedDict
-from PIL import Image
-from smqtk.representation.data_element.file_element import DataFileElement
 import multiprocessing
-import io
-#TODO: Unit test
 
 try:
     import torch
@@ -64,8 +56,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
         if len(return_layer_list) == 2:
             t1_model, _ = self.truncate_pytorch_model(model, 
                                                   [return_layer_list[0]]) 
-            model_child_iter = t1_model.named_children()
-            sub_module_list = [_ for _ in model_child_iter]
+            sub_module_list = [_ for _ in t1_model.named_children()]
             for inx, lay in enumerate(sub_module_list):
                 if return_layer_list[1] == lay[0]:
                     sub_pos = inx
@@ -100,8 +91,9 @@ class PytorchModelDescriptor (DescriptorGenerator):
         """
         try:
             if return_key is not '':
-                model_dict = getattr(model,"__dict__")
-                model = model_dict.get("_modules")[return_key]
+                assert (getattr(model,"__dict__")).get("_modules")[return_key]
+                #model_dict = getattr(model,"__dict__")
+                #model = model_dict.get("_modules")[return_key]
         except KeyError:
             self._log.info("KeyError: Given return layer is \
                                                not present in model")
@@ -121,27 +113,29 @@ class PytorchModelDescriptor (DescriptorGenerator):
         :param model_name: Name of model on PyTorch library,
             for example: 'resnet50', 'vgg16'.
         :type model_name: str
-        :param return_layer: The label of the layer we take data from to compose
-            output descriptor vector.
+        :param return_layer: The label of the layer we take data from 
+               to compose output descriptor vector.
         :type return_layer: str 
         :param custom_model_arch: Method that implements a custom Pytorch
             model.
         :type custom_model_arch: torch.nn
-        :param weights_filepath: Absolute file path to weights of a custom model 
-              custom_model_arch.
+        :param weights_filepath: Absolute file path to weights of a custom 
+               model custom_model_arch.
         :type weights_filepath: str
         :param norm_mean: Mean for normalizing images across three channels.
         :type norm_mean: List [float, float, float].
-        :param norm_std: Standard deviation for normalizing images across three channels.
+        :param norm_std: Standard deviation for normalizing images across 
+               three channels.
         :type norm_std: List [float, float, float].
         :param use_gpu: If Caffe should try to use the GPU
         :type use_gpu: bool
         :param batch_size: The maximum number of images to process in one feed
             forward of the network. This is especially important for GPUs since
-            they can only process a batch that will fit in the GPU memory space.
+            they can only process a batch that will fit in the GPU memory
+            space.
         :type batch_size: int
-        :param pretrained: The network is loaded with pretrained weights available on 
-            torchvision instead of custom weights.
+        :param pretrained: The network is loaded with pretrained weights 
+               available on torchvision instead of custom weights.
         :type pretrained: bool
         """
         self.model_name = model_name
@@ -170,10 +164,13 @@ class PytorchModelDescriptor (DescriptorGenerator):
             ret_para = [k for k in self.return_layer.split('.')]
             self.check_model_dict(model, ret_para[0])
             try:
-                assert ret_para[0] in model.__dict__['_modules'].keys()
-                _, model = self.truncate_pytorch_model(model, ret_para)
-            except:
-                self._log.info("Invalid return layer key not present in model")
+                _, new_model = self.truncate_pytorch_model(model, ret_para)
+                assert new_model
+                model = new_model
+            except AssertionError:
+                self._log.info("Invalid return layer label selected model:{}"\
+                                                            .format(model))
+                raise AssertionError
         else:
              model = custom_model_arch
         if (not self.pretrained) and (self.weights_filepath):

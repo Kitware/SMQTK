@@ -156,7 +156,7 @@ then
     STP_MBT="${LOG_DIR}/make_balltree.stamp"
 
     # Create list of image files
-    IMAGE_DIR_FILELIST="${IMAGE_DIR}.filelist.txt"
+    IMAGE_DIR_FILELIST="${MODEL_DIR}/${IMAGE_DIR}.filelist.txt"
     if [ ! -e "${STP_IMF}" ]
     then
         find "${IMAGE_DIR}/" -type f >"${IMAGE_DIR_FILELIST}"

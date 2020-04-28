@@ -1,22 +1,19 @@
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
 
-import torch
-from torch.utils.data import DataLoader
-from torch.autograd import Variable
-import torchvision 
-
-from .utils import PytorchImagedataset
-
 from collections import deque
 import multiprocessing
 import six
+import logging 
 
 try:
     import torch
     import torchvision
+    from torch.utils.data import DataLoader
+    from torch.autograd import Variable
+    from .utils import PytorchImagedataset
 except ImportError as ex:
-    logging.getLogger(__name__).warning("Failed to import torch/torchvision \
+    logging.warning("Failed to import torch/torchvision \
                                      module: %s", str(ex))
     torch = None
     torchvision = None
@@ -35,10 +32,10 @@ class PytorchModelDescriptor (DescriptorGenerator):
 
     @classmethod
     def is_usable(cls):
-        valid = torch is not None or torchvision is not None 
-        if not valid:
-            cls.get_logger().debug("PyTorch and torchvision cannot be imported")
-        return valid
+        valid = (torch is None) or (torchvision is None) 
+        if valid:
+            cls.get_logger().debug("PyTorch or torchvision cannot be imported")
+        return (not valid)
 
 
     def truncate_pytorch_model(self, model, return_layer_list):

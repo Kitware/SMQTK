@@ -7,11 +7,13 @@ services:
   #
 
   tpl-faiss-gpu:
-    image: ${SMQTK_REGISTRY}/tpl-faiss-gpu:v1.5.1
+    image: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
     build:
       context: tpl/faiss
       dockerfile: gpu/Dockerfile
       args:
+        FAISS_VERSION:  # using value from .env file.
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
         # One or more CUDA architectures to compile for.
         # Using ">-" for multi-line string concatenation with no new-lines.
         CUDA_ARCH: >-

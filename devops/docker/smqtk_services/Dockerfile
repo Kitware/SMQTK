@@ -19,9 +19,9 @@ RUN rm /bin/sh \
 
 # Miniconda setup + dependency install
 ENV PATH "/miniconda/bin:${PATH}"
-RUN curl --insecure https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh >/miniconda2-latest-linux-x86_64.sh \
- && bash /miniconda2-latest-linux-x86_64.sh -b -p /miniconda \
- && rm /miniconda2-latest-linux-x86_64.sh \
+RUN curl --insecure https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh >/miniconda3-latest-linux-x86_64.sh \
+ && bash /miniconda3-latest-linux-x86_64.sh -b -p /miniconda \
+ && rm /miniconda3-latest-linux-x86_64.sh \
  && conda update --all \
  && pip install numpy scipy matplotlib scikit-image protobuf \
  && conda install psycopg2
@@ -47,10 +47,10 @@ RUN cd /caffe/build \
     -DAtlas_LAPACK_LIBRARY:PATH=/usr/lib/liblapack_atlas.so \
     -DCMAKE_BUILD_TYPE:STRING=Release \
     -DCPU_ONLY:BOOL=ON \
-    -DPYTHON_EXECUTABLE:PATH=/miniconda/bin/python2.7 \
-    -DPYTHON_INCLUDE_DIR:PATH=/miniconda/include/python2.7 \
-    -DPYTHON_INCLUDE_DIR2:PATH=/miniconda/include/python2.7 \
-    -DPYTHON_LIBRARY:PATH=/miniconda/lib/libpython2.7.so \
+    -DPYTHON_EXECUTABLE:PATH=/miniconda/bin/python3.7m \
+    -DPYTHON_INCLUDE_DIR:PATH=/miniconda/include/python3.7m \
+    -DPYTHON_INCLUDE_DIR2:PATH=/miniconda/include/python3.7m \
+    -DPYTHON_LIBRARY:PATH=/miniconda/lib/libpython3.7m.so \
     -DUSE_CUDNN:BOOL=OFF \
     -DCMAKE_INSTALL_PREFIX:PATH=/caffe/install \
     /caffe/source \

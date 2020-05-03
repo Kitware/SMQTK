@@ -76,11 +76,11 @@ class Configurable (object):
         ...         default['power_func'] = {'module': 'math',
         ...                                  'attribute': 'pow'}
         ...         return default
-        >>> NonCompliantDefault.get_default_config()
-        {'power_func': {'module': 'math', 'attribute': 'pow'}}
+        >>> NonCompliantDefault.get_default_config() ==
+        ...        {'power_func': {'module': 'math', 'attribute': 'pow'}}
         >>> import json
-        >>> json.dumps(NonCompliantDefault.get_default_config())
-        '{"power_func": {"module": "math", "attribute": "pow"}}'
+        >>> json.dumps(NonCompliantDefault.get_default_config()) ==
+        ...        {"power_func": {"module": "math", "attribute": "pow"}}
 
         :return: Default configuration dictionary for the class.
         :rtype: dict

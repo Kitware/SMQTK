@@ -11,10 +11,13 @@ try:
     import torchvision
     from torch.utils.data import DataLoader
     from torch.autograd import Variable
+    from torch.utils.data import Dataset
+    from PIL import Image
+    import io
     from .utils import PytorchImagedataset
 except ImportError as ex:
-    logging.warning("Failed to import torch/torchvision \
-                                     module: %s", str(ex))
+    logging.warning("Failed to import torch/torchvision "
+                                     "module: %s", str(ex))
     torch = None
     torchvision = None
 
@@ -29,7 +32,6 @@ class PytorchModelDescriptor (DescriptorGenerator):
     descriptor.
     """
 
-
     @classmethod
     def is_usable(cls):
         valid = (torch is None) or (torchvision is None) 
@@ -38,63 +40,66 @@ class PytorchModelDescriptor (DescriptorGenerator):
         return (not valid)
 
 
-    def truncate_pytorch_model(self, model, return_layer_list):
+    def truncate_pytorch_model(self, model, t1_model):
         """
         Given a pytorch model and label of layer, the function returns a 
         model truncated at return layer.
         :param model: The pytorch model that needs to be truncated at 
                a certain return layer in network.
         :type model: torch.nn
-        :param return_layer_list: List of return layers in hierarchical order.
-        :type return_layer_list: List of string [str, str, ...]
-        
-        :return seq_mod,t1_model: Last sequential block of network 
-                in present state.
-        :return model,trunc_model: Model truncated until last sequential block 
-        :rtype: torch.nn    
+        :param t1_model: The pytorch sequential block of layers containing
+               the final return layer key.
+        :type t1_model: torch.nn.Sequential
+ 
+        :return model: Model truncated till the given sub module return
+                layer 
+        :rtype: torch.nn.Sequential    
         """
-        if len(return_layer_list) == 2:
-            t1_model, _ = self.truncate_pytorch_model(model, 
-                                                  [return_layer_list[0]]) 
-            sub_module_list = [_ for _ in t1_model.named_children()]
-            for inx, lay in enumerate(sub_module_list):
-                if return_layer_list[1] == lay[0]:
-                    sub_pos = inx
-            trunc_pos = len(sub_module_list) - (sub_pos+1)
-            model_sub_ = torch.nn.Sequential(*(list(t1_model.children()))
+        # Extract children of submodule return_key1
+        sub_module_list = [_ for _ in t1_model[0].named_children()]
+        for inx, lay in enumerate(sub_module_list):
+            if self.return_layer[1] == lay[0]:
+                sub_pos = inx
+        trunc_pos = len(sub_module_list) - (sub_pos+1)
+        model_sub_ = torch.nn.Sequential(*(list(t1_model[0].children()))
                                                   [:-trunc_pos])
-            setattr(locals().get("model"), 'classifier', model_sub_)
-            return t1_model, model
-        else:
-            module_list = list(model.__dict__['_modules'])
-            layer_position = (module_list.index(return_layer_list[0])) 
-            if len(module_list) == layer_position:
-                return model, model
-            else:
-                trunc_model = torch.nn.Sequential(*(list(model.children())
-                                                       [:layer_position+1]))
-                try:
-                    seq_mod = torch.nn.Sequential((list(model.children())
-                                                       [layer_position]))
-                except IndexError:
-                    seq_mod = None
-                return seq_mod, trunc_model
+        setattr(locals().get("model"), self.return_layer[0], model_sub_)
+        return model
 
-    def check_model_dict(self, model, return_key):
+    def check_model_dict(self, model):
         """
         Checks model dictionary to see if the top return layer is present.
         :param model: Base model to be checked for presense of layer
         :type model: torch.nn
-        :param return_keys: Label of top return layer for feature 
-               collection.
-        :type return_keys: str
+        :param model: The final model if return layer is a main in the
+               network's main backbone.
+                      A sequential block of layers containing
+               the final return layer key if probing a sub module.
+        :type model: torch.nn.Sequential
         """
         try:
-            if return_key is not '':
-                assert (getattr(model,"__dict__")).get("_modules")[return_key]
+            # We currently support iterating through only two levels of the network 
+            assert len(self.return_layer) < 3
+            if self.return_layer[0] is not '':
+                assert model._modules[self.return_layer[0]]
+                module_list = list(model.__dict__['_modules'])
+                layer_position = (module_list.index(self.return_layer[0]))
+                if len(self.return_layer) == 1:
+                    # If return_key1 is the last submodule
+                    if len(module_list) == layer_position:
+                        return model
+                    else:
+                        # If no submodule i.e return_key2 return 
+                        # truncated model
+                        model = torch.nn.Sequential(*(list(model.children())
+                                                       [:layer_position+1]))
+                if len(self.return_layer) == 2:
+                    model = torch.nn.Sequential((list(model.children())
+                                                       [layer_position]))
+            return model
         except KeyError:
-            raise KeyError("KeyError: Given return layer is \
-                                               not present in model")
+            raise KeyError("KeyError: Given return layer is "
+                                               "not present in model")
 
     def __init__(self, 
                  model_name = 'resnet18', return_layer = 'avgpool', 
@@ -137,40 +142,49 @@ class PytorchModelDescriptor (DescriptorGenerator):
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(norm_mean, norm_std)])
         self.batch_size = batch_size
-        self.return_layer = return_layer
         self.norm_mean = norm_mean
         self.norm_std = norm_std
         self.use_gpu = use_gpu
         self.pretrained = pretrained
         self.weights_filepath = weights_filepath
         self.custom_model_arch = custom_model_arch 
+        # Check if user wants to load custom model or a model from torchvision
         if not custom_model_arch:
             try: 
                 assert model_name in torchvision.models.__dict__.keys()
             except AssertionError:
-                self._log.info("Invalid model name, model not present \
-                             in torchvision. Please load network architecture")
+                self._log.info("Invalid model name, model not present "
+                             "in torchvision. Please load network architecture")
                 self._log.info("Available models include:{}"
-                       .format([s for s in torchvision.models.__dict__.keys() \
+                       .format([s for s in torchvision.models.__dict__.keys() 
                                               if not "__" in s])) 
+            # Loading model from torchvision library
             model = getattr(torchvision.models, self.model_name)(self.pretrained)
-            ret_para = [k for k in self.return_layer.split('.')]
-            self.check_model_dict(model, ret_para[0])
-            try:
-                _, new_model = self.truncate_pytorch_model(model, ret_para)
-                assert new_model
-                model = new_model
-            except AssertionError:
-                self._log.info("Selected model{}".format(model))
-                raise AssertionError("Invalid return layer label selected \
-                                                                  model")
         else:
+             # If custom architecture 
              model = custom_model_arch
         if (not self.pretrained) and (self.weights_filepath):
             checkpoint = torch.load(self.weights_filepath)
             if 'state_dict' in checkpoint:
                 checkpoint = checkpoint['state_dict']
             model.load_state_dict(checkpoint)
+        self.return_layer = [k for k in return_layer.split('.')]
+        # We currently support iterating through only two levels of the network 
+        # i.e return_layer1 and return_layer2
+        # Check if return_layer1 is present in model and returns the sub module containing
+        # return_key2 if present, else returns truncated model at return_key1
+
+        sub_model = self.check_model_dict(model)
+        # If we want to truncate submodule return_key1   
+        if len(self.return_layer) > 1:
+            sub_model = self.truncate_pytorch_model(model, sub_model) 
+        try:
+            assert sub_model
+            model = sub_model
+        except AssertionError:
+            self._log.info("Selected model{}".format(sub_model))
+            raise AssertionError("Invalid return layer label selected "
+                                                              "model")
         model.eval()
         if self.use_gpu:
             try:
@@ -314,7 +328,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
         del p
         self._log.debug("%d descriptors already computed",
                      len(self.data_elements) - len(self.uuid4proc))
-        self._log.debug("Given %d unique data elements", \
+        self._log.debug("Given %d unique data elements", 
                                      len(self.data_elements))
         if len(self.data_elements) == 0:
             raise ValueError("No data elements provided") 

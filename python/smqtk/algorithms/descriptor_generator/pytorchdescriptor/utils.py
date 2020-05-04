@@ -4,18 +4,50 @@ import io
 
 
 class PytorchImagedataset(Dataset):
-    def __init__(self, img_paths, uuid4proc, transforms):
+    """
+    A Pytorch dataset class that loads images for feature extraction,
+    while maintaining a corresponde between their feature vectors
+    and uuids.     
+    """
+
+    def __init__(self, data_elements, uuid4proc, transforms):
+        """
+        Create a Pytorch dataset for feature extraction using CNN.
+        :param data_elements: A dictionary of uuids to corresponding
+               smqtk.representation.DataElement 
+        :type data_elements: dict[uuid, smqtk.representation.DataElement]
+        :param uuid4proc: A queue of descriptor element uuids.
+        :type uuid4proc: list[uuid]
+        :param transforms: Augmentations and transforms applied to each
+               image.
+        :type tranforms: torchvision.transforms
+
+        :return: A tuple containing the transformed image and corresponding
+                 uuid.
+        :rtype: tuple(torch.tensor, str)
+        """
         self.transform = transforms
         self._uuid4proc = uuid4proc
-        self.image_path_list = img_paths
-        if not self.image_path_list:
-            self._log.info("Given file path contains no images of specified format {}".format(img_paths[0].split('.')[-1]))
+        self.data_ele = data_elements
 
     def __len__(self):
-        return len(self.image_path_list)
+        """
+        Returns the length of dataset
+        """
+        return len(self.data_ele)
 
     def __getitem__(self, idx):
-        img = Image.open(io.BytesIO(self.image_path_list[self._uuid4proc[idx]].get_bytes()))
+        """
+        Returns both the transformed image tensor and its corresponding uuids
+        at a random position inside the dataset.
+        :param idx: id of a dataset elements to be fetched in current batch
+               of feature extraction.
+        :type idx: int or [int]
+   
+        :return res: A tuple of the image tensor and its uuid.
+        :rtype res: tuple(torch.tensor, str) 
+        """
+        img = Image.open(io.BytesIO(self.data_ele[self._uuid4proc[idx]].get_bytes()))
         img = img.convert('RGB')
         if self.transform:
             img = self.transform(img)

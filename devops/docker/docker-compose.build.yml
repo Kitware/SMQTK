@@ -1,10 +1,43 @@
-version: "3"
+version: "3.4"
 
 services:
 
   #
   # TPL providing images.
   #
+
+  tpl-caffe-base:
+    # Base stage for common use by CPU and GPU build variants.
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-base
+    build:
+      context: tpl/caffe1
+      target: base
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
+
+  tpl-caffe-cpu:
+    # CPU-Only build variant
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cpu
+    depends_on:
+      - tpl-caffe-base
+    build:
+      context: tpl/caffe1
+      target: caffe_cpu
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
+
+  tpl-caffe-gpu:
+    # GPU build variant
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cuda${CUDA_DEVEL_IMAGE_TAG}
+    depends_on:
+      - tpl-caffe-base
+    build:
+      context: tpl/caffe1
+      target: caffe_gpu
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
+        # One or more CUDA architecture binary versions to compile for.
+        CUDA_ARCH_BIN_LIST: 35 52 60 61 62
 
   tpl-faiss-gpu:
     image: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
@@ -21,18 +54,7 @@ services:
           -gencode=arch=compute_52,code=compute_52
           -gencode=arch=compute_60,code=compute_60
           -gencode=arch=compute_61,code=compute_61
-
-  bvlc-caffe-cpu:
-    image: ${SMQTK_REGISTRY}/caffe:1.0-cpu
-    build:
-      context: smqtk_caffe
-      dockerfile: Dockerfile.cpu.df
-
-  bvlc-caffe-gpu:
-    image: ${SMQTK_REGISTRY}/caffe:1.0-gpu-cuda8.0-cudnn6
-    build:
-      context: smqtk_caffe
-      dockerfile: Dockerfile.gpu_cuda_cuDNNv6.df
+          -gencode=arch=compute_62,code=compute_62
 
   iqr-playground-gpu:
     image: ${SMQTK_REGISTRY}/iqr_playground:latest-gpu-cuda8-cudnn6

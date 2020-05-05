@@ -46,7 +46,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
         model truncated at return layer.
         :param model: The pytorch model that needs to be truncated at 
                a certain return layer in network.
-        :type model: torch.nn
+        :type model: torch.nn.Sequential
         :param t1_model: The pytorch sequential block of layers containing
                the final return layer key.
         :type t1_model: torch.nn.Sequential
@@ -56,12 +56,16 @@ class PytorchModelDescriptor (DescriptorGenerator):
         :rtype: torch.nn.Sequential    
         """
         # Extract children of submodule return_key1
-        sub_module_list = [_ for _ in t1_model[0].named_children()]
+        sub_module_list = [_ for _ in t1_model.named_children()]
         for inx, lay in enumerate(sub_module_list):
             if self.return_layer[1] == lay[0]:
                 sub_pos = inx
+                break
+        else:
+            raise KeyError("Invalid return layer:{}"
+                                   .format(self.return_layer[1]))
         trunc_pos = len(sub_module_list) - (sub_pos+1)
-        model_sub_ = torch.nn.Sequential(*(list(t1_model[0].children()))
+        model_sub_ = torch.nn.Sequential(*(list(t1_model.children()))
                                                   [:-trunc_pos])
         setattr(locals().get("model"), self.return_layer[0], model_sub_)
         return model
@@ -78,7 +82,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
         :type model: torch.nn.Sequential
         """
         try:
-            # We currently support iterating through only two levels of the network 
+        # We currently support iterating through only two levels of the network 
             assert len(self.return_layer) < 3
             if self.return_layer[0] is not '':
                 assert model._modules[self.return_layer[0]]
@@ -93,13 +97,14 @@ class PytorchModelDescriptor (DescriptorGenerator):
                         # truncated model
                         model = torch.nn.Sequential(*(list(model.children())
                                                        [:layer_position+1]))
+                # Return the last submodule that needs to be truncated further.
                 if len(self.return_layer) == 2:
                     model = torch.nn.Sequential((list(model.children())
-                                                       [layer_position]))
+                                                       [layer_position]))[0]
             return model
         except KeyError:
-            raise KeyError("KeyError: Given return layer is "
-                                               "not present in model")
+            raise KeyError("Given return layer is "
+                                  "invalid:{}".format(self.return_layer))
 
     def __init__(self, 
                  model_name = 'resnet18', return_layer = 'avgpool', 
@@ -171,8 +176,9 @@ class PytorchModelDescriptor (DescriptorGenerator):
         self.return_layer = [k for k in return_layer.split('.')]
         # We currently support iterating through only two levels of the network 
         # i.e return_layer1 and return_layer2
-        # Check if return_layer1 is present in model and returns the sub module containing
-        # return_key2 if present, else returns truncated model at return_key1
+        # Check if return_layer1 is present in model and returns the sub 
+        # module containing return_key2 if present, else returns 
+        # truncated model at return_key1
 
         sub_model = self.check_model_dict(model)
         # If we want to truncate submodule return_key1   
@@ -346,7 +352,9 @@ class PytorchModelDescriptor (DescriptorGenerator):
                 if len(pytorch_f.shape) < 2:
                     pytorch_f = pytorch_f.unsqueeze(0)
                 if len(pytorch_f.shape) > 2:
-                    pytorch_f = pytorch_f.view(pytorch_f.shape(0), (pytorch_f.shape(1)*pytorch_f.shape(2)))
+                    import numpy
+                    pytorch_f = pytorch_f.view(pytorch_f.shape[0],
+                               (numpy.prod(pytorch_f.shape[1:])))
                 [self.descr_elements[uuid].set_vector(
                                pytorch_f.data.cpu().numpy()[idx]) 
                                for idx, uuid in enumerate(uuids)]

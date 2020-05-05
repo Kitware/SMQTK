@@ -2,7 +2,7 @@ language: python
 
 jobs:
   include:
-    # Linux - Ubuntu Bionic
+    # Linux - Ubuntu Xenial
     - os: linux
       dist: xenial
       python: "2.7"

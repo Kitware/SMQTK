@@ -56,11 +56,37 @@ services:
           -gencode=arch=compute_61,code=compute_61
           -gencode=arch=compute_62,code=compute_62
 
-  iqr-playground-gpu:
-    image: ${SMQTK_REGISTRY}/iqr_playground:latest-gpu-cuda8-cudnn6
+  #
+  # IQR Playground Demo Image CPU/GPU
+  #
+  iqr-playground-cpu:
+    image: ${SMQTK_REGISTRY}/iqr_playground:${IQR_PLAYGROUND_TAG}-cpu
     depends_on:
-      - bvlc-caffe-gpu
+      - tpl-caffe-cpu
+      - tpl-faiss-gpu
     build:
       # Repo root
       context: ../..
-      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile.gpu-cuda8.0-cudnn6.df
+      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile
+      target: smqtk-cpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cpu
+        FAISS_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_VERSION:  # using value from .env file.
+
+  iqr-playground-gpu:
+    image: ${SMQTK_REGISTRY}/iqr_playground:${IQR_PLAYGROUND_TAG}-cuda${CUDA_RUNTIME_IMAGE_TAG}
+    depends_on:
+      - tpl-caffe-gpu
+      - tpl-faiss-gpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile
+      target: smqtk-gpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_VERSION:  # using value from .env file.

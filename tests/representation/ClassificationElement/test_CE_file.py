@@ -1,7 +1,7 @@
 import os
 import pickle
 
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.representation.classification_element.file \
     import FileClassificationElement

@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import pickle
 import unittest
 
-import mock
+import unittest.mock as mock
 import pytest
 
 from smqtk.exceptions import NoClassificationError

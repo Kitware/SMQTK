@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 
 from smqtk.representation import DetectionElement
 from smqtk.representation.detection_element_factory \

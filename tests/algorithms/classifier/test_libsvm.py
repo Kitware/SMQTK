@@ -2,7 +2,7 @@ from __future__ import (absolute_import, division, print_function)
 
 import unittest
 
-import mock
+import unittest.mock as mock
 import multiprocessing
 import multiprocessing.pool
 import numpy

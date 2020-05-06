@@ -1,4 +1,4 @@
-from six.moves import mock, range
+import unittest.mock as mock
 
 from smqtk.algorithms.object_detection import ObjectDetector
 from smqtk.representation import AxisAlignedBoundingBox, DataElement

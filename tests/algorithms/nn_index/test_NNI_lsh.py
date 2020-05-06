@@ -2,7 +2,7 @@ from __future__ import division, print_function
 
 import collections
 import json
-import mock
+import unittest.mock as mock
 import random
 import types
 import unittest

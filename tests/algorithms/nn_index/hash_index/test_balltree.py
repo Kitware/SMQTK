@@ -1,6 +1,6 @@
 import unittest
 
-import mock
+import unittest.mock as mock
 import numpy as np
 
 from smqtk.algorithms.nn_index.hash_index.sklearn_balltree import \

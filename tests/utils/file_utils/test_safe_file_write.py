@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 import unittest
 
 from smqtk.utils.file import safe_file_write

@@ -1,5 +1,5 @@
 import errno
-import mock
+import unittest.mock as mock
 import os
 import unittest
 

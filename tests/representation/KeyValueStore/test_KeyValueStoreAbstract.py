@@ -1,5 +1,5 @@
 import collections
-import mock
+import unittest.mock as mock
 import unittest
 
 from smqtk.exceptions import ReadOnlyError

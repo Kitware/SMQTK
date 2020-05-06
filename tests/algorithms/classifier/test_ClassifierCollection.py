@@ -1,6 +1,6 @@
 import unittest
 
-import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.classifier import ClassifierCollection
 from smqtk.exceptions import MissingLabelError

@@ -1,5 +1,5 @@
 import pytest
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.algorithms import RelevancyIndex
 from smqtk.iqr import IqrSession

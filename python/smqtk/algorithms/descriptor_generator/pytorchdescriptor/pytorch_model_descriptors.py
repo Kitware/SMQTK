@@ -186,12 +186,11 @@ class PytorchModelDescriptor (DescriptorGenerator):
             sub_model = self.truncate_pytorch_model(model, sub_model) 
         try:
             assert sub_model
-            model = sub_model
         except AssertionError:
             self._log.info("Selected model{}".format(sub_model))
             raise AssertionError("Invalid return layer label selected "
                                                               "model")
-        model.eval()
+        model = sub_model.eval()
         if self.use_gpu:
             try:
                 model = model.cuda()

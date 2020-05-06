@@ -23,7 +23,7 @@ RUN apt-get -y update \
         python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
         sudo=1.8.21p2-3ubuntu1.2 \
         vim=2:8.0.1453-1ubuntu1.3 \
-        # PostgreSQL 9.4 Installation
+        # PostgreSQL 10.12 Installation
         postgresql-10=10.12-0ubuntu0.18.04.1 \
         # MongoDB Installation
         mongodb=1:3.6.3-0ubuntu1.1 \
@@ -36,8 +36,6 @@ RUN apt-get -y update \
         libhdf5-100=1.10.0-patch1+docs-4 \
         libprotobuf10=3.0.0-9.1ubuntu1 \
         libopenblas-base=0.2.20+ds-4 \
-        python3=3.6.7-1~18.04 \
-        python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
  # Clean up apt resources.
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*

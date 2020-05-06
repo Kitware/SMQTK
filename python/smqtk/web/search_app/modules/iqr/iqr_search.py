@@ -249,10 +249,14 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             working_data = {}
             sid_data_elems = self._iqr_example_data.get(sid, {})
             for uid, workingElem in six.iteritems(sid_data_elems):
+                # Decoding base64 as ASCII knowing that
+                # `base64.urlsafe_b64decode` is used later, whose doc-string
+                # states that it may expect an ASCII string when not bytes.
                 working_data[uid] = {
                     'content_type': workingElem.content_type(),
                     'bytes_base64':
-                        base64.b64encode(workingElem.get_bytes()),
+                        base64.b64encode(workingElem.get_bytes())
+                              .decode('ascii'),
                 }
 
             state_dict["working_data"] = working_data

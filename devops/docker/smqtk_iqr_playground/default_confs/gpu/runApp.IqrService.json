@@ -104,8 +104,9 @@
                 "type": "PostgresDescriptorSet"
             },
             "neighbor_index": {
-                "LSHNearestNeighborIndex": {
+                "FaissNearestNeighborsIndex": {
                     "descriptor_set": {
+                        "__note__": "Using real descriptor index this time",
                         "PostgresDescriptorSet": {
                             "create_table": false,
                             "db_host": "/dev/shm",
@@ -122,64 +123,63 @@
                         },
                         "type": "PostgresDescriptorSet"
                     },
-                    "distance_method": "cosine",
-                    "hash2uuids_kvstore": {
-                        "MemoryKeyValueStore": {
-                            "cache_element": {
-                                "DataFileElement": {
-                                    "explicit_mimetype": null,
-                                    "filepath": "models/hash2uuids.memKvStore.pickle",
-                                    "readonly": false
-                                },
-                                "type": "DataFileElement"
-                            }
+                    "factory_string": "IDMap,Flat",
+                    "gpu_id": 0,
+                    "idx2uid_kvs": {
+                        "PostgresKeyValueStore": {
+                            "batch_size": 1000,
+                            "create_table": true,
+                            "db_host": "/dev/shm",
+                            "db_name": "postgres",
+                            "db_pass": null,
+                            "db_port": 5432,
+                            "db_user": "smqtk",
+                            "key_col": "key",
+                            "pickle_protocol": -1,
+                            "read_only": false,
+                            "table_name": "faiss_idx2uid_kvs",
+                            "value_col": "value"
                         },
-                        "type": "MemoryKeyValueStore"
+                        "type": "PostgresKeyValueStore"
                     },
-                    "hash_index": {
-                        "SkLearnBallTreeHashIndex": {
-                            "cache_element": {
-                                "DataFileElement": {
-                                    "explicit_mimetype": null,
-                                    "filepath": "models/balltree_hash_index.npz",
-                                    "readonly": false
-                                },
-                                "type": "DataFileElement"
-                            },
-                            "leaf_size": 40,
-                            "random_seed": 0
+                    "uid2idx_kvs": {
+                        "PostgresKeyValueStore": {
+                            "batch_size": 1000,
+                            "create_table": true,
+                            "db_host": "/dev/shm",
+                            "db_name": "postgres",
+                            "db_pass": null,
+                            "db_port": 5432,
+                            "db_user": "smqtk",
+                            "key_col": "key",
+                            "pickle_protocol": -1,
+                            "read_only": false,
+                            "table_name": "faiss_uid2idx_kvs",
+                            "value_col": "value"
                         },
-                        "type": "SkLearnBallTreeHashIndex"
+                        "type": "PostgresKeyValueStore"
                     },
-                    "hash_index_comment": "'hash_index' may also be null to default to a linear index built at query time.",
-                    "lsh_functor": {
-                        "ItqFunctor": {
-                            "bit_length": 256,
-                            "itq_iterations": 100,
-                            "mean_vec_cache": {
-                                "DataFileElement": {
-                                    "explicit_mimetype": null,
-                                    "filepath": "models/itq.model.b256_i100_r0.mean_vec.npy",
-                                    "readonly": true
-                                },
-                                "type": "DataFileElement"
-                            },
-                            "normalize": null,
-                            "random_seed": 0,
-                            "rotation_cache": {
-                                "DataFileElement": {
-                                    "explicit_mimetype": null,
-                                    "filepath": "models/itq.model.b256_i100_r0.rotation.npy",
-                                    "readonly": true
-                                },
-                                "type": "DataFileElement"
-                            }
+                    "index_element": {
+                        "DataFileElement": {
+                            "filepath": "models/faiss_index",
+                            "readonly": false
                         },
-                        "type": "ItqFunctor"
+                        "type": "DataFileElement"
                     },
-                    "read_only": false
+                    "index_param_element": {
+                        "DataFileElement": {
+                            "filepath": "models/faiss_index_params.json",
+                            "readonly": false
+                        },
+                        "type": "DataFileElement"
+                    },
+                    "ivf_nprobe": 64,
+                    "metric_type": "l2",
+                    "random_seed": 0,
+                    "read_only": false,
+                    "use_gpu": false
                 },
-                "type": "LSHNearestNeighborIndex"
+                "type": "FaissNearestNeighborsIndex"
             },
             "relevancy_index_config": {
                 "LibSvmHikRelevancyIndex": {

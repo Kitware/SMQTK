@@ -581,6 +581,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                     )
                 else:
                     desc_list.append(descriptor_)
+            if not desc_list:
+                self._log.info("No new descriptors provided not already "
+                               "present in this index. No update necessary.")
+                return
             data, new_uuids = self._descriptors_to_matrix(desc_list)
 
             n, d = data.shape

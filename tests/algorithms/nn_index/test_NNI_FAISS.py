@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import random
 import unittest
 
-import mock
+import unittest.mock as mock
 import numpy as np
 import pytest
 import six

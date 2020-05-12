@@ -4,24 +4,14 @@ jobs:
   include:
     # Linux - Ubuntu Xenial
     - os: linux
-      dist: xenial
-      python: "2.7"
-    - os: linux
-      dist: xenial
-      python: "3.6"
-    - os: linux
-      dist: xenial
-      python: "3.7"
-    # Linux - Ubuntu Bionic
-    - os: linux
-      dist: bionic
-      python: "2.7"
-    - os: linux
       dist: bionic
       python: "3.6"
     - os: linux
       dist: bionic
       python: "3.7"
+    - os: linux
+      dist: bionic
+      python: "3.8"
 
 sudo: false
 
@@ -42,6 +32,7 @@ install:
   - echo "${PYTHONINSTALLPREFIX}"
 
   # Build components of SMQTK
+  # - Builds custom libSVM (HIK kernel) and pip-installs SMQTK.
   # - Disabling the building of FLANN due to issues with newer versions of
   #   CMake and GCC. If FLANN desired and used in the future more than it
   #   currently is (basically not at all) then we can work to update the

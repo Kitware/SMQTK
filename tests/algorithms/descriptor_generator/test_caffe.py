@@ -5,7 +5,7 @@ import pickle
 import unittest
 
 import PIL.Image
-import mock
+import unittest.mock as mock
 import numpy
 import pytest
 

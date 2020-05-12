@@ -1,10 +1,8 @@
-
 import flask
+from io import BytesIO
 import multiprocessing
 import os
 import tempfile
-
-from six.moves import cStringIO as StringIO
 
 from smqtk.utils import SmqtkObject
 from smqtk.utils.file import safe_create_dir
@@ -45,7 +43,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
         #   Top level key is the file ID of the upload. The dictionary
         #   underneath that is the index ID'd chunks. When all chunks are
         #   present, the file is written and the entry in this map is removed.
-        #: :type: dict of (str, dict of (int, StringIO))
+        #: :type: dict of (str, dict of (int, BytesIO))
         self._file_chunks = {}
         # Lock per file ID so as to not collide when uploading multiple chunks
         #: :type: dict of (str, RLock)
@@ -82,7 +80,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                 # - Need to explicitly copy the buffered data as the file object
                 #   closes between chunk messages.
                 self._file_chunks.setdefault(fid, {})[current_chunk] \
-                    = StringIO(chunk_data.read())
+                    = BytesIO(chunk_data.read())
                 message = "Uploaded chunk #%d of %d for file '%s'" \
                     % (current_chunk, total_chunks, filename)
 
@@ -178,7 +176,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
         Returned file path should be manually removed by the user.
 
         :param chunk_map: Mapping of integer index to file-like chunk
-        :type chunk_map: dict of (int, StringIO)
+        :type chunk_map: dict of (int, BytesIO)
         :param file_extension: String extension to suffix the temporary file
             with
         :type file_extension: str

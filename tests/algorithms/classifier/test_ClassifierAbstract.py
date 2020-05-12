@@ -1,6 +1,6 @@
 from __future__ import division, print_function
-import mock
 import unittest
+import unittest.mock as mock
 
 import numpy as np
 import pytest

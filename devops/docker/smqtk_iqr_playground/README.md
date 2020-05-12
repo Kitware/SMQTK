@@ -3,8 +3,8 @@ SMQTK IQR Playground and Turn-key container
 
 We provide the docker container images:
 
-    kitware/smqtk/iqr_playground_cpu
-    kitware/smqtk/iqr_playground_nvidia
+    kitware/smqtk/iqr_playground:latest-cpu
+    kitware/smqtk/iqr_playground:latest-cuda9.2-cudnn7-runtime-ubuntu18.04
 
 This is a self-contained SMQTK playground environment that can also act as an
 image-to-application turn-key container. As an application, this container can
@@ -24,7 +24,7 @@ Default IQR web-app login:
 
 This is modifiable via a JSON file located in the container:
 
-    /usr/local/lib/python2.7/dist-packages/smqtk/web/search_app/modules/login/users.json
+    /usr/local/lib/python3.6/dist-packages/smqtk/web/search_app/modules/login/users.json
 
 Container internal data directories for volume mounting:
 
@@ -38,15 +38,29 @@ Container internal data directories for volume mounting:
 
 
 ## Building the Docker Images
+|   Requirements | Version     |
+|---------------:|-------------|
+|         docker | \>= 17.09.0 |
+| docker-compose | \>= 1.17.0  |
 
-The IQR image currently depends on Caffe, so the ``smqtk_caffe`` docker image
-needs to be built first. Both the CPU or GPU versions will be build by running
-``../smqtk_caffe/build_image.sh`` which should satisfy the dependencies for the
-CPU and GPU versions of the IQR images.
+The `docker-compose.build.yml` configuration located one level above here
+encodes build configuration and parametrization for the CPU and GPU variants
+of this image.
+Various arguments found in this file are defined by the `.env` file parallel
+in location to the YAML file.
 
-To build the CPU and GPU versions of the IQR docker images, the
-``build.docker.sh`` script should be run. This will first build the CPU image
-variant and then the GPU variant second.
+Before building, make sure your repository is clean by running `git clean -Xdi`
+and checking that there are no untracked files.
+
+From the directory above this, where the `docker-compose.build.yml` file is,
+all SMQTK bundled docker images can be built by running the following:
+```bash
+docker-compose -f docker-compose.build.yml build
+```
+If individual images are desired, then they must be listed explicitly, by
+service name, after `build`.
+This method of specification does not automatically follow depedencies so
+please note the `depends_on` fields.
 
 
 ## Running IQR on New Imagery
@@ -63,9 +77,10 @@ mount and the docker image tag to use).
 ```bash
 $ # Running CPU image variant
 $ docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<CPU-TAG> -b
-$ # Running GPU image variant using ``nvidia-docker2``
+$ # Running GPU image variants using ``nvidia-docker2``
 $ nvidia-docker run -d -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<GPU-TAG> -b
 $ docker run -d --runtime nvidia -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<GPU-TAG> -b
+$ docker run -d --gpus all -v <abs-img-dir>:/images -p 5000:5000 kitware/smqtk/iqr_playground:<GPU-TAG> -b
 ```
 
 The use of ``nvidia-docker`` is required to use the GPU computation

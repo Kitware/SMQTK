@@ -1,6 +1,6 @@
 import pickle
 
-import mock
+import unittest.mock as mock
 import pytest
 
 from smqtk.exceptions import NoDetectionError

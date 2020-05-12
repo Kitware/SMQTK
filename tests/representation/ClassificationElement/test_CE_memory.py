@@ -1,8 +1,9 @@
 import threading
 import unittest
+import unittest.mock as mock
 
 import pytest
-from six.moves import cPickle, mock
+from six.moves import cPickle
 
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation.classification_element.memory \

@@ -40,11 +40,14 @@ if (SMQTK_BUILD_LIBSVM)
     INSTALL_DIR       "${TPL_LOCAL_INSTALL}"
     INSTALL_COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/lib"
             COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_LOCAL_INSTALL}/include"
-            COMMAND   "${CMAKE_COMMAND}" -E make_directory "${TPL_PYTHON_SP}"
             COMMAND   "${CMAKE_COMMAND}" -E copy libsvm.so.2 "${TPL_LOCAL_INSTALL}/lib"
             COMMAND   "${CMAKE_COMMAND}" -E copy svm.h "${TPL_LOCAL_INSTALL}/include"
-            COMMAND   "${CMAKE_COMMAND}" -E copy python/svm.py "${TPL_PYTHON_SP}"
-            COMMAND   "${CMAKE_COMMAND}" -E copy python/svmutil.py "${TPL_PYTHON_SP}"
+    )
+  # Install command for the locally added `setup.py` based install.
+  install(
+    CODE "execute_process( COMMAND ${PYTHON_EXECUTABLE} -m pip install
+                                   --prefix=${CMAKE_INSTALL_PREFIX}
+                                   ${libSVM_DIR}/python )"
     )
 endif()
 

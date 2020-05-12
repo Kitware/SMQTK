@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import unittest
 
-import mock
+import unittest.mock as mock
 import numpy
 
 from smqtk.representation.descriptor_element.local_elements import \

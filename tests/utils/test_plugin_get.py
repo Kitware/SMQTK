@@ -4,8 +4,7 @@ import os
 import pkg_resources
 
 import pytest
-# noinspection PyUnresolvedReferences
-from six.moves import mock  # move defined in ``smqtk.tests``
+import unittest.mock as mock
 
 # noinspection PyProtectedMember
 from smqtk.utils.plugin import (

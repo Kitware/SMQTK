@@ -71,6 +71,9 @@ __pycache__
 /TPL/libsvm-3.1-custom/svm-prob
 /TPL/libsvm-3.1-custom/svm-scale
 /TPL/libsvm-3.1-custom/svm-train
+/TPL/libsvm-3.1-custom/python/build
+/TPL/libsvm-3.1-custom/python/libsvm.egg-info
+
 /bin/memex/hackathon_2016_07/scripts/es_config.json
 /bin/memex/hackathon_2016_07/notebooks/.ipynb_checkpoints/
 /bin/memex/hackathon_2016_07/data/

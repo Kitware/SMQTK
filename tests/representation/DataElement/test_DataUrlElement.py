@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 import os
 import requests
 import unittest

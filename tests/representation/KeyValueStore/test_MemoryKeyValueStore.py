@@ -1,6 +1,6 @@
 import unittest
 
-import mock
+import unittest.mock as mock
 import six
 from six.moves import cPickle as pickle
 

@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import mock
+import unittest.mock as mock
 import os
 import six
 import unittest

@@ -4,8 +4,7 @@ import random
 import numpy
 import pytest
 
-# noinspection PyUnresolvedReferences
-from six.moves import mock  # move defined in ``tests`` top module
+import unittest.mock as mock
 
 from smqtk.representation.bbox import AxisAlignedBoundingBox
 from smqtk.utils.configuration import configuration_test_helper

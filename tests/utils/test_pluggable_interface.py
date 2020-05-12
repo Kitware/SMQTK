@@ -1,8 +1,7 @@
 import os
 
 import pytest
-# noinspection PyUnresolvedReferences
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.utils.plugin import Pluggable, NotUsableError
 

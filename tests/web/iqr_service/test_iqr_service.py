@@ -1,6 +1,6 @@
 import base64
 import json
-import mock
+import unittest.mock as mock
 import os
 import unittest
 

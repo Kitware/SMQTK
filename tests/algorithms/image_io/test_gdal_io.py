@@ -7,8 +7,7 @@ import warnings
 
 import numpy
 import pytest
-# move registered in ``smqtk.tests`` module __init__.
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.image_io.gdal_io import (
     osgeo,

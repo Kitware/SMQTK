@@ -2,21 +2,19 @@
 --index-url https://pypi.python.org/simple/
 
 # Core deps
-Flask==1.1.1
+Flask==1.1.2
 Flask-BasicAuth==0.2.0
-Flask-login==0.4.1
-Flask-Cors==3.0.7
-imageio==2.3.0
-jinja2==2.10.1
+Flask-login==0.5.0
+Flask-Cors==3.0.8
+imageio==2.8.0
+jinja2==2.11.2
 jsmin==2.2.2
-matplotlib==2.2.3
-numpy==1.16.5; python_version < "3"
-numpy==1.17.3; python_version >= "3"
-Pillow==6.2.2
-pymongo==3.7.2
-requests==2.20.0
-scikit-learn==0.20.4; python_version < "3"
-scikit-learn==0.22.1; python_version >= "3"
-scipy==1.1.0
+matplotlib==3.2.1
+numpy==1.18.4
+Pillow==7.1.2
+pymongo==3.10.1
+requests==2.23.0
+scikit-learn==0.22.2.post1
+scipy==1.4.1
 six==1.14.0
-stevedore==1.29.0
+stevedore==1.32.0

@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import unittest
 
-import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 

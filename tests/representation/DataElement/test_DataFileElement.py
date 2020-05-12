@@ -1,7 +1,7 @@
 from __future__ import print_function
 import six
 
-import mock
+import unittest.mock as mock
 import os
 import unittest
 

@@ -1,7 +1,7 @@
 import functools
 import unittest
 
-import mock
+import unittest.mock as mock
 import numpy as np
 import pytest
 

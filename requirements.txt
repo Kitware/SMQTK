@@ -2,6 +2,7 @@
 --index-url https://pypi.python.org/simple/
 
 # Core deps
+Click==7.1.2
 Flask==1.1.2
 Flask-BasicAuth==0.2.0
 Flask-login==0.5.0

@@ -127,6 +127,7 @@ setuptools.setup(
         'pytest-runner',
     ],
     install_requires=[
+        'click',
         'flask',
         'flask-basicauth',
         'flask-login',
@@ -220,7 +221,8 @@ setuptools.setup(
             'train_itq = smqtk.bin.train_itq:main',
             'smqtk-make-train-test-sets = smqtk.bin.make_train_test_sets:main',
             'smqtk-nearest-neighbors = smqtk.bin.nearest_neighbors:main',
-            'smqtk-check-images = smqtk.bin.check_images:main'
-        ],
+            'smqtk-check-images = smqtk.bin.check_images:main',
+            'smqtk-nn-index-tool = smqtk.bin.nn_index_tool:cli_group',
+        ]
     }
 )

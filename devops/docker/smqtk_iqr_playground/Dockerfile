@@ -102,6 +102,9 @@ RUN mkdir /smqtk/build \
  && make install -j$(nproc) \
  && cd / \
  && rm -rf smqtk
+# Export language options to use UTF-8, desired by Click
+ENV LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
 
 # Shim to expose legacy postgresql CLI tools
 # TODO: Clean this up / modernize / don't be running a local database

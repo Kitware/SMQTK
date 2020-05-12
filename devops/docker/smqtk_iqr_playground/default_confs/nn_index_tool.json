@@ -1,0 +1,87 @@
+{
+    "descriptor_set": {
+        "PostgresDescriptorSet": {
+            "create_table": false,
+            "db_host": "/dev/shm",
+            "db_name": "postgres",
+            "db_pass": null,
+            "db_port": 5432,
+            "db_user": "smqtk",
+            "element_col": "element",
+            "multiquery_batch_size": 1000,
+            "pickle_protocol": -1,
+            "read_only": true,
+            "table_name": "descriptor_set_resnet50_pool5",
+            "uuid_col": "uid"
+        },
+        "type": "PostgresDescriptorSet"
+    },
+    "neighbor_index": {
+        "FaissNearestNeighborsIndex": {
+            "descriptor_set": {
+                "__note__": "Using memory here in order to avoid re-writing database set",
+                "MemoryDescriptorSet": {
+                    "cache_element": {"type": null},
+                    "pickle_protocol": -1
+                },
+                "type": "MemoryDescriptorSet"
+            },
+            "factory_string": "IDMap,Flat",
+            "gpu_id": 0,
+            "idx2uid_kvs": {
+                "PostgresKeyValueStore": {
+                    "batch_size": 1000,
+                    "create_table": true,
+                    "db_host": "/dev/shm",
+                    "db_name": "postgres",
+                    "db_pass": null,
+                    "db_port": 5432,
+                    "db_user": "smqtk",
+                    "key_col": "key",
+                    "pickle_protocol": -1,
+                    "read_only": false,
+                    "table_name": "faiss_idx2uid_kvs",
+                    "value_col": "value"
+                },
+                "type": "PostgresKeyValueStore"
+            },
+            "uid2idx_kvs": {
+                "PostgresKeyValueStore": {
+                    "batch_size": 1000,
+                    "create_table": true,
+                    "db_host": "/dev/shm",
+                    "db_name": "postgres",
+                    "db_pass": null,
+                    "db_port": 5432,
+                    "db_user": "smqtk",
+                    "key_col": "key",
+                    "pickle_protocol": -1,
+                    "read_only": false,
+                    "table_name": "faiss_uid2idx_kvs",
+                    "value_col": "value"
+                },
+                "type": "PostgresKeyValueStore"
+            },
+            "index_element": {
+                "DataFileElement": {
+                    "filepath": "models/faiss_index",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
+            "index_param_element": {
+                "DataFileElement": {
+                    "filepath": "models/faiss_index_params.json",
+                    "readonly": false
+                },
+                "type": "DataFileElement"
+            },
+            "ivf_nprobe": 64,
+            "metric_type": "l2",
+            "random_seed": 0,
+            "read_only": false,
+            "use_gpu": false
+        },
+        "type": "FaissNearestNeighborsIndex"
+    }
+}

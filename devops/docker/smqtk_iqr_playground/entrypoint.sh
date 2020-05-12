@@ -148,12 +148,8 @@ then
     STP_GIT="${LOG_DIR}/generate_image_transform.stamp"
     LOG_CMD="${LOG_DIR}/compute_many_descriptors.log"
     STP_CMD="${LOG_DIR}/compute_many_descriptors.stamp"
-    LOG_ITQ="${LOG_DIR}/train_itq.log"
-    STP_ITQ="${LOG_DIR}/train_itq.stamp"
-    LOG_CHC="${LOG_DIR}/compute_hash_codes.log"
-    STP_CHC="${LOG_DIR}/compute_hash_codes.stamp"
-    LOG_MBT="${LOG_DIR}/make_balltree.log"
-    STP_MBT="${LOG_DIR}/make_balltree.stamp"
+    LOG_NIT="${LOG_DIR}/nn_index_tool.log"
+    STP_NIT="${LOG_DIR}/nn_index_tool.stamp"
 
     # Create list of image files
     IMAGE_DIR_FILELIST="${MODEL_DIR}/${IMAGE_DIR}.filelist.txt"
@@ -191,8 +187,8 @@ then
     # Tail build logs until they are done
     # - touch log files first to prevent tail warning about files not existing.
     TAIL_PID="build_log_tail.pid"
-    touch "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}"
-    tail -F "${LOG_GIT}" "${LOG_CMD}" "${LOG_ITQ}" "${LOG_CHC}" "${LOG_MBT}" &
+    touch "${LOG_GIT}" "${LOG_CMD}" "${LOG_NIT}"
+    tail -F "${LOG_GIT}" "${LOG_CMD}" "${LOG_NIT}" &
     echo "$!" >"${TAIL_PID}"
 
     # Compute descriptors
@@ -206,29 +202,13 @@ then
         touch "${STP_CMD}"
     fi
 
-    # Train ITQ models
-    if [ ! -e "${STP_ITQ}" ]
+    # Step to build nn-index from build descriptor index
+    if [ ! -e "${STP_NIT}" ]
     then
-        train_itq -v -c "${CONFIG_DIR}/${SMQTK_ITQ_TRAIN_CONFIG}" \
-            &> "${LOG_ITQ}"
-        touch "${STP_ITQ}"
-    fi
-
-    # Compute hash codes for descriptors
-    if [ ! -e "${STP_CHC}" ]
-    then
-        compute_hash_codes \
-            -v -c "${CONFIG_DIR}/${SMQTK_CHC_CONFIG}" \
-            &> "${LOG_CHC}"
-        touch "${STP_CHC}"
-    fi
-
-    # Compute balltree hash index
-    if [ ! -e "${STP_MBT}" ]
-    then
-        make_balltree -v -c "${CONFIG_DIR}/${SMQTK_MAKE_BALLTREE}" \
-            &> "${LOG_MBT}"
-        touch "${STP_MBT}"
+        smqtk-nn-index-tool -v \
+            build "${CONFIG_DIR}/${SMQTK_NN_INDEX_TOOL_CONFIG}" \
+            &> "${LOG_NIT}"
+        touch "${STP_NIT}"
     fi
 
     # Stop log tail

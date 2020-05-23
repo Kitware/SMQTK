@@ -4,7 +4,9 @@ import collections
 import itertools
 import json
 import multiprocessing
+import random
 import time
+import threading
 import traceback
 import uuid
 
@@ -246,6 +248,12 @@ class IqrService (SmqtkWebApp):
         #: :type: dict[collections.Hashable, bool]
         self.session_classifier_dirty = {}
 
+        # Cache of random UIDs from the configured descriptor set for use
+        #: :type: list[collections.Hashable] | None
+        self._random_uid_list_cache = None
+        # Lock for mutation of this list cache
+        self._random_lock = threading.RLock()
+
         def session_expire_callback(session):
             """
             :type session: smqtk.iqr.IqrSession
@@ -341,6 +349,9 @@ class IqrService (SmqtkWebApp):
                           methods=['GET'])
         self.add_url_rule('/get_unadjudicated_relevancy',
                           view_func=self.get_unadjudicated_relevancy,
+                          methods=['GET'])
+        self.add_url_rule('/random_uids',
+                          view_func=self.get_random_uids,
                           methods=['GET'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
@@ -1595,7 +1606,59 @@ class IqrService (SmqtkWebApp):
             total=total, results=r
         ), 200
 
-    def _ensure_session_classifier(self, iqrs):
+    def get_random_uids(self):
+        """
+        Get a slice of random descriptor UIDs from the global set between the
+        optionally provided index offset and limit.
+
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
+
+        URI Args:
+            i: int
+                Starting index (inclusive). 0 by default.
+            j: int
+                Ending index (exclusive). Total global index size by default.
+            refresh: bool
+                If `true` we refresh our random UID list from the global index.
+                Otherwise this when `false` we utilize the same globally cached
+                random ordering for pagination stability.
+
+        Returns 200 and a JSON object that includes the following:
+            results: list[str]
+                List of string descriptor UIDs from the global set within the
+                give `[i, j]` slice.
+            total: int
+                Total number of UIDs in the global set.
+        """
+        i = flask.request.args.get('i', 0)
+        j = flask.request.args.get('j', None)
+        refresh_str = flask.request.args.get('refresh', 'false')
+
+        try:
+            refresh = json.loads(refresh_str)
+        except json.JSONDecodeError:
+            return make_response_json("Value for 'refresh' should be a valid "
+                                      "JSON boolean."), 400
+
+        with self._random_lock:
+            if self._random_uid_list_cache is None or refresh:
+                self._random_uid_list_cache = list(self.descriptor_set.keys())
+                random.shuffle(self._random_uid_list_cache)
+            total = len(self._random_uid_list_cache)
+            try:
+                i = int(i)
+                j = total if j is None else int(j)
+                results = self._random_uid_list_cache[i:j]
+            except ValueError:
+                return make_response_json("Invalid bounds index value(s)"), 400
+
+        return make_response_json(
+            "success", total=total, results=results
+        ), 200
+
+    def _ensure_session_classifier(self, iqrs)  :
         """
         Return the binary pos/neg classifier for this session.
 

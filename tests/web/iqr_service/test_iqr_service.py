@@ -1088,3 +1088,66 @@ class TestIqrService (unittest.TestCase):
         r_json = json.loads(r.data.decode())
         self.assertRegexpMatches(r_json['message'], 'Success')
         self.assertRegexpMatches(r_json['sid'], expected_sid)
+
+    def test_get_random_uids(self):
+        """
+        Test getting random descriptor UIDs from the
+        """
+        expected = list(map(chr, range(97, 97+26)))
+        self.app.descriptor_set.iterkeys = mock.MagicMock(
+            return_value=list(map(chr, range(97, 97+26)))
+        )
+        with self.app.test_client() as tc:
+            r = tc.get('/random_uids')
+            self.assertStatusCode(r, 200)
+            r_json = r.json
+            assert r_json['total'] == 26
+            # The results should have the expected contents but not be in the
+            # same order, cause ya know, random.
+            assert sorted(r_json['results']) == expected
+            assert r_json['results'] != expected
+            result1 = r_json['results']
+
+            # A second call should return the same list due to caching
+            r2 = tc.get('/random_uids')
+            self.assertStatusCode(r, 200)
+            r2_json = r2.json
+            assert r2_json['results'] == result1
+
+            # Calling with refresh should re-query the descriptor set and
+            # reorder. Result (should) be different.
+            # - MAYBE fails on RARE occasions because shuffle resulted in a
+            #   duplicate ordering? I would hope not given pseudo-randomness
+            #   but I don't know.
+            r3 = tc.get('/random_uids?refresh=true')
+            self.assertStatusCode(r, 200)
+            r3_json = r3.json
+            assert r3_json['results'] != result1
+
+    def test_get_random_uids_paged(self):
+        """ Test pagination of random UIDs """
+        expected = list(map(chr, range(97, 97+26)))
+        self.app.descriptor_set.iterkeys = mock.MagicMock(
+            return_value=list(map(chr, range(97, 97+26)))
+        )
+        with self.app.test_client() as tc:
+            # Lets get a baseline to test pagination
+            rbase = tc.get('/random_uids')
+            self.assertStatusCode(rbase, 200)
+            result_all = rbase.json['results']
+
+            r = tc.get('/random_uids?i=3')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[3:]
+            
+            r = tc.get('/random_uids?j=-4')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[:-4]
+
+            r = tc.get('/random_uids?j=10')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[:10]
+
+            r = tc.get('/random_uids?i=7&j=10')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[7:10]

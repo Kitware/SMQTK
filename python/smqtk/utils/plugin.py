@@ -320,10 +320,10 @@ def get_plugins(interface_type, env_var, helper_var,
                 # Making this a warning as I think this indicates a broken
                 # implementation in the ecosystem.
                 # noinspection PyUnresolvedReferences
-                log.warn('[%s.%s] [skip] Does not implement one or more '
-                         'abstract methods: %s',
-                         module_path, cls.__name__,
-                         list(cls.__abstractmethods__))
+                log.warning('[%s.%s] [skip] Does not implement one or '
+                            'more abstract methods: %s',
+                            module_path, cls.__name__,
+                            list(cls.__abstractmethods__))
             elif not cls.is_usable():
                 log.debug("[%s.%s] [skip] Class does not report as usable.",
                           module_path, cls.__name__)

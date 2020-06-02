@@ -95,7 +95,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     :param sequences: Input data to apply to the given ``work_func`` function.
         If more than one sequence is given, the function is called with an
         argument list consisting of the corresponding item of each sequence.
-    :type sequences: collections.Iterable
+    :type sequences: collections.abc.Iterable
 
     :param kwargs: Optionally available keyword arguments are as follows:
 

@@ -33,7 +33,7 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
     :param data_elements: Iterable of DataElement instances of files to
         work on.
-    :type data_elements: collections.Iterable[smqtk.representation.DataElement]
+    :type data_elements: collections.abc.Iterable[smqtk.representation.DataElement]
 
     :param descr_generator: DescriptorGenerator implementation instance
         to use to generate descriptor vectors.
@@ -72,8 +72,8 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
     :return: Generator that yields (DataElement, DescriptorElement) for each
         data element given, in the order they were provided.
-    :rtype: collections.Iterable[(smqtk.representation.DataElement,
-                                  smqtk.representation.DescriptorElement)]
+    :rtype: collections.abc.Iterable[(smqtk.representation.DataElement,
+                                      smqtk.representation.DescriptorElement)]
 
     """
     log = logging.getLogger(__name__)
@@ -156,7 +156,7 @@ class _CountedGenerator(object):
     """
     Used to count elements of an iterable as they are accessed
 
-    :param collections.Iterable iterable: An iterable containing elements to be
+    :param collections.abc.Iterable iterable: An iterable containing elements to be
         accessed and counted.
     :param list count_list: A list to which the count of items in iterable will
         be added once the iterable has been exhausted.
@@ -191,11 +191,11 @@ def compute_transformed_descriptors(data_elements, descr_generator,
 
     :param transform_function: Takes in a DataElement and returns an iterable
         of transformed DataElements.
-    :type transform_function: collections.Callable
+    :type transform_function: collections.abc.Callable
 
-    :rtype: collections.Iterable[
+    :rtype: collections.abc.Iterable[
         (smqtk.representation.DataElement,
-         collections.Iterable[smqtk.representation.DescriptorElement])]
+         collections.abc.Iterable[smqtk.representation.DescriptorElement])]
     """
     transformed_counts = []
 
@@ -223,7 +223,7 @@ def compute_hash_codes(uuids, descr_set, functor, report_interval=1.0,
     and convert to an integer, yielding (UUID, hash-int) pairs.
 
     :param uuids: Sequence of UUIDs to process
-    :type uuids: collections.Iterable[collections.Hashable]
+    :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
     :param descr_set: Descriptor set to pull from.
     :type descr_set: smqtk.representation.descriptor_set.DescriptorSet
@@ -304,7 +304,7 @@ def mb_kmeans_build_apply(descr_set, mbkm, initial_fit_size):
 
     :return: Dictionary of the cluster label (integer) to the set of descriptor
         UUIDs belonging to that cluster.
-    :rtype: dict[int, set[collections.Hashable]]
+    :rtype: dict[int, set[collections.abc.Hashable]]
 
     """
     log = logging.getLogger(__name__)

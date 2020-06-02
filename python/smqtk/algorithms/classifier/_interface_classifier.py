@@ -24,7 +24,7 @@ class Classifier (SmqtkAlgorithm):
         classifier embodies such a concept.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[collections.Hashable]
+        :rtype: collections.abc.Sequence[collections.abc.Hashable]
 
         :raises RuntimeError: No model loaded.
 
@@ -46,13 +46,13 @@ class Classifier (SmqtkAlgorithm):
         manner whereby each label is given a confidence-like value in the
         [0, 1] range.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
+        :param collections.abc.Iterable[numpy.ndarray] array_iter:
             Iterable of arrays to be classified.
 
         :return: Iterable of dictionaries, parallel in association to the input
             descriptor vectors. Each dictionary should map labels to associated
             confidence values.
-        :rtype: collections.Iterable[dict[collections.Hashable, float]]
+        :rtype: collections.abc.Iterable[dict[collections.abc.Hashable, float]]
         """
 
     @staticmethod
@@ -65,7 +65,7 @@ class Classifier (SmqtkAlgorithm):
         of more than one dimension (i.e. 2D matries, etc.) will trigger a
         ValueError.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
+        :param collections.abc.Iterable[numpy.ndarray] array_iter:
             Iterable numpy arrays.
 
         :raises ValueError: Not all input arrays were of consistent
@@ -99,7 +99,7 @@ class Classifier (SmqtkAlgorithm):
         manner whereby each label is given a confidence-like value in the
         [0, 1] range.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
+        :param collections.abc.Iterable[numpy.ndarray] array_iter:
             Iterable of DescriptorElement instances to be classified.
 
         :raises ValueError: Input arrays were not all of consistent
@@ -108,7 +108,7 @@ class Classifier (SmqtkAlgorithm):
         :return: Iterable of dictionaries, parallel in association to the input
             descriptor vectors. Each dictionary should map labels to associated
             confidence values.
-        :rtype: collections.Iterable[dict[collections.Hashable, float]]
+        :rtype: collections.abc.Iterable[dict[collections.abc.Hashable, float]]
         """
         return self._classify_arrays(
             self._assert_array_dim_consistency(array_iter)
@@ -156,7 +156,7 @@ class Classifier (SmqtkAlgorithm):
         all input descriptor elements and results are set to their respective
         classification elements regardless of existing result storage.
 
-        :param collections.Iterable[DescriptorElement] descr_iter:
+        :param collections.abc.Iterable[DescriptorElement] descr_iter:
             Iterable of DescriptorElement instances to be classified.
         :param smqtk.representation.ClassificationElementFactory factory:
             Classification element factory. The default factory yields
@@ -179,7 +179,7 @@ class Classifier (SmqtkAlgorithm):
         :return: Iterator of result ClassificationElement instances. UUIDs of
             generated ClassificationElement instances will reflect the UUID of
             the DescriptorElement it was computed from.
-        :rtype: collections.Iterator[smqtk.representation.ClassificationElement]
+        :rtype: collections.abc.Iterator[smqtk.representation.ClassificationElement]
         """
         log_debug = self._log.debug
 

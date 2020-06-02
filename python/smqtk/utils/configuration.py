@@ -216,7 +216,7 @@ def make_default_config(configurable_iter):
     to this function.  While functionally acceptable, it is generally not
     recommended to draw configurations from abstract classes.
 
-    :param collections.Iterable[type] configurable_iter:
+    :param collections.abc.Iterable[type] configurable_iter:
         An iterable of class types class types that sub-class ``Configurable``.
 
     :return: Base configuration dictionary with an empty ``type`` field, and
@@ -315,7 +315,7 @@ def cls_conf_from_config_dict(config, type_iter):
     :param dict config:
         Configuration dictionary to draw from.
 
-    :param collections.Iterable[type] type_iter:
+    :param collections.abc.Iterable[type] type_iter:
         An iterable of class types to select from.
 
     :raises ValueError:
@@ -397,7 +397,7 @@ def from_config_dict(config, type_iter, *args):
     :param dict config:
         Configuration dictionary to draw from.
 
-    :param collections.Iterable[type] type_iter:
+    :param collections.abc.Iterable[type] type_iter:
         An iterable of class types to select from.
 
     :param object args:

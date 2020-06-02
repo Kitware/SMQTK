@@ -45,7 +45,7 @@ class MatrixDataElement (DataElement):  # lgtm[py/missing-equals]
 
     def __init__(self, mat=None, readonly=False):
         """
-        :param None|collections.Sequence|numpy.ndarray mat:
+        :param None|collections.abc.Sequence|numpy.ndarray mat:
             Optional matrix to store at construction time.
         :param bool readonly:
             If the matrix stored should be considered read-only. This pertains

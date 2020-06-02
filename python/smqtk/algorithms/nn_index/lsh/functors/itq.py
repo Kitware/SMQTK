@@ -5,7 +5,7 @@ References/Resources:
 - GitHub with matlab implementation:
   https://github.com/willard-yuan/hashing-baseline-for-image-retrieval
 """
-from collections import Sequence
+from collections.abc import Sequence
 from copy import deepcopy
 import logging
 
@@ -304,7 +304,7 @@ class ItqFunctor (LshFunctor):
         :param descriptors: Iterable of ``DescriptorElement`` vectors to fit
             the model to.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param use_multiprocessing: If multiprocessing should be used, as
             opposed to threading, when collecting descriptor elements from the

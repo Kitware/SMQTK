@@ -164,7 +164,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         Providing explicit frames causes offset, interval and duration
         parameters to be ignored and only the frames specified here to be
         extracted and returned.
-    :type frames: collections.Iterable[int]
+    :type frames: collections.abc.Iterable[int]
 
     :param output_image_ext: Extension to use for output images.
     :type output_image_ext: str

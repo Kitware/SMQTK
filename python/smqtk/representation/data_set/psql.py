@@ -140,7 +140,7 @@ class PostgresNativeDataSet (DataSet):
         """
         Internal method to generate a psql data element with appropriate psql
         parameters.
-        :param collections.Hashable uid: UUID of data element.
+        :param collections.abc.Hashable uid: UUID of data element.
         :param None|str content_type: Content type / MIME type of the element.
         """
         e = PostgresDataElement(
@@ -216,7 +216,7 @@ class PostgresNativeDataSet (DataSet):
 
         :param uuid: Unique ID to test for inclusion. This should match the
             type that the set implementation expects or cares about.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if the given uuid matches an element in this set, or
             False if it does not.
@@ -261,7 +261,7 @@ class PostgresNativeDataSet (DataSet):
             this data set.
 
         :param uuid: The uuid of the element to retrieve.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: The data element instance for the given uuid.
         :rtype: smqtk.representation.DataElement

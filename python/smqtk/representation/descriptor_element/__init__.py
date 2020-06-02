@@ -20,7 +20,7 @@ def _uuid_and_vector_from_descriptor(descriptor):
     :type descriptor: smqtk.representation.descriptor_element.DescriptorElement
     :return: Tuple containing the UUID and associated vector for the given
         descriptor
-    :rtype: tuple[collections.Hashable, numpy.ndarray]
+    :rtype: tuple[collections.abc.Hashable, numpy.ndarray]
     """
     return (descriptor.uuid(), descriptor.vector())
 
@@ -52,7 +52,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         """
         super(DescriptorElement, self).__init__()
@@ -125,7 +125,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param config_dict: JSON compliant dictionary encapsulating
             a configuration.
@@ -148,7 +148,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
     def uuid(self):
         """
         :return: Unique ID for this vector.
-        :rtype: collections.Hashable
+        :rtype: collections.abc.Hashable
         """
         return self._uuid
 
@@ -173,14 +173,14 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
             of None for missing values.
 
         :param descriptors: Iterable of descriptors to query for.
-        :type descriptors: collections.Iterable[
+        :type descriptors: collections.abc.Iterable[
             smqtk.representation.descriptor_element.DescriptorElement]
 
         :return: Iterator of tuples containing the descriptor uuid and the
             vector associated with the given descriptors or None if the
             descriptor has no associated vector
-        :rtype: collections.Iterable[
-            tuple[collections.Hashable, Union[numpy.ndarray, None]]]
+        :rtype: collections.abc.Iterable[
+            tuple[collections.abc.Hashable, Union[numpy.ndarray, None]]]
         """
         for uuid_vector_pair in parallel_map(
                 _uuid_and_vector_from_descriptor, descriptors,
@@ -199,7 +199,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
             subclass.
 
         :param descriptors: Iterable of descriptors to query for.
-        :type descriptors: collections.Iterable[
+        :type descriptors: collections.abc.Iterable[
             smqtk.representation.descriptor_element.DescriptorElement]
 
         :return: Iterable of vectors associated with the given descriptors or

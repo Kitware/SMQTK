@@ -27,7 +27,7 @@ class FileClassificationElement (ClassificationElement):
         :type type_name: str
 
         :param uuid: uuid for this classification
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
             is relative, we interpret as relative to the current working
@@ -115,7 +115,7 @@ class FileClassificationElement (ClassificationElement):
             set.
 
         :return: Label-to-confidence dictionary.
-        :rtype: dict[collections.Hashable, float]
+        :rtype: dict[collections.abc.Hashable, float]
 
         """
         if not self.has_classifications():
@@ -132,7 +132,7 @@ class FileClassificationElement (ClassificationElement):
         by providing a dictionary mapping labels to confidence values.
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable, float]
+        :type m: dict[collections.abc.Hashable, float]
 
         :raises ValueError: The given label-confidence map was empty.
 

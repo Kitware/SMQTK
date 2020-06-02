@@ -286,7 +286,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         with self._model_lock:
@@ -336,7 +336,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         with self._model_lock:
@@ -382,7 +382,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
         Remove descriptors from this index associated with the given UIDs.
 
         :param uids: Iterable of UIDs of descriptors to remove from this index.
-        :type uids: collections.Iterable[collections.Hashable]
+        :type uids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: One or more UIDs provided do not match any stored
             descriptors.  The index should not be modified.
@@ -486,7 +486,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             for h_int in map(bit_vector_to_int_large, near_hashes):
                 # If descriptor hash not in our map, we effectively skip it.
                 # Get set of descriptor UUIDs for a hash code.
-                #: :type: set[collections.Hashable]
+                #: :type: set[collections.abc.Hashable]
                 near_uuids = self.hash2uuids_kvstore.get(h_int, set())
                 # Accumulate matching descriptor UUIDs to a list.
                 neighbor_uuids.extend(near_uuids)

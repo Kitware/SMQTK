@@ -136,7 +136,7 @@ def main():
 
     def descr_for_uuid(uuid):
         """
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
         :rtype: smqtk.representation.DescriptorElement
         """
         return descriptor_set.get_descriptor(uuid)
@@ -150,7 +150,7 @@ def main():
                                                classify_overwrite)
 
     log.info("Initializing uuid-to-descriptor parallel map")
-    #: :type: collections.Iterable[smqtk.representation.DescriptorElement]
+    #: :type: collections.abc.Iterable[smqtk.representation.DescriptorElement]
     element_iter = parallel.parallel_map(
         descr_for_uuid, iter_uuids(),
         use_multiprocessing=p_use_multiprocessing,
@@ -159,7 +159,7 @@ def main():
     )
 
     log.info("Initializing descriptor-to-classification parallel map")
-    #: :type: collections.Iterable[smqtk.representation.ClassificationElement]
+    #: :type: collections.abc.Iterable[smqtk.representation.ClassificationElement]
     classification_iter = parallel.parallel_map(
         classify_descr, element_iter,
         use_multiprocessing=p_use_multiprocessing,

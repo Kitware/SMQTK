@@ -75,7 +75,7 @@ def _get_local_plugin_modules(log, interface_type, warn=True):
         If we should warn about module import failures.
 
     :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     # Get the parent module and the filesystem path to that module.
@@ -126,7 +126,7 @@ def _get_envvar_plugin_module(log, env_var, warn=True):
         If we should warn about module import failures.
 
     :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     if env_var in os.environ:
@@ -154,7 +154,7 @@ def _get_extension_plugin_modules(log, warn=True):
     provide extensions in the ``smqtk_plugins`` namespace.
 
     :return: Iterator of python modules registered by installed extensions.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     # Get the cached extension manager.
@@ -276,7 +276,7 @@ def get_plugins(interface_type, env_var, helper_var,
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
                 classes = []
-            elif (isinstance(classes, collections.Iterable) and
+            elif (isinstance(classes, collections.abc.Iterable) and
                   not isinstance(classes, six.string_types)):
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",

@@ -302,14 +302,14 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.abc.Iterable[DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
         log_debug = self._log.debug
 
@@ -353,7 +353,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                     yield v
 
             # Slice out the next batch
-            #: :type: list[(collections.Hashable, numpy.ndarray)]
+            #: :type: list[(collections.abc.Hashable, numpy.ndarray)]
             batch_img_arrays = \
                 list(itertools.islice(img_array_iter, self.batch_size))
             batch_i += 1
@@ -368,15 +368,15 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
 
         :param uuids4proc: UUIDs of the source data to run in the network as a
             batch.
-        :type uuids4proc: collections.Sequence[collections.Hashable]
+        :type uuids4proc: collections.abc.Sequence[collections.abc.Hashable]
 
         :param data_elements: Mapping of UUID to data element for input data.
-        :type data_elements: dict[collections.Hashable,
+        :type data_elements: dict[collections.abc.Hashable,
                                   smqtk.representation.DataElement]
 
         :param descr_elements: Mapping of UUID to descriptor element based on
             input data elements.
-        :type descr_elements: dict[collections.Hashable,
+        :type descr_elements: dict[collections.abc.Hashable,
                                    smqtk.representation.DescriptorElement]
 
         :param procs: The number of asynchronous processes to run for loading

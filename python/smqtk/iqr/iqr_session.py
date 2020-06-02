@@ -89,7 +89,7 @@ class IqrSession (SmqtkObject):
 
         # Book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.
-        #: :type: set[collections.Hashable]
+        #: :type: set[collections.abc.Hashable]
         self._wi_seeds_used = set()
 
         # Descriptor elements representing data from external sources.
@@ -182,12 +182,12 @@ class IqrSession (SmqtkObject):
         :param positive: Iterable of descriptors from external sources to
             consider positive examples.
         :type positive:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param negative: Iterable of descriptors from external sources to
             consider negative examples.
         :type negative:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         positive = set(positive)
@@ -215,22 +215,22 @@ class IqrSession (SmqtkObject):
         :param new_positives: Descriptors of elements in our working set to
             now be considered to be positively relevant.
         :type new_positives:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param new_negatives: Descriptors of elements in our working set to
             now be considered to be negatively relevant.
         :type new_negatives:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_positives: Descriptors of elements in our working set to now
             be considered not positive any more.
         :type un_positives:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param un_negatives: Descriptors of elements in our working set to now
             be considered not negative any more.
         :type un_negatives:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # TODO: Assert that inputs are indeed in the working set?

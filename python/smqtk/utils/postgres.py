@@ -314,7 +314,7 @@ class PsqlConnectionHelper (SmqtkObject):
         nothing is to be actively yielded.
 
         :param iterable: Iterable of elements to batch.
-        :type iterable: collections.Iterable
+        :type iterable: collections.abc.Iterable
 
         :param cursor_callback: Function that takes two positional arguments:
             the cursor object for the database connection and the current batch

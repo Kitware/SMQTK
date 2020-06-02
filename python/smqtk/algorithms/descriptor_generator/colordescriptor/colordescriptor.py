@@ -291,7 +291,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -376,7 +376,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         :param data_set: Set of input data elements to generate the model
             with.
-        :type data_set: collections.Set[smqtk.representation.DataElement]
+        :type data_set: collections.abc.Set[smqtk.representation.DataElement]
 
         """
         if self.has_model:
@@ -645,14 +645,14 @@ class ColorDescriptor_Base (DescriptorGenerator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.abc.Iterable[DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
         return parallel_map(self._compute_one_descriptor, data_iter,
                             cores=self.parallel, use_multiprocessing=True,
@@ -779,7 +779,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -943,7 +943,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int

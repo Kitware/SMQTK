@@ -54,7 +54,7 @@ class IndexLabelClassifier (Classifier):
         classify descriptors into.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[str]
+        :rtype: collections.abc.Sequence[str]
 
         """
         # copying container

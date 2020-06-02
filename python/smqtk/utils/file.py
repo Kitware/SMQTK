@@ -119,7 +119,7 @@ def iter_directory_files(d, recurse=True):
 
     :return: Generator expression yielding absolute file paths under the given
         directory.
-    :rtype: collections.Iterable[str]
+    :rtype: collections.abc.Iterable[str]
 
     """
     d = os.path.abspath(d)
@@ -187,7 +187,7 @@ def iter_svm_file(filepath, width):
     :param width: int
 
     :return: Generator yielding ndarray vectors
-    :rtype: collections.Iterable[numpy.core.multiarray.ndarray]
+    :rtype: collections.abc.Iterable[numpy.core.multiarray.ndarray]
 
     """
     idx_val_re = re.compile(r"([0-9]+):([-+]?[0-9]*\.?[0-9]*)")
@@ -212,7 +212,7 @@ def iter_csv_file(filepath):
     :type filepath: str
 
     :return: Generator yielding ndarray vectors
-    :rtype: collections.Iterable[numpy.core.multiarray.ndarray]
+    :rtype: collections.abc.Iterable[numpy.core.multiarray.ndarray]
 
     """
     with open(filepath) as f:

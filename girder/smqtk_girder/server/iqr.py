@@ -31,12 +31,12 @@ class Iqr(Resource):
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.Hashable, SupervisedClassifier | None]
+        #: :type: dict[collections.abc.Hashable, SupervisedClassifier | None]
         self.session_classifiers = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
-        #: :type: dict[collections.Hashable, bool]
+        #: :type: dict[collections.abc.Hashable, bool]
         self.session_classifier_dirty = {}
         self.controller = IqrController(False)
 

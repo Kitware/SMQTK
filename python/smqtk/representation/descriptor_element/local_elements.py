@@ -134,7 +134,7 @@ class DescriptorFileElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: uuid for this descriptor
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
             is relative, we interpret as relative to the current working

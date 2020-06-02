@@ -162,7 +162,7 @@ class SolrDescriptorSet (DescriptorSet):
         Check if a DescriptorElement with the given UUID exists in this set.
 
         :param uuid: UUID to query for
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
             set, or False if not.
@@ -206,7 +206,7 @@ class SolrDescriptorSet (DescriptorSet):
         :param descriptors: Iterable of descriptor instances to add to this
             set.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         documents = []
@@ -224,7 +224,7 @@ class SolrDescriptorSet (DescriptorSet):
         Get the descriptor in this set that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -240,13 +240,13 @@ class SolrDescriptorSet (DescriptorSet):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Hashable
+        :type uuids: collections.abc.Hashable
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
@@ -254,7 +254,7 @@ class SolrDescriptorSet (DescriptorSet):
         def batch_query(_batch):
             """
             :param _batch: Batch of UIDs to select.
-            :type _batch: list[collections.Hashable]
+            :type _batch: list[collections.abc.Hashable]
             """
             query = ' OR '.join([self.d_uid_field + (':%s' % _uid)
                                  for _uid in _batch])
@@ -290,7 +290,7 @@ class SolrDescriptorSet (DescriptorSet):
         Remove a descriptor from this set by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -303,7 +303,7 @@ class SolrDescriptorSet (DescriptorSet):
         Remove descriptors associated to given descriptor UUIDs from this set.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
@@ -314,7 +314,7 @@ class SolrDescriptorSet (DescriptorSet):
         def batch_op(_batch):
             """
             :param _batch: UIDs to remove from set.
-            :type _batch: collections.Iterable[collections.Hashable]
+            :type _batch: collections.abc.Iterable[collections.abc.Hashable]
             """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
                                       for _uid in _batch])

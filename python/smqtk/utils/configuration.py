@@ -458,7 +458,7 @@ def configuration_test_helper(inst, config_ignored_params=frozenset(),
     assert not isinstance(inst, type), "Passed a type, expected instance."
     inst_T = inst.__class__
 
-    # Patent class default config keys should match constructor keys.
+    # Parent class default config keys should match constructor keys.
     dflt_cfg = inst_T.get_default_config()
     argspec = inspect.getargspec(inst_T.__init__)
     # Check that keys returned in default config is equivalent to parameters

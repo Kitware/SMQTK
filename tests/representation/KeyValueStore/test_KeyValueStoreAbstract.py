@@ -205,7 +205,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
     def test_clear_readonly(self):
         s = DummyKVStore()
         s.TEST_READ_ONLY = True
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ReadOnlyError,
             "Cannot clear a read-only DummyKVStore instance.",
             s.clear

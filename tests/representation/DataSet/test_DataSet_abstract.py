@@ -58,7 +58,7 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.get_data = mock.MagicMock(side_effect=expected_effect)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "^not expected key$",
             ds.__getitem__, 'unexpectedKey'

@@ -407,7 +407,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             2: 2,
         }
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, 'a',
             s.remove_many, ['a']
         )
@@ -415,7 +415,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         # Even if one of the keys is value, the table should not be modified if
         # one of the keys is invalid.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '6',
             s.remove_many, [1, 6]
         )
@@ -423,7 +423,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         PY2_SET_KEY_ERROR_RE = "set\(\[(?:7|8), (?:7|8)\]\)"
         PY3_SET_KEY_ERROR_RE = "{(?:7|8), (?:7|8)}"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             # Should show a "set" that contains 7 and 8, regardless of order.
             '(?:{}|{})'.format(PY2_SET_KEY_ERROR_RE, PY3_SET_KEY_ERROR_RE),

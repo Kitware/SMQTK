@@ -61,7 +61,7 @@ class TestIqrService (unittest.TestCase):
         :type r: flask.wrappers.Response
         :type regex: str
         """
-        self.assertRegexpMatches(json.loads(r.data.decode())['message'], regex)
+        self.assertRegex(json.loads(r.data.decode())['message'], regex)
 
     # Test Methods ############################################################
 
@@ -1086,8 +1086,8 @@ class TestIqrService (unittest.TestCase):
         )
         self.assertStatusCode(r, 200)
         r_json = json.loads(r.data.decode())
-        self.assertRegexpMatches(r_json['message'], 'Success')
-        self.assertRegexpMatches(r_json['sid'], expected_sid)
+        self.assertRegex(r_json['message'], 'Success')
+        self.assertRegex(r_json['sid'], expected_sid)
 
     def test_get_random_uids(self):
         """

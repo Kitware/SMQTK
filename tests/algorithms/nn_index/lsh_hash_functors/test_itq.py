@@ -220,7 +220,7 @@ class TestItqFunctor (unittest.TestCase):
         itq = ItqFunctor()
         itq.mean_vec = 'sim vec'
         itq.rotation = 'sim rot'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Model components have already been loaded.",
             itq.fit, []
@@ -237,7 +237,7 @@ class TestItqFunctor (unittest.TestCase):
             fit_descriptors.append(d)
 
         itq = ItqFunctor(bit_length=8)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Input descriptors have fewer features than requested bit encoding",
             itq.fit, fit_descriptors
@@ -246,7 +246,7 @@ class TestItqFunctor (unittest.TestCase):
         self.assertIsNone(itq.rotation)
 
         # Should behave the same when input is an iterable
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Input descriptors have fewer features than requested bit encoding",
             itq.fit, iter(fit_descriptors)

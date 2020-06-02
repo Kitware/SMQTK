@@ -69,7 +69,7 @@ class TestClassifierService (unittest.TestCase):
         self.assertEqual(rv.status_code, code)
 
     def assertResponseMessageRegex(self, rv, regex):
-        self.assertRegexpMatches(json.loads(rv.data.decode())['message'], regex)
+        self.assertRegex(json.loads(rv.data.decode())['message'], regex)
 
     def assertMessage(self, resp_data, message):
         self.assertEqual(resp_data['message'], message)

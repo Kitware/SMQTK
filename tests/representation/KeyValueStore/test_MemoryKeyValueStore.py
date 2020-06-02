@@ -421,7 +421,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         )
         self.assertDictEqual(s._table, expected_table)
 
-        PY2_SET_KEY_ERROR_RE = "set\(\[(?:7|8), (?:7|8)\]\)"
+        PY2_SET_KEY_ERROR_RE = r"set\(\[(?:7|8), (?:7|8)\]\)"
         PY3_SET_KEY_ERROR_RE = "{(?:7|8), (?:7|8)}"
         self.assertRaisesRegex(
             KeyError,

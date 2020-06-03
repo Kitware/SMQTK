@@ -45,8 +45,6 @@ import re
 import types
 import warnings
 
-import six
-from six.moves import reload_module
 from stevedore.extension import ExtensionManager
 
 
@@ -261,9 +259,7 @@ def get_plugins(interface_type, env_var, helper_var,
         log.debug("Examining module: {}".format(module_path))
         if reload_modules:
             # Invoke reload in case the module changed between imports.
-            # six should find the right thing.
-            # noinspection PyCompatibility
-            _module = reload_module(_module)
+            _module = importlib.reload(_module)
             if _module is None:
                 raise RuntimeError("[{}] Failed to reload".format(module_path))
 
@@ -277,7 +273,7 @@ def get_plugins(interface_type, env_var, helper_var,
                           module_path)
                 classes = []
             elif (isinstance(classes, collections.abc.Iterable) and
-                  not isinstance(classes, six.string_types)):
+                  not isinstance(classes, str)):
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",
                           module_path, len(classes))
@@ -342,8 +338,7 @@ class NotUsableError (Exception):
     """
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Pluggable (object):
+class Pluggable (metaclass=abc.ABCMeta):
     """
     Interface for classes that have plugin implementations
     """

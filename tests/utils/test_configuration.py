@@ -83,6 +83,20 @@ def test_configurable_default_config():
     assert T.get_default_config() == {'a': None, 'b': None, 'cat': None}
 
 
+def test_configurable_default_config_kwonlys():
+    """
+    Test properly getting constructor defaults when there are keyword-only
+    arguments present (presence of the `*` in the parameter list).
+    """
+    # Only using class methods, thus noinspection.
+    # noinspection PyAbstractClass
+    class T (Configurable):
+        # noinspection PyUnusedLocal
+        def __init__(self, a, *, b=0):
+            pass
+    assert T.get_default_config() == dict(a=None, b=0)
+
+
 def test_configurable_default_config_no_init():
     """
     Test that an empty dictionary is returned when a class has no ``__init__``

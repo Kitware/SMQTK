@@ -106,7 +106,7 @@ class PostgresDescriptorElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param table_name: String label of the database table to use.
         :type table_name: str
@@ -424,14 +424,14 @@ class PostgresDescriptorElement (DescriptorElement):
             of None for missing values.
 
         :param descriptors: Iterable of descriptors to query for.
-        :type descriptors: collections.Iterable[
+        :type descriptors: collections.abc.Iterable[
             smqtk.representation.descriptor_element.DescriptorElement]
 
         :return: Iterator of tuples containing the descriptor uuid and the
             vector associated with the given descriptors or None if the
             descriptor has no associated vector
-        :rtype: collections.Iterable[
-            tuple[collections.Hashable, Union[numpy.ndarray, None]]]
+        :rtype: collections.abc.Iterable[
+            tuple[collections.abc.Hashable, Union[numpy.ndarray, None]]]
         """
         batch_dictionary = defaultdict(list)
         # For each given descriptor...

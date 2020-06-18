@@ -168,7 +168,7 @@ class TestDataFileSet (unittest.TestCase):
 
     def test_add_data_not_dataelement(self):
         dfs = DataFileSet('/')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             AssertionError,
             "^Not given a DataElement for addition:",
             dfs.add_data, 'not a dataElement'
@@ -334,7 +334,7 @@ class TestDataFileSet (unittest.TestCase):
         m_isfile.return_value = False
 
         dfs = DataFileSet(TEST_DATA_DIR, None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             'no_exist_uuid',
             dfs.get_data, 'no_exist_uuid'

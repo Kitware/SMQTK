@@ -287,16 +287,16 @@ class TestFAISSIndex (unittest.TestCase):
         Test that any key should cause a key error on an empty index.
         """
         index = self._make_inst()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '0',
             index.remove_from_index, [0]
         )
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '0',
             index.remove_from_index, ['0']
         )
         # Only includes the first key that's erroneous in the KeyError inst
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '0',
             index.remove_from_index, [0, 'other']
         )

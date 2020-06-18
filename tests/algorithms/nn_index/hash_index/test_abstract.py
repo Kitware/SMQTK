@@ -34,12 +34,12 @@ class TestHashIndex (unittest.TestCase):
     def test_empty_iterable_exception(self):
         v = DummyHI._empty_iterable_exception()
         self.assertIsInstance(v, ValueError)
-        self.assertRegexpMatches(str(v), "hash vectors")
+        self.assertRegex(str(v), "hash vectors")
 
     def test_build_index_empty_iter(self):
         idx = DummyHI()
         idx._build_index = mock.MagicMock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             str(HashIndex._empty_iterable_exception()),
             idx.build_index, []
@@ -62,7 +62,7 @@ class TestHashIndex (unittest.TestCase):
     def test_update_index_empty_iter(self):
         idx = DummyHI()
         idx._update_index = mock.MagicMock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "No hash vectors.*",
             idx.update_index, []
@@ -85,7 +85,7 @@ class TestHashIndex (unittest.TestCase):
     def test_remove_from_index_empty_iter(self):
         idx = DummyHI()
         idx._remove_from_index = mock.MagicMock()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "No hash vectors.*",
             idx.update_index, []

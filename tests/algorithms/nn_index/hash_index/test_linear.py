@@ -217,7 +217,7 @@ class TestLinearHashIndex (unittest.TestCase):
     def test_save_cache_readonly_build_index(self):
         ro_cache = DataMemoryElement(readonly=True)
         i = LinearHashIndex(ro_cache)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "is read-only",
             i.build_index,
@@ -230,7 +230,7 @@ class TestLinearHashIndex (unittest.TestCase):
     def test_save_cache_readonly_update_index(self):
         ro_cache = DataMemoryElement(readonly=True)
         i = LinearHashIndex(ro_cache)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "is read-only",
             i.update_index,

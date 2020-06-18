@@ -95,7 +95,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         # far, and ``get`` method should not have been called yet.
         # called yet.
         v_iter = s.values()
-        self.assertIsInstance(v_iter, collections.Iterable)
+        self.assertIsInstance(v_iter, collections.abc.Iterable)
         self.assertEqual(s.keys.call_count, 1)
         self.assertEqual(s.get.call_count, 0)
 
@@ -205,7 +205,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
     def test_clear_readonly(self):
         s = DummyKVStore()
         s.TEST_READ_ONLY = True
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ReadOnlyError,
             "Cannot clear a read-only DummyKVStore instance.",
             s.clear

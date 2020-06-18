@@ -34,7 +34,7 @@ class DataFileSet (DataSet):
 
     # Regex for matching file names as valid FileSet serialized elements
     # - yields two groups, the first is the UUID, the second is the SHA1 sum
-    SERIAL_FILE_RE = re.compile("UUID_(\w+)\.dataElement")
+    SERIAL_FILE_RE = re.compile(r"UUID_(\w+)\.dataElement")
 
     @classmethod
     def is_usable(cls):

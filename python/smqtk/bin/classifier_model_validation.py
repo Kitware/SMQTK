@@ -213,7 +213,7 @@ def main():
         # Top dictionary keys are true labels, inner dictionary keys are UUID
         # predicted labels.
         log.info("Computing UUID Confusion Matrix")
-        #: :type: dict[str, dict[collections.Hashable, set]]
+        #: :type: dict[str, dict[collections.abc.Hashable, set]]
         uuid_cm = {}
         for tlabel in tlabel2classifications:
             uuid_cm[tlabel] = collections.defaultdict(set)

@@ -26,7 +26,7 @@ class PreviewCache (object):
     #   being a DataElement instance, and the second being the directory to
     #   place generated files under. These methods should return the full path
     #   to the generated preview image.
-    #: :type: dict[collections.Hashable, collections.Callable]
+    #: :type: dict[collections.abc.Hashable, collections.abc.Callable]
     PREVIEW_GEN_METHOD = {}
 
     @property
@@ -41,7 +41,7 @@ class PreviewCache (object):
         """
         self._cache_dir = os.path.abspath(os.path.expanduser(cache_dir))
         # Cache of preview images for data elements encountered.
-        #: :type: dict[collections.Hashable, str]
+        #: :type: dict[collections.abc.Hashable, str]
         self._preview_cache = {}
         self._video_work_dir = os.path.join(cache_dir, 'tmp_video_work')
 

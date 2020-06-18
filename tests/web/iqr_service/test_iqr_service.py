@@ -61,7 +61,7 @@ class TestIqrService (unittest.TestCase):
         :type r: flask.wrappers.Response
         :type regex: str
         """
-        self.assertRegexpMatches(json.loads(r.data.decode())['message'], regex)
+        self.assertRegex(json.loads(r.data.decode())['message'], regex)
 
     # Test Methods ############################################################
 
@@ -197,7 +197,7 @@ class TestIqrService (unittest.TestCase):
                                         ))
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Not all JSON list parts were hashable "
-                                       "values.")
+                                       r"values\.")
 
     def test_update_nn_index_uid_not_a_key(self):
         """
@@ -365,7 +365,7 @@ class TestIqrService (unittest.TestCase):
                           ))
             self.assertStatusCode(r, 400)
             self.assertJsonMessageRegex(r, 'Not all JSON list parts were '
-                                           'hashable values\.')
+                                           r'hashable values\.')
 
     def test_remove_from_nn_index_uid_not_a_key(self):
         """
@@ -665,7 +665,7 @@ class TestIqrService (unittest.TestCase):
         with self.app.test_client() as tc:
             r = tc.post('/refine')
             self.assertStatusCode(r, 400)
-            self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
+            self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
 
     def test_refine_invalid_session_id(self):
         with self.app.test_client() as tc:
@@ -1025,7 +1025,7 @@ class TestIqrService (unittest.TestCase):
                                            state_base64='dummy'
                                        ))
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
+        self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
 
     def test_set_iqr_state_no_b64(self):
         """
@@ -1086,8 +1086,8 @@ class TestIqrService (unittest.TestCase):
         )
         self.assertStatusCode(r, 200)
         r_json = json.loads(r.data.decode())
-        self.assertRegexpMatches(r_json['message'], 'Success')
-        self.assertRegexpMatches(r_json['sid'], expected_sid)
+        self.assertRegex(r_json['message'], 'Success')
+        self.assertRegex(r_json['sid'], expected_sid)
 
     def test_get_random_uids(self):
         """

@@ -510,7 +510,7 @@ class TestLshIndex (unittest.TestCase):
         d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             'uid1',
             idx.remove_from_index,
@@ -558,7 +558,7 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove descriptor with a UID we did not build with.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '5',
             idx.remove_from_index, [5]
         )
@@ -567,7 +567,7 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove multiple UIDs, one valid and one invalid
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '5',
             idx.remove_from_index, [2, 5]
         )

@@ -30,6 +30,19 @@ Utils
 Fixes
 -----
 
+General
+
+* Fixed various deprecation warnings due to use of ABCs directly from
+  ``collections``, deprecated assert methods, and invalid escape
+  sequences
+
 Docker
 
 * Fixed IQR Playground build.
+
+Utils
+
+* Replaced use of deprecated function ``logging.Logger.warn``
+
+* Removed some uses of ``six`` in connection with the Python 2.7
+  deprecation

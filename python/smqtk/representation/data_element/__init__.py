@@ -210,7 +210,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
 
         :return: UUID value for this data element. This return value should be
             hashable.
-        :rtype: collections.Hashable
+        :rtype: collections.abc.Hashable
 
         """
         # TODO(paul.tunison): Change to SHA512.
@@ -313,7 +313,7 @@ def from_uri(uri, impl_generator=DataElement.get_impls):
         implementation type names to the class type. By default this refers to
         the standard ``*.get_impls()`` function, however this can be
         changed to refer to a custom set of classes if desired.
-    :type impl_generator: () -> collections.Iterable[type[DataElement]]
+    :type impl_generator: () -> collections.abc.Iterable[type[DataElement]]
 
     :raises smqtk.exceptions.InvalidUriError: No data element implementations
         could resolve the given URI.

@@ -402,7 +402,7 @@ def utility_main_helper(default_config, args, additional_logging_domains=(),
     :param additional_logging_domains: We initialize logging on the base
         ``smqtk`` and ``__main__`` namespace. Any additional namespaces under
         which logging should be reported should be added here as an iterable.
-    :type additional_logging_domains: collections.Iterable[str]
+    :type additional_logging_domains: collections.abc.Iterable[str]
 
     :param skip_logging_init: Skip initialize logging in this function because
         it is done elsewhere externally.

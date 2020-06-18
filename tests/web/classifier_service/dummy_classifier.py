@@ -58,7 +58,7 @@ class DummyClassifier (Classifier):
         descriptors into. This includes the negative label.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[collections.Hashable]
+        :rtype: collections.abc.Sequence[collections.abc.Hashable]
 
         :raises RuntimeError: No model loaded.
 

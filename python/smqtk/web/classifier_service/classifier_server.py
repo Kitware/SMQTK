@@ -390,11 +390,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                         "Label(s) are not properly formatted JSON.", 400)
 
         # Collect optional result probability adjustment values
-        #: :type: dict[collections.Hashable, float]
+        #: :type: dict[collections.abc.Hashable, float]
         adjustments = {}
         if adjustment_str is not None:
             try:
-                #: :type: dict[collections.Hashable, float]
+                #: :type: dict[collections.abc.Hashable, float]
                 adjustments = flask.json.loads(adjustment_str)
 
                 for label, val in six.iteritems(adjustments):

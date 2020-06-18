@@ -61,14 +61,14 @@ class DummyDescriptorGenerator (DescriptorGenerator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.abc.Iterable[DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
         for _ in data_iter:
             yield np.zeros((5,), np.float64)

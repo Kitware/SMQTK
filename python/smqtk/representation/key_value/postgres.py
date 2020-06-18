@@ -278,7 +278,7 @@ class PostgresKeyValueStore (KeyValueStore):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterator[collections.abc.Hashable]
         """
         def cb(cur):
             cur.execute(self.SqlTemplates.SELECT_TMPL.format(
@@ -296,7 +296,7 @@ class PostgresKeyValueStore (KeyValueStore):
         """
         :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: collections.Iterator[object]
+        :rtype: collections.abc.Iterator[object]
         """
         def cb(cur):
             cur.execute(self.SqlTemplates.SELECT_TMPL.format(
@@ -320,7 +320,7 @@ class PostgresKeyValueStore (KeyValueStore):
         Check if this store has a value for the given key.
 
         :param key: Key to check for a value for.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :return: If this store has a value for the given key.
         :rtype: bool
@@ -347,7 +347,7 @@ class PostgresKeyValueStore (KeyValueStore):
         Add a key-value pair to this store.
 
         :param key: Key for the value. Must be hashable.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :param value: Python object to store.
         :type value: object
@@ -382,7 +382,7 @@ class PostgresKeyValueStore (KeyValueStore):
         the provided dictionary `d`.
 
         :param d: Dictionary of key-value pairs to add to this store.
-        :type d: dict[collections.Hashable, object]
+        :type d: dict[collections.abc.Hashable, object]
 
         :return: Self.
         :rtype: KeyValueStore
@@ -416,7 +416,7 @@ class PostgresKeyValueStore (KeyValueStore):
         Remove a single key-value entry.
 
         :param key: Key to remove.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :raises ReadOnlyError: If this instance is marked as read-only.
         :raises KeyError: The given key is not present in this store and no
@@ -451,7 +451,7 @@ class PostgresKeyValueStore (KeyValueStore):
         :param set keys: Keys to check for.
 
         :return: An set of keys NOT present in the table.
-        :rtype: set[collections.Hashable]
+        :rtype: set[collections.abc.Hashable]
         """
         def key_like_iter():
             for k_ in keys:
@@ -481,7 +481,7 @@ class PostgresKeyValueStore (KeyValueStore):
 
         :param keys: Iterable of keys to remove.  If this is empty this method
             does nothing.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises ReadOnlyError: If this instance is marked as read-only.
         :raises KeyError: The given key is not present in this store and no
@@ -535,7 +535,7 @@ class PostgresKeyValueStore (KeyValueStore):
         ``KeyError`` where appropriate.**
 
         :param key: Key to get the value of.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :param default: Optional default value if the given key is not present
             in this store. This may be any value except for the
@@ -578,7 +578,7 @@ class PostgresKeyValueStore (KeyValueStore):
         ``KeyError`` where appropriate.**
 
         :param keys: The keys for which associated values are requested.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.abc.Hashable]
 
         :param default: Optional default value if a given key is not present
             in this store. This may be any value except for the
@@ -590,7 +590,7 @@ class PostgresKeyValueStore (KeyValueStore):
 
         :return: Iterable of deserialized python objects stored for the given
             keys in the order that the corresponding keys were provided.
-        :rtype: collections.Iterable
+        :rtype: collections.abc.Iterable
 
         """
         sql_command_string = self.SqlTemplates.SELECT_MANY_TMPL.format(

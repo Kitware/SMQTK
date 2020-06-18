@@ -118,7 +118,7 @@ def map_gci_list_to_names(gci_list):
 
     Pre-condition: Integers provided are valid color interpretation constants.
 
-    :param collections.Iterable[int] gci_list:
+    :param collections.abc.Iterable[int] gci_list:
         Integer GDAL color interpretation integer constants sequence.
     :return: List of o the string names for each color interpretation constant
         provided
@@ -275,7 +275,7 @@ class GdalImageReader (ImageReader):
         :param str load_method:
             Method of loading GDAL Dataset from a DataElement.  This must be
             one of the ``GdalImageReader.LOAD_METHOD_*`` options.
-        :param str | collections.Sequence[int] channel_order:
+        :param str | collections.abc.Sequence[int] channel_order:
             Optional specific selection and order of channels read from the
             image to be included in the output matrix.  See above for more
             details.
@@ -294,7 +294,7 @@ class GdalImageReader (ImageReader):
         self._channel_order_gci = None
         if channel_order is not None:
             # Is Sequence check.
-            if not isinstance(channel_order, collections.Sequence):
+            if not isinstance(channel_order, collections.abc.Sequence):
                 raise ValueError("Channel order must be a sequence in order to "
                                  "discern order! Given type: {}"
                                  .format(type(channel_order)))

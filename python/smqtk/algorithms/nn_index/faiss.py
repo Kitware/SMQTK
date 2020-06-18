@@ -477,7 +477,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
@@ -555,7 +555,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
@@ -631,7 +631,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         descriptors from this index associated with the given UIDs.
 
         :param uids: Iterable of UIDs of descriptors to remove from this index.
-        :type uids: collections.Iterable[collections.Hashable]
+        :type uids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: One or more UIDs provided do not match any stored
             descriptors.
@@ -669,7 +669,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         :return: An (n,d) array of descriptors (d-dim descriptors in n
             rows), and the corresponding list of descriptor uuids.
-        :rtype: (np.ndarray, list[collections.Hashable])
+        :rtype: (np.ndarray, list[collections.abc.Hashable])
         """
         new_uuids = [desc.uuid() for desc in descriptors]
         data = np.vstack(

@@ -45,7 +45,7 @@ def uuids_for_processing(uuids, hash2uuids):
     :type hash2uuids: smqtk.representation.KeyValueStore
 
     :return: Iterator over UUIDs to process
-    :rtype: __generator[collections.Hashable]
+    :rtype: __generator[collections.abc.Hashable]
 
     """
     log = logging.getLogger(__name__)

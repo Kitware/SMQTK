@@ -29,13 +29,13 @@ class MemoryClassificationElement (ClassificationElement):
         :type type_name: str
 
         :param uuid: Unique ID reference of the classification
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         """
         super(MemoryClassificationElement, self).__init__(type_name, uuid)
 
         # dictionary of classification labels and values
-        #: :type: None | dict[collections.Hashable, float]
+        #: :type: None | dict[collections.abc.Hashable, float]
         self._c = None
         # Cannot be pickled. New lock initialized upon pickle/unpickle
         self._c_lock = RLock()
@@ -53,7 +53,7 @@ class MemoryClassificationElement (ClassificationElement):
         if not hasattr(self, '_c_lock') or self._c_lock is None:
             self._c_lock = RLock()
         with self._c_lock:
-            #: :type: None | dict[collections.Hashable, float]
+            #: :type: None | dict[collections.abc.Hashable, float]
             self._c = state['c']
 
     def get_config(self):
@@ -89,7 +89,7 @@ class MemoryClassificationElement (ClassificationElement):
             set.
 
         :return: Label-to-confidence dictionary.
-        :rtype: dict[collections.Hashable, float]
+        :rtype: dict[collections.abc.Hashable, float]
 
         """
         with self._c_lock:
@@ -107,7 +107,7 @@ class MemoryClassificationElement (ClassificationElement):
         by providing a dictionary mapping labels to confidence values.
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable, float]
+        :type m: dict[collections.abc.Hashable, float]
 
         :raises ValueError: The given label-confidence map was empty.
 

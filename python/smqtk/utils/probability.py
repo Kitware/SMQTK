@@ -44,14 +44,14 @@ def adjust_proba(proba, adj):
     :param proba: Numpy array of shape (n,d) with probabilities in each row.
        Each column represents a class. The probabilities need not be
        normalized to sum to 1.
-    :type proba: np.ndarray | collections.Iterable
+    :type proba: np.ndarray | collections.abc.Iterable
 
     :param adj: An iterable with d elements or a numpy array of shape (d,)
         that contains the adjustments for each class. The adjustments are
         log-scale and the probabilities in `proba` will be multiplied by the
         exponential of `adj`, then normalized. The parameters in `adj` need
         not be normalized.
-    :type adj: np.ndarray | collections.Iterable
+    :type adj: np.ndarray | collections.abc.Iterable
 
     :return: A numpy array with the same shape as `proba` containing the
         adjusted probabilities per-class. The output will sum to one on the

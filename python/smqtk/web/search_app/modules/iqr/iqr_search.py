@@ -166,7 +166,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         self._iqr_work_dirs = {}
         # Mapping of session ID to a dictionary of the custom example data for
         # a session (uuid -> DataElement)
-        #: :type: dict[str, dict[collections.Hashable, smqtk.representation.DataElement]]
+        #: :type: dict[str, dict[collections.abc.Hashable, smqtk.representation.DataElement]]
         self._iqr_example_data = {}
 
         # Preview Image Caching

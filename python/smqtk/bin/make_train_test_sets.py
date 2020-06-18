@@ -15,7 +15,7 @@ class KeyToFilepath(argparse.Action):
     Custom argparse action for parsing out positional class-to-filepath
     arguments.
     """
-    re_key2path = re.compile('(\w+)=(.+)', flags=re.UNICODE)
+    re_key2path = re.compile(r'(\w+)=(.+)', flags=re.UNICODE)
 
     # noinspection PyUnusedLocal,PyShadowingBuiltins
     def __init__(self, option_strings, dest, nargs=None, const=None,

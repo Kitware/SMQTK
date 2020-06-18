@@ -353,14 +353,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.abc.Iterable[DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
         self._set_caffe_mode()
         log_debug = self._log.debug
@@ -411,7 +411,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                     yield v
 
             # Slice out the next batch
-            #: :type: list[(collections.Hashable, numpy.ndarray)]
+            #: :type: list[(collections.abc.Hashable, numpy.ndarray)]
             batch_img_arrays = \
                 list(itertools.islice(img_array_iter, self.batch_size))
             batch_i += 1
@@ -435,7 +435,7 @@ def _process_load_img_array(input_tuple):
         map function. See above for content details.
 
     :return: Input DataElement UUID and Pre-processed numpy array.
-    :rtype: (collections.Hashable, numpy.ndarray)
+    :rtype: (collections.abc.Hashable, numpy.ndarray)
 
     """
     # data_element: DataElement providing bytes

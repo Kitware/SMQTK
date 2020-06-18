@@ -45,8 +45,6 @@ import re
 import types
 import warnings
 
-import six
-from six.moves import reload_module
 from stevedore.extension import ExtensionManager
 
 
@@ -75,7 +73,7 @@ def _get_local_plugin_modules(log, interface_type, warn=True):
         If we should warn about module import failures.
 
     :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     # Get the parent module and the filesystem path to that module.
@@ -126,7 +124,7 @@ def _get_envvar_plugin_module(log, env_var, warn=True):
         If we should warn about module import failures.
 
     :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     if env_var in os.environ:
@@ -154,7 +152,7 @@ def _get_extension_plugin_modules(log, warn=True):
     provide extensions in the ``smqtk_plugins`` namespace.
 
     :return: Iterator of python modules registered by installed extensions.
-    :rtype: collections.Iterator[types.ModuleType]
+    :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     # Get the cached extension manager.
@@ -261,9 +259,7 @@ def get_plugins(interface_type, env_var, helper_var,
         log.debug("Examining module: {}".format(module_path))
         if reload_modules:
             # Invoke reload in case the module changed between imports.
-            # six should find the right thing.
-            # noinspection PyCompatibility
-            _module = reload_module(_module)
+            _module = importlib.reload(_module)
             if _module is None:
                 raise RuntimeError("[{}] Failed to reload".format(module_path))
 
@@ -276,8 +272,8 @@ def get_plugins(interface_type, env_var, helper_var,
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
                 classes = []
-            elif (isinstance(classes, collections.Iterable) and
-                  not isinstance(classes, six.string_types)):
+            elif (isinstance(classes, collections.abc.Iterable) and
+                  not isinstance(classes, str)):
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",
                           module_path, len(classes))
@@ -320,10 +316,10 @@ def get_plugins(interface_type, env_var, helper_var,
                 # Making this a warning as I think this indicates a broken
                 # implementation in the ecosystem.
                 # noinspection PyUnresolvedReferences
-                log.warn('[%s.%s] [skip] Does not implement one or more '
-                         'abstract methods: %s',
-                         module_path, cls.__name__,
-                         list(cls.__abstractmethods__))
+                log.warning('[%s.%s] [skip] Does not implement one or '
+                            'more abstract methods: %s',
+                            module_path, cls.__name__,
+                            list(cls.__abstractmethods__))
             elif not cls.is_usable():
                 log.debug("[%s.%s] [skip] Class does not report as usable.",
                           module_path, cls.__name__)
@@ -342,8 +338,7 @@ class NotUsableError (Exception):
     """
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Pluggable (object):
+class Pluggable (metaclass=abc.ABCMeta):
     """
     Interface for classes that have plugin implementations
     """

@@ -48,7 +48,7 @@ class TestNNIndexAbstract (unittest.TestCase):
     def test_empty_iterable_exception(self):
         v = DummySI._empty_iterable_exception()
         self.assertIsInstance(v, ValueError)
-        self.assertRegexpMatches(str(v), "DescriptorElement")
+        self.assertRegex(str(v), "DescriptorElement")
 
     def test_check_empty_iterable_no_data(self):
         # Test that an exception is thrown when an empty list/iterable is
@@ -57,7 +57,7 @@ class TestNNIndexAbstract (unittest.TestCase):
         callback = mock.MagicMock()
 
         # Not-stateful iterable (list)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             str(DummySI._empty_iterable_exception()),
             check_empty_iterable, [], callback,
@@ -66,7 +66,7 @@ class TestNNIndexAbstract (unittest.TestCase):
         callback.assert_not_called()
 
         # with a stateful iterator.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             str(DummySI._empty_iterable_exception()),
             check_empty_iterable, iter([]), callback,

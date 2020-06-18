@@ -10,14 +10,14 @@ class TestRandomCharacters (unittest.TestCase):
         self.assertEqual(random_characters(0), '')
 
     def test_no_char_set(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Empty char_set given",
             random_characters, 5, ()
         )
 
     def test_negative_n(self):
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "n must be a positive integer",
             random_characters, -1234

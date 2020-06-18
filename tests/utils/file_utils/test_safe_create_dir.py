@@ -14,7 +14,7 @@ class TestSafeCreateDir (unittest.TestCase):
         p = safe_create_dir(dir_path)
 
         self.assertTrue(mock_os_makedirs.called)
-        self.assertEquals(p, dir_path)
+        self.assertEqual(p, dir_path)
 
     @mock.patch('smqtk.utils.file.os.path.exists')
     @mock.patch('smqtk.utils.file.os.makedirs')

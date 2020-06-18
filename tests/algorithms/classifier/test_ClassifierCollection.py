@@ -24,7 +24,7 @@ class TestClassifierCollection (unittest.TestCase):
 
     def test_new_not_classifier_positional(self):
         # First invalid key should be in error message.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "for key 'some label'",
             ClassifierCollection,
@@ -33,7 +33,7 @@ class TestClassifierCollection (unittest.TestCase):
 
     def test_new_not_classifier_kwarg(self):
         # First invalid key should be in error message.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "for key 'some_label'",
             ClassifierCollection,
@@ -60,7 +60,7 @@ class TestClassifierCollection (unittest.TestCase):
     def test_new_duplicate_label(self):
         c1 = DummyClassifier()
         c2 = DummyClassifier()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Duplicate classifier label 'c'",
             ClassifierCollection,
@@ -167,7 +167,7 @@ class TestClassifierCollection (unittest.TestCase):
         # Attempt adding a non-classifier instance
         ccol = ClassifierCollection()
         # The string 'b' is not a classifier instance.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Not given a Classifier instance",
             ccol.add_classifier,
@@ -176,7 +176,7 @@ class TestClassifierCollection (unittest.TestCase):
 
     def test_add_classifier_duplicate_label(self):
         ccol = ClassifierCollection(a=DummyClassifier())
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Duplicate label provided: 'a'",
             ccol.add_classifier,

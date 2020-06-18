@@ -101,7 +101,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         :type type: str
 
         :param uuid: UUID to associate with the classification.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: New ClassificationElement instance.
         :rtype: smqtk.representation.ClassificationElement
@@ -120,7 +120,7 @@ class ClassificationElementFactory (SmqtkRepresentation):
         :type type: str
 
         :param uuid: UUID to associate with the classification.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: New ClassificationElement instance.
         :rtype: smqtk.representation.ClassificationElement

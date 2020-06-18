@@ -69,7 +69,7 @@ class TestClassifierService (unittest.TestCase):
         self.assertEqual(rv.status_code, code)
 
     def assertResponseMessageRegex(self, rv, regex):
-        self.assertRegexpMatches(json.loads(rv.data.decode())['message'], regex)
+        self.assertRegex(json.loads(rv.data.decode())['message'], regex)
 
     def assertMessage(self, resp_data, message):
         self.assertEqual(resp_data['message'], message)
@@ -461,7 +461,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -474,7 +474,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -487,7 +487,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -500,7 +500,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),

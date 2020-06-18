@@ -78,7 +78,7 @@ def parse_hashable_json_list(json_str):
     :raises ValueError: Expected value check failed.
 
     :return: List of hashable-type values.
-    :rtype: list[collections.Hashable]
+    :rtype: list[collections.abc.Hashable]
 
     """
     try:
@@ -91,7 +91,7 @@ def parse_hashable_json_list(json_str):
     elif not v_list:
         raise ValueError("JSON list is empty.")
     # Contents of list should be numeric or string values.
-    elif not all(isinstance(el, collections.Hashable)
+    elif not all(isinstance(el, collections.abc.Hashable)
                  for el in v_list):
         raise ValueError("Not all JSON list parts were hashable values.")
     return v_list
@@ -232,7 +232,7 @@ class IqrService (SmqtkWebApp):
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.Hashable, SupervisedClassifier | None]
+        #: :type: dict[collections.abc.Hashable, SupervisedClassifier | None]
         self.session_classifiers = {}
         # Cache of IQR session classification results on descriptors with the
         # recorded UIDs.
@@ -240,16 +240,16 @@ class IqrService (SmqtkWebApp):
         # a session.
         # Only "positive" class confidence values are retained due to the
         # binary nature of IQR-based classifiers.
-        #: :type: dict[collections.Hashable, dict[collections.Hashable, float]]
+        #: :type: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
         self.session_classification_results = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
-        #: :type: dict[collections.Hashable, bool]
+        #: :type: dict[collections.abc.Hashable, bool]
         self.session_classifier_dirty = {}
 
         # Cache of random UIDs from the configured descriptor set for use
-        #: :type: list[collections.Hashable] | None
+        #: :type: list[collections.abc.Hashable] | None
         self._random_uid_list_cache = None
         # Lock for mutation of this list cache
         self._random_lock = threading.RLock()

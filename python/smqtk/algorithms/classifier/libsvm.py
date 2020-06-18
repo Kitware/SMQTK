@@ -112,7 +112,7 @@ class LibSvmClassifier (SupervisedClassifier):
         #: :type: svm.svm_model
         self.svm_model = None
         # dictionary mapping SVM integer labels to semantic labels
-        #: :type: dict[int, collections.Hashable]
+        #: :type: dict[int, collections.abc.Hashable]
         self.svm_label_map = None
 
         self._reload_model()
@@ -255,8 +255,8 @@ class LibSvmClassifier (SupervisedClassifier):
 
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
-        :type class_examples: dict[collections.Hashable,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
+        :type class_examples: dict[collections.abc.Hashable,
+                 collections.abc.Iterable[smqtk.representation.DescriptorElement]]
 
         :param extra_params: Dictionary with extra parameters for training.
             This is not used by this implementation.
@@ -287,7 +287,7 @@ class LibSvmClassifier (SupervisedClassifier):
             self._log.debug('-- class %d (%s)', i, l)
             # requires a sequence, so making the iterable ``g`` a tuple
             g = class_examples[l]
-            if not isinstance(g, collections.Sequence):
+            if not isinstance(g, collections.abc.Sequence):
                 self._log.debug('   (expanding iterable into sequence)')
                 g = tuple(g)
 
@@ -358,7 +358,7 @@ class LibSvmClassifier (SupervisedClassifier):
         descriptors into. This includes the negative label.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[collections.Hashable]
+        :rtype: collections.abc.Sequence[collections.abc.Hashable]
 
         :raises RuntimeError: No model loaded.
 

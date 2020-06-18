@@ -119,7 +119,7 @@ class DataMemorySet (DataSet):
         super(DataMemorySet, self).__init__()
 
         # Mapping of UUIDs to DataElement instances
-        #: :type: dict[collections.Hashable, DataElement]
+        #: :type: dict[collections.abc.Hashable, DataElement]
         self._element_map = {}
         self._element_map_lock = threading.RLock()
 
@@ -127,7 +127,7 @@ class DataMemorySet (DataSet):
         # table
         self.cache_element = cache_element
         if cache_element and not cache_element.is_empty():
-            #: :type: dict[collections.Hashable, DataElement]
+            #: :type: dict[collections.abc.Hashable, DataElement]
             self._element_map = pickle.loads(cache_element.get_bytes())
 
         self.pickle_protocol = pickle_protocol

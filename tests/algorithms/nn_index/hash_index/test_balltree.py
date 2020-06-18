@@ -143,7 +143,7 @@ class TestBallTreeHashIndex (unittest.TestCase):
         # A key error should be raised if there is no ball-tree index yet.
         bt = SkLearnBallTreeHashIndex(random_seed=0)
         rm_hash = np.random.randint(0, 2, 256)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             str(rm_hash[0]),
             bt.remove_from_index,
@@ -287,7 +287,7 @@ class TestBallTreeHashIndex (unittest.TestCase):
     def test_nn_no_index(self):
         i = SkLearnBallTreeHashIndex()
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "No index currently set to query from",
             i.nn, [0, 0, 0]

@@ -252,14 +252,14 @@ def test_to_config_dict_given_type():
     # Just with `object`.
     with pytest.raises(ValueError,
                        match="c_inst must be an instance and its type must "
-                             "subclass from Configurable\."):
+                             r"subclass from Configurable\."):
         # noinspection PyTypeChecker
         to_config_dict(object)
 
     # Literally the Configurable interface (abstract class)
     with pytest.raises(ValueError,
                        match="c_inst must be an instance and its type must "
-                             "subclass from Configurable\."):
+                             r"subclass from Configurable\."):
         # noinspection PyTypeChecker
         to_config_dict(Configurable)
 
@@ -283,7 +283,7 @@ def test_to_config_dict_given_non_configurable():
     inst = SomeOtherClassType()
     with pytest.raises(ValueError,
                        match="c_inst must be an instance and its type must "
-                             "subclass from Configurable\."):
+                             r"subclass from Configurable\."):
         # noinspection PyTypeChecker
         to_config_dict(inst)
 
@@ -333,7 +333,7 @@ def test_cls_conf_from_config_missing_type():
     }
     with pytest.raises(ValueError,
                        match="Configuration dictionary given does not have an "
-                             "implementation type specification\."):
+                             r"implementation type specification\."):
         cls_conf_from_config_dict(test_config, T_CLASS_SET)
 
 
@@ -351,8 +351,8 @@ def test_cls_conf_from_config_none_type():
         },
         'NotAnImpl': {}
     }
-    with pytest.raises(ValueError, match="No implementation type specified\. "
-                                         "Options: \[.*\]"):
+    with pytest.raises(ValueError, match=r"No implementation type specified\. "
+                                         r"Options: \[.*\]"):
         cls_conf_from_config_dict(test_config, T_CLASS_SET)
 
 
@@ -370,8 +370,8 @@ def test_cls_conf_from_config_config_label_mismatch():
     with pytest.raises(ValueError,
                        match="Implementation type specified as 'not-present-"
                              "label', but no configuration block was present "
-                             "for that type. Available configuration block "
-                             "options: \[.*\]"):
+                             r"for that type\. Available configuration block "
+                             r"options: \[.*\]"):
         cls_conf_from_config_dict(test_config, T_CLASS_SET)
 
 
@@ -390,7 +390,7 @@ def test_cls_conf_from_config_impl_label_mismatch():
                        match="Implementation type specified as 'NotAnImpl', "
                              "but no plugin implementations are available for "
                              "that type. Available implementation types "
-                             "options: \[.*\]"):
+                             r"options: \[.*\]"):
         cls_conf_from_config_dict(test_config, T_CLASS_SET)
 
 
@@ -439,5 +439,5 @@ def test_from_config_dict_assertion_error():
     }
     with pytest.raises(AssertionError,
                        match="Configured class type 'NotConfigurable' does not "
-                             "descend from `Configurable`\."):
+                             r"descend from `Configurable`\."):
         from_config_dict(test_config, test_class_set)

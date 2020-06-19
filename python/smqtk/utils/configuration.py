@@ -41,6 +41,39 @@ import six
 from smqtk.utils.dict import merge_dict
 
 
+def _param_map_func(func):
+    """
+    Get the given function's parameter names and default values as a dict.
+
+    :param func: Function to map parameter keys and defaults from. Usually a
+        constructor in this context.
+
+    :return: Dictionary whose keys are the string names of input function
+        parameters, minus the 'self' parameter, and whose values are the
+        default defined by the function, or None if there is no default
+        specified.
+    :rtype: dict[str, object]
+    """
+    sig = inspect.signature(func)
+    # We don't care to record `*` or `**` params, so only retain non-variadic
+    # parameters.
+    keep_kinds = {inspect.Parameter.POSITIONAL_ONLY,
+                  inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                  inspect.Parameter.KEYWORD_ONLY}
+
+    pmap = {}
+    for k, param in sig.parameters.items():
+        if k == 'self':
+            continue
+        elif param.kind in keep_kinds:
+            dflt = param.default
+            if dflt is param.empty:
+                # We want to map empty (no default) to the None value.
+                dflt = None
+            pmap[k] = dflt
+    return pmap
+
+
 @six.add_metaclass(abc.ABCMeta)
 class Configurable (object):
     """
@@ -81,20 +114,9 @@ class Configurable (object):
         >>> assert config == {'a': 1, 'b': 'foo'}
         """
         if isinstance(cls.__init__, (types.MethodType, types.FunctionType)):
-            argspec = inspect.getargspec(cls.__init__)
-
-            # Ignores potential *args or **kwargs present
-            params = argspec.args[1:]  # skipping ``self`` arg
-            num_params = len(params)
-
-            if argspec.defaults:
-                num_defaults = len(argspec.defaults)
-                vals = ((None,) * (num_params - num_defaults)
-                        + argspec.defaults)
-            else:
-                vals = (None,) * num_params
-
-            return dict(zip(params, vals))
+            dflt_config = _param_map_func(cls.__init__)
+            # TODO: Validate JSON compliance of ``dflt_config`` here?
+            return dflt_config
 
         # No constructor explicitly defined on this class
         return {}
@@ -460,14 +482,14 @@ def configuration_test_helper(inst, config_ignored_params=frozenset(),
 
     # Parent class default config keys should match constructor keys.
     dflt_cfg = inst_T.get_default_config()
-    argspec = inspect.getargspec(inst_T.__init__)
+    init_param_map = _param_map_func(inst_T.__init__)
     # Check that keys returned in default config is equivalent to parameters
     # requested by the constructor, minus explicitly provided parameter names
     # to disregard.
     # - Disregarded params are usually for when some arguments are also
     #   required by ``from_config``, i.e. runtime required.
     args_intersect = \
-        set(dflt_cfg) == (set(argspec.args[1:]) - config_ignored_params)
+        set(dflt_cfg) == (set(init_param_map) - config_ignored_params)
     assert args_intersect, \
         "Default configuration dictionary keys does not match the class' " \
         "constructor parameter."

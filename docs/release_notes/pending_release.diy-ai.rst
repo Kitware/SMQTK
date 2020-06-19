@@ -42,7 +42,10 @@ Docker
 
 Utils
 
-* Replaced use of deprecated function ``logging.Logger.warn``
+* Replaced use of deprecated function ``logging.Logger.warn``.
 
 * Removed some uses of ``six`` in connection with the Python 2.7
-  deprecation
+  deprecation.
+
+* Updated configuration constructor inspection to use `signature` and handle
+  keyword-only parameters.

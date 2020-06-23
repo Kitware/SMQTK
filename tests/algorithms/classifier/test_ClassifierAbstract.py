@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+from typing import Generator
 import unittest
 import unittest.mock as mock
 
@@ -9,7 +10,6 @@ from smqtk.algorithms.classifier import Classifier
 from smqtk.representation import (
     ClassificationElement,
     ClassificationElementFactory,
-    DescriptorElement,
 )
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -69,6 +69,48 @@ class TestClassifierAbstractClass (unittest.TestCase):
         self.inst = DummyClassifier()
         self.inst._post_iterator_check = mock.Mock()
 
+    def test_assert_array_dim_consistency_valid_ndarray(self):
+        """ Test that when passed a 2D ndarray of non-object type, the
+        consistency check short-circuits and simply returns the array. """
+        a = np.random.rand(10, 16).astype(np.float32)
+        r = self.inst._assert_array_dim_consistency(a)
+        assert a is r
+
+    def test_assert_array_dim_consistency_iter_check_bad_dim(self):
+        """ Test that iteration checking fails when at least one array is not
+        1D. """
+        a = [
+            np.random.rand(16),
+            np.random.rand(1, 16),
+        ]
+        r = self.inst._assert_array_dim_consistency(a)
+        assert isinstance(r, Generator)
+        with pytest.raises(ValueError,
+                           match='Input vector had more than one dimension'):
+            list(r)
+
+    def test_assert_array_dim_consistency_iter_check_bad_size(self):
+        """ Test that iteration checking fails when at least one array is of a
+        mismatching size compared to the first array. """
+
+        a = [
+            np.random.rand(16),
+            np.random.rand(32),
+        ]
+        r = self.inst._assert_array_dim_consistency(a)
+        assert isinstance(r, Generator)
+        with pytest.raises(ValueError, match='Input vector violated dimension '
+                                             'consistency'):
+            list(r)
+
+    def test_assert_array_dim_consistency_iter_pass(self):
+        """ Test successfully iterating out array vectors post check. """
+        a = list(np.random.rand(10, 16).astype(np.float32))
+        assert not isinstance(a, np.ndarray)
+        r = self.inst._assert_array_dim_consistency(a)
+        assert isinstance(r, Generator)
+        assert np.allclose(list(r), a)
+
     def test_classify_arrays_inconsistent(self):
         """ Test that passing arrays of inconsistent dimensionality causes a
         ValueError.
@@ -82,6 +124,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
         iterator."""
         arrs = []
         assert list(self.inst.classify_arrays(arrs)) == []
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
     def test_classify_arrays(self):
@@ -90,6 +133,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
                          [4, 5, 6],
                          [7, 8, 9]])
         list(self.inst.classify_arrays(arrs))
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
     def test_classify_elements_empty_iter(self):
@@ -101,6 +145,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
         """
         elems = []
         assert list(self.inst.classify_elements(elems)) == []
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
     def test_classify_elements_inconsistent(self):
@@ -187,6 +232,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
         m_ce_inst.set_classification.assert_any_call({'test': 7})
 
         # Dummy classifier iterator completed to the end.
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
     def test_classify_elements_all_preexisting(self):
@@ -216,6 +262,7 @@ class TestClassifierAbstractClass (unittest.TestCase):
         m_ce_inst.set_classification.assert_not_called()
 
         # Dummy classifier iterator completed to the end.
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
     def test_classify_elements_all_preexisting_overwrite(self):
@@ -251,8 +298,10 @@ class TestClassifierAbstractClass (unittest.TestCase):
         m_ce_inst.set_classification.assert_any_call({'test': 7})
 
         # Dummy classifier iterator completed to the end.
+        # noinspection PyUnresolvedReferences
         self.inst._post_iterator_check.assert_called_once()
 
+    # noinspection PyUnresolvedReferences
     def test_classify_elements_mixed_precomp(self):
         """ Test that a setup with mixed pre-computed and not
         ClassificationElements from the factory results in all elements yielded

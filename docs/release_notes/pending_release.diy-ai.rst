@@ -26,6 +26,15 @@ Utils
 * Add daemon flag to ``parallel_map``, defaulted to True, that flags
   threads/processes created as daemonic in behavior.
 
+Web
+
+* Classifier Service
+
+  * Added optional configuration of a `DescriptorSet`.
+
+  * Added endpoint to classify descriptors within the configured
+    `DescriptorSet` given a list of descriptor UIDs.
+
 
 Fixes
 -----

@@ -1,6 +1,8 @@
+import itertools
 import threading
+from typing import Iterable, Sequence
 
-import six
+import numpy as np
 
 from smqtk.exceptions import MissingLabelError
 from smqtk.utils import SmqtkObject
@@ -98,13 +100,13 @@ class ClassifierCollection (SmqtkObject, Configurable):
         # Go though classifiers map and key-word arguments, check that values
         # are actually classifiers.
         if classifiers is not None:
-            for label, classifier in six.iteritems(classifiers):
+            for label, classifier in classifiers.items():
                 if not isinstance(classifier, Classifier):
                     raise ValueError("Found a non-Classifier instance value "
                                      "for key '%s'" % label)
                 self._label_to_classifier[label] = classifier
 
-        for label, classifier in six.iteritems(labeled_classifiers):
+        for label, classifier in labeled_classifiers.items():
             if not isinstance(classifier, Classifier):
                 raise ValueError("Found a non-Classifier instance value "
                                  "for key '%s'" % label)
@@ -128,7 +130,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         with self._label_to_classifier_lock:
             c = dict((label, to_config_dict(classifier))
                      for label, classifier
-                     in six.iteritems(self._label_to_classifier))
+                     in self._label_to_classifier.items())
         return c
 
     def size(self):
@@ -206,6 +208,38 @@ class ClassifierCollection (SmqtkObject, Configurable):
         with self._label_to_classifier_lock:
             del self._label_to_classifier[label]
 
+    def labels_to_classifiers(self, labels=None):
+        """
+        Get a shallow copy mapping of classifiers for the labels given, or for
+        all classifiers if no labels were explicitly given.
+
+        This method is thread-safe and the returned dictionary is separate from
+        this class's control. However, the classifier instances are still
+        shared.
+
+        :param None | Iterable[str] labels:
+            One or more labels of stored classifiers to retrieve.
+            If None, we will consider all stored classifiers.
+
+        :raises MissingLabelError: Thrown when one or more labels provided do
+            not associate to any currently stored classifiers.
+
+        :return: Dictionary mapping string labels to Classifier instances.
+        :rtype: dict[str, Classifier]
+        """
+        with self._label_to_classifier_lock:
+            if labels is not None:
+                labels = list(labels)
+                # If we're missing some of the requested labels, complain
+                missing_labels = set(labels) - self.labels()
+                if missing_labels:
+                    raise MissingLabelError(missing_labels)
+                label2classifier = {label: self._label_to_classifier[label]
+                                    for label in labels}
+            else:
+                label2classifier = dict(self._label_to_classifier)
+        return label2classifier
+
     def classify(self, descriptor, labels=None,
                  factory=DFLT_CLASSIFIER_FACTORY, overwrite=False):
         """
@@ -238,28 +272,38 @@ class ClassifierCollection (SmqtkObject, Configurable):
         :rtype: dict[str, smqtk.representation.ClassificationElement]
 
         """
-
         d_classifications = {}
-        with self._label_to_classifier_lock:
-            # TODO(paul.tunison): Parallelize?
-            if labels is not None:
-                # If we're missing some of the requested labels, complain
-                missing_labels = set(labels) - self.labels()
-                if missing_labels:
-                    raise MissingLabelError(missing_labels)
-
-                for label in labels:
-                    classifier = self._label_to_classifier[label]
-                    d_classifications[label] = classifier.classify_one_element(
-                        descriptor, factory=factory, overwrite=overwrite
-                    )
-            else:
-                for label, classifier in six.iteritems(
-                        self._label_to_classifier):
-                    d_classifications[label] = classifier.classify_one_element(
-                        descriptor, factory=factory, overwrite=overwrite
-                    )
+        label2classifier = self.labels_to_classifiers(labels)
+        for label, classifier in label2classifier.items():
+            d_classifications[label] = classifier.classify_one_element(
+                descriptor, factory=factory, overwrite=overwrite
+            )
         return d_classifications
 
-    # TODO(paul.tunison): Classify many descriptors method when the need
-    #   arises (see updated vectorized Classifier API).
+    def classify_arrays(self, array_seq, labels=None):
+        """
+        Apply all stored classifiers to the given iterable or matrix of numpy
+        arrays.
+
+        We return a dictionary mapping the label of a stored classifier to the
+        class-confidence map result produced by that classifier's
+        `classify_arrays` method.
+
+        :param Sequence[np.ndarray] array_seq:
+            Sequence of descriptor vectors, as numpy arrays, to be classified.
+        :param Sequence[str] labels:
+            One or more labels of stored classifiers to use for classifying the
+            given descriptors.  If None (the default), use all stored
+            classifiers.
+
+        :raises MissingLabelError: Thrown when one or more labels provided do
+            not associate to any currently stored classifiers.
+
+        :return: Dictionary of result predictions for each classifier.
+        :rtype: dict[str, list[dict[collections.abc.Hashable, float]]]
+        """
+        label2classifier = self.labels_to_classifiers(labels)
+        label2pred = {}
+        for label, classifier in label2classifier.items():
+            label2pred[label] = list(classifier.classify_arrays(array_seq))
+        return label2pred

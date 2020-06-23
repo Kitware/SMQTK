@@ -3,6 +3,7 @@ import unittest
 
 import unittest.mock as mock
 
+from smqtk.representation import DescriptorElement
 from smqtk.representation.descriptor_set import DescriptorSet
 
 
@@ -88,3 +89,13 @@ class TestDescriptorSetAbstract (unittest.TestCase):
         self.assertEqual(list(di), [0, 1, 2])
         self.assertEqual(tuple(di), (0, 1, 2))
         self.assertEqual(di.iterdescriptors.call_count, 3)
+
+    @mock.patch("smqtk.representation.descriptor_set.DescriptorElement"
+                ".get_many_vectors", wraps=DescriptorElement.get_many_vectors)
+    def test_get_many_vectors_empty(self, m_de_gmv):
+        """ Test that no vectors are returned when no UIDs are provided. """
+        inst = DummyDescriptorSet()
+        inst.get_many_descriptors = mock.Mock(return_value=[])
+        r = inst.get_many_vectors([])
+        assert r == []
+        m_de_gmv.assert_called_once_with([])

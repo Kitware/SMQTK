@@ -40,6 +40,12 @@ Docker
 
 * Fixed IQR Playground build.
 
+Representations
+
+* DescriptorSet
+
+  * Fixed missing return statement in `DescriptorSet.get_many_vectors`.
+
 Utils
 
 * Replaced use of deprecated function ``logging.Logger.warn``.

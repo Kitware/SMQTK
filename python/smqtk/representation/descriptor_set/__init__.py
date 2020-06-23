@@ -42,12 +42,17 @@ class DescriptorSet (SmqtkRepresentation, Pluggable):
         :param uuids: Iterable of descriptor UUIDs to query for.
         :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
-        :return: Iterator of vectors for descriptors associated with given uuid
+        :raises: KeyError: When there is not a descriptor in this set for one
+            or more input UIDs.
+
+        :return: List of vectors for descriptors associated with given uuid
             values.
-        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: list[numpy.ndarray | None]
 
         """
-        DescriptorElement.get_many_vectors(self.get_many_descriptors(uuids))
+        return DescriptorElement.get_many_vectors(
+            self.get_many_descriptors(uuids)
+        )
 
     @abc.abstractmethod
     def count(self):

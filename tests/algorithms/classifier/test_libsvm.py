@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function)
-
+import pickle
 import unittest
 
 import unittest.mock as mock
@@ -7,8 +6,6 @@ import multiprocessing
 import multiprocessing.pool
 import numpy
 import pytest
-import six
-from six.moves import cPickle, zip
 
 from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.libsvm import LibSvmClassifier
@@ -20,6 +17,7 @@ from smqtk.representation.classification_element.memory import \
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils.configuration import configuration_test_helper
+from smqtk.utils.parallel import parallel_map
 
 
 @pytest.mark.skipif(not LibSvmClassifier.is_usable(),
@@ -41,15 +39,18 @@ class TestLibSvmClassifier (unittest.TestCase):
         ex_labelmap_uri = 'some label map uri'
         ex_trainparams = {'-s': 8,  '-t': -10,  '-b': 42,  '-c': 7.2}
         ex_normalize = 2
+        ex_njobs = 7
 
         c = LibSvmClassifier(ex_model_uri, ex_labelmap_uri,
                              train_params=ex_trainparams,
-                             normalize=ex_normalize)
+                             normalize=ex_normalize,
+                             n_jobs=7)
         for inst in configuration_test_helper(c):  # type: LibSvmClassifier
             assert inst.svm_model_uri == ex_model_uri
             assert inst.svm_label_map_uri == ex_labelmap_uri
             assert inst.train_params == ex_trainparams
             assert inst.normalize == ex_normalize
+            assert inst.n_jobs == ex_njobs
 
     def test_no_save_model_pickle(self):
         # Test model preservation across pickling even without model cache
@@ -66,7 +67,7 @@ class TestLibSvmClassifier (unittest.TestCase):
         self.assertTrue(classifier.svm_model is None)
         # Empty model should not trigger __LOCAL__ content in pickle
         self.assertNotIn('__LOCAL__', classifier.__getstate__())
-        _ = cPickle.loads(cPickle.dumps(classifier))
+        _ = pickle.loads(pickle.dumps(classifier))
 
         # train arbitrary model (same as ``test_simple_classification``)
         DIM = 2
@@ -112,9 +113,11 @@ class TestLibSvmClassifier (unittest.TestCase):
         self.assertTrue(len(p_state['__LOCAL_MODEL__']) > 0)
 
         # Restored classifier should classify the same test descriptor the
-        # same
+        # same.
+        # - If this fails after a new parameter was added its probably because
+        #   the parameter was not restored during the __setstate__.
         #: :type: LibSvmClassifier
-        classifier2 = cPickle.loads(cPickle.dumps(classifier))
+        classifier2 = pickle.loads(pickle.dumps(classifier))
         c_post_pickle = list(classifier2._classify_arrays([t_v]))[0]
         # There may be floating point error, so extract actual confidence
         # values and check post round
@@ -260,3 +263,49 @@ class TestLibSvmClassifier (unittest.TestCase):
         # Closing resources
         p.close()
         p.join()
+
+    @mock.patch("smqtk.algorithms.classifier.libsvm.svm.libsvm."
+                "svm_predict_probability")
+    @mock.patch("smqtk.algorithms.classifier.libsvm.parallel_map")
+    def test_serial_classification(self, m_pmap, m_svm_pred):
+        """ Test that when n_jobs==1 parallel_map is NOT used. """
+        classifier = LibSvmClassifier(
+            n_jobs=1
+        )
+        # Mock some stuff to pretend we have been trained.
+        classifier.has_model = mock.Mock(return_value=True)
+        classifier.svm_label_map = {1: "meh"}
+        classifier.svm_model = mock.Mock()
+        classifier.svm_model.is_probability_model.return_value = True
+        # Values for a default C_SVC
+        classifier.svm_model.get_svm_type.return_value = 0
+        classifier.svm_model.get_nr_class.return_value = 2
+        classifier.svm_model.get_labels.return_value = [1]
+
+        g = classifier._classify_arrays(numpy.array([[0], [1], [2]]))
+        preds = list(g)  # Turns out, this is what Nopon say in Xenoblade...
+        m_pmap.assert_not_called()
+
+    @mock.patch("smqtk.algorithms.classifier.libsvm.svm.libsvm."
+                "svm_predict_probability")
+    @mock.patch("smqtk.algorithms.classifier.libsvm.parallel_map",
+                wraps=parallel_map)
+    def test_parallel_classification(self, m_pmap, m_svm_pred):
+        """ Test that when n_jobs>1 parallel_map IS used. """
+        classifier = LibSvmClassifier(
+            n_jobs=4
+        )
+        # Mock some stuff to pretend we have been trained.
+        classifier.has_model = mock.Mock(return_value=True)
+        classifier.svm_label_map = {1: "meh"}
+        classifier.svm_model = mock.Mock()
+        classifier.svm_model.is_probability_model.return_value = True
+        # Values for a default C_SVC
+        classifier.svm_model.get_svm_type.return_value = 0
+        classifier.svm_model.get_nr_class.return_value = 2
+        classifier.svm_model.get_labels.return_value = [1]
+
+        g = classifier._classify_arrays(numpy.array([[0], [1], [2]]))
+        preds = list(g)  # Turns out, this is what Nopon say in Xenoblade...
+        m_pmap.assert_called()
+        assert m_pmap.call_count == 1

@@ -14,6 +14,13 @@ CI
   Also removed testing on Ubuntu Xenial (16.04) images due to lack of specific
   motivation and favoring simplicity.
 
+Classifiers
+
+* LibSVM
+
+  * Added `n_jobs` optional constructor argument to control new multiprocessing
+    parallel prediction within `_classify_arrays` implementation.
+
 Docker
 
 * Migrated build logic for caffe and iqr-playground into

@@ -1,6 +1,7 @@
 import unittest
-
 import unittest.mock as mock
+
+import numpy as np
 
 from smqtk.algorithms.classifier import ClassifierCollection
 from smqtk.exceptions import MissingLabelError
@@ -224,6 +225,7 @@ class TestClassifierCollection (unittest.TestCase):
     # Classification Method Tests
 
     def test_classify(self):
+        """ Test invoking `classify` in a valid manner. """
         ccol = ClassifierCollection({
             'subjectA': DummyClassifier(),
             'subjectB': DummyClassifier(),
@@ -249,6 +251,27 @@ class TestClassifierCollection (unittest.TestCase):
                              {'test': 0})
         self.assertDictEqual(result['subjectB'].get_classification(),
                              {'test': 0})
+
+    def test_classify_arrays(self):
+        """ Test invoking `classify_arrays` in a valid manner. """
+        # Use some dummy classifiers that
+        ccol = ClassifierCollection({
+            'subjectA': DummyClassifier(),
+            'subjectB': DummyClassifier(),
+        })
+        dmat = np.asarray([[0, 1, 2, 3, 4],
+                           [5, 6, 7, 8, 9]])
+        result = ccol.classify_arrays(dmat)
+        # Should contain one entry for each configured classifier.
+        assert len(result) == 2
+        assert 'subjectA' in result
+        assert 'subjectB' in result
+        # Each key should map to a list of dictionaries mapping classifier
+        # labels to confidence values. The DummyClassify maps input descriptor
+        # first values as the "confidence" for simplicity. Should be in order
+        # of input vectors.
+        assert result['subjectA'] == [{'test': 0}, {'test': 5}]
+        assert result['subjectB'] == [{'test': 0}, {'test': 5}]
 
     def test_classify_subset(self):
         ccol = ClassifierCollection({

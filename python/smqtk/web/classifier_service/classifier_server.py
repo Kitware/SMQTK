@@ -3,11 +3,11 @@ from __future__ import print_function
 import base64
 import binascii
 import json
+import pickle
+import urllib.parse
 
 import flask
 import six
-from six.moves import cPickle as pickle
-from six.moves import urllib, zip
 
 from smqtk.algorithms import (
     DescriptorGenerator,
@@ -21,8 +21,10 @@ from smqtk.iqr import IqrSession
 from smqtk.representation import (
     ClassificationElementFactory,
     DescriptorElementFactory,
+    DescriptorSet,
 )
 from smqtk.representation.data_element.memory_element import DataMemoryElement
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import probability
 from smqtk.utils.configuration import (
     from_config_dict,
@@ -44,6 +46,61 @@ else:
     else:
         # noinspection PyUnresolvedReferences
         JSON_DECODE_EXCEPTION = json.JSONDecodeError
+
+
+def labels_from_input(label_str):
+    """
+    Parse out a single or multiple labels from the provided JSON-encoded value.
+
+    :param str label_str: JSON encoded value to parse from.
+
+    :raises ValueError: Invalid label string.
+
+    :return: List of string labels or None if no labels were provided or was
+        not JSON parsable.
+    :rtype: list[str]
+    """
+    if not label_str:
+        return None
+    try:
+        labels = json.loads(label_str)
+        if isinstance(labels, str):
+            labels = [labels]
+        elif isinstance(labels, list):
+            for el in labels:
+                if not isinstance(el, str):
+                    raise ValueError("Label must be a list of strings or a "
+                                     "single string: give a list of more "
+                                     "than just strings (found type: "
+                                     f"{type(el).__name__}).")
+        else:
+            raise ValueError("Label must be a list of strings or a single "
+                             f"string (given type: {type(labels).__name__}).")
+    except json.JSONDecodeError:
+        # Unquoted strings aren't valid JSON. That is, a plain string
+        # needs to be passed as '"label"' rather than just 'label' or
+        # "label". However, we can be a bit more generous and just
+        # allow such a string, but we have to place *some* restriction
+        # on it. We use `urllib.quote` for this since essentially it
+        # just checks to make sure that the string is made up of one
+        # of the following types of characters:
+        #
+        #   - letters
+        #   - numbers
+        #   - spaces, underscores, periods, and dashes
+        #
+        # Since the concept of a "letter" is fraught with encoding and
+        # locality issues, we simply let urllib make this decision for
+        # us.
+
+        # If label_str matches the url-encoded version of itself, go
+        # ahead and use it
+        if urllib.parse.quote(label_str, safe=' ') == label_str:
+            labels = [label_str]
+        else:
+            raise ValueError("Label is not a properly formatted JSON nor a "
+                             "simple string.")
+    return labels
 
 
 class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
@@ -84,6 +141,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
     CONFIG_CLASSIFICATION_FACTORY = "classification_factory"
     CONFIG_DESCRIPTOR_GENERATOR = "descriptor_generator"
     CONFIG_DESCRIPTOR_FACTORY = "descriptor_factory"
+    CONFIG_DESCRIPTOR_SET = "descriptor_set"
     CONFIG_IMMUTABLE_LABELS = "immutable_labels"
     CONFIG_IQR_CLASSIFIER = "iqr_state_classifier_config"
 
@@ -112,6 +170,11 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         # Descriptor factory for new content descriptors
         c[cls.CONFIG_DESCRIPTOR_FACTORY] = \
             DescriptorElementFactory.get_default_config()
+        # Optional Descriptor set for "included" descriptors referenceable by
+        # UID.
+        c[cls.CONFIG_DESCRIPTOR_SET] = make_default_config(
+            DescriptorSet.get_impls()
+        )
         # from-IQR-state *supervised* classifier configuration
         c[cls.CONFIG_IQR_CLASSIFIER] = make_default_config(
             SupervisedClassifier.get_impls()
@@ -143,6 +206,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             ClassificationElementFactory.from_config(
                 json_config[self.CONFIG_CLASSIFICATION_FACTORY]
             )
+        #: :type: ClassifierCollection
         self.classifier_collection = ClassifierCollection.from_config(
             json_config[self.CONFIG_CLASSIFIER_COLLECTION]
         )
@@ -156,6 +220,16 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             json_config[self.CONFIG_DESCRIPTOR_GENERATOR],
             smqtk.algorithms.DescriptorGenerator.get_impls()
         )
+
+        # Descriptor set bundled for classification-by-UID.
+        try:
+            self.descriptor_set = from_config_dict(
+                json_config.get(self.CONFIG_DESCRIPTOR_SET, {}),
+                DescriptorSet.get_impls()
+            )
+        except ValueError:
+            # Default empty set.
+            self.descriptor_set = MemoryDescriptorSet()
 
         # Classifier config for uploaded IQR states.
         self.iqr_state_classifier_config = \
@@ -180,6 +254,9 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self.add_url_rule('/classifier_metadata',
                           view_func=self.get_classifier_metadata,
                           methods=['GET'])
+        self.add_url_rule('/classify_uids',
+                          view_func=self.classify_uids,
+                          methods=['POST'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
                           methods=['POST'])
@@ -251,6 +328,95 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             self.classifier_collection.get_classifier(label).get_labels()
         return make_response_json("Success", return_code=200,
                                   class_labels=class_labels)
+
+    # POST /classify_uids
+    def classify_uids(self):
+        """
+        Given a list of descriptor UIDs, we attempt to retrieve descriptor
+        vectors from our configured descriptor index and classify those vectors
+        against all currently stored classifiers (optionally a list of
+        requested classifiers), returning a map of classifier descriptive
+        labels to their class-to-probability results.
+
+        TODO: Add `adjustment` param from POST /classify
+
+        Arguments
+            uid_list:
+                JSON list of UIDs of descriptors in the configured descriptor
+                set to classify. These should be strings or integers depending
+                on the keys used in the configured descriptor set (usually
+                strings).
+            label:
+                Optional string label or JSON list of string labels defining
+                specific classifiers to use for inferencing against the
+                descriptors.
+
+        Possible error codes:
+            400
+                No UIDs provided, or provided labels are malformed.
+            404
+                Label or labels provided do not match any registered
+                classifier
+
+        Returns: {
+            ...
+            result: {
+                classifier-label: {
+                    class-label: prob,
+                    ...
+                },
+                ...
+            }
+        }
+
+        """
+        if self.classifier_collection.size() == 0:
+            return make_response_json("No classifiers currently loaded.", 200,
+                                      result={})
+
+        uid_list = flask.request.values.get('uid_list')
+        if uid_list is None:
+            return make_response_json("No UIDs provided.", 400)
+        try:
+            uid_list = json.loads(uid_list)
+        except json.JSONDecodeError:
+            return make_response_json("Failed to parse JSON list of UIDs.",
+                                      400)
+        if not uid_list:
+            return make_response_json("No UIDs provided.", 400)
+
+        try:
+            # We could technically pass `labels_from_input` as the `type=`
+            # value in `.get()` but the method eats ValueErrors raised.
+            labels = labels_from_input(
+                flask.request.values.get('label', default=None))
+        except ValueError as ex:
+            return make_response_json(f"Invalid label(s) specified: {ex}", 400)
+
+        # Label list has been parsed at this point. Make sure its contents
+        # meshes with available classifiers before retrieving descriptors.
+        if labels is not None:
+            missing_labels = (set(labels) -
+                              set(self.classifier_collection.labels()))
+            if missing_labels:
+                return make_response_json(
+                    "The following labels are not registered with any "
+                    "classifiers: " + ", ".join(map(repr, missing_labels)),
+                    404,
+                    missing_labels=list(missing_labels))
+
+        try:
+            vec_list = self.descriptor_set.get_many_vectors(uid_list)
+        except KeyError:
+            return make_response_json("One or more input UIDs did not exist in"
+                                      " the configured descriptor set!", 400)
+        pred_map = self.classifier_collection.classify_arrays(
+            vec_list, labels=labels
+        )
+
+        # TODO: Add `adjustment` functionality like from `POST /classify`.
+
+        return make_response_json("", 200, result=pred_map)
 
     # POST /classify
     def classify(self):
@@ -346,48 +512,10 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         label_str = flask.request.values.get('label', default=None)
         adjustment_str = flask.request.values.get('adjustment', default=None)
 
-        labels = None
-        if label_str is not None:
-            try:
-                labels = flask.json.loads(label_str)
-
-                if isinstance(labels, six.string_types):
-                    labels = [labels]
-                elif isinstance(labels, list):
-                    for el in labels:
-                        if not isinstance(el, six.string_types):
-                            return make_response_json(
-                                "Label must be a list of strings or a"
-                                " single string.", 400)
-                else:
-                    return make_response_json(
-                        "Label must be a list of strings or a single"
-                        " string.", 400)
-
-            except JSON_DECODE_EXCEPTION:
-                # Unquoted strings aren't valid JSON. That is, a plain string
-                # needs to be passed as '"label"' rather than just 'label' or
-                # "label". However, we can be a bit more generous and just
-                # allow such a string, but we have to place *some* restriction
-                # on it. We use `urllib.quote` for this since essentially it
-                # just checks to make sure that the string is made up of one
-                # of the following types of characters:
-                #
-                #   - letters
-                #   - numbers
-                #   - spaces, underscores, periods, and dashes
-                #
-                # Since the concept of a "letter" is fraught with encoding and
-                # locality issues, we simply let urllib make this decision for
-                # us.
-
-                # If label_str matches the url-encoded version of itself, go
-                # ahead and use it
-                if urllib.parse.quote(label_str, safe='') == label_str:
-                    labels = [label_str]
-                else:
-                    return make_response_json(
-                        "Label(s) are not properly formatted JSON.", 400)
+        try:
+            labels = labels_from_input(label_str)
+        except ValueError as ex:
+            return make_response_json(f"Invalid label(s) specified: {ex}", 400)
 
         # Collect optional result probability adjustment values
         #: :type: dict[collections.abc.Hashable, float]
@@ -606,6 +734,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
 
         # Make a classifier instance from the stored config for IQR
         # session-based classifiers.
+        # noinspection PyTypeChecker
         #: :type: SupervisedClassifier
         classifier = from_config_dict(
             self.iqr_state_classifier_config,

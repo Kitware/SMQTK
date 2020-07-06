@@ -2,7 +2,7 @@ import abc
 from collections import deque
 import itertools
 
-from six.moves import zip
+import numpy as np
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElement
@@ -65,27 +65,47 @@ class Classifier (SmqtkAlgorithm):
         of more than one dimension (i.e. 2D matries, etc.) will trigger a
         ValueError.
 
-        :param collections.abc.Iterable[numpy.ndarray] array_iter:
+        Includes a short-cut where if the input is a non-object 2D ndarray,
+        dimensionality must already be consistent, so the ndarray (which is an
+        Iterable) is just returned. Otherwise, we return a generator that
+        checked dimensionality of the input iterable during iteration.
+
+        :param collections.abc.Iterable[numpy.ndarray] | np.ndarray array_iter:
             Iterable numpy arrays.
 
+        :raises AttributeError: Individual arrays are not numpy.ndarray-like.
         :raises ValueError: Not all input arrays were of consistent
             dimensionality.
 
         :return: Iterable of the same arrays in the same order, but validated
             to be of common dimensionality.
         """
-        dim = None
-        for a in array_iter:
-            if a.ndim > 1:
-                raise ValueError("Input vector had more than one dimension! "
-                                 "(ndim = {})".format(a.ndim))
-            elif dim is None:
-                dim = a.size
-            elif a.size != dim:
-                raise ValueError("Input vector violated dimension consistency "
-                                 "(basis == {}, violation == {})"
-                                 .format(dim, a.size))
-            yield a
+        try:
+            # If an ndarray is at least 2 dimensional and not made of just
+            # objects then its shape *will* be consistent.
+            if array_iter.ndim > 1 and array_iter.dtype != np.object:
+                return array_iter
+        except AttributeError:
+            # If we don't encounter numpy array-like syntax proceed with
+            # generic iterable fallback.
+            pass
+
+        # Fall-back: manually checking that iterated arrays are 1D and of
+        # consistent size.
+        def _inner():
+            dim = None
+            for a in array_iter:
+                if a.ndim > 1:
+                    raise ValueError("Input vector had more than one "
+                                     f"dimension! (ndim = {a.ndim})")
+                elif dim is None:
+                    dim = a.size
+                elif a.size != dim:
+                    raise ValueError("Input vector violated dimension "
+                                     f"consistency (basis == {dim}, "
+                                     f"violation == {a.size})")
+                yield a
+        return _inner()
 
     def classify_arrays(self, array_iter):
         """
@@ -99,8 +119,8 @@ class Classifier (SmqtkAlgorithm):
         manner whereby each label is given a confidence-like value in the
         [0, 1] range.
 
-        :param collections.abc.Iterable[numpy.ndarray] array_iter:
-            Iterable of DescriptorElement instances to be classified.
+        :param collections.abc.Iterable[numpy.ndarray] | np.ndarray array_iter:
+            Iterable of descriptor vectors, as numpy arrays, to be classified.
 
         :raises ValueError: Input arrays were not all of consistent
             dimensionality.

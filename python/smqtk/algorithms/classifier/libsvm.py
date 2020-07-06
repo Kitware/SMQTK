@@ -1,22 +1,20 @@
-from __future__ import (absolute_import, division,
-                        print_function, unicode_literals)
-
 import collections
 from copy import deepcopy
 import ctypes
 import logging
 import os
+import pickle
 import tempfile
+import threading
 
 import numpy
 import numpy.linalg
 import scipy.stats
-import six
-from six.moves import cPickle
 
 from smqtk.algorithms import SupervisedClassifier
 from smqtk.representation import DescriptorElement
 from smqtk.representation.data_element import from_uri
+from smqtk.utils.parallel import parallel_map
 
 try:
     import svm
@@ -60,6 +58,7 @@ class LibSvmClassifier (SupervisedClassifier):
                      # '-g': 0.0078125,  # initial gamma (1 / 128)
                  },
                  normalize=None,
+                 n_jobs=4,
                  ):
         """
         Initialize the classifier with an empty or existing model.
@@ -88,6 +87,10 @@ class LibSvmClassifier (SupervisedClassifier):
             for 1D arrays. This is ``None`` by default (no normalization).
         :type normalize: None | int | float | str
 
+        :param int|None n_jobs:
+            Number of processes to use to parallelize prediction. If None or a
+            negative value, all cores are used.
+
         """
         super(LibSvmClassifier, self).__init__()
 
@@ -104,6 +107,7 @@ class LibSvmClassifier (SupervisedClassifier):
 
         self.train_params = train_params
         self.normalize = normalize
+        self.n_jobs = n_jobs
         # Validate normalization parameter by trying it on a random vector
         if normalize is not None:
             self._norm_vector(numpy.random.rand(8))
@@ -113,7 +117,7 @@ class LibSvmClassifier (SupervisedClassifier):
         self.svm_model = None
         # dictionary mapping SVM integer labels to semantic labels
         #: :type: dict[int, collections.abc.Hashable]
-        self.svm_label_map = None
+        self.svm_label_map = {}
 
         self._reload_model()
 
@@ -143,10 +147,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 os.remove(fp)
 
     def __setstate__(self, state):
-        self.svm_model_uri = state['svm_model_uri']
-        self.svm_label_map_uri = state['svm_model_uri']
-        self.train_params = state['train_params']
-        self.normalize = state['normalize']
+        self.__dict__.update(state)
 
         self.svm_model_elem = \
             self.svm_model_uri and from_uri(self.svm_model_uri)
@@ -155,6 +156,12 @@ class LibSvmClassifier (SupervisedClassifier):
 
         # C libraries/pointers don't survive across processes.
         if '__LOCAL__' in state:
+            # These would have gotten copied into dict during the updated.
+            # The instance doesn't need to keep them around after this.
+            del self.__dict__['__LOCAL__']
+            del self.__dict__['__LOCAL_LABELS__']
+            del self.__dict__['__LOCAL_MODEL__']
+
             fd, fp = tempfile.mkstemp()
             try:
                 os.close(fd)
@@ -185,7 +192,7 @@ class LibSvmClassifier (SupervisedClassifier):
 
         if self.svm_label_map_elem and not self.svm_label_map_elem.is_empty():
             self.svm_label_map = \
-                cPickle.loads(self.svm_label_map_elem.get_bytes())
+                pickle.loads(self.svm_label_map_elem.get_bytes())
 
     @staticmethod
     def _gen_param_string(params):
@@ -193,7 +200,7 @@ class LibSvmClassifier (SupervisedClassifier):
         Make a single string out of a parameters dictionary
         """
         return ' '.join((str(k) + ' ' + str(v)
-                         for k, v in six.iteritems(params)))
+                         for k, v in params.items()))
 
     def _norm_vector(self, v):
         """
@@ -232,6 +239,7 @@ class LibSvmClassifier (SupervisedClassifier):
             "svm_label_map_uri": self.svm_label_map_uri,
             "train_params": self.train_params,
             "normalize": self.normalize,
+            "n_jobs": self.n_jobs,
         }
 
     def has_model(self):
@@ -332,7 +340,7 @@ class LibSvmClassifier (SupervisedClassifier):
             self._log.debug("saving labels to element (%s)",
                             self.svm_label_map_elem)
             self.svm_label_map_elem.set_bytes(
-                cPickle.dumps(self.svm_label_map, -1)
+                pickle.dumps(self.svm_label_map, -1)
             )
         if self.svm_model_elem and self.svm_model_elem.writable():
             self._log.debug("saving model to element (%s)",
@@ -375,10 +383,14 @@ class LibSvmClassifier (SupervisedClassifier):
         # prediction.
         vec_mat = numpy.array(list(array_iter))
         vec_mat = self._norm_vector(vec_mat)
+        n_jobs = self.n_jobs
+        if n_jobs is not None:
+            n_jobs = min(len(vec_mat), n_jobs)
+        # Else: `n_jobs` is `None`, which is OK as it's the default  value for
+        # parallel_map.
 
-        all_label_list = self.get_labels()
         svm_label_map = self.svm_label_map
-        c_base = dict((l, 0.) for l in all_label_list)
+        c_base = dict((la, 0.) for la in svm_label_map.values())
 
         # Effectively reproducing the body of svmutil.svm_predict in order to
         # simplify and get around excessive prints
@@ -391,35 +403,49 @@ class LibSvmClassifier (SupervisedClassifier):
         #       function can just take a matrix?
 
         if self.svm_model.is_probability_model():
+            # noinspection PyUnresolvedReferences
             if svm_type in [svm.NU_SVR, svm.EPSILON_SVR]:
                 nr_class = 0
-            prob_estimates = (ctypes.c_double * nr_class)()
-            for v in vec_mat:
-                # normalize vector
+
+            def single_pred(v):
+                prob_estimates = (ctypes.c_double * nr_class)()
                 v, idx = svm.gen_svm_nodearray(v.tolist())
                 svm.libsvm.svm_predict_probability(self.svm_model, v,
                                                    prob_estimates)
-
                 c = dict(c_base)  # Shallow copy
                 c.update({svm_label_map[l]: p for l, p
                           in zip(svm_model_labels, prob_estimates[:nr_class])})
-                yield c
+                return c
+            # If n_jobs == 1, just be serial
+            if n_jobs == 1:
+                return (single_pred(v) for v in vec_mat)
+            else:
+                return parallel_map(single_pred, vec_mat,
+                                    cores=n_jobs,
+                                    use_multiprocessing=True)
+
         else:
             # noinspection PyUnresolvedReferences
             if svm_type in (svm.ONE_CLASS, svm.EPSILON_SVR, svm.NU_SVC):
                 nr_classifier = 1
             else:
                 nr_classifier = nr_class * (nr_class - 1) // 2
-            # noinspection PyCallingNonCallable,PyTypeChecker
-            dec_values = (ctypes.c_double * nr_classifier)()
-            for v in vec_mat:
-                # normalize vector
+
+            def single_label(v):
+                dec_values = (ctypes.c_double * nr_classifier)()
                 v, idx = svm.gen_svm_nodearray(v.tolist())
                 label = svm.libsvm.svm_predict_values(self.svm_model, v,
                                                       dec_values)
                 c = dict(c_base)  # Shallow copy
                 c[svm_label_map[label]] = 1.
-                yield c
+                return c
+            # If n_jobs == 1, just be serial
+            if n_jobs == 1:
+                return (single_label(v) for v in vec_mat)
+            else:
+                return parallel_map(single_label, vec_mat,
+                                    cores=n_jobs,
+                                    use_multiprocessing=True)
 
 
 # Explicitly declare to avoid silly warning about ignoring parent abstract

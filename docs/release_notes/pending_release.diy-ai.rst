@@ -14,6 +14,13 @@ CI
   Also removed testing on Ubuntu Xenial (16.04) images due to lack of specific
   motivation and favoring simplicity.
 
+Classifiers
+
+* LibSVM
+
+  * Added `n_jobs` optional constructor argument to control new multiprocessing
+    parallel prediction within `_classify_arrays` implementation.
+
 Docker
 
 * Migrated build logic for caffe and iqr-playground into
@@ -25,6 +32,15 @@ Utils
 
 * Add daemon flag to ``parallel_map``, defaulted to True, that flags
   threads/processes created as daemonic in behavior.
+
+Web
+
+* Classifier Service
+
+  * Added optional configuration of a `DescriptorSet`.
+
+  * Added endpoint to classify descriptors within the configured
+    `DescriptorSet` given a list of descriptor UIDs.
 
 
 Fixes
@@ -39,6 +55,12 @@ General
 Docker
 
 * Fixed IQR Playground build.
+
+Representations
+
+* DescriptorSet
+
+  * Fixed missing return statement in `DescriptorSet.get_many_vectors`.
 
 Utils
 

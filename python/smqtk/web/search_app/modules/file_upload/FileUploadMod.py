@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import tempfile
 
+from six import BytesIO
 from six.moves import cStringIO as StringIO
 
 from smqtk.utils import SmqtkObject
@@ -82,7 +83,7 @@ class FileUploadMod (SmqtkObject, flask.Blueprint):
                 # - Need to explicitly copy the buffered data as the file object
                 #   closes between chunk messages.
                 self._file_chunks.setdefault(fid, {})[current_chunk] \
-                    = StringIO(chunk_data.read())
+                    = BytesIO(chunk_data.read())
                 message = "Uploaded chunk #%d of %d for file '%s'" \
                     % (current_chunk, total_chunks, filename)
 

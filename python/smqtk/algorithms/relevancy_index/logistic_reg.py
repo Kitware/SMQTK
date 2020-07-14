@@ -16,7 +16,6 @@ try:
 except ImportError:
     LogisticRegression = None
     sklearn = None
-import pdb
 
 
 class LogisticRegRelevancyIndex (RelevancyIndex):

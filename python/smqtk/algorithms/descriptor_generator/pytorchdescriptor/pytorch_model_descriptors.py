@@ -11,7 +11,6 @@ try:
     import torchvision
     from torch.utils.data import DataLoader
     from torch.autograd import Variable
-    from torch.utils.data import Dataset
     from .utils import PytorchImagedataset
 except ImportError as ex:
     logging.warning("Failed to import torch/torchvision "

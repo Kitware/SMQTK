@@ -1,6 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
-import collections
 from copy import deepcopy
 import json
 import multiprocessing
@@ -9,8 +6,6 @@ import os
 import six
 import tempfile
 import warnings
-
-from six.moves import zip, filter
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
@@ -642,7 +637,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         with self._model_lock:
             # Check that provided IDs are present in uid2idx mapping.
-            uids_d = collections.deque()
+            uids_d = []
             for uid in uids:
                 if uid not in self._uid2idx_kvs:
                     raise KeyError(uid)

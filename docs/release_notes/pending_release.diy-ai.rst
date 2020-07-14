@@ -33,6 +33,9 @@ Utils
 * Add daemon flag to ``parallel_map``, defaulted to True, that flags
   threads/processes created as daemonic in behavior.
 
+* Added `smqtk.utils.file.safe_file_context` to provide a contextmanager
+  complement to `safe_file_write` in the same module.
+
 Web
 
 * Classifier Service

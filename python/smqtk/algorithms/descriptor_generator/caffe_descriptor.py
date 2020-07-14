@@ -181,11 +181,9 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
         self._log.debug("Loading Caffe network from network/model configs")
-        self.network = caffe.Net(self.network_prototxt.write_temp(),
+        self.network = caffe.Net(self.network_prototxt,
                                  caffe.TEST,
-                                 weights=self.network_model.write_temp())
-        self.network_prototxt.clean_temp()
-        self.network_model.clean_temp()
+                                 weights=self.network_model)
         # Assuming the network has a 'data' layer and notion of data shape
         self.net_data_shape = self.network.blobs[self.data_layer].data.shape
         self._log.debug("Network data shape: %s", self.net_data_shape)
@@ -201,7 +199,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         if self.image_mean is not None:
             self._log.debug("Loading image mean (reducing to single pixel "
                             "mean)")
-            image_mean_bytes = self.image_mean.get_bytes()
+            image_mean_bytes = open(self.image_mean, "rb").read()
             try:
                 a = numpy.load(io.BytesIO(image_mean_bytes))
                 self._log.info("Loaded image mean from numpy bytes")

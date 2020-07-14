@@ -105,7 +105,8 @@ class PytorchModelDescriptor (DescriptorGenerator):
     def __init__(self, 
                  model_name = 'resnet18', return_layer = 'avgpool', 
                  custom_model_arch = None, weights_filepath = None, 
-                 norm_mean = None, norm_std = None, use_gpu = True,
+                 norm_mean = [0.485, 0.456, 0.406], 
+                 norm_std = [0.229, 0.224, 0.225], use_gpu = True,
                  batch_size = 32, pretrained = True):
         """
         Create a PyTorch CNN descriptor generator
@@ -169,6 +170,8 @@ class PytorchModelDescriptor (DescriptorGenerator):
             if 'state_dict' in checkpoint:
                 checkpoint = checkpoint['state_dict']
             model.load_state_dict(checkpoint)
+        if (not self.pretrained) and (not self.weights_filepath):
+            raise ValueError('Network might be loaded with junk weights')
         self.return_layer = [k for k in return_layer.split('.')]
         # We currently support iterating through only two levels of the network 
         # i.e return_layer1 and return_layer2

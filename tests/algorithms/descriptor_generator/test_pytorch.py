@@ -28,9 +28,9 @@ if PytorchModelDescriptor.is_usable():
 
     class TestPytorchModelDescriptor (unittest.TestCase):
 
-        hopper_image_fp = get_sample_data('grace_hopper.png', asfileobj=False)
-        hopper_torch_res18_avgpool_descr_fp = os.path.join(
-            TEST_DATA_DIR, 'Hopper.resnet18_avgpool_output.npy'
+        lenna_image_fp = get_sample_data('Lenna.png', asfileobj=False)
+        lenna_torch_res18_avgpool_descr_fp = os.path.join(
+            TEST_DATA_DIR, 'Lenna.resnet18_avgpool_output.npy'
         )
 
         self.model_name_elem = 'resnet18'
@@ -115,8 +115,8 @@ if PytorchModelDescriptor.is_usable():
 
         @unittest.skipUnless(DataUrlElement.is_usable(),
                              "URL resolution not functional")
-        def test_compute_descriptor_from_url_hopper_description(self):
-            # Caffe AlexNet interaction test (Grace Hopper image)
+        def test_compute_descriptor_lenna_description(self):
+            # Pytorch ResNet interaction test (Lenna image)
             # This is a long test since it has to download data for remote URIs
             d = PytorchModelDescriptor(
                     self.model_name_elem,
@@ -125,9 +125,9 @@ if PytorchModelDescriptor.is_usable():
                     self.norm_mean_elem,
                     self.norm_std_elem,
                     True, 32, self.pretrained)      
-            hopper_elem = DataFileElement(self.hopper_image_fp, readonly=True)
-            expected_descr = numpy.load(self.hopper_torch_res18_avgpool_descr_fp)
-            descr = d.compute_descriptor(hopper_elem).vector()
+            lenna_elem = DataFileElement(self.lenna_image_fp, readonly=True)
+            expected_descr = numpy.load(self.lenna_torch_res18_avgpool_descr_fp)
+            descr = d.compute_descriptor(lenna_elem).vector()
             numpy.testing.assert_allclose(descr, expected_descr, atol=1e-4)
 
         def test_compute_descriptor_async_no_data(self):
@@ -169,4 +169,3 @@ if PytorchModelDescriptor.is_usable():
                     self.norm_mean_elem,
                     self.norm_std_elem,
                     True, 32, True))
-

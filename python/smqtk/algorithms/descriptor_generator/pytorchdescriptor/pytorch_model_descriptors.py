@@ -103,8 +103,8 @@ class PytorchModelDescriptor (DescriptorGenerator):
 
     def __init__(self, 
                  model_name = 'resnet18', return_layer = 'avgpool', 
-                 custom_model_arch = None, weights_filepath = None, 
-                 norm_mean = [0.485, 0.456, 0.406], 
+                 custom_model_arch = None, weights_filepath = None,
+                 input_dim = (224, 224), norm_mean = [0.485, 0.456, 0.406], 
                  norm_std = [0.229, 0.224, 0.225], use_gpu = True,
                  batch_size = 32, pretrained = True):
         """
@@ -121,6 +121,8 @@ class PytorchModelDescriptor (DescriptorGenerator):
         :param weights_filepath: Absolute file path to weights of a custom 
                model custom_model_arch.
         :type weights_filepath: str
+        :param input_dim: Image height and width of an input image.
+        :type input_dim: (int, int)
         :param norm_mean: Mean for normalizing images across three channels.
         :type norm_mean: List [float, float, float].
         :param norm_std: Standard deviation for normalizing images across 
@@ -139,7 +141,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
         """
         self.model_name = model_name
         self.transforms = torchvision.transforms.Compose([
-            torchvision.transforms.Resize((224,224)),
+            torchvision.transforms.Resize((input_dim[0], input_dim[1])),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(norm_mean, norm_std)])
         self.batch_size = batch_size
@@ -176,7 +178,6 @@ class PytorchModelDescriptor (DescriptorGenerator):
         # i.e return_layer1 and return_layer2
         # Check if return_layer1 is present in model and truncate the sub 
         # module containing return_key2.
-
         model = self.check_model_truncate(model)
         try:
             assert model
@@ -341,7 +342,11 @@ class PytorchModelDescriptor (DescriptorGenerator):
             for (d, uuids) in data_loader:
                 if self.use_gpu:
                     d = d.cuda()
-                pytorch_f = self.model(Variable(d)).squeeze()
+                try:
+                    pytorch_f = self.model(Variable(d)).squeeze()
+                except ValueError:
+                    self._log.error("Invalid input type or dimensions for"
+                                         "chosen network")
                 if len(pytorch_f.shape) < 2:
                     pytorch_f = pytorch_f.unsqueeze(0)
                 if len(pytorch_f.shape) > 2:

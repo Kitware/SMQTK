@@ -53,6 +53,7 @@ if PytorchModelDescriptor.is_usable():
         def setup_class(cls):
             cls.model_name = 'resnet18'
             cls.return_layer = 'avgpool'
+            cls.input_dim = (224, 224)
             cls.norm_mean = [0.485, 0.456, 0.406] 
             cls.norm_std = [0.229, 0.224, 0.225]
             if not torch.cuda.is_available():
@@ -71,6 +72,7 @@ if PytorchModelDescriptor.is_usable():
                 'return_layer': 'layer name',
                 'custom_model_arch': True,
                 'weights_filepath': None,
+                'input_dim': (24, 996),
                 'norm_mean': [0, 0, -0.5],
                 'norm_std': [0.2, 0.3, 1],
                 'use_gpu': False,
@@ -110,7 +112,7 @@ if PytorchModelDescriptor.is_usable():
             # zero-valued descriptor vector.
             self.assertRaises(
                 AssertionError,
-                PytorchModelDescriptor(model_name=self.dummy_model_name), 
+                PytorchModelDescriptor(model_name = self.dummy_model_name), 
             )
 
         @unittest.skipUnless(DataUrlElement.is_usable(),
@@ -121,7 +123,7 @@ if PytorchModelDescriptor.is_usable():
             d = PytorchModelDescriptor(
                     self.model_name_elem,
                     self.return_layer_elem,
-                    None, None,
+                    None, None, self.input_dim,
                     self.norm_mean_elem,
                     self.norm_std_elem,
                     True, 32, self.pretrained)      
@@ -135,7 +137,7 @@ if PytorchModelDescriptor.is_usable():
             g = PytorchModelDescriptor(
                     self.model_name_elem,
                     self.return_layer_elem,
-                    None, None,
+                    None, None, self.input_dim,
                     self.norm_mean_elem, 
                     self.norm_std_elem,
                     True, 32, self.pretrained)
@@ -152,7 +154,7 @@ if PytorchModelDescriptor.is_usable():
                 PytorchModelDescriptor(
                     self.model_name_elem,
                     self.return_layer_elem,
-                    None, None,
+                    None, None, self.input_dim,
                     self.norm_mean_elem,
                     self.norm_std_elem,
                     True, 32, False))
@@ -165,7 +167,21 @@ if PytorchModelDescriptor.is_usable():
                 PytorchModelDescriptor(
                     self.model_name_elem,
                     self.dummy_return_layer,
-                    None, None,
+                    None, None, self.input_dim,
                     self.norm_mean_elem,
                     self.norm_std_elem,
                     True, 32, True))
+
+       def test_input_dim_to_network(self):
+           # Should get a ValueError when  the input image dimensions 
+           # or type are incompatible with chosen network.
+           self.assertRaises(
+                ValueError,
+                PytorchModelDescriptor(
+                    self.model_name_elem,
+                    self.return_layer,
+                    None, None, (60, 60),
+                    self.norm_mean_elem,
+                    self.norm_std_elem,
+                    True, 32, True))
+

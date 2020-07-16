@@ -1,8 +1,10 @@
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator, \
     DFLT_DESCRIPTOR_FACTORY
+from smqtk.utils.cli import ProgressReporter
 
 from collections import deque
 import multiprocessing
+import multiprocessing.pool
 import six
 import logging 
 
@@ -95,11 +97,11 @@ class PytorchModelDescriptor (DescriptorGenerator):
                                                        [layer_position]))[0]
                     # If we want to truncate submodule return_key1   
                     model = self.truncate_pytorch_model(model, last_stage) 
-
-            return model
+            return model      
         except KeyError:
-            raise KeyError("Given return layer is "
+            self._log.error("Given return layer is "
                                   "invalid:{}".format(self.return_layer))
+            raise
 
     def __init__(self, 
                  model_name = 'resnet18', return_layer = 'avgpool', 
@@ -145,6 +147,7 @@ class PytorchModelDescriptor (DescriptorGenerator):
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(norm_mean, norm_std)])
         self.batch_size = batch_size
+        self.input_dim = input_dim
         self.norm_mean = norm_mean
         self.norm_std = norm_std
         self.use_gpu = use_gpu
@@ -156,11 +159,12 @@ class PytorchModelDescriptor (DescriptorGenerator):
             try: 
                 assert model_name in torchvision.models.__dict__.keys()
             except AssertionError:
-                self._log.info("Invalid model name, model not present "
+                self._log.error("Invalid model name, model not present "
                              "in torchvision. Please load network architecture")
                 self._log.info("Available models include:{}"
                        .format([s for s in torchvision.models.__dict__.keys() 
-                                              if not "__" in s])) 
+                                              if not "__" in s]))
+                raise 
             # Loading model from torchvision library
             model = getattr(torchvision.models, self.model_name)(self.pretrained)
         else:
@@ -172,30 +176,36 @@ class PytorchModelDescriptor (DescriptorGenerator):
                 checkpoint = checkpoint['state_dict']
             model.load_state_dict(checkpoint)
         if (not self.pretrained) and (not self.weights_filepath):
-            raise ValueError('Network might be loaded with junk weights')
+            self._log.error("Network might be loaded with junk weights")
+            raise ValueError
         self.return_layer = [k for k in return_layer.split('.')]
         # We currently support iterating through only two levels of the network 
         # i.e return_layer1 and return_layer2
         # Check if return_layer1 is present in model and truncate the sub 
         # module containing return_key2.
         model = self.check_model_truncate(model)
-        try:
-            assert model
-        except AssertionError:
-            self._log.info("Selected model{}".format(sub_model))
-            raise AssertionError("Invalid return layer label selected "
-                                                              "model")
         model.eval()
+
         if self.use_gpu:
             try:
                 model = model.cuda()
                 self.model = torch.nn.DataParallel(model)
-            except AssertionError:
-                self.model = model 
+            except ValueError:
+                self.model = model
                 self._log.info("Cannot load PyTorch model to GPU, running on CPU")
+
+        try:
+            assert model
+        except AssertionError:
+            self._log.info("Selected model{}".format(sub_model))
+            raise ("Model could not be loaded")
 
     def __getstate__(self):
         return self.get_config()
+
+    def _setup_network(self):
+        pass
+        #raise NotImplementedError("Nada")
 
     def __setstate__(self, state):
         # This works because configuration parameters exactly match up with
@@ -216,9 +226,10 @@ class PytorchModelDescriptor (DescriptorGenerator):
         """
         return {
             'model_name': self.model_name,
-            'return_layer': self.return_layer,
+            'return_layer': '.'.join(self.return_layer),
             'custom_model_arch': self.custom_model_arch,
             'weights_filepath': self.weights_filepath,
+            'input_dim': self.input_dim,
             'norm_mean': self.norm_mean,
             'norm_std': self.norm_std,
             'use_gpu': self.use_gpu,
@@ -272,6 +283,10 @@ class PytorchModelDescriptor (DescriptorGenerator):
                                   "compute_descriptor[_async] is being "
                                   "overridden")
 
+    def check_get_uuid(self, descriptor_elem):
+        if self.overwrite or not descriptor_elem.has_vector():
+            self.uuid4proc.append(descriptor_elem.uuid())
+
     def compute_descriptor_async(self, data_set, descriptor_elem_factory= 
                                  DFLT_DESCRIPTOR_FACTORY, overwrite=False):
         """
@@ -299,9 +314,9 @@ class PytorchModelDescriptor (DescriptorGenerator):
         :rtype: dict[collections.Hashable,
                      smqtk.representation.DescriptorElement]
         """
-        self.data_elements = {}
-        self.descr_elements = {}
-        self.uuid4proc = deque()
+        data_elements = {}
+        descr_elements = {}
+        pr = ProgressReporter(self._log.debug, 1.0).start()
         for d in data_set:
             ct = d.content_type()
             if ct not in self.valid_content_types():
@@ -309,32 +324,37 @@ class PytorchModelDescriptor (DescriptorGenerator):
                                 "'%s' data: %s)" % (ct, d))
                 raise ValueError("Cannot compute descriptor from content type "
                                  "'%s' data: %s)" % (ct, d))
-            self.data_elements[d.uuid()] = d
-            self.descr_elements[d.uuid()] = descriptor_elem_factory \
+            data_elements[d.uuid()] = d
+            descr_elements[d.uuid()] = descriptor_elem_factory \
                                .new_descriptor(self.name, d.uuid()) 
-        def check_get_uuid(descriptor_elem):
-            if overwrite or not descriptor_elem.has_vector():
-                self.uuid4proc.append(descriptor_elem.uuid()) 
+            pr.increment_report()
+        pr.report()
+        self.overwrite = overwrite 
+        self.uuid4proc = deque()
+
         procs = multiprocessing.cpu_count()
-        if len(self.data_elements) < procs:
-            procs = len(self.data_elements)
+        if len(data_elements) < procs:
+            procs = len(data_elements)
+        if procs == 0:
+            raise ValueError("No data elements provided")
         # Using thread-pool due to in-line function + updating local deque
         p = multiprocessing.pool.ThreadPool(procs)
         try:
-            p.map(check_get_uuid, six.itervalues(self.descr_elements))
-        finally:
+            p.map(self.check_get_uuid, six.itervalues(descr_elements))
+        except AttributeError:
             p.close()
             p.join()
         del p
         self._log.debug("%d descriptors already computed",
-                     len(self.data_elements) - len(self.uuid4proc))
+                     len(data_elements) - len(self.uuid4proc))
         self._log.debug("Given %d unique data elements", 
-                                     len(self.data_elements))
-        if len(self.data_elements) == 0:
+                                     len(data_elements))
+        if len(data_elements) == 0:
             raise ValueError("No data elements provided") 
+
         if self.uuid4proc:
             kwargs = {'num_workers': procs, 'pin_memory': True}
-            data_loader_cls = PytorchImagedataset(self.data_elements, 
+            data_loader_cls = PytorchImagedataset(data_elements, 
                                    self.uuid4proc, self.transforms)
             data_loader = DataLoader(data_loader_cls, 
                          batch_size=self.batch_size, shuffle=False, **kwargs)
@@ -342,21 +362,26 @@ class PytorchModelDescriptor (DescriptorGenerator):
             for (d, uuids) in data_loader:
                 if self.use_gpu:
                     d = d.cuda()
-                try:
-                    pytorch_f = self.model(Variable(d)).squeeze()
-                except ValueError:
-                    self._log.error("Invalid input type or dimensions for"
-                                         "chosen network")
+                pytorch_f = self.model(Variable(d)).squeeze()
                 if len(pytorch_f.shape) < 2:
                     pytorch_f = pytorch_f.unsqueeze(0)
                 if len(pytorch_f.shape) > 2:
                     import numpy
                     pytorch_f = pytorch_f.view(pytorch_f.shape[0],
                                (numpy.prod(pytorch_f.shape[1:])))
-                [self.descr_elements[uuid].set_vector(
+                [descr_elements[uuid].set_vector(
                                pytorch_f.data.cpu().numpy()[idx]) 
                                for idx, uuid in enumerate(uuids)]
         self._log.debug("forming output dict")
-        return dict((self.data_elements[k].uuid(), self.descr_elements[k])
-                    for k in self.data_elements)
+        return dict((data_elements[k].uuid(), descr_elements[k])
+                    for k in data_elements)
 
+def _process_load_img_array(image_pil, transforms = None):
+    """
+    Helper function for multiprocessing image data loading
+
+    """
+    if transforms:
+        image_pil = transforms(image_pil)
+    return torchvision.transforms.ToPILImage(image_pil) 
+    

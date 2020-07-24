@@ -52,6 +52,9 @@ General
   ``collections``, deprecated assert methods, and invalid escape
   sequences
 
+* Fixed broken link in top-level `README.md` and added a quick-start to
+  building local documentation.
+
 Docker
 
 * Fixed IQR Playground build.

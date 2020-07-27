@@ -51,12 +51,21 @@ services:
         CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
         # One or more CUDA architectures to compile for.
         # Using ">-" for multi-line string concatenation with no new-lines.
+        # Using ">-" for multi-line string concatenation with no new-lines.
+        # - arch upper bound defined by CUDA version (e.g. 9.2 cannot support
+        #   compute_75)
+        # - https://docs.nvidia.com/cuda/turing-compatibility-guide/index.html#building-turing-compatible-apps-using-cuda-9-
+        # - In order to support a NEWER gpu architecture than considered here,
+        #   the final line here should specify a PTX version, e.g.
+        #   `-gencode=arch=compute_XY,code=compute_XY` (note the `code=...`),
+        #   in order to provide compatibility with future architectures.
         CUDA_ARCH: >-
-          -gencode=arch=compute_35,code=compute_35
-          -gencode=arch=compute_52,code=compute_52
-          -gencode=arch=compute_60,code=compute_60
-          -gencode=arch=compute_61,code=compute_61
-          -gencode=arch=compute_62,code=compute_62
+          -gencode=arch=compute_50,code=sm_50
+          -gencode=arch=compute_52,code=sm_52
+          -gencode=arch=compute_60,code=sm_60
+          -gencode=arch=compute_61,code=sm_61
+          -gencode=arch=compute_70,code=sm_70
+          -gencode=arch=compute_70,code=compute_70
 
   #
   # IQR Playground Demo Image CPU/GPU

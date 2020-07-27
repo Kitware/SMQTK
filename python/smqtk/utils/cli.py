@@ -117,7 +117,7 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
     :type overwrite: bool
 
     :param error_rc: Custom integer error return code to use instead of 1.
-    ;type error_rc: int
+    :type error_rc: int
 
     :param log: Optionally logging instance. Otherwise we use a local one.
     :type log: logging.Logger

@@ -149,9 +149,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
-                 read_only=False, factory_string='IVF1,Flat',
-                 use_multiprocessing=True, use_gpu=False, gpu_id=0,
-                 random_seed=None):
+                 read_only=False, distance_m='cosine',
+                 factory_string='IVF1,Flat', use_multiprocessing=True, 
+                 use_gpu=False, gpu_id=0, random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
@@ -232,6 +232,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self.random_seed = int(random_seed)
         # Index value for the next added element.  Reset to 0 on a build.
         self._next_index = 0
+        self._distance_metric = distance_m
 
         # Place-holder for option GPU resource reference. Just exist for the
         # duration of the index converted with it.
@@ -435,6 +436,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         faiss_index = self._index_factory_wrapper(d, self.factory_string)
         # noinspection PyArgumentList
+        if self._distance_metric:
+            data = (
+                data / np.linalg.norm(
+                data, axis=1, keepdims=True)
+            )
         faiss_index.train(data)
         # TODO(john.moeller): This will raise an exception on flat indexes.
         # There's a solution which involves wrapping the index in an
@@ -645,7 +651,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         """
         q = d.vector()[np.newaxis, :].astype(np.float32)
-
+        if self._distance_metric:
+            q = (
+                q / np.linalg.norm(
+                q, axis=1, keepdims=True)
+            )
         self._log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:

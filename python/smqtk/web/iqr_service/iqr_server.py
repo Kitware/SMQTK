@@ -9,8 +9,6 @@ import traceback
 import uuid
 
 import flask
-import numpy as np
-import six
 
 from smqtk.algorithms import (
     Classifier,

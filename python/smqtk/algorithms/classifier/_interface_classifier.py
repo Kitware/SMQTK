@@ -6,10 +6,6 @@ from six.moves import zip
 
 from smqtk.algorithms import SmqtkAlgorithm
 from smqtk.representation import DescriptorElement
-from smqtk.utils import (
-    cli,
-    parallel,
-)
 
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 

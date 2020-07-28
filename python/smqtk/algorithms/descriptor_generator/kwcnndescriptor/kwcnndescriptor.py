@@ -1,5 +1,4 @@
 """KWCNN descriptor generator definition."""
-from collections import deque
 import os
 import io
 import itertools
@@ -10,13 +9,10 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
-import six
 # noinspection PyUnresolvedReferences
-from six.moves import range, zip
+from six.moves import zip
 
-from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
-                                                   DFLT_DESCRIPTOR_FACTORY)
-from smqtk.utils.cli import ProgressReporter
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.utils.parallel import parallel_map
 
 try:

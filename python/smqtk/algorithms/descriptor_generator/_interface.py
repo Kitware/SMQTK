@@ -1,9 +1,8 @@
 import abc
 from collections import deque
-import numpy
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.representation import DataElement, DescriptorElementFactory
+from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils import ContentTypeValidator
@@ -27,7 +26,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
@@ -56,7 +55,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         includes any functionality after the final ``yield`` statement in any
         of the underlying iterators.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of DataElement instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
@@ -108,7 +107,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         input data elements and are set to their respective descriptor elements
         regardless of existing vector storage.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of DataElement instances to be described.
         :param smqtk.representation.DescriptorElementFactory descr_factory:
             DescriptorElementFactory instance to drive the generation of
@@ -256,7 +255,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         :meth:`DescriptorGenerator.generate_arrays` method for more
         information.
 
-        :param DataElement data_elem:
+        :param smqtk.representation.DataElement data_elem:
             DataElement instance to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
@@ -282,7 +281,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         :meth:`DescriptorGenerator.generate_elements` method for more
         information
 
-        :param DataElement data_elem:
+        :param smqtk.representation.DataElement data_elem:
             DataElement instance to be described.
         :param smqtk.representation.DescriptorElementFactory descr_factory:
             DescriptorElementFactory instance to drive the generation of

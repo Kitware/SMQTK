@@ -73,7 +73,6 @@ import matplotlib.pyplot as plt
 import numpy
 import sklearn.model_selection
 import sklearn.metrics
-import six
 
 from smqtk.algorithms.classifier import SupervisedClassifier
 from smqtk.representation import (
@@ -134,8 +133,6 @@ def classifier_kfold_validation():
     #
     # Load configurations / Setup data
     #
-    use_mp = config['cross_validation']['classification_use_multiprocessing']
-
     pr_enabled = config['pr_curves']['enabled']
     pr_output_dir = config['pr_curves']['output_directory']
     pr_file_prefix = config['pr_curves']['file_prefix'] or ''

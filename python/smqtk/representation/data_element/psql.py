@@ -36,7 +36,7 @@ except ImportError:
 GLOBAL_PSQL_TABLE_CREATE_RLOCK = RLock()
 
 
-class PostgresDataElement (DataElement):
+class PostgresDataElement (DataElement):  # lgtm [py/missing-equals]
     """
     Data element bytes stored in PostgreSQL database.
 

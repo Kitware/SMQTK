@@ -11,8 +11,6 @@ import json
 import logging
 import os
 
-import six
-
 from smqtk.algorithms import Classifier
 from smqtk.algorithms import DescriptorGenerator
 

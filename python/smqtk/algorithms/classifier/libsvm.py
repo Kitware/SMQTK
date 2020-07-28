@@ -269,10 +269,8 @@ class LibSvmClassifier (SupervisedClassifier):
         CLASS_LABEL_OFFSET = 1
 
         # Stuff for debug reporting
-        etm_ri = None
         param_debug = {'-q': ''}
         if self._log.getEffectiveLevel() <= logging.DEBUG:
-            etm_ri = 1.0
             param_debug = {}
 
         # Form libSVM problem input values

@@ -1,10 +1,8 @@
 import collections
-import os.path as osp
 
 import numpy
 import six
 from six.moves import range, zip
-from six.moves import cPickle as pickle
 
 from smqtk.algorithms.relevancy_index import RelevancyIndex
 from smqtk.utils.parallel import parallel_map

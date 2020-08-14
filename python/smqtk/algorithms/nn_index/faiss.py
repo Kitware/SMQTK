@@ -29,8 +29,10 @@ from smqtk.utils.dict import merge_dict
 # Requires FAISS bindings
 try:
     import faiss
+    import sklearn
 except ImportError:
     faiss = None
+    sklearn = None
 
 
 class FaissNearestNeighborsIndex (NearestNeighborsIndex):
@@ -50,10 +52,18 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         else:
             return False
 
+    @staticmethod
+    def normalize_vec(data, min_range=0, max_range=1):
+        data = sklearn.preprocessing.minmax_scale(X, feature_range=(min_range, max_range), axis=1, copy=False)
+        return data
+       
     @classmethod
     def is_usable(cls):
         # if underlying library is not found, the import above will error
-        return faiss is not None
+        if (faiss is not None) and (sklearn is not None):
+            return True
+        else:
+            return False
 
     @classmethod
     def get_default_config(cls):
@@ -149,9 +159,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
     def __init__(self, descriptor_set, idx2uid_kvs, uid2idx_kvs,
                  index_element=None, index_param_element=None,
-                 read_only=False, factory_string='IVF1,Flat',
-                 use_multiprocessing=True, use_gpu=False, gpu_id=0,
-                 random_seed=None):
+                 read_only=False, distance_m='cosine',
+                 factory_string='IVF1,Flat', use_multiprocessing=True, 
+                 use_gpu=False, gpu_id=0, random_seed=None):
         """
         Initialize FAISS index properties. Does not contain a queryable index
         until one is built via the ``build_index`` method, or loaded from
@@ -182,6 +192,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param read_only: If True, `build_index` will error if there is an
             existing index. False by default.
         :type read_only: bool
+
+        :param distsance_m: Key for selecting metric used during indexing
+            and retireval. 'cosine' and 'euclidean' are currently supported   
+        :type distance_m: str
 
         :param factory_string: String to pass to FAISS' `index_factory`;
             see the documentation [1] on this feature for more details.
@@ -232,6 +246,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             self.random_seed = int(random_seed)
         # Index value for the next added element.  Reset to 0 on a build.
         self._next_index = 0
+        self._distance_metric = distance_m
 
         # Place-holder for option GPU resource reference. Just exist for the
         # duration of the index converted with it.
@@ -435,6 +450,9 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         faiss_index = self._index_factory_wrapper(d, self.factory_string)
         # noinspection PyArgumentList
+        if self._distance_metric == 'cosine':
+        # Normalizing vector before using L2 will result in cosine distance.
+            data = normalize_vec(data)
         faiss_index.train(data)
         # TODO(john.moeller): This will raise an exception on flat indexes.
         # There's a solution which involves wrapping the index in an
@@ -645,7 +663,8 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
         """
         q = d.vector()[np.newaxis, :].astype(np.float32)
-
+        if self._distance_metric == 'cosine':
+            q = normalize_vec(q)
         self._log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:

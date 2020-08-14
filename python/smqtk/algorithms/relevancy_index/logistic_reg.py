@@ -23,9 +23,6 @@ class LogisticRegRelevancyIndex (RelevancyIndex):
     to implement IQR ranking.
     """
 
-    # Dictionary of parameter/value pairs that will be passed to libSVM during
-    # the model trail phase. Parameters that are flags, i.e. have no values,
-    # should be given an empty string ('') value.
     LR_TRAIN_PARAMS = {
         "penalty": "l2",
         "dual": True,  
@@ -47,16 +44,13 @@ class LogisticRegRelevancyIndex (RelevancyIndex):
         """
         return LogisticRegression and sklearn
 
-    def __init__(self, descr_cache_filepath=None, autoneg_select_ratio=1,
+    def __init__(self, autoneg_select_ratio=1,
                  multiprocess_fetch=False, cores=None):
         """
         Initialize a new or existing index.
         TODO ::
         - input optional known background descriptors, i.e. descriptors for
             things that would otherwise always be considered a negative example.
-        :param descr_cache_filepath: Optional path to store/load descriptors
-            we index.
-        :type descr_cache_filepath: None | str
         :param autoneg_select_ratio: Number of maximally distant descriptors to
             select from our descriptor cache for each positive example provided
             when no negative examples are provided for ranking.
@@ -73,7 +67,6 @@ class LogisticRegRelevancyIndex (RelevancyIndex):
         """
         super(LogisticRegRelevancyIndex, self).__init__()
 
-        self.descr_cache_fp = descr_cache_filepath
         self.autoneg_select_ratio = int(autoneg_select_ratio)
         self.multiprocess_fetch = multiprocess_fetch
         self.cores = cores
@@ -87,20 +80,12 @@ class LogisticRegRelevancyIndex (RelevancyIndex):
         # subsequently in the distance kernel
         self._descr2index = {}
 
-        if self.descr_cache_fp and osp.exists(self.descr_cache_fp):
-            with open(self.descr_cache_fp, 'rb') as f:
-                descriptors = pickle.load(f)
-                self.descr_cache_fp = None
-                self.build_index(descriptors)
-                self.descr_cache_fp = descr_cache_filepath
-
     @classmethod
     def _gen_lr_parameter_string(cls):
         return cls.LR_TRAIN_PARAMS
     
     def get_config(self):
         return {
-            "descr_cache_filepath": self.descr_cache_fp,
             'autoneg_select_ratio': self.autoneg_select_ratio,
             'multiprocess_fetch': self.multiprocess_fetch,
             'cores': self.cores,
@@ -149,7 +134,6 @@ class LogisticRegRelevancyIndex (RelevancyIndex):
             self._descr2index[tuple(v)] = i
         self._descr_matrix = numpy.array(self._descr_matrix)
         
-
     def rank(self, pos, neg):
         """
         Rank the currently indexed elements given ``pos`` positive and ``neg``

@@ -8,7 +8,7 @@ RUN apt-get -y update \
         git=1:2.17.1-1ubuntu0.7 \
         cmake=3.10.2-1ubuntu2.18.04.1 \
         python3-dev=3.6.7-1~18.04 \
-        python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
+        python3-pip=9.0.1-2.3~ubuntu1.18.04.2 \
         # Caffe Dependencies
         libopenblas-dev=0.2.20+ds-4 \
         libboost-all-dev=1.65.1.0ubuntu1 \

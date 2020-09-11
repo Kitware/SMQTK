@@ -1,4 +1,4 @@
-SMQTK Pending Release Notes
+SMQTK v0.14.0 Release Notes
 ===========================
 
 Notable updates with this release:

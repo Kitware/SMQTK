@@ -12,7 +12,7 @@ from six import next
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation import DescriptorIndex
+from smqtk.representation import DescriptorSet
 from smqtk.representation.descriptor_element import elements_to_matrix
 from smqtk.utils.configuration import (
     from_config_dict,
@@ -86,7 +86,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         """
         default = super(MRPTNearestNeighborsIndex, cls).get_default_config()
 
-        di_default = make_default_config(DescriptorIndex.get_impls())
+        di_default = make_default_config(DescriptorSet.get_impls())
         default['descriptor_set'] = di_default
 
         return default
@@ -120,7 +120,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         cfg['descriptor_set'] = \
             from_config_dict(cfg['descriptor_set'],
-                             DescriptorIndex.get_impls())
+                             DescriptorSet.get_impls())
 
         return super(MRPTNearestNeighborsIndex, cls).from_config(cfg, False)
 
@@ -137,7 +137,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
 
         :param descriptor_set: Index in which DescriptorElements will be
             stored.
-        :type descriptor_set: smqtk.representation.DescriptorIndex
+        :type descriptor_set: smqtk.representation.DescriptorSet
 
         :param index_filepath: Optional file location to load/store MRPT index
             when initialized and/or built.
@@ -463,7 +463,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
             self._log.info("Building new MRPT index")
 
             self._log.debug("Clearing and adding new descriptor elements")
-            # NOTE: It may be the case for some DescriptorIndex implementations,
+            # NOTE: It may be the case for some DescriptorSet implementations,
             # this clear may interfere with iteration when part of the input
             # iterator of descriptors was this index's previous descriptor-set,
             # as is the case with ``update_index``.

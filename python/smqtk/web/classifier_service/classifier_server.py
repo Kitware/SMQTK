@@ -319,7 +319,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 (Optional) JSON-encoded dictionary of labels to floats. Higher
                 values lower the gain on the class and therefore correspond to
                 higher precision (and lower recall) for the class (and higher
-                recall/lower precision for other classes). This translates git
+                recall/lower precision for other classes). This translates
                 to calling ``smqtk.utils.probability.adjust_proba``.
 
         Possible error codes:
@@ -421,8 +421,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         self._log.debug("Length of byte data: %d" % len(data_bytes))
 
         data_elem = DataMemoryElement(data_bytes, content_type, readonly=True)
-        descr_elem = self.descriptor_gen.compute_descriptor(
-            data_elem, self.descriptor_factory
+        descr_elem = self.descriptor_gen.generate_one_element(
+            data_elem, descr_factory=self.descriptor_factory
         )
         self._log.debug("Descriptor shape: %s", descr_elem.vector().shape)
 

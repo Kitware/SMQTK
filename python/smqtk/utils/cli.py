@@ -152,7 +152,7 @@ class ProgressReporter (SmqtkObject):
     TODO: Add parameter for an optionally known total number of increments.
     """
 
-    def __init__(self, log_func, interval):
+    def __init__(self, log_func, interval, what_per_second="Loops"):
         """
         Initialize this reporter.
 
@@ -164,9 +164,15 @@ class ProgressReporter (SmqtkObject):
             passed.
         :type interval: float
 
+        :param str what_per_second:
+            String label about what is happening or being iterated over per
+            second. The provided string should make sense when followed by
+            " per second ...".
+
         """
         self.log_func = log_func
         self.interval = float(interval)
+        self.what_per_second = what_per_second
 
         self.lock = threading.RLock()
         # c_last : Increment count at the time of the last report. Updated after
@@ -212,12 +218,12 @@ class ProgressReporter (SmqtkObject):
         if not self.started:
             raise RuntimeError("Reporter needs to be started first.")
         self.c += 1
+        self.c_delta = self.c - self.c_last
         self.t = time.time()
         self.t_delta = self.t - self.t_last
         # Only report if its been ``interval`` seconds since the last
         # report.
         if self.t_delta >= self.interval:
-            self.c_delta = self.c - self.c_last
             self.report()
             self.t_last = self.t
             self.c_last = self.c
@@ -243,9 +249,10 @@ class ProgressReporter (SmqtkObject):
             raise RuntimeError("Reporter needs to be started first.")
         # divide-by-zero safeguard
         if self.t_delta > 0 and (self.t - self.t_start) > 0:
-            self.log_func("Loops per second %f (avg %f) "
+            self.log_func("%s per second %f (avg %f) "
                           "(%d current interval / %d total)"
-                          % (self.c_delta / self.t_delta,
+                          % (self.what_per_second,
+                             self.c_delta / self.t_delta,
                              self.c / (self.t - self.t_start),
                              self.c_delta,
                              self.c))

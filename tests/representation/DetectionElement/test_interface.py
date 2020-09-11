@@ -40,6 +40,12 @@ class DummyDetectionElement (DetectionElement):
     def set_detection(self, bbox, classification_element):
         raise NotImplementedError()
 
+    def get_bbox(self):
+        raise NotImplementedError()
+
+    def get_classification(self):
+        raise NotImplementedError()
+
     def get_detection(self):
         raise NotImplementedError()
 

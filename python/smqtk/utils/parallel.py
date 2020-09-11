@@ -294,7 +294,13 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
             raise StopIteration()
 
         # If anything bad happens, stop iteration and workers.
-        except Exception:
+        # - Using BaseException to also catch things like KeyboardInterrupt
+        #   and other exceptions that do not descend from Exception.
+        # - This also catches the in-due-course StopIteration exception, thus
+        #   this is also the "normal" stop route.
+        except BaseException as ex:
+            self._log.log(1, "Stopping iteration due to exception: ({}) {}"
+                             .format(type(ex), str(ex)))
             self.stop()
             raise
 

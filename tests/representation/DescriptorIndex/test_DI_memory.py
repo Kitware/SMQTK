@@ -10,7 +10,7 @@ from smqtk.representation.data_element.memory_element import (
 )
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils.dict import merge_dict
 
 
@@ -25,23 +25,23 @@ def random_descriptor():
     return d
 
 
-class TestMemoryDescriptorIndex (unittest.TestCase):
+class TestMemoryDescriptorSet (unittest.TestCase):
 
     def test_is_usable(self):
         # Always usable because no dependencies.
-        self.assertEqual(MemoryDescriptorIndex.is_usable(), True)
+        self.assertEqual(MemoryDescriptorSet.is_usable(), True)
 
     def test_default_config(self):
         # Default should be valid for constructing a new instance.
-        c = MemoryDescriptorIndex.get_default_config()
-        self.assertEqual(MemoryDescriptorIndex.from_config(c).get_config(), c)
+        c = MemoryDescriptorSet.get_default_config()
+        self.assertEqual(MemoryDescriptorSet.from_config(c).get_config(), c)
 
     def test_from_config_null_cache_elem(self):
-        inst = MemoryDescriptorIndex.from_config({'cache_element': None})
+        inst = MemoryDescriptorSet.from_config({'cache_element': None})
         self.assertIsNone(inst.cache_element)
         self.assertEqual(inst._table, {})
 
-        inst = MemoryDescriptorIndex.from_config({
+        inst = MemoryDescriptorSet.from_config({
             'cache_element': {
                 'type': None
             }
@@ -52,7 +52,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
     def test_from_config_null_cache_elem_type(self):
         # An empty cache should not trigger loading on construction.
         expected_empty_cache = DataMemoryElement()
-        inst = MemoryDescriptorIndex.from_config({
+        inst = MemoryDescriptorSet.from_config({
             'cache_element': {
                 'type': 'DataMemoryElement',
                 'DataMemoryElement': {'bytes': ''}
@@ -63,11 +63,12 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_from_config(self):
         # Configured cache with some picked bytes
+        # Then convert to "string" (decode -> unicode) for python version used.
         expected_table = dict(a=1, b=2, c=3)
         expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
         expected_cache_json_str = \
             expected_cache.get_bytes().decode(BYTES_CONFIG_ENCODING)
-        inst = MemoryDescriptorIndex.from_config({
+        inst = MemoryDescriptorSet.from_config({
             'cache_element': {
                 'type': 'DataMemoryElement',
                 'DataMemoryElement': {'bytes': expected_cache_json_str}
@@ -77,13 +78,13 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         self.assertEqual(inst._table, expected_table)
 
     def test_init_no_cache(self):
-        inst = MemoryDescriptorIndex()
+        inst = MemoryDescriptorSet()
         self.assertIsNone(inst.cache_element, None)
         self.assertEqual(inst._table, {})
 
     def test_init_empty_cache(self):
         cache_elem = DataMemoryElement()
-        inst = MemoryDescriptorIndex(cache_element=cache_elem)
+        inst = MemoryDescriptorSet(cache_element=cache_elem)
         self.assertEqual(inst.cache_element, cache_elem)
         self.assertEqual(inst._table, {})
 
@@ -93,7 +94,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         expected_table = dict((r.uuid(), r) for r in d_list)
         expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
 
-        inst = MemoryDescriptorIndex(expected_cache)
+        inst = MemoryDescriptorSet(expected_cache)
         self.assertEqual(len(inst._table), 4)
         self.assertEqual(inst.cache_element, expected_cache)
         self.assertEqual(inst._table, expected_table)
@@ -101,19 +102,19 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
 
     def test_get_config(self):
         self.assertEqual(
-            MemoryDescriptorIndex().get_config(),
-            MemoryDescriptorIndex.get_default_config()
+            MemoryDescriptorSet().get_config(),
+            MemoryDescriptorSet.get_default_config()
         )
 
         self.assertEqual(
-            MemoryDescriptorIndex(None).get_config(),
-            MemoryDescriptorIndex.get_default_config()
+            MemoryDescriptorSet(None).get_config(),
+            MemoryDescriptorSet.get_default_config()
         )
 
         empty_elem = DataMemoryElement()
         self.assertEqual(
-            MemoryDescriptorIndex(empty_elem).get_config(),
-            merge_dict(MemoryDescriptorIndex.get_default_config(), {
+            MemoryDescriptorSet(empty_elem).get_config(),
+            merge_dict(MemoryDescriptorSet.get_default_config(), {
                 'cache_element': {'type': 'DataMemoryElement'}
             })
         )
@@ -122,8 +123,8 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         dict_pickle_bytes_str = dict_pickle_bytes.decode(BYTES_CONFIG_ENCODING)
         cache_elem = DataMemoryElement(bytes=dict_pickle_bytes)
         self.assertEqual(
-            MemoryDescriptorIndex(cache_elem).get_config(),
-            merge_dict(MemoryDescriptorIndex.get_default_config(), {
+            MemoryDescriptorSet(cache_elem).get_config(),
+            merge_dict(MemoryDescriptorSet.get_default_config(), {
                 'cache_element': {
                     'DataMemoryElement': {
                         'bytes': dict_pickle_bytes_str
@@ -134,13 +135,13 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         )
 
     def test_cache_table_no_cache(self):
-        inst = MemoryDescriptorIndex()
+        inst = MemoryDescriptorSet()
         inst._table = {}
         inst.cache_table()  # should basically do nothing
         self.assertIsNone(inst.cache_element)
 
     def test_cache_table_empty_table(self):
-        inst = MemoryDescriptorIndex(DataMemoryElement(), -1)
+        inst = MemoryDescriptorSet(DataMemoryElement(), -1)
         inst._table = {}
         expected_table_pickle_bytes = pickle.dumps(inst._table, -1)
 
@@ -150,7 +151,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
                          expected_table_pickle_bytes)
 
     def test_add_descriptor(self):
-        index = MemoryDescriptorIndex()
+        index = MemoryDescriptorSet()
 
         d1 = random_descriptor()
         index.add_descriptor(d1)
@@ -168,7 +169,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
             random_descriptor(),
             random_descriptor(),
         ]
-        index = MemoryDescriptorIndex()
+        index = MemoryDescriptorSet()
         index.add_many_descriptors(descrs)
 
         # Compare code keys of input to code keys in internal table
@@ -185,7 +186,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         )
 
     def test_count(self):
-        index = MemoryDescriptorIndex()
+        index = MemoryDescriptorSet()
         self.assertEqual(index.count(), 0)
 
         d1 = random_descriptor()
@@ -210,7 +211,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
             random_descriptor(),   # [3]
             random_descriptor(),   # [4]
         ]
-        index = MemoryDescriptorIndex()
+        index = MemoryDescriptorSet()
         index.add_many_descriptors(descrs)
 
         # single descriptor reference
@@ -225,7 +226,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
                          {descrs[0], descrs[3]})
 
     def test_clear(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         n = 10
 
         descrs = [random_descriptor() for _ in range(n)]
@@ -236,7 +237,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         self.assertEqual(i._table, {})
 
     def test_has(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         descrs = [random_descriptor() for _ in range(10)]
         i.add_many_descriptors(descrs)
 
@@ -248,7 +249,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
         descrs = [random_descriptor() for _ in range(3)]
         expected_table = dict((r.uuid(), r) for r in descrs)
 
-        i = MemoryDescriptorIndex(cache_elem)
+        i = MemoryDescriptorSet(cache_elem)
         self.assertTrue(cache_elem.is_empty())
 
         # Should add descriptors to table, caching to writable element.
@@ -272,7 +273,7 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
                          expected_table)
 
     def test_remove(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(len(i), 100)
@@ -292,21 +293,21 @@ class TestMemoryDescriptorIndex (unittest.TestCase):
                          set(descrs[1:]).difference(rm_d))
 
     def test_iterdescrs(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(i.iterdescriptors()),
                          set(descrs))
 
     def test_iterkeys(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(i.iterkeys()),
                          set(d.uuid() for d in descrs))
 
     def test_iteritems(self):
-        i = MemoryDescriptorIndex()
+        i = MemoryDescriptorSet()
         descrs = [random_descriptor() for _ in range(100)]
         i.add_many_descriptors(descrs)
         self.assertEqual(set(six.iteritems(i)),

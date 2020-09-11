@@ -1,7 +1,7 @@
 {
     "plugins": {
-        "descriptor_index": {
-            "PostgresDescriptorIndex": {
+        "descriptor_set": {
+            "PostgresDescriptorSet": {
                 "create_table": false,
                 "db_host": "/dev/shm",
                 "db_name": "postgres",
@@ -12,10 +12,10 @@
                 "multiquery_batch_size": 1000,
                 "pickle_protocol": -1,
                 "read_only": true,
-                "table_name": "descriptor_index_resnet50_pool5",
+                "table_name": "descriptor_set_resnet50_pool5",
                 "uuid_col": "uid"
             },
-            "type": "PostgresDescriptorIndex"
+            "type": "PostgresDescriptorSet"
         },
         "hash2uuid_kvstore": {
             "MemoryKeyValueStore": {

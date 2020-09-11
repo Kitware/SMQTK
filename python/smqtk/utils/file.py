@@ -190,7 +190,7 @@ def iter_svm_file(filepath, width):
     :rtype: collections.Iterable[numpy.core.multiarray.ndarray]
 
     """
-    idx_val_re = re.compile("([0-9]+):([-+]?[0-9]*\.?[0-9]*)")
+    idx_val_re = re.compile(r"([0-9]+):([-+]?[0-9]*\.?[0-9]*)")
     with open(filepath, 'r') as infile:
         for line in infile:
             v = numpy.zeros(width, dtype=float)

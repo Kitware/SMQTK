@@ -11,8 +11,6 @@ import json
 import logging
 import os
 
-import six
-
 from smqtk.algorithms import Classifier
 from smqtk.algorithms import DescriptorGenerator
 
@@ -153,18 +151,19 @@ def classify_files(config, label, file_globs):
     descriptor_generator = \
         from_config_dict(config['descriptor_generator'],
                          DescriptorGenerator.get_impls())
-    descr_map = descriptor_generator\
-        .compute_descriptor_async(data_elements, descriptor_factory)
+    descr_iter = descriptor_generator.generate_elements(
+        data_elements, descr_factory=descriptor_factory
+    )
 
     log.info("Classifying descriptors")
     classification_factory = ClassificationElementFactory \
         .from_config(config['classification_factory'])
-    classification_map = classifier\
-        .classify_async(list(descr_map.values()), classification_factory)
+    classification_iter = \
+        classifier.classify_elements(descr_iter, classification_factory)
 
     log.info("Printing input file paths that classified as the given label.")
     # map of UUID to filepath:
-    uuid2c = dict((c.uuid, c) for c in six.itervalues(classification_map))
+    uuid2c = {c.uuid: c for c in classification_iter}
     for data in data_elements:
         d_uuid = data.uuid()
         log.debug("'{}' classification map: {}".format(

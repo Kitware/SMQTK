@@ -3,10 +3,10 @@ import unittest
 
 import mock
 
-from smqtk.representation.descriptor_index import DescriptorIndex
+from smqtk.representation.descriptor_set import DescriptorSet
 
 
-class DummyDescriptorIndex (DescriptorIndex):
+class DummyDescriptorSet (DescriptorSet):
 
     @classmethod
     def is_usable(cls):
@@ -52,30 +52,30 @@ class DummyDescriptorIndex (DescriptorIndex):
         pass
 
 
-class TestDescriptorIndexAbstract (unittest.TestCase):
+class TestDescriptorSetAbstract (unittest.TestCase):
 
     def test_len(self):
-        di = DummyDescriptorIndex()
+        di = DummyDescriptorSet()
         di.count = mock.Mock(return_value=100)
         self.assertEqual(len(di), 100)
         di.count.assert_called_once_with()
 
     def test_get_item(self):
-        di = DummyDescriptorIndex()
+        di = DummyDescriptorSet()
         di.get_descriptor = mock.Mock(return_value='foo')
         self.assertEqual(di['some_key'], 'foo')
         di.get_descriptor.assert_called_once_with('some_key')
 
     def test_del_item(self):
-        di = DummyDescriptorIndex()
+        di = DummyDescriptorSet()
         di.remove_descriptor = mock.Mock()
 
         del di['foo']
         di.remove_descriptor.assert_called_once_with('foo')
 
     def test_iter(self):
-        # Iterating over a DescriptorIndex should yield the descriptor elements
-        di = DummyDescriptorIndex()
+        # Iterating over a DescriptorSet should yield the descriptor elements
+        di = DummyDescriptorSet()
 
         def dumb_iterator():
             for _i in range(3):

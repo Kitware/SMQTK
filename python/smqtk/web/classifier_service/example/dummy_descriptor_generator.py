@@ -52,21 +52,23 @@ class DummyDescriptorGenerator (DescriptorGenerator):
         """
         return ['image/jpeg']
 
-    def _compute_descriptor(self, data):
+    def _generate_arrays(self, data_iter):
         """
-        Internal method that defines the generation of the descriptor vector
-        for a given data element. This returns a numpy array.
+        Inner template method that defines the generation of descriptor vectors
+        for a given iterable of data elements.
 
-        This method is only called if the data element has been verified to be
-        of a valid content type for this descriptor implementation.
+        Pre-conditions:
+          - Data elements input to this method have been validated to be of at
+            least one of this class's reported ``valid_content_types``.
 
-        :raises RuntimeError: Feature extraction failure of some kind.
+        :param collections.Iterable[DataElement] data_iter:
+            Iterable of data element instances to be described.
 
-        :param data: Some kind of input data for the feature descriptor.
-        :type data: smqtk.representation.DataElement
+        :raises RuntimeError: Descriptor extraction failure of some kind.
 
-        :return: Feature vector.
-        :rtype: numpy.core.multiarray.ndarray
-
+        :return: Iterable of numpy arrays in parallel association with the
+            input data elements.
+        :rtype: collections.Iterable[numpy.ndarray]
         """
-        return np.zeros((5,), np.float64)
+        for _ in data_iter:
+            yield np.zeros((5,), np.float64)

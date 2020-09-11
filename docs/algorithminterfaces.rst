@@ -15,22 +15,37 @@ This interface represents algorithms that classify ``DescriptorElement`` instanc
 
 .. autoclass:: smqtk.algorithms.classifier.Classifier
    :members:
+   :private-members:
 
 
 DescriptorGenerator
 +++++++++++++++++++
-This interface represents algorithms that generate whole-content descriptor vectors for a single given input ``DataElement`` instance.
-The input ``DataElement`` must be of a content type that the ``DescriptorGenerator`` supports, referenced against the ``DescriptorGenerator.valid_content_types`` method.
+This interface represents algorithms that generate whole-content descriptor
+vectors for one or more given input :class:`.DataElement`
+instances.
+The input :class:`.DataElement` instances must be of a
+content type that the :class:`.DescriptorGenerator` supports, referenced
+against the :meth:`~smqtk.utils.ContentTypeValidator.valid_content_types`
+method (required by the :class:`~smqtk.utils.ContentTypeValidator` mixin
+class).
 
-The ``compute_descriptor`` method also requires a ``DescriptorElementFactory`` instance to tell the algorithm how to generate the ``DescriptorElement`` it should return.
-The returned ``DescriptorElement`` instance will have a type equal to the name of the ``DescriptorGenerator`` class that generated it, and a UUID that is the same as the input ``DataElement`` instance.
+The :meth:`.DescriptorGenerator.generate_elements` method also requires a
+:class:`.DescriptorElementFactory` instance to tell the algorithm how to
+generate the :class:`.DescriptorElement` instances it should return.
+The returned :class:`.DescriptorElement` instances will have a type equal to
+the name of the :class:`.DescriptorGenerator` class that generated it, and a
+UUID that is the same as the input :class:`.DataElement` instance.
 
-If a ``DescriptorElement`` implementation that supports persistant storage is generated, and there is already a descriptor associated with the given type name and UUID values, the descriptor is returned without re-computation.
+If a :class:`.DescriptorElement` implementation that supports persistent
+storage is generated, and there is already a descriptor associated with the
+given type name and UUID values, the descriptor is returned without
+re-computation.
 
-If the ``overwrite`` parameter is ``True``, the ``DescriptorGenerator`` instance will re-compute a descriptor for the input ``DataElement``, setting it to the generated ``DescriptorElement``. This will overwrite descriptor data in persistant storage if the ``DescriptorElement`` type used supports it.
-
-This interface supports a high-level, implementation agnostic asynchronous descriptor computation method.
-This is given an iterable of ``DataElement`` instances, a single ``DescriptorElementFactory`` that is used to produce all descriptor
+If the ``overwrite`` parameter is ``True``, the :class:`.DescriptorGenerator`
+instance will re-compute a descriptor for the input :class:`.DataElement`,
+setting it to the generated :class:`.DescriptorElement`.
+This will overwrite descriptor data in persistent storage if the
+:class:`.DescriptorElement` type used supports it.
 
 .. autoclass:: smqtk.algorithms.descriptor_generator.DescriptorGenerator
    :members:
@@ -42,7 +57,7 @@ ImageReader
 .. autoclass:: smqtk.algorithms.image_io.ImageReader
    :members:
 
-.. autoclass:: smqtk.algorithms.image_io.pil.PilImageReader
+.. autoclass:: smqtk.algorithms.image_io.pil_io.PilImageReader
    :members:
 
 

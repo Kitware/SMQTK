@@ -4,7 +4,7 @@ from smqtk.representation import SmqtkRepresentation, DescriptorElement
 from smqtk.utils.plugin import Pluggable
 
 
-class DescriptorIndex (SmqtkRepresentation, Pluggable):
+class DescriptorSet (SmqtkRepresentation, Pluggable):
     """
     Index of descriptors, keyed and query-able by descriptor UUID.
 
@@ -30,7 +30,8 @@ class DescriptorIndex (SmqtkRepresentation, Pluggable):
 
     def __contains__(self, item):
         if isinstance(item, DescriptorElement):
-            # Testing for UUID inclusion since element hash based on UUID value.
+            # Testing for UUID inclusion since element hash based on UUID
+            # value.
             return self.has_descriptor(item.uuid())
         return False
 

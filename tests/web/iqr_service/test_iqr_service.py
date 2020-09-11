@@ -4,13 +4,19 @@ import mock
 import os
 import unittest
 
+from smqtk.iqr import IqrSession
 from smqtk.representation import DescriptorElement
+from smqtk.representation.classification_element.memory \
+    import MemoryClassificationElement
+from smqtk.representation.descriptor_element.local_elements \
+    import DescriptorMemoryElement
 from smqtk.utils.plugin import Pluggable
 from smqtk.web.iqr_service import IqrService
 
 from tests.web.iqr_service.stubs import \
     STUB_MODULE_PATH, \
-    StubDescriptorIndex, StubDescrGenerator, StubNearestNeighborIndex
+    StubClassifier, StubDescriptorSet, StubDescrGenerator, \
+    StubNearestNeighborIndex
 
 
 class TestIqrService (unittest.TestCase):
@@ -34,7 +40,7 @@ class TestIqrService (unittest.TestCase):
             'MemoryClassificationElement'
         plugin_config['descriptor_factory']['type'] = \
             'DescriptorMemoryElement'
-        plugin_config['descriptor_index']['type'] = 'StubDescriptorIndex'
+        plugin_config['descriptor_set']['type'] = 'StubDescriptorSet'
 
         # Set up dummy algorithm types
         plugin_config['classifier_config']['type'] = 'StubClassifier'
@@ -48,7 +54,7 @@ class TestIqrService (unittest.TestCase):
         :type r: :type: flask.wrappers.Response
         :type code: int
         """
-        self.assertEqual(r.status_code, code)
+        self.assertEqual(code, r.status_code)
 
     def assertJsonMessageRegex(self, r, regex):
         """
@@ -65,7 +71,7 @@ class TestIqrService (unittest.TestCase):
         r = self.app.test_client().get('/is_ready')
         self.assertStatusCode(r, 200)
         self.assertJsonMessageRegex(r, "Yes, I'm alive.")
-        self.assertIsInstance(self.app.descriptor_index, StubDescriptorIndex)
+        self.assertIsInstance(self.app.descriptor_set, StubDescriptorSet)
         self.assertIsInstance(self.app.descriptor_generator, StubDescrGenerator)
         self.assertIsInstance(self.app.neighbor_index, StubNearestNeighborIndex)
 
@@ -115,7 +121,7 @@ class TestIqrService (unittest.TestCase):
         self.app.describe_base64_data = mock.Mock(
             return_value=expected_descriptor
         )
-        self.app.descriptor_index.add_descriptor = mock.Mock()
+        self.app.descriptor_set.add_descriptor = mock.Mock()
 
         query_data = {
             "data_b64": expected_base64,
@@ -127,7 +133,7 @@ class TestIqrService (unittest.TestCase):
         self.app.describe_base64_data.assert_called_once_with(
             expected_base64, expected_contenttype
         )
-        self.app.descriptor_index.add_descriptor.assert_called_once_with(
+        self.app.descriptor_set.add_descriptor.assert_called_once_with(
             expected_descriptor
         )
 
@@ -201,11 +207,11 @@ class TestIqrService (unittest.TestCase):
         def key_error_raise(*_, **__):
             raise KeyError('test-key')
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             side_effect=key_error_raise
         )
         # Pretend any UID except 2 and "hello" are not contained.
-        self.app.descriptor_index.has_descriptor = mock.Mock(
+        self.app.descriptor_set.has_descriptor = mock.Mock(
             side_effect=lambda k: k == 2 or k == "hello"
         )
 
@@ -216,14 +222,14 @@ class TestIqrService (unittest.TestCase):
                                         data=dict(
                                             descriptor_uids=expected_list_json,
                                         ))
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_list
         )
-        self.app.descriptor_index.has_descriptor.assert_any_call(0)
-        self.app.descriptor_index.has_descriptor.assert_any_call(1)
-        self.app.descriptor_index.has_descriptor.assert_any_call(2)
-        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
-        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.app.descriptor_set.has_descriptor.assert_any_call(0)
+        self.app.descriptor_set.has_descriptor.assert_any_call(1)
+        self.app.descriptor_set.has_descriptor.assert_any_call(2)
+        self.app.descriptor_set.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_set.has_descriptor.assert_any_call("foobar")
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
@@ -232,7 +238,7 @@ class TestIqrService (unittest.TestCase):
 
     def test_update_nn_index_delayed_key_error(self):
         """
-        Some DescriptorIndex implementations of get_many_descriptors use the
+        Some DescriptorSet implementations of get_many_descriptors use the
         yield statement and thus won't potentially generate key errors until
         actually iterated within the update call.  Test that this is correctly
         caught.
@@ -245,11 +251,11 @@ class TestIqrService (unittest.TestCase):
             # noinspection PyUnreachableCode
             yield
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             side_effect=generator_key_error
         )
         # Pretend any UID except 2 and "hello" are not contained.
-        self.app.descriptor_index.has_descriptor = mock.Mock(
+        self.app.descriptor_set.has_descriptor = mock.Mock(
             side_effect=lambda k: k == 2 or k == "hello"
         )
 
@@ -260,14 +266,14 @@ class TestIqrService (unittest.TestCase):
                                         data=dict(
                                             descriptor_uids=expected_list_json,
                                         ))
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_list
         )
-        self.app.descriptor_index.has_descriptor.assert_any_call(0)
-        self.app.descriptor_index.has_descriptor.assert_any_call(1)
-        self.app.descriptor_index.has_descriptor.assert_any_call(2)
-        self.app.descriptor_index.has_descriptor.assert_any_call("hello")
-        self.app.descriptor_index.has_descriptor.assert_any_call("foobar")
+        self.app.descriptor_set.has_descriptor.assert_any_call(0)
+        self.app.descriptor_set.has_descriptor.assert_any_call(1)
+        self.app.descriptor_set.has_descriptor.assert_any_call(2)
+        self.app.descriptor_set.has_descriptor.assert_any_call("hello")
+        self.app.descriptor_set.has_descriptor.assert_any_call("foobar")
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Some provided UIDs do not exist in "
                                        "the current index")
@@ -284,7 +290,7 @@ class TestIqrService (unittest.TestCase):
         expected_uid_list_json = json.dumps(expected_uid_list)
         expected_new_index_count = 10
 
-        self.app.descriptor_index.get_many_descriptors = mock.Mock(
+        self.app.descriptor_set.get_many_descriptors = mock.Mock(
             return_value=expected_descriptors
         )
         self.app.neighbor_index.update_index = mock.Mock()
@@ -297,7 +303,7 @@ class TestIqrService (unittest.TestCase):
         )
         r = self.app.test_client().post('/nn_index', data=data)
 
-        self.app.descriptor_index.get_many_descriptors.assert_called_once_with(
+        self.app.descriptor_set.get_many_descriptors.assert_called_once_with(
             expected_uid_list
         )
         self.app.neighbor_index.update_index.assert_called_once_with(
@@ -510,8 +516,8 @@ class TestIqrService (unittest.TestCase):
             # uid='some-uid',
             k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, 'No UID provided')
 
@@ -521,8 +527,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             # k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "No 'k' value provided")
 
@@ -532,8 +538,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k="10.2",  # float string fails an int cast.
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
                                        "integer")
@@ -541,7 +547,7 @@ class TestIqrService (unittest.TestCase):
     def test_uid_nearest_neighbors_no_elem_for_uid(self):
         def raise_keyerror(*_):
             raise KeyError("invalid-key")
-        self.app.descriptor_index.get_descriptor = mock.Mock(
+        self.app.descriptor_set.get_descriptor = mock.Mock(
             side_effect=raise_keyerror
         )
 
@@ -549,8 +555,8 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k=3,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to get descriptor for UID "
                                        "some-uid")
@@ -564,7 +570,7 @@ class TestIqrService (unittest.TestCase):
             expected_neighbors.append(e)
         expected_dists = [1, 2, 3]
 
-        self.app.descriptor_index.get_descriptor = mock.Mock()
+        self.app.descriptor_set.get_descriptor = mock.Mock()
         self.app.neighbor_index.nn = mock.Mock(
             return_value=[expected_neighbors, expected_dists]
         )
@@ -573,19 +579,87 @@ class TestIqrService (unittest.TestCase):
             uid='some-uid',
             k=10,
         )
-        r = self.app.test_client().post('/uid_nearest_neighbors',
-                                        data=data)
-        self.app.descriptor_index.get_descriptor.assert_called_once_with(
+        r = self.app.test_client().get('/uid_nearest_neighbors',
+                                       data=data)
+        self.app.descriptor_set.get_descriptor.assert_called_once_with(
             data['uid']
         )
         self.app.neighbor_index.nn.assert_called_once_with(
-            self.app.descriptor_index.get_descriptor(), data['k']
+            self.app.descriptor_set.get_descriptor(), data['k']
         )
 
         self.assertStatusCode(r, 200)
         r_json = json.loads(r.data.decode())
         self.assertListEqual(r_json['neighbor_uids'], expected_uids)
         self.assertListEqual(r_json['neighbor_dists'], expected_dists)
+
+    def test_get_session_info_no_session_id(self):
+        """
+        Test that passing no session ID results in a 400 error.
+        """
+        self._test_getter_no_sid('session')
+
+    def test_get_session_info_invalid_session_id(self):
+        """
+        Test that passing an ID that does not map to any current session
+        returns a 400 error.
+        """
+        # There are no sessions on server initialization.
+        self._test_getter_sid_not_found('session')
+
+        iqrs = IqrSession(session_uid='1')  # not '0', which is queried for.
+        self.app.controller.add_session(iqrs)
+        self._test_getter_sid_not_found('session')
+
+    def test_get_session_info(self):
+        """
+        Test a valid retrieval of a complex IQR session state.
+        """
+        iqrs = IqrSession(session_uid='abc')
+
+        ep, en, p1, p2, p3, n1, n2, d1, d2, n3 = [
+            DescriptorMemoryElement('test', uid) for uid in
+            ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']
+            # ep   en   p1   p2   p3   n1   n2   d1   d2   n3
+        ]   # C              C         C    C    C    C
+        #     ^Contributing^
+
+        # Current adjudications
+        iqrs.external_positive_descriptors = {ep}
+        iqrs.positive_descriptors = {p1, p2, p3}
+        iqrs.external_negative_descriptors = {en}
+        iqrs.negative_descriptors = {n1, n2, n3}
+        # "Last Refine" adjudications
+        # - simulating that "currently" neutral descriptors were previous
+        #   adjudicated.
+        iqrs.rank_contrib_pos = {p2, d1}
+        iqrs.rank_contrib_pos_ext = {ep}
+        iqrs.rank_contrib_neg = {n1, n3, d2}
+        iqrs.rank_contrib_neg_ext = set()
+        # mock working set with
+        iqrs.working_set.add_many_descriptors([p1, p2, p3, n1, n2, d1, d2, n3])
+
+        self.app.controller.add_session(iqrs)
+
+        with self.app.test_client() as tc:
+            #: :type: flask.wrappers.Response
+            r = tc.get('/session?sid=abc')
+            self.assertStatusCode(r, 200)
+            r_json = r.json
+            assert r_json['sid'] == 'abc'
+            # That everything included in "current" adjudications is included
+            # here.
+            assert set(r_json['uuids_pos_ext']) == {'a'}
+            assert set(r_json['uuids_pos']) == {'c', 'd', 'e'}
+            assert set(r_json['uuids_neg_ext']) == {'b'}
+            assert set(r_json['uuids_neg']) == {'f', 'g', 'j'}
+            # That those marked as "contributing" are included here
+            assert set(r_json['uuids_pos_in_model']) == {'d', 'h'}
+            assert set(r_json['uuids_pos_ext_in_model']) == {'a'}
+            assert set(r_json['uuids_neg_in_model']) == {'f', 'j', 'i'}
+            assert set(r_json['uuids_neg_ext_in_model']) == set()
+            # IQR working set expected size
+            assert r_json['wi_count'] == 8
 
     def test_refine_no_session_id(self):
         with self.app.test_client() as tc:
@@ -601,6 +675,279 @@ class TestIqrService (unittest.TestCase):
                         })
             self.assertStatusCode(r, 404)
             self.assertJsonMessageRegex(r, "session id invalid-sid not found")
+
+    def _test_getter_no_sid(self, endpoint):
+        """
+        Test common getter response to providing no session ID.
+        :param str endpoint: String endpoint of the getter method.
+        """
+        with self.app.test_client() as tc:
+            r = tc.get('/{}'.format(endpoint))
+            self.assertStatusCode(r, 400)
+            self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
+
+    def _test_getter_sid_not_found(self, endpoint):
+        """
+        Test common getter response to when the given session ID is not present
+        in the controller.
+        :param str endpoint: String endpoint of the getter method.
+        """
+        with self.app.test_client() as tc:
+            # Service IQR session controller is empty upon construction, so no
+            # ID is initially valid.
+            r = tc.get('/{}?sid=0'.format(endpoint))
+            self.assertStatusCode(r, 404)
+            self.assertJsonMessageRegex(r, "session id '0' not found")
+
+    def test_get_results_no_sid(self):
+        """
+        Test getting relevancy results without providing a session ID.
+        """
+        self._test_getter_no_sid('get_results')
+
+    def test_get_results_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_results')
+
+    def test_get_results(self):
+        """
+        Test successfully getting results from a requested session.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().ordered_results.return_value = [
+            [d0, 0.3], [d2, 0.2], [d1, 0.1],
+        ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_results?sid={}'.format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Returning result pairs")
+            r_json = r.json
+            assert r_json['total_results'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_positive_adjudication_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_positive_adjudication_relevancy')
+
+    def test_get_positive_adjudication_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_positive_adjudication_relevancy')
+
+    def test_get_positive_adjudication_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_positive_adjudication_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_positive_adjudication_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_negative_adjudication_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_negative_adjudication_relevancy')
+
+    def test_get_negative_adjudication_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_negative_adjudication_relevancy')
+
+    def test_get_negative_adjudication_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_negative_adjudication_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_negative_adjudication_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_unadjudicated_relevancy_no_sid(self):
+        """
+        Test that the expected error is returned when no session ID is
+        provided.
+        """
+        self._test_getter_no_sid('get_unadjudicated_relevancy')
+
+    def test_get_unadjudicated_relevancy_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_unadjudicated_relevancy')
+
+    def test_get_unadjudicated_relevancy(self):
+        """
+        Test successfully getting results for descriptors that are positively
+        adjudicated.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().get_unadjudicated_relevancy \
+            .return_value = [
+                [d0, 0.3], [d2, 0.2], [d1, 0.1],
+            ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_unadjudicated_relevancy?sid={}'
+                       .format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "success")
+            r_json = r.json
+            assert r_json['total'] == 3
+            assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    @mock.patch('smqtk.web.iqr_service.iqr_server.SupervisedClassifier'
+                '.get_impls')
+    def test_classify(self, m_sc_get_impls):
+        """
+        Test calling the GET /classify endpoint under nominal conditions.
+        """
+        # Mock classifier instantiation to return stub classifier class
+        # instance.
+        m_sc_get_impls.return_value = {StubClassifier}
+
+        # Setup descriptor set to have descriptors we test query for
+        mock_descriptors = [
+            DescriptorMemoryElement('', 'a').set_vector([0.4]),
+            DescriptorMemoryElement('', 'b').set_vector([0.5]),
+            DescriptorMemoryElement('', 'c').set_vector([0.6]),
+        ]
+        self.app.descriptor_set.get_many_descriptors = mock.MagicMock(
+            return_value=mock_descriptors
+        )
+        # Mock stub classifier return
+        mock_classifications = [
+            MemoryClassificationElement('', 'a'),
+            MemoryClassificationElement('', 'b'),
+            MemoryClassificationElement('', 'c'),
+        ]
+        mock_classifications[0].set_classification(
+            {'positive': 0.6, 'negative': 0.4})
+        mock_classifications[1].set_classification(
+            {'positive': 0.5, 'negative': 0.5})
+        mock_classifications[2].set_classification(
+            {'positive': 0.4, 'negative': 0.6})
+        StubClassifier.classify_elements = mock.MagicMock(
+            return_value=iter(mock_classifications)
+        )
+
+        with self.app.test_client() as tc:
+            # Initialize a new session.
+            tc.post("/session",
+                    data=dict(
+                        sid="0"
+                    ))
+
+            # Setup nominal IQR Session state for classifier generation and
+            # application.
+            iqr_session = self.app.controller.get_session("0")
+            # Mock descriptors on IQR session
+            iqr_session.external_positive_descriptors.add(
+                DescriptorMemoryElement('', 0).set_vector([0.0])
+            )
+            iqr_session.positive_descriptors.add(
+                DescriptorMemoryElement('', 1).set_vector([0.1])
+            )
+            iqr_session.external_negative_descriptors.add(
+                DescriptorMemoryElement('', 2).set_vector([1.0])
+            )
+            iqr_session.negative_descriptors.add(
+                DescriptorMemoryElement('', 3).set_vector([0.9])
+            )
+
+            #: :type: flask.Response
+            r = tc.get('/classify',
+                       query_string=dict(
+                           sid=0,
+                           uuids=json.dumps(['a', 'b', 'c'])
+                       ))
+            self.assertStatusCode(r, 200)
+            # We expect the UIDs returned to be in the same order as input and
+            # for the expected classification "positive" probabilities as in
+            # the mocked classification results.
+            r_json = r.json
+            assert r_json['sid'] == '0'
+            assert r_json['uuids'] == ['a', 'b', 'c']
+            assert r_json['proba'] == [0.6, 0.5, 0.4]
 
     def test_get_iqr_state_no_sid(self):
         # Test that calling GET /state with no SID results in error.

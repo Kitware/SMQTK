@@ -10,7 +10,7 @@
             "classifier_config": "The configuration to use for training and using classifiers for the /classifier endpoint. When configuring a classifier for use, don't fill out model persistence values as many classifiers may be created and thrown away during this service's operation.",
             "descriptor_factory": "What descriptor element factory to use when asked to compute a descriptor on data.",
             "descriptor_generator": "Descriptor generation algorithm to use when requested to describe data.",
-            "descriptor_index": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
+            "descriptor_set": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
             "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
             "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
         },
@@ -53,20 +53,41 @@
                     "batch_size": 10,
                     "data_layer": "data",
                     "gpu_device_id": 0,
-                    "image_mean_uri": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
+                    "image_mean": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
+                            "readonly": true
+                        },
+                        "type": "DataFileElement"
+                    },
                     "input_scale": null,
                     "load_truncated_images": true,
                     "network_is_bgr": true,
-                    "network_model_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
-                    "network_prototxt_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
+                    "network_model": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
+                            "readonly": true
+                        },
+                        "type": "DataFileElement"
+                    },
+                    "network_prototxt": {
+                        "DataFileElement": {
+                            "explicit_mimetype": null,
+                            "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
+                            "readonly": true
+                        },
+                        "type": "DataFileElement"
+                    },
                     "pixel_rescale": null,
                     "return_layer": "pool5",
                     "use_gpu": true
                 },
                 "type": "CaffeDescriptorGenerator"
             },
-            "descriptor_index": {
-                "PostgresDescriptorIndex": {
+            "descriptor_set": {
+                "PostgresDescriptorSet": {
                     "create_table": false,
                     "db_host": "/dev/shm",
                     "db_name": "postgres",
@@ -77,15 +98,15 @@
                     "multiquery_batch_size": 1000,
                     "pickle_protocol": -1,
                     "read_only": false,
-                    "table_name": "descriptor_index_resnet50_pool5",
+                    "table_name": "descriptor_set_resnet50_pool5",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorIndex"
+                "type": "PostgresDescriptorSet"
             },
             "neighbor_index": {
                 "LSHNearestNeighborIndex": {
-                    "descriptor_index": {
-                        "PostgresDescriptorIndex": {
+                    "descriptor_set": {
+                        "PostgresDescriptorSet": {
                             "create_table": false,
                             "db_host": "/dev/shm",
                             "db_name": "postgres",
@@ -96,10 +117,10 @@
                             "multiquery_batch_size": 1000,
                             "pickle_protocol": -1,
                             "read_only": false,
-                            "table_name": "descriptor_index_resnet50_pool5",
+                            "table_name": "descriptor_set_resnet50_pool5",
                             "uuid_col": "uid"
                         },
-                        "type": "PostgresDescriptorIndex"
+                        "type": "PostgresDescriptorSet"
                     },
                     "distance_method": "cosine",
                     "hash2uuids_kvstore": {

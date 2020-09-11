@@ -1,22 +1,18 @@
-from collections import deque
-import io
 import itertools
 import logging
-import multiprocessing
-import multiprocessing.pool
 
 import numpy
 import PIL.Image
 import PIL.ImageFile
-import six
-from six.moves import range, zip
+from six import BytesIO
+from six.moves import zip
 
-from smqtk.algorithms.descriptor_generator import \
-    DescriptorGenerator, \
-    DFLT_DESCRIPTOR_FACTORY
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation import DataElement
-from smqtk.utils.cli import ProgressReporter
-from smqtk.utils.configuration import from_config_dict, to_config_dict
+from smqtk.utils.configuration import from_config_dict, to_config_dict, \
+    make_default_config
+from smqtk.utils.dict import merge_dict
+from smqtk.utils.parallel import parallel_map
 
 try:
     import caffe
@@ -46,12 +42,55 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             cls.get_logger().debug("Caffe python module cannot be imported")
         return valid
 
+    @classmethod
+    def get_default_config(cls):
+        default = super(CaffeDescriptorGenerator, cls).get_default_config()
+
+        data_elem_impl_set = DataElement.get_impls()
+        # Need to make copies of dict so changes to one does not effect others.
+        default['network_prototxt'] = \
+            make_default_config(data_elem_impl_set)
+        default['network_model'] = make_default_config(data_elem_impl_set)
+        default['image_mean'] = make_default_config(data_elem_impl_set)
+
+        return default
+
+    @classmethod
+    def from_config(cls, config_dict, merge_default=True):
+        if merge_default:
+            config_dict = merge_dict(cls.get_default_config(),
+                                     config_dict)
+
+        data_elem_impl_set = DataElement.get_impls()
+
+        # Translate prototext and model sub-configs into DataElement instances.
+        config_dict['network_prototxt'] = \
+            from_config_dict(config_dict['network_prototxt'],
+                             data_elem_impl_set)
+        config_dict['network_model'] = \
+            from_config_dict(config_dict['network_model'],
+                             data_elem_impl_set)
+
+        # Translate optionally provided image mean sub-config into a
+        # DataElement instance. May have been provided as ``None`` or a
+        # configuration dictionary with type ``None`.
+        # None, dict[type=None], dict[type=str]
+        if config_dict['image_mean'] is None \
+                or config_dict['image_mean'].get('type', None) is None:
+            config_dict['image_mean'] = None
+        else:
+            config_dict['image_mean'] = \
+                from_config_dict(config_dict['image_mean'], data_elem_impl_set)
+
+        return super(CaffeDescriptorGenerator, cls)\
+            .from_config(config_dict, merge_default=False)
+
     def __init__(self, network_prototxt, network_model,
                  image_mean=None, return_layer='fc7',
                  batch_size=1, use_gpu=False, gpu_device_id=0,
                  network_is_bgr=True, data_layer='data',
                  load_truncated_images=False, pixel_rescale=None,
-                 input_scale=None):
+                 input_scale=None, threads=None):
         """
         Create a Caffe CNN descriptor generator
 
@@ -106,6 +145,14 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             directly multiplied against the pixel values.
         :type input_scale: None | float
 
+        :param int|None threads:
+            Optional specific number of threads to use for data loading and
+            pre-processing. If this is None or 0, we introspect the current
+            system thread capacity and use that.
+
+        ::raises AssertionError: Optionally provided image mean protobuf
+            consisted of more than one image, or its shape was neither 1 or 3
+            channels.
         """
         super(CaffeDescriptorGenerator, self).__init__()
 
@@ -126,6 +173,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         self.pixel_rescale = pixel_rescale
         self.input_scale = input_scale
 
+        self.threads = threads
+
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" \
             % self.batch_size
@@ -144,16 +193,21 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         return self.get_config()
 
     def __setstate__(self, state):
-        # This works because configuration parameters exactly match up with
-        # instance attributes.
+        # This ``__dict__.update`` works because configuration parameters
+        # exactly match up with instance attributes currently.
         self.__dict__.update(state)
+        # Translate nested Configurable instance configurations into actual
+        # object instances.
+        # noinspection PyTypeChecker
         self.network_prototxt = from_config_dict(
             self.network_prototxt, DataElement.get_impls()
         )
+        # noinspection PyTypeChecker
         self.network_model = from_config_dict(
             self.network_model, DataElement.get_impls()
         )
         if self.image_mean is not None:
+            # noinspection PyTypeChecker
             self.image_mean = from_config_dict(
                 self.image_mean, DataElement.get_impls()
             )
@@ -174,6 +228,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
     def _setup_network(self):
         """
         Initialize Caffe and the network
+
+        ::raises AssertionError: Optionally provided image mean protobuf
+            consisted of more than one image, or its shape was neither 1 or 3
+            channels.
         """
         self._set_caffe_mode()
 
@@ -181,9 +239,11 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         #   - ``caffe.TEST`` indicates phase of either TRAIN or TEST
         self._log.debug("Initializing network")
         self._log.debug("Loading Caffe network from network/model configs")
-        self.network = caffe.Net(self.network_prototxt.write_temp(),
-                                 caffe.TEST,
-                                 weights=self.network_model.write_temp())
+        self.network = caffe.Net(
+            self.network_prototxt.write_temp().encode(),
+            caffe.TEST,
+            weights=self.network_model.write_temp().encode()
+        )
         self.network_prototxt.clean_temp()
         self.network_model.clean_temp()
         # Assuming the network has a 'data' layer and notion of data shape
@@ -203,7 +263,8 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                             "mean)")
             image_mean_bytes = self.image_mean.get_bytes()
             try:
-                a = numpy.load(io.BytesIO(image_mean_bytes))
+                # noinspection PyTypeChecker
+                a = numpy.load(BytesIO(image_mean_bytes), allow_pickle=True)
                 self._log.info("Loaded image mean from numpy bytes")
             except IOError:
                 self._log.debug("Image mean file not a numpy array, assuming "
@@ -267,6 +328,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             "load_truncated_images": self.load_truncated_images,
             "pixel_rescale": self.pixel_rescale,
             "input_scale": self.input_scale,
+            "threads": self.threads,
         }
 
     def valid_content_types(self):
@@ -279,237 +341,80 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             'image/tiff',
             'image/png',
             'image/jpeg',
+            'image/bmp',
         }
 
-    def _compute_descriptor(self, data):
-        raise NotImplementedError("Shouldn't get here as "
-                                  "compute_descriptor[_async] is being "
-                                  "overridden")
-
-    def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                           overwrite=False):
+    def _generate_arrays(self, data_iter):
         """
-        Given some data, return a descriptor element containing a descriptor
-        vector.
+        Inner template method that defines the generation of descriptor vectors
+        for a given iterable of data elements.
+
+        Pre-conditions:
+          - Data elements input to this method have been validated to be of at
+            least one of this class's reported ``valid_content_types``.
+
+        :param collections.Iterable[DataElement] data_iter:
+            Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
-        :raises ValueError: Given data element content was not of a valid type
-            with respect to this descriptor.
 
-        :param data: Some kind of input data for the feature descriptor.
-        :type data: smqtk.representation.DataElement
-
-        :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. The default factory produces
-            ``DescriptorMemoryElement`` instances by default.
-        :type descr_factory: smqtk.representation.DescriptorElementFactory
-
-        :param overwrite: Whether or not to force re-computation of a descriptor
-            vector for the given data even when there exists a precomputed
-            vector in the generated DescriptorElement as generated from the
-            provided factory. This will overwrite the persistently stored vector
-            if the provided factory produces a DescriptorElement implementation
-            with such storage.
-        :type overwrite: bool
-
-        :return: Result descriptor element. UUID of this output descriptor is
-            the same as the UUID of the input data element.
-        :rtype: smqtk.representation.DescriptorElement
-
-        """
-        m = self.compute_descriptor_async([data], descr_factory, overwrite,
-                                          procs=1)
-        return m[data.uuid()]
-
-    def compute_descriptor_async(self, data_iter,
-                                 descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                                 overwrite=False, procs=None, **kwds):
-        """
-        Asynchronously compute feature data for multiple data items.
-
-        :param data_iter: Iterable of data elements to compute features for.
-            These must have UIDs assigned for feature association in return
-            value.
-        :type data_iter: collections.Iterable[smqtk.representation.DataElement]
-
-        :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. The default factory produces
-            ``DescriptorMemoryElement`` instances by default.
-        :type descr_factory: smqtk.representation.DescriptorElementFactory
-
-        :param overwrite: Whether or not to force re-computation of a descriptor
-            vectors for the given data even when there exists precomputed
-            vectors in the generated DescriptorElements as generated from the
-            provided factory. This will overwrite the persistently stored
-            vectors if the provided factory produces a DescriptorElement
-            implementation such storage.
-        :type overwrite: bool
-
-        :param procs: Optional specification of how many processors to use
-            when pooling sub-tasks. If None, we attempt to use all available
-            cores.
-        :type procs: int | None
-
-        :raises ValueError: An input DataElement was of a content type that we
-            cannot handle.
-
-        :return: Mapping of input DataElement UUIDs to the computed descriptor
-            element for that data. DescriptorElement UUID's are congruent with
-            the UUID of the data element it is the descriptor of.
-        :rtype: dict[collections.Hashable,
-                     smqtk.representation.DescriptorElement]
-
+        :return: Iterable of numpy arrays in parallel association with the
+            input data elements.
+        :rtype: collections.Iterable[numpy.ndarray]
         """
         self._set_caffe_mode()
+        log_debug = self._log.debug
 
-        # Create DescriptorElement instances for each data elem.
-        data_elements = {}
-        descr_elements = {}
-        self._log.debug("Checking content types; aggregating data/descriptor "
-                        "elements.")
-        pr = ProgressReporter(self._log.debug, 1.0).start()
-        for data in data_iter:
-            ct = data.content_type()
-            if ct not in self.valid_content_types():
-                self._log.error("Cannot compute descriptor from content type "
-                                "'%s' data: %s)" % (ct, data))
-                raise ValueError("Cannot compute descriptor from content type "
-                                 "'%s' data: %s)" % (ct, data))
-            data_elements[data.uuid()] = data
-            descr_elements[data.uuid()] = \
-                descr_factory.new_descriptor(self.name, data.uuid())
-            pr.increment_report()
-        pr.report()
-        self._log.debug("Given %d unique data elements", len(data_elements))
+        # Start parallel operation to pre-process imagery before aggregating
+        # for network execution.
+        # TODO: update ``buffer_factor`` param to account for batch size?
+        img_array_iter = \
+            parallel_map(_process_load_img_array,
+                         zip(
+                             data_iter, itertools.repeat(self.transformer),
+                             itertools.repeat(self.data_layer),
+                             itertools.repeat(self.load_truncated_images),
+                             itertools.repeat(self.pixel_rescale),
+                         ),
+                         ordered=True, cores=self.threads)
 
-        # Reduce procs down to the number of elements to process if its smaller
-        if len(data_elements) < (procs or multiprocessing.cpu_count()):
-            procs = len(data_elements)
-        if procs == 0:
-            raise ValueError("No data elements provided")
+        # Aggregate and process batches of input data elements
+        #: :type: list[numpy.ndarray]
+        batch_img_arrays = \
+            list(itertools.islice(img_array_iter, self.batch_size))
+        batch_i = 0
+        while len(batch_img_arrays) > 0:
+            cur_batch_size = len(batch_img_arrays)
+            log_debug("Batch {} - size {}".format(batch_i, cur_batch_size))
 
-        # For thread safely, only use .append() and .popleft() (queue)
-        uuid4proc = deque()
+            log_debug("Updating network data layer shape ({} images)"
+                      .format(cur_batch_size))
+            self.network.blobs[self.data_layer].reshape(
+                cur_batch_size, *self.net_data_shape[1:4]
+            )
+            log_debug("Loading image matrices into network layer '{:s}'"
+                      .format(self.data_layer))
+            self.network.blobs[self.data_layer].data[...] = batch_img_arrays
+            log_debug("Moving network forward")
+            self.network.forward()
+            descriptor_list = self.network.blobs[self.return_layer].data
+            log_debug("extracting return layer '{:s}' into vectors"
+                      .format(self.return_layer))
+            for v in descriptor_list:
+                if v.ndim > 1:
+                    # In case caffe generates multidimensional array
+                    # (rows, 1, 1)
+                    log_debug("- Raveling output array of shape {}"
+                              .format(v.shape))
+                    yield numpy.ravel(v)
+                else:
+                    yield v
 
-        def check_get_uuid(descriptor_elem):
-            if overwrite or not descriptor_elem.has_vector():
-                uuid4proc.append(descriptor_elem.uuid())
-
-        # Using thread-pool due to in-line function + updating local deque
-        p = multiprocessing.pool.ThreadPool(procs)
-        try:
-            p.map(check_get_uuid, six.itervalues(descr_elements))
-        finally:
-            p.close()
-            p.join()
-        del p
-        self._log.debug("%d descriptors already computed",
-                        len(data_elements) - len(uuid4proc))
-
-        if uuid4proc:
-            self._log.debug("Converting deque to tuple for segmentation")
-            uuid4proc = tuple(uuid4proc)
-
-            # Split UUIDs into groups equal to our batch size, and an option
-            # tail group that is less than our batch size.
-            tail_size = len(uuid4proc) % self.batch_size
-            batch_groups = (len(uuid4proc) - tail_size) // self.batch_size
-            self._log.debug("Processing %d batches of size %d", batch_groups,
-                            self.batch_size)
-            if tail_size:
-                self._log.debug("Processing tail group of size %d", tail_size)
-
-            if batch_groups:
-                for g in range(batch_groups):
-                    self._log.debug("Starting batch: %d of %d",
-                                    g + 1, batch_groups)
-                    batch_uuids = \
-                        uuid4proc[g * self.batch_size:(g + 1) * self.batch_size]
-                    self._process_batch(batch_uuids, data_elements,
-                                        descr_elements, procs,
-                                        kwds.get('use_mp', True))
-
-            if tail_size:
-                batch_uuids = uuid4proc[-tail_size:]
-                self._log.debug("Starting tail batch (size=%d)",
-                                len(batch_uuids))
-                self._process_batch(batch_uuids, data_elements, descr_elements,
-                                    procs, kwds.get('use_mp', True))
-
-        self._log.debug("forming output dict")
-        return dict((data_elements[k].uuid(), descr_elements[k])
-                    for k in data_elements)
-
-    def _process_batch(self, uuids4proc, data_elements, descr_elements, procs,
-                       use_mp):
-        """
-        Run a number of data elements through the network, based on the number
-        of UUIDs given, returning the vectors of
-
-        :param uuids4proc: UUIDs of the source data to run in the network as a
-            batch.
-        :type uuids4proc: collections.Sequence[collections.Hashable]
-
-        :param data_elements: Mapping of UUID to data element for input data.
-        :type data_elements: dict[collections.Hashable,
-                                  smqtk.representation.DataElement]
-
-        :param descr_elements: Mapping of UUID to descriptor element based on
-            input data elements.
-        :type descr_elements: dict[collections.Hashable,
-                                   smqtk.representation.DescriptorElement]
-
-        :param procs: The number of asynchronous processes to run for loading
-            images. This may be None to just use all available cores.
-        :type procs: None | int
-
-        :param use_mp: Whether or not to use a multiprocessing pool or a thread
-            pool.
-        :type use_mp: bool
-
-        """
-        self._log.debug("Updating network data layer shape (%d images)",
-                        len(uuids4proc))
-        self.network.blobs[self.data_layer].reshape(len(uuids4proc),
-                                                    *self.net_data_shape[1:4])
-
-        self._log.debug("Loading image pixel arrays")
-        uid_num = len(uuids4proc)
-
-        if use_mp:
-            p = multiprocessing.Pool(procs)
-        else:
-            p = multiprocessing.pool.ThreadPool(procs)
-
-        img_arrays = p.map(
-            _process_load_img_array,
-            list(zip(
-                (data_elements[uid] for uid in uuids4proc),
-                itertools.repeat(self.transformer, uid_num),
-                itertools.repeat(self.data_layer, uid_num),
-                itertools.repeat(self.load_truncated_images, uid_num),
-                itertools.repeat(self.pixel_rescale, uid_num),
-            ))
-        )
-        p.close()
-        p.join()
-
-        self._log.debug("Loading image bytes into network layer '%s'",
-                        self.data_layer)
-        self.network.blobs[self.data_layer].data[...] = img_arrays
-
-        self._log.debug("Moving network forward")
-        self.network.forward()
-        descriptor_list = self.network.blobs[self.return_layer].data
-
-        self._log.debug("extracting return layer '%s' into descriptors",
-                        self.return_layer)
-        for uid, v in zip(uuids4proc, descriptor_list):
-            if v.ndim > 1:
-                # In case caffe generates multidimensional array (rows, 1, 1)
-                descr_elements[uid].set_vector(numpy.ravel(v))
-            else:
-                descr_elements[uid].set_vector(v)
+            # Slice out the next batch
+            #: :type: list[(collections.Hashable, numpy.ndarray)]
+            batch_img_arrays = \
+                list(itertools.islice(img_array_iter, self.batch_size))
+            batch_i += 1
 
 
 def _process_load_img_array(input_tuple):
@@ -529,7 +434,8 @@ def _process_load_img_array(input_tuple):
         Tuple of input arguments as we expect to be called by a multiprocessing
         map function. See above for content details.
 
-    :return: Pre-processed numpy array.
+    :return: Input DataElement UUID and Pre-processed numpy array.
+    :rtype: (collections.Hashable, numpy.ndarray)
 
     """
     # data_element: DataElement providing bytes
@@ -538,23 +444,31 @@ def _process_load_img_array(input_tuple):
     (data_element, transformer, data_layer, load_truncated_images,
      pixel_rescale) = input_tuple
     PIL.ImageFile.LOAD_TRUNCATED_IMAGES = load_truncated_images
-    img = PIL.Image.open(io.BytesIO(data_element.get_bytes()))
+    try:
+        img = PIL.Image.open(BytesIO(data_element.get_bytes()))
+    except Exception as ex:
+        logging.getLogger(__name__).error(
+            "Failed opening image from data element {}. Exception ({}): {}"
+            .format(data_element, type(ex), str(ex))
+        )
+        raise
     if img.mode != "RGB":
         img = img.convert("RGB")
+    logging.getLogger(__name__).debug("Image: {}".format(img))
     # Caffe natively uses float types (32-bit)
     try:
         # This can fail if the image is truncated and we're not allowing the
         # loading of those images
         img_a = numpy.asarray(img, numpy.float32)
-    except Exception:
+    except Exception as ex:
         logging.getLogger(__name__).error(
-            "Failed array-ifying data element. Image may be truncated: %s",
-            data_element
+            "Failed array-ifying data element {}. Image may be truncated. "
+            "Exception ({}): {}"
+            .format(data_element, type(ex), str(ex))
         )
         raise
     assert img_a.ndim == 3, \
-        "Loaded invalid RGB image with shape %s" \
-        % img_a.shape
+        "Loaded invalid RGB image with shape {:s}".format(img_a.shape)
     if pixel_rescale:
         pmin, pmax = min(pixel_rescale), max(pixel_rescale)
         r = pmax - pmin

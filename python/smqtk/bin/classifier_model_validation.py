@@ -42,6 +42,7 @@ import collections
 import csv
 import json
 import logging
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy
@@ -55,7 +56,7 @@ from smqtk.algorithms import (
 )
 from smqtk.representation import (
     ClassificationElementFactory,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.utils import (
     cli,
@@ -77,8 +78,8 @@ def default_config():
                 make_default_config(SupervisedClassifier.get_impls()),
             'classification_factory':
                 ClassificationElementFactory.get_default_config(),
-            'descriptor_index':
-                make_default_config(DescriptorIndex.get_impls())
+            'descriptor_set':
+                make_default_config(DescriptorSet.get_impls())
         },
         'utility': {
             'train': False,
@@ -92,6 +93,7 @@ def default_config():
         },
         "parallelism": {
             "descriptor_fetch_cores": 4,
+            # DEPRECATED
             "classification_cores": None,
         },
     }
@@ -106,6 +108,15 @@ def main():
     config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
+    # Deprecations
+    if (config.get('parallelism', {})
+              .get('classification_cores', None) is not None):
+        warnings.warn("Usage of 'classification_cores' is deprecated. "
+                      "Classifier parallelism is not defined on a "
+                      "per-implementation basis. See classifier "
+                      "implementation parameterization.",
+                      category=DeprecationWarning)
+
     #
     # Initialize stuff from configuration
     #
@@ -118,10 +129,10 @@ def main():
     classification_factory = ClassificationElementFactory.from_config(
         config['plugins']['classification_factory']
     )
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
 
     uuid2label_filepath = config['utility']['csv_filepath']
@@ -151,7 +162,7 @@ def main():
     def get_descr(r):
         """ Fetch descriptors from configured index """
         uuid, truth_label = r
-        return truth_label, descriptor_index.get_descriptor(uuid)
+        return truth_label, descriptor_set.get_descriptor(uuid)
 
     tlabel_element_iter = parallel.parallel_map(
         get_descr, iter_uuid_label(),
@@ -182,12 +193,8 @@ def main():
     tlabel2classifications = {}
     for tlabel, descriptors in six.iteritems(tlabel2descriptors):
         tlabel2classifications[tlabel] = \
-            set(classifier.classify_async(
-                descriptors, classification_factory,
-                use_multiprocessing=True,
-                procs=config['parallelism']['classification_cores'],
-                ri=1.0,
-            ).values())
+            set(classifier.classify_elements(descriptors,
+                                             classification_factory))
     log.info("Truth label counts:")
     for l in sorted(tlabel2classifications):
         log.info("  %s :: %d", l, len(tlabel2classifications[l]))

@@ -6,23 +6,18 @@ from six.moves import cPickle
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestDescriptorMemoryElement (unittest.TestCase):
 
     def test_configuration(self):
-        default_config = DescriptorMemoryElement.get_default_config()
-        self.assertEqual(default_config, {})
-
-        inst1 = DescriptorMemoryElement.from_config(default_config, 'test', 'a')
-        self.assertEqual(default_config, inst1.get_config())
-        self.assertEqual(inst1.type(), 'test')
-        self.assertEqual(inst1.uuid(), 'a')
-
-        # vector-based equality
-        inst2 = DescriptorMemoryElement.from_config(inst1.get_config(),
-                                                    'test', 'a')
-        self.assertEqual(inst1, inst2)
+        """ Test instance standard configuration """
+        inst = DescriptorMemoryElement('test', 'abcd')
+        for i in configuration_test_helper(inst, {'type_str', 'uuid'},
+                                           ('test', 'abcd')):  # type: DescriptorMemoryElement
+            assert i.type() == 'test'
+            assert i.uuid() == 'abcd'
 
     def test_pickle_dump_load(self):
         # Make a couple descriptors

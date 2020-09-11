@@ -15,8 +15,8 @@ import six
 from six.moves import cPickle
 
 from smqtk.algorithms import SupervisedClassifier
+from smqtk.representation import DescriptorElement
 from smqtk.representation.data_element import from_uri
-from smqtk.representation.descriptor_element import elements_to_matrix
 
 try:
     import svm
@@ -269,10 +269,8 @@ class LibSvmClassifier (SupervisedClassifier):
         CLASS_LABEL_OFFSET = 1
 
         # Stuff for debug reporting
-        etm_ri = None
         param_debug = {'-q': ''}
         if self._log.getEffectiveLevel() <= logging.DEBUG:
-            etm_ri = 1.0
             param_debug = {}
 
         # Form libSVM problem input values
@@ -294,7 +292,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 g = tuple(g)
 
             train_group_sizes.append(float(len(g)))
-            x = elements_to_matrix(g, report_interval=etm_ri)
+            x = numpy.array(DescriptorElement.get_many_vectors(g))
             x = self._norm_vector(x)
             train_labels.extend([i] * x.shape[0])
             train_vectors.extend(x.tolist())
@@ -369,53 +367,43 @@ class LibSvmClassifier (SupervisedClassifier):
             raise RuntimeError("No model loaded")
         return list(self.svm_label_map.values())
 
-    def _classify(self, d):
-        """
-        Internal method that constructs the label-to-confidence map (dict) for
-        a given DescriptorElement.
-
-        The passed descriptor element is guaranteed to have a vector to
-        extract. It is not extracted yet due to the philosophy of waiting
-        until the vector is immediately needed. This moment is thus determined
-        by the implementing algorithm.
-
-        :param d: DescriptorElement containing the vector to classify.
-        :type d: smqtk.representation.DescriptorElement
-
-        :raises RuntimeError: Could not perform classification for some reason
-            (see message in raised exception).
-
-        :return: Dictionary mapping trained labels to classification confidence
-            values
-        :rtype: dict[collections.Hashable, float]
-
-        """
+    def _classify_arrays(self, array_iter):
         if not self.has_model():
             raise RuntimeError("No SVM model present for classification")
 
-        # Get and normalize vector
-        v = d.vector().astype(float)
-        v = self._norm_vector(v)
-        v, idx = svm.gen_svm_nodearray(v.tolist())
+        # Dump descriptors into a matrix for normalization and use in
+        # prediction.
+        vec_mat = numpy.array(list(array_iter))
+        vec_mat = self._norm_vector(vec_mat)
+
+        all_label_list = self.get_labels()
+        svm_label_map = self.svm_label_map
+        c_base = dict((l, 0.) for l in all_label_list)
 
         # Effectively reproducing the body of svmutil.svm_predict in order to
         # simplify and get around excessive prints
         svm_type = self.svm_model.get_svm_type()
         nr_class = self.svm_model.get_nr_class()
-        c = dict((l, 0.) for l in self.get_labels())
+        # Model internal labels. Parallel to ``prob_estimates`` array.
+        svm_model_labels = self.svm_model.get_labels()
+
+        # TODO: Normalize input arrays in batch(es). TEST if current norm
+        #       function can just take a matrix?
 
         if self.svm_model.is_probability_model():
-            # noinspection PyUnresolvedReferences
             if svm_type in [svm.NU_SVR, svm.EPSILON_SVR]:
                 nr_class = 0
-            # noinspection PyCallingNonCallable,PyTypeChecker
             prob_estimates = (ctypes.c_double * nr_class)()
-            svm.libsvm.svm_predict_probability(self.svm_model, v,
-                                               prob_estimates)
-            # Update dict
-            for l, p in zip(self.svm_model.get_labels(),
-                            prob_estimates[:nr_class]):
-                c[self.svm_label_map[l]] = p
+            for v in vec_mat:
+                # normalize vector
+                v, idx = svm.gen_svm_nodearray(v.tolist())
+                svm.libsvm.svm_predict_probability(self.svm_model, v,
+                                                   prob_estimates)
+
+                c = dict(c_base)  # Shallow copy
+                c.update({svm_label_map[l]: p for l, p
+                          in zip(svm_model_labels, prob_estimates[:nr_class])})
+                yield c
         else:
             # noinspection PyUnresolvedReferences
             if svm_type in (svm.ONE_CLASS, svm.EPSILON_SVR, svm.NU_SVC):
@@ -424,13 +412,14 @@ class LibSvmClassifier (SupervisedClassifier):
                 nr_classifier = nr_class * (nr_class - 1) // 2
             # noinspection PyCallingNonCallable,PyTypeChecker
             dec_values = (ctypes.c_double * nr_classifier)()
-            label = svm.libsvm.svm_predict_values(self.svm_model, v,
-                                                  dec_values)
-            # Update dict
-            c[self.svm_label_map[label]] = 1.
-
-        assert len(c) == len(self.svm_label_map)
-        return c
+            for v in vec_mat:
+                # normalize vector
+                v, idx = svm.gen_svm_nodearray(v.tolist())
+                label = svm.libsvm.svm_predict_values(self.svm_model, v,
+                                                      dec_values)
+                c = dict(c_base)  # Shallow copy
+                c[svm_label_map[label]] = 1.
+                yield c
 
 
 # Explicitly declare to avoid silly warning about ignoring parent abstract

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS descriptors_resnet50_pool5 (
 
   PRIMARY KEY (uid, type_str)
 );
-CREATE TABLE IF NOT EXISTS descriptor_index_resnet50_pool5 (
+CREATE TABLE IF NOT EXISTS descriptor_set_resnet50_pool5 (
   uid       TEXT  NOT NULL,
   element   BYTEA NOT NULL,
 

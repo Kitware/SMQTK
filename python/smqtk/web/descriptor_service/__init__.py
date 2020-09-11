@@ -31,8 +31,8 @@ class DescriptorServiceServer (SmqtkWebApp):
 
         /<descriptor_type>/<uri>[?...]
 
-    See the docstring for the ``compute_descriptor()`` method for complete rules
-    on how to form a calling URL.
+    See the docstring for the ``DescriptorServiceServer.compute_descriptor()``
+    method for complete rules on how to form a calling URL.
 
     Computes the requested descriptor for the given file and returns that via
     a JSON structure.
@@ -271,7 +271,7 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         Get the cached content descriptor instance for a configuration label
         :type label: str
-        :rtype: smqtk.descriptor_generator.DescriptorGenerator
+        :rtype: smqtk.algorithms.descriptor_generator.DescriptorGenerator
         """
         with self.descriptor_cache_lock:
             if label not in self.descriptor_cache:
@@ -344,7 +344,9 @@ class DescriptorServiceServer (SmqtkWebApp):
         """
         with SimpleTimer("Computing descriptor...", self._log.debug):
             cd = self.get_descriptor_inst(cd_label)
-            descriptor = cd.compute_descriptor(de, self.descr_elem_factory)
+            descriptor = cd.generate_one_element(
+                de, descr_factory=self.descr_elem_factory
+            )
 
         return descriptor
 

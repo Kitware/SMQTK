@@ -4,6 +4,7 @@ from six import BytesIO
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.matrix import MatrixDataElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestMatrixDataElement (object):
@@ -85,38 +86,32 @@ class TestMatrixDataElement (object):
         Testing getting the configuration from an instance with no matrix data
         and creating a new instance from that configuration.
         """
-        e1 = MatrixDataElement(readonly=False)
-        e1_conf = e1.get_config()
-        assert e1_conf['mat'] is None
-        assert e1_conf['readonly'] is False
+        inst = MatrixDataElement(readonly=False)
+        for i in configuration_test_helper(inst):  # type: MatrixDataElement
+            assert i.matrix is None
+            assert i.is_read_only() is False
 
-        e1 = MatrixDataElement(readonly=True)
-        e1_conf = e1.get_config()
-        assert e1_conf['mat'] is None
-        assert e1_conf['readonly'] is True
-
-        e2 = MatrixDataElement.from_config(e1_conf)
-        assert e2._matrix is None
-        assert e2._readonly is True
+        inst = MatrixDataElement(readonly=True)
+        for i in configuration_test_helper(inst):  # type: MatrixDataElement
+            assert i.matrix is None
+            assert i.is_read_only() is True
 
     def test_configuration_with_data(self):
         """
         Testing getting the configuration from an instance with no matrix data
         and creating a new instance from that configuration.
         """
-        e1 = MatrixDataElement((1, 2, 3, 4), readonly=False)
-        e1_conf = e1.get_config()
-        assert e1_conf['mat'] is not None
-        assert e1_conf['readonly'] is False
+        inst = MatrixDataElement((1, 2, 3, 4), readonly=False)
+        for i in configuration_test_helper(inst):  # type: MatrixDataElement
+            assert i.matrix is not None
+            np.testing.assert_allclose(i.matrix, (1, 2, 3, 4))
+            assert i.is_read_only() is False
 
-        e1 = MatrixDataElement((1, 2, 3, 4), readonly=True)
-        e1_conf = e1.get_config()
-        assert e1_conf['mat'] is not None
-        assert e1_conf['readonly'] is True
-
-        e2 = MatrixDataElement.from_config(e1_conf)
-        np.testing.assert_allclose(e2._matrix, (1, 2, 3, 4))
-        assert e2._readonly is True
+        inst = MatrixDataElement((1, 2, 3, 4), readonly=True)
+        for i in configuration_test_helper(inst):  # type: MatrixDataElement
+            assert i.matrix is not None
+            np.testing.assert_allclose(i.matrix, (1, 2, 3, 4))
+            assert i.is_read_only() is True
 
     def test_is_empty_None(self):
         """

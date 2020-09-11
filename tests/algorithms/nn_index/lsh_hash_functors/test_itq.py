@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 from math import sqrt
 import unittest
+import pytest
 
 import numpy
 import six
@@ -24,6 +25,8 @@ class TestItqFunctor (unittest.TestCase):
         self.assertEqual(ItqFunctor.from_config(c).get_config(), c)
 
     def test_configuration_with_caches(self):
+        # This should run without error in both python
+        # 2 and 3, as str/unicode are JSON compliant in both.
         expected_mean_vec = numpy.array([1, 2, 3])
         expected_rotation = numpy.eye(3)
 

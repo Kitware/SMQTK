@@ -23,12 +23,12 @@ Plugins may be accessed by one of the following ways:
      Or::
 
          ...
-         entry_points = [
+         entry_points = {
              "smqtk_plugins": [
                  "my_package_mode_1 = my_package.mode_1.plugins",
                  "my_package_mode_2 = my_package.mode_2.plugins",
              ]
-         ]
+         }
          ...
 
 """
@@ -51,10 +51,10 @@ from stevedore.extension import ExtensionManager
 
 
 # Template for checking validity of sub-module files
-VALID_MODULE_FILE_RE = re.compile("^[a-zA-Z]\w*(?:\.py)?$")
+VALID_MODULE_FILE_RE = re.compile(r"^[a-zA-Z]\w*(?:\.py)?$")
 
 # Template for checking validity of module attributes
-VALUE_ATTRIBUTE_RE = re.compile("^[a-zA-Z]\w*$")
+VALUE_ATTRIBUTE_RE = re.compile(r"^[a-zA-Z]\w*$")
 
 # Environment variable *PATH separator for the current platform.
 OS_ENV_PATH_SEP = os.pathsep
@@ -95,8 +95,8 @@ def _get_local_plugin_modules(log, interface_type, warn=True):
     # Containing directory of the module ``interface_class`` is defined in.
     t_module_fp = inspect.getsourcefile(t_module) or inspect.getfile(t_module)
     t_module_dir = os.path.abspath(os.path.dirname(t_module_fp))
-    logging.debug("Looking for python modules parallel to {} in directory '{}'."
-                  .format(interface_type.__name__, t_module_dir))
+    log.debug("Looking for python modules parallel to {} in directory '{}'."
+              .format(interface_type.__name__, t_module_dir))
 
     # Discover sibling modules to interface type's module.
     for importer, module_name, ispackage \

@@ -49,6 +49,8 @@ class ContentTypeValidator (object):
             we compose a generic message that also reports the given
             element's content type.
 
+        :return: The unmodified input data element.
+        :rtype: smqtk.representation.DataElement
         """
         if not self.is_valid_element(data_element):
             if message is None:
@@ -61,3 +63,4 @@ class ContentTypeValidator (object):
             # constructable to the exception class being constructed (user
             # decision repercussion).
             raise exception_type(message)
+        return data_element

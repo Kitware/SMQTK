@@ -5,7 +5,7 @@ from girder.api.rest import Resource, filtermodel, getCurrentToken, getCurrentUs
 from girder.utility.model_importer import ModelImporter
 from girder.constants import AccessType
 
-from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
+from smqtk.representation.descriptor_set.postgres import PostgresDescriptorSet
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.representation.data_element.girder import GirderDataElement
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
@@ -25,9 +25,9 @@ class NearestNeighbors(Resource):
 
 
     @staticmethod
-    def descriptorIndexFromItem(item):
+    def descriptorSetFromItem(item):
         """
-        Get the descriptor index related to the item (its folder id).
+        Get the descriptor set related to the item (its folder id).
 
         Note that this only works for top level items in the directory,
         meaning images must have been processed for the directory
@@ -35,29 +35,29 @@ class NearestNeighbors(Resource):
         should recursively ascend the dir tree looking for the first .smqtk
         directory.
 
-        :param item: Item to find the descriptor index for, usually the item that
+        :param item: Item to find the descriptor set for, usually the item that
             the user is performing the nearest neighbors search on.
         """
         # this assumes the parent directory of the item has been processed. i.e. subdirectories
         # won't work. this should be fixed and this should recursively ascend looking for .smqtk
         # TODO also no error checking whatsoever
 
-        return PostgresDescriptorIndex('descriptor_index_%s' % item['folderId'],
-                                       db_name=setting.get('smqtk_girder.db_name'),
-                                       db_host=setting.get('smqtk_girder.db_host'),
-                                       db_user=setting.get('smqtk_girder.db_user'),
-                                       db_pass=setting.get('smqtk_girder.db_pass'))
+        return PostgresDescriptorSet('descriptor_set_%s' % item['folderId'],
+                                     db_name=setting.get('smqtk_girder.db_name'),
+                                     db_host=setting.get('smqtk_girder.db_host'),
+                                     db_user=setting.get('smqtk_girder.db_user'),
+                                     db_pass=setting.get('smqtk_girder.db_pass'))
 
 
     @staticmethod
-    def nearestNeighborIndex(item, user, descriptorIndex):
+    def nearestNeighborIndex(item, user, descriptorSet):
         """
-        Get the nearest neighbor index from a given item and descriptor index.
+        Get the nearest neighbor index from a given item and descriptor set.
 
         :param item: Item to find the nn index from, usually the item that the
             user is performing the nearest neighbors search on.
         :param user: The owner of the .smqtk folder.
-        :param descriptorIndex: The relevant descriptor index.
+        :param descriptorSet: The relevant descriptor set.
         """
         folder = ModelImporter.model('folder')
 
@@ -82,7 +82,7 @@ class NearestNeighbors(Resource):
 
         hash2uuidsKV = MemoryKeyValueStore(_GirderDataElement(hash2uuidsFileId))
 
-        return LSHNearestNeighborIndex(functor, descriptorIndex,
+        return LSHNearestNeighborIndex(functor, descriptorSet,
                                        hash2uuidsKV, read_only=True)
 
 
@@ -93,15 +93,15 @@ class NearestNeighbors(Resource):
                        .param('limit', 'Number of neighbors to query for.', default=25))
     def nearestNeighbors(self, item, limit, params):
         limit = int(limit)
-        desc_index = self.descriptorIndexFromItem(item)
-        nn_index = self.nearestNeighborIndex(item, getCurrentUser(), desc_index)
+        desc_set = self.descriptorSetFromItem(item)
+        nn_index = self.nearestNeighborIndex(item, getCurrentUser(), desc_set)
 
         if nn_index is None:
             raise RestException('Nearest neighbor index could not be found.')
 
         try:
             smqtk_uuid = item['meta']['smqtk_uuid']
-            descriptor = desc_index.get_descriptor(smqtk_uuid)
+            descriptor = desc_set.get_descriptor(smqtk_uuid)
         except KeyError:
             raise RestException('Unable to retrieve image descriptor for querying object.')
 

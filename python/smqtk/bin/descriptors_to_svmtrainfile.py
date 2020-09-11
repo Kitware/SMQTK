@@ -27,7 +27,7 @@ from six.moves import zip
 
 import six
 
-from smqtk.representation import DescriptorIndex
+from smqtk.representation import DescriptorSet
 from smqtk.utils import (
     cli,
 )
@@ -40,8 +40,8 @@ from smqtk.utils.configuration import (
 def default_config():
     return {
         'plugins': {
-            'descriptor_index':
-                make_default_config(DescriptorIndex.get_impls()),
+            'descriptor_set':
+                make_default_config(DescriptorSet.get_impls()),
         }
     }
 
@@ -67,10 +67,10 @@ def main():
     config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
 
     labels_filepath = args.f
@@ -88,7 +88,7 @@ def main():
 
         log.info("Scanning input descriptors and labels")
         for i, (l, d) in enumerate(
-                    zip(labels, descriptor_index.get_many_descriptors(uuids))):
+                    zip(labels, descriptor_set.get_many_descriptors(uuids))):
             log.debug("%d %s", i, d.uuid())
             if l not in label2int:
                 label2int[l] = next_int

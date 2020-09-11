@@ -6,32 +6,20 @@ from six.moves import cPickle
 
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorFileElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestDescriptorFileElement (unittest.TestCase):
 
-    def test_configuration1(self):
-        default_config = DescriptorFileElement.get_default_config()
-        self.assertEqual(default_config,
-                         {
-                             'save_dir': None,
-                             'subdir_split': None,
-                         })
-
-        default_config['save_dir'] = '/some/path/somewhere'
-        default_config['subdir_split'] = 4
-
-        #: :type: DescriptorFileElement
-        inst1 = DescriptorFileElement.from_config(default_config,
-                                                  'test', 'abcd')
-        self.assertEqual(default_config, inst1.get_config())
-        self.assertEqual(inst1._save_dir, '/some/path/somewhere')
-        self.assertEqual(inst1._subdir_split, 4)
-
-        # vector-based equality
-        inst2 = DescriptorFileElement.from_config(inst1.get_config(),
-                                                  'test', 'abcd')
-        self.assertEqual(inst1, inst2)
+    def test_configuration(self):
+        """ Test instance standard configuration """
+        inst = DescriptorFileElement('test', 'abcd',
+                                     save_dir='/some/path/somewhere',
+                                     subdir_split=4)
+        for i in configuration_test_helper(inst, {'type_str', 'uuid'},
+                                           ('test', 'abcd')):
+            assert i._save_dir == '/some/path/somewhere'
+            assert i._subdir_split == 4
 
     def test_vec_filepath_generation(self):
         d = DescriptorFileElement('test', 'abcd', '/base', 4)

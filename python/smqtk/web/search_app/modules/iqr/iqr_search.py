@@ -14,7 +14,6 @@ import six
 
 import flask
 import PIL.Image
-import requests
 
 from smqtk.iqr import IqrSession
 from smqtk.representation import DataSet
@@ -29,6 +28,7 @@ from smqtk.utils.configuration import (
 from smqtk.utils.file import safe_create_dir
 from smqtk.utils.mimetype import get_mimetypes
 from smqtk.utils.preview_cache import PreviewCache
+from smqtk.utils.web import ServiceProxy
 from smqtk.web.search_app.modules.file_upload import FileUploadMod
 from smqtk.web.search_app.modules.static_host import StaticDirectoryHost
 
@@ -137,7 +137,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         self._parent_app = parent_app
         self._data_set = data_set
-        self._iqr_service = IqrServiceProxy(iqr_service_url.rstrip('/'))
+        self._iqr_service = ServiceProxy(iqr_service_url.rstrip('/'))
 
         # base directory that's transformed by the ``work_dir`` property into
         # an absolute path.
@@ -740,42 +740,3 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         safe_create_dir(self._iqr_work_dirs[sid])
 
         self._iqr_example_data[sid].clear()
-
-
-class IqrServiceProxy (object):
-    """
-    Helper class for interacting with the IQR service
-    """
-
-    def __init__(self, url):
-        """
-        :param url: URL to base requests on.
-        :type url: str
-        """
-        # Append http:// to the head of the URL if neither http(s) are present
-        if not (url.startswith('http://') or url.startswith('https://')):
-            url = 'http://' + url
-        self.url = url
-
-    def _compose(self, endpoint):
-        return '/'.join([self.url, endpoint])
-
-    def get(self, endpoint, **params):
-        # Make params None if its empty.
-        params = params and params or None
-        return requests.get(self._compose(endpoint), params)
-
-    def post(self, endpoint, **params):
-        # Make params None if its empty.
-        params = params and params or None
-        return requests.post(self._compose(endpoint), data=params)
-
-    def put(self, endpoint, **params):
-        # Make params None if its empty.
-        params = params and params or None
-        return requests.put(self._compose(endpoint), data=params)
-
-    def delete(self, endpoint, **params):
-        # Make params None if its empty.
-        params = params and params or None
-        return requests.delete(self._compose(endpoint), data=params)

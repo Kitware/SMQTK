@@ -8,6 +8,7 @@ import unittest
 from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
 
@@ -82,34 +83,14 @@ class TestDataFileElement (unittest.TestCase):
         d.clean_temp()
         self.assertTrue(os.path.isfile(source_file))
 
-    def test_fromConfig(self):
-        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
-        c = {
-            "filepath": fp
-        }
-        #: :type: DataFileElement
-        df = DataFileElement.from_config(c)
-        self.assertEqual(df._filepath, fp)
-
-    def test_toConfig(self):
-        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
-        df = DataFileElement(fp)
-        c = df.get_config()
-        self.assertEqual(c['filepath'], fp)
-
     def test_configuration(self):
-        fp = os.path.join(TEST_DATA_DIR, "Lenna.png")
-        default_config = DataFileElement.get_default_config()
-        self.assertEqual(default_config,
-                         {'filepath': None, 'readonly': False,
-                          'explicit_mimetype': None})
-
-        default_config['filepath'] = fp
-        inst1 = DataFileElement.from_config(default_config)
-        self.assertEqual(default_config, inst1.get_config())
-
-        inst2 = DataFileElement.from_config(inst1.get_config())
-        self.assertEqual(inst1, inst2)
+        fp = os.path.join(TEST_DATA_DIR, "grace_hopper.png")
+        inst = DataFileElement(filepath=fp, readonly=True,
+                               explicit_mimetype='foo/bar')
+        for i in configuration_test_helper(inst):  # type: DataFileElement
+            assert i._filepath == fp
+            assert i._readonly is True
+            assert i._explicit_mimetype == 'foo/bar'
 
     def test_repr(self):
         e = DataFileElement('foo')
@@ -217,7 +198,7 @@ class TestDataFileElement (unittest.TestCase):
         self.assertTrue(e.is_empty())
 
     def test_is_empty_file_has_data(self):
-        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'Lenna.png'))
+        e = DataFileElement(os.path.join(TEST_DATA_DIR, 'grace_hopper.png'))
         self.assertFalse(e.is_empty())
 
     def test_get_bytes_no_file(self):

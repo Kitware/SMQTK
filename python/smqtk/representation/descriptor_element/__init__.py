@@ -205,7 +205,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :return: Iterable of vectors associated with the given descriptors or
             None if the descriptor has no associated vector. Results are
             returned in the order that descriptors were given.
-        :rtype: collections.Iterable[Union[numpy.ndarray, None]]
+        :rtype: list[numpy.ndarray | None]
         """
         batch_dictionary = defaultdict(list)
         uuid_indices = {}
@@ -225,8 +225,9 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
 
         # Retrieve all the vectors for a given type of descriptor in a single
         # batch
-        for cls, descriptor_batch in batch_dictionary.items():
-            for uuid, vector in cls._get_many_vectors(descriptor_batch):
+        for _cls, descriptor_batch in batch_dictionary.items():
+            # noinspection PyProtectedMember
+            for uuid, vector in _cls._get_many_vectors(descriptor_batch):
                 ordered_vectors[uuid_indices[uuid]] = vector
 
         return ordered_vectors

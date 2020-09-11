@@ -13,7 +13,7 @@ from girder.utility.model_importer import ModelImporter
 from smqtk.algorithms.nn_index.lsh import LSHNearestNeighborIndex
 from smqtk.algorithms.nn_index.lsh.functors.itq import ItqFunctor
 from smqtk.iqr import IqrSession, IqrController
-from smqtk.representation.descriptor_index.postgres import PostgresDescriptorIndex
+from smqtk.representation.descriptor_set.postgres import PostgresDescriptorSet
 from smqtk.representation.key_value.memory import MemoryKeyValueStore
 
 from .utils import getCreateSessionsFolder, localSmqtkFileIdFromName, smqtkDataElementFromGirderFileId
@@ -41,17 +41,17 @@ class Iqr(Resource):
         self.controller = IqrController(False)
 
     @staticmethod
-    def _descriptorIndexFromSessionId(sid):
+    def _descriptorSetFromSessionId(sid):
         """
-        Return the PostgresDescriptorIndex object from a given session id.
+        Return the PostgresDescriptorSet object from a given session id.
 
         This essentially does the postfixing of the data folder's ID to
         form the table name.
 
         :param sid: ID of the session
-        :returns: Descriptor index representing the data folder related
+        :returns: Descriptor set representing the data folder related
         to the sid or None if no session exists
-        :rtype: PostgresDescriptorIndex|None
+        :rtype: PostgresDescriptorSet|None
         """
         session = ModelImporter.model('item').findOne({'_id': ObjectId(sid)})
 
@@ -59,21 +59,21 @@ class Iqr(Resource):
             return None
         else:
             setting = ModelImporter.model('setting')
-            return PostgresDescriptorIndex('descriptor_index_%s' % session['meta']['data_folder_id'],
-                                           db_name=setting.get('smqtk_girder.db_name'),
-                                           db_host=setting.get('smqtk_girder.db_host'),
-                                           db_user=setting.get('smqtk_girder.db_user'),
-                                           db_pass=setting.get('smqtk_girder.db_pass'))
+            return PostgresDescriptorSet('descriptor_set_%s' % session['meta']['data_folder_id'],
+                                         db_name=setting.get('smqtk_girder.db_name'),
+                                         db_host=setting.get('smqtk_girder.db_host'),
+                                         db_user=setting.get('smqtk_girder.db_user'),
+                                         db_pass=setting.get('smqtk_girder.db_pass'))
 
 
     @staticmethod
-    def _nearestNeighborIndex(sid, descriptor_index):
+    def _nearestNeighborIndex(sid, descriptor_set):
         """
         Retrieve the Nearest neighbor index for a given session.
 
         :param sid: ID of the session
-        :param descriptor_index: The descriptor index corresponding to the session id,
-        see _descriptorIndexFromSessionId.
+        :param descriptor_set: The descriptor set corresponding to the session id,
+        see _descriptorSetFromSessionId.
         :returns: Nearest neighbor index or None if no session exists
         :rtype: LSHNearestNeighborIndex|None
         """
@@ -91,7 +91,7 @@ class Iqr(Resource):
             hash2uuidsKV = MemoryKeyValueStore(
                 smqtkDataElementFromGirderFileId(localSmqtkFileIdFromName(smqtkFolder, 'hash2uuids.pickle')))
 
-            return LSHNearestNeighborIndex(functor, descriptor_index,
+            return LSHNearestNeighborIndex(functor, descriptor_set,
                                            hash2uuidsKV, read_only=True)
 
     @access.user
@@ -111,7 +111,7 @@ class Iqr(Resource):
         sessionsFolder = getCreateSessionsFolder()
 
         # Get the folder with images in it, since this is what's used for computing
-        # what descriptor index table to use
+        # what descriptor set table to use
         dataFolderId = ModelImporter.model('folder').load(ObjectId(smqtkFolder), user=getCurrentUser())
         dataFolderId = str(dataFolderId['parentId'])
 
@@ -163,21 +163,22 @@ class Iqr(Resource):
             iqrs.lock.acquire()  # lock BEFORE releasing controller
 
         try:
-            descriptor_index = self._descriptorIndexFromSessionId(sid)
-            neighbor_index = self._nearestNeighborIndex(sid, descriptor_index)
+            descriptor_set = self._descriptorSetFromSessionId(sid)
+            neighbor_index = self._nearestNeighborIndex(sid, descriptor_set)
 
-            if descriptor_index is None or neighbor_index is None:
+            if descriptor_set is None or neighbor_index is None:
                 logger.error('Unable to compute descriptor or neighbor index from sid %s.' % sid)
                 raise RestException('Unable to compute descriptor or neighbor index from sid %s.' % sid, 500)
 
             # Get appropriate descriptor elements from index for
             # setting new adjudication state.
             try:
-                pos_descrs = set(descriptor_index.get_many_descriptors(pos_uuids))
-                neg_descrs = set(descriptor_index.get_many_descriptors(neg_uuids))
+                pos_descrs = set(descriptor_set.get_many_descriptors(pos_uuids))
+                neg_descrs = set(descriptor_set.get_many_descriptors(neg_uuids))
             except KeyError as ex:
                 logger.warn(traceback.format_exc())
-                raise RestException('Descriptor UUID %s not found in index.' % ex, 404)
+                raise RestException('Descriptor UUID %s not found in '
+                                    'descriptor set.' % ex, 404)
 
             # if a new classifier should be made upon the next
             # classification request.
@@ -193,7 +194,7 @@ class Iqr(Resource):
             iqrs.negative_descriptors = neg_descrs
 
             logger.info("[%s] Updating working index", sid)
-            iqrs.update_working_index(neighbor_index)
+            iqrs.update_working_set(neighbor_index)
 
             logger.info("[%s] Refining", sid)
             iqrs.refine()

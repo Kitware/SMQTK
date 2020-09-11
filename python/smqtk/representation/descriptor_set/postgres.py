@@ -11,7 +11,7 @@ import multiprocessing
 from six.moves import zip
 from six.moves import cPickle as pickle
 
-from smqtk.representation import DescriptorIndex
+from smqtk.representation import DescriptorSet
 from smqtk.exceptions import ReadOnlyError
 from smqtk.utils.postgres \
     import norm_psql_cmd_string, PsqlConnectionHelper
@@ -28,12 +28,12 @@ PSQL_TABLE_CREATE_RLOCK = multiprocessing.RLock()
 
 
 # noinspection SqlNoDataSourceInspection
-class PostgresDescriptorIndex (DescriptorIndex):
+class PostgresDescriptorSet (DescriptorSet):
     """
-    DescriptorIndex implementation that stored DescriptorElement references in
+    DescriptorSet implementation that stored DescriptorElement references in
     a PostgreSQL database.
 
-    A ``PostgresDescriptorIndex`` effectively controls the entire table. Thus
+    A ``PostgresDescriptorSet`` effectively controls the entire table. Thus
     a ``clear()`` call will remove everything from the table.
 
     PostgreSQL version support:
@@ -53,9 +53,9 @@ class PostgresDescriptorIndex (DescriptorIndex):
     #
     # The following are SQL query templates. The string formatting using {}'s
     # is used to fill in the query before using it in an execute with instance
-    # specific values. The ``%()s`` formatting is special for the execute where-
-    # by psycopg2 will fill in the values appropriately as specified in a second
-    # dictionary argument to ``cursor.execute(query, value_dict)``.
+    # specific values. The ``%()s`` formatting is special for the execute
+    # where-by psycopg2 will fill in the values appropriately as specified in a
+    # second dictionary argument to ``cursor.execute(query, value_dict)``.
     #
     UPSERT_TABLE_TMPL = norm_psql_cmd_string("""
         CREATE TABLE IF NOT EXISTS {table_name:s} (
@@ -117,13 +117,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
     def is_usable(cls):
         return psycopg2 is not None
 
-    def __init__(self, table_name='descriptor_index', uuid_col='uid',
+    def __init__(self, table_name='descriptor_set', uuid_col='uid',
                  element_col='element',
                  db_name='postgres', db_host=None, db_port=None, db_user=None,
                  db_pass=None, multiquery_batch_size=1000, pickle_protocol=-1,
                  read_only=False, create_table=True):
         """
-        Initialize index instance.
+        Initialize set instance.
 
         :param table_name: Name of the table to use.
         :type table_name: str
@@ -171,7 +171,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
             default (latest version, probably binary).
         :type pickle_protocol: int
 
-        :param read_only: Only allow read actions against this index.
+        :param read_only: Only allow read actions against this set.
             Modification actions will throw a ReadOnlyError exceptions.
         :type read_only: bool
 
@@ -183,7 +183,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :type create_table: bool
 
         """
-        super(PostgresDescriptorIndex, self).__init__()
+        super(PostgresDescriptorSet, self).__init__()
 
         self.table_name = table_name
         self.uuid_col = uuid_col
@@ -237,7 +237,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def count(self):
         """
-        :return: Number of descriptor elements stored in this index.
+        :return: Number of descriptor elements stored in this set.
         :rtype: int | long
         """
         # Just count UUID column to limit data read.
@@ -256,10 +256,10 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def clear(self):
         """
-        Clear this descriptor index's entries.
+        Clear this descriptor set's entries.
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot clear a read-only index.")
+            raise ReadOnlyError("Cannot clear a read-only set.")
 
         q = self.DELETE_LIKE_TMPL.format(
             table_name=self.table_name,
@@ -273,13 +273,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def has_descriptor(self, uuid):
         """
-        Check if a DescriptorElement with the given UUID exists in this index.
+        Check if a DescriptorElement with the given UUID exists in this set.
 
         :param uuid: UUID to query for
         :type uuid: collections.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
-            index, or False if not.
+            set, or False if not.
         :rtype: bool
 
         """
@@ -300,18 +300,18 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def add_descriptor(self, descriptor):
         """
-        Add a descriptor to this index.
+        Add a descriptor to this set.
 
         Adding the same descriptor multiple times should not add multiple copies
-        of the descriptor in the index (based on UUID). Added descriptors
-        overwrite indexed descriptors based on UUID.
+        of the descriptor in the set (based on UUID). Added descriptors
+        overwrite set descriptors based on UUID.
 
-        :param descriptor: Descriptor to index.
+        :param descriptor: Descriptor to set.
         :type descriptor: smqtk.representation.DescriptorElement
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot clear a read-only index.")
+            raise ReadOnlyError("Cannot clear a read-only set.")
 
         q = self.UPSERT_TMPL.format(
             table_name=self.table_name,
@@ -335,17 +335,17 @@ class PostgresDescriptorIndex (DescriptorIndex):
         Add multiple descriptors at one time.
 
         Adding the same descriptor multiple times should not add multiple copies
-        of the descriptor in the index (based on UUID). Added descriptors
-        overwrite indexed descriptors based on UUID.
+        of the descriptor in the set (based on UUID). Added descriptors
+        overwrite set descriptors based on UUID.
 
         :param descriptors: Iterable of descriptor instances to add to this
-            index.
+            set.
         :type descriptors:
             collections.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot clear a read-only index.")
+            raise ReadOnlyError("Cannot clear a read-only set.")
 
         q = self.UPSERT_TMPL.format(
             table_name=self.table_name,
@@ -372,13 +372,13 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def get_descriptor(self, uuid):
         """
-        Get the descriptor in this index that is associated with the given UUID.
+        Get the descriptor in this set that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
         :type uuid: collections.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         :return: DescriptorElement associated with the queried UUID.
         :rtype: smqtk.representation.DescriptorElement
@@ -401,7 +401,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                    % (uuid, c.rowcount))
 
         r = list(self.psql_helper.single_execute(eh, yield_result_rows=True))
-        return pickle.loads(str(r[0][0]))
+        return pickle.loads(bytes(r[0][0]))
 
     def get_many_descriptors(self, uuids):
         """
@@ -411,7 +411,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         :return: Iterator of descriptors associated to given uuid values.
         :rtype: __generator[smqtk.representation.DescriptorElement]
@@ -450,7 +450,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
                                            yield_result_rows=True)
         i = 0
         for r, expected_uuid in zip(g, uuid_order):
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(bytes(r[0]))
             if d.uuid() != expected_uuid:
                 raise KeyError(expected_uuid)
             yield d
@@ -462,17 +462,17 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def remove_descriptor(self, uuid):
         """
-        Remove a descriptor from this index by the given UUID.
+        Remove a descriptor from this set by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
         :type uuid: collections.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot remove from a read-only index.")
+            raise ReadOnlyError("Cannot remove from a read-only set.")
 
         q = self.DELETE_LIKE_TMPL.format(
             table_name=self.table_name,
@@ -491,17 +491,17 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def remove_many_descriptors(self, uuids):
         """
-        Remove descriptors associated to given descriptor UUIDs from this index.
+        Remove descriptors associated to given descriptor UUIDs from this set.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
         :type uuids: collections.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
-            DescriptorElement in this index.
+            DescriptorElement in this set.
 
         """
         if self.read_only:
-            raise ReadOnlyError("Cannot remove from a read-only index.")
+            raise ReadOnlyError("Cannot remove from a read-only set.")
 
         q = self.DELETE_MANY_TMPL.format(
             table_name=self.table_name,
@@ -523,7 +523,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def iterkeys(self):
         """
-        Return an iterator over indexed descriptor keys, which are their UUIDs.
+        Return an iterator over set descriptor keys, which are their UUIDs.
         :rtype: collections.Iterator[collections.Hashable]
         """
         # Getting UUID through the element because the UUID might not be a
@@ -534,7 +534,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
 
     def iterdescriptors(self):
         """
-        Return an iterator over indexed descriptor element instances.
+        Return an iterator over set descriptor element instances.
         :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
         """
         def execute(c):
@@ -548,12 +548,12 @@ class PostgresDescriptorIndex (DescriptorIndex):
             execute, yield_result_rows=True, named=True
         )
         for r in execution_results:
-            d = pickle.loads(str(r[0]))
+            d = pickle.loads(bytes(r[0]))
             yield d
 
     def iteritems(self):
         """
-        Return an iterator over indexed descriptor key and instance pairs.
+        Return an iterator over set descriptor key and instance pairs.
         :rtype: collections.Iterator[(collections.Hashable,
                                       smqtk.representation.DescriptorElement)]
         """

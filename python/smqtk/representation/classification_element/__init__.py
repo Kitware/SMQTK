@@ -166,6 +166,8 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :rtype: ClassificationElement
 
         """
+        # Shallow-copy config dict to modify
+        config_dict = dict(config_dict)
         config_dict['type_name'] = type_name
         config_dict['uuid'] = uuid
         return super(ClassificationElement, cls).from_config(

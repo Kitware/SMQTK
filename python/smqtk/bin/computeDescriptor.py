@@ -50,6 +50,18 @@ def cli_parser():
     return parser
 
 
+def generate_vector(log, generator, data_element, factory, overwrite):
+    descr_elem = generator.generate_one_element(
+        data_element, descr_factory=factory, overwrite=overwrite
+    )
+    vec = descr_elem.vector()
+
+    if vec is None:
+        log.error("Failed to generate a descriptor vector for the input data!")
+
+    return vec
+
+
 def main():
     parser = cli_parser()
     args = parser.parse_args()
@@ -73,11 +85,8 @@ def main():
     #: :type: smqtk.algorithms.descriptor_generator.DescriptorGenerator
     cd = from_config_dict(config['content_descriptor'],
                           DescriptorGenerator.get_impls())
-    descr_elem = cd.compute_descriptor(data_element, factory, overwrite)
-    vec = descr_elem.vector()
 
-    if vec is None:
-        log.error("Failed to generate a descriptor vector for the input data!")
+    vec = generate_vector(log, cd, data_element, factory, overwrite)
 
     if output_filepath:
         numpy.save(output_filepath, vec)

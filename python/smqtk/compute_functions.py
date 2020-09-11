@@ -21,7 +21,7 @@ from smqtk.utils import (
 
 
 def compute_many_descriptors(data_elements, descr_generator, descr_factory,
-                             descr_index, batch_size=None, overwrite=False,
+                             descr_set, batch_size=None, overwrite=False,
                              procs=None, **kwds):
     """
     Compute descriptors for each data element, yielding
@@ -43,11 +43,11 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         descriptor vectors.
     :type descr_factory: smqtk.representation.DescriptorElementFactory
 
-    :param descr_index: DescriptorIndex instance to add generated descriptors
+    :param descr_set: DescriptorSet instance to add generated descriptors
         to. When given a non-zero batch size, we add descriptors to the given
-        index in batches of that size. When a batch size is not given, we add
-        all generated descriptors to the index after they have been generated.
-    :type descr_index: smqtk.representation.DescriptorIndex
+        set in batches of that size. When a batch size is not given, we add
+        all generated descriptors to the set after they have been generated.
+    :type descr_set: smqtk.representation.DescriptorSet
 
     :param batch_size: Optional number of elements to asynchronously compute
         at a time. This is useful when it is desired for this function to yield
@@ -63,13 +63,12 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
         into the generated DescriptorElement.
     :type overwrite: bool
 
-    :param procs: Tell the DescriptorGenerator to use a specific number of
-        threads/cores.
+    :param procs: Deprecated parameter. Parallelism in batch computation is now
+        controlled on a per implementation basis.
     :type procs: None | int
 
-    :param kwds: Remaining keyword-arguments that are to be passed into the
-        ``compute_descriptor_async`` function on the descriptor generator.
-    :type kwds: dict
+    :param kwds: Deprecated parameter. Extra keyword arguments are no longer
+        passed down to the batch generation method on the descriptor generator.
 
     :return: Generator that yields (DataElement, DescriptorElement) for each
         data element given, in the order they were provided.
@@ -84,16 +83,39 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
     de_deque = collections.deque()
 
     # Counts for logging
-    total = 0
-    unique = 0
+    total = [0]
+    unique = set()
 
     def iter_capture_elements():
         for d in data_elements:
             de_deque.append(d)
             yield d
 
+    # TODO: Re-write this method to more simply tee the input data elem iter
+    #       and yield with paired generated descriptors::
+    #           data_iter1, data_iter2 = itertools.tee(data_elements, 2)
+    #           descr_iter = descr_generator.generate_elements(
+    #               data_iter1, descr_factory, overwrite
+    #           )
+    #           return zip(data_iter2, descr_iter)
+
     if batch_size:
         log.debug("Computing in batches of size %d", batch_size)
+
+        def iterate_batch_results():
+            descr_list_ = list(descr_generator.generate_elements(
+                de_deque, descr_factory, overwrite
+            ))
+            total[0] += len(de_deque)
+            unique.update(d.uuid() for d in descr_list_)
+            log.debug("-- Processed %d so far (%d total data elements "
+                      "input)", len(unique), total[0])
+            log.debug("-- adding to set")
+            descr_set.add_many_descriptors(descr_list_)
+            log.debug("-- yielding generated descriptor elements")
+            for data_, descr_ in zip(de_deque, descr_list_):
+                yield data_, descr_
+            de_deque.clear()
 
         batch_i = 0
 
@@ -102,62 +124,32 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
             if len(de_deque) == batch_size:
                 batch_i += 1
-                log.debug("Computing batch %d", batch_i)
-
-                total += len(de_deque)
-                m = descr_generator.compute_descriptor_async(
-                    de_deque, descr_factory, overwrite, procs, **kwds
-                )
-                unique += len(m)
-                log.debug("-- Processed %d so far (%d total data elements "
-                          "input)", unique, total)
-
-                log.debug("-- adding to index")
-                descr_index.add_many_descriptors(six.itervalues(m))
-
-                log.debug("-- yielding generated descriptor elements")
-                for e in de_deque:
-                    # noinspection PyProtectedMember
-                    yield e, m[e.uuid()]
-
-                de_deque.clear()
+                log.debug("Computing batch {}".format(batch_i))
+                for data_e, descr_e in iterate_batch_results():
+                    yield data_e, descr_e
 
         if len(de_deque):
             log.debug("Computing final batch of size %d",
                       len(de_deque))
-
-            total += len(de_deque)
-            m = descr_generator.compute_descriptor_async(
-                de_deque, descr_factory, overwrite, procs, **kwds
-            )
-            unique += len(m)
-            log.debug("-- Processed %d so far (%d total data elements "
-                      "input)", unique, total)
-
-            log.debug("-- adding to index")
-            descr_index.add_many_descriptors(six.itervalues(m))
-
-            log.debug("-- yielding generated descriptor elements")
-            for de in de_deque:
-                # noinspection PyProtectedMember
-                yield de, m[de.uuid()]
+            for data_e, descr_e in iterate_batch_results():
+                yield data_e, descr_e
 
     else:
-        log.debug("Using single async call")
+        log.debug("Using single generate call")
 
         # Just do everything in one call
         log.debug("Computing descriptors")
-        m = descr_generator.compute_descriptor_async(
+        descr_list = list(descr_generator.generate_elements(
             iter_capture_elements(), descr_factory,
-            overwrite, procs, **kwds
-        )
+            overwrite
+        ))
 
-        log.debug("Adding to index")
-        descr_index.add_many_descriptors(six.itervalues(m))
+        log.debug("Adding to set")
+        descr_set.add_many_descriptors(descr_list)
 
         log.debug("yielding generated elements")
-        for de in de_deque:
-            yield de, m[de.uuid()]
+        for data, descr in zip(de_deque, descr_list):
+            yield data, descr
 
 
 class _CountedGenerator(object):
@@ -182,7 +174,7 @@ class _CountedGenerator(object):
 
 
 def compute_transformed_descriptors(data_elements, descr_generator,
-                                    descr_factory, descr_index,
+                                    descr_factory, descr_set,
                                     transform_function, batch_size=None,
                                     overwrite=False, procs=None, **kwds):
     """
@@ -216,25 +208,25 @@ def compute_transformed_descriptors(data_elements, descr_generator,
         transformed_elements())
     descriptors = compute_many_descriptors(chained_elements,
                                            descr_generator, descr_factory,
-                                           descr_index, batch_size=batch_size,
+                                           descr_set, batch_size=batch_size,
                                            overwrite=overwrite, procs=procs,
                                            **kwds)
     for count, de in zip(transformed_counts, data_elements):
         yield de, itertools.islice((d[1] for d in descriptors), count)
 
 
-def compute_hash_codes(uuids, index, functor, report_interval=1.0,
+def compute_hash_codes(uuids, descr_set, functor, report_interval=1.0,
                        use_mp=False, ordered=False):
     """
     Given an iterable of DescriptorElement UUIDs, asynchronously access them
-    from the given ``index``, asynchronously compute hash codes via ``functor``
+    from the given ``set``, asynchronously compute hash codes via ``functor``
     and convert to an integer, yielding (UUID, hash-int) pairs.
 
     :param uuids: Sequence of UUIDs to process
     :type uuids: collections.Iterable[collections.Hashable]
 
-    :param index: Descriptor index to pull from.
-    :type index: smqtk.representation.descriptor_index.DescriptorIndex
+    :param descr_set: Descriptor set to pull from.
+    :type descr_set: smqtk.representation.descriptor_set.DescriptorSet
 
     :param functor: LSH hash code functor instance
     :type functor: smqtk.algorithms.LshFunctor
@@ -246,7 +238,7 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0,
 
     :param use_mp: If multiprocessing should be used for parallel
         computation vs. threading. Reminder: This will copy currently loaded
-        objects onto worker processes (e.g. the given index), which could lead
+        objects onto worker processes (e.g. the given set), which could lead
         to dangerously high RAM consumption.
     :type use_mp: bool
 
@@ -258,11 +250,11 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0,
     :return: Generator instance yielding (DescriptorElement, int) value pairs.
 
     """
-    # TODO: parallel map fetch elements from index?
+    # TODO: parallel map fetch elements from set?
     #       -> separately from compute
 
     def get_hash(u):
-        v = index.get_descriptor(u).vector()
+        v = descr_set.get_descriptor(u).vector()
         return u, bits.bit_vector_to_int_large(functor.get_hash(v))
 
     # Setup log and reporting function
@@ -290,16 +282,16 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0,
     reporter.report()
 
 
-def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
+def mb_kmeans_build_apply(descr_set, mbkm, initial_fit_size):
     """
     Build the MiniBatchKMeans centroids based on the descriptors in the given
-    index, then predicting descriptor clusters with the final result model.
+    set, then predicting descriptor clusters with the final result model.
 
-    If the given index is empty, no fitting or clustering occurs and an empty
+    If the given set is empty, no fitting or clustering occurs and an empty
     dictionary is returned.
 
-    :param index: Index of descriptors
-    :type index: smqtk.representation.DescriptorIndex
+    :param descr_set: set of descriptors
+    :type descr_set: smqtk.representation.DescriptorSet
 
     :param mbkm: Scikit-Learn MiniBatchKMeans instead to train and then use for
         prediction
@@ -321,10 +313,10 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     k_deque = collections.deque()
     d_fitted = 0
 
-    log.info("Getting index keys (shuffled)")
-    index_keys = sorted(six.iterkeys(index))
+    log.info("Getting set keys (shuffled)")
+    set_keys = sorted(six.iterkeys(descr_set))
     numpy.random.seed(mbkm.random_state)
-    numpy.random.shuffle(index_keys)
+    numpy.random.shuffle(set_keys)
 
     def parallel_iter_vectors(descriptors):
         """ Get the vectors for the descriptors given.
@@ -336,12 +328,12 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     def get_vectors(k_iter):
         """ Get numpy array of descriptor vectors (2D array returned) """
         return numpy.array(list(
-            parallel_iter_vectors(index.get_many_descriptors(k_iter))
+            parallel_iter_vectors(descr_set.get_many_descriptors(k_iter))
         ))
 
     log.info("Collecting iteratively fitting model")
     pr = cli.ProgressReporter(log.debug, 1.0).start()
-    for i, k in enumerate(index_keys):
+    for i, k in enumerate(set_keys):
         k_deque.append(k)
         pr.increment_report()
 
@@ -382,7 +374,7 @@ def mb_kmeans_build_apply(index, mbkm, initial_fit_size):
     mbkm.verbose = False
     d_classes = collections.defaultdict(set)
     d_uv_iter = parallel.parallel_map(lambda d: (d.uuid(), d.vector()),
-                                      index,
+                                      descr_set,
                                       use_multiprocessing=False,
                                       name="uv-collector")
     # TODO: Batch predict call inputs to something larger than one at a time.

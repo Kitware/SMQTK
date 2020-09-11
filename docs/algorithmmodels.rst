@@ -43,7 +43,7 @@ Below is an example code snippet of how to train a ColorDescriptor model for som
 
     # Assuming there is not model generated, the following call would fail due to
     # there not being a model loaded
-    # cd.compute_descriptor(some_data, some_factory)
+    # cd.generate_one_element(some_data, some_factory)
 
     data_elements = [...]  # Some iterable of DataElement instances to media content
     # Generates model components
@@ -53,8 +53,8 @@ Below is an example code snippet of how to train a ColorDescriptor model for som
     # existing model files in the provided ``model_directory``.
     new_cd = ColorDescriptor_<flavor>(model_directory="data", work_directory="work")
 
-    # Since there is a model, we can now compute descriptors for new data
-    new_cd.compute_descriptor(new_data, some_factory)
+    # Since there is a model, we can now generate descriptors for new data
+    new_cd.generate_one_element(new_data, some_factory)
 
 CaffeDefaultImageNet
 ^^^^^^^^^^^^^^^^^^^^

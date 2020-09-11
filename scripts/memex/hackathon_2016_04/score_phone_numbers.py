@@ -6,12 +6,14 @@ import logging
 
 from matplotlib import pyplot as plt
 import numpy
+import six
 from sklearn.metrics import auc, confusion_matrix, precision_recall_curve, roc_curve
 
 from smqtk.algorithms import get_classifier_impls
 from smqtk.representation import ClassificationElementFactory
 from smqtk.representation.classification_element.memory import MemoryClassificationElement
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils.cli import initialize_logging
 from smqtk.utils.plugin import from_plugin_config
 
@@ -24,7 +26,7 @@ log = logging.getLogger(__name__)
 # Parameters
 #
 PHONE_SHA1_JSON = "eval.map.phone2shas.json"
-DESCRIPTOR_INDEX_FILE_CACHE = "eval.images.descriptors.alexnet_fc7.index"
+DESCRIPTOR_SET_FILE_CACHE = "eval.images.descriptors.alexnet_fc7.index"
 
 CLASSIFIER_TRAINING_CONFIG_JSON = 'ad-images.final.cmv.train.json'
 
@@ -110,7 +112,8 @@ else:
         classifier_config = json.load(f)
 
     log.info("Loading plugins")
-    descriptor_index = MemoryDescriptorIndex(file_cache=DESCRIPTOR_INDEX_FILE_CACHE)
+    descr_set_cache_elem = DataFileElement(filepath=DESCRIPTOR_SET_FILE_CACHE)
+    descriptor_set = MemoryDescriptorSet(cache_element=descr_set_cache_elem)
     #: :type: smqtk.algorithms.Classifier
     classifier = from_plugin_config(classifier_config['plugins']['classifier'],
                                     get_classifier_impls())
@@ -123,23 +126,24 @@ else:
 
     log.info("Classifying phone imagery descriptors")
     i = 0
-    descriptor_index_shas = set(descriptor_index.iterkeys())
+    descriptor_set_shas = set(descriptor_set.iterkeys())
     for p in phone2shas:
         log.info('%s (%d / %d)', p, i + 1, len(phone2shas))
         # Not all source "images" have descriptors since some URLs returned
         # non-image files. Intersect phone sha's with what was actually
         # computed. Warn if this reduces descriptors for classification to zero.
-        indexed_shas = set(phone2shas[p]) & descriptor_index_shas
+        indexed_shas = set(phone2shas[p]) & descriptor_set_shas
         if not indexed_shas:
             raise RuntimeError(
                 "Phone number '%s' has no valid images associated "
                 "with it.\nBefore:\n%s\n\nAfter:\n%s"
                 % (p, phone2shas[p], indexed_shas))
 
-        descriptor_elems = descriptor_index.get_many_descriptors(*indexed_shas)
-        e2c = classifier.classify_async(descriptor_elems, c_factory,
-                                        use_multiprocessing=True, ri=1.)
-        pos_scores = [c['positive'] for c in e2c.values()]
+        descriptor_elems = descriptor_set.get_many_descriptors(*indexed_shas)
+        pos_scores = [c['positive'] for c
+                      in classifier.classify_elements(
+                          descriptor_elems, c_factory,
+                      )]
 
         # Max of pool
         phone2score[p] = max(pos_scores)
@@ -148,7 +152,7 @@ else:
 
     log.info("Saving score map")
     csv.writer(open(PHONE2SCORE_OUTPUT_FILEPATH, 'w')) \
-        .writerows(sorted(phone2score.iteritems()))
+        .writerows(sorted(six.iteritems(phone2score)))
 
 
 log.info("Done")

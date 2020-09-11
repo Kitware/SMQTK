@@ -19,20 +19,41 @@
             "batch_size": 20,
             "data_layer": "data",
             "gpu_device_id": 0,
-            "image_mean_uri": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
+            "image_mean": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
+                    "readonly": true
+                },
+                "type": "DataFileElement"
+            },
             "input_scale": null,
             "load_truncated_images": true,
             "network_is_bgr": true,
-            "network_model_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
-            "network_prototxt_uri": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
+            "network_model": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
+                    "readonly": true
+                },
+                "type": "DataFileElement"
+            },
+            "network_prototxt": {
+                "DataFileElement": {
+                    "explicit_mimetype": null,
+                    "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
+                    "readonly": true
+                },
+                "type": "DataFileElement"
+            },
             "pixel_rescale": null,
             "return_layer": "pool5",
             "use_gpu": true
         },
         "type": "CaffeDescriptorGenerator"
     },
-    "descriptor_index": {
-        "PostgresDescriptorIndex": {
+    "descriptor_set": {
+        "PostgresDescriptorSet": {
             "create_table": false,
             "db_host": "/dev/shm",
             "db_name": "postgres",
@@ -43,10 +64,10 @@
             "multiquery_batch_size": 1000,
             "pickle_protocol": -1,
             "read_only": false,
-            "table_name": "descriptor_index_resnet50_pool5",
+            "table_name": "descriptor_set_resnet50_pool5",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorIndex"
+        "type": "PostgresDescriptorSet"
     },
     "optional_data_set": {
         "DataMemorySet": {

@@ -1,6 +1,6 @@
 """
 Script for asynchronously computing classifications for DescriptorElements
-in a DescriptorIndex specified via a list of UUIDs. Results are output to a
+in a DescriptorSet specified via a list of UUIDs. Results are output to a
 CSV file in the format:
 
     uuid, label1_confidence, label2_confidence, ...
@@ -24,7 +24,7 @@ from smqtk.algorithms import (
 from smqtk.representation import (
     ClassificationElementFactory,
     ClassificationElement,
-    DescriptorIndex,
+    DescriptorSet,
 )
 from smqtk.utils import (
     cli,
@@ -55,8 +55,8 @@ def default_config():
             "classification_factory": make_default_config(
                 ClassificationElement.get_impls()
             ),
-            "descriptor_index": make_default_config(
-                DescriptorIndex.get_impls()
+            "descriptor_set": make_default_config(
+                DescriptorSet.get_impls()
             ),
         }
     }
@@ -109,10 +109,10 @@ def main():
     #
 
     log.info("Initializing descriptor index")
-    #: :type: smqtk.representation.DescriptorIndex
-    descriptor_index = from_config_dict(
-        config['plugins']['descriptor_index'],
-        DescriptorIndex.get_impls()
+    #: :type: smqtk.representation.DescriptorSet
+    descriptor_set = from_config_dict(
+        config['plugins']['descriptor_set'],
+        DescriptorSet.get_impls()
     )
 
     log.info("Initializing classification factory")
@@ -139,14 +139,15 @@ def main():
         :type uuid: collections.Hashable
         :rtype: smqtk.representation.DescriptorElement
         """
-        return descriptor_index.get_descriptor(uuid)
+        return descriptor_set.get_descriptor(uuid)
 
     def classify_descr(d):
         """
         :type d: smqtk.representation.DescriptorElement
         :rtype: smqtk.representation.ClassificationElement
         """
-        return classifier.classify(d, c_factory, classify_overwrite)
+        return classifier.classify_one_element(d, c_factory,
+                                               classify_overwrite)
 
     log.info("Initializing uuid-to-descriptor parallel map")
     #: :type: collections.Iterable[smqtk.representation.DescriptorElement]

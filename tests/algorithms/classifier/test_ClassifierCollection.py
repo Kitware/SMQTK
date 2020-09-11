@@ -243,12 +243,12 @@ class TestClassifierCollection (unittest.TestCase):
         self.assertIsInstance(result['subjectA'], MemoryClassificationElement)
         self.assertIsInstance(result['subjectB'], MemoryClassificationElement)
         # We know the dummy classifier outputs "classifications" in a
-        # deterministic way: class label is descriptor UUID and classification
-        # value is its vector as a list.
+        # deterministic way: class label is "test" and classification
+        # value is the index of the descriptor .
         self.assertDictEqual(result['subjectA'].get_classification(),
-                             {'0': d_v})
+                             {'test': 0})
         self.assertDictEqual(result['subjectB'].get_classification(),
-                             {'0': d_v})
+                             {'test': 0})
 
     def test_classify_subset(self):
         ccol = ClassifierCollection({
@@ -257,7 +257,7 @@ class TestClassifierCollection (unittest.TestCase):
         })
 
         classifierB = ccol._label_to_classifier['subjectB']
-        classifierB.classify = mock.Mock()
+        classifierB.classify_one_element = mock.Mock()
 
         d_v = [0, 1, 2, 3, 4]
         d = DescriptorMemoryElement('memory', '0')
@@ -268,7 +268,7 @@ class TestClassifierCollection (unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertIn('subjectA', result)
         self.assertNotIn('subjectB', result)
-        self.assertFalse(classifierB.classify.called)
+        classifierB.classify_one_element.assert_not_called()
         # Each key should map to a classification element (memory in this case
         # because we're using the default factory)
         self.assertIsInstance(result['subjectA'], MemoryClassificationElement)
@@ -276,7 +276,7 @@ class TestClassifierCollection (unittest.TestCase):
         # deterministic way: class label is descriptor UUID and classification
         # value is its vector as a list.
         self.assertDictEqual(result['subjectA'].get_classification(),
-                             {'0': d_v})
+                             {'test': 0})
 
     def test_classify_empty_subset(self):
         ccol = ClassifierCollection({
@@ -285,9 +285,9 @@ class TestClassifierCollection (unittest.TestCase):
         })
 
         classifierA = ccol._label_to_classifier['subjectA']
-        classifierA.classify = mock.Mock()
+        classifierA.classify_one_element = mock.Mock()
         classifierB = ccol._label_to_classifier['subjectB']
-        classifierB.classify = mock.Mock()
+        classifierB.classify_one_element = mock.Mock()
 
         d_v = [0, 1, 2, 3, 4]
         d = DescriptorMemoryElement('memory', '0')
@@ -297,9 +297,9 @@ class TestClassifierCollection (unittest.TestCase):
         # Should contain no entries.
         self.assertEqual(len(result), 0)
         self.assertNotIn('subjectA', result)
-        self.assertFalse(classifierA.classify.called)
+        classifierA.classify_one_element.assert_not_called()
         self.assertNotIn('subjectB', result)
-        self.assertFalse(classifierB.classify.called)
+        classifierB.classify_one_element.assert_not_called()
 
     def test_classify_missing_label(self):
         ccol = ClassifierCollection({

@@ -9,6 +9,7 @@ from smqtk.representation.classification_element.memory \
     import MemoryClassificationElement
 from smqtk.representation.detection_element.memory \
     import MemoryDetectionElement
+from smqtk.utils.configuration import configuration_test_helper
 
 
 def test_is_usable():
@@ -50,7 +51,9 @@ def test_serialize_deserialize_pickle():
 
 def test_get_config():
     """ Test that configuration for memory element is empty. """
-    assert MemoryDetectionElement(0).get_config() == {}
+    inst = MemoryDetectionElement(0)
+    for i in configuration_test_helper(inst, {'uuid'}, (0,)):  # type: MemoryDetectionElement
+        assert i.uuid == 0
 
 
 def test_has_detection():
@@ -83,7 +86,6 @@ def test_has_detection_one_none_member():
     # Possible "valid" values.
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     celem = mock.MagicMock(spec_set=ClassificationElement)
-    celem.__nonzero__.return_value = celem.__bool__.return_value = True
     celem.has_classifications.return_value = True
 
     inst = MemoryDetectionElement(0)
@@ -103,6 +105,7 @@ def test_has_detection_empty_classification_element():
     """
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     celem = mock.MagicMock(spec_set=ClassificationElement)
+    # Simulate an empty ClassificationElement
     celem.has_classifications.return_value = False
 
     inst = MemoryDetectionElement(0)
@@ -112,12 +115,62 @@ def test_has_detection_empty_classification_element():
     assert inst.has_detection() is False
 
 
+def test_get_bbox():
+    """ Test successfully getting the detection bounding box. """
+    bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
+    inst = MemoryDetectionElement(0)
+    inst._bbox = bbox
+    assert inst.get_bbox() == bbox
+
+
+def test_get_bbox_no_bbox():
+    """ Test attempting to get a bbox when none is set. """
+    inst = MemoryDetectionElement(0)
+    with pytest.raises(NoDetectionError,
+                       match="Missing detection bounding box for "
+                             "in-memory detection with UUID 0"):
+        inst.get_bbox()
+
+
+def test_get_classification():
+    """ Test successfully getting the detection classification element. """
+    c_elem = mock.MagicMock(spec_set=ClassificationElement)
+    # Simulate a populated ClassificationElement
+    c_elem.has_classifications.return_value = True
+    inst = MemoryDetectionElement(0)
+    inst._classification = c_elem
+    assert inst.get_classification() == c_elem
+
+
+def test_get_classification_no_classification():
+    """ Test attempting to get the classification element when none is set. """
+    inst = MemoryDetectionElement(0)
+    with pytest.raises(NoDetectionError,
+                       match="Missing or empty classification for in-memory "
+                             "detection with UUID 0"):
+        inst.get_classification()
+
+
+def test_get_classification_empty_classification():
+    """ Test attempting to get the classification element when it is empty. """
+    c_elem = mock.MagicMock(spec_set=ClassificationElement)
+    # Simulate an empty ClassificationElement
+    c_elem.has_classifications.return_value = False
+
+    inst = MemoryDetectionElement(0)
+    inst._classification = c_elem
+    with pytest.raises(NoDetectionError,
+                       match="Missing or empty classification for in-memory "
+                             "detection with UUID 0"):
+        inst.get_classification()
+
+
 def test_get_detection():
     """ Test successfully getting the detection components. """
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     c_elem = mock.MagicMock(spec_set=ClassificationElement)
     # Simulate a populated ClassificationElement
-    c_elem.__nonzero__.return_value = c_elem.__bool__.return_value = False
+    c_elem.has_classifications.return_value = True
 
     inst = MemoryDetectionElement(0)
     inst._bbox = bbox
@@ -145,6 +198,7 @@ def test_get_detection_error_empty_classification():
     """
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     celem = mock.MagicMock(spec_set=ClassificationElement)
+    # Simulate an empty ClassificationElement
     celem.has_classifications.return_value = False
 
     inst = MemoryDetectionElement(0)
@@ -166,7 +220,7 @@ def test_set_detection():
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     c_elem = mock.MagicMock(spec_set=ClassificationElement)
     # Simulating that c_elem is a valid, populated classification element
-    c_elem.__nonzero__.return_value = c_elem.__bool__.return_value = False
+    c_elem.has_classifications.return_value = True
 
     d_elem = MemoryDetectionElement(0)
     # noinspection PyTypeChecker
@@ -216,6 +270,7 @@ def test_set_detection_empty_classification_element():
     """
     bbox = mock.MagicMock(spec_set=AxisAlignedBoundingBox)
     c_elem = mock.MagicMock(spec_set=ClassificationElement)
+    # Simulate an empty ClassificationElement
     c_elem.has_classifications.return_value = False
 
     with pytest.raises(ValueError,

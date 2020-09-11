@@ -1,5 +1,4 @@
 """KWCNN descriptor generator definition."""
-from collections import deque
 import os
 import io
 import itertools
@@ -10,13 +9,11 @@ import multiprocessing.pool
 import numpy
 import PIL.Image
 import PIL.ImageFile
-import six
 # noinspection PyUnresolvedReferences
-from six.moves import range, zip
+from six.moves import zip
 
-from smqtk.algorithms.descriptor_generator import (DescriptorGenerator,
-                                                   DFLT_DESCRIPTOR_FACTORY)
-from smqtk.utils.cli import ProgressReporter
+from smqtk.algorithms.descriptor_generator import DescriptorGenerator
+from smqtk.utils.parallel import parallel_map
 
 try:
     from six.moves import cPickle as pickle
@@ -59,7 +56,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
                  batch_size=32, use_gpu=False, gpu_device_id=0,
                  network_is_greyscale=False, load_truncated_images=False,
                  pixel_rescale=None, input_scale=None,
-                 pre_initialize_network=True):
+                 pre_initialize_network=True, threads=None):
         """
         Create a KWCNN CNN descriptor generator.
 
@@ -99,6 +96,11 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             directly multiplied against the pixel values.
         :type input_scale: None | float
 
+        :param int|None threads:
+            Optional specific number of threads to use for data loading and
+            pre-processing. If this is None or 0, we introspect the current
+            system thread capacity and use that.
+
         """
         super(KWCNNDescriptorGenerator, self).__init__()
 
@@ -115,6 +117,8 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         self.input_scale = input_scale
 
         self.network_model_filepath = str(network_model_filepath)
+
+        self.threads = threads
 
         assert self.batch_size > 0, \
             "Batch size must be greater than 0 (got %d)" % self.batch_size
@@ -272,6 +276,7 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             "load_truncated_images": self.load_truncated_images,
             "pixel_rescale": self.pixel_rescale,
             "input_scale": self.input_scale,
+            'threads': self.threads,
         }
 
     def valid_content_types(self):
@@ -288,162 +293,71 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             "image/jpeg",
         }
 
-    def _compute_descriptor(self, data):
-        raise NotImplementedError("Shouldn't get here as "
-                                  "compute_descriptor[_async] is being "
-                                  "overridden")
-
-    def compute_descriptor(self, data, descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                           overwrite=False):
+    def _generate_arrays(self, data_iter):
         """
-        Given some data, return a descriptor element containing a descriptor
-        vector.
+        Inner template method that defines the generation of descriptor vectors
+        for a given iterable of data elements.
+
+        Pre-conditions:
+          - Data elements input to this method have been validated to be of at
+            least one of this class's reported ``valid_content_types``.
+
+        :param collections.Iterable[DataElement] data_iter:
+            Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
-        :raises ValueError: Given data element content was not of a valid type
-            with respect to this descriptor.
 
-        :param data: Some kind of input data for the feature descriptor.
-        :type data: smqtk.representation.DataElement
-
-        :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. The default factory produces
-            ``DescriptorMemoryElement`` instances by default.
-        :type descr_factory: smqtk.representation.DescriptorElementFactory
-
-        :param overwrite: Whether or not to force re-computation of a descriptor
-            vector for the given data even when there exists a precomputed
-            vector in the generated DescriptorElement as generated from the
-            provided factory. This will overwrite the persistently stored vector
-            if the provided factory produces a DescriptorElement implementation
-            with such storage.
-        :type overwrite: bool
-
-        :return: Result descriptor element. UUID of this output descriptor is
-            the same as the UUID of the input data element.
-        :rtype: smqtk.representation.DescriptorElement
-
+        :return: Iterable of numpy arrays in parallel association with the
+            input data elements.
+        :rtype: collections.Iterable[numpy.ndarray]
         """
-        m = self.compute_descriptor_async([data], descr_factory, overwrite,
-                                          procs=1)
-        return m[data.uuid()]
+        log_debug = self._log.debug
 
-    def compute_descriptor_async(self, data_iter,
-                                 descr_factory=DFLT_DESCRIPTOR_FACTORY,
-                                 overwrite=False, procs=None, **kwds):
-        """
-        Asynchronously compute feature data for multiple data items.
+        # Start parallel operation to pre-process imagery before aggregating
+        # for network execution.
+        # TODO: update ``buffer_factor`` param to account for batch size?
+        img_array_iter = \
+            parallel_map(_process_load_img_array,
+                         zip(
+                             data_iter, itertools.repeat(self.transformer),
+                             itertools.repeat(self.data_layer),
+                             itertools.repeat(self.load_truncated_images),
+                             itertools.repeat(self.pixel_rescale),
+                         ),
+                         ordered=True, cores=self.threads)
 
-        :param data_iter: Iterable of data elements to compute features for.
-            These must have UIDs assigned for feature association in return
-            value.
-        :type data_iter: collections.Iterable[smqtk.representation.DataElement]
+        # Aggregate and process batches of input data elements
+        #: :type: list[numpy.ndarray]
+        batch_img_arrays = \
+            list(itertools.islice(img_array_iter, self.batch_size))
+        batch_i = 0
+        while len(batch_img_arrays) > 0:
+            cur_batch_size = len(batch_img_arrays)
+            log_debug("Batch {} - size {}".format(batch_i, cur_batch_size))
 
-        :param descr_factory: Factory instance to produce the wrapping
-            descriptor element instance. The default factory produces
-            ``DescriptorMemoryElement`` instances by default.
-        :type descr_factory: smqtk.representation.DescriptorElementFactory
+            log_debug("Loading image numpy array into KWCNN Data object")
+            self.data.set_data_list(batch_img_arrays, quiet=True)
 
-        :param overwrite: Whether or not to force re-computation of a descriptor
-            vectors for the given data even when there exists precomputed
-            vectors in the generated DescriptorElements as generated from the
-            provided factory. This will overwrite the persistently stored
-            vectors if the provided factory produces a DescriptorElement
-            implementation such storage.
-        :type overwrite: bool
+            log_debug("Performing forward inference using KWCNN Network")
+            test_results = self.network.test(quiet=True)
+            descriptor_list = test_results['probability_list']
 
-        :param procs: Optional specification of how many processors to use
-            when pooling sub-tasks. If None, we attempt to use all available
-            cores.
-        :type procs: int | None
+            for v in descriptor_list:
+                if v.ndim > 1:
+                    # In case kwcnn generates multidimensional array
+                    # (rows, 1, 1)
+                    log_debug("- Raveling output array of shape {}"
+                              .format(v.shape))
+                    yield numpy.ravel(v)
+                else:
+                    yield v
 
-        :raises ValueError: An input DataElement was of a content type that we
-            cannot handle.
+            # Slice out the next batch
+            #: :type: list[(collections.Hashable, numpy.ndarray)]
+            batch_img_arrays = \
+                list(itertools.islice(img_array_iter, self.batch_size))
+            batch_i += 1
 
-        :return: Mapping of input DataElement UUIDs to the computed descriptor
-            element for that data. DescriptorElement UUID's are congruent with
-            the UUID of the data element it is the descriptor of.
-        :rtype: dict[collections.Hashable,
-                     smqtk.representation.DescriptorElement]
-
-        """
-        # Create DescriptorElement instances for each data elem.
-        data_elements = {}
-        descr_elements = {}
-        self._log.debug("Checking content types; aggregating data/descriptor "
-                        "elements.")
-        pr = ProgressReporter(self._log.debug, 1.0).start()
-        for data in data_iter:
-            ct = data.content_type()
-            if ct not in self.valid_content_types():
-                self._log.error("Cannot compute descriptor from content type "
-                                "'%s' data: %s)" % (ct, data))
-                raise ValueError("Cannot compute descriptor from content type "
-                                 "'%s' data: %s)" % (ct, data))
-            data_elements[data.uuid()] = data
-            descr_elements[data.uuid()] = \
-                descr_factory.new_descriptor(self.name, data.uuid())
-            pr.increment_report()
-        pr.report()
-        self._log.debug("Given %d unique data elements", len(data_elements))
-
-        # Reduce procs down to the number of elements to process if its smaller
-        if len(data_elements) < (procs or multiprocessing.cpu_count()):
-            procs = len(data_elements)
-        if procs == 0:
-            raise ValueError("No data elements provided")
-
-        # For thread safely, only use .append() and .popleft() (queue)
-        uuid4proc = deque()
-
-        def check_get_uuid(descriptor_elem):
-            if overwrite or not descriptor_elem.has_vector():
-                # noinspection PyUnresolvedReferences
-                uuid4proc.append(descriptor_elem.uuid())
-
-        # Using thread-pool due to in-line function + updating local deque
-        p = multiprocessing.pool.ThreadPool(procs)
-        try:
-            p.map(check_get_uuid, six.itervalues(descr_elements))
-        finally:
-            p.close()
-            p.join()
-        del p
-        self._log.debug("%d descriptors already computed",
-                        len(data_elements) - len(uuid4proc))
-
-        if uuid4proc:
-            self._log.debug("Converting deque to tuple for segmentation")
-            uuid4proc = tuple(uuid4proc)
-
-            # Split UUIDs into groups equal to our batch size, and an option
-            # tail group that is less than our batch size.
-            tail_size = len(uuid4proc) % self.batch_size
-            batch_groups = (len(uuid4proc) - tail_size) // self.batch_size
-            self._log.debug("Processing %d batches of size %d", batch_groups,
-                            self.batch_size)
-            if tail_size:
-                self._log.debug("Processing tail group of size %d", tail_size)
-
-            if batch_groups:
-                for g in range(batch_groups):
-                    self._log.debug("Starting batch: %d of %d",
-                                    g + 1, batch_groups)
-                    batch_uuids = \
-                        uuid4proc[g * self.batch_size:(g + 1) * self.batch_size]
-                    self._process_batch(batch_uuids, data_elements,
-                                        descr_elements, procs)
-
-            if tail_size:
-                batch_uuids = uuid4proc[-tail_size:]
-                self._log.debug("Starting tail batch (size=%d)",
-                                len(batch_uuids))
-                self._process_batch(batch_uuids, data_elements, descr_elements,
-                                    procs)
-
-        self._log.debug("forming output dict")
-        return dict((data_elements[k].uuid(), descr_elements[k])
-                    for k in data_elements)
 
     def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
         """

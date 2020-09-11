@@ -45,31 +45,12 @@ class DummyClassifier (Classifier):
         """
         return True
 
-    def _classify(self, d):
-        """
-        Internal method that constructs the label-to-confidence map (dict) for
-        a given DescriptorElement.
-
-        The passed descriptor element is guaranteed to have a vector to
-        extract. It is not extracted yet due to the philosophy of waiting
-        until the vector is immediately needed. This moment is thus determined
-        by the implementing algorithm.
-
-        :param d: DescriptorElement containing the vector to classify.
-        :type d: smqtk.representation.DescriptorElement
-
-        :raises RuntimeError: Could not perform classification for some reason
-            (see message in raised exception).
-
-        :return: Dictionary mapping trained labels to classification
-            confidence values
-        :rtype: dict[collections.Hashable, float]
-
-        """
-        return {
-            'negative': 0.5,
-            'positive': 0.5,
-        }
+    def _classify_arrays(self, array_iter):
+        for _ in array_iter:
+            yield {
+                'negative': 0.5,
+                'positive': 0.5,
+            }
 
     def get_labels(self):
         """
@@ -106,5 +87,5 @@ class DummySupervisedClassifier (SupervisedClassifier):
     def get_labels(self):
         pass
 
-    def _classify(self, d):
+    def _classify_arrays(self, array_iter):
         pass

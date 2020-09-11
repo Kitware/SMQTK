@@ -84,7 +84,7 @@ def main():
     collect_plugins(smqtk.representation.DataElement)
     collect_plugins(smqtk.representation.DataSet)
     collect_plugins(smqtk.representation.DescriptorElement)
-    collect_plugins(smqtk.representation.DescriptorIndex)
+    collect_plugins(smqtk.representation.DescriptorSet)
     collect_plugins(smqtk.representation.KeyValueStore)
 
     #

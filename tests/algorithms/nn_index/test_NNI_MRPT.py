@@ -12,7 +12,8 @@ from smqtk.representation.descriptor_element.local_elements import \
 from smqtk.algorithms import NearestNeighborsIndex
 from smqtk.algorithms.nn_index.mrpt import MRPTNearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
-from smqtk.representation.descriptor_index.memory import MemoryDescriptorIndex
+from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
+from smqtk.utils.configuration import configuration_test_helper
 
 
 class TestMRPTIndex (unittest.TestCase):
@@ -26,7 +27,7 @@ class TestMRPTIndex (unittest.TestCase):
         if 'random_seed' not in kwargs:
             kwargs.update(random_seed=self.RAND_SEED)
         return MRPTNearestNeighborsIndex(
-            MemoryDescriptorIndex(), **kwargs)
+            MemoryDescriptorSet(), **kwargs)
 
     def test_impl_findable(self):
         self.assertIn(MRPTNearestNeighborsIndex,
@@ -36,21 +37,22 @@ class TestMRPTIndex (unittest.TestCase):
         index_filepath = osp.abspath(osp.expanduser('index_filepath'))
         para_filepath = osp.abspath(osp.expanduser('param_fp'))
 
-        # Make configuration based on default
-        c = MRPTNearestNeighborsIndex.get_default_config()
-        c['index_filepath'] = index_filepath
-        c['parameters_filepath'] = para_filepath
-        c['descriptor_set']['type'] = 'MemoryDescriptorIndex'
-
-        # Build based on configuration
-        index = MRPTNearestNeighborsIndex.from_config(c)
-        self.assertEqual(index._index_filepath, index_filepath)
-        self.assertEqual(index._index_param_filepath, para_filepath)
-
-        # Test that constructing a new instance from ``index``'s config yields
-        # an index with the same configuration (idempotent).
-        index2 = MRPTNearestNeighborsIndex.from_config(index.get_config())
-        self.assertEqual(index.get_config(), index2.get_config())
+        i = MRPTNearestNeighborsIndex(
+            descriptor_set=MemoryDescriptorSet(),
+            index_filepath=index_filepath, parameters_filepath=para_filepath,
+            read_only=True, num_trees=9, depth=2, random_seed=8,
+            pickle_protocol=0, use_multiprocessing=True,
+        )
+        for inst in configuration_test_helper(i):  # type: MRPTNearestNeighborsIndex
+            assert isinstance(inst._descriptor_set, MemoryDescriptorSet)
+            assert inst._index_filepath == index_filepath
+            assert inst._index_param_filepath == para_filepath
+            assert inst._read_only == True
+            assert inst._num_trees == 9
+            assert inst._depth == 2
+            assert inst._rand_seed == 8
+            assert inst._pickle_protocol == 0
+            assert inst._use_multiprocessing == True
 
     def test_read_only(self):
         v = np.zeros(5, float)
@@ -75,13 +77,13 @@ class TestMRPTIndex (unittest.TestCase):
     def test_update_index_new_index(self):
         n = 100
         dim = 8
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
 
         index = self._make_inst()
-        index.update_index(d_index)
+        index.update_index(d_set)
         self.assertEqual(index.count(), 100)
-        for d in d_index:
+        for d in d_set:
             self.assertIn(d, index._descriptor_set)
 
         # Check that NN can return stuff from the set used.
@@ -90,7 +92,7 @@ class TestMRPTIndex (unittest.TestCase):
         random.seed(self.RAND_SEED)
         for _ in range(10):
             i = random.randint(0, n-1)
-            q = d_index[i]
+            q = d_set[i]
             n_elems, n_dists = index.nn(q)
             self.assertEqual(n_elems[0], q)
 
@@ -187,15 +189,15 @@ class TestMRPTIndex (unittest.TestCase):
         depth = 5
         num_trees = 10
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         mrpt = MRPTNearestNeighborsIndex(
             di, num_trees=num_trees, depth=depth, random_seed=0)
-        mrpt.build_index(d_index)
+        mrpt.build_index(d_set)
 
         nbrs, dists = mrpt.nn(q, 10)
         self.assertEqual(len(nbrs), len(dists))
@@ -212,15 +214,15 @@ class TestMRPTIndex (unittest.TestCase):
         # 3k/L = 60
         num_trees = 60
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
-        [d.set_vector(np.random.rand(dim)) for d in d_index]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
+        [d.set_vector(np.random.rand(dim)) for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         mrpt = MRPTNearestNeighborsIndex(
             di, num_trees=num_trees, depth=depth, random_seed=0)
-        mrpt.build_index(d_index)
+        mrpt.build_index(d_set)
 
         nbrs, dists = mrpt.nn(q, k)
         self.assertEqual(len(nbrs), len(dists))
@@ -235,19 +237,19 @@ class TestMRPTIndex (unittest.TestCase):
         # 3k/L = 60
         num_trees = 60
 
-        d_index = [DescriptorMemoryElement('test', i) for i in range(n)]
+        d_set = [DescriptorMemoryElement('test', i) for i in range(n)]
         # Put all descriptors on a line so that different trees get same
         # divisions.
         # noinspection PyTypeChecker
         [d.set_vector(np.full(dim, d.uuid(), dtype=np.float64))
-         for d in d_index]
+         for d in d_set]
         q = DescriptorMemoryElement('q', -1)
         q.set_vector(np.zeros((dim,)))
 
-        di = MemoryDescriptorIndex()
+        di = MemoryDescriptorSet()
         mrpt = MRPTNearestNeighborsIndex(
             di, num_trees=num_trees, depth=depth, random_seed=0)
-        mrpt.build_index(d_index)
+        mrpt.build_index(d_set)
 
         nbrs, dists = mrpt.nn(q, k)
         self.assertEqual(len(nbrs), len(dists))

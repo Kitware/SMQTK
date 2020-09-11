@@ -9,11 +9,8 @@ service.  To generate a default configuration, please refer to the
 """
 import argparse
 import glob
-import json
 import logging
 import os.path as osp
-
-import six
 
 from smqtk import algorithms
 from smqtk import representation
@@ -161,20 +158,20 @@ def main():
     # Generate descriptors of data for building NN index.
     log.info("Computing descriptors for data set with {}"
              .format(descriptor_generator))
-    data2descriptor = descriptor_generator.compute_descriptor_async(
-        data_set, descriptor_elem_factory
-    )
+    descr_list = list(descriptor_generator.generate_elements(
+        data_set, descr_factory=descriptor_elem_factory
+    ))
 
     # Possible additional support steps before building NNIndex
     try:
         # Fit the LSH index functor
         log.debug("Has LSH Functor to fit?")
-        nn_index.lsh_functor.fit(six.itervalues(data2descriptor))
+        nn_index.lsh_functor.fit(descr_list)
     except AttributeError as ex:
         log.debug("Has LSH Functor to fit - Nope: {}".format(str(ex)))
 
     log.info("Building nearest neighbors index {}".format(nn_index))
-    nn_index.build_index(six.itervalues(data2descriptor))
+    nn_index.build_index(descr_list)
 
 
 if __name__ == "__main__":

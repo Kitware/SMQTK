@@ -11,9 +11,6 @@
 # elasticsearch==2.4.0
 # elasticsearch_dsl==2.1.0
 
-# # CLI Development ease
-# ipython==5.1.0
-
 # # PostgreSQL
 # psycopg2-binary==2.7.6
 

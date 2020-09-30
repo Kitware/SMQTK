@@ -38,18 +38,18 @@ test:py36:
   image: python:3.6-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
-    - python setup.py test
+    - pytest --cov=smqtk --cov-config=.pytest.coveragerc
 
 test:py37:
   stage: test
   image: python:3.7-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
-    - python setup.py test
+    - pytest --cov=smqtk --cov-config=.pytest.coveragerc
 
 test:py38:
   stage: test
   image: python:3.8-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
-    - python setup.py test
+    - pytest --cov=smqtk --cov-config=.pytest.coveragerc

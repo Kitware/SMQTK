@@ -53,3 +53,10 @@ test:py38:
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - pytest --cov=smqtk --cov-config=.pytest.coveragerc
+
+lint:
+  stage: test
+  image: python:3.8-buster
+  script:
+    - *test_setup  # expand `&test_setup` anchor above into here.
+    - flake8

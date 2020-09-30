@@ -286,7 +286,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
             self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
 
-        if svm_model.l == 0:
+        if svm_model.l == 0:  # noqa: E741
             raise RuntimeError("SVM Model learning failed")
 
         #

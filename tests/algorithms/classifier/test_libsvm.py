@@ -9,11 +9,7 @@ import pytest
 
 from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.libsvm import LibSvmClassifier
-from smqtk.representation import \
-    ClassificationElementFactory, \
-    DescriptorElementFactory
-from smqtk.representation.classification_element.memory import \
-    MemoryClassificationElement
+from smqtk.representation import DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils.configuration import configuration_test_helper
@@ -75,9 +71,6 @@ class TestLibSvmClassifier (unittest.TestCase):
         POS_LABEL = 'positive'
         NEG_LABEL = 'negative'
         d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-        c_factory = ClassificationElementFactory(
-            MemoryClassificationElement, {}
-        )
 
         def make_element(iv):
             i, v = iv
@@ -143,9 +136,9 @@ class TestLibSvmClassifier (unittest.TestCase):
         d_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
 
         def make_element(iv):
-            i, v = iv
-            elem = d_factory.new_descriptor('test', i)
-            elem.set_vector(v)
+            _i, _v = iv
+            elem = d_factory.new_descriptor('test', _i)
+            elem.set_vector(_v)
             return elem
 
         # Constructing artificial descriptors
@@ -208,9 +201,9 @@ class TestLibSvmClassifier (unittest.TestCase):
         di = 0
 
         def make_element(iv):
-            i, v = iv
-            elem = d_factory.new_descriptor('test', i)
-            elem.set_vector(v)
+            _i, _v = iv
+            elem = d_factory.new_descriptor('test', _i)
+            elem.set_vector(_v)
             return elem
 
         # Constructing artificial descriptors
@@ -283,7 +276,7 @@ class TestLibSvmClassifier (unittest.TestCase):
         classifier.svm_model.get_labels.return_value = [1]
 
         g = classifier._classify_arrays(numpy.array([[0], [1], [2]]))
-        preds = list(g)  # Turns out, this is what Nopon say in Xenoblade...
+        _ = list(g)  # cycle through the generator
         m_pmap.assert_not_called()
 
     @mock.patch("smqtk.algorithms.classifier.libsvm.svm.libsvm."
@@ -306,6 +299,6 @@ class TestLibSvmClassifier (unittest.TestCase):
         classifier.svm_model.get_labels.return_value = [1]
 
         g = classifier._classify_arrays(numpy.array([[0], [1], [2]]))
-        preds = list(g)  # Turns out, this is what Nopon say in Xenoblade...
+        _ = list(g)  # cycle through the generator
         m_pmap.assert_called()
         assert m_pmap.call_count == 1

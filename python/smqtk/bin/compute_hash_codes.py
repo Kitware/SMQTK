@@ -137,8 +137,8 @@ def main():
         if uuid_list_filepath:
             log.info("Using UUIDs list file")
             with open(uuid_list_filepath) as f:
-                for l in f:
-                    yield l.strip()
+                for line in f:
+                    yield line.strip()
         else:
             log.info("Using all UUIDs resent in descriptor index")
             for k in descriptor_set.keys():

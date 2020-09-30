@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import random
 import unittest
 
@@ -10,7 +8,7 @@ import six
 from six.moves import range, zip
 
 from smqtk.algorithms import NearestNeighborsIndex
-from smqtk.algorithms.nn_index.faiss import FaissNearestNeighborsIndex, faiss
+from smqtk.algorithms.nn_index.faiss import FaissNearestNeighborsIndex
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation.data_element.memory_element import (
     DataMemoryElement,

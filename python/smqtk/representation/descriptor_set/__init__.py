@@ -198,4 +198,3 @@ class DescriptorSet (SmqtkRepresentation, Pluggable):
     def items(self):
         """ alias for iteritems """
         return self.iteritems()
-

@@ -1126,7 +1126,6 @@ class TestIqrService (unittest.TestCase):
 
     def test_get_random_uids_paged(self):
         """ Test pagination of random UIDs """
-        expected = list(map(chr, range(97, 97+26)))
         self.app.descriptor_set.iterkeys = mock.MagicMock(
             return_value=list(map(chr, range(97, 97+26)))
         )
@@ -1139,7 +1138,7 @@ class TestIqrService (unittest.TestCase):
             r = tc.get('/random_uids?i=3')
             self.assertStatusCode(r, 200)
             assert r.json['results'] == result_all[3:]
-            
+
             r = tc.get('/random_uids?j=-4')
             self.assertStatusCode(r, 200)
             assert r.json['results'] == result_all[:-4]

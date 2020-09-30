@@ -403,7 +403,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             for v in descriptor_list:
                 if v.ndim > 1:
                     # In case caffe generates multidimensional array
-                    # (rows, 1, 1)
+                    # like (rows, 1, 1)
                     log_debug("- Raveling output array of shape {}"
                               .format(v.shape))
                     yield numpy.ravel(v)

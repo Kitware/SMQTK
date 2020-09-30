@@ -1,8 +1,4 @@
-import itertools
 import threading
-from typing import Iterable, Sequence
-
-import numpy as np
 
 from smqtk.exceptions import MissingLabelError
 from smqtk.utils import SmqtkObject
@@ -217,7 +213,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         this class's control. However, the classifier instances are still
         shared.
 
-        :param None | Iterable[str] labels:
+        :param None | typing.Iterable[str] labels:
             One or more labels of stored classifiers to retrieve.
             If None, we will consider all stored classifiers.
 
@@ -255,7 +251,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         :param labels: One or more labels of stored classifiers to use for
             classifying the given descriptor.  If None, use all stored
             classifiers.
-        :type labels: Iterable[str]
+        :type labels: typing.Iterable[str]
 
         :param factory: Classification element factory.
         :type factory: ClassificationElementFactory
@@ -289,7 +285,7 @@ class ClassifierCollection (SmqtkObject, Configurable):
         class-confidence map result produced by that classifier's
         `classify_arrays` method.
 
-        :param Sequence[np.ndarray] array_seq:
+        :param Sequence[numpy.ndarray] array_seq:
             Sequence of descriptor vectors, as numpy arrays, to be classified.
         :param Sequence[str] labels:
             One or more labels of stored classifiers to use for classifying the

@@ -174,11 +174,11 @@ class IqrService (SmqtkWebApp):
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(
-                        DescriptorGenerator.get_impls()
-                    ),
+                            DescriptorGenerator.get_impls()
+                        ),
                     "descriptor_set": make_default_config(
-                        DescriptorSet.get_impls()
-                    ),
+                            DescriptorSet.get_impls()
+                        ),
                     "neighbor_index":
                         make_default_config(NearestNeighborsIndex.get_impls()),
                     "classifier_config":
@@ -1658,7 +1658,7 @@ class IqrService (SmqtkWebApp):
             "success", total=total, results=results
         ), 200
 
-    def _ensure_session_classifier(self, iqrs)  :
+    def _ensure_session_classifier(self, iqrs):
         """
         Return the binary pos/neg classifier for this session.
 

@@ -72,7 +72,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     """
     log = logging.getLogger(__name__)
 
-    file_paths = [l.strip() for l in open(filelist_filepath)]
+    file_paths = [line.strip() for line in open(filelist_filepath)]
 
     log.info("Making descriptor factory")
     factory = DescriptorElementFactory.from_config(c['descriptor_factory'])

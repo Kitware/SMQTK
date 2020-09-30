@@ -801,4 +801,3 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
 
 
 SMQTK_PLUGIN_CLASS = FaissNearestNeighborsIndex
-

@@ -5,7 +5,6 @@ import logging
 import os
 import pickle
 import tempfile
-import threading
 
 import numpy
 import numpy.linalg
@@ -413,7 +412,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 svm.libsvm.svm_predict_probability(self.svm_model, v,
                                                    prob_estimates)
                 c = dict(c_base)  # Shallow copy
-                c.update({svm_label_map[l]: p for l, p
+                c.update({svm_label_map[label]: prob for label, prob
                           in zip(svm_model_labels, prob_estimates[:nr_class])})
                 return c
             # If n_jobs == 1, just be serial

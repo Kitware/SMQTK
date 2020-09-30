@@ -3,7 +3,6 @@ import csv
 import errno
 import os
 import numpy
-from pathlib import Path
 import re
 import sys
 import tempfile
@@ -52,9 +51,9 @@ def safe_file_context(path, dir=None, **tempfile_kwargs):
     `dir` and `delete` kwargs of `NamedTemporaryFile`. Other kwargs are left
     as input here for custom user specification.
 
-    :param str|Path path: Path to the file to write to.
-    :param str|Path dir: Optional custom directory to write the intermediate
-        temporary file to. This directory must already exist.
+    :param str|pathlib.Path path: Path to the file to write to.
+    :param str|pathlib.Path dir: Optional custom directory to write the
+        intermediate temporary file to. This directory must already exist.
     :param tempfile_kwargs: Additional keyword arguments to pass to the
         underlying invocation to `tempfile.NamedTemporaryFile`. Note that
 
@@ -253,9 +252,9 @@ def iter_csv_file(filepath):
 
     """
     with open(filepath) as f:
-        r = csv.reader(f)
-        for l in r:
-            yield numpy.array(l, dtype=float)
+        reader = csv.reader(f)
+        for line in reader:
+            yield numpy.array(line, dtype=float)
 
 
 def file_mimetype_filemagic(filepath):

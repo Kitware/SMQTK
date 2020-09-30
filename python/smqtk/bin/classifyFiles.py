@@ -114,8 +114,8 @@ def classify_files(config, label, file_globs):
 
     def log_avaialable_labels():
         log.info("Available classifier labels:")
-        for l in classifier.get_labels():
-            log.info("- %s", l)
+        for _l in classifier.get_labels():
+            log.info("- %s", _l)
 
     if label is None:
         log_avaialable_labels()

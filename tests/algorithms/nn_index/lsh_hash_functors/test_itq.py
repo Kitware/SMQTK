@@ -1,7 +1,5 @@
-from __future__ import division, print_function
 from math import sqrt
 import unittest
-import pytest
 
 import numpy
 import six

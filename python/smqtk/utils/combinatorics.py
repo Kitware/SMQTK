@@ -30,5 +30,3 @@ def ncr(n, r):
     # denom = functools.reduce(op.mul, range(1, r+1), 1)
     denom = math.factorial(r)
     return numer // denom
-
-

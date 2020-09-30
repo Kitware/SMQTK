@@ -35,15 +35,15 @@ def next_perm(v):
     return w
 
 
-def iter_perms(l, n):
+def iter_perms(length, n):
     """
     Return an iterator over bit combinations of length ``l`` with ``n`` set
     bits.
 
     :raises StopIteration: If ``n`` <= 0 or normal completion.
 
-    :param l: Total bit length to work with. The ``n`` in nCr problem.
-    :type l: int
+    :param length: Total bit length to work with. The ``n`` in nCr problem.
+    :type length: int
 
     :param n: Number of bits to be set in permutations. The ``r`` in nCr
         problem.
@@ -56,10 +56,10 @@ def iter_perms(l, n):
     """
     if n <= 0:
         raise StopIteration()
-    n = min(l, n)
+    n = min(length, n)
     s = (1 << n) - 1
     yield s
-    for _ in range(ncr(l, n) - 1):
+    for _ in range(ncr(length, n) - 1):
         s = next_perm(s)
         yield s
 

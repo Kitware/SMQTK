@@ -6,7 +6,7 @@ import setuptools
 
 
 PYTHON_SRC = 'python'
-PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
+PYTHON_FILE_RE = re.compile(r'.*\.(?:py[co]?)$')
 
 
 # TODO: Auto-append dev version based on how forward from latest release

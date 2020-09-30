@@ -23,7 +23,7 @@ except ImportError:
 try:
     import kwcnn
     from .autoencoder_model_def import AutoEncoderModel
-except ImportError as ex:
+except ImportError:
     kwcnn = None
     AutoEncoderModel = None
 
@@ -357,7 +357,6 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             batch_img_arrays = \
                 list(itertools.islice(img_array_iter, self.batch_size))
             batch_i += 1
-
 
     def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
         """

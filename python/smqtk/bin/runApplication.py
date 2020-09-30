@@ -116,10 +116,10 @@ def main():
         log.info("")
         log.info("Available applications:")
         log.info("")
-        for l, cls in six.iteritems(web_applications):
-            log.info("\t" + l)
+        for label, cls in six.iteritems(web_applications):
+            log.info("\t" + label)
             if debug_smqtk:
-                log.info('\t' + ('^'*len(l)) + '\n' +
+                log.info('\t' + ('^'*len(label)) + '\n' +
 
                          cls.__doc__ + '\n' +
                          ('*' * 80) + '\n')

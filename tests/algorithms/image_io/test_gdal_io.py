@@ -17,7 +17,7 @@ from smqtk.algorithms.image_io.gdal_io import (
     GdalImageReader,
 )
 from smqtk.algorithms.image_io import gdal_io
-from smqtk.representation import AxisAlignedBoundingBox, DataElement
+from smqtk.representation import AxisAlignedBoundingBox
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils.configuration import configuration_test_helper

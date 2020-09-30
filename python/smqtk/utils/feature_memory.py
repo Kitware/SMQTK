@@ -271,9 +271,9 @@ class FeatureMemory (object):
             with SimpleTimer("Allocating return matrix", self._log.debug):
                 # noinspection PyUnresolvedReferences
                 # -> matrix class DOES have ``dtype`` property...
-                ret_mat = matrix(ndarray((len(clip_id_or_ids),
-                                          self._feature_mat.shape[1]),
-                                         self._feature_mat.dtype))
+                ret_mat = np.ndarray((len(clip_id_or_ids),
+                                      self._feature_mat.shape[1]),
+                                     self._feature_mat.dtype)
             for i, cid in enumerate(clip_id_or_ids):
                 feature_idx = self._cid2idx_map[cid]
                 ret_mat[i, :] = self._feature_mat[feature_idx, :]

@@ -9,8 +9,6 @@ import pytest
 
 from smqtk.algorithms.classifier import Classifier
 from smqtk.algorithms.classifier.index_label import IndexLabelClassifier
-from smqtk.representation.descriptor_element.local_elements import \
-    DescriptorMemoryElement
 from smqtk.utils.configuration import configuration_test_helper
 
 from tests import TEST_DATA_DIR
@@ -75,7 +73,6 @@ class TestIndexLabelClassifier (unittest.TestCase):
 
     def test_classify_arrays_invalid_descriptor_dimensions(self):
         c = IndexLabelClassifier(self.FILEPATH_TEST_LABELS)
-        d = DescriptorMemoryElement('test', 0)
 
         # One less
         a = numpy.array([1, 2, 3, 4, 5])

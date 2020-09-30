@@ -131,8 +131,8 @@ def main():
     #
     def iter_uuids():
         with open(uuids_list_filepath) as f:
-            for l in f:
-                yield l.strip()
+            for line in f:
+                yield line.strip()
 
     def descr_for_uuid(uuid):
         """
@@ -178,7 +178,7 @@ def main():
         :type e: smqtk.representation.ClassificationElement
         """
         c_m = e.get_classification()
-        return [e.uuid] + [c_m[l] for l in c_labels]
+        return [e.uuid] + [c_m[label] for label in c_labels]
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)

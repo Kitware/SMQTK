@@ -196,8 +196,8 @@ def main():
             set(classifier.classify_elements(descriptors,
                                              classification_factory))
     log.info("Truth label counts:")
-    for l in sorted(tlabel2classifications):
-        log.info("  %s :: %d", l, len(tlabel2classifications[l]))
+    for tlabel in sorted(tlabel2classifications):
+        log.info("  %s :: %d", tlabel, len(tlabel2classifications[tlabel]))
 
     #
     # Confusion Matrix

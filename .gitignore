@@ -41,6 +41,9 @@ __pycache__
 # Tox cache directory
 /.tox
 
+# MyPy cache director
+/.mypy_cache
+
 #
 # TPL
 #

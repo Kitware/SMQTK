@@ -56,7 +56,14 @@ test:py38:
 
 lint:
   stage: test
-  image: python:3.8-buster
+  image: python:3.6-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - flake8
+
+typecheck:
+  stage: test
+  image: python:3.6-buster
+  script:
+    - *test_setup
+    - mypy

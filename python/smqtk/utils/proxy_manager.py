@@ -81,8 +81,7 @@ class BaseProxy2 (BaseProxy):
 
     def __init__(self, token, serializer, manager=None, authkey=None,
                  exposed=None, incref=True):
-        super(BaseProxy2, self).__init__(token, serializer, manager, authkey,
-                                         exposed, incref)
+        super().__init__(token, serializer, manager, authkey, exposed, incref)
         # Keep a second manager reference around to survive the base class's
         # after-fork nuke of the _manager attribute.
         self._manager_copy = manager
@@ -94,7 +93,9 @@ class BaseProxy2 (BaseProxy):
 
     def __reduce__(self):
         ret = super(BaseProxy2, self).__reduce__()
-        ret[1][-1]['authkey'] = str(self._authkey)
+        # Not sure why type checking is missing the _authkey property...
+        # noinspection PyUnresolvedReferences
+        ret[1][-1]['authkey'] = str(self._authkey)  # type: ignore
         return ret
 
 

@@ -130,9 +130,9 @@ class TestDataFileSet (unittest.TestCase):
         list(dfs)
         self.assertEqual(m_open.call_count, 3)
         self.assertEqual(m_pickle.load.call_count, 3)
-        m_open.assert_any_call('/a')
-        m_open.assert_any_call('/b')
-        m_open.assert_any_call('/d')
+        m_open.assert_any_call('/a', 'rb')
+        m_open.assert_any_call('/b', 'rb')
+        m_open.assert_any_call('/d', 'rb')
 
     def test_count(self):
         expected_file_tree_iter = ['/a', '/b', '/d']

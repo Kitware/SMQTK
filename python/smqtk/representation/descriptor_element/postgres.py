@@ -435,7 +435,7 @@ class PostgresDescriptorElement (DescriptorElement):
         """
         batch_dictionary = defaultdict(list)
         # For each given descriptor...
-        for descriptor_ in descriptors:
+        for descriptor_ in descriptors:  # type: PostgresDescriptorElement
             # Extract options for constructing SQL query used to
             # retrieve descriptor vectors
             batch_dictionary[
@@ -444,8 +444,13 @@ class PostgresDescriptorElement (DescriptorElement):
 
         # For each unique set of SQL query options...
         for query_options, uuids in batch_dictionary.items():
-            psql_helper = cls._create_psql_helper(
-                *query_options[:-1], create_table=False)
+            helper_kwargs = dict(zip(
+                ['db_name', 'db_host', 'db_port', 'db_user', 'db_pass',
+                 'table_name', 'uuid_col', 'type_col', 'binary_col'],
+                query_options[:-1]
+            ))
+            helper_kwargs['create_table'] = False
+            psql_helper = cls._create_psql_helper(**helper_kwargs)
 
             sql_query = cls.SELECT_MANY_TMPL.format(
                 table_name=query_options[5],

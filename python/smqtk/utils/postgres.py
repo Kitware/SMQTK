@@ -8,11 +8,13 @@ from smqtk.utils import SmqtkObject
 try:
     import psycopg2  # type: ignore
     from psycopg2.pool import ThreadedConnectionPool  # type: ignore
+    from psycopg2.extensions import connection  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
     ThreadedConnectionPool = None
+    connection = None
 
 
 GLOBAL_PSQL_TABLE_CREATE_RLOCK = RLock()
@@ -159,10 +161,9 @@ class PsqlConnectionHelper (SmqtkObject):
         self.connection_pool = get_connection_pool(db_name, db_host, db_port,
                                                    db_user, db_pass)
 
-    def get_psql_connection(self):
+    def get_psql_connection(self) -> connection:
         """
         :return: A new connection to the configured database
-        :rtype: psycopg2._psycopg.connection
         """
         return self.connection_pool.getconn()
 
@@ -366,8 +367,7 @@ class PsqlConnectionHelper (SmqtkObject):
         self._log.debug("starting multi operation (batch_size: %s)", batch_size)
 
         # Lazy initialize -- only if there are elements to iterate over
-        #: :type: None | psycopg2._psycopg.connection
-        conn = None
+        conn: connection = None
 
         # Create a named cursor to allow server-side iteration. This is
         # required in order to not pull the whole table into memory.

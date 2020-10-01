@@ -3,12 +3,14 @@ import logging
 import multiprocessing
 import os
 import tempfile
+from typing import List
 
 from six.moves import cPickle
 
 import numpy
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
+from smqtk.representation import DescriptorElement
 from smqtk.representation.data_element import from_uri
 from smqtk.representation.descriptor_element import elements_to_matrix
 
@@ -138,8 +140,7 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
 
         # In-order cache of descriptors we're indexing over.
         # - flann.nn_index will spit out indices to list
-        #: :type: list[smqtk.representation.DescriptorElement] | None
-        self._descr_cache = None
+        self._descr_cache: List[DescriptorElement] = []
 
         # The flann instance with a built index. None before index load/build.
         #: :type: pyflann.index.FLANN or None
@@ -187,12 +188,17 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
                 not self._descr_cache_elem.is_empty())
 
     def _load_flann_model(self):
-        if not self._descr_cache and not self._descr_cache_elem.is_empty():
+        can_load_descr_cache = (
+            bool(self._descr_cache)
+            and not self._descr_cache_elem.is_empty()
+        )
+        if can_load_descr_cache:
             # Load descriptor cache
             # - is copied on fork, so only need to load here.
             self._log.debug("Loading cached descriptors")
-            self._descr_cache = \
-                cPickle.loads(self._descr_cache_elem.get_bytes())
+            self._descr_cache = cPickle.loads(
+                self._descr_cache_elem.get_bytes()
+            )
 
         # Params pickle include the build params + our local state params
         if self._index_param_elem and not self._index_param_elem.is_empty():
@@ -204,7 +210,11 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
             self._flann_build_params = state['flann_build_params']
 
         # Load the binary index
-        if self._index_elem and not self._index_elem.is_empty():
+        can_restore_index = (
+            self._index_elem
+            and not self._index_elem.is_empty()
+        )
+        if can_restore_index:
             # make numpy matrix of descriptor vectors for FLANN
             pts_array = [d.vector() for d in self._descr_cache]
             pts_array = numpy.array(pts_array, dtype=pts_array[0].dtype)
@@ -411,6 +421,10 @@ class FlannNearestNeighborsIndex (NearestNeighborsIndex):
         """
         with self._model_lock:
             self._restore_index()
+            assert self._flann is not None, (
+                "We should have an index after restoration."
+            )
+
             vec = d.vector()
 
             # If the distance method is HIK, we need to treat it special since

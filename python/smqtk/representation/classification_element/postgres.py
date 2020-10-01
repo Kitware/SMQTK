@@ -283,7 +283,7 @@ class PostgresClassificationElement (ClassificationElement):
                                             % (self.type_name, str(self.uuid)))
             else:
                 b = r[0]
-                c = cPickle.loads(str(b))
+                c = cPickle.loads(b)
                 return c
         except Exception:
             conn.rollback()

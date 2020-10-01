@@ -8,6 +8,7 @@ import os
 import os.path as osp
 import random
 import shutil
+from typing import Any, Dict, Hashable
 import zipfile
 
 import six
@@ -16,7 +17,7 @@ import flask
 import PIL.Image
 
 from smqtk.iqr import IqrSession
-from smqtk.representation import DataSet
+from smqtk.representation import DataSet, DataElement
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.utils import SmqtkObject
 from smqtk.utils.configuration import (
@@ -163,19 +164,21 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
 
         # Mapping of session IDs to their work directory
         #: :type: dict[str, str]
-        self._iqr_work_dirs = {}
+        self._iqr_work_dirs: Dict[str, str] = {}
         # Mapping of session ID to a dictionary of the custom example data for
         # a session (uuid -> DataElement)
-        #: :type: dict[str, dict[collections.abc.Hashable, smqtk.representation.DataElement]]
-        self._iqr_example_data = {}
+        self._iqr_example_data: Dict[
+            str,
+            Dict[Hashable, DataElement]
+        ] = {}
 
         # Preview Image Caching
         self._preview_cache = PreviewCache(osp.join(self._static_data_dir,
                                                     "previews"))
 
         # Cache mapping of written static files for data elements
-        self._static_cache = {}
-        self._static_cache_element = {}
+        self._static_cache: Dict[Hashable, str] = {}
+        self._static_cache_element: Dict[Hashable, DataElement] = {}
 
         #
         # Routing
@@ -186,6 +189,10 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
         def index():
             # Stripping left '/' from blueprint modules in order to make sure
             # the paths are relative to our base.
+            assert self.mod_upload.url_prefix is not None, (
+                "Currently assuming the upload module has a non-None URL "
+                "prefix."
+            )
             r = {
                 "module_name": self.name,
                 "uploader_url": self.mod_upload.url_prefix.lstrip('/'),
@@ -285,7 +292,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             sid = self.get_current_iqr_session()
             fid = flask.request.form.get('fid', None)
 
-            return_obj = {
+            return_obj: Dict[str, Any] = {
                 'success': False,
             }
 
@@ -387,7 +394,7 @@ class IqrSearch (SmqtkObject, flask.Flask, Configurable):
             """
             uid = flask.request.args['uid']
 
-            info = {
+            info: Dict[str, Any] = {
                 "success": True,
                 "message": None,
                 "shape": None,  # (width, height)

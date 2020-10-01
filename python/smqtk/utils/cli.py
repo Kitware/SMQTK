@@ -46,9 +46,9 @@ def initialize_logging(logger, stream_level=logging.WARNING,
 
     if output_filepath:
         # TODO: Setup rotating part of the handler?
-        file_handler = logging.handlers.RotatingFileHandler(output_filepath,
-                                                            mode='w',
-                                                            delay=1)
+        file_handler = logging.handlers.RotatingFileHandler(
+            output_filepath, mode='w', delay=True
+        )
         file_handler.setFormatter(log_formatter)
         file_handler.setLevel(file_level or stream_level)
         logger.addHandler(file_handler)

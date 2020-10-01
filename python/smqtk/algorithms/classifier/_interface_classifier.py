@@ -1,11 +1,12 @@
 import abc
 from collections import deque
 import itertools
+from typing import Deque, List, Optional, Tuple
 
 import numpy as np
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.representation import DescriptorElement
+from smqtk.representation import ClassificationElement, DescriptorElement
 
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 
@@ -215,15 +216,13 @@ class Classifier (SmqtkAlgorithm):
         #   for-loop. This way we do not retain elements and booleans for
         #   things we have yielded that would otherwise build up if this method
         #   iterated for a long time.
-        #: :type: deque[(smqtk.representation.ClassificationElement, bool)]
-        elem_and_status_q = deque()
+        elem_and_status_q: Deque[Tuple[ClassificationElement, bool]] = deque()
 
         # Flag for end of data iteration. When not None will be the index of
         # the last descriptor/classification element to be yielded. This will
         # NOT be the number of elements to be yielded, that would be
         # ``end_of_iter[0]+1``.
-        #: :type: list[int|None]
-        end_of_iter = [None]
+        end_of_iter: List[Optional[int]] = [None]
 
         # TODO: Make generator threadsafe?
         # See: https://anandology.com/blog/using-iterators-and-generators/

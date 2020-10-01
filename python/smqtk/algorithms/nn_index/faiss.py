@@ -5,6 +5,7 @@ import numpy as np
 import os
 import six
 import tempfile
+from typing import Dict
 import warnings
 
 from smqtk.algorithms.nn_index import NearestNeighborsIndex
@@ -46,14 +47,15 @@ def metric_label_to_const():
     :rtype: dict[str, int]
     """
     try:
-        m = metric_label_to_const.cache
+        m: Dict[str, int] = metric_label_to_const.cache  # type: ignore
     except AttributeError:
-        m = metric_label_to_const.cache = {
+        m = {
             # Key starting after "METRIC_"
             k[7:].lower(): getattr(faiss, k)
             for k in faiss.__dict__
             if k.startswith("METRIC_")
         }
+        metric_label_to_const.cache = m  # type: ignore
     return m
 
 
@@ -636,6 +638,11 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
             raise ReadOnlyError("Cannot modify read-only index.")
 
         with self._model_lock:
+            if self._faiss_index is None:
+                # No index built, so anything is a key error.
+                # We can also only be here if hashes was non-zero in size.
+                raise KeyError(next(iter(uids)))
+
             # Check that provided IDs are present in uid2idx mapping.
             uids_d = []
             for uid in uids:
@@ -755,6 +762,10 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         log.debug("Received query for %d nearest neighbors", n)
 
         with self._model_lock:
+            if self._faiss_index is None:
+                raise RuntimeError("No index currently available to remove "
+                                   "from.")
+
             # Attempt to set n-probe of an IVF index
             self._set_index_nprobe()
 

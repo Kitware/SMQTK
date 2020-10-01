@@ -6,6 +6,7 @@ import multiprocessing.synchronize
 import sys
 import threading
 import traceback
+from typing import Type, Optional, Union
 
 from six.moves import queue, range, zip, zip_longest
 from six.moves.collections_abc import Iterator
@@ -166,7 +167,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
     """
     # kwargs
-    cores = kwargs.get('cores', None)
+    cores: Optional[int] = kwargs.get('cores', None)
     ordered = kwargs.get('ordered', True)
     buffer_factor = kwargs.get('buffer_factor', 2.0)
     use_multiprocessing = kwargs.get('use_multiprocessing', False)
@@ -191,6 +192,8 @@ def parallel_map(work_func, *sequences, **kwargs):
         log.debug("Only using %d cores", cores)
 
     # Choose parallel types
+    queue_t: Union[Type[multiprocessing.Queue], Type[queue.Queue]]
+    worker_t: Type[_Worker]
     if use_multiprocessing:
         queue_t = multiprocessing.Queue
         worker_t = _WorkerProcess
@@ -198,8 +201,10 @@ def parallel_map(work_func, *sequences, **kwargs):
         queue_t = queue.Queue
         worker_t = _WorkerThread
 
-    queue_work = queue_t(int(cores * buffer_factor))
-    queue_results = queue_t(int(cores * buffer_factor))
+    # Type ignoring these calls due to a mypy issue where it's deducing the
+    # type to `<nothing>` for some reason.
+    queue_work = queue_t(maxsize=int(cores * buffer_factor))  # type: ignore
+    queue_results = queue_t(maxsize=int(cores * buffer_factor))  # type: ignore
 
     log.log(1, "Constructing worker processes")
     workers = [worker_t(name, i, work_func, queue_work, queue_results,
@@ -426,15 +431,16 @@ class ParallelResultsIterator (SmqtkObject, Iterator):
             # multiprocessing.Queue.qsize doesn't work on OSX
             # - Try to get something from each queue, expecting an empty
             #   exception.
+            # - multiprocessing shares the same exception as the queue module.
             try:
                 self.work_queue.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("In queue not empty")
             try:
                 self.results_queue.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("Out queue not empty")
@@ -483,7 +489,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self._stop_event.set()
 
     def stopped(self):
-        return self._stop_event.isSet()
+        return self._stop_event.is_set()
 
     def run(self):
         self._log.log(1, "Starting")
@@ -492,7 +498,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
             _zip = zip_longest
             _zip_kwds = {'fillvalue': self.fill_value}
         else:
-            _zip = zip
+            # Ignoring that the callable here doesn't *exactly* match
+            # zip_longest based on stubs: They match in the way that we use it
+            # here.
+            _zip = zip  # type: ignore
             _zip_kwds = {}
 
         try:

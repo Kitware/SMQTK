@@ -8,11 +8,11 @@ for these functions instead of scripts in ``<source>/bin/scripts``.
 import collections
 import logging
 import itertools
+from typing import Deque, Hashable, List, Set
 
 import numpy
-import six
-from six.moves import zip
 
+from smqtk.representation import DataElement
 from smqtk.utils import (
     cli,
     bits,
@@ -79,12 +79,11 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
     log = logging.getLogger(__name__)
 
     # Capture of generated elements in order of generation
-    #: :type: deque[smqtk.representation.DataElement]
-    de_deque = collections.deque()
+    de_deque: Deque[DataElement] = collections.deque()
 
     # Counts for logging
     total = [0]
-    unique = set()
+    unique: Set[Hashable] = set()
 
     def iter_capture_elements():
         for d in data_elements:
@@ -197,7 +196,7 @@ def compute_transformed_descriptors(data_elements, descr_generator,
         (smqtk.representation.DataElement,
          collections.abc.Iterable[smqtk.representation.DescriptorElement])]
     """
-    transformed_counts = []
+    transformed_counts: List[int] = []
 
     def transformed_elements():
         for elem in data_elements:
@@ -266,7 +265,7 @@ def compute_hash_codes(uuids, descr_set, functor, report_interval=1.0,
         log.debug("Not logging progress")
     else:
         log.debug("Logging progress at %f second intervals", report_interval)
-        log_func = log.debug
+        log_func = log.debug  # type: ignore
 
     log.debug("Starting computation")
     reporter = cli.ProgressReporter(log_func, report_interval)
@@ -310,11 +309,11 @@ def mb_kmeans_build_apply(descr_set, mbkm, initial_fit_size):
     log = logging.getLogger(__name__)
 
     ifit_completed = False
-    k_deque = collections.deque()
+    k_deque: Deque[Hashable] = collections.deque()
     d_fitted = 0
 
     log.info("Getting set keys (shuffled)")
-    set_keys = sorted(six.iterkeys(descr_set))
+    set_keys = sorted(descr_set.keys())
     numpy.random.seed(mbkm.random_state)
     numpy.random.shuffle(set_keys)
 

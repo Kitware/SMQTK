@@ -742,6 +742,7 @@ Form Args:
 Possible error code returns:
     400
         - No session ID provided.
+        - No UIDs provided.
         - Failed to decode descriptor UUIDs list json provided.
         - No positive or negative adjudications for the given session (cannot
           build supervised classifier.

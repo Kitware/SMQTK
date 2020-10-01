@@ -1,6 +1,7 @@
 import collections
 import pickle
 import time
+from typing import Deque, Hashable
 
 from smqtk.representation.descriptor_set import DescriptorSet
 
@@ -321,7 +322,7 @@ class SolrDescriptorSet (DescriptorSet):
                              % (self.set_uuid_field, self.set_uuid,
                                 uuid_query))
 
-        batch = collections.deque()
+        batch: Deque[Hashable] = collections.deque()
         for uid in uuids:
             batch.append(uid)
 

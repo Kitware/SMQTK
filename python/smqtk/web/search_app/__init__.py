@@ -7,6 +7,7 @@ import json
 import os
 import os.path
 import threading
+from typing import Dict
 
 import flask
 from flask_cors import cross_origin  # type: ignore
@@ -108,8 +109,7 @@ class IqrSearchDispatcher (SmqtkWebApp):
         #
 
         # Mapping of IqrSearch application instances from their ID string
-        #: :type: dict[str, IqrSearch]
-        self.instances = {}
+        self.instances = {}  # type: Dict[str, IqrSearch]
         self.instances_lock = threading.Lock()
 
         # Login module

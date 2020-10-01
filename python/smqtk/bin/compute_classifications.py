@@ -183,7 +183,7 @@ def main():
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)
     safe_create_dir(os.path.dirname(output_csv_header_filepath))
-    with open(output_csv_header_filepath, 'wb') as f_csv:
+    with open(output_csv_header_filepath, 'w') as f_csv:
         w = csv.writer(f_csv)
         w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
@@ -192,7 +192,7 @@ def main():
     safe_create_dir(os.path.dirname(output_csv_filepath))
     pr = cli.ProgressReporter(log.info, 1.0)
     pr.start()
-    with open(output_csv_filepath, 'wb') as f_csv:
+    with open(output_csv_filepath, 'w') as f_csv:
         w = csv.writer(f_csv)
         for c in classification_iter:
             w.writerow(make_row(c))

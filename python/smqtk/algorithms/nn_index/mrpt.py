@@ -410,7 +410,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
                 "depth": self._depth,
             }
             # noinspection PyTypeChecker
-            with open(self._index_param_filepath, "w") as f:
+            with open(self._index_param_filepath, "wb") as f:
                 pickle.dump(params, f, self._pickle_protocol)
 
     def _load_mrpt_model(self):
@@ -419,7 +419,7 @@ class MRPTNearestNeighborsIndex (NearestNeighborsIndex):
         if self._index_param_filepath:
             self._log.debug("Loading index params: %s",
                             self._index_param_filepath)
-            with open(self._index_param_filepath) as f:
+            with open(self._index_param_filepath, 'rb') as f:
                 params = pickle.load(f)
             self._read_only = params['read_only']
             self._num_trees = params['num_trees']

@@ -89,7 +89,7 @@ class FeatureMemory (object):
         :type id_vector: ndarray of int
         :param bg_clip_ids: Set of clip IDs that are to be treated as background
             clip IDs.
-        :type bg_clip_ids: set of int
+        :type bg_clip_ids: set[int]
         :param feature_mat: (numpy) Matrix of features for clip IDs. Features
             should be stored vertically, i.e. Each row is a feature for a
             particular clip ID (id_vector being the index-to-clipID map).
@@ -144,7 +144,7 @@ class FeatureMemory (object):
             self._rw_lock = ReadWriteLock()
 
         self._id_vector = id_vector
-        self._bg_clip_ids = bg_clip_ids
+        self._bg_clip_ids = set(bg_clip_ids)
         self._feature_mat = feature_mat
         self._kernel_mat = kernel_mat
 

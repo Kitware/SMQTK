@@ -6,7 +6,7 @@ import flask
 import requests
 
 from smqtk.algorithms import DescriptorGenerator
-from smqtk.representation import DescriptorElementFactory
+from smqtk.representation import DataElement, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
@@ -298,6 +298,7 @@ class DescriptorServiceServer (SmqtkWebApp):
 
         """
         # Resolve URI into appropriate DataElement instance
+        de: DataElement
         if uri[:7] == "file://":
             self._log.debug("Given local disk filepath")
             filepath = uri[7:]

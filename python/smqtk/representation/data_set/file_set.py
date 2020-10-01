@@ -145,7 +145,7 @@ class DataFileSet (DataSet):
         """
         for fp in self._iter_file_tree():
             # deserialize and yield
-            with open(fp) as f:
+            with open(fp, 'rb') as f:
                 yield pickle.load(f)
 
     def get_config(self):

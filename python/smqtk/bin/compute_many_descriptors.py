@@ -8,6 +8,7 @@ import collections
 import csv
 import logging
 import os
+from typing import cast, Deque, Optional
 
 from smqtk.algorithms import DescriptorGenerator
 from smqtk.compute_functions import compute_many_descriptors
@@ -78,24 +79,30 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
     factory = DescriptorElementFactory.from_config(c['descriptor_factory'])
 
     log.info("Making descriptor index")
-    #: :type: smqtk.representation.DescriptorSet
-    descriptor_set = from_config_dict(c['descriptor_set'],
-                                      DescriptorSet.get_impls())
+    descriptor_set = cast(
+        DescriptorSet,
+        from_config_dict(c['descriptor_set'],
+                         DescriptorSet.get_impls())
+    )
 
     # ``data_set`` added to within the ``iter_valid_elements`` function.
-    data_set = None
+    data_set: Optional[DataSet] = None
     if c['optional_data_set']['type'] is None:
         log.info("Not saving loaded data elements to data set")
     else:
         log.info("Initializing data set to append to")
-        #: :type: smqtk.representation.DataSet
-        data_set = from_config_dict(c['optional_data_set'], DataSet.get_impls())
+        data_set = cast(
+            DataSet,
+            from_config_dict(c['optional_data_set'], DataSet.get_impls())
+        )
 
     log.info("Making descriptor generator '%s'",
              c['descriptor_generator']['type'])
-    #: :type: smqtk.algorithms.DescriptorGenerator
-    generator = from_config_dict(c['descriptor_generator'],
-                                 DescriptorGenerator.get_impls())
+    generator = cast(
+        DescriptorGenerator,
+        from_config_dict(c['descriptor_generator'],
+                         DescriptorGenerator.get_impls())
+    )
 
     def iter_valid_elements():
         def is_valid(file_path):
@@ -108,7 +115,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
             else:
                 return False
 
-        data_elements = collections.deque()
+        data_elements: Deque[DataFileElement] = collections.deque()
         valid_files_filter = parallel.parallel_map(is_valid,
                                                    file_paths,
                                                    name="check-file-type",
@@ -125,7 +132,7 @@ def run_file_list(c, filelist_filepath, checkpoint_filepath, batch_size=None,
                         data_elements.clear()
         # elements only collected if we have a data-set configured, so add any
         # still in the deque to the set
-        if data_elements:
+        if data_set is not None and data_elements:
             log.debug("Adding data elements to set (size: %d",
                       len(data_elements))
             data_set.add_data(*data_elements)

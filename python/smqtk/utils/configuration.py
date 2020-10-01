@@ -185,8 +185,12 @@ class Configurable (object):
         if merge_default:
             config_dict = merge_dict(cls.get_default_config(), config_dict)
 
+        # Warnings about this applying to the *current* class, Configurable, of
+        # course are valid, but this is intended to apply dynamically to a
+        # subclass invoking this method: one which *does* implement a
+        # constructor.
         # noinspection PyArgumentList
-        return cls(**config_dict)
+        return cls(**config_dict)  # type: ignore
 
     @abc.abstractmethod
     def get_config(self):

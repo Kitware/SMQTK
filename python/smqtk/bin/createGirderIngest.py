@@ -30,6 +30,7 @@ TODO: Add support for searching collections
 
 import collections
 import logging
+from typing import Deque
 
 import requests
 
@@ -221,9 +222,11 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
 
     """
     log = logging.getLogger(__name__)
+    # TODO: If we're ever here agian, probably shift to using girder_client
+    #       for this kinda thing.
     tm = GirderTokenManager(api_root, api_key)
     # Get the token once before parallel requests
-    tm.get_token()
+    tm_token = tm.get_token()
 
     if query_batch is None:
         query_batch = 0
@@ -235,8 +238,7 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
     while file_fifo:  # Just file IDs
         file_id = file_fifo.popleft()
         log.debug('-f %s', file_id)
-        e = GirderDataElement(file_id, api_root, api_key)
-        e.token_manager = tm  # because we already made one
+        e = GirderDataElement(file_id, api_root, api_key, token=tm_token)
         yield e
 
     log.info("Collecting files from items")
@@ -246,9 +248,8 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
         log.debug('-i %s', item_id)
         for file_id, ct in get_item_files(api_root, item_id, tm, query_batch):
             log.debug('   -f %s', file_id)
-            e = GirderDataElement(file_id, api_root, api_key)
+            e = GirderDataElement(file_id, api_root, api_key, token=tm_token)
             e._content_type = ct
-            e.token_manager = tm
             yield e
 
     # Collect items from folders, then files from items.
@@ -267,9 +268,9 @@ def find_girder_files(api_root, folder_ids, item_ids, file_ids,
             for file_id, ct in get_item_files(api_root, item_id, tm,
                                               query_batch):
                 log.debug('      -f %s (%s)', file_id, ct)
-                e = GirderDataElement(file_id, api_root, api_key)
+                e = GirderDataElement(file_id, api_root, api_key,
+                                      token=tm_token)
                 e._content_type = ct
-                e.token_manager = tm
                 yield e
 
 
@@ -305,10 +306,10 @@ def main():
             ids_file.extend([fid.strip() for fid in f])
 
     #: :type: smqtk.representation.DataSet
-    data_set = from_config_dict(config['plugins']['data_set'],
-                                DataSet.get_impls())
+    data_set: DataSet = from_config_dict(config['plugins']['data_set'],
+                                         DataSet.get_impls())
 
-    batch = collections.deque()
+    batch: Deque[GirderDataElement] = collections.deque()
     pr = cli.ProgressReporter(log.info, 1.0).start()
     for e in find_girder_files(api_root, ids_folder, ids_item, ids_file,
                                api_key, api_query_batch):

@@ -1,4 +1,5 @@
 import threading
+from typing import cast, List, Optional
 
 import numpy as np
 from six import BytesIO, next
@@ -113,7 +114,7 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         # the actual index
         #: :type: sklearn.neighbors.BallTree
-        self.bt = None
+        self.bt: Optional[BallTree] = None
 
         self.load_model()
 
@@ -294,8 +295,11 @@ class SkLearnBallTreeHashIndex (HashIndex):
         with self._model_lock:
             # Convert to a set of hashable tuples for removal
             if self.bt:
-                tuple_matrix = set(tuple(r) for r in
-                                   np.asarray(self.bt.data).tolist())
+                bt_data_list: List = cast(
+                    List,
+                    np.asarray(self.bt.data).tolist()
+                )
+                tuple_matrix = set(tuple(r) for r in bt_data_list)
                 hash_tuples = set()
                 for h in hashes:
                     # this is oddly faster than tuple(h)
@@ -338,6 +342,10 @@ class SkLearnBallTreeHashIndex (HashIndex):
 
         """
         with self._model_lock:
+            if self.bt is None:
+                raise RuntimeError("No index currently available to query "
+                                   "from.")
+
             # Reselect N based on how many hashes are currently indexes
             n = min(n, self.count())
             # Reshaping ``h`` into an array of arrays, with just one array

@@ -377,6 +377,9 @@ class LibSvmClassifier (SupervisedClassifier):
     def _classify_arrays(self, array_iter):
         if not self.has_model():
             raise RuntimeError("No SVM model present for classification")
+        assert self.svm_model is not None, (
+            "Should have an SVM model at this point."
+        )
 
         # Dump descriptors into a matrix for normalization and use in
         # prediction.

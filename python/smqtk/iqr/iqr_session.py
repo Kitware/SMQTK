@@ -2,12 +2,12 @@ import io
 import json
 import logging
 import threading
+from typing import cast, Dict, List, Optional, Tuple
 import uuid
 import zipfile
 
-import six
-
 from smqtk.algorithms.relevancy_index import RelevancyIndex
+from smqtk.representation import DescriptorElement
 from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
 from smqtk.utils.configuration import from_config_dict
@@ -128,22 +128,30 @@ class IqrSession (SmqtkObject):
         #   recorded positive and negative adjudications.
         # This is None before any initialization or refinement occurs.
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
-        self.results = None
+        self.results: Optional[Dict[DescriptorElement, float]] = None
 
         # Cache variables for views of refinement results.
         # All results as a list in order of relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
-        self._ordered_results = None
+        self._ordered_results: Optional[
+            List[Tuple[DescriptorElement, float]]
+        ] = None
         #: Positively adjudicated descriptors in order of relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
-        self._ordered_pos = None
+        self._ordered_pos: Optional[
+            List[Tuple[DescriptorElement, float]]
+        ] = None
         # Negatively adjudicated descriptors in order of relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
-        self._ordered_neg = None
+        self._ordered_neg: Optional[
+            List[Tuple[DescriptorElement, float]]
+        ] = None
         # Non-adjudicated descriptors in our working set in order of
         # relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
-        self._ordered_non_adj = None
+        self._ordered_non_adj: Optional[
+            List[Tuple[DescriptorElement, float]]
+        ] = None
 
         #
         # Algorithm Instances [+Config]
@@ -308,9 +316,11 @@ class IqrSession (SmqtkObject):
         # Make new relevancy index
         if updated:
             self._log.info("Creating new relevancy index over working set.")
-            #: :type: smqtk.algorithms.relevancy_index.RelevancyIndex
-            self.rel_index = from_config_dict(
-                self.rel_index_config, RelevancyIndex.get_impls()
+            self.rel_index = cast(
+                RelevancyIndex,
+                from_config_dict(
+                    self.rel_index_config, RelevancyIndex.get_impls()
+                )
             )
             self.rel_index.build_index(self.working_set.iterdescriptors())
 
@@ -359,22 +369,20 @@ class IqrSession (SmqtkObject):
         If refinement has not yet occurred since session creation or the last
         reset, an empty tuple is returned.
 
-        :rtype: None | tuple[(smqtk.representation.DescriptorElement, float)]
+        :rtype: None | list[(smqtk.representation.DescriptorElement, float)]
         """
         with self.lock:
             try:
-                return list(self._ordered_results)
+                return list(cast(List, self._ordered_results))
             except TypeError:
                 # NoneType is not iterable
                 # Cache did non exist.
-
-                try:
-                    result_items = six.iteritems(self.results)
-                except AttributeError:
+                if self.results is None:
                     # NoneType missing items/iteritems attr
                     # No results to iterate over.
                     return list()
 
+                result_items = self.results.items()
                 r = self._ordered_results = sorted(
                     result_items,
                     key=lambda p: p[1], reverse=True
@@ -401,7 +409,7 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             try:
-                return list(self._ordered_pos)
+                return list(cast(List, self._ordered_pos))
             except TypeError:
                 # NoneType is not iterable
                 # No cache yet.
@@ -435,7 +443,7 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             try:
-                return list(self._ordered_neg)
+                return list(cast(List, self._ordered_neg))
             except TypeError:
                 # NoneType is not iterable
                 # No cache yet.
@@ -462,7 +470,7 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             try:
-                return list(self._ordered_non_adj)
+                return list(cast(List, self._ordered_non_adj))
             except TypeError:
                 # NoneType is not iterable
                 # No cache yet

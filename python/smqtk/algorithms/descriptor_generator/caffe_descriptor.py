@@ -362,6 +362,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             input data elements.
         :rtype: collections.abc.Iterable[numpy.ndarray]
         """
+        assert self.network is not None, (
+            "A network should be initialized by now."
+        )
+
         self._set_caffe_mode()
         log_debug = self._log.debug
 

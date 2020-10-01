@@ -6,6 +6,7 @@ in the base.
 import collections
 import itertools
 import multiprocessing
+from typing import Deque, Dict, Hashable, Set
 
 import numpy
 from six.moves import map, zip
@@ -299,13 +300,14 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             self.descriptor_set.add_many_descriptors(descriptors)
 
             self._log.debug("Generating hash codes")
-            #: :type: collections.deque[numpy.ndarray[bool]]
-            hash_vectors = collections.deque()
+            hash_vectors: Deque[numpy.ndarray] = collections.deque()
             self.hash2uuids_kvstore.clear()
             prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
             # We just cleared the previous store, so aggregate new kv-mapping
             # in ``kvstore_update`` for single update after loop.
-            kvstore_update = collections.defaultdict(set)
+            kvstore_update: Dict[
+                int, Set[Hashable]
+            ] = collections.defaultdict(set)
             for d in self.descriptor_set:
                 h_vec = self.lsh_functor.get_hash(d.vector())
                 hash_vectors.append(h_vec)
@@ -352,8 +354,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
 
             self._log.debug("Generating hash codes for new descriptors")
             prog_reporter = ProgressReporter(self._log.debug, 1.0).start()
-            #: :type: collections.deque[numpy.ndarray[bool]]
-            hash_vectors = collections.deque()  # for updating hash_index
+            # for updating hash_index
+            hash_vectors: Deque[numpy.ndarray] = collections.deque()
             # for updating kv-store after collecting new hash codes
             kvstore_update = {}
             for d in d_for_hashing:
@@ -403,8 +405,8 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # - `get_many_descriptors` fails when bad UIDs are provided
             #   (KeyError).
             self._log.debug("Removing hash2uid entries for UID's descriptors")
-            h_vectors = collections.deque()
-            h_ints = collections.deque()
+            h_vectors: Deque[numpy.ndarray] = collections.deque()
+            h_ints: Deque[int] = collections.deque()
             for d in self.descriptor_set.get_many_descriptors(uids):
                 h_vec = self.lsh_functor.get_hash(d.vector())
                 h_vectors.append(h_vec)
@@ -414,7 +416,7 @@ class LSHNearestNeighborIndex (NearestNeighborsIndex):
             # If we're here, then all given UIDs mapped to an indexed
             # descriptor.  Proceed with removal from hash2uids kvs.  If a hash
             # no longer maps anything, remove that key from the KVS.
-            hashes_for_removal = collections.deque()
+            hashes_for_removal: Deque[numpy.ndarray] = collections.deque()
             # store key-value pairs to update after loop in batch call
             kvs_update = {}
             # store keys to remove after loop in batch-call

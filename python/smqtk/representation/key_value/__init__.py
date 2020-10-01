@@ -23,7 +23,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     """
 
     # Mutable storage container is not hashable.
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
     def __len__(self):
         return self.count()

@@ -1,16 +1,18 @@
 import logging
 from multiprocessing import RLock
+from typing import Dict, Optional, Tuple
 import uuid
 
 from smqtk.utils import SmqtkObject
 
 try:
-    import psycopg2
-    import psycopg2.pool
+    import psycopg2  # type: ignore
+    from psycopg2.pool import ThreadedConnectionPool  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
     psycopg2 = None
+    ThreadedConnectionPool = None
 
 
 GLOBAL_PSQL_TABLE_CREATE_RLOCK = RLock()
@@ -22,7 +24,10 @@ GLOBAL_CONNECTION_POOL_LOCK = RLock()
 # pool for that tuple. If we didn't do it this way, each PsqlConnectionHelper
 # would have its own connection pool, even if it had the same credentials,
 # which would defeat the purpose of pooling.
-_connection_pools = dict()
+_connection_pools: Dict[
+    Tuple[Optional[str], Optional[str], Optional[int], Optional[str]],
+    ThreadedConnectionPool
+] = dict()
 
 
 def get_connection_pool(db_name, db_host, db_port, db_user, db_pass):
@@ -52,7 +57,7 @@ def get_connection_pool(db_name, db_host, db_port, db_user, db_pass):
 
     :return: New or existing connection pool instance for the given address
         specification.
-    :rtype: psycopg2.pool.ThreadedConnectionPool
+    :rtype: ThreadedConnectionPool
     """
     key_tuple = (
         db_name,
@@ -65,7 +70,7 @@ def get_connection_pool(db_name, db_host, db_port, db_user, db_pass):
             cp = _connection_pools[key_tuple]
         except KeyError:
             _connection_pools[key_tuple] = cp = \
-                psycopg2.pool.ThreadedConnectionPool(
+                ThreadedConnectionPool(
                     # FIXME: The min and max connections have been
                     # hard-coded to sensible values, but we should find a
                     # way to make them configurable.

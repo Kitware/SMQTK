@@ -5,27 +5,22 @@ import itertools
 import logging
 import multiprocessing
 import multiprocessing.pool
+import pickle
 
 import numpy
 import PIL.Image
 import PIL.ImageFile
-# noinspection PyUnresolvedReferences
-from six.moves import zip
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.utils.parallel import parallel_map
 
 try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
-    import kwcnn
-    from .autoencoder_model_def import AutoEncoderModel
+    import kwcnn  # type: ignore
 except ImportError:
     kwcnn = None
-    AutoEncoderModel = None
+
+# Importing after above to prevent circular import issue.
+from .autoencoder_model_def import AutoEncoderModel
 
 
 __author__ = 'jason.parham@kitware.com,paul.tunison@kitware.com'

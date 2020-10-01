@@ -44,7 +44,7 @@ import json
 import logging
 import warnings
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy
 import scipy.stats
 import six

@@ -1,8 +1,10 @@
 """
 Example of a module that has an exception upon import.
 """
-from smqtk.tests.utils.test_plugin_dir.internal_plugins.interface import \
+from tests.utils.test_plugin_dir.internal_plugins.interface import \
     DummyInterface
+
+raise RuntimeError('some intentional error to trigger on import')
 
 
 class ImplActuallyValid (DummyInterface):
@@ -13,6 +15,3 @@ class ImplActuallyValid (DummyInterface):
 
     def inst_method(self, val):
         return "actuallyValidImpl"+str(val)
-
-
-raise RuntimeError('some intentional error to trigger on import')

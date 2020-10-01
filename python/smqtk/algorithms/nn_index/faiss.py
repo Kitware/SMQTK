@@ -22,7 +22,7 @@ from smqtk.utils.dict import merge_dict
 
 # Requires FAISS bindings
 try:
-    import faiss
+    import faiss  # type: ignore
 except ImportError as ex:
     warnings.warn("FaissNearestNeighborsIndex is not usable due to the faiss "
                   "module not being importable: {}".format(str(ex)))

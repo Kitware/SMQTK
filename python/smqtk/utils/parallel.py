@@ -582,7 +582,7 @@ class _Worker (SmqtkObject):
     def stopped(self):
         return self._stop_event.is_set()
 
-    def run(self):
+    def run(self) -> None:
         try:
             packet = self.q_get()
             while not self.stopped():

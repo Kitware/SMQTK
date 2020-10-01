@@ -33,7 +33,7 @@ from . import utils
 
 # Requires FLANN bindings
 try:
-    import pyflann
+    import pyflann  # type: ignore
 except ImportError:
     pyflann = None
 

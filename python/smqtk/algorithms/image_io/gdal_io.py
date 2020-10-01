@@ -12,9 +12,9 @@ from smqtk.algorithms import ImageReader
 from smqtk.utils.image import crop_in_bounds
 
 try:
-    import osgeo
-    import osgeo.gdal as gdal
-    import osgeo.gdal_array as gdal_array
+    import osgeo  # type: ignore
+    import osgeo.gdal as gdal  # type: ignore
+    import osgeo.gdal_array as gdal_array  # type: ignore
 except ImportError:
     osgeo = gdal = gdal_array = None
 

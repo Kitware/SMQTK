@@ -15,8 +15,8 @@ from smqtk.utils.distance_kernel import (
 from smqtk.utils.metrics import histogram_intersection_distance
 
 try:
-    import svm
-    import svmutil
+    import svm  # type: ignore
+    import svmutil  # type: ignore
 except ImportError:
     svm = None
     svmutil = None

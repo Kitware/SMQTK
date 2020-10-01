@@ -274,7 +274,7 @@ def file_mimetype_filemagic(filepath):
 
     """
     # noinspection PyUnresolvedReferences
-    import magic
+    import magic  # type: ignore
     if os.path.isfile(filepath):
         d = magic.detect_from_filename(filepath)
         return d.mime_type
@@ -302,5 +302,5 @@ def file_mimetype_tika(filepath):
 
     """
     # noinspection PyUnresolvedReferences
-    import tika.detector
+    import tika.detector  # type: ignore
     return tika.detector.from_file(filepath)

@@ -14,7 +14,7 @@ from smqtk.representation.descriptor_element import elements_to_matrix
 
 # Requires FLANN bindings
 try:
-    import pyflann
+    import pyflann  # type: ignore
 except ImportError:
     pyflann = None
 

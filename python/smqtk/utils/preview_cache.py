@@ -1,7 +1,8 @@
-import imageio
+import imageio  # type: ignore
 import logging
 import os
 import shutil
+from typing import Callable, Dict, Hashable
 
 import six
 
@@ -19,15 +20,14 @@ class PreviewCache (object):
     """
 
     # Preview generation methods based on content type
-    # - types can either be specific types or just type classes (i.e. "image" or
-    #   "video"), which are fall-backs when a data element's specific content
-    #   type is not found in the mapping.
-    # - This should be populated with methods that take two arguments, the first
-    #   being a DataElement instance, and the second being the directory to
-    #   place generated files under. These methods should return the full path
-    #   to the generated preview image.
-    #: :type: dict[collections.abc.Hashable, collections.abc.Callable]
-    PREVIEW_GEN_METHOD = {}
+    # - types can either be specific types or just type classes (i.e. "image"
+    #   or "video"), which are fall-backs when a data element's specific
+    #   content type is not found in the mapping.
+    # - This should be populated with methods that take two arguments, the
+    #   first being a DataElement instance, and the second being the directory
+    #   to place generated files under. These methods should return the full
+    #   path to the generated preview image.
+    PREVIEW_GEN_METHOD: Dict[Hashable, Callable] = {}
 
     @property
     def _log(self):

@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from flask.sessions import SessionInterface, SessionMixin
 from werkzeug.datastructures import CallbackDict
-from pymongo import MongoClient
+from pymongo import MongoClient  # type: ignore
 
 
 LOG = logging.getLogger(__name__)

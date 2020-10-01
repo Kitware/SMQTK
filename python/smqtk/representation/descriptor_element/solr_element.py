@@ -7,7 +7,7 @@ from smqtk.representation import DescriptorElement
 
 # Try to import required module
 try:
-    import solr
+    import solr  # type: ignore
 except ImportError:
     solr = None
 

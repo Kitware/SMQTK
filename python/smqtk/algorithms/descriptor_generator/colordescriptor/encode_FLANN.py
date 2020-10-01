@@ -22,7 +22,7 @@ import csv
 # These functions should only be called by colordescriptor.py module, which is
 # only available if pyflann is available by the following check
 try:
-    import pyflann
+    import pyflann  # type: ignore
 except ImportError:
     pyflann = None
 

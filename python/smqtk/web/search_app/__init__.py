@@ -9,7 +9,7 @@ import os.path
 import threading
 
 import flask
-from flask_cors import cross_origin
+from flask_cors import cross_origin  # type: ignore
 import six
 from werkzeug.exceptions import NotFound
 from werkzeug.wsgi import peek_path_info, pop_path_info

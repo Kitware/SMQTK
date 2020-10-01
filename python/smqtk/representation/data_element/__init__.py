@@ -60,7 +60,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         self._temp_filepath_stack = []
 
     # Because we can't generally guarantee external data immutability.
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
     def __del__(self):
         self.clean_temp()

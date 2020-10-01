@@ -69,7 +69,7 @@ import csv
 import logging
 import os
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy
 import sklearn.model_selection
 import sklearn.metrics

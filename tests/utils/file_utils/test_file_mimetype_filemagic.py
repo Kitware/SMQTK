@@ -6,7 +6,7 @@ from smqtk.utils.file import file_mimetype_filemagic
 from tests import TEST_DATA_DIR
 
 try:
-    import magic
+    import magic  # type: ignore
     # We know there are multiple modules named magic. Make sure the function we
     # expect is there.
     # noinspection PyStatementEffect

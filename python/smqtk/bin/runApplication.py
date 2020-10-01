@@ -4,8 +4,8 @@ Runs conforming SMQTK Web Applications.
 
 import logging
 
-from flask_basicauth import BasicAuth
-from flask_cors import CORS
+from flask_basicauth import BasicAuth  # type: ignore
+from flask_cors import CORS  # type: ignore
 import six
 
 from smqtk.utils import cli

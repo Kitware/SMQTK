@@ -15,7 +15,7 @@ from smqtk.utils.dict import merge_dict
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import caffe
+    import caffe  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import caffe module: %s",
                                         str(ex))

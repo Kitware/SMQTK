@@ -14,10 +14,10 @@ import tempfile
 
 # Try to import DescriptorIO module provided by ColorDescriptor package
 try:
-    import DescriptorIO
+    import DescriptorIO  # type: ignore
 except ImportError:
     try:
-        from colorDescriptor import DescriptorIO
+        from colorDescriptor import DescriptorIO  # type: ignore
     except ImportError:
         DescriptorIO = None
 

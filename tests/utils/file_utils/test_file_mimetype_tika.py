@@ -6,7 +6,7 @@ from smqtk.utils.file import file_mimetype_tika
 from tests import TEST_DATA_DIR
 
 try:
-    from tika import detector as tika_detector
+    from tika import detector as tika_detector  # type: ignore
 except ImportError:
     tika_detector = None
 

@@ -6,7 +6,7 @@ from smqtk.representation import ClassificationElement
 
 # Try to import required modules
 try:
-    import psycopg2
+    import psycopg2  # type: ignore
 except ImportError:
     psycopg2 = None
 

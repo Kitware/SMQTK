@@ -16,8 +16,8 @@ from smqtk.representation.data_element import from_uri
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import svm
-    import svmutil
+    import svm  # type: ignore
+    import svmutil  # type: ignore
 except ImportError:
     svm = None
     svmutil = None

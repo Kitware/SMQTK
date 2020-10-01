@@ -8,8 +8,8 @@ from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 try:
-    import psycopg2
-    import psycopg2.extras
+    import psycopg2  # type: ignore
+    import psycopg2.extras  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))

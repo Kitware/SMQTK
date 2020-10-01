@@ -8,14 +8,15 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from multiprocessing import current_process
-# noinspection PyProtectedMember
-from multiprocessing.managers import (
+# Incomplete typing in typeshed
+from multiprocessing.managers import (    # type: ignore
     all_methods,
     BaseProxy,
     SyncManager
 )
 import multiprocessing
-import multiprocessing.util
+# Incomplete typing in typeshed
+import multiprocessing.util  # type: ignore
 import six
 
 import numpy as np

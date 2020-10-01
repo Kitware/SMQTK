@@ -7,31 +7,19 @@ from six.moves import range
 
 from .combinatorics import ncr
 
-try:
-    # noinspection PyUnresolvedReferences
-    from numba import jit
-except (ImportError, TypeError):
-    # Create passthrough function if numba is not installed.
-    def jit(func_or_sig):
-        import types
-        if isinstance(func_or_sig, (types.FunctionType, types.MethodType)):
-            return func_or_sig
-        else:
-            return lambda *args, **kwds: func_or_sig
 
-
-def next_perm(v):
+def next_perm(v: int) -> int:
     """
     Compute the lexicographically next bit permutation
 
     Generates next permutation with a given amount of set bits,
     given the previous lexicographical value.
 
-    Taken from http://graphics.stanford.edu/~seander/bithacks.html
+    Taken from http://graphics.stanford.edu/~seander/bithacks.html#NextBitPermutation
 
     """
     t = (v | (v - 1)) + 1
-    w = t | ((((t & -t) / (v & -v)) >> 1) - 1)
+    w = t | ((((t & -t) // (v & -v)) >> 1) - 1)
     return w
 
 
@@ -51,7 +39,7 @@ def iter_perms(length, n):
 
     :return: List of bit vector permutations of the value ``(1<<n)-1`` over
         ``l`` bits.
-    :rtype: list[int]
+    :rtype: typing.Generator[int]
 
     """
     if n <= 0:
@@ -91,27 +79,6 @@ def neighbor_codes(b, c, d):
             yield c ^ fltr
 
 
-@jit
-def bit_vector_to_int(v):
-    """
-    Transform a numpy vector representing a sequence of binary bits [0 | >0]
-    into an integer representation.
-
-    This version handles vectors of up to 64bits in size.
-
-    :param v: 1D Vector of bits
-    :type v: numpy.ndarray
-
-    :return: Integer equivalent
-    :rtype: int
-
-    """
-    c = 0
-    for b in v:
-        c = (c << 1) + int(b)
-    return c
-
-
 def bit_vector_to_int_large(v):
     """
     Transform a numpy vector representing a sequence of binary bits [0 | >0]
@@ -131,45 +98,6 @@ def bit_vector_to_int_large(v):
     for b in v:
         c = (c << 1) + int(b)
     return c
-
-
-@jit
-def int_to_bit_vector(integer, bits=0):
-    """
-    Transform integer into a bit vector, optionally of a specific length.
-
-    This version handles vectors of up to 64bits in size.
-
-    :raises ValueError: If ``bits`` specified is smaller than the required bits
-        to represent the given ``integer`` value.
-
-    :param integer: integer to convert
-    :type integer: int
-
-    :param bits: Optional fixed number of bits that should be represented by the
-        vector.
-    :type bits: Optional specification of the size of returned vector.
-
-    :return: Bit vector as numpy array (big endian).
-    :rtype: numpy.ndarray[bool]
-
-    """
-    # Can't use math version because floating-point precision runs out after
-    # about 2^48
-    # -2 to remove length of '0b' string prefix
-    size = len(bin(integer)) - 2
-
-    if bits and (bits - size) < 0:
-        raise ValueError("%d bits too small to represent integer value %d."
-                         % (bits, integer))
-
-    # Converting integer to array
-    v = numpy.zeros(bits or size, numpy.bool_)
-    for i in range(0, size):
-        v[-(i+1)] = integer & 1
-        integer >>= 1
-
-    return v
 
 
 def int_to_bit_vector_large(integer, bits=0):
@@ -211,7 +139,7 @@ def int_to_bit_vector_large(integer, bits=0):
     return v
 
 
-def popcount(v):
+def popcount(v: int) -> int:
     """
     Count the number of bits set (number of 1-bits, not 0-bits).
 
@@ -223,10 +151,8 @@ def popcount(v):
 
     :param v: Integer to count the set bits of. Must be a 32-bit integer or
         less.
-    :type v: int
 
     :return: Number of set bits in the given integer ``v``.
-    :rtype: int
 
     """
     # TODO: C implementation of this
@@ -260,4 +186,4 @@ def popcount(v):
 
 
 # Maximum known stable value that can be passed as ``v``.
-popcount.v_max = (2**256) - 2
+POPCOUNT_VMAX = (2**256) - 2

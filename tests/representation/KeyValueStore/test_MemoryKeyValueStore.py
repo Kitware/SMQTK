@@ -58,11 +58,12 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             pickle.dumps(expected_table).decode(BYTES_CONFIG_ENCODING)
 
         # Test construction with memory data element.
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         config = {'cache_element': {
-            'DataMemoryElement': {
+            dme_key: {
                 'bytes': empty_dict_pickle_str,
             },
-            'type': 'DataMemoryElement'
+            'type': dme_key
         }}
         s = MemoryKeyValueStore.from_config(config)
         self.assertIsInstance(s._cache_element, DataMemoryElement)
@@ -153,13 +154,14 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         s = MemoryKeyValueStore()
         s._cache_element = DataMemoryElement(b'someBytes', 'text/plain',
                                              readonly=False)
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         expected_config = {'cache_element': {
-            "DataMemoryElement": {
+            dme_key: {
                 'bytes': 'someBytes',
                 'content_type': 'text/plain',
                 'readonly': False,
             },
-            'type': 'DataMemoryElement'
+            'type': dme_key
         }}
         self.assertEqual(s.get_config(), expected_config)
 

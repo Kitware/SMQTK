@@ -65,7 +65,8 @@ class TestBallTreeHashIndex (unittest.TestCase):
             c
         )
         # With non-null cache element
-        c['cache_element']['type'] = 'DataMemoryElement'
+        c['cache_element']['type'] = ('smqtk.representation.data_element'
+                                      '.memory_element.DataMemoryElement')
         self.assertEqual(
             SkLearnBallTreeHashIndex.from_config(c).get_config(),
             c

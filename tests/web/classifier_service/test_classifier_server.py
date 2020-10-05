@@ -33,28 +33,35 @@ class TestClassifierService (unittest.TestCase):
         super(TestClassifierService, self).setUp()
         self.config = SmqtkClassifierService.get_default_config()
 
-        self.config['classification_factory']['type'] = \
-            'MemoryClassificationElement'
-        del self.config['classification_factory']['FileClassificationElement']
+        key_mce = "smqtk.representation.classification_element.memory.MemoryClassificationElement"
+        key_c_dummy = "tests.web.classifier_service.dummy_classifier.DummyClassifier"
+        key_dme = "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
+        key_dg_dummy = "tests.web.classifier_service.dummy_descriptor_generator.DummyDescriptorGenerator"
+        key_sc_dummy = "tests.web.classifier_service.dummy_classifier.DummySupervisedClassifier"
+
+        self.config['classification_factory']['type'] = key_mce
+        # del self.config['classification_factory'][
+        #     'smqtk.representation.classification_element.file'
+        #     '.FileClassificationElement'
+        # ]
 
         del self.config['classifier_collection']['__example_label__']
         self.dummy_label = 'dummy'
         self.config['classifier_collection'][self.dummy_label] = {
-            'DummyClassifier': {},
-            'type': 'DummyClassifier'
+            key_c_dummy: {},
+            'type': key_c_dummy
         }
         self.config['immutable_labels'] = [self.dummy_label]
 
-        self.config['descriptor_factory']['type'] = 'DescriptorMemoryElement'
-        del self.config['descriptor_factory']['DescriptorFileElement']
+        self.config['descriptor_factory']['type'] = key_dme
+        # del self.config['descriptor_factory']['DescriptorFileElement']
 
         self.config['descriptor_generator'] = {
-            'DummyDescriptorGenerator': {},
-            'type': 'DummyDescriptorGenerator'
+            key_dg_dummy: {},
+            'type': key_dg_dummy
         }
 
-        self.config['iqr_state_classifier_config']['type'] = \
-            'DummySupervisedClassifier'
+        self.config['iqr_state_classifier_config']['type'] = key_sc_dummy
 
         self.config['enable_classifier_removal'] = True
 

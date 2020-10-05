@@ -179,6 +179,37 @@ def _get_extension_plugin_modules(log, warn=True):
             yield ext.plugin
 
 
+def is_valid(cls, log, module_path, interface_type):
+    if not isinstance(cls, type):
+        # No logging, over verbose, undetermined type.
+        return False
+    elif cls is interface_type:
+        log.debug("[%s.%s] [skip] Literally the base class.",
+                  module_path, cls.__name__)
+        return False
+    elif not issubclass(cls, interface_type):
+        log.debug("[%s.%s] [skip] Does not descend from base class.",
+                  module_path, cls.__name__)
+        return False
+    elif bool(cls.__abstractmethods__):
+        # Making this a warning as I think this indicates a broken
+        # implementation in the ecosystem.
+        # noinspection PyUnresolvedReferences
+        log.warning('[%s.%s] [skip] Does not implement one or '
+                    'more abstract methods: %s',
+                    module_path, cls.__name__,
+                    list(cls.__abstractmethods__))
+        return False
+    elif not cls.is_usable():
+        log.debug("[%s.%s] [skip] Class does not report as usable.",
+                  module_path, cls.__name__)
+        return False
+    else:
+        log.debug('[%s.%s] [KEEP] Retaining subclass.',
+                  module_path, cls.__name__)
+        return True
+
+
 def get_plugins(interface_type, env_var, helper_var,
                 warn=True, reload_modules=False):
     """
@@ -296,37 +327,7 @@ def get_plugins(interface_type, env_var, helper_var,
                     classes.append(getattr(_module, attr_name))
 
         # Check the validity of the discovered class types in this module.
-        for cls in classes:
-            # check that all class types in iterable are:
-            # - Class types,
-            # - Subclasses of the given base-type and plugin interface
-            # - Not missing any abstract implementations.
-            #
-            # noinspection PyUnresolvedReferences
-            if not isinstance(cls, type):
-                # No logging, over verbose, undetermined type.
-                pass
-            elif cls is interface_type:
-                log.debug("[%s.%s] [skip] Literally the base class.",
-                          module_path, cls.__name__)
-            elif not issubclass(cls, interface_type):
-                log.debug("[%s.%s] [skip] Does not descend from base class.",
-                          module_path, cls.__name__)
-            elif bool(cls.__abstractmethods__):
-                # Making this a warning as I think this indicates a broken
-                # implementation in the ecosystem.
-                # noinspection PyUnresolvedReferences
-                log.warning('[%s.%s] [skip] Does not implement one or '
-                            'more abstract methods: %s',
-                            module_path, cls.__name__,
-                            list(cls.__abstractmethods__))
-            elif not cls.is_usable():
-                log.debug("[%s.%s] [skip] Class does not report as usable.",
-                          module_path, cls.__name__)
-            else:
-                log.debug('[%s.%s] [KEEP] Retaining subclass.',
-                          module_path, cls.__name__)
-                class_set.add(cls)
+        class_set.update(cls for cls in classes if is_valid(cls, log, module_path, interface_type))
 
     return class_set
 

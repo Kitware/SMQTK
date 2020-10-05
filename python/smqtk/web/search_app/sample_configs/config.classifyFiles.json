@@ -1,10 +1,10 @@
 {
     "classification_factory": {
-        "MemoryClassificationElement": {},
-        "type": "MemoryClassificationElement"
+        "smqtk.representation.classification_element.memory.MemoryClassificationElement": {},
+        "type": "smqtk.representation.classification_element.memory.MemoryClassificationElement"
     },
     "classifier": {
-        "LibSvmClassifier": {
+        "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
             "normalize": 2,
             "svm_label_map_uri": "workdir/iqr_classifier/label_map",
             "svm_model_uri": "workdir/iqr_classifier/model",
@@ -15,27 +15,46 @@
                 "-t": 0
             }
         },
-        "type": "LibSvmClassifier"
+        "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
     },
     "descriptor_factory": {
-        "DescriptorMemoryElement": {},
-        "type": "DescriptorMemoryElement"
+        "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement": {},
+        "type": "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
     },
     "descriptor_generator": {
-        "CaffeDescriptorGenerator": {
-            "batch_size": 128,
-            "data_layer": "data",
-            "gpu_device_id": 0,
-            "image_mean_uri": "~/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
-            "input_scale": null,
-            "load_truncated_images": false,
-            "network_is_bgr": true,
-            "network_model_uri": "~/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
-            "network_prototxt_uri": "~/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
-            "pixel_rescale": null,
+        "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator",
+        "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+            "network_model": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "bvlc_alexnet.caffemodel",
+                    "readonly":true
+                }
+            },
+            "network_prototxt": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "bvlc_alexnet/deploy.prototxt",
+                    "readonly": true
+                }
+            },
+            "image_mean": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "ilsvrc12/imagenet_mean.binaryproto",
+                    "readonly": true
+                }
+            },
             "return_layer": "fc7",
-            "use_gpu": true
-        },
-        "type": "CaffeDescriptorGenerator"
+            "batch_size": 256,
+            "use_gpu": false,
+            "gpu_device_id": 0,
+            "network_is_bgr": true,
+            "data_layer": "data",
+            "load_truncated_images": false,
+            "pixel_rescale": null,
+            "input_scale": null,
+            "threads": null
+        }
     }
 }

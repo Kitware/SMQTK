@@ -11,11 +11,11 @@
     "iqr_service": {
         "plugins": {
             "classification_factory": {
-                "MemoryClassificationElement": {},
-                "type": "MemoryClassificationElement"
+                "smqtk.representation.classification_element.memory.MemoryClassificationElement": {},
+                "type": "smqtk.representation.classification_element.memory.MemoryClassificationElement"
             },
             "classifier_config": {
-                "LibSvmClassifier": {
+                "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
                     "normalize": 2,
                     "svm_label_map_uri": null,
                     "svm_model_uri": null,
@@ -26,122 +26,133 @@
                         "-t": 0
                     }
                 },
-                "type": "LibSvmClassifier"
+                "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
             },
             "descriptor_factory": {
-                "DescriptorMemoryElement": {},
-                "type": "DescriptorMemoryElement"
+                "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement": {},
+                "type": "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
             },
             "descriptor_generator": {
-                "CaffeDescriptorGenerator": {
-                    "batch_size": 128,
-                    "data_layer": "data",
-                    "gpu_device_id": 0,
-                    "image_mean_uri": "~/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
-                    "input_scale": null,
-                    "load_truncated_images": false,
-                    "network_is_bgr": true,
-                    "network_model_uri": "~/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
-                    "network_prototxt_uri": "~/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
-                    "pixel_rescale": null,
+                "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator",
+                "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+                    "network_model": {
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "bvlc_alexnet/bvlc_alexnet.caffemodel",
+                            "readonly":true
+                        }
+                    },
+                    "network_prototxt": {
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "bvlc_alexnet/deploy.prototxt",
+                            "readonly": true
+                        }
+                    },
+                    "image_mean": {
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "ilsvrc12/imagenet_mean.binaryproto",
+                            "readonly": true
+                        }
+                    },
                     "return_layer": "fc7",
-                    "use_gpu": true
-                },
-                "type": "CaffeDescriptorGenerator"
+                    "batch_size": 256,
+                    "use_gpu": false,
+                    "gpu_device_id": 0,
+                    "network_is_bgr": true,
+                    "data_layer": "data",
+                    "load_truncated_images": false,
+                    "pixel_rescale": null,
+                    "input_scale": null,
+                    "threads": null
+                }
             },
             "descriptor_set": {
-                "MemoryDescriptorSet": {
+                "smqtk.representation.descriptor_set.memory.MemoryDescriptorSet": {
                     "cache_element": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "workdir/butterflies_alexnet_fc7/descriptor_set.pickle",
                             "readonly": false
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "pickle_protocol": -1
                 },
-                "type": "MemoryDescriptorSet"
+                "type": "smqtk.representation.descriptor_set.memory.MemoryDescriptorSet"
             },
             "neighbor_index": {
-                "FlannNearestNeighborsIndex": {
-                    "autotune": false,
-                    "descriptor_cache_uri": "workdir/butterflies_alexnet_fc7/flann/index.cache",
-                    "distance_method": "hik",
-                    "index_uri": "workdir/butterflies_alexnet_fc7/flann/index.flann",
-                    "parameters_uri": "workdir/butterflies_alexnet_fc7/flann/index.parameters",
-                    "random_seed": 42
-                },
-                "LSHNearestNeighborIndex": {
+                "smqtk.algorithms.nn_index.lsh.LSHNearestNeighborIndex": {
                     "descriptor_set": {
-                        "MemoryDescriptorSet": {
+                        "smqtk.representation.descriptor_set.memory.MemoryDescriptorSet": {
                             "cache_element": {
-                                "DataFileElement": {
+                                "smqtk.representation.data_element.file_element.DataFileElement": {
                                     "explicit_mimetype": null,
                                     "filepath": "workdir/butterflies_alexnet_fc7/descriptor_set.pickle",
                                     "readonly": false
                                 },
-                                "type": "DataFileElement"
+                                "type": "smqtk.representation.data_element.file_element.DataFileElement"
                             },
                             "pickle_protocol": -1
                         },
-                        "type": "MemoryDescriptorSet"
+                        "type": "smqtk.representation.descriptor_set.memory.MemoryDescriptorSet"
                     },
                     "distance_method": "cosine",
                     "hash2uuids_kvstore": {
-                        "MemoryKeyValueStore": {
+                        "smqtk.representation.key_value.memory.MemoryKeyValueStore": {
                             "cache_element": {
-                                "DataFileElement": {
+                                "smqtk.representation.data_element.file_element.DataFileElement": {
                                     "explicit_mimetype": null,
                                     "filepath": "workdir/butterflies_alexnet_fc7/hash2uuids.mem_kvstore.pickle",
                                     "readonly": false
                                 },
-                                "type": "DataFileElement"
+                                "type": "smqtk.representation.data_element.file_element.DataFileElement"
                             }
                         },
-                        "type": "MemoryKeyValueStore"
+                        "type": "smqtk.representation.key_value.memory.MemoryKeyValueStore"
                     },
                     "hash_index": {
                         "type": null
                     },
                     "hash_index_comment": "'hash_index' may also be null to default to a linear index built at query time.",
                     "lsh_functor": {
-                        "ItqFunctor": {
+                        "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor": {
                             "bit_length": 64,
                             "itq_iterations": 50,
                             "mean_vec_cache": {
-                                "DataFileElement": {
+                                "smqtk.representation.data_element.file_element.DataFileElement": {
                                     "explicit_mimetype": null,
                                     "filepath": "workdir/butterflies_alexnet_fc7/itqnn/mean_vec.npy",
                                     "readonly": false
                                 },
-                                "type": "DataFileElement"
+                                "type": "smqtk.representation.data_element.file_element.DataFileElement"
                             },
                             "normalize": null,
                             "random_seed": 42,
                             "rotation_cache": {
-                                "DataFileElement": {
+                                "smqtk.representation.data_element.file_element.DataFileElement": {
                                     "explicit_mimetype": null,
                                     "filepath": "workdir/butterflies_alexnet_fc7/itqnn/rotation.npy",
                                     "readonly": false
                                 },
-                                "type": "DataFileElement"
+                                "type": "smqtk.representation.data_element.file_element.DataFileElement"
                             }
                         },
-                        "type": "ItqFunctor"
+                        "type": "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor"
                     },
                     "read_only": false
                 },
-                "type": "LSHNearestNeighborIndex"
+                "type": "smqtk.algorithms.nn_index.lsh.LSHNearestNeighborIndex"
             },
             "relevancy_index_config": {
-                "LibSvmHikRelevancyIndex": {
+                "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex": {
                     "autoneg_select_ratio": 1,
                     "cores": null,
                     "descr_cache_filepath": null,
                     "multiprocess_fetch": false
                 },
-                "type": "LibSvmHikRelevancyIndex"
+                "type": "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex"
             }
         },
         "session_control": {

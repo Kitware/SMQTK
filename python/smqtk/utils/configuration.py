@@ -35,13 +35,14 @@ import abc
 import inspect
 import json
 import types
+from typing import Any, Dict, Iterable, Tuple, Type, Union
 
 import six
 
 from smqtk.utils.dict import merge_dict
 
 
-def _param_map_func(func):
+def _param_map_func(func: Union[types.FunctionType, types.MethodType]) -> Dict[str, object]:
     """
     Get the given function's parameter names and default values as a dict.
 
@@ -52,7 +53,6 @@ def _param_map_func(func):
         parameters, minus the 'self' parameter, and whose values are the
         default defined by the function, or None if there is no default
         specified.
-    :rtype: dict[str, object]
     """
     sig = inspect.signature(func)
     # We don't care to record `*` or `**` params, so only retain non-variadic
@@ -72,6 +72,17 @@ def _param_map_func(func):
                 dflt = None
             pmap[k] = dflt
     return pmap
+
+
+def _type_to_key(t: Type) -> str:
+    """
+    Common function for transforming a class type to its associated string key
+    for use in configuration semantics.
+
+    :param t: Type to get the key for.
+    :return: String key for the input type.
+    """
+    return f"{t.__module__}.{t.__name__}"
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -215,7 +226,7 @@ class Configurable (object):
         """
 
 
-def make_default_config(configurable_iter):
+def make_default_config(configurable_iter: Iterable[Type[Configurable]]) -> Dict:
     """
     Generated default configuration dictionary for the given iterable of
     Configurable-inheriting types.
@@ -223,12 +234,13 @@ def make_default_config(configurable_iter):
     For example, assuming the following simple class that descends from
     ``Configurable``, we would expect the following behavior:
 
+    >>> # noinspection PyAbstractClass
     >>> class ExampleConfigurableType (Configurable):
     ...     def __init__(self, a, b):
     ...        ''' Dummy constructor '''
     >>> make_default_config([ExampleConfigurableType]) == {
     ...     'type': None,
-    ...     'ExampleConfigurableType': {
+    ...     'smqtk.utils.configuration.ExampleConfigurableType': {
     ...         'a': None,
     ...         'b': None,
     ...     }
@@ -257,25 +269,25 @@ def make_default_config(configurable_iter):
             "Encountered invalid Configurable type: '{}' (type={})".format(
                 cls, type(cls)
             )
-        d[cls.__name__] = cls.get_default_config()
+        d[_type_to_key(cls)] = cls.get_default_config()
     return d
 
 
-def cls_conf_to_config_dict(cls, conf):
+def cls_conf_to_config_dict(cls: Type, conf: Dict) -> Dict:
     """
     Helper function for creating the appropriate "standard" smqtk configuration
     dictionary given a `Configurable`-implementing class and a configuration
     for that class.
 
-    This very simple function simply arranges a class, using its __name__
-    property, and an associated dictionary into a normal pattern used for
-    configuration in SMQTK::
+    This very simple function simply arranges a semantic class key and an
+    associated dictionary into a normal pattern used for configuration
+    in SMQTK::
 
     >>> class SomeClass (object):
     ...     pass
     >>> cls_conf_to_config_dict(SomeClass, {0: 0, 'a': 'b'}) == {
-    ...     'type': 'SomeClass',
-    ...     'SomeClass': {0: 0, 'a': 'b'}
+    ...     'type': 'smqtk.utils.configuration.SomeClass',
+    ...     'smqtk.utils.configuration.SomeClass': {0: 0, 'a': 'b'}
     ... }
     True
 
@@ -290,26 +302,25 @@ def cls_conf_to_config_dict(cls, conf):
     :rtype: dict
 
     """
+    cls_key = _type_to_key(cls)
     return {
-        "type": cls.__name__,
-        cls.__name__: conf
+        "type": cls_key,
+        cls_key: conf
     }
 
 
-def to_config_dict(c_inst):
+def to_config_dict(c_inst: Configurable) -> Dict:
     """
     Helper function that transforms the configuration dictionary retrieved from
     ``configurable_inst`` into the "standard" SMQTK configuration dictionary
     format (see above module documentation).
 
     For example, with a simple DataFileElement:
-    >>> from smqtk.representation.data_element.file_element \
-            import DataFileElement
-    >>> e = DataFileElement(filepath='/path/to/file.txt',
-    ...                       readonly=True)
+    >>> from smqtk.representation.data_element.file_element import DataFileElement
+    >>> e = DataFileElement(filepath='/path/to/file.txt', readonly=True)
     >>> to_config_dict(e) == {
-    ...     "type": "DataFileElement",
-    ...     "DataFileElement": {
+    ...     "type": "smqtk.representation.data_element.file_element.DataFileElement",
+    ...     "smqtk.representation.data_element.file_element.DataFileElement": {
     ...         "filepath": "/path/to/file.txt",
     ...         "readonly": True,
     ...         "explicit_mimetype": None,
@@ -332,7 +343,9 @@ def to_config_dict(c_inst):
     return cls_conf_to_config_dict(c_class, c_inst.get_config())
 
 
-def cls_conf_from_config_dict(config, type_iter):
+def cls_conf_from_config_dict(
+        config: Dict,
+        type_iter: Iterable[Type]) -> Tuple[Type, Dict]:
     """
     Helper function for getting the appropriate type and configuration
     sub-dictionary based on the provided "standard" SMQTK configuration
@@ -361,7 +374,7 @@ def cls_conf_from_config_dict(config, type_iter):
         raise ValueError("Configuration dictionary given does not have an "
                          "implementation type specification.")
     conf_type_name = config['type']
-    type_map = dict(map(lambda t: (t.__name__, t), type_iter))
+    type_map = dict(map(lambda t: (_type_to_key(t), t), type_iter))
 
     conf_type_options = set(config.keys()) - {'type'}
     # Type provided may either by None, not have a matching block in the
@@ -383,7 +396,9 @@ def cls_conf_from_config_dict(config, type_iter):
     return cls, config[conf_type_name]
 
 
-def from_config_dict(config, type_iter, *args):
+def from_config_dict(config: Dict,
+                     type_iter: Iterable[Type],
+                     *args: Any) -> Configurable:
     """
     Helper function for instantiating an instance of a class given the
     configuration dictionary ``config`` from available types provided by
@@ -396,13 +411,12 @@ def from_config_dict(config, type_iter, *args):
     Example:
     >>> from smqtk.representation import DescriptorElement
     >>> example_config = {
-    ...     'type': 'DescriptorMemoryElement',
-    ...     'DescriptorMemoryElement': {},
+    ...     'type': 'smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement',
+    ...     'smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement': {},
     ... }
     >>> inst = from_config_dict(example_config, DescriptorElement.get_impls(),
     ...                         'type-str', 'some-uuid')
-    >>> from smqtk.representation.descriptor_element.local_elements \
-            import DescriptorMemoryElement
+    >>> from smqtk.representation.descriptor_element.local_elements import DescriptorMemoryElement
     >>> isinstance(inst, DescriptorMemoryElement)
     True
 

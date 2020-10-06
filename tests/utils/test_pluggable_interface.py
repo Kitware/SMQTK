@@ -55,7 +55,9 @@ def test_get_impls_expected_defaults():
                                               # Default ``warn`` value
                                               warn=True,
                                               # Default ``reload_modules`` value
-                                              reload_modules=False)
+                                              reload_modules=False,
+                                              # Default ``subclasses`` value
+                                              subclasses=False)
 
 
 def test_get_impls_do_reload():
@@ -70,7 +72,8 @@ def test_get_impls_do_reload():
                                               'SMQTK_PLUGIN_PATH',
                                               'SMQTK_PLUGIN_CLASS',
                                               warn=True,
-                                              reload_modules=True)
+                                              reload_modules=True,
+                                              subclasses=False)
 
 
 @mock.patch.object(DummyImpl, 'PLUGIN_HELPER_VAR',
@@ -92,7 +95,8 @@ def test_get_impls_change_vars(m_env_var_prop, m_helper_var_prop):
                                               expected_env_var,
                                               expected_helper_var,
                                               warn=True,
-                                              reload_modules=False)
+                                              reload_modules=False,
+                                              subclasses=False)
 
 
 # Make sure there is not something in the environment to mess with this test.

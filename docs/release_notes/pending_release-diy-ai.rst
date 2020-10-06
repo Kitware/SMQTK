@@ -32,6 +32,15 @@ Utils
 Fixes
 -----
 
+Algorithms
+
+* NearestNeighborIndex
+
+  * FAISS
+
+    * Fix attribute reference missing issue when the installed FAISS
+      package does not support GPU.
+
 Misc.
 
 * Fixed various small formatting issues raised by new use of flake8.

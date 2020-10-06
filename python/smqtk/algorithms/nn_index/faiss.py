@@ -717,7 +717,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
                 # to function even when there is no GPU available, so the usual
                 # pythonic EAFP doesn't cause an exception to catch when doing
                 # the "improper" thing first.
-                if isinstance(idx, faiss.GpuIndex):
+                if self._use_gpu and isinstance(idx, faiss.GpuIndex):
                     ps = faiss.GpuParameterSpace()
                 else:
                     ps = faiss.ParameterSpace()

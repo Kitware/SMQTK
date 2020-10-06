@@ -43,6 +43,7 @@ import os
 import pkgutil
 import re
 import types
+from typing import Type
 import warnings
 
 from stevedore.extension import ExtensionManager
@@ -178,7 +179,7 @@ def _get_extension_plugin_modules(log, warn=True):
             yield ext.plugin
 
 
-def is_valid(cls: Type[Pluggable], log: logging.Logger, module_path: str, interface_type: Type[Pluggable]) -> bool:
+def is_valid(cls: Type["Pluggable"], log: logging.Logger, module_path: str, interface_type: Type["Pluggable"]) -> bool:
     """
     Determine if a class type is a valid candidate for plugin discovery.
 

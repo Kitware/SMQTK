@@ -211,7 +211,7 @@ def is_valid(cls, log, module_path, interface_type):
 
 
 def get_plugins(interface_type, env_var, helper_var,
-                warn=True, reload_modules=False):
+                warn=True, reload_modules=False, subclasses=False):
     """
     Discover and return classes implementing the given ``interface_class``.
 
@@ -328,6 +328,10 @@ def get_plugins(interface_type, env_var, helper_var,
 
         # Check the validity of the discovered class types in this module.
         class_set.update(cls for cls in classes if is_valid(cls, log, module_path, interface_type))
+
+    # Filter and add the direct subclasses of the interface_type.
+    if subclasses:
+        class_set.update(cls for cls in interface_type.__subclasses__() if is_valid(cls, log, interface_type.__module__, interface_type))
 
     return class_set
 

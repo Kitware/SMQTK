@@ -30,13 +30,13 @@ EXT_MOD_INVALID = 'tests.utils.test_plugin_dir.external_invalid_helper'
 EXT_MOD_ABSTRACT = 'tests.utils.test_plugin_dir.external_still_abstract'
 
 
-def get_plugins_for_class(cls, warn=False):
+def get_plugins_for_class(cls, warn=False, subclasses=False):
     """
     Test standard wrapper on get_plugins call using test constants.
     This is not a fixture due to environment variable mocking.
     """
     # Suppressing warnings for testing purposes.
-    return get_plugins(cls, ENV_VAR, HELP_VAR, warn=warn)
+    return get_plugins(cls, ENV_VAR, HELP_VAR, warn=warn, subclasses=subclasses)
 
 
 ###############################################################################

@@ -47,7 +47,6 @@ import warnings
 
 from stevedore.extension import ExtensionManager
 
-
 # Template for checking validity of sub-module files
 VALID_MODULE_FILE_RE = re.compile(r"^[a-zA-Z]\w*(?:\.py)?$")
 
@@ -179,7 +178,23 @@ def _get_extension_plugin_modules(log, warn=True):
             yield ext.plugin
 
 
-def is_valid(cls, log, module_path, interface_type):
+def is_valid(cls: Type[Pluggable], log: logging.Logger, module_path: str, interface_type: Type[Pluggable]) -> bool:
+    """
+    Determine if a class type is a valid candidate for plugin discovery.
+
+    In particular, the class type ``cls`` must satisfy several conditions:
+    1. It must be a strict subtype of ``interface_type``.
+    2. It must not be an abstract class.
+    3. It must self-report as usable via its `is_usable()` class method.
+
+    :param Type[Pluggable] cls: The class type whose validity is being tested
+    :param logging.Logger log: A logger used to report testing progress
+    :param str module_path: The module path containing the definition of ``cls``
+    :param Type[Pluggable] interface_type: The base class under consideration
+
+    :return: ``True`` if the class is a valid candidate for discovery, and ``False`` otherwise
+    :rtype: bool
+    """
     if not isinstance(cls, type):
         # No logging, over verbose, undetermined type.
         return False

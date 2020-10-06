@@ -354,7 +354,7 @@ class Pluggable (metaclass=abc.ABCMeta):
     PLUGIN_HELPER_VAR = "SMQTK_PLUGIN_CLASS"
 
     @classmethod
-    def get_impls(cls, warn=True, reload_modules=False):
+    def get_impls(cls, warn=True, reload_modules=False, subclasses=False):
         """
         Discover and return a set of classes that implement the calling class.
 
@@ -380,7 +380,7 @@ class Pluggable (metaclass=abc.ABCMeta):
         # TODO: If reload is False, cache result or use cache
         # TODO: If True, re-cache new result.
         return get_plugins(cls, cls.PLUGIN_ENV_VAR, cls.PLUGIN_HELPER_VAR,
-                           warn=warn, reload_modules=reload_modules)
+                           warn=warn, reload_modules=reload_modules, subclasses=subclasses)
 
     @classmethod
     @abc.abstractmethod

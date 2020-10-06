@@ -62,6 +62,10 @@ def test_get_internal_modules():
     """
     class_set = get_plugins_for_class(DummyInterface)
     class_dict = {t.__name__: t for t in class_set}
+
+    subclass_set = get_plugins_for_class(DummyInterface, subclasses=True)
+    subclass_dict = {t.__name__: t for t in subclass_set}
+
     assert len(class_set) == 3
 
     # Classes we expect to be discovered
@@ -78,6 +82,27 @@ def test_get_internal_modules():
     assert class_dict['ImplFoo']().inst_method('a') == 'fooa'
     assert class_dict['ImplBar']().inst_method('b') == 'barb'
     assert class_dict['ImplDoExport']().inst_method('c') == 'doExportc'
+
+    # There should be five classes detected via the subclass method.
+    assert len(subclass_set) == 5
+
+    # Every class detected in the non-subclass set should also be in the
+    # subclass set.
+    assert class_set <= subclass_set
+
+    # We expect two extra classes to be available.
+    assert 'ImplNoExport' in subclass_dict
+    assert 'ImplSkipModule' in subclass_dict
+
+    # We expect these classes to continue to not be discovered.
+    assert 'ImplNotUsable' not in subclass_dict
+    assert 'SomethingElse' not in subclass_dict
+    assert 'ImplActuallyValid' not in subclass_dict
+
+    # We expect the same behavior of the expected classes.
+    assert subclass_dict['ImplFoo']().inst_method('a') == 'fooa'
+    assert subclass_dict['ImplBar']().inst_method('b') == 'barb'
+    assert subclass_dict['ImplDoExport']().inst_method('c') == 'doExportc'
 
 
 @mock.patch.dict(os.environ, {ENV_VAR: EXT_MOD_1})

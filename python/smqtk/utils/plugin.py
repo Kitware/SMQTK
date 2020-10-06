@@ -43,10 +43,10 @@ import os
 import pkgutil
 import re
 import types
+from typing import Type
 import warnings
 
 from stevedore.extension import ExtensionManager
-
 
 # Template for checking validity of sub-module files
 VALID_MODULE_FILE_RE = re.compile(r"^[a-zA-Z]\w*(?:\.py)?$")
@@ -179,14 +179,62 @@ def _get_extension_plugin_modules(log, warn=True):
             yield ext.plugin
 
 
-def get_plugins(interface_type, env_var, helper_var,
-                warn=True, reload_modules=False):
+def is_valid(cls: Type["Pluggable"], log: logging.Logger, module_path: str, interface_type: Type["Pluggable"]) -> bool:
     """
-    Discover and return classes implementing the given ``interface_class``.
+    Determine if a class type is a valid candidate for plugin discovery.
+
+    In particular, the class type ``cls`` must satisfy several conditions:
+    1. It must be a strict subtype of ``interface_type``.
+    2. It must not be an abstract class.
+    3. It must self-report as usable via its `is_usable()` class method.
+
+    :param Type[Pluggable] cls: The class type whose validity is being tested
+    :param logging.Logger log: A logger used to report testing progress
+    :param str module_path: The module path containing the definition of ``cls``
+    :param Type[Pluggable] interface_type: The base class under consideration
+
+    :return: ``True`` if the class is a valid candidate for discovery, and ``False`` otherwise
+    :rtype: bool
+    """
+    if not isinstance(cls, type):
+        # No logging, over verbose, undetermined type.
+        return False
+    elif cls is interface_type:
+        log.debug("[%s.%s] [skip] Literally the base class.",
+                  module_path, cls.__name__)
+        return False
+    elif not issubclass(cls, interface_type):
+        log.debug("[%s.%s] [skip] Does not descend from base class.",
+                  module_path, cls.__name__)
+        return False
+    elif bool(cls.__abstractmethods__):
+        # Making this a warning as I think this indicates a broken
+        # implementation in the ecosystem.
+        # noinspection PyUnresolvedReferences
+        log.warning('[%s.%s] [skip] Does not implement one or '
+                    'more abstract methods: %s',
+                    module_path, cls.__name__,
+                    list(cls.__abstractmethods__))
+        return False
+    elif not cls.is_usable():
+        log.debug("[%s.%s] [skip] Class does not report as usable.",
+                  module_path, cls.__name__)
+        return False
+    else:
+        log.debug('[%s.%s] [KEEP] Retaining subclass.',
+                  module_path, cls.__name__)
+        return True
+
+
+def get_plugins(interface_type, env_var, helper_var,
+                warn=True, reload_modules=False, subclasses=False):
+    """
+    Discover and return classes implementing the given ``interface_type``.
 
     Discoverable implementations may either be located in sub-modules parallel
-    to the definition of the interface class or be located in modules specified
-    in the environment variable  ``env_var``.
+    to the definition of the interface class, be located in modules specified in
+    the environment variable  ``env_var``, or they may be defined in scope as
+    subclasses of ``interface_type``.
 
     In order to specify additional out-of-scope python modules containing
     interface-class implementations, additions to the given environment variable
@@ -199,7 +247,7 @@ def get_plugins(interface_type, env_var, helper_var,
     an alphanumeric character. '_' prefixed attributes are effectively hidden
     from discovery by this function when merely scanning a module's attributes.
 
-    We required that the base class that we are checking for also descends from
+    We require that the base class that we are checking for also descends from
     the ``Pluggable`` interface defined above. This allows us to check if a
     loaded class ``is_usable``.
 
@@ -229,6 +277,9 @@ def get_plugins(interface_type, env_var, helper_var,
     :param bool reload_modules:
         Explicitly reload discovered modules from source instead of taking a
         potentially cached version of the module.
+
+    :param bool subclasses:
+        Control whether to report on subclasses defined in scope.
 
     :return: Set of discovered class types descending from type
         ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
@@ -296,37 +347,14 @@ def get_plugins(interface_type, env_var, helper_var,
                     classes.append(getattr(_module, attr_name))
 
         # Check the validity of the discovered class types in this module.
-        for cls in classes:
-            # check that all class types in iterable are:
-            # - Class types,
-            # - Subclasses of the given base-type and plugin interface
-            # - Not missing any abstract implementations.
-            #
-            # noinspection PyUnresolvedReferences
-            if not isinstance(cls, type):
-                # No logging, over verbose, undetermined type.
-                pass
-            elif cls is interface_type:
-                log.debug("[%s.%s] [skip] Literally the base class.",
-                          module_path, cls.__name__)
-            elif not issubclass(cls, interface_type):
-                log.debug("[%s.%s] [skip] Does not descend from base class.",
-                          module_path, cls.__name__)
-            elif bool(cls.__abstractmethods__):
-                # Making this a warning as I think this indicates a broken
-                # implementation in the ecosystem.
-                # noinspection PyUnresolvedReferences
-                log.warning('[%s.%s] [skip] Does not implement one or '
-                            'more abstract methods: %s',
-                            module_path, cls.__name__,
-                            list(cls.__abstractmethods__))
-            elif not cls.is_usable():
-                log.debug("[%s.%s] [skip] Class does not report as usable.",
-                          module_path, cls.__name__)
-            else:
-                log.debug('[%s.%s] [KEEP] Retaining subclass.',
-                          module_path, cls.__name__)
-                class_set.add(cls)
+        class_set.update(cls for cls in classes if is_valid(cls, log, module_path, interface_type))
+
+    # Filter and add the direct subclasses of the interface_type.
+    if subclasses:
+        class_set.update(
+            cls for cls in interface_type.__subclasses__()
+            if is_valid(cls, log, interface_type.__module__, interface_type)
+        )
 
     return class_set
 
@@ -349,7 +377,7 @@ class Pluggable (metaclass=abc.ABCMeta):
     PLUGIN_HELPER_VAR = "SMQTK_PLUGIN_CLASS"
 
     @classmethod
-    def get_impls(cls, warn=True, reload_modules=False):
+    def get_impls(cls, warn=True, reload_modules=False, subclasses=False):
         """
         Discover and return a set of classes that implement the calling class.
 
@@ -366,6 +394,9 @@ class Pluggable (metaclass=abc.ABCMeta):
         :param bool reload_modules:
             Explicitly reload discovered modules from source.
 
+        :param bool subclasses:
+            Control whether to report on subclasses defined in scope.
+
         :return: Set of discovered class types descending from type
             ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys
             are the string names of the class types.
@@ -375,7 +406,7 @@ class Pluggable (metaclass=abc.ABCMeta):
         # TODO: If reload is False, cache result or use cache
         # TODO: If True, re-cache new result.
         return get_plugins(cls, cls.PLUGIN_ENV_VAR, cls.PLUGIN_HELPER_VAR,
-                           warn=warn, reload_modules=reload_modules)
+                           warn=warn, reload_modules=reload_modules, subclasses=subclasses)
 
     @classmethod
     @abc.abstractmethod

@@ -331,7 +331,10 @@ def get_plugins(interface_type, env_var, helper_var,
 
     # Filter and add the direct subclasses of the interface_type.
     if subclasses:
-        class_set.update(cls for cls in interface_type.__subclasses__() if is_valid(cls, log, interface_type.__module__, interface_type))
+        class_set.update(
+            cls for cls in interface_type.__subclasses__()
+            if is_valid(cls, log, interface_type.__module__, interface_type)
+        )
 
     return class_set
 

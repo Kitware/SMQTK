@@ -228,11 +228,12 @@ def is_valid(cls: Type[Pluggable], log: logging.Logger, module_path: str, interf
 def get_plugins(interface_type, env_var, helper_var,
                 warn=True, reload_modules=False, subclasses=False):
     """
-    Discover and return classes implementing the given ``interface_class``.
+    Discover and return classes implementing the given ``interface_type``.
 
     Discoverable implementations may either be located in sub-modules parallel
-    to the definition of the interface class or be located in modules specified
-    in the environment variable  ``env_var``.
+    to the definition of the interface class, be located in modules specified in
+    the environment variable  ``env_var``, or they may be defined in scope as
+    subclasses of ``interface_type``.
 
     In order to specify additional out-of-scope python modules containing
     interface-class implementations, additions to the given environment variable
@@ -245,7 +246,7 @@ def get_plugins(interface_type, env_var, helper_var,
     an alphanumeric character. '_' prefixed attributes are effectively hidden
     from discovery by this function when merely scanning a module's attributes.
 
-    We required that the base class that we are checking for also descends from
+    We require that the base class that we are checking for also descends from
     the ``Pluggable`` interface defined above. This allows us to check if a
     loaded class ``is_usable``.
 
@@ -275,6 +276,9 @@ def get_plugins(interface_type, env_var, helper_var,
     :param bool reload_modules:
         Explicitly reload discovered modules from source instead of taking a
         potentially cached version of the module.
+
+    :param bool subclasses:
+        Control whether to report on subclasses defined in scope.
 
     :return: Set of discovered class types descending from type
         ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
@@ -388,6 +392,9 @@ class Pluggable (metaclass=abc.ABCMeta):
 
         :param bool reload_modules:
             Explicitly reload discovered modules from source.
+
+        :param bool subclasses:
+            Control whether to report on subclasses defined in scope.
 
         :return: Set of discovered class types descending from type
             ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys

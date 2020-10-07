@@ -69,7 +69,7 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         super(DetectionElement, self).__init__()
         self._uuid = uuid
 
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
     def __eq__(self, other):
         """

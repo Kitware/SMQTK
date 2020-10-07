@@ -2,19 +2,18 @@ import collections
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 import tempfile
+from typing import Dict, Optional, List, Sequence, Set, Union
 import warnings
 
 import numpy as np
-import six
-from six.moves import range
 
 from smqtk.algorithms import ImageReader
 from smqtk.utils.image import crop_in_bounds
 
 try:
-    import osgeo
-    import osgeo.gdal as gdal
-    import osgeo.gdal_array as gdal_array
+    import osgeo  # type: ignore
+    import osgeo.gdal as gdal  # type: ignore
+    import osgeo.gdal_array as gdal_array  # type: ignore
 except ImportError:
     osgeo = gdal = gdal_array = None
 
@@ -24,21 +23,20 @@ except ImportError:
 #
 # TODO: Move appropriate functions to a ``smqtk.utils.gdal`` module.
 
-def get_gdal_driver_supported_mimetypes():
+def get_gdal_driver_supported_mimetypes() -> Set[str]:
     """
     Get a set of mimetype strings that currently available GDAL drivers
     support.
 
-    :return: Set of MIMETYPE string.
-    :rtype: set[str]
-
+    :return: Set of MIMETYPE strings.
     """
     # look for DMD_MIMETYPE metadata key in available drivers (available in
     # both versions 1 and 2)
     try:
-        return get_gdal_driver_supported_mimetypes.cache
+        return get_gdal_driver_supported_mimetypes.cache  # type: ignore
     except AttributeError:
-        m_set = get_gdal_driver_supported_mimetypes.cache = set()
+        m_set: Set[str] = set()
+        get_gdal_driver_supported_mimetypes.cache = m_set  # type: ignore
         m_key = gdal.DMD_MIMETYPE
 
         for i in range(gdal.GetDriverCount()):
@@ -49,10 +47,10 @@ def get_gdal_driver_supported_mimetypes():
             if d_mimetype is not None:
                 m_set.add(d_mimetype)
 
-        return get_gdal_driver_supported_mimetypes.cache
+        return m_set
 
 
-def get_possible_gdal_gci_values():
+def get_possible_gdal_gci_values() -> Set[int]:
     """
     Get the set of possible gdal.GCI_* values.
 
@@ -60,18 +58,17 @@ def get_possible_gdal_gci_values():
     the runtime of an application.
 
     :return: The set of possible gdal.GCI_* values.
-    :rtype: set[int]
     """
     try:
-        return get_possible_gdal_gci_values.cache
+        return get_possible_gdal_gci_values.cache  # type: ignore
     except AttributeError:
-        get_possible_gdal_gci_values.cache = s = \
-            set(map(lambda a: getattr(gdal, a),
+        s = set(map(lambda a: getattr(gdal, a),
                     [attr for attr in dir(gdal) if attr.startswith("GCI_")]))
+        get_possible_gdal_gci_values.cache = s  # type: ignore
         return s
 
 
-def get_gdal_gci_abbreviation_map():
+def get_gdal_gci_abbreviation_map() -> Dict[str, int]:
     """
     Abbreviation mapping::
 
@@ -95,9 +92,9 @@ def get_gdal_gci_abbreviation_map():
     :rtype: dict[str, int]
     """
     try:
-        return get_gdal_gci_abbreviation_map.map_cache
+        return get_gdal_gci_abbreviation_map.map_cache  # type: ignore
     except AttributeError:
-        get_gdal_gci_abbreviation_map.map_cache = m = {
+        m = {
             'a': gdal.GCI_AlphaBand,
             'b': gdal.GCI_BlueBand,
             'g': gdal.GCI_GreenBand,
@@ -109,6 +106,7 @@ def get_gdal_gci_abbreviation_map():
             's': gdal.GCI_SaturationBand,
             'l': gdal.GCI_LightnessBand
         }
+        get_gdal_gci_abbreviation_map.map_cache = m  # type: ignore
         return m
 
 
@@ -173,8 +171,9 @@ def load_dataset_vsimem(data_element):
     # Unguarded next() call is OK in this case because the generator returned
     # by ``_get_candidate_names()`` does not terminate.
     # noinspection PyProtectedMember
+    get_candidate_names = tempfile._get_candidate_names  # type: ignore
     tmp_vsimem_path = '/vsimem/{}'.format(
-        six.next(tempfile._get_candidate_names())  # lgtm[py/unguarded-next-in-generator]
+        next(get_candidate_names())  # lgtm[py/unguarded-next-in-generator]
     )
     gdal.FileFromMemBuffer(tmp_vsimem_path, data_element.get_bytes())
     try:
@@ -232,7 +231,8 @@ class GdalImageReader (ImageReader):
             return False
         return True
 
-    def __init__(self, load_method=LOAD_METHOD_TEMPFILE, channel_order=None):
+    def __init__(self, load_method: str = LOAD_METHOD_TEMPFILE,
+                 channel_order: Optional[Union[str, Sequence[int]]] = None):
         """
         Use GDAL to read raster image pixel data and returns an image matrix in
         the format native to the input data.
@@ -272,10 +272,10 @@ class GdalImageReader (ImageReader):
         functional in GDAL version 2 and above currently. A RuntimeError is
         raised if the currently imported GDAL is not version 2 or greater.
 
-        :param str load_method:
+        :param load_method:
             Method of loading GDAL Dataset from a DataElement.  This must be
             one of the ``GdalImageReader.LOAD_METHOD_*`` options.
-        :param str | collections.abc.Sequence[int] channel_order:
+        :param channel_order:
             Optional specific selection and order of channels read from the
             image to be included in the output matrix.  See above for more
             details.
@@ -290,44 +290,45 @@ class GdalImageReader (ImageReader):
         # The channel order in known GDAL GCI integer values. This is None when
         # channel_order is none, otherwise is a sequence of valid GDAL GCI
         # integer values.
-        #: :type: None | list[int]
-        self._channel_order_gci = None
+        self._channel_order_gci: Optional[List[int]] = None
         if channel_order is not None:
             # Is Sequence check.
             if not isinstance(channel_order, collections.abc.Sequence):
-                raise ValueError("Channel order must be a sequence in order to "
-                                 "discern order! Given type: {}"
+                raise ValueError("Channel order must be a sequence in order "
+                                 "to discern order! Given type: {}"
                                  .format(type(channel_order)))
             # Cannot be given an empty order sequence.
             if len(channel_order) == 0:
-                raise ValueError("Invalid channel order, must request at least "
-                                 "one band. Given: '{}'".format(channel_order))
+                raise ValueError("Invalid channel order, must request at "
+                                 "least one band. Given: '{}'"
+                                 .format(channel_order))
             # If using an abbreviation string, make sure all characters match a
             # known abbreviation.
-            if isinstance(channel_order, six.string_types):
-                self._channel_order = channel_order = channel_order.lower()
+            if isinstance(channel_order, str):
+                channel_order = channel_order.lower()
+                self._channel_order = channel_order
                 abb_map = get_gdal_gci_abbreviation_map()
                 # Set will be non-empty if there is an invalid character.
-                valid_set = set(abb_map)
+                valid_chr_set = set(abb_map)
                 # noinspection PyTypeChecker
-                diff_set = \
-                    set(channel_order).difference(valid_set)
-                if diff_set:
+                str_diff_set = set(channel_order).difference(valid_chr_set)
+                if str_diff_set:
                     raise ValueError("Invalid abbreviation character in given "
                                      "channel order. Invalid characters: {}. "
                                      "Valid characters: {}."
-                                     .format(list(diff_set), list(valid_set)))
+                                     .format(list(str_diff_set),
+                                             list(valid_chr_set)))
                 # Cache channel order in GCI translated values
                 self._channel_order_gci = [abb_map[a] for a in channel_order]
             # When not string, make sure integer values are in the reported set
             # values from GDAL, otherwise we'll get a runtime error later.
             else:
-                valid_set = set(get_possible_gdal_gci_values())
-                diff_set = set(channel_order).difference(valid_set)
-                if diff_set:
+                valid_int_set = set(get_possible_gdal_gci_values())
+                int_diff_set = set(channel_order).difference(valid_int_set)
+                if int_diff_set:
                     raise ValueError("Invalid GDAL band integer values given. "
                                      "Given invalid values: {}."
-                                     .format(list(diff_set)))
+                                     .format(list(int_diff_set)))
                 # Given channel order was already in GCI values, mirror in
                 # expected attribute.
                 self._channel_order_gci = list(channel_order)
@@ -341,7 +342,9 @@ class GdalImageReader (ImageReader):
                              .format(load_method,
                                      self.LOAD_METHOD_CONTEXTMANAGERS))
         elif self._load_method == self.LOAD_METHOD_VSIMEM:
-            gdal_major_version = LooseVersion(osgeo.__version__).version[0]
+            gdal_major_version: int = int(
+                LooseVersion(osgeo.__version__).version[0]
+            )
             if gdal_major_version < 2:
                 raise RuntimeError("Load method '{}' was specified, "
                                    "but required GDAL version of 2 is not "
@@ -424,14 +427,19 @@ class GdalImageReader (ImageReader):
             # Select specific channels if they are present in this dataset, or
             # just get all of them
             if self._channel_order is not None:
+                assert self._channel_order_gci is not None, (
+                    "When a channel-order is set, the GCI equivalent should "
+                    "also be set."
+                )
                 # Map raster bands from CI value to band index.
                 # - GDAL uses 1-based indexing.
                 band_ci_to_idx = {
                     gdal_ds.GetRasterBand(b_i).GetColorInterpretation(): b_i
                     for b_i in range(1, gdal_ds.RasterCount+1)
                 }
-                gci_diff = \
+                gci_diff = (
                     set(self._channel_order_gci).difference(band_ci_to_idx)
+                )
                 if gci_diff:
                     raise RuntimeError(
                         "Data element did not provide channels required to "

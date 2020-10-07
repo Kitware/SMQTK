@@ -3,29 +3,22 @@ import os
 import io
 import itertools
 import logging
-import multiprocessing
-import multiprocessing.pool
+import pickle
 
 import numpy
 import PIL.Image
 import PIL.ImageFile
-# noinspection PyUnresolvedReferences
-from six.moves import zip
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.utils.parallel import parallel_map
 
 try:
-    from six.moves import cPickle as pickle
+    import kwcnn  # type: ignore
 except ImportError:
-    import pickle
-
-try:
-    import kwcnn
-    from .autoencoder_model_def import AutoEncoderModel
-except ImportError as ex:
     kwcnn = None
-    AutoEncoderModel = None
+
+# Importing after above to prevent circular import issue.
+from .autoencoder_model_def import AutoEncoderModel
 
 
 __author__ = 'jason.parham@kitware.com,paul.tunison@kitware.com'
@@ -319,8 +312,9 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
         img_array_iter = \
             parallel_map(_process_load_img_array,
                          zip(
-                             data_iter, itertools.repeat(self.transformer),
-                             itertools.repeat(self.data_layer),
+                             data_iter,
+                             itertools.repeat(self.network_is_greyscale),
+                             itertools.repeat(self.input_shape),
                              itertools.repeat(self.load_truncated_images),
                              itertools.repeat(self.pixel_rescale),
                          ),
@@ -336,10 +330,10 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             log_debug("Batch {} - size {}".format(batch_i, cur_batch_size))
 
             log_debug("Loading image numpy array into KWCNN Data object")
-            self.data.set_data_list(batch_img_arrays, quiet=True)
+            self.data.set_data_list(batch_img_arrays, quiet=True)  # type: ignore
 
             log_debug("Performing forward inference using KWCNN Network")
-            test_results = self.network.test(quiet=True)
+            test_results = self.network.test(quiet=True)  # type: ignore
             descriptor_list = test_results['probability_list']
 
             for v in descriptor_list:
@@ -357,63 +351,6 @@ class KWCNNDescriptorGenerator (DescriptorGenerator):
             batch_img_arrays = \
                 list(itertools.islice(img_array_iter, self.batch_size))
             batch_i += 1
-
-
-    def _process_batch(self, uuids4proc, data_elements, descr_elements, procs):
-        """
-        Run a number of data elements through the network in batches.
-
-        Compute results of elements based on the number of UUIDs given,
-        returning the vectors of descriptors
-
-        :param uuids4proc: UUIDs of the source data to run in the network as a
-            batch.
-        :type uuids4proc: collections.abc.Sequence[collections.abc.Hashable]
-
-        :param data_elements: Mapping of UUID to data element for input data.
-        :type data_elements: dict[collections.abc.Hashable,
-                                  smqtk.representation.DataElement]
-
-        :param descr_elements: Mapping of UUID to descriptor element based on
-            input data elements.
-        :type descr_elements: dict[collections.abc.Hashable,
-                                   smqtk.representation.DescriptorElement]
-
-        :param procs: The number of asynchronous processes to run for loading
-            images. This may be None to just use all available cores.
-        :type procs: None | int
-
-        """
-        self._log.debug("Loading image pixel arrays")
-        uid_num = len(uuids4proc)
-        p = multiprocessing.Pool(procs)
-        img_arrays = p.map(
-            _process_load_img_array,
-            zip(
-                (data_elements[uid] for uid in uuids4proc),
-                itertools.repeat(self.network_is_greyscale, uid_num),
-                itertools.repeat(self.input_shape, uid_num),
-                itertools.repeat(self.load_truncated_images, uid_num),
-                itertools.repeat(self.pixel_rescale, uid_num),
-            )
-        )
-        p.close()
-        p.join()
-
-        self._log.debug("Loading image numpy array into KWCNN Data object")
-        self.data.set_data_list(img_arrays, quiet=True)
-
-        self._log.debug("Performing forward inference using KWCNN Network")
-        test_results = self.network.test(quiet=True)
-        descriptor_list = test_results['probability_list']
-
-        self._log.debug("transform network output into descriptors")
-        for uid, v in zip(uuids4proc, descriptor_list):
-            if v.ndim > 1:
-                # In case kwcnn generates multidimensional array (rows, 1, 1)
-                descr_elements[uid].set_vector(numpy.ravel(v))
-            else:
-                descr_elements[uid].set_vector(v)
 
 
 def _process_load_img_array(data_element, network_is_greyscale, input_shape,

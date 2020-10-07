@@ -15,6 +15,7 @@ import logging
 import re
 import signal
 import threading
+from typing import List
 
 
 class SignalHandler(object):
@@ -36,12 +37,13 @@ class SignalHandler(object):
         # create a mapping of signal integer keys to the signal they represent
         # this may change from system to system(?), thus the creating it
         # automatically
-        sig_list = [
-            re.match('^SIG[A-Z]+$', e) and re.match('^SIG[A-Z]+$', e).group()
-            for e in dir(signal)
-        ]
+        sig_re = re.compile(r'^SIG[A-Z]+$')
+        sig_list: List[str] = []
+        for e in dir(signal):
+            m = sig_re.match(e)
+            if m:
+                sig_list.append(m.group())
         sig_list.sort()
-        sig_list = sig_list[sig_list.count(None):]
         self._sig_map = dict([(getattr(signal, sig), sig)
                               for sig in sig_list])
 

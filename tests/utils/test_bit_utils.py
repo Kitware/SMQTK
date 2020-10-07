@@ -74,7 +74,7 @@ class TestBitUtils (unittest.TestCase):
         c = 10000
         for _ in range(c):
             # noinspection PyUnresolvedReferences
-            v = random.randint(0, bits.popcount.v_max)
+            v = random.randint(0, bits.POPCOUNT_VMAX)
             # Known method to always work based on counting python's binary
             # string representation.
             v_bin_count = bin(v).count('1')

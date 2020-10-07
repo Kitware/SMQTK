@@ -4,7 +4,6 @@ Auto-encoder network model definition. Only defined if kwcnn is available.
 from .kwcnndescriptor import kwcnn
 
 
-AutoEncoderModel = None
 if kwcnn is not None:
     class AutoEncoderModel(kwcnn.core.KWCNN_Auto_Model):  # NOQA
         """FCNN Model."""
@@ -107,3 +106,5 @@ if kwcnn is not None:
             )
 
             return l_bottleneck
+else:
+    AutoEncoderModel = None  # type: ignore

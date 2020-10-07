@@ -15,7 +15,7 @@ from smqtk.utils.dict import merge_dict
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import caffe
+    import caffe  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import caffe module: %s",
                                         str(ex))
@@ -362,6 +362,10 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             input data elements.
         :rtype: collections.abc.Iterable[numpy.ndarray]
         """
+        assert self.network is not None, (
+            "A network should be initialized by now."
+        )
+
         self._set_caffe_mode()
         log_debug = self._log.debug
 
@@ -403,7 +407,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             for v in descriptor_list:
                 if v.ndim > 1:
                     # In case caffe generates multidimensional array
-                    # (rows, 1, 1)
+                    # like (rows, 1, 1)
                     log_debug("- Raveling output array of shape {}"
                               .format(v.shape))
                     yield numpy.ravel(v)

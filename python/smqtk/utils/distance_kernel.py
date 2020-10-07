@@ -1,15 +1,15 @@
 """
 LICENCE
 -------
-Copyright 2013-2015 by Kitware, Inc. All Rights Reserved. Please refer to
+Copyright 2013-2020 by Kitware, Inc. All Rights Reserved. Please refer to
 KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
 import logging
+from typing import FrozenSet
 
 import numpy as np
-from six.moves import range
 
 from smqtk.utils import ReadWriteLock
 from smqtk.utils import SimpleTimer
@@ -411,12 +411,12 @@ class DistanceKernel (object):
                 #                        "without the background flag vector!")
 
                 try:
-                    clip_ids = [int(e) for e in clip_ids]
+                    clip_ids_list = [int(e) for e in clip_ids]
                 except ValueError:
                     # Re-raise with more informative exception.
                     raise ValueError("Not all clip IDs could be used as ints!")
 
-                id_diff = set(clip_ids).difference(self._row_id_index_map)
+                id_diff = set(clip_ids_list).difference(self._row_id_index_map)
                 assert not id_diff, \
                     "Not all clip IDs provided are represented in this " \
                     "distance kernel matrix! (difference: %s)" \
@@ -426,9 +426,9 @@ class DistanceKernel (object):
             with SimpleTimer("Computing union of BG clips and provided IDs",
                              self._log.debug):
                 if self._bg_cid_set is not None:
-                    all_cids = self._bg_cid_set.union(clip_ids)
+                    all_cids = self._bg_cid_set.union(clip_ids_list)
                 else:
-                    all_cids = set(clip_ids)
+                    all_cids = set(clip_ids_list)
 
             # Reorder the given clip IDs so that they are in the same relative
             # order as the kernel matrix edges.
@@ -446,7 +446,7 @@ class DistanceKernel (object):
             focus_id2isbg = []
             for idx in focus_indices:
                 cid = self._row_id_index_map[idx]
-                focus_id2isbg.append(False if cid in clip_ids else True)
+                focus_id2isbg.append(False if cid in clip_ids_list else True)
 
             ret_mat = self._kernel[focus_indices, :][:, focus_indices]
             return focus_clipids, focus_id2isbg, ret_mat
@@ -476,12 +476,14 @@ class DistanceKernel (object):
         with self._rw_lock.read_lock():
             with SimpleTimer("Checking inputs", self._log.debug):
                 try:
-                    clipID_or_IDs = frozenset(int(e) for e in clipID_or_IDs)
+                    clipID_or_IDs_set: FrozenSet[int] = frozenset(
+                        int(e) for e in clipID_or_IDs
+                    )
                 except Exception as ex:
                     raise ValueError("Not all clip IDs could be used as ints: "
                                      "%s" % str(ex))
 
-                id_diff = clipID_or_IDs.difference(self._row_id_index_map)
+                id_diff = clipID_or_IDs_set.difference(self._row_id_index_map)
                 assert not id_diff, \
                     "Not all clip IDs provided are represented in this " \
                     "distance kernel matrix! (difference: %s)" \
@@ -495,9 +497,9 @@ class DistanceKernel (object):
                 focus_row_indices = []
                 focus_row_clipids = []
                 for idx, cid in enumerate(self._row_id_index_map):
-                    # if ((cid in clipID_or_IDs)
+                    # if ((cid in clipID_or_IDs_set)
                     #         and (cid not in focus_row_clipids)):
-                    if cid in clipID_or_IDs:
+                    if cid in clipID_or_IDs_set:
                         focus_row_indices.append(idx)
                         focus_row_clipids.append(cid)
 

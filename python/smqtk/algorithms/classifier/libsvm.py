@@ -5,7 +5,6 @@ import logging
 import os
 import pickle
 import tempfile
-import threading
 
 import numpy
 import numpy.linalg
@@ -17,8 +16,8 @@ from smqtk.representation.data_element import from_uri
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import svm
-    import svmutil
+    import svm  # type: ignore
+    import svmutil  # type: ignore
 except ImportError:
     svm = None
     svmutil = None
@@ -378,6 +377,9 @@ class LibSvmClassifier (SupervisedClassifier):
     def _classify_arrays(self, array_iter):
         if not self.has_model():
             raise RuntimeError("No SVM model present for classification")
+        assert self.svm_model is not None, (
+            "Should have an SVM model at this point."
+        )
 
         # Dump descriptors into a matrix for normalization and use in
         # prediction.
@@ -413,7 +415,7 @@ class LibSvmClassifier (SupervisedClassifier):
                 svm.libsvm.svm_predict_probability(self.svm_model, v,
                                                    prob_estimates)
                 c = dict(c_base)  # Shallow copy
-                c.update({svm_label_map[l]: p for l, p
+                c.update({svm_label_map[label]: prob for label, prob
                           in zip(svm_model_labels, prob_estimates[:nr_class])})
                 return c
             # If n_jobs == 1, just be serial

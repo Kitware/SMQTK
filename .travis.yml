@@ -27,7 +27,8 @@ addons:
 # "Install" of SMQTK + immediate deps
 install:
   # install python dependencies to environment
-  - pip install -r requirements.txt
+  - pip install -U pip
+  - pip install --use-feature=2020-resolver -r requirements/ci.txt
   - PYTHONINSTALLPREFIX="$(realpath "$(dirname "$(which python)")/..")"
   - echo "${PYTHONINSTALLPREFIX}"
 
@@ -51,4 +52,4 @@ install:
 
 # Run tests here
 script:
-  - python setup.py test
+  - pytest --cov=smqtk --cov-config=.pytest.coveragerc

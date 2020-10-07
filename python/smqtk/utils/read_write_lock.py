@@ -1,8 +1,8 @@
 """
 LICENCE
 -------
-Copyright 2013-2015 by Kitware, Inc. All Rights Reserved. Please refer to
-KITWARE_LICENSE.TXT for licensing information, or contact General Counsel,
+Copyright 2013-2020 by Kitware, Inc. All Rights Reserved. Please refer to
+LICENSE.TXT for licensing information, or contact General Counsel,
 Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 """
 
@@ -10,6 +10,7 @@ from collections import deque
 import multiprocessing
 from threading import current_thread
 import time
+from typing import Deque, Optional, Tuple
 import warnings
 
 
@@ -121,8 +122,9 @@ class ReadWriteLock (object):
 
         # Writers will be serviced before readers, recorded by this count.
         # Writers serviced in order of request as ordered in this list.
-        #: :type: deque of (int, int)
-        self.__pending_writers = deque()  # insert linked-list structure here?
+        self.__pending_writers: Deque[
+            Tuple[Optional[int], Optional[int]]
+        ] = deque()
 
         # current processes holding reader locks. Maps the user's ID to the
         # number of times it has reentered reading locks.

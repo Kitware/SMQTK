@@ -27,7 +27,7 @@ from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
 try:
-    import psycopg2
+    import psycopg2  # type: ignore
 except ImportError:
     psycopg2 = None
 

@@ -6,7 +6,7 @@ import setuptools
 
 
 PYTHON_SRC = 'python'
-PYTHON_FILE_RE = re.compile('.*\.(?:py[co]?)$')
+PYTHON_FILE_RE = re.compile(r'.*\.(?:py[co]?)$')
 
 
 # TODO: Auto-append dev version based on how forward from latest release
@@ -123,9 +123,6 @@ setuptools.setup(
     },
     data_files=list_directory_files('etc'),
 
-    setup_requires=[
-        'pytest-runner',
-    ],
     install_requires=[
         'click',
         'flask',
@@ -144,12 +141,6 @@ setuptools.setup(
         'scipy',
         'six',
         'stevedore',
-    ],
-    tests_require=[
-        'coverage',
-        'mock',
-        'pytest',
-        'pytest-cov',
     ],
     extras_require={
         # Various optional dependencies for plugins

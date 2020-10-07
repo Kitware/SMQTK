@@ -11,6 +11,7 @@ import os.path as osp
 import subprocess
 import sys
 import tempfile
+from typing import Callable, Dict, Hashable, List, Optional, Set, Tuple
 
 import numpy
 import six
@@ -33,7 +34,7 @@ from . import utils
 
 # Requires FLANN bindings
 try:
-    import pyflann
+    import pyflann  # type: ignore
 except ImportError:
     pyflann = None
 
@@ -58,6 +59,8 @@ class ColorDescriptor_Base (DescriptorGenerator):
     # Name/Path to the colorDescriptor executable to use. By default we assume
     # its accessible on the PATH.
     EXE = 'colorDescriptor'
+
+    _is_usable_cache: Optional[bool] = None
 
     @classmethod
     def is_usable(cls):
@@ -491,6 +494,10 @@ class ColorDescriptor_Base (DescriptorGenerator):
         :rtype: numpy.ndarray
 
         """
+        assert self._codebook is not None, (
+            "We should have a codebook at this point."
+        )
+
         checkpoint_filepath = self._get_checkpoint_feature_file(data)
         # if osp.isfile(checkpoint_filepath):
         #     return numpy.load(checkpoint_filepath)
@@ -819,7 +826,10 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
             # Mapping of UID to tuple containing:
             #   (info_fp, desc_fp, async processing result, tmp_clean_method)
-            r_map = {}
+            r_map: Dict[
+                Hashable,
+                Tuple[str, str, multiprocessing.pool.ApplyResult, Callable]
+            ] = {}
             with SimpleTimer("Computing descriptors async...", self._log.debug):
                 for di in data_set:
                     # Creating temporary image file from data bytes
@@ -844,6 +854,11 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             i_width = None
             d_width = None
 
+            failed_gen_uids: Set[Hashable] = set()
+            r2_map: Dict[
+                Hashable,
+                Tuple[str, str, int, Optional[List[int]]]
+            ] = {}
             for uid in s_keys:
                 ifp, dfp, r, tmp_clean_method = r_map[uid]
 
@@ -854,7 +869,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                     self._log.warning("Descriptor generation failed for "
                                       "UID[%s], skipping its inclusion in "
                                       "model: %s", uid, str(ex))
-                    r_map[uid] = None
+                    failed_gen_uids.add(uid)
                     continue
                 finally:
                     # Done with image file, so remove from filesystem
@@ -868,7 +883,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                 if d_shape[1] == 0:
                     continue
 
-                ssi = None
+                ssi: Optional[List[int]] = None
                 if i_shape[0] > per_item_limit:
                     # pick random indices to subsample down to size limit
                     ssi = sorted(
@@ -876,7 +891,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                     )
 
                 # Only keep this if any descriptors were generated
-                r_map[uid] = (ifp, dfp, running_height, ssi)
+                r2_map[uid] = (ifp, dfp, running_height, ssi)
                 running_height += min(i_shape[0], per_item_limit)
             pool.join()
 
@@ -886,12 +901,12 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
             for uid in s_keys:
-                if r_map[uid]:
-                    ifp, dfp, sR, ssi = r_map[uid]
+                if uid not in failed_gen_uids:
+                    ifp, dfp, sR, subsample = r2_map[uid]
                     tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                                   args=(ifp, master_info, sR, ssi))
+                                   args=(ifp, master_info, sR, subsample))
                     tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                                   args=(dfp, master_desc, sR, ssi))
+                                   args=(dfp, master_desc, sR, subsample))
             tp.close()
             tp.join()
             return master_info, master_desc
@@ -973,7 +988,13 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         # Mapping of [UID] to [frame] to tuple containing:
         #   (info_fp, desc_fp, async processing result)
-        r_map = {}
+        r_map: Dict[
+            Hashable,
+            Dict[
+                int,
+                Tuple[str, str, multiprocessing.pool.ApplyResult]
+            ]
+        ] = {}
         with SimpleTimer("Extracting frames and submitting descriptor jobs...",
                          self._log.debug):
             for di in data_set:
@@ -1008,6 +1029,10 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
         pool.close()
 
         # Each result is a tuple of two ndarrays: info and descriptor matrices
+        r2_map: Dict[
+            Hashable,
+            Tuple[List[str], List[str], int, Optional[List[int]]]
+        ] = {}
         with SimpleTimer("Collecting shape information for super matrices...",
                          self._log.debug):
             running_height = 0
@@ -1033,7 +1058,8 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                         self._log.warning('Descriptor generation failed for '
                                           'frame %d in video UID[%s]: %s',
                                           frame, uid, str(ex))
-                        r_map[uid] = None
+                        # This frame is just not counted in the `*_mat_fps`
+                        # lists.
                         continue
 
                     if d_width is None and d_shape[0] != 0:
@@ -1051,7 +1077,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
                 # If combined descriptor height exceeds the per-item limit,
                 # generate a random subsample index list
-                ssi = None
+                ssi: Optional[List[int]] = None
                 if video_num_desc > per_item_limit:
                     ssi = sorted(
                         numpy.random
@@ -1059,8 +1085,8 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
                     )
                     video_num_desc = len(ssi)
 
-                r_map[uid] = (video_info_mat_fps, video_desc_mat_fps,
-                              running_height, ssi)
+                r2_map[uid] = (video_info_mat_fps, video_desc_mat_fps,
+                               running_height, ssi)
                 running_height += video_num_desc
         pool.join()
         del pool
@@ -1071,11 +1097,11 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
             for uid in uids:
-                info_fp_list, desc_fp_list, sR, ssi = r_map[uid]
+                info_fp_list, desc_fp_list, sR, subsample = r_map[uid]
                 tp.apply_async(ColorDescriptor_Video._thread_load_matrices,
-                               args=(master_info, info_fp_list, sR, ssi))
+                               args=(master_info, info_fp_list, sR, subsample))
                 tp.apply_async(ColorDescriptor_Video._thread_load_matrices,
-                               args=(master_desc, desc_fp_list, sR, ssi))
+                               args=(master_desc, desc_fp_list, sR, subsample))
             tp.close()
             tp.join()
 

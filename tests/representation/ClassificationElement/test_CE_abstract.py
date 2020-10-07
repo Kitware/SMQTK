@@ -368,8 +368,8 @@ class TestClassificationElementAbstract (unittest.TestCase):
         #: :type: ClassificationElement
         e = mock.MagicMock(spec_set=ClassificationElement)
 
-        with pytest.raises(ValueError, match="No classification labels/values "
-                                             "given\."):
+        with pytest.raises(ValueError,
+                           match=r"No classification labels/values given\."):
             ClassificationElement.set_classification(e)
 
     def test_set_empty_input(self):
@@ -381,8 +381,8 @@ class TestClassificationElementAbstract (unittest.TestCase):
         #: :type: ClassificationElement
         e = mock.MagicMock(spec_set=ClassificationElement)
 
-        with pytest.raises(ValueError, match="No classification labels/values "
-                                             "given\."):
+        with pytest.raises(ValueError,
+                           match=r"No classification labels/values given\."):
             ClassificationElement.set_classification(e, {})
 
     def test_set_input_dict(self):

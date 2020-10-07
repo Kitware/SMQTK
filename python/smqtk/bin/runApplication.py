@@ -4,8 +4,8 @@ Runs conforming SMQTK Web Applications.
 
 import logging
 
-from flask_basicauth import BasicAuth
-from flask_cors import CORS
+from flask_basicauth import BasicAuth  # type: ignore
+from flask_cors import CORS  # type: ignore
 import six
 
 from smqtk.utils import cli
@@ -116,10 +116,10 @@ def main():
         log.info("")
         log.info("Available applications:")
         log.info("")
-        for l, cls in six.iteritems(web_applications):
-            log.info("\t" + l)
+        for label, cls in six.iteritems(web_applications):
+            log.info("\t" + label)
             if debug_smqtk:
-                log.info('\t' + ('^'*len(l)) + '\n' +
+                log.info('\t' + ('^'*len(label)) + '\n' +
 
                          cls.__doc__ + '\n' +
                          ('*' * 80) + '\n')

@@ -3,10 +3,10 @@
 
 # Some of these deps are installed by ReadTheDocs implicitly so they are
 # "duplicate" here. However, listing them here is useful for a local
-# documentation build. Not pinning versions to allow
+# documentation build. Not pinning versions to allow specifically pinned
+# versions by ReadTheDocs to not be modified.
 sphinx
 sphinx_rtd_theme
-mock
 
 # SMQTK specific documentation depedencies
 sphinx-argparse==0.2.5

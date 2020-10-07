@@ -68,9 +68,7 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
                                      self.max_vertex.size))
         if not (self.max_vertex >= self.min_vertex).all():
             raise ValueError("The maximum vertex was not strictly >= the "
-                             "minimum vertex."
-                             .format(tuple(self.min_vertex),
-                                     tuple(self.max_vertex)))
+                             "minimum vertex.")
 
     def __str__(self):
         return "<{} [{}, {}]>"\

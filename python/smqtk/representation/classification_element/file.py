@@ -120,7 +120,7 @@ class FileClassificationElement (ClassificationElement):
         """
         if not self.has_classifications():
             raise NoClassificationError("No classification values.")
-        with open(self.filepath) as f:
+        with open(self.filepath, 'rb') as f:
             return cPickle.load(f)
 
     def set_classification(self, m=None, **kwds):
@@ -140,5 +140,5 @@ class FileClassificationElement (ClassificationElement):
         m = super(FileClassificationElement, self)\
             .set_classification(m, **kwds)
         safe_create_dir(osp.dirname(self.filepath))
-        with open(self.filepath, 'w') as f:
+        with open(self.filepath, 'wb') as f:
             cPickle.dump(m, f, self.pickle_protocol)

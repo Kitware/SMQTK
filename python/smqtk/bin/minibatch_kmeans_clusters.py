@@ -89,7 +89,7 @@ def main():
 
     log.info("Saving result classification map to: %s", output_filepath)
     safe_create_dir(os.path.dirname(output_filepath))
-    with open(output_filepath, 'w') as f:
+    with open(output_filepath, 'wb') as f:
         cPickle.dump(d_classes, f, -1)
 
     log.info("Done")

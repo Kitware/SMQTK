@@ -16,6 +16,7 @@ import itertools
 
 SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
 
+
 @setting_utilities.validator({
     PluginSettings.DB_HOST,
     PluginSettings.DB_NAME,
@@ -30,21 +31,26 @@ SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
 def validateSettings(doc):
     pass
 
+
 @setting_utilities.default(PluginSettings.DB_HOST)
 def defaultDbHost():
     return 'localhost'
+
 
 @setting_utilities.default(PluginSettings.DB_NAME)
 def defaultDbName():
     return 'smqtk'
 
+
 @setting_utilities.default(PluginSettings.DB_USER)
 def defaultDbUser():
     return 'smqtk'
 
+
 @setting_utilities.default(PluginSettings.DB_DESCRIPTORS_TABLE)
 def defaultDbDescriptorsTable():
     return 'descriptors'
+
 
 @setting_utilities.default(PluginSettings.IMAGE_BATCH_SIZE)
 def defaultImageBatchSize():
@@ -75,7 +81,7 @@ class SmqtkAPI(Resource):
         """
         setting_results = list(ModelImporter.model('setting').find({
             'key': {
-                '$regex': '^smqtk_girder\.'
+                '$regex': r'^smqtk_girder\.'
             }
         }))
 

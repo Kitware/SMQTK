@@ -43,7 +43,7 @@ import os
 import pkgutil
 import re
 import types
-from typing import Type
+from typing import Callable, FrozenSet, Set, Type
 import warnings
 
 from stevedore.extension import ExtensionManager
@@ -58,6 +58,8 @@ VALUE_ATTRIBUTE_RE = re.compile(r"^[a-zA-Z]\w*$")
 OS_ENV_PATH_SEP = os.pathsep
 
 EXTENSION_NAMESPACE = "smqtk_plugins"
+
+_EMPTY_FROZENSET_STR: FrozenSet[str] = frozenset()
 
 
 def _get_local_plugin_modules(log, interface_type, warn=True):
@@ -82,13 +84,15 @@ def _get_local_plugin_modules(log, interface_type, warn=True):
     #   ``Pluggable``.
     # - This should do the right thing regardless of whether ``cls`` is
     #   defined in an ``__init__.py`` file or "normal" python module file.
-    #: :type: types.ModuleType
     t_module = inspect.getmodule(interface_type)
+    assert t_module is not None, "Interface type module not found."
     # __package__ should correctly get us the parent module path regardless of
     # whether ``interface_type`` is defined in an ``__init__.py`` file or in a
     # parallel python module file.
-    #: :type: str
     t_module_package = t_module.__package__
+    assert t_module_package is not None, (
+        "Interface type module missing package specification"
+    )
 
     # Containing directory of the module ``interface_class`` is defined in.
     t_module_fp = inspect.getsourcefile(t_module) or inspect.getfile(t_module)
@@ -151,18 +155,21 @@ def _get_extension_plugin_modules(log, warn=True):
     Get the modules registered by installed python modules that
     provide extensions in the ``smqtk_plugins`` namespace.
 
+    This function is NOT thread-safe.
+
     :return: Iterator of python modules registered by installed extensions.
     :rtype: collections.abc.Iterator[types.ModuleType]
 
     """
     # Get the cached extension manager.
     try:
-        m = _get_extension_plugin_modules.ext_manager
+        m = _get_extension_plugin_modules.ext_manager  # type: ignore
     except AttributeError:
         log.debug("Creating and caching ExtensionManager for namespace '{}'."
                   .format(EXTENSION_NAMESPACE))
-        m = _get_extension_plugin_modules.ext_manager = \
-            ExtensionManager(EXTENSION_NAMESPACE)
+        m = ExtensionManager(EXTENSION_NAMESPACE)
+        # noinspection PyTypeHints
+        _get_extension_plugin_modules.ext_manager = m  # type: ignore
     # Yield registered extensions that are actually modules.
     for ext in m:
         ext_plugin_module = ext.plugin
@@ -207,23 +214,36 @@ def is_valid(cls: Type["Pluggable"], log: logging.Logger, module_path: str, inte
         log.debug("[%s.%s] [skip] Does not descend from base class.",
                   module_path, cls.__name__)
         return False
-    elif bool(cls.__abstractmethods__):
-        # Making this a warning as I think this indicates a broken
-        # implementation in the ecosystem.
-        # noinspection PyUnresolvedReferences
-        log.warning('[%s.%s] [skip] Does not implement one or '
-                    'more abstract methods: %s',
-                    module_path, cls.__name__,
-                    list(cls.__abstractmethods__))
-        return False
-    elif not cls.is_usable():
-        log.debug("[%s.%s] [skip] Class does not report as usable.",
-                  module_path, cls.__name__)
-        return False
     else:
-        log.debug('[%s.%s] [KEEP] Retaining subclass.',
-                  module_path, cls.__name__)
-        return True
+        # We've narrowed cls down to a subclass of `interface_type`.
+        # Next we want to know if there are not-yet-implemented
+        # abstract methods and, if a Pluggable, it declares itself as
+        # "usable."
+        cls_abstract_methods: FrozenSet[str] = getattr(
+            cls, "__abstractmethods__", _EMPTY_FROZENSET_STR
+        )
+        # Don't invoke just yet because this may still be abstract
+        # until after checking `cls_abstract_methods`.
+        cls_is_usable: Callable[[], bool] = getattr(
+            cls, "is_usable", lambda: True
+        )
+        if bool(cls_abstract_methods):
+            # Making this a warning as I think this indicates a broken
+            # implementation in the ecosystem.
+            # noinspection PyUnresolvedReferences
+            log.warning('[%s.%s] [skip] Does not implement one or '
+                        'more abstract methods: %s',
+                        module_path, cls.__name__,
+                        list(cls_abstract_methods))
+            return False
+        elif not cls_is_usable():
+            log.debug("[%s.%s] [skip] Class does not report as usable.",
+                      module_path, cls.__name__)
+            return False
+        else:
+            log.debug('[%s.%s] [KEEP] Retaining subclass.',
+                      module_path, cls.__name__)
+            return True
 
 
 def get_plugins(interface_type, env_var, helper_var,
@@ -304,7 +324,7 @@ def get_plugins(interface_type, env_var, helper_var,
 
     log.debug("Getting plugins for interface '{}'"
               .format(interface_type.__name__))
-    class_set = set()
+    class_set: Set[Type[Pluggable]] = set()
     for _module in modules_iter:
         module_path = _module.__name__
         log.debug("Examining module: {}".format(module_path))

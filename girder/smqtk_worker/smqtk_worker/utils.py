@@ -1,6 +1,4 @@
 import itertools
-import json
-import os
 
 from smqtk.utils.image import is_valid_element
 from smqtk.utils import parallel
@@ -10,6 +8,7 @@ from smqtk.representation.data_element.girder import GirderDataElement
 from girder_client import HttpError
 
 settings = None
+
 
 def getSetting(gc, key=None):
     global settings

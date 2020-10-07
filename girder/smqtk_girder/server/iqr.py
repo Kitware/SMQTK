@@ -1,4 +1,3 @@
-import json
 import traceback
 
 from bson.objectid import ObjectId
@@ -6,7 +5,7 @@ from bson.objectid import ObjectId
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import Resource, getCurrentUser, filtermodel, loadmodel, RestException
+from girder.api.rest import Resource, getCurrentUser, filtermodel, RestException
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
@@ -64,7 +63,6 @@ class Iqr(Resource):
                                          db_host=setting.get('smqtk_girder.db_host'),
                                          db_user=setting.get('smqtk_girder.db_user'),
                                          db_pass=setting.get('smqtk_girder.db_pass'))
-
 
     @staticmethod
     def _nearestNeighborIndex(sid, descriptor_set):

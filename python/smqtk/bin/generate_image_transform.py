@@ -104,15 +104,14 @@ def generate_image_transformations(image_path,
     if crop_center_n:
         log.info("Computing center crops")
         tag = "crop_centers"
-        for l, c in image_crop_center_levels(image, crop_center_n):
-            save_image(c, [tag, str(l)])
+        for level, c in image_crop_center_levels(image, crop_center_n):
+            save_image(c, [tag, str(level)])
 
     if crop_quadrant_levels:
         log.info("Computing quadrant crops")
         tag = "crop_quadrants"
-        for l, (i, j), c in image_crop_quadrant_pyramid(image,
-                                                        crop_quadrant_levels):
-            save_image(c, [tag, str(l), "q_{:d}_{:d}".format(i, j)])
+        for level, (i, j), c in image_crop_quadrant_pyramid(image, crop_quadrant_levels):
+            save_image(c, [tag, str(level), "q_{:d}_{:d}".format(i, j)])
 
     if crop_tile_shape and crop_tile_shape[0] > 0 and crop_tile_shape[1] > 0:
         tag = "crop_tiles"

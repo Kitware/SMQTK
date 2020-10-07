@@ -1,7 +1,8 @@
 import abc
-import numpy
-
 from collections import defaultdict
+from typing import Any, Dict
+
+import numpy
 
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.dict import merge_dict
@@ -139,7 +140,7 @@ class DescriptorElement (SmqtkRepresentation, Pluggable):
         :rtype: DescriptorElement
 
         """
-        c = {}
+        c: Dict[str, Any] = {}
         merge_dict(c, config_dict)
         c['type_str'] = type_str
         c['uuid'] = uuid

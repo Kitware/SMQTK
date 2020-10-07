@@ -87,14 +87,14 @@ def main():
         uuids, labels = list(zip(*input_uuid_labels))
 
         log.info("Scanning input descriptors and labels")
-        for i, (l, d) in enumerate(
+        for i, (la, d) in enumerate(
                     zip(labels, descriptor_set.get_many_descriptors(uuids))):
             log.debug("%d %s", i, d.uuid())
-            if l not in label2int:
-                label2int[l] = next_int
+            if la not in label2int:
+                label2int[la] = next_int
                 next_int += 1
             ofile.write(
-                "%d " % label2int[l] +
+                "%d " % label2int[la] +
                 ' '.join(["%d:%.12f" % (j+1, f)
                           for j, f in enumerate(d.vector())
                           if f != 0.0]) +
@@ -102,8 +102,8 @@ def main():
             )
 
     log.info("Integer label association:")
-    for i, l in sorted((i, l) for l, i in six.iteritems(label2int)):
-        log.info('\t%d :: %s', i, l)
+    for i, la in sorted((i, _la) for _la, i in six.iteritems(label2int)):
+        log.info('\t%d :: %s', i, la)
 
 
 if __name__ == '__main__':

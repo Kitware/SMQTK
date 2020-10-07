@@ -68,8 +68,9 @@ Configuration
 import csv
 import logging
 import os
+from typing import Any, cast, Dict, List
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy
 import sklearn.model_selection
 import sklearn.metrics
@@ -77,6 +78,7 @@ import sklearn.metrics
 from smqtk.algorithms.classifier import SupervisedClassifier
 from smqtk.representation import (
     ClassificationElementFactory,
+    DescriptorElement,
     DescriptorSet,
 )
 from smqtk.representation.classification_element.memory import \
@@ -199,7 +201,7 @@ def classifier_kfold_validation():
             ...
         }
     """
-    fold_data = {}
+    fold_data: Dict[int, Any] = {}
 
     i = 0
     for train, test in kfolds:
@@ -209,15 +211,16 @@ def classifier_kfold_validation():
         fold_data[i] = {}
 
         log.info("-- creating classifier")
-        #: :type: SupervisedClassifier
-        classifier = from_config_dict(
-            classifier_config,
-            SupervisedClassifier.get_impls()
+        classifier = cast(
+            SupervisedClassifier,
+            from_config_dict(
+                classifier_config,
+                SupervisedClassifier.get_impls()
+            )
         )
 
         log.info("-- gathering descriptors")
-        #: :type: dict[str, list[smqtk.representation.DescriptorElement]]
-        pos_map = {}
+        pos_map: Dict[str, List[DescriptorElement]] = {}
         for idx in train:
             if truth_labels[idx] not in pos_map:
                 pos_map[truth_labels[idx]] = []

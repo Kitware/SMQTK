@@ -7,6 +7,7 @@ import mimetypes
 import os
 import os.path as osp
 import tempfile
+from typing import cast, Deque
 
 from smqtk.exceptions import InvalidUriError, NoUriResolutionError, \
     ReadOnlyError
@@ -60,7 +61,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         self._temp_filepath_stack = []
 
     # Because we can't generally guarantee external data immutability.
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
     def __del__(self):
         self.clean_temp()
@@ -104,7 +105,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         """
         Clear paths in temp stack that don't exist on the system.
         """
-        no_exist_paths = deque()  # tmp list of paths to remove
+        no_exist_paths: Deque[str] = deque()  # tmp list of paths to remove
         for fp in self._temp_filepath_stack:
             if not osp.isfile(fp):
                 no_exist_paths.append(fp)
@@ -228,7 +229,7 @@ class DataElement (SmqtkRepresentation, Pluggable):
         :rtype: io.BufferedReader
 
         """
-        return io.BufferedReader(io.BytesIO(self.get_bytes()))
+        return io.BytesIO(self.get_bytes())
 
     def is_read_only(self):
         """

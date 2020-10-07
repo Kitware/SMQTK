@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import random
 import os.path as osp
 import unittest
@@ -47,12 +45,12 @@ class TestMRPTIndex (unittest.TestCase):
             assert isinstance(inst._descriptor_set, MemoryDescriptorSet)
             assert inst._index_filepath == index_filepath
             assert inst._index_param_filepath == para_filepath
-            assert inst._read_only == True
+            assert inst._read_only is True
             assert inst._num_trees == 9
             assert inst._depth == 2
             assert inst._rand_seed == 8
             assert inst._pickle_protocol == 0
-            assert inst._use_multiprocessing == True
+            assert inst._use_multiprocessing is True
 
     def test_read_only(self):
         v = np.zeros(5, float)

@@ -8,6 +8,7 @@ import random
 import time
 import threading
 import traceback
+from typing import cast, Dict, Hashable, List, Optional
 import uuid
 
 import flask
@@ -174,11 +175,11 @@ class IqrService (SmqtkWebApp):
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(
-                        DescriptorGenerator.get_impls()
-                    ),
+                            DescriptorGenerator.get_impls()
+                        ),
                     "descriptor_set": make_default_config(
-                        DescriptorSet.get_impls()
-                    ),
+                            DescriptorSet.get_impls()
+                        ),
                     "neighbor_index":
                         make_default_config(NearestNeighborsIndex.get_impls()),
                     "classifier_config":
@@ -232,21 +233,22 @@ class IqrService (SmqtkWebApp):
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.abc.Hashable, SupervisedClassifier | None]
-        self.session_classifiers = {}
+        self.session_classifiers: Dict[
+            Hashable, Optional[SupervisedClassifier]
+        ] = {}
         # Cache of IQR session classification results on descriptors with the
         # recorded UIDs.
         # This session cache contents are purged when a classifier retrains for
         # a session.
         # Only "positive" class confidence values are retained due to the
         # binary nature of IQR-based classifiers.
-        #: :type: dict[collections.abc.Hashable, dict[collections.abc.Hashable, float]]
-        self.session_classification_results = {}
+        self.session_classification_results: Dict[
+            Hashable, Dict[Hashable, float]
+        ] = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
-        #: :type: dict[collections.abc.Hashable, bool]
-        self.session_classifier_dirty = {}
+        self.session_classifier_dirty: Dict[Hashable, bool] = {}
 
         # Cache of random UIDs from the configured descriptor set for use
         #: :type: list[collections.abc.Hashable] | None
@@ -1658,7 +1660,7 @@ class IqrService (SmqtkWebApp):
             "success", total=total, results=results
         ), 200
 
-    def _ensure_session_classifier(self, iqrs)  :
+    def _ensure_session_classifier(self, iqrs):
         """
         Return the binary pos/neg classifier for this session.
 
@@ -1689,19 +1691,20 @@ class IqrService (SmqtkWebApp):
             raise RuntimeError("No negative labels in current IQR session. "
                                "Required for a supervised classifier.")
 
-        classifier = self.session_classifiers.get(sid, None)
+        maybe_classifier = self.session_classifiers.get(sid, None)
 
         pos_label = "positive"
         neg_label = "negative"
 
-        if self.session_classifier_dirty[sid] or classifier is None:
+        if self.session_classifier_dirty[sid] or maybe_classifier is None:
             self._log.debug("Training new classifier for current "
                             "adjudication state...")
-
-            #: :type: SupervisedClassifier
-            classifier = from_config_dict(
-                self.classifier_config,
-                SupervisedClassifier.get_impls()
+            classifier = cast(
+                SupervisedClassifier,
+                from_config_dict(
+                    self.classifier_config,
+                    SupervisedClassifier.get_impls()
+                )
             )
             classifier.train(
                 {pos_label: all_pos,
@@ -1711,6 +1714,8 @@ class IqrService (SmqtkWebApp):
             self.session_classifiers[sid] = classifier
             self.session_classification_results[sid] = {}
             self.session_classifier_dirty[sid] = False
+        else:
+            classifier = cast(SupervisedClassifier, maybe_classifier)
 
         return classifier, pos_label, neg_label
 
@@ -1738,18 +1743,21 @@ class IqrService (SmqtkWebApp):
         """
         # Record clean/dirty status after making classifier/refining so we
         # don't train a new classifier when we don't have to.
-        sid = flask.request.args.get('sid', None)
-        uuids = flask.request.args.get('uuids', None)
+        sid: Optional[str] = flask.request.args.get('sid', None)
+        # Default: Empty JSON list.
+        uuids_str: Optional[str] = flask.request.args.get('uuids', None)
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
+        if uuids_str is None:
+            return make_response_json("No UIDs provided."), 400
 
         try:
-            uuids = json.loads(uuids)
+            uuids: List[str] = json.loads(uuids_str)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"
-                % uuids
+                % uuids_str
             ), 400
 
         with self.controller:

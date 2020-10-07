@@ -1,8 +1,9 @@
 import abc
 from collections import deque
+from typing import Deque, List, Optional, Tuple
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.representation import DescriptorElementFactory
+from smqtk.representation import DescriptorElement, DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils import ContentTypeValidator
@@ -139,8 +140,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         #   for-loop. This way we do not retain elements and booleans for
         #   things we have yielded that would otherwise build up if this method
         #   iterated for a long time.
-        #: :type: deque[(smqtk.representation.DescriptorElement, bool)]
-        elem_and_status_q = deque()
+        elem_and_status_q: Deque[Tuple[DescriptorElement, bool]] = deque()
 
         # Flag for end of data iteration. When not None will be the index of
         # the last data/descriptor element to be yielded. This will NOT be the
@@ -149,8 +149,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         #       ``nonlocal end_of_iter`` statement within the
         #       ``iter_tocompute_data`` function instead of imitating a state
         #       object here.
-        #: :type: list[int|None]
-        end_of_iter = [None]
+        end_of_iter: List[Optional[int]] = [None]
 
         # TODO: Make generator threadsafe?
         # See: https://anandology.com/blog/using-iterators-and-generators/

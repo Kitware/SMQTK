@@ -1,15 +1,14 @@
 import logging
 import multiprocessing
-
-import six
-from six.moves import cPickle as pickle
+import pickle
+from typing import Hashable, Set
 
 from smqtk.representation.key_value import KeyValueStore, NO_DEFAULT_VALUE
 from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 try:
-    import psycopg2
-    import psycopg2.extras
+    import psycopg2  # type: ignore
+    import psycopg2.extras  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
@@ -398,7 +397,7 @@ class PostgresKeyValueStore (KeyValueStore):
 
         # Iterator over transformed inputs into values for statement.
         def val_iter():
-            for key, val in six.iteritems(d):
+            for key, val in d.items():
                 yield {
                     'key': self._py_to_bin(key),
                     'val': self._py_to_bin(val)
@@ -464,7 +463,7 @@ class PostgresKeyValueStore (KeyValueStore):
         )
 
         # Keys found in table
-        matched_keys = set()
+        matched_keys: Set[Hashable] = set()
 
         def cb(cursor, batch):
             cursor.execute(has_many_q, {'key_tuple': tuple(batch)})

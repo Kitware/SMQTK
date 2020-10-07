@@ -115,10 +115,10 @@ These files detail different dependencies, and their exact versions tested, for 
 
 The the core required python packages are detailed in: :file:`requirements.txt`.
 
-In addition, if you wish to be able to build the Sphinx_ based documentation for the project: :file:`requirements.docs.txt`.
+In addition, if you wish to be able to build the Sphinx_ based documentation for the project: :file:`docs/readthedocs-reqs.txt`.
 These are separated because not everyone wishes or needs to build the documentation.
 
-Other optional dependencies and what plugins they correspond to are found in: :file:`requirements.optional.txt`
+Other optional dependencies and what plugins they correspond to are found in: :file:`requirements/optional.txt`
 
 Note that if :command:`conda` [#conda]_ is being used, not all packages listed in our requirements files may be found in :command:`conda`'s repository.
 
@@ -126,9 +126,9 @@ Installation of python dependencies via pip will look like the following:
 
 .. prompt:: bash
 
-    pip install -r requirements.txt [-r requirements.docs.txt]
+    pip install -r requirements.txt [-r docs/readthedocs-reqs.txt]
 
-Where the :file:`requirements.docs.txt` argument is only needed if you intend to build the SMQTK documentation.
+Where the :file:`docs/readthedocs-reqs.txt` argument is only needed if you intend to build the SMQTK documentation.
 
 
 Building NumPy and SciPy

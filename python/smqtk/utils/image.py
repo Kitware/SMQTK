@@ -132,8 +132,8 @@ def image_crop_quadrant_pyramid(image, n_levels):
     if n_crops <= 0:
         raise ValueError("Can't produce 0 or negative levels")
 
-    for l in range(1, n_levels + 1):
-        l_sq = 2**l
+    for level in range(1, n_levels + 1):
+        l_sq = 2**level
         xs = numpy.linspace(0, image.width, l_sq + 1,
                             endpoint=True, dtype=int)
         ys = numpy.linspace(0, image.height, l_sq + 1,
@@ -141,7 +141,7 @@ def image_crop_quadrant_pyramid(image, n_levels):
         for j in range(l_sq):
             for i in range(l_sq):
                 yield (
-                    l,
+                    level,
                     (i, j),
                     image.crop([xs[i], ys[j], xs[i + 1], ys[j + 1]])
                 )

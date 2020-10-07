@@ -1,0 +1,8 @@
+# Additional requirements for CI utility.
+
+# This is an implicit value, here for clarity
+--index-url https://pypi.python.org/simple/
+
+flake8==3.8.3
+flake8-mutable==1.2.0   # for triggering on mutable default values.
+mypy==0.782

@@ -9,6 +9,7 @@ from smqtk.algorithms import (
     NearestNeighborsIndex
 )
 from smqtk.representation import (
+    DataElement,
     DescriptorElementFactory,
     DescriptorSet,
 )
@@ -279,6 +280,7 @@ class NearestNeighborServiceServer (SmqtkWebApp):
         """
         self._log.debug("Resolving URI: %s", uri)
         # Resolve URI into appropriate DataElement instance
+        de: DataElement  # declare as to contain the base-class.
         if uri[:7] == "file://":
             self._log.debug("Given local disk filepath")
             filepath = uri[7:]
@@ -321,14 +323,14 @@ class NearestNeighborServiceServer (SmqtkWebApp):
 
         """
         # Short-cut if we are given data/descriptor UUID via URI
-        if uri[:7] == 'uuid://':
+        if self.descr_index is not None and uri[:7] == 'uuid://':
             descriptor = self.descr_index[uri[7:]]
         else:
             de = self.resolve_data_element(uri)
             descriptor = self.descriptor_generator_inst.generate_one_element(
                 de, descr_factory=self.descr_elem_factory
             )
-            if self.update_index:
+            if self.descr_index is not None and self.update_index:
                 self._log.info("Updating index with new descriptor")
                 self.descr_index.add_descriptor(descriptor)
             if not descriptor.has_vector():

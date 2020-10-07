@@ -52,7 +52,9 @@ def get_metadata_info(video_filepath, ffprobe_exe='ffprobe'):
     log.debug("Using ffprobe: %s", ffprobe_exe)
     cmd = [ffprobe_exe, '-i', video_filepath]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE,
+                         # because we want str in `communicate`.
+                         universal_newlines=True)
     out, err = p.communicate()
     # ffprobe puts output to err stream
     if p.returncode:  # non-zero

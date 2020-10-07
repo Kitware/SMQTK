@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import unittest
 
 import unittest.mock as mock
@@ -38,7 +37,7 @@ class TestColorDescriptor (unittest.TestCase):
             assert inst._flann_distance_metric == 'hik'
             assert inst._flann_target_precision == 0.92
             assert inst._flann_sample_fraction == 0.71
-            assert inst._flann_autotune == True
+            assert inst._flann_autotune is True
             assert inst._rand_seed == 7
-            assert inst._use_sp == True
+            assert inst._use_sp is True
             assert inst.parallel == 3

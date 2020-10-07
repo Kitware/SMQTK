@@ -8,6 +8,7 @@ distance is used to measure distance between descriptors.
 """
 import logging
 import os
+from typing import Any, Dict
 
 import numpy
 from six.moves import cPickle
@@ -34,7 +35,7 @@ def default_config():
     class MBKTemp (MiniBatchKMeans, Configurable):
         pass
 
-    c = {
+    c: Dict[str, Any] = {
         "minibatch_kmeans_params": MBKTemp.get_default_config(),
         "descriptor_set": make_default_config(DescriptorSet.get_impls()),
         # Number of descriptors to run an initial fit with. This brings the

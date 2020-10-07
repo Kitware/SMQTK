@@ -305,9 +305,7 @@ def main():
         with open(args.file_list) as f:
             ids_file.extend([fid.strip() for fid in f])
 
-    #: :type: smqtk.representation.DataSet
-    data_set: DataSet = from_config_dict(config['plugins']['data_set'],
-                                         DataSet.get_impls())
+    data_set = from_config_dict(config['plugins']['data_set'], DataSet.get_impls())
 
     batch: Deque[GirderDataElement] = collections.deque()
     pr = cli.ProgressReporter(log.info, 1.0).start()

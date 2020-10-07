@@ -47,7 +47,6 @@ def main():
                     yield DataFileElement(g)
 
     log.info("Adding elements to data set")
-    #: :type: smqtk.representation.DataSet
     ds = from_config_dict(config['data_set'], DataSet.get_impls())
     ds.add_data(*iter_input_elements())
 

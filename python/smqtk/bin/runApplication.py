@@ -3,6 +3,7 @@ Runs conforming SMQTK Web Applications.
 """
 
 import logging
+from typing import cast
 
 from flask_basicauth import BasicAuth  # type: ignore
 from flask_cors import CORS  # type: ignore
@@ -120,8 +121,7 @@ def main():
             log.info("\t" + label)
             if debug_smqtk:
                 log.info('\t' + ('^'*len(label)) + '\n' +
-
-                         cls.__doc__ + '\n' +
+                         cast(str, cls.__doc__) + '\n' +
                          ('*' * 80) + '\n')
         log.info("")
         exit(0)

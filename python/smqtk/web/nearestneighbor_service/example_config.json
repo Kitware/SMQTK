@@ -1,25 +1,46 @@
 {
     "descriptor_factory": {
-        "DescriptorMemoryElement": {},
-        "type": "DescriptorMemoryElement"
+        "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement": {},
+        "type": "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
     },
     "descriptor_generator": {
-      "type": "CaffeDescriptorGenerator",
-      "CaffeDescriptorGenerator": {
-        "network_prototxt_filepath": "caffe/models/bvlc_reference_caffenet/deploy.prototxt",
-        "network_model_filepath": "caffe/models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel",
-        "image_mean_filepath": "caffe/data/ilsvrc12/imagenet_mean.binaryproto",
-        "return_layer": "fc7",
-        "batch_size": 1,
-        "use_gpu": false,
-        "gpu_device_id": 0,
-        "network_is_bgr": true,
-        "data_layer": "data",
-        "load_truncated_images": true
-      }
+        "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator",
+        "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+            "network_model": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                    "readonly":true
+                }
+            },
+            "network_prototxt": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+                    "readonly": true
+                }
+            },
+            "image_mean": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+                    "readonly": true
+                }
+            },
+            "return_layer": "fc7",
+            "batch_size": 256,
+            "use_gpu": false,
+            "gpu_device_id": 0,
+            "network_is_bgr": true,
+            "data_layer": "data",
+            "load_truncated_images": false,
+            "pixel_rescale": null,
+            "input_scale": null,
+            "threads": null
+        }
     },
     "nn_index": {
-        "FlannNearestNeighborsIndex": {
+        "smqtk.algorithms.nn_index.flann.FlannNearestNeighborsIndex": {
             "autotune": false,
             "descriptor_cache_filepath": "nn.cache",
             "distance_method": "hik",
@@ -29,7 +50,7 @@
             "sample_fraction": 0.1,
             "target_precision": 0.95
         },
-        "type": "FlannNearestNeighborsIndex"
+        "type": "smqtk.algorithms.nn_index.flann.FlannNearestNeighborsIndex"
     },
     "flask_app": {
         "BASIC_AUTH_PASSWORD": "demo",

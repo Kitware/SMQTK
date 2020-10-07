@@ -15,8 +15,7 @@ LOG = logging.getLogger(__name__)
 def build_default_config():
     return {
         'descriptor_set': make_default_config(DescriptorSet.get_impls()),
-        'neighbor_index':
-            make_default_config(NearestNeighborsIndex.get_impls()),
+        'neighbor_index': make_default_config(NearestNeighborsIndex.get_impls()),
     }
 
 
@@ -82,13 +81,9 @@ def cli_build(config_filepath):
     if not success:
         raise RuntimeError("Failed to load configuration file.")
 
-    # noinspection PyTypeChecker
-    #: :type: DescriptorSet
     descr_set = from_config_dict(config_dict['descriptor_set'],
                                  DescriptorSet.get_impls())
 
-    # noinspection PyTypeChecker
-    #: :type: NearestNeighborsIndex
     nn_index = from_config_dict(config_dict['neighbor_index'],
                                 NearestNeighborsIndex.get_impls())
 

@@ -104,13 +104,11 @@ class NearestNeighborServiceServer (SmqtkWebApp):
                 DescriptorSet.get_impls()
             )
 
-        #: :type: smqtk.algorithms.NearestNeighborsIndex
         self.nn_index = from_config_dict(
             json_config['nn_index'],
             NearestNeighborsIndex.get_impls()
         )
 
-        #: :type: smqtk.algorithms.DescriptorGenerator
         self.descriptor_generator_inst = from_config_dict(
             self.json_config['descriptor_generator'],
             DescriptorGenerator.get_impls()

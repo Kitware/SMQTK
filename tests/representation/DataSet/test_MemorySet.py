@@ -40,7 +40,7 @@ class TestDataFileSet (unittest.TestCase):
     def test_from_config_empty_cache(self):
         # Specify a memory element cache with no pre-existing bytes.
         c = DataMemorySet.get_default_config()
-        c['cache_element']['type'] = 'DataMemoryElement'
+        c['cache_element']['type'] = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         i = DataMemorySet.from_config(c)
         self.assertIsNotNone(i.cache_element)
         self.assertIsInstance(i.cache_element, DataMemoryElement)
@@ -52,9 +52,10 @@ class TestDataFileSet (unittest.TestCase):
         # Use a cache element with content defining pickle of map to use.
         expected_map = dict(a=1, b=2, c=3)
 
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         c = DataMemorySet.get_default_config()
-        c['cache_element']['type'] = 'DataMemoryElement'
-        c['cache_element']['DataMemoryElement']['bytes'] = \
+        c['cache_element']['type'] = dme_key
+        c['cache_element'][dme_key]['bytes'] = \
             pickle.dumps(expected_map).decode(BYTES_CONFIG_ENCODING)
 
         i = DataMemorySet.from_config(c)
@@ -143,9 +144,10 @@ class TestDataFileSet (unittest.TestCase):
             default_c
         )
 
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         c = DataMemorySet.get_default_config()
-        c['cache_element']['type'] = 'DataMemoryElement'
-        c['cache_element']['DataMemoryElement']['readonly'] = True
+        c['cache_element']['type'] = dme_key
+        c['cache_element'][dme_key]['readonly'] = True
         c['pickle_protocol'] = 1
         self.assertEqual(
             DataMemorySet.from_config(c).get_config(),

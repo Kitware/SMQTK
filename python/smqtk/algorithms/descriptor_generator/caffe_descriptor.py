@@ -1,11 +1,11 @@
 import itertools
 import logging
+from typing import Dict, Optional
 
 import numpy
 import PIL.Image
 import PIL.ImageFile
 from six import BytesIO
-from six.moves import zip
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation import DataElement
@@ -82,8 +82,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             config_dict['image_mean'] = \
                 from_config_dict(config_dict['image_mean'], data_elem_impl_set)
 
-        return super(CaffeDescriptorGenerator, cls)\
-            .from_config(config_dict, merge_default=False)
+        return super(CaffeDescriptorGenerator, cls).from_config(config_dict, merge_default=False)
 
     def __init__(self, network_prototxt, network_model,
                  image_mean=None, return_layer='fc7',
@@ -311,6 +310,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :rtype: dict
 
         """
+        image_mean_config: Optional[Dict]
         if self.image_mean is not None:
             image_mean_config = to_config_dict(self.image_mean)
         else:

@@ -52,10 +52,11 @@ class TestMemoryDescriptorSet (unittest.TestCase):
     def test_from_config_null_cache_elem_type(self):
         # An empty cache should not trigger loading on construction.
         expected_empty_cache = DataMemoryElement()
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         inst = MemoryDescriptorSet.from_config({
             'cache_element': {
-                'type': 'DataMemoryElement',
-                'DataMemoryElement': {'bytes': ''}
+                'type': dme_key,
+                dme_key: {'bytes': ''}
             }
         })
         self.assertEqual(inst.cache_element, expected_empty_cache)
@@ -68,10 +69,11 @@ class TestMemoryDescriptorSet (unittest.TestCase):
         expected_cache = DataMemoryElement(bytes=pickle.dumps(expected_table))
         expected_cache_json_str = \
             expected_cache.get_bytes().decode(BYTES_CONFIG_ENCODING)
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         inst = MemoryDescriptorSet.from_config({
             'cache_element': {
-                'type': 'DataMemoryElement',
-                'DataMemoryElement': {'bytes': expected_cache_json_str}
+                'type': dme_key,
+                dme_key: {'bytes': expected_cache_json_str}
             }
         })
         self.assertEqual(inst.cache_element, expected_cache)
@@ -112,10 +114,11 @@ class TestMemoryDescriptorSet (unittest.TestCase):
         )
 
         empty_elem = DataMemoryElement()
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         self.assertEqual(
             MemoryDescriptorSet(empty_elem).get_config(),
             merge_dict(MemoryDescriptorSet.get_default_config(), {
-                'cache_element': {'type': 'DataMemoryElement'}
+                'cache_element': {'type': dme_key}
             })
         )
 
@@ -126,10 +129,10 @@ class TestMemoryDescriptorSet (unittest.TestCase):
             MemoryDescriptorSet(cache_elem).get_config(),
             merge_dict(MemoryDescriptorSet.get_default_config(), {
                 'cache_element': {
-                    'DataMemoryElement': {
+                    dme_key: {
                         'bytes': dict_pickle_bytes_str
                     },
-                    'type': 'DataMemoryElement'
+                    'type': dme_key
                 }
             })
         )

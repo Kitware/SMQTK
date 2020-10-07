@@ -170,8 +170,8 @@ def test_make_default_config():
     """
     expected = {
         'type': None,
-        'T1': T1.get_default_config(),
-        'T2': T2.get_default_config(),
+        'tests.utils.test_configuration.T1': T1.get_default_config(),
+        'tests.utils.test_configuration.T2': T2.get_default_config(),
     }
     assert make_default_config(T_CLASS_SET) == expected
 
@@ -187,8 +187,8 @@ def test_cls_conf_to_config_dict():
     }
     c1 = cls_conf_to_config_dict(T1, conf1)
     expected1 = {
-        'type': 'T1',
-        'T1': {
+        'type': 'tests.utils.test_configuration.T1',
+        'tests.utils.test_configuration.T1': {
             'foo': 1,
             'bar': 'baz',
         },
@@ -202,8 +202,8 @@ def test_cls_conf_to_config_dict():
     }
     c2 = cls_conf_to_config_dict(T1, conf2)
     expected2 = {
-        'type': 'T1',
-        'T1': {
+        'type': 'tests.utils.test_configuration.T1',
+        'tests.utils.test_configuration.T1': {
             'foo': 8,
             'bar': 'baz',
         },
@@ -290,13 +290,16 @@ def test_to_config_dict_given_non_configurable():
 
 def test_cls_conf_from_config_dict():
     """
-    Test that ``cls_conf_from_config_dict`` returns the corret type and
+    Test that ``cls_conf_from_config_dict`` returns the correct type and
     sub-configuration requested.
     """
     test_config = {
-        'type': 'T1',
-        'T1': {'foo': 256, 'bar': 'Some string value'},
-        'T2': {
+        'type': 'tests.utils.test_configuration.T1',
+        'tests.utils.test_configuration.T1': {
+            'foo': 256,
+            'bar': 'Some string value'
+        },
+        'tests.utils.test_configuration.T2': {
             'child': {'foo': -1, 'bar': 'some other value'},
             'alpha': 1.0,
             'beta': 'euclidean',
@@ -307,7 +310,7 @@ def test_cls_conf_from_config_dict():
     assert cls == T1
     assert cls_conf == {'foo': 256, 'bar': 'Some string value'}
 
-    test_config['type'] = 'T2'
+    test_config['type'] = 'tests.utils.test_configuration.T2'
     cls, cls_conf = cls_conf_from_config_dict(test_config, T_CLASS_SET)
     assert cls == T2
     assert cls_conf == {
@@ -400,9 +403,12 @@ def test_from_config_dict():
     requested by the configuration.
     """
     test_config = {
-        'type': 'T1',
-        'T1': {'foo': 256, 'bar': 'Some string value'},
-        'T2': {
+        'type': 'tests.utils.test_configuration.T1',
+        'tests.utils.test_configuration.T1': {
+            'foo': 256,
+            'bar': 'Some string value'
+        },
+        'tests.utils.test_configuration.T2': {
             'child': {'foo': -1, 'bar': 'some other value'},
             'alpha': 1.0,
             'beta': 'euclidean',
@@ -428,14 +434,17 @@ def test_from_config_dict_assertion_error():
     test_class_set = T_CLASS_SET | {NotConfigurable}
 
     test_config = {
-        'type': 'NotConfigurable',
-        'T1': {'foo': 256, 'bar': 'Some string value'},
-        'T2': {
+        'type': 'tests.utils.test_configuration.NotConfigurable',
+        'tests.utils.test_configuration.T1': {
+            'foo': 256,
+            'bar': 'Some string value'
+        },
+        'tests.utils.test_configuration.T2': {
             'child': {'foo': -1, 'bar': 'some other value'},
             'alpha': 1.0,
             'beta': 'euclidean',
         },
-        'NotConfigurable': {}
+        'tests.utils.test_configuration.NotConfigurable': {}
     }
     with pytest.raises(AssertionError,
                        match="Configured class type 'NotConfigurable' does not "

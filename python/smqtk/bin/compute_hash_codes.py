@@ -67,11 +67,9 @@ def default_config():
             "use_multiprocessing": False,
         },
         "plugins": {
-            "descriptor_set":
-                make_default_config(DescriptorSet.get_impls()),
+            "descriptor_set": make_default_config(DescriptorSet.get_impls()),
             "lsh_functor": make_default_config(LshFunctor.get_impls()),
-            "hash2uuid_kvstore":
-                make_default_config(KeyValueStore.get_impls()),
+            "hash2uuid_kvstore": make_default_config(KeyValueStore.get_impls()),
         },
     }
 
@@ -113,19 +111,16 @@ def main():
     # Loading stuff
     #
     log.info("Loading descriptor index")
-    #: :type: smqtk.representation.DescriptorSet
     descriptor_set = from_config_dict(
         config['plugins']['descriptor_set'],
         DescriptorSet.get_impls()
     )
     log.info("Loading LSH functor")
-    #: :type: smqtk.algorithms.LshFunctor
     lsh_functor = from_config_dict(
         config['plugins']['lsh_functor'],
         LshFunctor.get_impls()
     )
     log.info("Loading Key/Value store")
-    #: :type: smqtk.representation.KeyValueStore
     hash2uuids_kvstore = from_config_dict(
         config['plugins']['hash2uuid_kvstore'],
         KeyValueStore.get_impls()

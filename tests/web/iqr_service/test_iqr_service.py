@@ -36,16 +36,20 @@ class TestIqrService (unittest.TestCase):
         plugin_config = config['iqr_service']['plugins']
 
         # Use basic in-memory representation types.
-        plugin_config['classification_factory']['type'] =\
-            'MemoryClassificationElement'
-        plugin_config['descriptor_factory']['type'] = \
-            'DescriptorMemoryElement'
-        plugin_config['descriptor_set']['type'] = 'StubDescriptorSet'
+        key_mce = "smqtk.representation.classification_element.memory.MemoryClassificationElement"
+        key_dme = "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
+        key_ds_stub = "tests.web.iqr_service.stubs.StubDescriptorSet"
+        plugin_config['classification_factory']['type'] = key_mce
+        plugin_config['descriptor_factory']['type'] = key_dme
+        plugin_config['descriptor_set']['type'] = key_ds_stub
 
         # Set up dummy algorithm types
-        plugin_config['classifier_config']['type'] = 'StubClassifier'
-        plugin_config['descriptor_generator']['type'] = 'StubDescrGenerator'
-        plugin_config['neighbor_index']['type'] = 'StubNearestNeighborIndex'
+        key_c_stub = "tests.web.iqr_service.stubs.StubClassifier"
+        key_dg_stub = "tests.web.iqr_service.stubs.StubDescrGenerator"
+        key_nn_stub = "tests.web.iqr_service.stubs.StubNearestNeighborIndex"
+        plugin_config['classifier_config']['type'] = key_c_stub
+        plugin_config['descriptor_generator']['type'] = key_dg_stub
+        plugin_config['neighbor_index']['type'] = key_nn_stub
 
         self.app = IqrService(config)
 

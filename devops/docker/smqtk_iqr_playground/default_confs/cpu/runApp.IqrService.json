@@ -11,16 +11,16 @@
             "descriptor_factory": "What descriptor element factory to use when asked to compute a descriptor on data.",
             "descriptor_generator": "Descriptor generation algorithm to use when requested to describe data.",
             "descriptor_set": "This is the index from which given positive and negative example descriptors are retrieved from. Not used for nearest neighbor querying. This index must contain all descriptors that could possibly be used as positive/negative examples and updated accordingly.",
-            "neighbor_set": "This is the neighbor index to pull initial near-positive descriptors from.",
-            "relevancy_set_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
+            "neighbor_index": "This is the neighbor index to pull initial near-positive descriptors from.",
+            "relevancy_index_config": "The relevancy index config provided should not have persistent storage configured as it will be used in such a way that instances are created, built and destroyed often."
         },
         "plugins": {
             "classification_factory": {
-                "MemoryClassificationElement": {},
-                "type": "MemoryClassificationElement"
+                "smqtk.representation.classification_element.memory.MemoryClassificationElement": {},
+                "type": "smqtk.representation.classification_element.memory.MemoryClassificationElement"
             },
             "classifier_config": {
-                "LibSvmClassifier": {
+                "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
                     "normalize": 2,
                     "svm_label_map_uri": null,
                     "svm_model_uri": null,
@@ -31,10 +31,10 @@
                         "-t": 0
                     }
                 },
-                "type": "LibSvmClassifier"
+                "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
             },
             "descriptor_factory": {
-                "PostgresDescriptorElement": {
+                "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement": {
                     "binary_col": "vector",
                     "create_table": false,
                     "db_host": "/dev/shm",
@@ -46,48 +46,48 @@
                     "type_col": "type_str",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorElement"
+                "type": "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement"
             },
             "descriptor_generator": {
-                "CaffeDescriptorGenerator": {
+                "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
                     "batch_size": 10,
                     "data_layer": "data",
                     "gpu_device_id": 0,
                     "image_mean": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "/home/smqtk/caffe/msra_resnet/ResNet_mean.binaryproto",
                             "readonly": true
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "input_scale": null,
                     "load_truncated_images": true,
                     "network_is_bgr": true,
                     "network_model": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-model.caffemodel",
                             "readonly": true
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "network_prototxt": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt",
                             "readonly": true
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "pixel_rescale": null,
                     "return_layer": "pool5",
                     "use_gpu": false
                 },
-                "type": "CaffeDescriptorGenerator"
+                "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator"
             },
             "descriptor_set": {
-                "PostgresDescriptorSet": {
+                "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet": {
                     "create_table": false,
                     "db_host": "/dev/shm",
                     "db_name": "postgres",
@@ -101,13 +101,13 @@
                     "table_name": "descriptor_set_resnet50_pool5",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorSet"
+                "type": "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet"
             },
             "neighbor_index": {
-                "FaissNearestNeighborsIndex": {
+                "smqtk.algorithms.nn_index.faiss.FaissNearestNeighborsIndex": {
                     "descriptor_set": {
                         "__note__": "Using real descriptor index this time",
-                        "PostgresDescriptorSet": {
+                        "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet": {
                             "create_table": false,
                             "db_host": "/dev/shm",
                             "db_name": "postgres",
@@ -121,12 +121,12 @@
                             "table_name": "descriptor_set_resnet50_pool5",
                             "uuid_col": "uid"
                         },
-                        "type": "PostgresDescriptorSet"
+                        "type": "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet"
                     },
                     "factory_string": "IDMap,Flat",
                     "gpu_id": 0,
                     "idx2uid_kvs": {
-                        "PostgresKeyValueStore": {
+                        "smqtk.representation.key_value.postgres.PostgresKeyValueStore": {
                             "batch_size": 1000,
                             "create_table": true,
                             "db_host": "/dev/shm",
@@ -140,10 +140,10 @@
                             "table_name": "faiss_idx2uid_kvs",
                             "value_col": "value"
                         },
-                        "type": "PostgresKeyValueStore"
+                        "type": "smqtk.representation.key_value.postgres.PostgresKeyValueStore"
                     },
                     "uid2idx_kvs": {
-                        "PostgresKeyValueStore": {
+                        "smqtk.representation.key_value.postgres.PostgresKeyValueStore": {
                             "batch_size": 1000,
                             "create_table": true,
                             "db_host": "/dev/shm",
@@ -157,21 +157,21 @@
                             "table_name": "faiss_uid2idx_kvs",
                             "value_col": "value"
                         },
-                        "type": "PostgresKeyValueStore"
+                        "type": "smqtk.representation.key_value.postgres.PostgresKeyValueStore"
                     },
                     "index_element": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "filepath": "models/faiss_index",
                             "readonly": false
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "index_param_element": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "filepath": "models/faiss_index_params.json",
                             "readonly": false
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "ivf_nprobe": 64,
                     "metric_type": "l2",
@@ -179,16 +179,16 @@
                     "read_only": false,
                     "use_gpu": false
                 },
-                "type": "FaissNearestNeighborsIndex"
+                "type": "smqtk.algorithms.nn_index.faiss.FaissNearestNeighborsIndex"
             },
             "relevancy_index_config": {
-                "LibSvmHikRelevancyIndex": {
+                "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex": {
                     "autoneg_select_ratio": 1,
                     "cores": null,
                     "descr_cache_filepath": null,
                     "multiprocess_fetch": false
                 },
-                "type": "LibSvmHikRelevancyIndex"
+                "type": "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex"
             }
         },
         "session_control": {

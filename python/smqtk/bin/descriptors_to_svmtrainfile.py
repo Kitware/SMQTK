@@ -23,9 +23,6 @@ libSVM source tree. For example:
 
 import csv
 import logging
-from six.moves import zip
-
-import six
 
 from smqtk.representation import DescriptorSet
 from smqtk.utils import (
@@ -40,8 +37,7 @@ from smqtk.utils.configuration import (
 def default_config():
     return {
         'plugins': {
-            'descriptor_set':
-                make_default_config(DescriptorSet.get_impls()),
+            'descriptor_set': make_default_config(DescriptorSet.get_impls()),
         }
     }
 
@@ -67,10 +63,8 @@ def main():
     config = cli.utility_main_helper(default_config, args)
     log = logging.getLogger(__name__)
 
-    #: :type: smqtk.representation.DescriptorSet
     descriptor_set = from_config_dict(
-        config['plugins']['descriptor_set'],
-        DescriptorSet.get_impls()
+        config['plugins']['descriptor_set'], DescriptorSet.get_impls()
     )
 
     labels_filepath = args.f
@@ -102,7 +96,7 @@ def main():
             )
 
     log.info("Integer label association:")
-    for i, la in sorted((i, _la) for _la, i in six.iteritems(label2int)):
+    for i, la in sorted((i, _la) for _la, i in label2int.items()):
         log.info('\t%d :: %s', i, la)
 
 

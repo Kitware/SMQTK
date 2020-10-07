@@ -1,7 +1,7 @@
 {
     "plugins": {
         "descriptor_set": {
-            "PostgresDescriptorSet": {
+            "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet": {
                 "db_host": "/dev/shm",
                 "db_name": "postgres",
                 "db_pass": null,
@@ -14,17 +14,30 @@
                 "table_name": "descriptor_set",
                 "uuid_col": "uid"
             },
-            "type": "PostgresDescriptorSet"
+            "type": "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet"
         },
         "lsh_functor": {
-            "ItqFunctor": {
+            "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor": {
+                "mean_vec_cache": {
+                    "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                    "smqtk.representation.data_element.file_element.DataFileElement": {
+                        "filepath": "2b.itq.256bit.mean_vec.npy",
+                        "readonly":true
+                    }
+                },
+                "rotation_cache": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                    "smqtk.representation.data_element.file_element.DataFileElement": {
+                        "filepath": "2b.itq.256bit.rotation.npy",
+                        "readonly":true
+                    }
+                },
                 "bit_length": 256,
                 "itq_iterations": 50,
-                "mean_vec_filepath": "2b.itq.256bit.mean_vec.npy",
-                "random_seed": 0,
-                "rotation_filepath": "2b.itq.256bit.rotation.npy"
+                "normalize": null,
+                "random_seed": 0
             },
-            "type": "ItqFunctor"
+            "type": "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor"
         }
     },
     "utility": {

@@ -28,7 +28,7 @@ class TestLinearHashIndex (unittest.TestCase):
 
     def test_from_config_with_cache(self):
         c = LinearHashIndex.get_default_config()
-        c['cache_element']['type'] = "DataMemoryElement"
+        c['cache_element']['type'] = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         i = LinearHashIndex.from_config(c)
         self.assertIsInstance(i.cache_element, DataMemoryElement)
         self.assertEqual(i.index, set())
@@ -42,7 +42,7 @@ class TestLinearHashIndex (unittest.TestCase):
 
         # With cache element
         i.cache_element = DataMemoryElement()
-        expected_c['cache_element']['type'] = 'DataMemoryElement'
+        expected_c['cache_element']['type'] = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         self.assertEqual(i.get_config(), expected_c)
 
     def test_build_index_no_cache(self):

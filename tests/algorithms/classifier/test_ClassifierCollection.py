@@ -98,8 +98,17 @@ class TestClassifierCollection (unittest.TestCase):
         self.assertEqual(
             ccol.get_config(),
             {
-                'a': {'DummyClassifier': {}, 'type': 'DummyClassifier'},
-                'b': {'DummyClassifier': {}, 'type': 'DummyClassifier'},
+                'a': {
+                    'tests.algorithms.classifier.test_ClassifierAbstract'
+                    '.DummyClassifier': {},
+                    'type': 'tests.algorithms.classifier'
+                            '.test_ClassifierAbstract.DummyClassifier'},
+                'b': {
+                    'tests.algorithms.classifier.test_ClassifierAbstract'
+                    '.DummyClassifier': {},
+                    'type': 'tests.algorithms.classifier'
+                            '.test_ClassifierAbstract.DummyClassifier'
+                }
             }
         )
 
@@ -122,10 +131,19 @@ class TestClassifierCollection (unittest.TestCase):
         # Mocking implementation getter to only return the dummy
         # implementation.
         m_get_impls.side_effect = lambda: {DummyClassifier}
-
+        "tests.algorithms.classifier.test_ClassifierAbstract.DummyClassifier"
         ccol = ClassifierCollection.from_config({
-            'a': {'DummyClassifier': {}, 'type': 'DummyClassifier'},
-            'b': {'DummyClassifier': {}, 'type': 'DummyClassifier'},
+            'a': {
+                'tests.algorithms.classifier.test_ClassifierAbstract'
+                '.DummyClassifier': {},
+                'type': 'tests.algorithms.classifier'
+                        '.test_ClassifierAbstract.DummyClassifier'},
+            'b': {
+                'tests.algorithms.classifier.test_ClassifierAbstract'
+                '.DummyClassifier': {},
+                'type': 'tests.algorithms.classifier'
+                        '.test_ClassifierAbstract.DummyClassifier'
+            },
         })
         self.assertEqual(
             # Using sort because return from ``keys()`` has no guarantee on

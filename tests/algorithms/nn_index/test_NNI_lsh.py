@@ -82,9 +82,9 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(c)), c)
 
         # Make a simple configuration
-        c['lsh_functor']['type'] = 'ItqFunctor'
-        c['descriptor_set']['type'] = 'MemoryDescriptorSet'
-        c['hash2uuids_kvstore']['type'] = 'MemoryKeyValueStore'
+        c['lsh_functor']['type'] = 'smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor'
+        c['descriptor_set']['type'] = 'smqtk.representation.descriptor_set.memory.MemoryDescriptorSet'
+        c['hash2uuids_kvstore']['type'] = 'smqtk.representation.key_value.memory.MemoryKeyValueStore'
         c['hash_index']['type'] = None
         index = LSHNearestNeighborIndex.from_config(c)
 

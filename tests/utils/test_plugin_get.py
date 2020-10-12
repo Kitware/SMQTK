@@ -15,6 +15,7 @@ from smqtk.utils.plugin import (
 )
 
 from .test_plugin_dir.internal_plugins.interface import DummyInterface
+from .test_plugin_dir.internal_plugins.implPartial import ImplNoExport
 
 
 ###############################################################################
@@ -38,6 +39,10 @@ def get_plugins_for_class(cls, warn=False, subclasses=False):
     # Suppressing warnings for testing purposes.
     return get_plugins(cls, ENV_VAR, HELP_VAR, warn=warn, subclasses=subclasses)
 
+
+# Define a "grandchild" class descending from DummyInterface.
+class Grandchild(ImplNoExport):
+    pass
 
 ###############################################################################
 # Tests
@@ -78,20 +83,22 @@ def test_get_internal_modules():
     assert 'ImplNoExport' not in class_dict
     assert 'ImplSkipModule' not in class_dict
     assert 'ImplActuallyValid' not in class_dict
+    assert 'Grandchild' not in class_dict
 
     assert class_dict['ImplFoo']().inst_method('a') == 'fooa'
     assert class_dict['ImplBar']().inst_method('b') == 'barb'
     assert class_dict['ImplDoExport']().inst_method('c') == 'doExportc'
 
     # There should be five classes detected via the subclass method.
-    assert len(subclass_set) == 5
+    assert len(subclass_set) == 6
 
     # Every class detected in the non-subclass set should also be in the
     # subclass set.
     assert class_set <= subclass_set
 
-    # We expect two extra classes to be available.
+    # We expect three extra classes to be available.
     assert 'ImplNoExport' in subclass_dict
+    assert 'Grandchild' in subclass_dict
     assert 'ImplSkipModule' in subclass_dict
 
     # We expect these classes to continue to not be discovered.

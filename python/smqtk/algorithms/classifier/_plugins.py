@@ -1,0 +1,3 @@
+from .index_label import IndexLabelClassifier
+from .libsvm import LibSvmClassifier
+from .sklearn_logistic_regression import SkLearnLogisticRegression

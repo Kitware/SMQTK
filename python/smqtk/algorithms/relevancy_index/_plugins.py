@@ -1,0 +1,2 @@
+from .classifier_wrapper import SupervisedClassifierRelevancyIndex
+from .libsvm_hik import LibSvmHikRelevancyIndex

@@ -15,4 +15,5 @@ max-line-length = 120
 # - Allow certain files to export sub-package contents via unused imports.
 per-file-ignores =
     */__init__.py:F401
+    */_plugins.py:F401
     python/smqtk/algorithms/object_detection/_defaults.py:F401

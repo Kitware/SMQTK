@@ -1,0 +1,3 @@
+from .local_elements import DescriptorMemoryElement, DescriptorFileElement
+from .postgres import PostgresDescriptorElement
+from .solr_element import SolrDescriptorElement

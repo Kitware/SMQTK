@@ -374,7 +374,7 @@ def get_plugins(interface_type, env_var, helper_var,
     # interface_type.
     if subclasses:
         # Use a queue to track the descendant classes of `interface_type`.
-        candidates = queue.Queue()
+        candidates: queue.Queue = queue.Queue()
 
         # Initialize the queue with the immediate subclasses of the target
         # class.

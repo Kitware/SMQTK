@@ -47,6 +47,7 @@ class Grandchild(ImplNoExport):
 ###############################################################################
 # Tests
 
+
 def test_get_plugins_invalid_baseclass():
     """
     Baseclass provided must inherit from Pluggable.

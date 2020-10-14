@@ -41,6 +41,7 @@ import itertools
 import logging
 import os
 import pkgutil
+import queue
 import re
 import types
 from typing import Callable, FrozenSet, Set, Type
@@ -369,12 +370,35 @@ def get_plugins(interface_type, env_var, helper_var,
         # Check the validity of the discovered class types in this module.
         class_set.update(cls for cls in classes if is_valid(cls, log, module_path, interface_type))
 
-    # Filter and add the direct subclasses of the interface_type.
+    # Filter and add all subclasses (not just immediate ones) of the
+    # interface_type.
     if subclasses:
-        class_set.update(
-            cls for cls in interface_type.__subclasses__()
-            if is_valid(cls, log, interface_type.__module__, interface_type)
-        )
+        # Use a queue to track the descendant classes of `interface_type`.
+        candidates: queue.Queue = queue.Queue()
+
+        # Initialize the queue with the immediate subclasses of the target
+        # class.
+        for class_type in interface_type.__subclasses__():
+            candidates.put_nowait(class_type)
+
+        # Continue testing classes from the queue until it is empty.
+        try:
+            while True:
+                # Pull a class off the queue, and keep it if it passes the
+                # validation logic. When the queue is empty, that means there's
+                # no further work to do, and control will break to the except
+                # clause below.
+                class_type = candidates.get_nowait()
+                if is_valid(class_type, log, class_type.__module__, interface_type):
+                    class_set.add(class_type)
+
+                # Whether the class is valid or not, add its subclasses to the
+                # queue.
+                for subclass in class_type.__subclasses__():
+                    candidates.put_nowait(subclass)
+
+        except queue.Empty:
+            pass
 
     return class_set
 

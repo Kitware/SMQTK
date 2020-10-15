@@ -28,6 +28,21 @@ Utils
   * Removed unused JIT-decorated functions, which also removed unused optional
     dependency on numba.
 
+* Configuration
+
+  * In configuration dictionaries we now use the fully python module path
+    instead of just the leaf class name. This change is an effort to prevent
+    naming conflicts between plugins that happen to share the same class name
+    but are located in different module paths.
+
+* Plugin
+
+  * Added an optional discovery method that uses the `__subclasses__` built-in
+    method on types to introspect sub-class types defined anywhere in the
+    current interpreter scope. This is to satisfy the use-case where a user has
+    defined an implementation type locally when the other discovery methods
+    would otherwise miss it.
+
 
 Fixes
 -----

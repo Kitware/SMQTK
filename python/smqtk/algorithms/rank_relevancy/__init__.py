@@ -1,1 +1,1 @@
-from ._interface import RankRelevancy, RankRelevancyWithFeedback
+from ._interface import RankRelevancy, RankRelevancyWithFeedback  # noqa: F401

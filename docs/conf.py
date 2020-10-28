@@ -68,7 +68,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'SMQTK'
-copyright = u'2015-16, Kitware, Inc.'
+copyright = u'2015, Kitware, Inc.'
 author = u'Kitware, Inc.'
 
 # The version info for the project you're documenting, acts as replacement for

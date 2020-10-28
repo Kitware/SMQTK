@@ -1,13 +1,20 @@
 SMQTK Architecture Overview
 ===========================
 
-SMQTK provides a plugin infrastructure to allow the definition of high level
-interfaces and allow a number of implementations to fulfil those interfaces.
+SMQTK provides at its lowest level semantics for plugins and configuration.
+These are provided by some utility functions and two mixin classes:
+:py:class:`smqtk.utils.plugin.Pluggable` and
+:py:class:`smqtk.utils.configuration.Configurable`.
+These are explained further in the "Plugins and Configuration" section.
 
-Within this architecture, SMQTK provides two main categories of interfaces:
-algorithms and data representations.
-Algorithms are usually interfaces defining a functional process where as data
-representation interfaces define the encapsulation of some data structure.
+Subsequent to these two mixin classes, SMQTK provides two main categories of
+interfaces: algorithms and data representations.
+This organization of philosophy roughly aligns with the concept of data
+oriented design.
+Algorithms are usually interfaces defining a behavioral or transformative
+action(s), abstracting away how that behavior or transformation is achieved.
+Data representation interfaces define the encapsulation of some data structure,
+abstracting away where that data is stored..
 
 Building upon algorithm and data representation interfaces, there is a
 sub-module providing some general web services: :mod:`smqtk.web`.

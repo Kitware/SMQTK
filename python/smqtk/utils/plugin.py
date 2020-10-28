@@ -25,13 +25,13 @@ Because these plugin semantics are pretty low level and commonly utilized,
 logging can be extremely verbose. Logging in this module, while still exists,
 is set to emit only at log level 1 or lower ("trace").
 
-NOTE: The type annotations for `discover_via_subclasses` and
-      `filter_plugin_types` are currently set to the broad `Type` annotation.
-      Ideally these should use `Type[T]` instead, but there is currently a
-      `known issue with mypy`_ where it aggressively assumes that an annotated
-      type *must* be constructable, so it emits an error when the functions are
-      called with an abstract `interface_type`. When this is resolved in mypy
-      these annotations should be updated.
+**NOTE:** The type annotations for `discover_via_subclasses` and
+`filter_plugin_types` are currently set to the broad `Type` annotation.
+Ideally these should use `Type[T]` instead, but there is currently a
+`known issue with mypy`_ where it aggressively assumes that an annotated
+type *must* be constructable, so it emits an error when the functions are
+called with an abstract `interface_type`. When this is resolved in mypy
+these annotations should be updated.
 
 .. _known issue with mypy: https://github.com/python/mypy/issues/4717
 
@@ -64,12 +64,16 @@ def is_valid_plugin(cls: Type, interface_type: Type) -> bool:
     Determine if a class type is a valid candidate for plugin discovery.
 
     In particular, the class type ``cls`` must satisfy several conditions:
-    1. It must not literally be the given interface type.
-    2. It must be a strict subtype of ``interface_type``.
-    3. It must not be an abstract class. (i.e. no lingering abstract methods or
-       properties if the `abc.ABCMeta` metaclass has been used).
-    4. If the cls is a subclass of Pluggable, it must report as usable via
-       its is_usable() class method.
+
+        1. It must not literally be the given interface type.
+
+        2. It must be a strict subtype of ``interface_type``.
+
+        3. It must not be an abstract class. (i.e. no lingering abstract methods or
+           properties if the `abc.ABCMeta` metaclass has been used).
+
+        4. If the cls is a subclass of Pluggable, it must report as usable via
+           its is_usable() class method.
 
     Logging for this function, when enabled can be very verbose, and is only
     active with a logging level of 1 or lower.

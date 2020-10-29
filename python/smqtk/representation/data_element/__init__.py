@@ -7,7 +7,7 @@ import mimetypes
 import os
 import os.path as osp
 import tempfile
-from typing import cast, Deque
+from typing import Deque
 
 from smqtk.exceptions import InvalidUriError, NoUriResolutionError, \
     ReadOnlyError

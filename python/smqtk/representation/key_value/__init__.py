@@ -2,7 +2,7 @@
 Data abstraction interface for general key-value storage.
 """
 import abc
-import collections
+import collections  # noqa: F401
 
 from smqtk.exceptions import ReadOnlyError
 from smqtk.representation import SmqtkRepresentation

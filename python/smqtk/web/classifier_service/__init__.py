@@ -1,1 +1,1 @@
-from .classifier_server import SmqtkClassifierService
+from .classifier_server import SmqtkClassifierService  # noqa: F401

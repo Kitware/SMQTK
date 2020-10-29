@@ -1,4 +1,4 @@
-from .faiss import FaissNearestNeighborsIndex
-from .flann import FlannNearestNeighborsIndex
-from .lsh import LSHNearestNeighborIndex
-from .mrpt import MRPTNearestNeighborsIndex
+from .faiss import FaissNearestNeighborsIndex  # noqa: F401
+from .flann import FlannNearestNeighborsIndex  # noqa: F401
+from .lsh import LSHNearestNeighborIndex  # noqa: F401
+from .mrpt import MRPTNearestNeighborsIndex  # noqa: F401

@@ -1,2 +1,2 @@
-from .memory import MemoryKeyValueStore
-from .postgres import PostgresKeyValueStore
+from .memory import MemoryKeyValueStore  # noqa: F401
+from .postgres import PostgresKeyValueStore  # noqa: F401

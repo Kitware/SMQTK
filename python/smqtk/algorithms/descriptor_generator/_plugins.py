@@ -1,5 +1,5 @@
-from .caffe_descriptor import CaffeDescriptorGenerator
-from .colordescriptor.colordescriptor import (
+from .caffe_descriptor import CaffeDescriptorGenerator  # noqa: F401
+from .colordescriptor.colordescriptor import (  # noqa: F401
     ColorDescriptor_Image_rgbhistogram,
     ColorDescriptor_Video_rgbhistogram,
     ColorDescriptor_Image_opponenthistogram,
@@ -29,4 +29,4 @@ from .colordescriptor.colordescriptor import (
     ColorDescriptor_Image_rgbsift,
     ColorDescriptor_Video_rgbsift,
 )
-from .kwcnndescriptor import KWCNNDescriptorGenerator
+from .kwcnndescriptor import KWCNNDescriptorGenerator  # noqa: F401

@@ -1,12 +1,10 @@
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import filtermodel, getCurrentUser, Resource
+from girder.api.rest import getCurrentUser, Resource
 from girder.constants import AccessType, TokenScope, SortDir
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
-from girder.plugins.worker.utils import getWorkerApiUrl, jobInfoSpec
-
-from girder import logger
+from girder.plugins.worker.utils import getWorkerApiUrl
 
 from .constants import PluginSettings
 

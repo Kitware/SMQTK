@@ -1,1 +1,1 @@
-from .memory import MemoryDetectionElement
+from .memory import MemoryDetectionElement  # noqa: F401

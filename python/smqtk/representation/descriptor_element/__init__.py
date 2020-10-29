@@ -9,7 +9,7 @@ from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 from smqtk.utils.parallel import parallel_map
 
-from ._io import elements_to_matrix
+from ._io import elements_to_matrix  # noqa: F401
 
 
 def _uuid_and_vector_from_descriptor(descriptor):

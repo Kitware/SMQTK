@@ -1,416 +1,352 @@
 """
-Helper interface and function for implementing class discovery.
+Helper functions and mixin interface for implementing class type discovery,
+filtering and a convenience mixin class.
 
-Plugins may be accessed by one of the following ways:
-  1. Be defined within SMQTK next to their interface.
-  2. The environment variable ``SMQTK_PLUGIN_PATH`` may be set to a number of
-     `:`-separated (`;` on Windows) python module paths to where plugin classes
-     are defined.
-  3. Other installed python packages may define one or more extensions for
-     the namespace "smqtk_plugins". This should be a single or list of
-     extensions that specify modules within the installed package where
-     plugins for export are implemented. Note that we desire modules,
-     not objects, for our extensions.
+This package provides a number of `discover_via_...` functions that return sets
+of type instances as found by the method described by that function.
 
-     For example::
+These methods may be composed to create a pool of types that may be then
+filtered via the `filter_plugin_types` function to those types that are
+specifically "plugin types" for the given interface class.
+See the `is_valid_plugin` function documentation for what it means to be a
+"plugin" of an interface type.
 
-         ...
-         entry_points={
-             "smqtk_plugins": "my_package = my_package.plugins"
-         ]
-         ...
+While the above are defined in fairly general terms, the `Pluggable` class type
+defined last here is a mixin class that utilizes all of the above in a manner
+specific manner for the purposes of SMQTK.
+This mixin class defines the class-method ``get_impls()`` that will return
+currently discoverable plugins underneath the type it was called on.
+This discovery will follow the values of the ``PLUGIN_ENV_VAR`` and
+``PLUGIN_NAMESPACE`` class variables defined in the interface class you are
+calling ``get_impls()`` from, using inherited values if not immediately
+specified.
 
-     Or::
+Because these plugin semantics are pretty low level and commonly utilized,
+logging can be extremely verbose. Logging in this module, while still exists,
+is set to emit only at log level 1 or lower ("trace").
 
-         ...
-         entry_points = {
-             "smqtk_plugins": [
-                 "my_package_mode_1 = my_package.mode_1.plugins",
-                 "my_package_mode_2 = my_package.mode_2.plugins",
-             ]
-         }
-         ...
+**NOTE:** The type annotations for `discover_via_subclasses` and
+`filter_plugin_types` are currently set to the broad `Type` annotation.
+Ideally these should use `Type[T]` instead, but there is currently a
+`known issue with mypy`_ where it aggressively assumes that an annotated
+type *must* be constructable, so it emits an error when the functions are
+called with an abstract `interface_type`. When this is resolved in mypy
+these annotations should be updated.
+
+.. _known issue with mypy: https://github.com/python/mypy/issues/4717
 
 """
 
 import abc
-import collections
 import importlib
 import inspect
-import itertools
 import logging
 import os
-import pkgutil
-import queue
-import re
+import pkg_resources
 import types
-from typing import Callable, FrozenSet, Set, Type
-import warnings
-
-from stevedore.extension import ExtensionManager
-
-# Template for checking validity of sub-module files
-VALID_MODULE_FILE_RE = re.compile(r"^[a-zA-Z]\w*(?:\.py)?$")
-
-# Template for checking validity of module attributes
-VALUE_ATTRIBUTE_RE = re.compile(r"^[a-zA-Z]\w*$")
+from typing import cast, Collection, FrozenSet, Set, Type, TypeVar
 
 # Environment variable *PATH separator for the current platform.
 OS_ENV_PATH_SEP = os.pathsep
 
-EXTENSION_NAMESPACE = "smqtk_plugins"
-
 _EMPTY_FROZENSET_STR: FrozenSet[str] = frozenset()
 
+# Generic Type variable
+T = TypeVar("T")
+# Type variable for something that would descend from Pluggable
+P = TypeVar("P", bound="Pluggable")
 
-def _get_local_plugin_modules(log, interface_type, warn=True):
-    """
-    Get the python modules within the SMQTK tree that are located parallel
-    to the module defining the given interface type.
-
-    :param logging.Logger log:
-        Logger instance to use for logging.
-    :param type interface_type:
-        Interface type we want to find modules around.
-    :param bool warn:
-        If we should warn about module import failures.
-
-    :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.abc.Iterator[types.ModuleType]
-
-    """
-    # Get the parent module and the filesystem path to that module.
-    # - This is for finding implementations that are defined in the same
-    #   parent module as the interface that is inheriting from
-    #   ``Pluggable``.
-    # - This should do the right thing regardless of whether ``cls`` is
-    #   defined in an ``__init__.py`` file or "normal" python module file.
-    t_module = inspect.getmodule(interface_type)
-    assert t_module is not None, "Interface type module not found."
-    # __package__ should correctly get us the parent module path regardless of
-    # whether ``interface_type`` is defined in an ``__init__.py`` file or in a
-    # parallel python module file.
-    t_module_package = t_module.__package__
-    assert t_module_package is not None, (
-        "Interface type module missing package specification"
-    )
-
-    # Containing directory of the module ``interface_class`` is defined in.
-    t_module_fp = inspect.getsourcefile(t_module) or inspect.getfile(t_module)
-    t_module_dir = os.path.abspath(os.path.dirname(t_module_fp))
-    log.debug("Looking for python modules parallel to {} in directory '{}'."
-              .format(interface_type.__name__, t_module_dir))
-
-    # Discover sibling modules to interface type's module.
-    for importer, module_name, ispackage \
-            in pkgutil.iter_modules([t_module_dir]):
-        sib_module_path = '.'.join([t_module_package, module_name])
-        log.debug("Found sibling module '{}'.".format(sib_module_path))
-        try:
-            yield importlib.import_module(sib_module_path)
-        except Exception as ex:
-            if warn:
-                warnings.warn("Failed to import module '{}' due to exception: "
-                              "({}) {}"
-                              .format(sib_module_path, ex.__class__.__name__,
-                                      str(ex)))
+LOG = logging.getLogger(__name__)
 
 
-def _get_envvar_plugin_module(log, env_var, warn=True):
-    """
-    Get the python modules specified by the given environment variable.
-
-    :param logging.Logger log:
-        Logger instance to use for logging.
-    :param str env_var:
-        Environment variable key to use to look for python module paths to
-        load.
-    :param bool warn:
-        If we should warn about module import failures.
-
-    :return: Iterator of python modules parallel to the given interface.
-    :rtype: collections.abc.Iterator[types.ModuleType]
-
-    """
-    if env_var in os.environ:
-        for p in os.environ[env_var].split(OS_ENV_PATH_SEP):
-            # skip empty strings
-            if p:
-                log.debug("In env variable '{}' found module path '{}'."
-                          .format(env_var, p))
-                try:
-                    yield importlib.import_module(p)
-                except Exception as ex:
-                    if warn:
-                        warnings.warn(
-                            "Failed to import module '{}' due to exception: "
-                            "({}) {}"
-                            .format(p, ex.__class__.__name__, str(ex))
-                        )
-    else:
-        log.debug("No variable '{}' in environment.".format(env_var))
-
-
-def _get_extension_plugin_modules(log, warn=True):
-    """
-    Get the modules registered by installed python modules that
-    provide extensions in the ``smqtk_plugins`` namespace.
-
-    This function is NOT thread-safe.
-
-    :return: Iterator of python modules registered by installed extensions.
-    :rtype: collections.abc.Iterator[types.ModuleType]
-
-    """
-    # Get the cached extension manager.
-    try:
-        m = _get_extension_plugin_modules.ext_manager  # type: ignore
-    except AttributeError:
-        log.debug("Creating and caching ExtensionManager for namespace '{}'."
-                  .format(EXTENSION_NAMESPACE))
-        m = ExtensionManager(EXTENSION_NAMESPACE)
-        # noinspection PyTypeHints
-        _get_extension_plugin_modules.ext_manager = m  # type: ignore
-    # Yield registered extensions that are actually modules.
-    for ext in m:
-        ext_plugin_module = ext.plugin
-        if not isinstance(ext_plugin_module, types.ModuleType):
-            if warn:
-                warnings.warn("Skipping extension provided by package '{} "
-                              "({})' that did NOT resolve to a python module "
-                              "(got an object of type {} instead: {})."
-                              .format(ext.entry_point.dist.key,
-                                      ext.entry_point.dist.version,
-                                      type(ext_plugin_module).__name__,
-                                      ext_plugin_module))
-        else:
-            yield ext.plugin
-
-
-def is_valid(cls: Type["Pluggable"], log: logging.Logger, module_path: str, interface_type: Type["Pluggable"]) -> bool:
+def is_valid_plugin(cls: Type, interface_type: Type) -> bool:
     """
     Determine if a class type is a valid candidate for plugin discovery.
 
     In particular, the class type ``cls`` must satisfy several conditions:
-    1. It must be a strict subtype of ``interface_type``.
-    2. It must not be an abstract class.
-    3. It must self-report as usable via its `is_usable()` class method.
 
-    :param Type[Pluggable] cls: The class type whose validity is being tested
-    :param logging.Logger log: A logger used to report testing progress
-    :param str module_path: The module path containing the definition of ``cls``
-    :param Type[Pluggable] interface_type: The base class under consideration
+        1. It must not literally be the given interface type.
 
-    :return: ``True`` if the class is a valid candidate for discovery, and ``False`` otherwise
+        2. It must be a strict subtype of ``interface_type``.
+
+        3. It must not be an abstract class. (i.e. no lingering abstract methods or
+           properties if the `abc.ABCMeta` metaclass has been used).
+
+        4. If the cls is a subclass of Pluggable, it must report as usable via
+           its is_usable() class method.
+
+    Logging for this function, when enabled can be very verbose, and is only
+    active with a logging level of 1 or lower.
+
+    :param cls: The class type whose validity is being tested
+    :param interface_type: The base class under consideration
+
+    :return: ``True`` if the class is a valid candidate for discovery, and
+        ``False`` otherwise.
     :rtype: bool
     """
-    if not isinstance(cls, type):
-        # No logging, over verbose, undetermined type.
-        return False
-    elif cls is interface_type:
-        log.debug("[%s.%s] [skip] Literally the base class.",
-                  module_path, cls.__name__)
+    log_prefix = f"[{interface_type.__name__} ->? {cls.__module__}.{cls.__name__}]"
+    llevel = 1
+    if cls is interface_type:
+        LOG.log(llevel, f"{log_prefix} [skip] Literally the base class.")
         return False
     elif not issubclass(cls, interface_type):
-        log.debug("[%s.%s] [skip] Does not descend from base class.",
-                  module_path, cls.__name__)
+        LOG.log(llevel, f"{log_prefix} [skip] Does not descend from base class.")
         return False
     else:
         # We've narrowed cls down to a subclass of `interface_type`.
         # Next we want to know if there are not-yet-implemented
-        # abstract methods and, if a Pluggable, it declares itself as
-        # "usable."
-        cls_abstract_methods: FrozenSet[str] = getattr(
-            cls, "__abstractmethods__", _EMPTY_FROZENSET_STR
-        )
-        # Don't invoke just yet because this may still be abstract
-        # until after checking `cls_abstract_methods`.
-        cls_is_usable: Callable[[], bool] = getattr(
-            cls, "is_usable", lambda: True
-        )
-        if bool(cls_abstract_methods):
-            # Making this a warning as I think this indicates a broken
-            # implementation in the ecosystem.
-            # noinspection PyUnresolvedReferences
-            log.warning('[%s.%s] [skip] Does not implement one or '
-                        'more abstract methods: %s',
-                        module_path, cls.__name__,
-                        list(cls_abstract_methods))
+        # abstract methods.
+        if inspect.isabstract(cls):
+            # Type checking does not easily introspect that
+            # `__abstractmethods__` is an attribute of types derived from that
+            # metaclass, thus the use of `getattr` here.
+            cls_abstract_methods: FrozenSet[str] = getattr(
+                cls, "__abstractmethods__", _EMPTY_FROZENSET_STR
+            )
+            LOG.log(
+                llevel,
+                f"{log_prefix} [skip] Does not implement one or "
+                f"more abstract methods: {list(cls_abstract_methods)}"
+            )
             return False
-        elif not cls_is_usable():
-            log.debug("[%s.%s] [skip] Class does not report as usable.",
-                      module_path, cls.__name__)
+        elif issubclass(cls, Pluggable) and not cls.is_usable():
+            # Class inherits from Pluggable and does not report itself as
+            # usable.
+            LOG.log(llevel, f"{log_prefix} [skip] Class does not report as usable.")
             return False
         else:
-            log.debug('[%s.%s] [KEEP] Retaining subclass.',
-                      module_path, cls.__name__)
+            LOG.log(llevel, f"{log_prefix} [KEEP] Retaining subclass.")
             return True
 
 
-def get_plugins(interface_type, env_var, helper_var,
-                warn=True, reload_modules=False, subclasses=False):
+def _collect_types_in_module(module: types.ModuleType) -> Set[Type]:
     """
-    Discover and return classes implementing the given ``interface_type``.
+    Common method of returning a set of class types defined in a python module.
 
-    Discoverable implementations may either be located in sub-modules parallel
-    to the definition of the interface class, be located in modules specified in
-    the environment variable  ``env_var``, or they may be defined in scope as
-    subclasses of ``interface_type``.
+    If you happened to want to dynamically reload the types in a module that is
+    updated during runtime:
 
-    In order to specify additional out-of-scope python modules containing
-    interface-class implementations, additions to the given environment variable
-    must be made. Entries must be separated by the standard PATH separating
-    character based on the operating OS standard (e.g. ';' (for windows) or
-    ':' for most everything else). Entries should be importable python module
-    paths.
+    .. code-block:: python
 
-    When looking at module attributes, we only acknowledge those that start with
-    an alphanumeric character. '_' prefixed attributes are effectively hidden
-    from discovery by this function when merely scanning a module's attributes.
-
-    We require that the base class that we are checking for also descends from
-    the ``Pluggable`` interface defined above. This allows us to check if a
-    loaded class ``is_usable``.
-
-    Within a module we first look for a helper variable by the name provided,
-    which can either be a single class object or an iterable of class objects,
-    to be specifically exported. If the variable is set to None, we skip that
-    module and do not import anything. If the variable is not present, we look
-    at attributes defined in that module for classes that descend from the given
-    base class type. If none of the above are found, or if an exception occurs,
-    the module is skipped.
-
-    :param type interface_type:
-        Interface class type of which we want to discover implementations of
-        (the plugins).
-
-    :param str env_var:
-        String name of an environment variable defining additional python module
-        paths, whose child modules are searched for implementing sub-classes of
-        the specified base type.
-
-    :param str helper_var:
-        Name of the expected module helper attribute.
-
-    :param bool warn:
-        If we should warn about module import failures.
-
-    :param bool reload_modules:
-        Explicitly reload discovered modules from source instead of taking a
-        potentially cached version of the module.
-
-    :param bool subclasses:
-        Control whether to report on subclasses defined in scope.
-
-    :return: Set of discovered class types descending from type
-        ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys are
-        the string names of the class types.
-    :rtype: set[type[Pluggable]]
-
+       module = importlib.reload(module)
+       _collect_types_in_module(module)
     """
-    if not issubclass(interface_type, Pluggable):
-        raise ValueError("Required base-class must descend from the Pluggable "
-                         "interface!")
+    type_set: Set[Type] = set()
+    for attr_name in dir(module):
+        attr = getattr(module, attr_name)
+        if isinstance(attr, type):
+            type_set.add(attr)
+    return type_set
 
-    log = logging.getLogger('.'.join([
-        __name__, 'get_plugins[{}]'.format(interface_type.__name__)
-    ]))
 
-    modules_iter = \
-        itertools.chain(
-            _get_local_plugin_modules(log, interface_type, warn=warn),
-            _get_envvar_plugin_module(log, env_var, warn=warn),
-            _get_extension_plugin_modules(log, warn=warn)
+def discover_via_env_var(env_var: str) -> Set[Type]:
+    """
+    Discover and return types specified in python-importable modules
+    specified in the the given environment variable.
+
+    We expect the given environment variable to define zero or more python
+    module paths from which to yield all contained type definitions (i.e.
+    things that descent from `type`). If there is an empty path element, it is
+    skipped (e.g. "foo::bar:baz" will only attempt importing `foo`, `bar` and
+    `baz` modules).
+
+    These python module paths should be separated with the same separator as
+    would be used in the PYTHONPATH environment variable specification.
+
+    If a module defines no class types, then no types are included from that
+    source for return.
+
+    An expected use-case for this discovery method is for modules
+    that are not installed but otherwise accessible via the python search path.
+    E.g. local modules, modules accessible through PYTHONPATH search path
+    modification, modules accessible through `sys.path` modification.
+
+    Any errors raised from attempting to import a module are propagated upward.
+
+    :param env_var: The name of the environment variable to read from.
+
+    :raises ModuleNotFoundError: When one or more module paths specified in the
+        given environment variable are not importable.
+
+    :return: Set of discovered types from the modules specified in the
+        environment variable's contents.
+    """
+    type_set: Set[Type] = set()
+    env_var_paths = os.environ.get(env_var, "").split(OS_ENV_PATH_SEP)
+    llevel = 1
+    # If no value, and empty string splits into `[""]`.
+    if env_var_paths == [""]:
+        LOG.log(
+            llevel,
+            f"Environment variable `{env_var}` not defined or did not "
+            f"contain any module paths."
         )
+    for path in env_var_paths:
+        # Skip empty strings
+        if path:
+            # May raise ModuleNotFoundError if `path` is not a valid,
+            # importable module path.
+            m = importlib.import_module(path)
+            m_tset = _collect_types_in_module(m)
+            LOG.log(
+                llevel,
+                f"For environment variable `{env_var}`, found module "
+                f"path `{path}` with types: "
+                f"{[t.__name__ for t in m_tset]}"
+            )
+            type_set.update(m_tset)
+    return type_set
 
-    log.debug("Getting plugins for interface '{}'"
-              .format(interface_type.__name__))
-    class_set: Set[Type[Pluggable]] = set()
-    for _module in modules_iter:
-        module_path = _module.__name__
-        log.debug("Examining module: {}".format(module_path))
-        if reload_modules:
-            # Invoke reload in case the module changed between imports.
-            _module = importlib.reload(_module)
-            if _module is None:
-                raise RuntimeError("[{}] Failed to reload".format(module_path))
 
-        # Find valid classes in the discovered module by:
-        classes = []
-        if hasattr(_module, helper_var):
-            # Looking for magic variable for import guidance
-            classes = getattr(_module, helper_var)
-            if classes is None:
-                log.debug("[%s] Helper is None-valued, skipping module",
-                          module_path)
-                classes = []
-            elif (isinstance(classes, collections.abc.Iterable) and
-                  not isinstance(classes, str)):
-                classes = list(classes)
-                log.debug("[%s] Loaded list of %d class types via helper",
-                          module_path, len(classes))
-            # Thus, non-iterable value.
-            elif isinstance(classes, type) \
-                    and issubclass(classes, interface_type):
-                log.debug("[%s] Loaded class type: %s",
-                          module_path, classes.__name__)
-                classes = [classes]
-            else:
-                raise RuntimeError("[%s] Helper variable set to an invalid "
-                                   "value: %s" % (module_path, classes))
+class NotAModuleError(Exception):
+    """
+    Exception for when the `discover_via_entrypoint_extensions` function
+    found an entrypoint that was *not* a module specification.
+    """
+
+
+def discover_via_entrypoint_extensions(entrypoint_ns: str) -> Set[Type]:
+    """
+    Discover and return types defined in modules exposed through the
+    entry-point extensions defined for the given namespace by installed python
+    packages.
+
+    Other installed python packages may define one or more extensions for
+    a namespace, as specified by `ns`, in their "setup.py". This should be a
+    single or list of extensions that specify modules within the installed
+    package where plugins for export are implemented.
+
+    Currently, this method only accepts extensions that export a module as
+    opposed to specifications of a specific attribute in a module.
+    This is due to other methods of type discovery not necessarily honoring the
+    selectivity that specific attribute specification provides
+    (Looking at you `__subclasses__`...).
+
+    For example, as a single specification string::
+
+        ...
+        entry_points={
+            "smqtk_plugins": "my_package = my_package.plugins"
+        ]
+        ...
+
+    Or in list form of multiple specification strings::
+
+        ...
+        entry_points = {
+            "smqtk_plugins": [
+                "my_package_mode_1 = my_package.mode_1.plugins",
+                "my_package_mode_2 = my_package.mode_2.plugins",
+            ]
+        }
+        ...
+
+    :param entrypoint_ns: The name of the entry-point mapping in  to look for
+        extensions under.
+
+    :return: Set of discovered types from the modules and class types specified
+        in the extensions under the specified entry-point.
+    """
+    type_set: Set[Type] = set()
+    for entry_point in pkg_resources.iter_entry_points(
+        entrypoint_ns
+    ):  # type: pkg_resources.EntryPoint
+        m = entry_point.load()
+        if not isinstance(m, types.ModuleType):
+            ep_dist = entry_point.dist
+            ep_dist_key = getattr(ep_dist, "key", "UNKNOWN-PACKAGE")
+            ep_dist_ver = getattr(ep_dist, "version", "UNKNOWN-VERSION")
+            raise NotAModuleError(
+                f"Extension provided by the package '{ep_dist_key} "
+                f"(version: {ep_dist_ver})' did NOT resolve to a python "
+                f"module (got an object of type {type(m).__name__} instead: "
+                f"{m})."
+            )
         else:
-            # Scan module valid attributes for classes that descend from the
-            # given base-class.
-            log.debug("[%s] No helper, scanning module attributes",
-                      module_path)
-            for attr_name in dir(_module):
-                if VALUE_ATTRIBUTE_RE.match(attr_name):
-                    classes.append(getattr(_module, attr_name))
+            type_set.update(_collect_types_in_module(m))
+    return type_set
 
-        # Check the validity of the discovered class types in this module.
-        class_set.update(cls for cls in classes if is_valid(cls, log, module_path, interface_type))
 
-    # Filter and add all subclasses (not just immediate ones) of the
-    # interface_type.
-    if subclasses:
-        # Use a queue to track the descendant classes of `interface_type`.
-        candidates: queue.Queue = queue.Queue()
+def discover_via_subclasses(interface_type: Type) -> Set[Type]:
+    """
+    Utilize the ``__subclasses__`` to discover nested subclasses for a given
+    interface type.
 
-        # Initialize the queue with the immediate subclasses of the target
-        # class.
-        for class_type in interface_type.__subclasses__():
-            candidates.put_nowait(class_type)
+    This approach will be able to observe any implementations that have been
+    defined, anywhere at all, at the point of invocation, which can circumvent
+    efforts towards specificity that other discovery methods may provide. For
+    example, `discover_via_entrypoint_extensions` may return a single type
+    that was specifically exported from a module whereas this method will,
+    called afterwards, yield all the other types defined in that
+    entry-point-imported module.
 
-        # Continue testing classes from the queue until it is empty.
-        try:
-            while True:
-                # Pull a class off the queue, and keep it if it passes the
-                # validation logic. When the queue is empty, that means there's
-                # no further work to do, and control will break to the except
-                # clause below.
-                class_type = candidates.get_nowait()
-                if is_valid(class_type, log, class_type.__module__, interface_type):
-                    class_set.add(class_type)
+    The use of this discovery method may also result in different returns
+    depending on the import state at the time of invocation. E.g. further
+    imports may increase the quantity of returns from this function.
 
-                # Whether the class is valid or not, add its subclasses to the
-                # queue.
-                for subclass in class_type.__subclasses__():
-                    candidates.put_nowait(subclass)
+    This function uses depth-first-search when traversing sub-class tree.
 
-        except queue.Empty:
-            pass
+    Reference:
+      https://docs.python.org/3/library/stdtypes.html#class.__subclasses__
 
+    NOTE: subclasses are retained via weak-references, so if a normal condition
+          is exposing types from something that otherwise raised an exception
+          or if a local definition is leaking, apparently an `import gc;
+          gc.collect()` wipes out the return as long as it's not referenced, of
+          course as long as its reference is not retained by something.
+
+    :param interface_type: The interface type to recursively find sub-classes
+        under.
+    :return: Set of recursive subclass types under `interface_type`.
+    """
+    # __subclasses__ only returns *immediate* subclasses, i.e. one level.
+    # To get nested subclasses we'll have to do some graph traversal.
+    class_set = set()
+
+    # Use a list (stack behavior) to track the descendant classes of
+    # `interface_type`. Depth- vs. Breadth-first search should not matter here,
+    # so just using just using lists here for theoretically more optimal array
+    # caching.
+    candidates = interface_type.__subclasses__()
+    while candidates:
+        class_type = candidates.pop()
+        class_set.add(class_type)
+        candidates.extend(class_type.__subclasses__())
     return class_set
 
 
-class NotUsableError (Exception):
+def filter_plugin_types(
+    interface_type: Type, candidate_pool: Collection[Type]
+) -> Set[Type]:
+    """
+    Filter the given set of types to those that are "plugins" of the given
+    interface type.
+
+    See the documentation for :py:func:`is_valid_plugin` for what we define a
+    "plugin type" to be relative to the given `interface_type`.
+
+    We consider that there may be duplicate type instances in the given
+    candidate pool. Due to this we will consider an instance of a type only
+    once and return a set type to contain the validated types.
+
+    :param interface_type: The parent type to filter on.
+    :param candidate_pool: Some iterable of types from which to collect
+        interface type plugins from.
+    :return: Set of types that are considered "plugins" of the interface types
+        following the above listed rules.
+    """
+    return {cls for cls in candidate_pool if is_valid_plugin(cls, interface_type)}
+
+
+class NotUsableError(Exception):
     """
     Exception thrown when a pluggable class is constructed but does not report
     as usable.
     """
 
 
-class Pluggable (metaclass=abc.ABCMeta):
+class Pluggable(metaclass=abc.ABCMeta):
     """
     Interface for classes that have plugin implementations
     """
@@ -418,10 +354,10 @@ class Pluggable (metaclass=abc.ABCMeta):
     __slots__ = ()
 
     PLUGIN_ENV_VAR = "SMQTK_PLUGIN_PATH"
-    PLUGIN_HELPER_VAR = "SMQTK_PLUGIN_CLASS"
+    PLUGIN_NAMESPACE = "smqtk_plugins"
 
     @classmethod
-    def get_impls(cls, warn=True, reload_modules=False, subclasses=False):
+    def get_impls(cls: Type[P]) -> Set[Type[P]]:
         """
         Discover and return a set of classes that implement the calling class.
 
@@ -432,51 +368,53 @@ class Pluggable (metaclass=abc.ABCMeta):
         may be overridden to change what environment and helper variable are
         looked for, respectively.
 
-        :param bool warn:
-        If we should warn about module import failures.
-
-        :param bool reload_modules:
-            Explicitly reload discovered modules from source.
-
-        :param bool subclasses:
-            Control whether to report on subclasses defined in scope.
-
-        :return: Set of discovered class types descending from type
-            ``interface_type`` and ``smqtk.utils.plugin.Pluggable`` whose keys
-            are the string names of the class types.
-        :rtype: set[type[Pluggable]]
+        :return: Set of discovered class types that are considered "valid"
+            plugins of this type. See :py:func:`is_valid_plugin` for what we
+            define a "valid" type to be be relative to this class.
 
         """
-        # TODO: If reload is False, cache result or use cache
-        # TODO: If True, re-cache new result.
-        return get_plugins(cls, cls.PLUGIN_ENV_VAR, cls.PLUGIN_HELPER_VAR,
-                           warn=warn, reload_modules=reload_modules, subclasses=subclasses)
+        candidate_types = {
+            *discover_via_env_var(cls.PLUGIN_ENV_VAR),
+            *discover_via_entrypoint_extensions(cls.PLUGIN_NAMESPACE),
+            *discover_via_subclasses(cls)
+        }
+        resolved_types = cast(
+            Set[Type[P]],
+            filter_plugin_types(cls, candidate_types)
+        )
+        return resolved_types
 
     @classmethod
-    @abc.abstractmethod
-    def is_usable(cls):
+    def is_usable(cls) -> bool:
         """
         Check whether this class is available for use.
 
-        Since certain plugin implementations may require additional dependencies
-        that may not yet be available on the system, this method should check
-        for those dependencies and return a boolean saying if the implementation
-        is usable.
+        Since certain plugin implementations may require additional
+        dependencies that may not yet be available on the system, or other
+        runtime conditions, this method may be overridden to check for those
+        and return a boolean saying if the implementation is available for
+        usable. When this method returns `True`, the class is declaring that it
+        should be constructable and usable in the current environment.
+
+        By default, this method will return True unless a sub-class overrides
+        this class-method with their specific logic.
 
         NOTES:
             - This should be a class method
             - When an implementation is deemed not usable, this should emit a
-                warning detailing why the implementation is not available for
-                use.
+                (user) warning, or some other kind of logging, detailing why
+                the implementation is not available for use.
 
-        :return: Boolean determination of whether this implementation is usable.
+        :return: Boolean determination of whether this implementation is
+            usable in the current environment.
         :rtype: bool
 
         """
-        raise NotImplementedError("is_usable class-method not implemented for "
-                                  "class '%s'" % cls.__name__)
+        return True
 
-    def __init__(self):
+    def __init__(self) -> None:
         if not self.is_usable():
-            raise NotUsableError("Implementation class '%s' is not currently "
-                                 "usable." % self.__class__.__name__)
+            raise NotUsableError(
+                "Implementation class '%s' is not currently "
+                "usable." % self.__class__.__name__
+            )

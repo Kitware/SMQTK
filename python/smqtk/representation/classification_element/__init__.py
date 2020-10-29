@@ -4,7 +4,6 @@ import six
 
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 
 

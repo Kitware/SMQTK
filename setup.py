@@ -122,6 +122,9 @@ setuptools.setup(
         'smqtk': find_package_datafiles(os.path.join(PYTHON_SRC, 'smqtk'))
     },
     data_files=list_directory_files('etc'),
+    # Required for mypy to be able to find the installed package.
+    # https://mypy.readthedocs.io/en/latest/installed_packages.html#installed-packages
+    zip_safe=False,
 
     install_requires=[
         'click',
@@ -181,30 +184,44 @@ setuptools.setup(
     #   to be used...
     # TODO: Rename camel-case scripts to ``smqtk-...`` format without camel-case
     entry_points={
+        'smqtk_plugins': [
+            # Included batteries!
+            # Algorithms
+            "smqtk.algorithms.classifier._plugins = smqtk.algorithms.classifier._plugins",
+            "smqtk.algorithms.descriptor_generator._plugins = smqtk.algorithms.descriptor_generator._plugins"
+            "smqtk.algorithms.image_io._plugins = smqtk.algorithms.image_io._plugins",
+            "smqtk.algorithms.nn_index._plugins = smqtk.algorithms.nn_index._plugins",
+            "smqtk.algorithms.nn_index.hash_index._plugins = smqtk.algorithms.nn_index.hash_index._plugins",
+            "smqtk.algorithms.nn_index.lsh.functors._plugins = smqtk.algorithms.nn_index.lsh.functors._plugins",
+            "smqtk.algorithms.relevancy_index._plugins = smqtk.algorithms.relevancy_index._plugins",
+            # Representations
+            "smqtk.representation.classification_element._plugins"
+            " = smqtk.representation.classification_element._plugins",
+            "smqtk.representation.data_element._plugins = smqtk.representation.data_element._plugins",
+            "smqtk.representation.data_set._plugins = smqtk.representation.data_set._plugins",
+            "smqtk.representation.descriptor_element._plugins = smqtk.representation.descriptor_element._plugins",
+            "smqtk.representation.descriptor_set._plugins = smqtk.representation.descriptor_set._plugins",
+            "smqtk.representation.detection_element._plugins = smqtk.representation.detection_element._plugins",
+            "smqtk.representation.key_value._plugins = smqtk.representation.key_value._plugins",
+            # Web
+            "smqtk.web._plugins = smqtk.web._plugins",
+        ],
         'console_scripts': [
-            'classifier_kfold_validation = \
-                smqtk.bin.classifier_kfold_validation\
-                :classifier_kfold_validation',
-            'classifier_model_validation = \
-                smqtk.bin.classifier_model_validation:main',
+            'classifier_kfold_validation = smqtk.bin.classifier_kfold_validation:classifier_kfold_validation',
+            'classifier_model_validation = smqtk.bin.classifier_model_validation:main',
             'smqtk-classify-files = smqtk.bin.classifyFiles:main ',
             'compute_classifications = smqtk.bin.compute_classifications:main',
             'compute_hash_codes = smqtk.bin.compute_hash_codes:main',
-            'compute_many_descriptors = \
-                smqtk.bin.compute_many_descriptors:main',
+            'compute_many_descriptors = smqtk.bin.compute_many_descriptors:main',
             'smqtk-compute-descriptor = smqtk.bin.computeDescriptor:main',
             'smqtk-create-file-ingest = smqtk.bin.createFileIngest:main',
             'smqtk-create-girder-ingest = smqtk.bin.createGirderIngest:main',
-            'descriptors_to_svmtrain = \
-                smqtk.bin.descriptors_to_svmtrainfile:main',
-            'generate_image_transform = \
-                smqtk.bin.generate_image_transform:main',
-            'iqr_app_model_generation = \
-                smqtk.bin.iqr_app_model_generation:main',
+            'descriptors_to_svmtrain = smqtk.bin.descriptors_to_svmtrainfile:main',
+            'generate_image_transform = smqtk.bin.generate_image_transform:main',
+            'iqr_app_model_generation = smqtk.bin.iqr_app_model_generation:main',
             'iqrTrainClassifier = smqtk.bin.iqrTrainClassifier:main',
             'make_balltree = smqtk.bin.make_balltree:main',
-            'minibatch_kmeans_clusters = \
-                smqtk.bin.minibatch_kmeans_clusters:main',
+            'minibatch_kmeans_clusters = smqtk.bin.minibatch_kmeans_clusters:main',
             'smqtk-remove-old-files = smqtk.bin.removeOldFiles:main',
             'smqtk-proxy-manager-server = smqtk.bin.proxyManagerServer:main',
             'runApplication = smqtk.bin.runApplication:main',

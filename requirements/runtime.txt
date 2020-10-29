@@ -19,4 +19,3 @@ pymongo==3.10.1
 requests==2.23.0
 scikit-learn==0.23.1
 scipy==1.4.1
-stevedore==1.32.0

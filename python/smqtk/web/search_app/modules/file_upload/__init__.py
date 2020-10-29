@@ -1,1 +1,1 @@
-from .FileUploadMod import FileUploadMod
+from .FileUploadMod import FileUploadMod  # noqa: F401

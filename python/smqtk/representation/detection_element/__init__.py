@@ -1,1 +1,1 @@
-from ._interface import DetectionElement
+from ._interface import DetectionElement  # noqa: F401

@@ -20,3 +20,7 @@ Utils
 
 Fixes
 -----
+
+Misc.
+
+* Fix issues revealed with updating to use of mypy version 0.790.

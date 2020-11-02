@@ -1,5 +1,7 @@
 import io
 import logging
+from typing import Generator, Tuple
+
 import numpy
 import PIL.Image
 import PIL.ImageEnhance
@@ -70,7 +72,10 @@ def is_valid_element(data_element, valid_content_types=None,
     return isinstance(data_element, DataElement)
 
 
-def image_crop_center_levels(image, n_crops):
+def image_crop_center_levels(
+    image: PIL.Image.Image,
+    n_crops: int
+) -> Generator[Tuple[int, PIL.Image.Image], None, None]:
     """
     Crop out one or more increasing smaller images from a base image by cutting
     off increasingly larger portions of the outside perimeter. Cropped image
@@ -78,15 +83,11 @@ def image_crop_center_levels(image, n_crops):
     crops to generate.
 
     :param image: The base image array. This is not modified,.
-    :type image: PIL.Image.Image
-
     :param n_crops: Number of crops to generate.
-    :type n_crops: int
 
     :return: Generator yielding paired level number and PIL.Image.Image tuples.
         Cropped images have not loaded/copied yet, so changes to the original
         image will affect them.
-    :rtype: __generator[(int, PIL.Image.Image)]
 
     """
     n_crops = int(n_crops)
@@ -101,7 +102,7 @@ def image_crop_center_levels(image, n_crops):
     # Outside edges of generated points in the original image size
     for i in range(1, n_crops + 1):
         # crop wants: [xmin, ymin, xmax, ymax]
-        t = zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]])
+        t = list(zip(x_points[[i, -i - 1]], y_points[[i, -i - 1]]))
         yield i, image.crop(t[0] + t[1])
 
 

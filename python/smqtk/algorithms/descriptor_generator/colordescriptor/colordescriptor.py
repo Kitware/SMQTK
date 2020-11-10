@@ -11,7 +11,7 @@ import os.path as osp
 import subprocess
 import sys
 import tempfile
-from typing import Callable, Dict, Hashable, List, Optional, Set, Tuple
+from typing import Callable, Dict, Hashable, List, Optional, Tuple
 
 import numpy
 import six
@@ -848,20 +848,16 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             # - Transforms r_map into:
             #       UID -> (info_fp, desc_fp, starting_row, SubSampleIndices)
             self._log.debug("Constructing information for super matrices...")
-            s_keys = sorted(r_map.keys())
             running_height = 0  # info and desc heights congruent
 
             i_width = None
             d_width = None
 
-            failed_gen_uids: Set[Hashable] = set()
             r2_map: Dict[
                 Hashable,
                 Tuple[str, str, int, Optional[List[int]]]
             ] = {}
-            for uid in s_keys:
-                ifp, dfp, r, tmp_clean_method = r_map[uid]
-
+            for uid, (ifp, dfp, r, tmp_clean_method) in r_map.items():
                 # descriptor generation may have failed for this ingest UID
                 try:
                     i_shape, d_shape = r.get()
@@ -869,7 +865,6 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
                     self._log.warning("Descriptor generation failed for "
                                       "UID[%s], skipping its inclusion in "
                                       "model: %s", uid, str(ex))
-                    failed_gen_uids.add(uid)
                     continue
                 finally:
                     # Done with image file, so remove from filesystem
@@ -900,13 +895,11 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
-            for uid in s_keys:
-                if uid not in failed_gen_uids:
-                    ifp, dfp, sR, subsample = r2_map[uid]
-                    tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                                   args=(ifp, master_info, sR, subsample))
-                    tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
-                                   args=(dfp, master_desc, sR, subsample))
+            for uid, (ifp, dfp, sR, subsample) in r2_map.items():
+                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                               args=(ifp, master_info, sR, subsample))
+                tp.apply_async(ColorDescriptor_Image._thread_load_matrix,
+                               args=(dfp, master_desc, sR, subsample))
             tp.close()
             tp.join()
             return master_info, master_desc
@@ -1043,14 +1036,11 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
             # Transform r_map[uid] into:
             #   (info_mat_files, desc_mat_files, sR, ssi_list)
             #   -> files in frame order
-            uids = sorted(r_map)
-            for uid in uids:
+            for uid in r_map:
                 video_num_desc = 0
                 video_info_mat_fps = []  # ordered list of frame info mat files
                 video_desc_mat_fps = []  # ordered list of frame desc mat files
-                for frame in sorted(r_map[uid]):
-                    ifp, dfp, r = r_map[uid][frame]
-
+                for frame, (ifp, dfp, r) in sorted(r_map[uid].items()):
                     # Descriptor generation may have failed for this UID
                     try:
                         i_shape, d_shape = r.get()
@@ -1096,8 +1086,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
             master_info = numpy.zeros((running_height, i_width), dtype=float)
             master_desc = numpy.zeros((running_height, d_width), dtype=float)
             tp = multiprocessing.pool.ThreadPool(processes=self.parallel)
-            for uid in uids:
-                info_fp_list, desc_fp_list, sR, subsample = r_map[uid]
+            for uid, (info_fp_list, desc_fp_list, sR, subsample) in r2_map.items():
                 tp.apply_async(ColorDescriptor_Video._thread_load_matrices,
                                args=(master_info, info_fp_list, sR, subsample))
                 tp.apply_async(ColorDescriptor_Video._thread_load_matrices,

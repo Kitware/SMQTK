@@ -5,4 +5,4 @@
 
 flake8==3.8.3
 flake8-mutable==1.2.0   # for triggering on mutable default values.
-mypy==0.782
+mypy==0.790

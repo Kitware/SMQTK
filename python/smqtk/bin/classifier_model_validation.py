@@ -455,11 +455,10 @@ def make_pr_curves(label2classifications, output_filepath, plot_ci,
         y_l = numpy.min([y, y_l], 0)
         y_u = numpy.max([y, y_u], 0)
         # Add points to flush ends with plot border
-        poly_points = (
-            [(x[0], y_l[0])] + zip(x_l, y_l) + [(x[-1], y_l[-1])] +
-            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) +
-            [(x[0], y_u[0])]
-        )
+        poly_points = [
+            (x[0], y_l[0]), *zip(x_l, y_l), (x[-1], y_l[-1]),
+            (x[-1], y_u[-1]), *list(zip(x_u, y_u))[::-1], (x[0], y_u[0])
+        ]
         return plt.Polygon(poly_points, **poly_kwds)
 
     log = logging.getLogger(__name__)
@@ -478,11 +477,10 @@ def make_roc_curves(label2classifications, output_filepath, plot_ci,
         x_u = numpy.max([x, x_u], 0)
         y_l = numpy.min([y, y_l], 0)
         y_u = numpy.max([y, y_u], 0)
-        poly_points = (
-            [(x[0], y_u[0])] + zip(x_l, y_u) + [(x[-1], y_u[-1])] +
-            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) +
-            [(x[0], y_l[0])]
-        )
+        poly_points = [
+            (x[0], y_u[0]), *zip(x_l, y_u), (x[-1], y_u[-1]),
+            (x[-1], y_l[-1]), *list(zip(x_u, y_l))[::-1], (x[0], y_l[0])
+        ]
         return plt.Polygon(poly_points, **poly_kwds)
 
     log = logging.getLogger(__name__)

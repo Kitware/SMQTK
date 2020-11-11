@@ -188,7 +188,7 @@ setuptools.setup(
             # Included batteries!
             # Algorithms
             "smqtk.algorithms.classifier._plugins = smqtk.algorithms.classifier._plugins",
-            "smqtk.algorithms.descriptor_generator._plugins = smqtk.algorithms.descriptor_generator._plugins"
+            "smqtk.algorithms.descriptor_generator._plugins = smqtk.algorithms.descriptor_generator._plugins",
             "smqtk.algorithms.image_io._plugins = smqtk.algorithms.image_io._plugins",
             "smqtk.algorithms.nn_index._plugins = smqtk.algorithms.nn_index._plugins",
             "smqtk.algorithms.nn_index.hash_index._plugins = smqtk.algorithms.nn_index.hash_index._plugins",

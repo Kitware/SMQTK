@@ -193,6 +193,7 @@ setuptools.setup(
             "smqtk.algorithms.nn_index._plugins = smqtk.algorithms.nn_index._plugins",
             "smqtk.algorithms.nn_index.hash_index._plugins = smqtk.algorithms.nn_index.hash_index._plugins",
             "smqtk.algorithms.nn_index.lsh.functors._plugins = smqtk.algorithms.nn_index.lsh.functors._plugins",
+            "smqtk.algorithms.rank_relevancy._plugins = smqtk.algorithms.rank_relevancy._plugins",
             "smqtk.algorithms.relevancy_index._plugins = smqtk.algorithms.relevancy_index._plugins",
             # Representations
             "smqtk.representation.classification_element._plugins"

@@ -8,4 +8,5 @@ from .object_detection import ObjectDetector, ImageMatrixObjectDetector  # noqa:
 from .nn_index import NearestNeighborsIndex  # noqa: F401
 from .nn_index.hash_index import HashIndex  # noqa: F401
 from .nn_index.lsh.functors import LshFunctor  # noqa: F401
+from .rank_relevancy import RankRelevancy, RankRelevancyWithFeedback  # noqa: F401
 from .relevancy_index import RelevancyIndex  # noqa: F401

@@ -5,6 +5,21 @@ SMQTK DIY-AI Pending Release Notes
 Updates / New Features
 ----------------------
 
+Algorithms
+
+* Added new algorithms ``RankRelevancy`` and ``RankRelevancyWithFeedback``.
+  ``RankRelevancy`` is an overhaul of the existing ``RelevancyIndex`` algorithm
+  and will eventually replace it.  ``RankRelevancyWithFeedback`` is a closely
+  related algorithm that additionally provides feedback requests.
+
+  * An implementation ``RankRelevancyWithSupervisedClassifier`` is provided for
+    ``RankRelevancy``, porting the existing
+    ``SupervisedClassifierRelevancyIndex``.
+
+  * An implementation ``RankRelevancyWithMarginSampledFeedback`` is provided
+    for ``RankRelevancyWithFeedback``, supporting wrapping a ``RankRelevancy``
+    instance for margin sampling.
+
 Documentation
 
 * Update plugin related sphinx documentation content and examples.

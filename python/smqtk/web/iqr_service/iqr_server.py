@@ -17,7 +17,7 @@ from smqtk.algorithms import (
     Classifier,
     DescriptorGenerator,
     NearestNeighborsIndex,
-    RelevancyIndex,
+    RankRelevancy,
     SupervisedClassifier,
 )
 from smqtk.iqr import (
@@ -116,10 +116,9 @@ class IqrService (SmqtkWebApp):
     def get_default_config(cls):
         c = super(IqrService, cls).get_default_config()
 
-        c_rel_index = make_default_config(
-            RelevancyIndex.get_impls()
+        c_rank_rel = make_default_config(
+            RankRelevancy.get_impls()
         )
-        merge_dict(c_rel_index, iqr_session.DFLT_REL_INDEX_CONFIG)
 
         merge_dict(c, {
             "iqr_service": {
@@ -171,7 +170,7 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "relevancy_index_config": c_rel_index,
+                    "relevancy_index_config": c_rank_rel,
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(

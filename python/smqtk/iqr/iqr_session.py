@@ -6,19 +6,11 @@ from typing import cast, Dict, List, Optional, Tuple
 import uuid
 import zipfile
 
-from smqtk.algorithms.relevancy_index import RelevancyIndex
+from smqtk.algorithms import RankRelevancy
 from smqtk.representation import DescriptorElement
 from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
 from smqtk.utils.configuration import from_config_dict
-
-
-DFLT_REL_INDEX_CONFIG = {
-    "type": "LibSvmHikRelevancyIndex",
-    "LibSvmHikRelevancyIndex": {
-        "descr_cache_filepath": None,
-    }
-}
 
 
 class IqrSession (SmqtkObject):
@@ -40,7 +32,7 @@ class IqrSession (SmqtkObject):
         )
 
     def __init__(self, pos_seed_neighbors=500,
-                 rel_index_config=None, session_uid=None):
+                 rank_relevancy=None, session_uid=None):
         """
         Initialize the IQR session
 
@@ -156,16 +148,9 @@ class IqrSession (SmqtkObject):
         #
         # Algorithm Instances [+Config]
         #
-        # RelevancyIndex configuration and instance that is used for producing
+        # RankRelvancy instance that is used for producing
         #   results.
-        # This is only [re]constructed when initializing the session.
-        if rel_index_config is None:
-            rel_index_config = DFLT_REL_INDEX_CONFIG
-        self.rel_index_config = rel_index_config
-        # This is None until session initialization happens after pos/neg
-        # exemplar data has been added.
-        #: :type: None | smqtk.algorithms.relevancy_index.RelevancyIndex
-        self.rel_index = None
+        self.rank_relevancy = None
 
     def __enter__(self):
         """
@@ -313,16 +298,6 @@ class IqrSession (SmqtkObject):
                 self._wi_seeds_used.add(p.uuid())
                 updated = True
 
-        # Make new relevancy index
-        if updated:
-            self._log.info("Creating new relevancy index over working set.")
-            self.rel_index = cast(
-                RelevancyIndex,
-                from_config_dict(
-                    self.rel_index_config, RelevancyIndex.get_impls()
-                )
-            )
-            self.rel_index.build_index(self.working_set.iterdescriptors())
 
     def refine(self):
         """ Refine current model results based on current adjudication state
@@ -335,10 +310,6 @@ class IqrSession (SmqtkObject):
 
         """
         with self.lock:
-            if not self.rel_index:
-                raise RuntimeError("No relevancy index yet. Must not have "
-                                   "initialized session (no working set).")
-
             # combine pos/neg adjudications + added external data descriptors
             pos = self.positive_descriptors | self.external_positive_descriptors
             neg = self.negative_descriptors | self.external_negative_descriptors
@@ -349,7 +320,9 @@ class IqrSession (SmqtkObject):
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            element_probability_map = self.rel_index.rank(pos, neg)
+            element_probability_map = self.rank_relevancy.rank(
+              pos, neg, self.working_set.iterdescriptors()
+            )
             self.results = element_probability_map
             # Record UIDs of elements used for relevancy ranking.
             # - shallow copy for separate container instance
@@ -504,7 +477,6 @@ class IqrSession (SmqtkObject):
             self.rank_contrib_neg.clear()
             self.rank_contrib_neg_ext.clear()
 
-            self.rel_index = None
             self.results = None
             self._ordered_results = self._ordered_pos = self._ordered_neg = \
                 self._ordered_non_adj = None

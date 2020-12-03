@@ -1,0 +1,66 @@
+name: CI Unittests
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the
+  # master branch.
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    # Nightly run unit tests to check for implicit dependency issues between
+    # pull requests.
+    - cron: '0 0 * * *'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # A single job called "build_test"
+  build_test:
+    # Running in containers, so this unknown environment is fine.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7]
+      # We want all above python versions tested even if one of them happens to
+      # fail.
+      fail-fast: false
+
+    container: python:${{ matrix.python-version }}
+
+    steps:
+      - name: Container setup
+        run: |
+          apt-get -y update
+          apt-get -y install cmake
+
+      # Checks-out your repository under $GITHUB_WORKSPACE.
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Versions of things used here
+        run: |
+          command -v python
+          python --version
+          pip --version
+          cmake --version
+
+      - name: Pip install requirements
+        run: pip install -r requirements.txt -r requirements.test.txt
+
+      - name: Perform a build and install using CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -DSMQTK_BUILD_FLANN=OFF -DSMQTK_PIP_INSTALL_FLAGS="-e" ..
+          make -j$(nproc) install
+
+      - name: Run Unittests
+        run: python setup.py test

@@ -58,7 +58,7 @@ def train_classifier_iqr(config, iqr_state_fp):
     with open(iqr_state_fp, 'rb') as f:
         state_bytes = f.read().strip()
     descr_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-    iqrs = IqrSession()
+    iqrs = IqrSession(None)
     iqrs.set_state_bytes(state_bytes, descr_factory)
 
     # Positive descriptor examples for training are composed of those from

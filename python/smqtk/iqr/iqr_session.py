@@ -6,11 +6,9 @@ from typing import cast, Dict, List, Optional, Tuple
 import uuid
 import zipfile
 
-from smqtk.algorithms import RankRelevancy
 from smqtk.representation import DescriptorElement
 from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
-from smqtk.utils.configuration import from_config_dict
 
 
 class IqrSession (SmqtkObject):
@@ -31,8 +29,8 @@ class IqrSession (SmqtkObject):
             "[%s]" % self.uuid
         )
 
-    def __init__(self, pos_seed_neighbors=500,
-                 rank_relevancy=None, session_uid=None):
+    def __init__(self, rank_relevancy,
+                 pos_seed_neighbors=500, session_uid=None):
         """
         Initialize the IQR session
 
@@ -150,7 +148,7 @@ class IqrSession (SmqtkObject):
         #
         # RankRelvancy instance that is used for producing
         #   results.
-        self.rank_relevancy = None
+        self.rank_relevancy = rank_relevancy
 
     def __enter__(self):
         """
@@ -278,10 +276,6 @@ class IqrSession (SmqtkObject):
             raise RuntimeError("No positive descriptors to query the neighbor "
                                "index with.")
 
-        # Not clearing working set because this step is intended to be
-        # additive.
-        updated = False
-
         # adding to working set
         self._log.info("Building working set using %d positive examples "
                        "(%d external, %d adjudicated)",
@@ -296,12 +290,9 @@ class IqrSession (SmqtkObject):
                     nn_index.nn(p, n=self.pos_seed_neighbors)[0]
                 )
                 self._wi_seeds_used.add(p.uuid())
-                updated = True
-
 
     def refine(self):
         """ Refine current model results based on current adjudication state
-
         :raises RuntimeError: No working set has been initialized.
             :meth:`update_working_set` should have been called after
             adjudicating some positive examples.
@@ -317,7 +308,6 @@ class IqrSession (SmqtkObject):
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
-
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))

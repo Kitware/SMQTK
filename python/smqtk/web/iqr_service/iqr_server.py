@@ -813,8 +813,8 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors,
-                                      self.rel_index_config,
+        iqrs = iqr_session.IqrSession(None,
+                                      self.positive_seed_neighbors,
                                       sid)
         with self.controller:
             with iqrs:  # because classifier maps locked by session

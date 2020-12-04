@@ -611,7 +611,7 @@ class TestIqrService (unittest.TestCase):
         # There are no sessions on server initialization.
         self._test_getter_sid_not_found('session')
 
-        iqrs = IqrSession(session_uid='1')  # not '0', which is queried for.
+        iqrs = IqrSession(None, session_uid='1')  # not '0', which is queried for.
         self.app.controller.add_session(iqrs)
         self._test_getter_sid_not_found('session')
 
@@ -619,7 +619,7 @@ class TestIqrService (unittest.TestCase):
         """
         Test a valid retrieval of a complex IQR session state.
         """
-        iqrs = IqrSession(session_uid='abc')
+        iqrs = IqrSession(None, session_uid='abc')
 
         ep, en, p1, p2, p3, n1, n2, d1, d2, n3 = [
             DescriptorMemoryElement('test', uid) for uid in

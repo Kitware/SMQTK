@@ -726,7 +726,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 "Label already exists in classifier collection.", 400)
 
         # Create dummy IqrSession to extract pos/neg descriptors.
-        iqrs = IqrSession()
+        iqrs = IqrSession(None)
         iqrs.set_state_bytes(data_bytes, self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors

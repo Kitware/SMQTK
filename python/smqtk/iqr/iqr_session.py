@@ -318,12 +318,12 @@ class IqrSession (SmqtkObject):
                 raise RuntimeError("Did not find at least one positive "
                                    "adjudication.")
 
+
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            element_probability_map = self.rank_relevancy.rank(
-              pos, neg, self.working_set.iterdescriptors()
-            )
-            self.results = element_probability_map
+            pool = [p for p in self.working_set.iterdescriptors()]
+            probabilities = self.rank_relevancy.rank(pos, neg, pool)
+            self.results = dict(zip(pool, probabilities))
             # Record UIDs of elements used for relevancy ranking.
             # - shallow copy for separate container instance
             self.rank_contrib_pos = set(self.positive_descriptors)

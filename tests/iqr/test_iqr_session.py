@@ -346,6 +346,11 @@ class TestIqrSession (object):
         test_ex_neg_elem = DescriptorMemoryElement('t', 3).set_vector([3])
         test_other_elem = DescriptorMemoryElement('t', 4).set_vector([4])
 
+        # Mock the working set so it has the correct size and elements
+        iqrs.working_set.add_many_descriptors([test_in_pos_elem,
+                                               test_in_neg_elem,
+                                               test_other_elem])
+
         # Mock return dictionary, probabilities don't matter much other than
         # they are not 1.0 or 0.0.
         iqrs.rel_index.rank.return_value = \
@@ -375,6 +380,7 @@ class TestIqrSession (object):
         iqrs.rel_index.rank.assert_called_once_with(
             {test_in_pos_elem, test_ex_pos_elem},
             {test_in_neg_elem, test_ex_neg_elem},
+            [p for p in iqrs.working_set.iterdescriptors()]
         )
         assert iqrs.results is not None
         assert len(iqrs.results) == 3
@@ -412,6 +418,11 @@ class TestIqrSession (object):
             {e: 0.5 for e in [test_in_pos_elem, test_in_neg_elem,
                               test_other_elem]}
 
+        # Mock the working set so it has the correct size and elements
+        iqrs.working_set.add_many_descriptors([test_in_pos_elem,
+                                               test_in_neg_elem,
+                                               test_other_elem])
+
         # Create a "previous state" of the results dictionary containing
         # results from our "working set" of descriptor elements.
         iqrs.results = {
@@ -443,6 +454,7 @@ class TestIqrSession (object):
         iqrs.rel_index.rank.assert_called_once_with(
             {test_in_pos_elem, test_ex_pos_elem},
             {test_in_neg_elem, test_ex_neg_elem},
+            [p for p in iqrs.working_set.iterdescriptors()]
         )
         assert iqrs.results is not None
         assert len(iqrs.results) == 3

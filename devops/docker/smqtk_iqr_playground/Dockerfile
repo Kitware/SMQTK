@@ -90,7 +90,7 @@ COPY etc /smqtk/source/etc
 COPY python /smqtk/source/python
 COPY src /smqtk/source/src
 COPY TPL /smqtk/source/TPL
-COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* VERSION \
+COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* \
      /smqtk/source/
 RUN mkdir /smqtk/build \
  && cd /smqtk/build \

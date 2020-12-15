@@ -33,6 +33,15 @@ variables:
 #  script:
 #    - echo "Placeholder for any build operations required."
 
+build:docs:
+  stage: build
+  image: python:3.6-buster
+  script:
+    - *test_setup  # expand `&test_setup` anchor above into here.
+    - cd docs
+    - make html
+    - stat _build/html/index.html
+
 test:py36:
   stage: test
   image: python:3.6-buster

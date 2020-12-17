@@ -1,5 +1,5 @@
 # SMQTK
-![Build Status](https://travis-ci.org/Kitware/SMQTK.svg?branch=master)
+![CI Unittests](https://github.com/Kitware/SMQTK/workflows/CI%20Unittests/badge.svg)
 
 [![Documentation Status](https://readthedocs.org/projects/smqtk/badge/?version=latest)](https://smqtk.readthedocs.io/en/latest/?badge=latest)
 

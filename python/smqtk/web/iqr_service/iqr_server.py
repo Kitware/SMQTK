@@ -116,10 +116,6 @@ class IqrService (SmqtkWebApp):
     def get_default_config(cls):
         c = super(IqrService, cls).get_default_config()
 
-        c_rank_rel = make_default_config(
-            RankRelevancy.get_impls()
-        )
-
         merge_dict(c, {
             "iqr_service": {
 
@@ -133,8 +129,8 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugin_notes": {
-                    "relevancy_index_config":
-                        "The relevancy index config provided should not have "
+                    "rank_relevancy_config":
+                        "The rank relevancy config provided should not have "
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
                         "destroyed often.",
@@ -170,7 +166,9 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "relevancy_index_config": c_rank_rel,
+                    "rank_relevancy_config": make_default_config(
+                        RankRelevancy.get_impls()
+                        ),
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(
@@ -228,7 +226,7 @@ class IqrService (SmqtkWebApp):
         self.neighbor_index_lock = multiprocessing.RLock()
 
         self.rel_index_config = \
-            json_config['iqr_service']['plugins']['relevancy_index_config']
+            json_config['iqr_service']['plugins']['rank_relevancy_config']
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.

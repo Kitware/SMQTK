@@ -2,10 +2,11 @@ import io
 import json
 import logging
 import threading
-from typing import cast, Dict, List, Optional, Tuple
+from typing import cast, Dict, Hashable, List, Optional, Set, Tuple, Union
 import uuid
 import zipfile
 
+from smqtk.algorithms import RankRelevancy
 from smqtk.representation import DescriptorElement
 from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
@@ -29,8 +30,9 @@ class IqrSession (SmqtkObject):
             "[%s]" % self.uuid
         )
 
-    def __init__(self, rank_relevancy,
-                 pos_seed_neighbors=500, session_uid=None):
+    def __init__(self, rank_relevancy: RankRelevancy,
+                 pos_seed_neighbors: int = 500,
+                 session_uid: Optional[Union[str, uuid.UUID]] = None):
         """
         Initialize the IQR session
 
@@ -78,24 +80,24 @@ class IqrSession (SmqtkObject):
         # Book-keeping set so we know what positive descriptors
         # UUIDs we've used to query the neighbor index with already.
         #: :type: set[collections.abc.Hashable]
-        self._wi_seeds_used = set()
+        self._wi_seeds_used: Set[Hashable] = set()
 
         # Descriptor elements representing data from external sources.
         # These may be arbitrary descriptor elements not present in
         #   ``working_index``.
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.external_positive_descriptors = set()
+        self.external_positive_descriptors: Set[DescriptorElement] = set()
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.external_negative_descriptors = set()
+        self.external_negative_descriptors: Set[DescriptorElement] = set()
 
         # Descriptor references from ``working_set`` that have been
         #   adjudicated.
         # These should be sub-sets of the descriptors contained in the
         #   ``working_set``.
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.positive_descriptors = set()
+        self.positive_descriptors: Set[DescriptorElement] = set()
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.negative_descriptors = set()
+        self.negative_descriptors: Set[DescriptorElement] = set()
 
         # Sets of descriptor elements that were used in the last refinement
         #   to achieve the currently cached results, i.e. "contributed" to the
@@ -103,13 +105,13 @@ class IqrSession (SmqtkObject):
         # These sets are empty before the first refine after construction or a
         #   reset.
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.rank_contrib_pos = set()
+        self.rank_contrib_pos: Set[DescriptorElement] = set()
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.rank_contrib_pos_ext = set()
+        self.rank_contrib_pos_ext: Set[DescriptorElement] = set()
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.rank_contrib_neg = set()
+        self.rank_contrib_neg: Set[DescriptorElement] = set()
         #: :type: set[smqtk.representation.DescriptorElement]
-        self.rank_contrib_neg_ext = set()
+        self.rank_contrib_neg_ext: Set[DescriptorElement] = set()
 
         # Mapping of a DescriptorElement in our relevancy search index (not the
         #   set that the nn_index uses) to the relevancy score given the
@@ -144,8 +146,7 @@ class IqrSession (SmqtkObject):
         #
         # Algorithm Instances [+Config]
         #
-        # RankRelvancy instance that is used for producing
-        #   results.
+        # RankRelvancy instance that is used for producing results.
         self.rank_relevancy = rank_relevancy
 
     def __enter__(self):
@@ -300,8 +301,11 @@ class IqrSession (SmqtkObject):
         """
         with self.lock:
             # combine pos/neg adjudications + added external data descriptors
-            pos = self.positive_descriptors | self.external_positive_descriptors
-            neg = self.negative_descriptors | self.external_negative_descriptors
+            pos = [desc.vector() for desc in (self.positive_descriptors |
+                                              self.external_positive_descriptors)]
+
+            neg = [desc.vector() for desc in (self.negative_descriptors |
+                                              self.external_negative_descriptors)]
 
             if not pos:
                 raise RuntimeError("Did not find at least one positive "
@@ -309,9 +313,9 @@ class IqrSession (SmqtkObject):
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            pool = [p for p in self.working_set.iterdescriptors()]
+            pool = [desc.vector() for desc in self.working_set.iterdescriptors()]
             probabilities = self.rank_relevancy.rank(pos, neg, pool)
-            self.results = dict(zip(pool, probabilities))
+            self.results = dict(zip(self.working_set.iterdescriptors(), probabilities))
             # Record UIDs of elements used for relevancy ranking.
             # - shallow copy for separate container instance
             self.rank_contrib_pos = set(self.positive_descriptors)

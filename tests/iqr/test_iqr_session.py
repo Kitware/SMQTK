@@ -358,9 +358,9 @@ class TestIqrSession (object):
         # - ``results`` attribute now has a dict value
         # - value of ``results`` attribute is what we expect.
         self.iqrs.rank_relevancy.rank.assert_called_once_with(
-            {test_in_pos_elem, test_ex_pos_elem},
-            {test_in_neg_elem, test_ex_neg_elem},
-            [p for p in self.iqrs.working_set.iterdescriptors()]
+            [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
+            [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
+            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()]
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3
@@ -421,9 +421,9 @@ class TestIqrSession (object):
         # - ``results`` attribute now has an dict value
         # - value of ``results`` attribute is what we expect.
         self.iqrs.rank_relevancy.rank.assert_called_once_with(
-            {test_in_pos_elem, test_ex_pos_elem},
-            {test_in_neg_elem, test_ex_neg_elem},
-            [p for p in self.iqrs.working_set.iterdescriptors()]
+            [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
+            [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
+            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()]
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3

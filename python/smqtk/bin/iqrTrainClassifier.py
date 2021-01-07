@@ -15,8 +15,9 @@ will be used to train the configured SupervisedClassifier.
 
 import logging
 import os
+import unittest.mock as mock
 
-from smqtk.algorithms import SupervisedClassifier
+from smqtk.algorithms import RankRelevancy, SupervisedClassifier
 
 from smqtk.iqr import IqrSession
 
@@ -58,7 +59,8 @@ def train_classifier_iqr(config, iqr_state_fp):
     with open(iqr_state_fp, 'rb') as f:
         state_bytes = f.read().strip()
     descr_factory = DescriptorElementFactory(DescriptorMemoryElement, {})
-    iqrs = IqrSession(None)
+    rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+    iqrs = IqrSession(rank_relevancy)
     iqrs.set_state_bytes(state_bytes, descr_factory)
 
     # Positive descriptor examples for training are composed of those from

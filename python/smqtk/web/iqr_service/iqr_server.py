@@ -167,7 +167,7 @@ class IqrService (SmqtkWebApp):
 
                 "plugins": {
                     "rank_relevancy_config": make_default_config(
-                        RankRelevancy.get_impls()
+                            RankRelevancy.get_impls()
                         ),
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
@@ -225,8 +225,10 @@ class IqrService (SmqtkWebApp):
         )
         self.neighbor_index_lock = multiprocessing.RLock()
 
-        self.rel_index_config = \
-            json_config['iqr_service']['plugins']['rank_relevancy_config']
+        self.rank_relevancy = from_config_dict(
+            json_config['iqr_service']['plugins']['rank_relevancy_config'],
+            RankRelevancy.get_impls(),
+        )
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
@@ -811,7 +813,7 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession(None,
+        iqrs = iqr_session.IqrSession(self.rank_relevancy,
                                       self.positive_seed_neighbors,
                                       sid)
         with self.controller:

@@ -4,6 +4,7 @@ import unittest.mock as mock
 import os
 import unittest
 
+from smqtk.algorithms import RankRelevancy
 from smqtk.iqr import IqrSession
 from smqtk.representation import DescriptorElement
 from smqtk.representation.classification_element.memory \
@@ -611,7 +612,8 @@ class TestIqrService (unittest.TestCase):
         # There are no sessions on server initialization.
         self._test_getter_sid_not_found('session')
 
-        iqrs = IqrSession(None, session_uid='1')  # not '0', which is queried for.
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy, session_uid='1')  # not '0', which is queried for.
         self.app.controller.add_session(iqrs)
         self._test_getter_sid_not_found('session')
 
@@ -619,7 +621,8 @@ class TestIqrService (unittest.TestCase):
         """
         Test a valid retrieval of a complex IQR session state.
         """
-        iqrs = IqrSession(None, session_uid='abc')
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy, session_uid='abc')
 
         ep, en, p1, p2, p3, n1, n2, d1, d2, n3 = [
             DescriptorMemoryElement('test', uid) for uid in

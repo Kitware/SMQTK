@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import pickle
+import unittest.mock as mock
 import urllib.parse
 
 import flask
@@ -11,6 +12,7 @@ import six
 
 from smqtk.algorithms import (
     DescriptorGenerator,
+    RankRelevancy,
     SupervisedClassifier
 )
 from smqtk.algorithms.classifier import (
@@ -726,7 +728,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 "Label already exists in classifier collection.", 400)
 
         # Create dummy IqrSession to extract pos/neg descriptors.
-        iqrs = IqrSession(None)
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy)
         iqrs.set_state_bytes(data_bytes, self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors

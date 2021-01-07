@@ -129,7 +129,7 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugin_notes": {
-                    "rank_relevancy_config":
+                    "rank_relevancy":
                         "The rank relevancy config provided should not have "
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
@@ -166,7 +166,7 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "rank_relevancy_config": make_default_config(
+                    "rank_relevancy": make_default_config(
                             RankRelevancy.get_impls()
                         ),
                     "descriptor_factory":
@@ -226,7 +226,7 @@ class IqrService (SmqtkWebApp):
         self.neighbor_index_lock = multiprocessing.RLock()
 
         self.rank_relevancy = from_config_dict(
-            json_config['iqr_service']['plugins']['rank_relevancy_config'],
+            json_config['iqr_service']['plugins']['rank_relevancy'],
             RankRelevancy.get_impls(),
         )
 

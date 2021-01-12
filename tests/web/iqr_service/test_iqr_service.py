@@ -48,9 +48,11 @@ class TestIqrService (unittest.TestCase):
         key_c_stub = "tests.web.iqr_service.stubs.StubClassifier"
         key_dg_stub = "tests.web.iqr_service.stubs.StubDescrGenerator"
         key_nn_stub = "tests.web.iqr_service.stubs.StubNearestNeighborIndex"
+        key_rr_stub = "tests.web.iqr_service.stubs.StubRankRelevancy"
         plugin_config['classifier_config']['type'] = key_c_stub
         plugin_config['descriptor_generator']['type'] = key_dg_stub
         plugin_config['neighbor_index']['type'] = key_nn_stub
+        plugin_config['rank_relevancy']['type'] = key_rr_stub
 
         self.app = IqrService(config)
 

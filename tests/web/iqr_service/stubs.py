@@ -1,8 +1,12 @@
 """
 Stub abstract class implementations.
 """
+from typing import Sequence
+
+from numpy import ndarray
+
 from smqtk.algorithms import SupervisedClassifier, DescriptorGenerator, \
-    NearestNeighborsIndex
+    NearestNeighborsIndex, RankRelevancy
 from smqtk.representation import DescriptorSet
 
 
@@ -125,4 +129,24 @@ class StubNearestNeighborIndex (NearestNeighborsIndex):
         pass
 
     def _nn(self, d, n=1):
+        pass
+
+
+class StubRankRelevancy (RankRelevancy):
+    """
+    RankRelevancy stub for testing IqrService.
+    """
+
+    @classmethod
+    def is_usable(cls):
+        return True
+
+    def get_config(self):
+        pass
+
+    def rank(self,
+             pos: Sequence[ndarray],
+             neg: Sequence[ndarray],
+             pool: Sequence[ndarray],
+             ) -> Sequence[float]:
         pass

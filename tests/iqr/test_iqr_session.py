@@ -293,15 +293,6 @@ class TestIqrSession (object):
         assert self.iqrs._ordered_neg is True
         assert self.iqrs._ordered_non_adj is True
 
-    def test_refine_no_rank_relevancy(self):
-        """
-        Test that refinement cannot occur if there is no relevancy index
-        instance yet.
-        """
-        self.iqrs.rank_relevancy = None
-        with pytest.raises(RuntimeError, match="No valid rank relevancy"):
-            self.iqrs.refine()
-
     def test_refine_no_pos(self):
         """
         Test that refinement cannot occur if there are no positive descriptor

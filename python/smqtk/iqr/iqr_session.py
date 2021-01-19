@@ -11,7 +11,7 @@ import zipfile
 
 import numpy as np
 
-from smqtk.algorithms import NearestNeighborsIndex, RankRelevancy
+from smqtk.algorithms import NearestNeighborsIndex, RankRelevancyWithFeedback
 from smqtk.representation import DescriptorElement, DescriptorElementFactory
 from smqtk.representation.descriptor_set.memory import MemoryDescriptorSet
 from smqtk.utils import SmqtkObject
@@ -35,7 +35,7 @@ class IqrSession (SmqtkObject):
             "[%s]" % self.uuid
         )
 
-    def __init__(self, rank_relevancy: RankRelevancy,
+    def __init__(self, rank_relevancy_with_feedback: RankRelevancyWithFeedback,
                  pos_seed_neighbors: int = 500,
                  session_uid: Optional[Union[str, uuid.UUID]] = None) -> None:
         """
@@ -50,8 +50,8 @@ class IqrSession (SmqtkObject):
         indexed material adjudicated through-out the lifetime of the session to
         stay relevant.
 
-        :param rank_relevancy: The rank relevancy used to rank user
-            adjudications.
+        :param rank_relevancy_with_feedback: The rank relevancy with feedback
+            algorithm used to rank user adjudications.
 
         :param pos_seed_neighbors: Number of neighbors to pull from the given
             ``nn_index`` for each positive exemplar when populating the working
@@ -122,6 +122,11 @@ class IqrSession (SmqtkObject):
         #: :type: None | dict[smqtk.representation.DescriptorElement, float]
         self.results: Optional[Dict[DescriptorElement, float]] = None
 
+        # List of UID's representing the descriptors that we recommend for
+        #   adjudicationfeedback.
+        # This is None before any initialization or refinement occurs.
+        self.feedback_list: Optional[List[DescriptorElement]] = None
+
         # Cache variables for views of refinement results.
         # All results as a list in order of relevancy score.
         #: :type: None | list[(smqtk.representation.DescriptorElement, float)]
@@ -149,7 +154,7 @@ class IqrSession (SmqtkObject):
         # Algorithm Instances [+Config]
         #
         # RankRelvancy instance that is used for producing results.
-        self.rank_relevancy = rank_relevancy
+        self.rank_relevancy_with_feedback = rank_relevancy_with_feedback
 
     def __enter__(self) -> "IqrSession":
         """
@@ -325,7 +330,9 @@ class IqrSession (SmqtkObject):
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
             pool = [desc.vector() for desc in self.working_set.iterdescriptors()]
-            probabilities = self.rank_relevancy.rank(pos, neg, pool)
+            pool_uids = [u for u in self.working_set.iterkeys()]
+            probabilities, feedback = self.rank_relevancy_with_feedback.rank_with_feedback(
+              pos, neg, pool, pool_uids)
             self.results = dict(zip(self.working_set.iterdescriptors(), probabilities))
             # Record UIDs of elements used for relevancy ranking.
             # - shallow copy for separate container instance
@@ -366,6 +373,28 @@ class IqrSession (SmqtkObject):
                 )
                 # Shallow copy of the list to protect against external mutation
                 return list(r)
+
+    def feedback_results(self) -> List[DescriptorElement]:
+        """
+        Return a list of all working-set descriptor elements that would benefit
+        from further refinement. The list is in order of most to least useful.
+
+        If refinement has not yet occurred since session creation or the last
+        reset, an empty tuple is returned.
+        """
+        with self.lock:
+            try:
+                return list(cast(List, self._feedback_results))
+            except TypeError:
+                # NoneType is not iterable
+                # Cache did non exist.
+                if self.feedback_list is None:
+                    # NoneType missing items/iteritems attr
+                    # No results to iterate over.
+                    return list()
+
+                # Shallow copy of the list to protect against external mutation
+                return list(self.feedback_list)
 
     def get_positive_adjudication_relevancy(self) -> List[Tuple[DescriptorElement, float]]:
         """

@@ -1,7 +1,7 @@
 import pytest
 import unittest.mock as mock
 
-from smqtk.algorithms import RankRelevancy
+from smqtk.algorithms import RankRelevancyWithFeedback
 from smqtk.iqr import IqrSession
 from smqtk.representation.descriptor_element.local_elements \
     import DescriptorMemoryElement
@@ -17,8 +17,8 @@ class TestIqrSession (object):
         """
         Setup an iqr session with a mocked rank relevancy
         """
-        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
-        cls.iqrs = IqrSession(rank_relevancy)
+        rank_relevancy_with_feedback = mock.MagicMock(spec=RankRelevancyWithFeedback)
+        cls.iqrs = IqrSession(rank_relevancy_with_feedback)
 
     def test_adjudicate_new_pos_neg(self):
         """
@@ -326,7 +326,10 @@ class TestIqrSession (object):
 
         # Mock return dictionary, probabilities don't matter much other than
         # they are not 1.0 or 0.0.
-        self.iqrs.rank_relevancy.rank.return_value = [0.5, 0.5, 0.5]
+        self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.return_value = (
+          [0.5, 0.5, 0.5],
+          [1, 2, 3]
+        )
 
         # Asserting expected pre-condition where there are no results yet.
         assert self.iqrs.results is None
@@ -344,14 +347,15 @@ class TestIqrSession (object):
         self.iqrs.refine()
 
         # We test that:
-        # - ``rank_relevancy.rank`` called with the combination of
+        # - ``rank_relevancy_with_feedback.rank`` called with the combination of
         #   external/adjudicated descriptor elements.
         # - ``results`` attribute now has a dict value
         # - value of ``results`` attribute is what we expect.
-        self.iqrs.rank_relevancy.rank.assert_called_once_with(
+        self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.assert_called_once_with(
             [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
             [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
-            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()]
+            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()],
+            [u for u in self.iqrs.working_set.iterkeys()]
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3
@@ -376,7 +380,10 @@ class TestIqrSession (object):
 
         # Mock return dictionary, probabilities don't matter much other than
         # they are not 1.0 or 0.0.
-        self.iqrs.rank_relevancy.rank.return_value = [0.5, 0.5, 0.5]
+        self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.return_value = (
+          [0.5, 0.5, 0.5],
+          [1, 2, 3]
+        )
 
         # Mock the working set so it has the correct size and elements
         self.iqrs.working_set.add_many_descriptors([test_in_pos_elem,
@@ -411,10 +418,11 @@ class TestIqrSession (object):
         #   external/adjudicated descriptor elements.
         # - ``results`` attribute now has an dict value
         # - value of ``results`` attribute is what we expect.
-        self.iqrs.rank_relevancy.rank.assert_called_once_with(
+        self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.assert_called_once_with(
             [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
             [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
-            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()]
+            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()],
+            [u for u in self.iqrs.working_set.iterkeys()]
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3

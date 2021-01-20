@@ -17,7 +17,7 @@ from smqtk.algorithms import (
     Classifier,
     DescriptorGenerator,
     NearestNeighborsIndex,
-    RankRelevancy,
+    RankRelevancyWithFeedback,
     SupervisedClassifier,
 )
 from smqtk.iqr import (
@@ -115,7 +115,7 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugin_notes": {
-                    "rank_relevancy":
+                    "rank_relevancy_with_feedback":
                         "The rank relevancy config provided should not have "
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
@@ -152,8 +152,8 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "rank_relevancy": make_default_config(
-                            RankRelevancy.get_impls()
+                    "rank_relevancy_with_feedback": make_default_config(
+                            RankRelevancyWithFeedback.get_impls()
                         ),
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
@@ -211,9 +211,9 @@ class IqrService (SmqtkWebApp):
         )
         self.neighbor_index_lock = multiprocessing.RLock()
 
-        self.rank_relevancy = from_config_dict(
-            json_config['iqr_service']['plugins']['rank_relevancy'],
-            RankRelevancy.get_impls(),
+        self.rank_relevancy_with_feedback = from_config_dict(
+            json_config['iqr_service']['plugins']['rank_relevancy_with_feedback'],
+            RankRelevancyWithFeedback.get_impls(),
         )
 
         # Record of trained classifiers for a session. Session classifier
@@ -799,7 +799,7 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession(self.rank_relevancy,
+        iqrs = iqr_session.IqrSession(self.rank_relevancy_with_feedback,
                                       self.positive_seed_neighbors,
                                       sid)
         with self.controller:

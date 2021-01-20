@@ -1,12 +1,12 @@
 """
 Stub abstract class implementations.
 """
-from typing import Sequence
+from typing import Hashable, Sequence, Tuple
 
 from numpy import ndarray
 
 from smqtk.algorithms import SupervisedClassifier, DescriptorGenerator, \
-    NearestNeighborsIndex, RankRelevancy
+    NearestNeighborsIndex, RankRelevancyWithFeedback
 from smqtk.representation import DescriptorSet
 
 
@@ -132,9 +132,9 @@ class StubNearestNeighborIndex (NearestNeighborsIndex):
         pass
 
 
-class StubRankRelevancy (RankRelevancy):
+class StubRankRelevancyWithFeedback (RankRelevancyWithFeedback):
     """
-    RankRelevancy stub for testing IqrService.
+    RankRelevancyWithFeedback stub for testing IqrService.
     """
 
     @classmethod
@@ -144,9 +144,10 @@ class StubRankRelevancy (RankRelevancy):
     def get_config(self):
         pass
 
-    def rank(self,
-             pos: Sequence[ndarray],
-             neg: Sequence[ndarray],
-             pool: Sequence[ndarray],
-             ) -> Sequence[float]:
+    def _rank_with_feedback(self,
+                            pos: Sequence[ndarray],
+                            neg: Sequence[ndarray],
+                            pool: Sequence[ndarray],
+                            pool_uids: Sequence[Hashable],
+                            ) -> Tuple[Sequence[float], Sequence[Hashable]]:
         pass

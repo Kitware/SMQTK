@@ -329,11 +329,12 @@ class IqrSession (SmqtkObject):
 
             self._log.debug("Ranking working set with %d pos and %d neg total "
                             "examples.", len(pos), len(neg))
-            pool = [desc.vector() for desc in self.working_set.iterdescriptors()]
-            pool_uids = [u for u in self.working_set.iterkeys()]
-            probabilities, feedback = self.rank_relevancy_with_feedback.rank_with_feedback(
-              pos, neg, pool, pool_uids)
+            pool_uids, pool_de = zip(*self.working_set.items())
+            pool = [de.vector() for de in pool_de]
+            probabilities, feedback_uuids = self.rank_relevancy_with_feedback.rank_with_feedback(
+                pos, neg, pool, pool_uids)
             self.results = dict(zip(self.working_set.iterdescriptors(), probabilities))
+            self.feedback_list = [*self.working_set.get_many_descriptors(feedback_uuids)]
             # Record UIDs of elements used for relevancy ranking.
             # - shallow copy for separate container instance
             self.rank_contrib_pos = set(self.positive_descriptors)
@@ -381,10 +382,13 @@ class IqrSession (SmqtkObject):
 
         If refinement has not yet occurred since session creation or the last
         reset, an empty tuple is returned.
+
+        :raises RuntimeError: If the end of the function is reached this means
+            the feedback results have gotten into an invalid state.
         """
         with self.lock:
             try:
-                return list(cast(List, self._feedback_results))
+                return list(cast(List, self.feedback_list))
             except TypeError:
                 # NoneType is not iterable
                 # Cache did non exist.
@@ -393,8 +397,8 @@ class IqrSession (SmqtkObject):
                     # No results to iterate over.
                     return list()
 
-                # Shallow copy of the list to protect against external mutation
-                return list(self.feedback_list)
+        # Error out since this case should not be reachable
+        raise RuntimeError("Feedback results in an invalid state.")
 
     def get_positive_adjudication_relevancy(self) -> List[Tuple[DescriptorElement, float]]:
         """
@@ -508,6 +512,7 @@ class IqrSession (SmqtkObject):
             self.rank_contrib_neg_ext.clear()
 
             self.results = None
+            self.feedback_list = None
             self._ordered_results = self._ordered_pos = self._ordered_neg = \
                 self._ordered_non_adj = None
 

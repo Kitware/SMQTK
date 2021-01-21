@@ -320,19 +320,20 @@ class TestIqrSession (object):
         test_other_elem = DescriptorMemoryElement('t', 4).set_vector([4])
 
         # Mock the working set so it has the correct size and elements
-        self.iqrs.working_set.add_many_descriptors([test_in_pos_elem,
-                                                    test_in_neg_elem,
-                                                    test_other_elem])
+        desc_list = [test_in_pos_elem, test_in_neg_elem, test_other_elem]
+        self.iqrs.working_set.add_many_descriptors(desc_list)
 
         # Mock return dictionary, probabilities don't matter much other than
         # they are not 1.0 or 0.0.
+        pool_ids = [de.uuid() for de in desc_list]
         self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.return_value = (
           [0.5, 0.5, 0.5],
-          [1, 2, 3]
+          pool_ids
         )
 
         # Asserting expected pre-condition where there are no results yet.
         assert self.iqrs.results is None
+        assert self.iqrs.feedback_list is None
 
         # Prepare IQR state for refinement
         # - set dummy internal/external positive negatives.
@@ -351,11 +352,13 @@ class TestIqrSession (object):
         #   external/adjudicated descriptor elements.
         # - ``results`` attribute now has a dict value
         # - value of ``results`` attribute is what we expect.
+        pool_uids, pool_de = zip(*self.iqrs.working_set.items())
+        pool = [de.vector() for de in pool_de]
         self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.assert_called_once_with(
             [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
             [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
-            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()],
-            [u for u in self.iqrs.working_set.iterkeys()]
+            pool,
+            pool_uids
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3
@@ -366,6 +369,7 @@ class TestIqrSession (object):
         assert self.iqrs.results[test_other_elem] == 0.5
         assert self.iqrs.results[test_in_pos_elem] == 0.5
         assert self.iqrs.results[test_in_neg_elem] == 0.5
+        assert self.iqrs.feedback_list == desc_list
 
     def test_refine_with_prev_results(self):
         """
@@ -378,17 +382,17 @@ class TestIqrSession (object):
         test_ex_neg_elem = DescriptorMemoryElement('t', 3).set_vector([3])
         test_other_elem = DescriptorMemoryElement('t', 4).set_vector([4])
 
+        # Mock the working set so it has the correct size and elements
+        desc_list = [test_in_pos_elem, test_in_neg_elem, test_other_elem]
+        self.iqrs.working_set.add_many_descriptors(desc_list)
+
         # Mock return dictionary, probabilities don't matter much other than
         # they are not 1.0 or 0.0.
+        pool_ids = [*self.iqrs.working_set.iterkeys()]
         self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.return_value = (
           [0.5, 0.5, 0.5],
-          [1, 2, 3]
+          pool_ids
         )
-
-        # Mock the working set so it has the correct size and elements
-        self.iqrs.working_set.add_many_descriptors([test_in_pos_elem,
-                                                    test_in_neg_elem,
-                                                    test_other_elem])
 
         # Create a "previous state" of the results dictionary containing
         # results from our "working set" of descriptor elements.
@@ -400,6 +404,11 @@ class TestIqrSession (object):
             # NOT retained.
             'something else': 0.3,
         }
+
+        # Create a "previous state" of the feedback results.
+        self.iqrs.feedback_list = [test_ex_pos_elem,
+                                   test_ex_neg_elem,
+                                   test_other_elem]
 
         # Prepare IQR state for refinement
         # - set dummy internal/external positive negatives.
@@ -418,11 +427,13 @@ class TestIqrSession (object):
         #   external/adjudicated descriptor elements.
         # - ``results`` attribute now has an dict value
         # - value of ``results`` attribute is what we expect.
+        pool_uids, pool_de = zip(*self.iqrs.working_set.items())
+        pool = [de.vector() for de in pool_de]
         self.iqrs.rank_relevancy_with_feedback.rank_with_feedback.assert_called_once_with(
             [test_in_pos_elem.vector(), test_ex_pos_elem.vector()],
             [test_in_neg_elem.vector(), test_ex_neg_elem.vector()],
-            [desc.vector() for desc in self.iqrs.working_set.iterdescriptors()],
-            [u for u in self.iqrs.working_set.iterkeys()]
+            pool,
+            pool_uids
         )
         assert self.iqrs.results is not None
         assert len(self.iqrs.results) == 3
@@ -434,6 +445,7 @@ class TestIqrSession (object):
         assert self.iqrs.results[test_other_elem] == 0.5
         assert self.iqrs.results[test_in_pos_elem] == 0.5
         assert self.iqrs.results[test_in_neg_elem] == 0.5
+        assert self.iqrs.feedback_list == desc_list
 
     def test_ordered_results_no_results_no_cache(self):
         """
@@ -518,6 +530,51 @@ class TestIqrSession (object):
 
         # Post-reset, there should be no results nor cache.
         actual = self.iqrs.ordered_results()
+        assert actual == []
+
+    def test_feedback_results_no_results_no_cache(self):
+        """
+        Test that an empty list is returned when ``feedback_results`` is called
+        before any refinement has occurred.
+        """
+        assert self.iqrs.feedback_results() == []
+
+    def test_feedback_results_has_cache(self):
+        """
+        Test that a shallow copy of the cached list is returned when there is
+        a cache.
+        """
+        # Simulate there being a cache
+        self.iqrs.feedback_list = ['simulated', 'cache']
+        actual = self.iqrs.feedback_results()
+        assert actual == self.iqrs.feedback_list
+        assert id(actual) != id(self.iqrs.feedback_list)
+
+    def test_feedback_results_has_results_post_reset(self):
+        """
+        Test that an empty list is returned after a reset where there was a
+        cached value before the reset.
+        """
+
+        # Mocking results map existing for return.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        d3 = DescriptorMemoryElement('', 3).set_vector([3])
+        self.iqrs.feedback_list = {
+            d0,
+            d1,
+            d2,
+            d3,
+        }
+
+        # Initial call to ``ordered_results`` should have a non-None return.
+        assert self.iqrs.feedback_results() is not None
+
+        self.iqrs.reset()
+
+        # Post-reset, there should be no results nor cache.
+        actual = self.iqrs.feedback_results()
         assert actual == []
 
     def test_get_positive_adjudication_relevancy_has_cache(self):

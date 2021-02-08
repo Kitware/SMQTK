@@ -1,19 +1,30 @@
 stages:
-  - build
   - test
 
 # Global default parameters set for all jobs unless overridden by job-specific
 # configuration.
 default:
-  image: python:3.8-buster
-  tags:
-    - smqtk
+  image: python:3.6-buster
+  interruptible: true
 
 # Global default variables set for all jobs unless overridden by job-specific
 # configuration.
 variables:
   LC_ALL: "C.UTF-8"
   LANG: "C.UTF-8"
+
+# Common job specification not otherwise specifiable in the `default` section
+# above.
+.test_job_defaults:
+  stage: test
+  tags:
+    - linux
+    - docker
+    - test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: on_success
+    - when: never  # explicit fail-exclude terminal condition.
 
 # Common setup script lines for test jobs
 .test_setup: &test_setup
@@ -33,9 +44,8 @@ variables:
 #  script:
 #    - echo "Placeholder for any build operations required."
 
-build:docs:
-  stage: build
-  image: python:3.6-buster
+test:build_docs:
+  extends: .test_job_defaults
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - cd docs
@@ -43,36 +53,40 @@ build:docs:
     - stat _build/html/index.html
 
 test:py36:
-  stage: test
-  image: python:3.6-buster
+  extends: .test_job_defaults
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - pytest --cov=smqtk --cov-config=.pytest.coveragerc
 
 test:py37:
-  stage: test
+  extends: .test_job_defaults
   image: python:3.7-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - pytest --cov=smqtk --cov-config=.pytest.coveragerc
 
 test:py38:
-  stage: test
+  extends: .test_job_defaults
   image: python:3.8-buster
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - pytest --cov=smqtk --cov-config=.pytest.coveragerc
 
-lint:
-  stage: test
-  image: python:3.6-buster
+test:lint:
+  extends: .test_job_defaults
   script:
     - *test_setup  # expand `&test_setup` anchor above into here.
     - flake8
 
-typecheck:
-  stage: test
-  image: python:3.6-buster
+test:typecheck:
+  extends: .test_job_defaults
   script:
     - *test_setup
     - mypy
+
+test:added_a_change_note:
+  extends: .test_job_defaults
+  script:
+    - echo "Testing diff between:" $CI_MERGE_REQUEST_TARGET_BRANCH_NAME "-> HEAD"
+    - git diff --name-status --diff-filter=d origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME} HEAD
+    - git diff --name-status --diff-filter=d origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME} HEAD | grep "^\w\s*docs/release_notes/pending"

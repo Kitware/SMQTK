@@ -20,9 +20,21 @@ Algorithms
     for ``RankRelevancyWithFeedback``, supporting wrapping a ``RankRelevancy``
     instance for margin sampling.
 
+CI
+
+* Added test checking that a pending release notes files is updated on a merge
+  request, otherwise it fails. The intent of this test is to remind
+  contributors that they ought to be adding change notes.
+
 Documentation
 
 * Update plugin related sphinx documentation content and examples.
+
+IQR
+
+* Change over the previous use of the "RelevancyIndex" to the new
+  "RankRelevancy" algorithm interface in the IqrSession class. Updates also
+  reflected in the IQR web service and respective unit tests.
 
 Utils
 

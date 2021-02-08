@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import pickle
+import unittest.mock as mock
 import urllib.parse
 
 import flask
@@ -11,6 +12,7 @@ import six
 
 from smqtk.algorithms import (
     DescriptorGenerator,
+    RankRelevancy,
     SupervisedClassifier
 )
 from smqtk.algorithms.classifier import (
@@ -32,20 +34,6 @@ from smqtk.utils.configuration import (
 )
 from smqtk.utils.web import make_response_json
 import smqtk.web
-
-
-# Get expected JSON decode exception
-# noinspection PyProtectedMember
-if hasattr(flask.json._json, 'JSONDecodeError'):
-    # noinspection PyProtectedMember
-    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
-else:
-    # Exception thrown from ``json`` module.
-    if six.PY2:
-        JSON_DECODE_EXCEPTION = ValueError
-    else:
-        # noinspection PyUnresolvedReferences
-        JSON_DECODE_EXCEPTION = json.JSONDecodeError
 
 
 def labels_from_input(label_str):
@@ -523,7 +511,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         if adjustment_str is not None:
             try:
                 #: :type: dict[collections.abc.Hashable, float]
-                adjustments = flask.json.loads(adjustment_str)
+                adjustments = json.loads(adjustment_str)
 
                 for label, val in six.iteritems(adjustments):
                     if not isinstance(label, six.string_types):
@@ -536,7 +524,7 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                             "Adjustment value %s for label '%s' is not an int "
                             "or float" % (val, label),
                             400)
-            except JSON_DECODE_EXCEPTION:
+            except json.JSONDecodeError:
                 return make_response_json(
                     "Adjustment(s) are not properly formatted JSON.", 400)
 
@@ -705,8 +693,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
         elif label is None or len(label) == 0:
             return make_response_json("No descriptive label provided.", 400)
         try:
-            lock_clfr = bool(flask.json.loads(lock_clfr_str))
-        except JSON_DECODE_EXCEPTION:
+            lock_clfr = bool(json.loads(lock_clfr_str))
+        except json.JSONDecodeError:
             return make_response_json("Invalid boolean value for"
                                       " 'lock_label'. Was given: '%s'"
                                       % lock_clfr_str,
@@ -726,7 +714,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
                 "Label already exists in classifier collection.", 400)
 
         # Create dummy IqrSession to extract pos/neg descriptors.
-        iqrs = IqrSession()
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy)
         iqrs.set_state_bytes(data_bytes, self.descriptor_factory)
         pos = iqrs.positive_descriptors | iqrs.external_positive_descriptors
         neg = iqrs.negative_descriptors | iqrs.external_negative_descriptors
@@ -839,8 +828,8 @@ class SmqtkClassifierService (smqtk.web.SmqtkWebApp):
             return make_response_json("No descriptive label provided.", 400)
         try:
             # This can throw a ValueError if lock_clfr is malformed JSON
-            lock_clfr = bool(flask.json.loads(lock_clfr_str))
-        except JSON_DECODE_EXCEPTION:
+            lock_clfr = bool(json.loads(lock_clfr_str))
+        except json.JSONDecodeError:
             return make_response_json("Invalid boolean value for"
                                       " 'lock_label'. Was given: '%s'"
                                       % lock_clfr_str,

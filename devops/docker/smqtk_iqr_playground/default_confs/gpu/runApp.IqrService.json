@@ -181,14 +181,25 @@
                 },
                 "type": "smqtk.algorithms.nn_index.faiss.FaissNearestNeighborsIndex"
             },
-            "relevancy_index_config": {
-                "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex": {
-                    "autoneg_select_ratio": 1,
-                    "cores": null,
-                    "descr_cache_filepath": null,
-                    "multiprocess_fetch": false
+            "rank_relevancy": {
+                "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier": {
+                    "classifier_inst": {
+                        "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
+                            "n_jobs": 4,
+                            "normalize": 2,
+                            "svm_label_map_uri": null,
+                            "svm_model_uri": null,
+                            "train_params": {
+                                "-b": 1,
+                                "-c": 2,
+                                "-s": 0,
+                                "-t": 0
+                            }
+                        },
+                        "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
+                    }
                 },
-                "type": "smqtk.algorithms.relevancy_index.libsvm_hik.LibSvmHikRelevancyIndex"
+                "type": "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier"
             }
         },
         "session_control": {

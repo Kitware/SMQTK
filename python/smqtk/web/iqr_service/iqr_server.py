@@ -17,7 +17,7 @@ from smqtk.algorithms import (
     Classifier,
     DescriptorGenerator,
     NearestNeighborsIndex,
-    RelevancyIndex,
+    RankRelevancy,
     SupervisedClassifier,
 )
 from smqtk.iqr import (
@@ -55,20 +55,6 @@ def make_response_json(message, **params):
     return flask.jsonify(**r)
 
 
-# Get expected JSON decode exception.
-#
-# Flask can use one of two potential JSON parsing libraries: simplejson or
-# json.  simplejson has a specific exception for decoding errors while json
-# just raises a ValueError.
-#
-# noinspection PyProtectedMember
-if hasattr(flask.json._json, 'JSONDecodeError'):
-    # noinspection PyProtectedMember
-    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
-else:
-    JSON_DECODE_EXCEPTION = ValueError
-
-
 def parse_hashable_json_list(json_str):
     """
     Parse and check input string, looking for a JSON list of hashable values.
@@ -83,8 +69,8 @@ def parse_hashable_json_list(json_str):
 
     """
     try:
-        v_list = flask.json.loads(json_str)
-    except JSON_DECODE_EXCEPTION as ex:
+        v_list = json.loads(json_str)
+    except json.JSONDecodeError as ex:
         raise ValueError("JSON parsing error: %s" % str(ex))
     if not isinstance(v_list, list):
         raise ValueError("JSON provided is not a list.")
@@ -116,11 +102,6 @@ class IqrService (SmqtkWebApp):
     def get_default_config(cls):
         c = super(IqrService, cls).get_default_config()
 
-        c_rel_index = make_default_config(
-            RelevancyIndex.get_impls()
-        )
-        merge_dict(c_rel_index, iqr_session.DFLT_REL_INDEX_CONFIG)
-
         merge_dict(c, {
             "iqr_service": {
 
@@ -134,8 +115,8 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugin_notes": {
-                    "relevancy_index_config":
-                        "The relevancy index config provided should not have "
+                    "rank_relevancy":
+                        "The rank relevancy config provided should not have "
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
                         "destroyed often.",
@@ -171,7 +152,9 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "relevancy_index_config": c_rel_index,
+                    "rank_relevancy": make_default_config(
+                            RankRelevancy.get_impls()
+                        ),
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(
@@ -228,8 +211,10 @@ class IqrService (SmqtkWebApp):
         )
         self.neighbor_index_lock = multiprocessing.RLock()
 
-        self.rel_index_config = \
-            json_config['iqr_service']['plugins']['relevancy_index_config']
+        self.rank_relevancy = from_config_dict(
+            json_config['iqr_service']['plugins']['rank_relevancy'],
+            RankRelevancy.get_impls(),
+        )
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
@@ -814,8 +799,8 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors,
-                                      self.rel_index_config,
+        iqrs = iqr_session.IqrSession(self.rank_relevancy,
+                                      self.positive_seed_neighbors,
                                       sid)
         with self.controller:
             with iqrs:  # because classifier maps locked by session
@@ -1753,7 +1738,7 @@ class IqrService (SmqtkWebApp):
             return make_response_json("No UIDs provided."), 400
 
         try:
-            uuids: List[str] = json.loads(uuids_str)
+            uuids: List[Hashable] = json.loads(uuids_str)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"

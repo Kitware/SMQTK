@@ -7,7 +7,7 @@ import unittest
 
 from six.moves import cPickle as pickle
 
-from smqtk.algorithms import Classifier
+from smqtk.algorithms import Classifier, RankRelevancy
 from smqtk.iqr import IqrSession
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -812,7 +812,8 @@ class TestClassifierService (unittest.TestCase):
         serialization.
         """
         # Make a simple session with dummy adjudication descriptor elements
-        iqrs = IqrSession(session_uid=str("0"))
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy, session_uid=str("0"))
         iqr_p1 = DescriptorMemoryElement('test', 0).set_vector([0])
         iqr_n1 = DescriptorMemoryElement('test', 1).set_vector([1])
         iqrs.adjudicate(

@@ -40,7 +40,7 @@ RUN apt-get -y update \
       git=1:2.17.1-1ubuntu0.7 \
       libopenblas-dev=0.2.20+ds-4 \
       python3-dev=3.6.7-1~18.04 \
-      python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
+      python3-pip \
       swig=3.0.12-1 \
  && rm -rf /var/lib/apt/lists/*
 RUN pip3 install numpy==1.18.3

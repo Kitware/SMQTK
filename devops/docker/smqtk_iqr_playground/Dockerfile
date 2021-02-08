@@ -16,15 +16,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -y update \
  && apt-get -y install \
         cmake=3.10.2-1ubuntu2.18.04.1 \
-        curl=7.58.0-2ubuntu3.8 \
+        curl \
         less=487-0.1 \
         parallel=20161222-1 \
         python3-dev=3.6.7-1~18.04 \
-        python3-pip=9.0.1-2.3~ubuntu1.18.04.1 \
-        sudo=1.8.21p2-3ubuntu1.2 \
-        vim=2:8.0.1453-1ubuntu1.3 \
-        # PostgreSQL 10.12 Installation
-        postgresql-10=10.12-0ubuntu0.18.04.1 \
+        python3-pip \
+        sudo \
+        vim \
+        # PostgreSQL 10 Installation
+        postgresql-10=10.15-0ubuntu0.18.04.1 \
         # MongoDB Installation
         mongodb=1:3.6.3-0ubuntu1.1 \
         # Caffe/FAISS TPL deps
@@ -88,6 +88,7 @@ RUN pip3 install /caffe-1.0-py3-none-any.whl \
 COPY docs /smqtk/source/docs
 COPY etc /smqtk/source/etc
 COPY python /smqtk/source/python
+COPY requirements /smqtk/source/requirements
 COPY src /smqtk/source/src
 COPY TPL /smqtk/source/TPL
 COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* \

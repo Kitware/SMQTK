@@ -36,7 +36,7 @@ services:
       args:
         CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
         # One or more CUDA architecture binary versions to compile for.
-        CUDA_ARCH_BIN_LIST: 35 52 60 61 62
+        CUDA_ARCH_BIN_LIST: 35 52 60 61 62 70
 
   #
   # TPL: FAISS

@@ -7,7 +7,11 @@ cmake_minimum_required(VERSION 2.8.12)
 #
 # Expected format: <major>.<minor>.<patch>
 #
-file(READ "${SMQTK_SOURCE_DIR}/VERSION" SMQTK_VERSION)
+execute_process(
+  COMMAND "${PYTHON_EXECUTABLE}" -c "from setup import VERSION; print(VERSION)"
+  RESULT_VARIABLE proc_success
+  OUTPUT_VARIABLE SMQTK_VERSION
+  )
 string( STRIP "${SMQTK_VERSION}" SMQTK_VERSION )
 string( REGEX MATCHALL "([0-9]+)(.([0-9]+))?(.([0-9]+))?" SMQTK_VERSION_MATCH "${SMQTK_VERSION}" )
 message( STATUS "SMQTK_VERSION : ${SMQTK_VERSION}" )

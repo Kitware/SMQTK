@@ -132,9 +132,9 @@ class TestFAISSIndex (unittest.TestCase):
     def test_configuration_null_persistence(self):
         # Make configuration based on default
         c = FaissNearestNeighborsIndex.get_default_config()
-        c['descriptor_set']['type'] = 'MemoryDescriptorSet'
-        c['idx2uid_kvs']['type'] = 'MemoryKeyValueStore'
-        c['uid2idx_kvs']['type'] = 'MemoryKeyValueStore'
+        c['descriptor_set']['type'] = 'smqtk.representation.descriptor_set.memory.MemoryDescriptorSet'
+        c['idx2uid_kvs']['type'] = 'smqtk.representation.key_value.memory.MemoryKeyValueStore'
+        c['uid2idx_kvs']['type'] = 'smqtk.representation.key_value.memory.MemoryKeyValueStore'
 
         # # Build based on configuration
         index = FaissNearestNeighborsIndex.from_config(c)

@@ -55,20 +55,6 @@ def make_response_json(message, **params):
     return flask.jsonify(**r)
 
 
-# Get expected JSON decode exception.
-#
-# Flask can use one of two potential JSON parsing libraries: simplejson or
-# json.  simplejson has a specific exception for decoding errors while json
-# just raises a ValueError.
-#
-# noinspection PyProtectedMember
-if hasattr(flask.json._json, 'JSONDecodeError'):
-    # noinspection PyProtectedMember
-    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
-else:
-    JSON_DECODE_EXCEPTION = ValueError
-
-
 def parse_hashable_json_list(json_str):
     """
     Parse and check input string, looking for a JSON list of hashable values.
@@ -83,8 +69,8 @@ def parse_hashable_json_list(json_str):
 
     """
     try:
-        v_list = flask.json.loads(json_str)
-    except JSON_DECODE_EXCEPTION as ex:
+        v_list = json.loads(json_str)
+    except json.JSONDecodeError as ex:
         raise ValueError("JSON parsing error: %s" % str(ex))
     if not isinstance(v_list, list):
         raise ValueError("JSON provided is not a list.")
@@ -1752,7 +1738,7 @@ class IqrService (SmqtkWebApp):
             return make_response_json("No UIDs provided."), 400
 
         try:
-            uuids: List[str] = json.loads(uuids_str)
+            uuids: List[Hashable] = json.loads(uuids_str)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"

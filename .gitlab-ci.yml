@@ -87,6 +87,11 @@ test:typecheck:
 test:added_a_change_note:
   extends: .test_job_defaults
   script:
-    - echo "Testing diff between:" $CI_MERGE_REQUEST_TARGET_BRANCH_NAME "-> HEAD"
-    - git diff --name-status --diff-filter=d origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME} HEAD
-    - git diff --name-status --diff-filter=d origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME} HEAD | grep "^\w\s*docs/release_notes/pending"
+    - TARGET=origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+    - |
+      FOUND=$(git diff --name-status --diff-filter=d ${TARGET} HEAD | grep "^\w\s*docs/release_notes/pending" || echo "")
+      if [[ "$FOUND" = "" ]]
+      then
+        echo "No \"pending_*\" change notes files have been modified. Please add a change note!"
+        exit 1
+      fi

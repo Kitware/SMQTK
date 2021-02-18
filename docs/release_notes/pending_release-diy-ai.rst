@@ -33,8 +33,8 @@ Documentation
 IQR
 
 * Change over the previous use of the "RelevancyIndex" to the new
-  "RankRelevancy" algorithm interface in the IqrSession class. Updates also
-  reflected in the IQR web service and respective unit tests.
+  "RankRelevancyWithFeedback" algorithm interface in the IqrSession class.
+  Updates also reflected in the IQR web service and respective unit tests.
 
 Utils
 

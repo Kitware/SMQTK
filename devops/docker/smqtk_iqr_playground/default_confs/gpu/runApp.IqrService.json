@@ -181,25 +181,32 @@
                 },
                 "type": "smqtk.algorithms.nn_index.faiss.FaissNearestNeighborsIndex"
             },
-            "rank_relevancy": {
-                "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier": {
-                    "classifier_inst": {
-                        "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
-                            "n_jobs": 4,
-                            "normalize": 2,
-                            "svm_label_map_uri": null,
-                            "svm_model_uri": null,
-                            "train_params": {
-                                "-b": 1,
-                                "-c": 2,
-                                "-s": 0,
-                                "-t": 0
+            "rank_relevancy_with_feedback": {
+                "smqtk.algorithms.rank_relevancy.margin_sampling.RankRelevancyWithMarginSampledFeedback": {
+                    "rank_relevancy": {
+                        "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier": {
+                            "classifier_inst": {
+                                "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
+                                    "n_jobs": 4,
+                                    "normalize": 2,
+                                    "svm_label_map_uri": null,
+                                    "svm_model_uri": null,
+                                    "train_params": {
+                                        "-b": 1,
+                                        "-c": 2,
+                                        "-s": 0,
+                                        "-t": 0
+                                    }
+                                },
+                                "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
                             }
                         },
-                        "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
-                    }
+                        "type": "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier"
+                    },
+                    "n": 10,
+                    "center": 0.5
                 },
-                "type": "smqtk.algorithms.rank_relevancy.wrap_classifier.RankRelevancyWithSupervisedClassifier"
+                "type": "smqtk.algorithms.rank_relevancy.margin_sampling.RankRelevancyWithMarginSampledFeedback"
             }
         },
         "session_control": {

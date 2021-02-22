@@ -48,6 +48,11 @@ Utils
 Fixes
 -----
 
+CMake
+
+* Minor fix to set the appropriate working directory when fetching the vesion
+  value.
+
 Misc.
 
 * Fix issues revealed with updating to use of mypy version 0.790.

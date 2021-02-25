@@ -749,6 +749,47 @@ class TestIqrService (unittest.TestCase):
 
         self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
 
+    def test_get_feedback_no_sid(self):
+        """
+        Test getting feedback results without providing a session ID.
+        """
+        self._test_getter_no_sid('get_feedback')
+
+    def test_get_feedback_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_feedback')
+
+    def test_get_feedback(self):
+        """
+        Test successfully getting feedback results from a requested session.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock feedback_results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().feedback_results.return_value = [
+            d0, d2, d1
+        ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_feedback?sid={}'.format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Returning feedback uuids")
+            r_json = r.json
+            assert r_json['total_results'] == 3
+            assert r_json['results'] == [0, 2, 1]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
     def test_get_positive_adjudication_relevancy_no_sid(self):
         """
         Test that the expected error is returned when no session ID is

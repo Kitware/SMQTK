@@ -572,7 +572,7 @@ Possible error code returns:
     404
         No session for the given ID.
 
-Success returns 201 and a JSON object that includes the keys:
+Success returns 200 and a JSON object that includes the keys:
     sid: str
         String IQR session ID accessed.
     i: int
@@ -589,6 +589,44 @@ Success returns 201 and a JSON object that includes the keys:
         relevancy probability score is associated do. The
         ``probability`` value is a float in the [0, 1] range.
 
+[GET] /get_feedback
+^^^^^^^^^^^^^^^^^^
+Get the feedback results for working set descriptor elements that are
+recommended for adjudication feedback. They are listed with the most
+useful first.
+
+If the requested session has not been refined yet (no ranking), an
+empty results list is returned.
+
+URL Args:
+    sid: str
+        UUID of the session to use
+    i: int
+        Starting index (inclusive)
+    j: int
+        Ending index (exclusive)
+
+Possible error code returns:
+    400
+        No session ID provided. Offset/limit index values were not
+        valid integers.
+    404
+        No session for the given ID.
+
+Success returns 200 and a JSON object that includes the keys:
+    sid: str
+        String IQR session ID accessed.
+    i: int
+        Index offset used.
+    j: int
+        Index limit used.
+    total_results: int
+        Total number of feedback results. This is not necessarily the
+        number of results returned from the call due to the optional
+        use of ``i``  and ``j``.
+    results: list[str]
+        A list of ``element_ids``. The ``element_id`` is the UUID of
+        the data/descriptor that is recommending for feedback.
 
 [GET] /get_positive_adjudication_relevancy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

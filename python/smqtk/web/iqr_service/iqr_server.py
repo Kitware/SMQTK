@@ -328,6 +328,9 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/get_results',
                           view_func=self.get_results,
                           methods=['GET'])
+        self.add_url_rule('/get_feedback',
+                          view_func=self.get_feedback,
+                          methods=['GET'])
         self.add_url_rule('/get_positive_adjudication_relevancy',
                           view_func=self.get_positive_adjudication_relevancy,
                           methods=['GET'])
@@ -1313,7 +1316,7 @@ class IqrService (SmqtkWebApp):
             404
                 No session for the given ID.
 
-        Success returns 201 and a JSON object that includes the keys:
+        Success returns 200 and a JSON object that includes the keys:
             sid: str
                 String IQR session ID accessed.
             i: int
@@ -1360,6 +1363,80 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.release()
 
         return make_response_json("Returning result pairs",
+                                  sid=sid, i=i, j=j,
+                                  total_results=num_results,
+                                  results=r), 200
+
+    # GET /get_feedback
+    def get_feedback(self):
+        """
+        Get the feedback results for working set descriptor elements that are
+        recommended for adjudication feedback. They are listed with the most
+        useful first.
+
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
+
+        URL Args:
+            sid: str
+                UUID of the session to use
+            i: int
+                Starting index (inclusive)
+            j: int
+                Ending index (exclusive)
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Success returns 200 and a JSON object that includes the keys:
+            sid: str
+                String IQR session ID accessed.
+            i: int
+                Index offset used.
+            j: int
+                Index limit used.
+            total_results: int
+                Total number of feedback results. This is not necessarily the
+                number of results returned from the call due to the optional
+                use of ``i``  and ``j``.
+            results: list[str]
+                A list of ``element_ids``. The ``element_id`` is the UUID of
+                the data/descriptor that is recommending for feedback.
+
+        """
+        sid = flask.request.args.get('sid', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            feedback_results = iqrs.feedback_results()
+            num_results = len(feedback_results)
+            # int() can raise ValueError, catch
+            i = 0 if i is None else int(i)
+            j = num_results if j is None else int(j)
+            # We ensured i, j are valid by this point
+            r = [d.uuid() for d in feedback_results]
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
+
+        finally:
+            iqrs.lock.release()
+
+        return make_response_json("Returning feedback uuids",
                                   sid=sid, i=i, j=j,
                                   total_results=num_results,
                                   results=r), 200

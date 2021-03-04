@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 2.8.12)
 #
 execute_process(
   COMMAND "${PYTHON_EXECUTABLE}" -c "from setup import VERSION; print(VERSION)"
+  WORKING_DIRECTORY ${SMQTK_SOURCE_DIR}
   RESULT_VARIABLE proc_success
   OUTPUT_VARIABLE SMQTK_VERSION
   )

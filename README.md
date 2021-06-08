@@ -17,3 +17,4 @@ Examples of high level applications may include being able to search a media cor
 
 Documentation for SMQTK is maintained at [ReadtheDocs](http://smqtk.readthedocs.org), including [build instructions](http://smqtk.readthedocs.org/en/latest/building.html) and [examples](http://smqtk.readthedocs.org/en/latest/examples/overview.html).
 
+An extra line to provide a diff.

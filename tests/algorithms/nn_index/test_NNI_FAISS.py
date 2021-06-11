@@ -554,12 +554,12 @@ class TestFAISSIndex (unittest.TestCase):
 
         # Shouldn't do anything for non-IVF indices
         # -- IDMap,HNSW32
-        index = self._make_inst(factory_string="IDMap,HNSW32",
+        index = self._make_inst(factory_string="IDMap,HNSW32,Flat",
                                 ivf_nprobe=2)
         index.build_index(descr_elems)
         q_results, q_dists = index.nn(descr_elems[0], n=64)
         # -- PCAR8,IDMap,HNSW32
-        index = self._make_inst(factory_string="PCAR8,IDMap,HNSW32",
+        index = self._make_inst(factory_string="PCAR8,IDMap,HNSW32,Flat",
                                 ivf_nprobe=2)
         index.build_index(descr_elems)
         q_results, q_dists = index.nn(descr_elems[0], n=64)

@@ -228,9 +228,7 @@ class TestClassifierService (unittest.TestCase):
         new_label = 'dummy2'
 
         with self.app.test_client() as cli:
-            rv = cli.get('/classifier', data={
-                'label': old_label,
-            })
+            rv = cli.get(f'/classifier?label={old_label}')
             self.assertStatus(rv, 200)
             enc_data = rv.data.decode()
 
@@ -396,7 +394,7 @@ class TestClassifierService (unittest.TestCase):
             self.assertMessage(json.loads(rv.data.decode()),
                                "No label provided.")
 
-            rv = cli.get('/classifier', data={'label': label})
+            rv = cli.get(f'/classifier?label={label}')
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,

@@ -1,15 +1,15 @@
+from collections.abc import Iterator
 import heapq
+from itertools import zip_longest
 import logging
 import multiprocessing
 import multiprocessing.queues
 import multiprocessing.synchronize
+import queue
 import sys
 import threading
 import traceback
 from typing import Type, Optional, Union
-
-from six.moves import queue, range, zip, zip_longest
-from six.moves.collections_abc import Iterator
 
 from smqtk.utils import SmqtkObject
 
@@ -515,9 +515,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                     self._log.log(1, "Told to stop prematurely")
                     break
         # Transport back any exceptions raised
-        # - Using BaseException to also catch things like KeyboardInterrupt
-        #   and other exceptions that do not descend from Exception.
-        except BaseException as ex:
+        except (Exception, KeyboardInterrupt) as ex:
             self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
@@ -609,9 +607,7 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        # - Using BaseException to also catch things like KeyboardInterrupt
-        #   and other exceptions that do not descend from Exception.
-        except BaseException as ex:
+        except (Exception, KeyboardInterrupt) as ex:
             self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()

@@ -1,6 +1,5 @@
 import abc
-
-from six.moves.collections_abc import Set
+from collections.abc import Set
 
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.plugin import Pluggable

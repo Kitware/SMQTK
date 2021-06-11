@@ -530,43 +530,30 @@ class TestIqrService (unittest.TestCase):
 
     def test_uid_nearest_neighbors_no_k(self):
         """ Test not providing base64 """
-        data = dict(
-            uid='some-uid',
-            # k=10,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors?uid=some-uid')
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "No 'k' value provided")
 
     def test_uid_nearest_neighbors_bad_k_json(self):
         """ Test string for k """
-        data = dict(
-            uid='some-uid',
-            k="10.2",  # float string fails an int cast.
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        # float string fails an int cast.
+        r = self.app.test_client().get('/uid_nearest_neighbors?uid=some-uid&k=10.2')
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
                                        "integer")
 
     def test_uid_nearest_neighbors_no_elem_for_uid(self):
+        # Simulate that any key we provide is not indexed.
         def raise_keyerror(*_):
             raise KeyError("invalid-key")
         self.app.descriptor_set.get_descriptor = mock.Mock(
             side_effect=raise_keyerror
         )
 
-        data = dict(
-            uid='some-uid',
-            k=3,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        data_uid = 'some-uid'
+        r = self.app.test_client().get(f'/uid_nearest_neighbors?uid={data_uid}&k=3')
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "Failed to get descriptor for UID "
-                                       "some-uid")
+        self.assertJsonMessageRegex(r, f"Failed to get descriptor for UID {data_uid}")
 
     def test_uid_nearest_neighbors(self):
         expected_uids = ['a', 'b', 'c']
@@ -582,17 +569,14 @@ class TestIqrService (unittest.TestCase):
             return_value=[expected_neighbors, expected_dists]
         )
 
-        data = dict(
-            uid='some-uid',
-            k=10,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        data_uid = 'some-uid'
+        data_k = 10
+        r = self.app.test_client().get(f'/uid_nearest_neighbors?uid={data_uid}&k={data_k}')
         self.app.descriptor_set.get_descriptor.assert_called_once_with(
-            data['uid']
+            data_uid
         )
         self.app.neighbor_index.nn.assert_called_once_with(
-            self.app.descriptor_set.get_descriptor(), data['k']
+            self.app.descriptor_set.get_descriptor(), data_k
         )
 
         self.assertStatusCode(r, 200)

@@ -4,8 +4,11 @@ import collections
 import itertools
 import json
 import multiprocessing
+import random
 import time
+import threading
 import traceback
+from typing import cast, Dict, Hashable, List, Optional
 import uuid
 
 import flask
@@ -14,7 +17,7 @@ from smqtk.algorithms import (
     Classifier,
     DescriptorGenerator,
     NearestNeighborsIndex,
-    RelevancyIndex,
+    RankRelevancyWithFeedback,
     SupervisedClassifier,
 )
 from smqtk.iqr import (
@@ -52,20 +55,6 @@ def make_response_json(message, **params):
     return flask.jsonify(**r)
 
 
-# Get expected JSON decode exception.
-#
-# Flask can use one of two potential JSON parsing libraries: simplejson or
-# json.  simplejson has a specific exception for decoding errors while json
-# just raises a ValueError.
-#
-# noinspection PyProtectedMember
-if hasattr(flask.json._json, 'JSONDecodeError'):
-    # noinspection PyProtectedMember
-    JSON_DECODE_EXCEPTION = getattr(flask.json._json, 'JSONDecodeError')
-else:
-    JSON_DECODE_EXCEPTION = ValueError
-
-
 def parse_hashable_json_list(json_str):
     """
     Parse and check input string, looking for a JSON list of hashable values.
@@ -76,12 +65,12 @@ def parse_hashable_json_list(json_str):
     :raises ValueError: Expected value check failed.
 
     :return: List of hashable-type values.
-    :rtype: list[collections.Hashable]
+    :rtype: list[collections.abc.Hashable]
 
     """
     try:
-        v_list = flask.json.loads(json_str)
-    except JSON_DECODE_EXCEPTION as ex:
+        v_list = json.loads(json_str)
+    except json.JSONDecodeError as ex:
         raise ValueError("JSON parsing error: %s" % str(ex))
     if not isinstance(v_list, list):
         raise ValueError("JSON provided is not a list.")
@@ -89,7 +78,7 @@ def parse_hashable_json_list(json_str):
     elif not v_list:
         raise ValueError("JSON list is empty.")
     # Contents of list should be numeric or string values.
-    elif not all(isinstance(el, collections.Hashable)
+    elif not all(isinstance(el, collections.abc.Hashable)
                  for el in v_list):
         raise ValueError("Not all JSON list parts were hashable values.")
     return v_list
@@ -113,11 +102,6 @@ class IqrService (SmqtkWebApp):
     def get_default_config(cls):
         c = super(IqrService, cls).get_default_config()
 
-        c_rel_index = make_default_config(
-            RelevancyIndex.get_impls()
-        )
-        merge_dict(c_rel_index, iqr_session.DFLT_REL_INDEX_CONFIG)
-
         merge_dict(c, {
             "iqr_service": {
 
@@ -131,8 +115,8 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugin_notes": {
-                    "relevancy_index_config":
-                        "The relevancy index config provided should not have "
+                    "rank_relevancy_with_feedback":
+                        "The rank relevancy config provided should not have "
                         "persistent storage configured as it will be used in "
                         "such a way that instances are created, built and "
                         "destroyed often.",
@@ -168,15 +152,17 @@ class IqrService (SmqtkWebApp):
                 },
 
                 "plugins": {
-                    "relevancy_index_config": c_rel_index,
+                    "rank_relevancy_with_feedback": make_default_config(
+                            RankRelevancyWithFeedback.get_impls()
+                        ),
                     "descriptor_factory":
                         DescriptorElementFactory.get_default_config(),
                     "descriptor_generator": make_default_config(
-                        DescriptorGenerator.get_impls()
-                    ),
+                            DescriptorGenerator.get_impls()
+                        ),
                     "descriptor_set": make_default_config(
-                        DescriptorSet.get_impls()
-                    ),
+                            DescriptorSet.get_impls()
+                        ),
                     "neighbor_index":
                         make_default_config(NearestNeighborsIndex.get_impls()),
                     "classifier_config":
@@ -225,26 +211,35 @@ class IqrService (SmqtkWebApp):
         )
         self.neighbor_index_lock = multiprocessing.RLock()
 
-        self.rel_index_config = \
-            json_config['iqr_service']['plugins']['relevancy_index_config']
+        self.rank_relevancy_with_feedback = from_config_dict(
+            json_config['iqr_service']['plugins']['rank_relevancy_with_feedback'],
+            RankRelevancyWithFeedback.get_impls(),
+        )
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.Hashable, SupervisedClassifier | None]
-        self.session_classifiers = {}
+        self.session_classifiers: Dict[
+            Hashable, Optional[SupervisedClassifier]
+        ] = {}
         # Cache of IQR session classification results on descriptors with the
         # recorded UIDs.
         # This session cache contents are purged when a classifier retrains for
         # a session.
         # Only "positive" class confidence values are retained due to the
         # binary nature of IQR-based classifiers.
-        #: :type: dict[collections.Hashable, dict[collections.Hashable, float]]
-        self.session_classification_results = {}
+        self.session_classification_results: Dict[
+            Hashable, Dict[Hashable, float]
+        ] = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
-        #: :type: dict[collections.Hashable, bool]
-        self.session_classifier_dirty = {}
+        self.session_classifier_dirty: Dict[Hashable, bool] = {}
+
+        # Cache of random UIDs from the configured descriptor set for use
+        #: :type: list[collections.abc.Hashable] | None
+        self._random_uid_list_cache = None
+        # Lock for mutation of this list cache
+        self._random_lock = threading.RLock()
 
         def session_expire_callback(session):
             """
@@ -333,6 +328,9 @@ class IqrService (SmqtkWebApp):
         self.add_url_rule('/get_results',
                           view_func=self.get_results,
                           methods=['GET'])
+        self.add_url_rule('/get_feedback',
+                          view_func=self.get_feedback,
+                          methods=['GET'])
         self.add_url_rule('/get_positive_adjudication_relevancy',
                           view_func=self.get_positive_adjudication_relevancy,
                           methods=['GET'])
@@ -341,6 +339,9 @@ class IqrService (SmqtkWebApp):
                           methods=['GET'])
         self.add_url_rule('/get_unadjudicated_relevancy',
                           view_func=self.get_unadjudicated_relevancy,
+                          methods=['GET'])
+        self.add_url_rule('/random_uids',
+                          view_func=self.get_random_uids,
                           methods=['GET'])
         self.add_url_rule('/classify',
                           view_func=self.classify,
@@ -801,8 +802,8 @@ class IqrService (SmqtkWebApp):
                 sid=sid,
             ), 409  # CONFLICT
 
-        iqrs = iqr_session.IqrSession(self.positive_seed_neighbors,
-                                      self.rel_index_config,
+        iqrs = iqr_session.IqrSession(self.rank_relevancy_with_feedback,
+                                      self.positive_seed_neighbors,
                                       sid)
         with self.controller:
             with iqrs:  # because classifier maps locked by session
@@ -1315,7 +1316,7 @@ class IqrService (SmqtkWebApp):
             404
                 No session for the given ID.
 
-        Success returns 201 and a JSON object that includes the keys:
+        Success returns 200 and a JSON object that includes the keys:
             sid: str
                 String IQR session ID accessed.
             i: int
@@ -1362,6 +1363,80 @@ class IqrService (SmqtkWebApp):
             iqrs.lock.release()
 
         return make_response_json("Returning result pairs",
+                                  sid=sid, i=i, j=j,
+                                  total_results=num_results,
+                                  results=r), 200
+
+    # GET /get_feedback
+    def get_feedback(self):
+        """
+        Get the feedback results for working set descriptor elements that are
+        recommended for adjudication feedback. They are listed with the most
+        useful first.
+
+        If the requested session has not been refined yet (no ranking), an
+        empty results list is returned.
+
+        URL Args:
+            sid: str
+                UUID of the session to use
+            i: int
+                Starting index (inclusive)
+            j: int
+                Ending index (exclusive)
+
+        Possible error code returns:
+            400
+                No session ID provided. Offset/limit index values were not
+                valid integers.
+            404
+                No session for the given ID.
+
+        Success returns 200 and a JSON object that includes the keys:
+            sid: str
+                String IQR session ID accessed.
+            i: int
+                Index offset used.
+            j: int
+                Index limit used.
+            total_results: int
+                Total number of feedback results. This is not necessarily the
+                number of results returned from the call due to the optional
+                use of ``i``  and ``j``.
+            results: list[str]
+                A list of ``element_ids``. The ``element_id`` is the UUID of
+                the data/descriptor that is recommending for feedback.
+
+        """
+        sid = flask.request.args.get('sid', None)
+        i = flask.request.args.get('i', None)
+        j = flask.request.args.get('j', None)
+
+        if sid is None:
+            return make_response_json("No session id (sid) provided"), 400
+
+        with self.controller:
+            if not self.controller.has_session_uuid(sid):
+                return make_response_json("session id '%s' not found" % sid,
+                                          sid=sid), 404
+            iqrs = self.controller.get_session(sid)
+            iqrs.lock.acquire()  # lock BEFORE releasing controller
+
+        try:
+            feedback_results = iqrs.feedback_results()
+            num_results = len(feedback_results)
+            # int() can raise ValueError, catch
+            i = 0 if i is None else int(i)
+            j = num_results if j is None else int(j)
+            # We ensured i, j are valid by this point
+            r = [d.uuid() for d in feedback_results]
+        except ValueError:
+            return make_response_json("Invalid bounds index value(s)"), 400
+
+        finally:
+            iqrs.lock.release()
+
+        return make_response_json("Returning feedback uuids",
                                   sid=sid, i=i, j=j,
                                   total_results=num_results,
                                   results=r), 200
@@ -1595,6 +1670,58 @@ class IqrService (SmqtkWebApp):
             total=total, results=r
         ), 200
 
+    def get_random_uids(self):
+        """
+        Get a slice of random descriptor UIDs from the global set between the
+        optionally provided index offset and limit.
+
+        If ``i`` (offset, inclusive) is omitted, we assume a starting index of
+        0. If ``j`` (limit, exclusive) is omitted, we assume the ending index
+        is the same as the number of results available.
+
+        URI Args:
+            i: int
+                Starting index (inclusive). 0 by default.
+            j: int
+                Ending index (exclusive). Total global index size by default.
+            refresh: bool
+                If `true` we refresh our random UID list from the global index.
+                Otherwise this when `false` we utilize the same globally cached
+                random ordering for pagination stability.
+
+        Returns 200 and a JSON object that includes the following:
+            results: list[str]
+                List of string descriptor UIDs from the global set within the
+                give `[i, j]` slice.
+            total: int
+                Total number of UIDs in the global set.
+        """
+        i = flask.request.args.get('i', 0)
+        j = flask.request.args.get('j', None)
+        refresh_str = flask.request.args.get('refresh', 'false')
+
+        try:
+            refresh = json.loads(refresh_str)
+        except json.JSONDecodeError:
+            return make_response_json("Value for 'refresh' should be a valid "
+                                      "JSON boolean."), 400
+
+        with self._random_lock:
+            if self._random_uid_list_cache is None or refresh:
+                self._random_uid_list_cache = list(self.descriptor_set.keys())
+                random.shuffle(self._random_uid_list_cache)
+            total = len(self._random_uid_list_cache)
+            try:
+                i = int(i)
+                j = total if j is None else int(j)
+                results = self._random_uid_list_cache[i:j]
+            except ValueError:
+                return make_response_json("Invalid bounds index value(s)"), 400
+
+        return make_response_json(
+            "success", total=total, results=results
+        ), 200
+
     def _ensure_session_classifier(self, iqrs):
         """
         Return the binary pos/neg classifier for this session.
@@ -1626,19 +1753,20 @@ class IqrService (SmqtkWebApp):
             raise RuntimeError("No negative labels in current IQR session. "
                                "Required for a supervised classifier.")
 
-        classifier = self.session_classifiers.get(sid, None)
+        maybe_classifier = self.session_classifiers.get(sid, None)
 
         pos_label = "positive"
         neg_label = "negative"
 
-        if self.session_classifier_dirty[sid] or classifier is None:
+        if self.session_classifier_dirty[sid] or maybe_classifier is None:
             self._log.debug("Training new classifier for current "
                             "adjudication state...")
-
-            #: :type: SupervisedClassifier
-            classifier = from_config_dict(
-                self.classifier_config,
-                SupervisedClassifier.get_impls()
+            classifier = cast(
+                SupervisedClassifier,
+                from_config_dict(
+                    self.classifier_config,
+                    SupervisedClassifier.get_impls()
+                )
             )
             classifier.train(
                 {pos_label: all_pos,
@@ -1648,6 +1776,8 @@ class IqrService (SmqtkWebApp):
             self.session_classifiers[sid] = classifier
             self.session_classification_results[sid] = {}
             self.session_classifier_dirty[sid] = False
+        else:
+            classifier = cast(SupervisedClassifier, maybe_classifier)
 
         return classifier, pos_label, neg_label
 
@@ -1675,18 +1805,21 @@ class IqrService (SmqtkWebApp):
         """
         # Record clean/dirty status after making classifier/refining so we
         # don't train a new classifier when we don't have to.
-        sid = flask.request.args.get('sid', None)
-        uuids = flask.request.args.get('uuids', None)
+        sid: Optional[str] = flask.request.args.get('sid', None)
+        # Default: Empty JSON list.
+        uuids_str: Optional[str] = flask.request.args.get('uuids', None)
 
         if sid is None:
             return make_response_json("No session id (sid) provided"), 400
+        if uuids_str is None:
+            return make_response_json("No UIDs provided."), 400
 
         try:
-            uuids = json.loads(uuids)
+            uuids: List[Hashable] = json.loads(uuids_str)
         except ValueError:
             return make_response_json(
                 "Failed to decode uuids as json. Given '%s'"
-                % uuids
+                % uuids_str
             ), 400
 
         with self.controller:

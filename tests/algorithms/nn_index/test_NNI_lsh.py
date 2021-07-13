@@ -2,7 +2,7 @@ from __future__ import division, print_function
 
 import collections
 import json
-import mock
+import unittest.mock as mock
 import random
 import types
 import unittest
@@ -82,9 +82,9 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(c)), c)
 
         # Make a simple configuration
-        c['lsh_functor']['type'] = 'ItqFunctor'
-        c['descriptor_set']['type'] = 'MemoryDescriptorSet'
-        c['hash2uuids_kvstore']['type'] = 'MemoryKeyValueStore'
+        c['lsh_functor']['type'] = 'smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor'
+        c['descriptor_set']['type'] = 'smqtk.representation.descriptor_set.memory.MemoryDescriptorSet'
+        c['hash2uuids_kvstore']['type'] = 'smqtk.representation.key_value.memory.MemoryKeyValueStore'
         c['hash_index']['type'] = None
         index = LSHNearestNeighborIndex.from_config(c)
 
@@ -510,7 +510,7 @@ class TestLshIndex (unittest.TestCase):
         d_set = MemoryDescriptorSet()
         hash_kvs = MemoryKeyValueStore()
         idx = LSHNearestNeighborIndex(DummyHashFunctor(), d_set, hash_kvs)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             'uid1',
             idx.remove_from_index,
@@ -558,7 +558,7 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove descriptor with a UID we did not build with.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '5',
             idx.remove_from_index, [5]
         )
@@ -567,7 +567,7 @@ class TestLshIndex (unittest.TestCase):
         self.assertEqual(idx.hash2uuids_kvstore._table, expected_kvs_table)
 
         # Attempt to remove multiple UIDs, one valid and one invalid
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '5',
             idx.remove_from_index, [2, 5]
         )

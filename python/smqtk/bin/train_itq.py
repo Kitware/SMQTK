@@ -62,8 +62,8 @@ def main():
     if uuids_list_filepath and os.path.isfile(uuids_list_filepath):
         def uuids_iter():
             with open(uuids_list_filepath) as f:
-                for l in f:
-                    yield l.strip()
+                for line in f:
+                    yield line.strip()
         log.info("Loading UUIDs list from file: %s", uuids_list_filepath)
         d_iter = descriptor_set.get_many_descriptors(uuids_iter())
     else:

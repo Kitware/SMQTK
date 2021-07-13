@@ -1,0 +1,12 @@
+[flake8]
+exclude =
+    *.ipynb_checkpoints,
+    __pycache__,
+    .eggs,
+    docs,
+    scripts,
+    TPL
+
+# While a max length of 79 is encouraged, sometimes going over makes more sense
+# for overall clarity.
+max-line-length = 120

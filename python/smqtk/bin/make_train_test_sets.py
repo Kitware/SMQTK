@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 import argparse
 import csv
-import itertools
 import os
 import re
 
 import numpy
-import six
 from sklearn.model_selection import StratifiedShuffleSplit
 
 
@@ -15,7 +13,7 @@ class KeyToFilepath(argparse.Action):
     Custom argparse action for parsing out positional class-to-filepath
     arguments.
     """
-    re_key2path = re.compile('(\w+)=(.+)', flags=re.UNICODE)
+    re_key2path = re.compile(r'(\w+)=(.+)', flags=re.UNICODE)
 
     # noinspection PyUnusedLocal,PyShadowingBuiltins
     def __init__(self, option_strings, dest, nargs=None, const=None,
@@ -87,7 +85,7 @@ def main():
 
     # Parse CSV files associated to classes
     cls_uuids = {}
-    for cls, filepath in six.iteritems(CLS_TO_FILEPATH):
+    for cls, filepath in CLS_TO_FILEPATH.items():
         cls_uuids[cls] = sorted({r[1] for r in csv.reader(open(filepath))})
 
     cls_list = sorted(cls_uuids)
@@ -106,7 +104,7 @@ def main():
     # Get array of index position values of ``all_uuids`` of uuids to use for
     # train and test sets, respectively.
     train_index, test_index = \
-        iter(sss.split(numpy.zeros(len(all_label)), all_label)).next()
+        next(iter(sss.split(numpy.zeros(len(all_label)), all_label)))
     uuids_train, uuids_test = all_uuids[train_index], all_uuids[test_index]
     label_train, label_test = all_label[train_index], all_label[test_index]
 
@@ -124,17 +122,17 @@ def main():
     # Save out files for use with ``classifier_model_validation``
     with open('%s.all_uuids.csv' % OUTPUT_BASE, 'w') as f:
         w = csv.writer(f)
-        for uuid, label in itertools.izip(all_uuids, all_label):
+        for uuid, label in zip(all_uuids, all_label):
             w.writerow([uuid, label])
 
     with open('%s.train_uuids.csv' % OUTPUT_BASE, 'w') as f:
         w = csv.writer(f)
-        for uuid, label in itertools.izip(uuids_train, label_train):
+        for uuid, label in zip(uuids_train, label_train):
             w.writerow([uuid, label])
 
     with open('%s.test_uuids.csv' % OUTPUT_BASE, 'w') as f:
         w = csv.writer(f)
-        for uuid, label in itertools.izip(uuids_test, label_test):
+        for uuid, label in zip(uuids_test, label_test):
             w.writerow([uuid, label])
 
 

@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 import os
 import requests
 import unittest
@@ -132,7 +132,7 @@ class TestDataUrlElement (unittest.TestCase):
         simulated_r.status_code = sim_rc
         m_requests_get.return_value = simulated_r
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             requests.HTTPError,
             '%d' % sim_rc,
             e.get_bytes

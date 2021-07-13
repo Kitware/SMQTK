@@ -51,7 +51,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         check_empty_iterable(descriptors, self._build_index,
@@ -69,7 +69,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
 
         :param descriptors: Iterable of descriptor elements to add to this
             index.
-        :type descriptors: collections.Iterable[smqtk.representation
+        :type descriptors: collections.abc.Iterable[smqtk.representation
                                                      .DescriptorElement]
 
         """
@@ -82,7 +82,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         UIDs.
 
         :param uids: Iterable of UIDs of descriptors to remove from this index.
-        :type uids: collections.Iterable[collections.Hashable]
+        :type uids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises ValueError: No data available in the given iterable.
         :raises KeyError: One or more UIDs provided do not match any stored
@@ -136,7 +136,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
 
@@ -152,7 +152,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
 
@@ -163,7 +163,7 @@ class NearestNeighborsIndex (SmqtkAlgorithm):
         descriptors from this index associated with the given UIDs.
 
         :param uids: Iterable of UIDs of descriptors to remove from this index.
-        :type uids: collections.Iterable[collections.Hashable]
+        :type uids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: One or more UIDs provided do not match any stored
             descriptors.

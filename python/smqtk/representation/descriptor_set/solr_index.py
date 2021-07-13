@@ -1,13 +1,13 @@
 import collections
+import pickle
 import time
-
-from six.moves import cPickle, range
+from typing import Deque, Hashable
 
 from smqtk.representation.descriptor_set import DescriptorSet
 
 # Try to import required module
 try:
-    import solr
+    import solr  # type: ignore
 except ImportError:
     solr = None
 
@@ -162,7 +162,7 @@ class SolrDescriptorSet (DescriptorSet):
         Check if a DescriptorElement with the given UUID exists in this set.
 
         :param uuid: UUID to query for
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
             set, or False if not.
@@ -190,8 +190,8 @@ class SolrDescriptorSet (DescriptorSet):
 
         """
         doc = self._doc_for_code_descr(descriptor)
-        doc[self.descriptor_field] = cPickle.dumps(descriptor,
-                                                   self.pickle_protocol)
+        doc[self.descriptor_field] = pickle.dumps(descriptor,
+                                                  self.pickle_protocol)
         doc[self.timestamp_field] = time.time()
         self.solr.add(doc, commit=self.commit_on_add)
 
@@ -206,13 +206,13 @@ class SolrDescriptorSet (DescriptorSet):
         :param descriptors: Iterable of descriptor instances to add to this
             set.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         documents = []
         for d in descriptors:
             doc = self._doc_for_code_descr(d)
-            doc[self.descriptor_field] = cPickle.dumps(d, self.pickle_protocol)
+            doc[self.descriptor_field] = pickle.dumps(d, self.pickle_protocol)
             doc[self.timestamp_field] = time.time()
             documents.append(doc)
         self.solr.add_many(documents)
@@ -224,7 +224,7 @@ class SolrDescriptorSet (DescriptorSet):
         Get the descriptor in this set that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -240,13 +240,13 @@ class SolrDescriptorSet (DescriptorSet):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Hashable
+        :type uuids: collections.abc.Hashable
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
@@ -254,7 +254,7 @@ class SolrDescriptorSet (DescriptorSet):
         def batch_query(_batch):
             """
             :param _batch: Batch of UIDs to select.
-            :type _batch: list[collections.Hashable]
+            :type _batch: list[collections.abc.Hashable]
             """
             query = ' OR '.join([self.d_uid_field + (':%s' % _uid)
                                  for _uid in _batch])
@@ -263,11 +263,11 @@ class SolrDescriptorSet (DescriptorSet):
                                     query))
             # result batches come in chunks of 10
             for doc in r.results:
-                yield cPickle.loads(doc[self.descriptor_field])
+                yield pickle.loads(doc[self.descriptor_field])
             for j in range(r.numFound // 10):
                 r = r.next_batch()
                 for doc in r.results:
-                    yield cPickle.loads(doc[self.descriptor_field])
+                    yield pickle.loads(doc[self.descriptor_field])
 
         batch = []
         for uid in uuids:
@@ -290,7 +290,7 @@ class SolrDescriptorSet (DescriptorSet):
         Remove a descriptor from this set by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -303,7 +303,7 @@ class SolrDescriptorSet (DescriptorSet):
         Remove descriptors associated to given descriptor UUIDs from this set.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
@@ -314,7 +314,7 @@ class SolrDescriptorSet (DescriptorSet):
         def batch_op(_batch):
             """
             :param _batch: UIDs to remove from set.
-            :type _batch: collections.Iterable[collections.Hashable]
+            :type _batch: collections.abc.Iterable[collections.abc.Hashable]
             """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
                                       for _uid in _batch])
@@ -322,7 +322,7 @@ class SolrDescriptorSet (DescriptorSet):
                              % (self.set_uuid_field, self.set_uuid,
                                 uuid_query))
 
-        batch = collections.deque()
+        batch: Deque[Hashable] = collections.deque()
         for uid in uuids:
             batch.append(uid)
 
@@ -357,11 +357,11 @@ class SolrDescriptorSet (DescriptorSet):
                              % (self.set_uuid_field, self.set_uuid,
                                 self.descriptor_field))
         for doc in r.results:
-            yield cPickle.loads(doc[self.descriptor_field])
+            yield pickle.loads(doc[self.descriptor_field])
         for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
-                yield cPickle.loads(doc[self.descriptor_field])
+                yield pickle.loads(doc[self.descriptor_field])
 
     def iteritems(self):
         """
@@ -371,10 +371,10 @@ class SolrDescriptorSet (DescriptorSet):
                              % (self.set_uuid_field, self.set_uuid,
                                 self.d_uid_field, self.descriptor_field))
         for doc in r.results:
-            d = cPickle.loads(doc[self.descriptor_field])
+            d = pickle.loads(doc[self.descriptor_field])
             yield d.uuid(), d
         for _ in range(r.numFound // 10):
             r = r.next_batch()
             for doc in r.results:
-                d = cPickle.loads(doc[self.descriptor_field])
+                d = pickle.loads(doc[self.descriptor_field])
                 yield d.uuid(), d

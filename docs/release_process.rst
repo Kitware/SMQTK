@@ -24,11 +24,12 @@ As such, patch releases should only ever be based on an existing release point.
 1. Create a new branch off of the ``release`` branch named something like
    ``release-patch-{NEW_VERSION}``.
 
-  - Increment patch value in ``VERSION`` file.
+  - Increment patch value in ``python/smqtk/__init__.py`` file's
+    ``__version__`` attribute.
   - Rename the ``docs/release_notes/pending_patch.rst`` file to
     ``docs/release_notes/v{VERSION}.rst``, matching the value in the
-    ``VERSION`` file.  Add a descriptive paragraph under the title section
-    summarizing this release.
+    ``__version__`` attribute.  Add a descriptive paragraph under the title
+    section summarizing this release.
   - Add new release notes RST file reference to ``docs/release_notes.rst``.
 
 2. Tag branch (see `Tag new version`_ below ).

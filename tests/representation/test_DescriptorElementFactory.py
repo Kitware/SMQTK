@@ -101,9 +101,10 @@ class TestDescriptorElemFactory (unittest.TestCase):
     def test_configuration(self):
         c = DescriptorElementFactory.get_default_config()
         self.assertIsNone(c['type'])
-        self.assertIn('DescriptorMemoryElement', c)
+        dme_key = 'smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement'
+        self.assertIn(dme_key, c)
 
-        c['type'] = 'DescriptorMemoryElement'
+        c['type'] = dme_key
         factory = DescriptorElementFactory.from_config(c)
         self.assertEqual(factory._d_type.__name__,
                          DescriptorMemoryElement.__name__)
@@ -122,7 +123,8 @@ class TestDescriptorElemFactory (unittest.TestCase):
             'p1': 'some dir',
             'vec': 1
         }
+        dummy_key = f"{__name__}.{DummyElementImpl.__name__}"
         factory = DescriptorElementFactory(DummyElementImpl, test_params)
         factory_config = factory.get_config()
-        assert factory_config == {"type": "DummyElementImpl",
-                                  "DummyElementImpl": test_params}
+        assert factory_config == {"type": dummy_key,
+                                  dummy_key: test_params}

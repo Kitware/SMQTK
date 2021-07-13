@@ -1,0 +1,7 @@
+# This is an implicit value, here for clarity
+--index-url https://pypi.python.org/simple/
+
+coverage==5.1
+pytest==5.4.1
+pytest-cov==2.8.1
+

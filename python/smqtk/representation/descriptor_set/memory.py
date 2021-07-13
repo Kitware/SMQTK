@@ -110,7 +110,7 @@ class MemoryDescriptorSet (DescriptorSet):
         super(MemoryDescriptorSet, self).__init__()
 
         # Mapping of descriptor UUID to the DescriptorElement instance.
-        #: :type: dict[collections.Hashable, smqtk.representation.DescriptorElement]
+        #: :type: dict[collections.abc.Hashable, smqtk.representation.DescriptorElement]
         self._table = {}
         # Record of optional file cache we're using
         self.cache_element = cache_element
@@ -151,7 +151,7 @@ class MemoryDescriptorSet (DescriptorSet):
         Check if a DescriptorElement with the given UUID exists in this index.
 
         :param uuid: UUID to query for
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
             index, or False if not.
@@ -187,7 +187,7 @@ class MemoryDescriptorSet (DescriptorSet):
         :param descriptors: Iterable of descriptor instances to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         added_something = False
@@ -203,7 +203,7 @@ class MemoryDescriptorSet (DescriptorSet):
         Get the descriptor in this index that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this index.
@@ -219,7 +219,7 @@ class MemoryDescriptorSet (DescriptorSet):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -236,7 +236,7 @@ class MemoryDescriptorSet (DescriptorSet):
         Remove a descriptor from this index by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this index.
@@ -257,7 +257,7 @@ class MemoryDescriptorSet (DescriptorSet):
         index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.

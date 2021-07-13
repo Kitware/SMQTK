@@ -39,9 +39,9 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
         Create a new AxisAlignedBoundingBox from the given minimum and maximum
         euclidean-space vertex.
 
-        :param collections.Sequence[int|float] min_vertex:
+        :param collections.abc.Sequence[int|float] min_vertex:
             Minimum bounding vertex of the (hyper) rectangle.
-        :param collections.Sequence[int|float] max_vertex:
+        :param collections.abc.Sequence[int|float] max_vertex:
             Maximum bounding vertex of the (hyper) rectangle.
 
         :raises ValueError:
@@ -68,9 +68,7 @@ class AxisAlignedBoundingBox (SmqtkRepresentation):
                                      self.max_vertex.size))
         if not (self.max_vertex >= self.min_vertex).all():
             raise ValueError("The maximum vertex was not strictly >= the "
-                             "minimum vertex."
-                             .format(tuple(self.min_vertex),
-                                     tuple(self.max_vertex)))
+                             "minimum vertex.")
 
     def __str__(self):
         return "<{} [{}, {}]>"\

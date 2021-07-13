@@ -1,21 +1,133 @@
-version: "3"
+version: "3.4"
 
 services:
 
   #
-  # TPL providing images.
+  # TPL: Caffe 1.0
   #
+  tpl-caffe-base:
+    # Base stage for common use by CPU and GPU build variants.
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-base
+    build:
+      context: tpl/caffe1
+      target: base
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
 
+  tpl-caffe-cpu:
+    # CPU-Only build variant
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cpu
+    depends_on:
+      - tpl-caffe-base
+    build:
+      context: tpl/caffe1
+      target: caffe_cpu
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
+
+  tpl-caffe-gpu:
+    # GPU build variant
+    image: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cuda${CUDA_DEVEL_IMAGE_TAG}
+    depends_on:
+      - tpl-caffe-base
+    build:
+      context: tpl/caffe1
+      target: caffe_gpu
+      args:
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
+        # One or more CUDA architecture binary versions to compile for.
+        CUDA_ARCH_BIN_LIST: 35 52 60 61 62 70
+
+  #
+  # TPL: FAISS
+  #
   tpl-faiss-gpu:
-    image: kitware/smqtk/tpl-faiss-gpu:v1.5.1
+    image: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
     build:
       context: tpl/faiss
       dockerfile: gpu/Dockerfile
       args:
+        FAISS_VERSION:  # using value from .env file.
+        CUDA_DEVEL_IMAGE_TAG:  # using value from .env file.
         # One or more CUDA architectures to compile for.
         # Using ">-" for multi-line string concatenation with no new-lines.
+        # Using ">-" for multi-line string concatenation with no new-lines.
+        # - arch upper bound defined by CUDA version (e.g. 9.2 cannot support
+        #   compute_75)
+        # - https://docs.nvidia.com/cuda/turing-compatibility-guide/index.html#building-turing-compatible-apps-using-cuda-9-
+        # - In order to support a NEWER gpu architecture than considered here,
+        #   the final line here should specify a PTX version, e.g.
+        #   `-gencode=arch=compute_XY,code=compute_XY` (note the `code=...`),
+        #   in order to provide compatibility with future architectures.
         CUDA_ARCH: >-
-          -gencode=arch=compute_35,code=compute_35
-          -gencode=arch=compute_52,code=compute_52
-          -gencode=arch=compute_60,code=compute_60
-          -gencode=arch=compute_61,code=compute_61
+          -gencode=arch=compute_50,code=sm_50
+          -gencode=arch=compute_52,code=sm_52
+          -gencode=arch=compute_60,code=sm_60
+          -gencode=arch=compute_61,code=sm_61
+          -gencode=arch=compute_70,code=sm_70
+          -gencode=arch=compute_70,code=compute_70
+
+  #
+  # IQR Playground Demo Image CPU/GPU
+  #
+  iqr-playground-cpu:
+    image: ${SMQTK_REGISTRY}/iqr_playground:${SMQTK_TAG}-cpu
+    depends_on:
+      - tpl-caffe-cpu
+      - tpl-faiss-gpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile
+      target: smqtk-cpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cpu
+        FAISS_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_VERSION:  # using value from .env file.
+
+  iqr-playground-gpu:
+    image: ${SMQTK_REGISTRY}/iqr_playground:${SMQTK_TAG}-cuda${CUDA_RUNTIME_IMAGE_TAG}
+    depends_on:
+      - tpl-caffe-gpu
+      - tpl-faiss-gpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_iqr_playground/Dockerfile
+      target: smqtk-gpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-faiss:${FAISS_VERSION}-cuda${CUDA_DEVEL_IMAGE_TAG}
+        FAISS_VERSION:  # using value from .env file.
+
+  #
+  # Classifier Service
+  # TODO: Refactor to use common smqtk install image instead of duplicating.
+  #
+  classifier-service-cpu:
+    image: ${SMQTK_REGISTRY}/classifier_service:${SMQTK_TAG}-cpu
+    depends_on:
+      - tpl-caffe-cpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_classifier_service/Dockerfile
+      target: smqtk-cpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cpu
+
+  classifier-service-gpu:
+    image: ${SMQTK_REGISTRY}/classifier_service:${SMQTK_TAG}-cuda${CUDA_RUNTIME_IMAGE_TAG}
+    depends_on:
+      - tpl-caffe-gpu
+    build:
+      # Repo root
+      context: ../..
+      dockerfile: devops/docker/smqtk_classifier_service/Dockerfile
+      target: smqtk-gpu
+      args:
+        CUDA_RUNTIME_IMAGE_TAG:  # using value from .env file.
+        CAFFE_COPY_FROM_IMAGE: ${SMQTK_REGISTRY}/tpl-caffe:1.0-cuda${CUDA_DEVEL_IMAGE_TAG}

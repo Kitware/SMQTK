@@ -3,7 +3,7 @@ import unittest
 
 import numpy
 import pytest
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 import smqtk.representation

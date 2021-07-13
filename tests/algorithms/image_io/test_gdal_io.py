@@ -2,13 +2,13 @@ from distutils.version import LooseVersion
 import os
 import pickle
 import re
+from typing import Optional
 import unittest
 import warnings
 
 import numpy
 import pytest
-# move registered in ``smqtk.tests`` module __init__.
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.image_io.gdal_io import (
     osgeo,
@@ -18,7 +18,7 @@ from smqtk.algorithms.image_io.gdal_io import (
     GdalImageReader,
 )
 from smqtk.algorithms.image_io import gdal_io
-from smqtk.representation import AxisAlignedBoundingBox, DataElement
+from smqtk.representation import AxisAlignedBoundingBox
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.utils.configuration import configuration_test_helper
@@ -26,11 +26,11 @@ from smqtk.utils.configuration import configuration_test_helper
 from tests import TEST_DATA_DIR
 
 
-GH_IMAGE_FP = None              # type: str
-GH_FILE_ELEMENT = None          # type: DataFileElement
-GH_CROPPED_IMAGE_FP = None      # type: str
-GH_CROPPED_FILE_ELEMENT = None  # type: DataFileElement
-GH_CROPPED_BBOX = None          # type: AxisAlignedBoundingBox
+GH_IMAGE_FP = None              # type: Optional[str]
+GH_FILE_ELEMENT = None          # type: Optional[DataFileElement]
+GH_CROPPED_IMAGE_FP = None      # type: Optional[str]
+GH_CROPPED_FILE_ELEMENT = None  # type: Optional[DataFileElement]
+GH_CROPPED_BBOX = None          # type: Optional[AxisAlignedBoundingBox]
 
 
 def setup_module():

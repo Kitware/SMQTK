@@ -1,1 +1,1 @@
-from .iqr_search import IqrSearch
+from .iqr_search import IqrSearch  # noqa: F401

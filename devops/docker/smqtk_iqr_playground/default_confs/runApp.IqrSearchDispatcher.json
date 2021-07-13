@@ -7,18 +7,18 @@
     "iqr_tabs": {
         "Data-set Iqr": {
             "data_set": {
-                "DataMemorySet": {
+                "smqtk.representation.data_set.memory_set.DataMemorySet": {
                     "cache_element": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "models/image_elements.dms_cache",
                             "readonly": true
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "pickle_protocol": -1
                 },
-                "type": "DataMemorySet"
+                "type": "smqtk.representation.data_set.memory_set.DataMemorySet"
             },
             "iqr_service_url": "localhost:5001",
             "working_directory": "data/iqr_app_work"

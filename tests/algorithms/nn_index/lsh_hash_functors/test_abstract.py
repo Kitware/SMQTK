@@ -1,7 +1,7 @@
 from __future__ import division, print_function
 import unittest
 
-import mock
+import unittest.mock as mock
 
 from smqtk.algorithms.nn_index.lsh.functors import LshFunctor
 

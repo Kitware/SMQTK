@@ -26,6 +26,12 @@ class DescriptorMemoryElement (DescriptorElement):
         super(DescriptorMemoryElement, self).__init__(type_str, uuid)
         self.__v = None
 
+    @classmethod
+    def _get_many_vectors(cls, descriptors):
+        # Memory elements are super simple.
+        for d in descriptors:
+            yield d.uuid(), d.vector()
+
     def __getstate__(self):
         state = super(DescriptorMemoryElement, self).__getstate__()
         # save vector as binary string
@@ -134,7 +140,7 @@ class DescriptorFileElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: uuid for this descriptor
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param save_dir: Directory to save this element's contents. If this path
             is relative, we interpret as relative to the current working

@@ -94,7 +94,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :type type_str: str
 
         :param uuid: UUID to associate with the descriptor
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: New DescriptorElement instance
         :rtype: smqtk.representation.DescriptorElement
@@ -111,7 +111,7 @@ class DescriptorElementFactory (SmqtkRepresentation):
         :type type_str: str
 
         :param uuid: UUID to associate with the descriptor
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: New DescriptorElement instance
         :rtype: smqtk.representation.DescriptorElement

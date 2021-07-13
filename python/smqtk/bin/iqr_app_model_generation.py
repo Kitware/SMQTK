@@ -150,7 +150,7 @@ def main():
     # Generate a model if the generator defines a known generation method.
     try:
         log.debug("descriptor generator as model to generate?")
-        descriptor_generator.generate_model(data_set)
+        descriptor_generator.generate_model(data_set)  # type: ignore
     except AttributeError as ex:
         log.debug("descriptor generator as model to generate - Nope: {}"
                   .format(str(ex)))
@@ -166,7 +166,7 @@ def main():
     try:
         # Fit the LSH index functor
         log.debug("Has LSH Functor to fit?")
-        nn_index.lsh_functor.fit(descr_list)
+        nn_index.lsh_functor.fit(descr_list)  # type: ignore
     except AttributeError as ex:
         log.debug("Has LSH Functor to fit - Nope: {}".format(str(ex)))
 

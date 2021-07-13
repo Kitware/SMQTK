@@ -46,9 +46,9 @@ def initialize_logging(logger, stream_level=logging.WARNING,
 
     if output_filepath:
         # TODO: Setup rotating part of the handler?
-        file_handler = logging.handlers.RotatingFileHandler(output_filepath,
-                                                            mode='w',
-                                                            delay=1)
+        file_handler = logging.handlers.RotatingFileHandler(
+            output_filepath, mode='w', delay=True
+        )
         file_handler.setFormatter(log_formatter)
         file_handler.setLevel(file_level or stream_level)
         logger.addHandler(file_handler)
@@ -117,7 +117,7 @@ def output_config(output_path, config_dict, log=None, overwrite=False,
     :type overwrite: bool
 
     :param error_rc: Custom integer error return code to use instead of 1.
-    ;type error_rc: int
+    :type error_rc: int
 
     :param log: Optionally logging instance. Otherwise we use a local one.
     :type log: logging.Logger
@@ -402,7 +402,7 @@ def utility_main_helper(default_config, args, additional_logging_domains=(),
     :param additional_logging_domains: We initialize logging on the base
         ``smqtk`` and ``__main__`` namespace. Any additional namespaces under
         which logging should be reported should be added here as an iterable.
-    :type additional_logging_domains: collections.Iterable[str]
+    :type additional_logging_domains: collections.abc.Iterable[str]
 
     :param skip_logging_init: Skip initialize logging in this function because
         it is done elsewhere externally.

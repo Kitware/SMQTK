@@ -44,7 +44,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of descriptor elements to build index
             over.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
         check_empty_iterable(hashes, self._build_index,
@@ -62,7 +62,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of numpy boolean hash vectors to add to this
             index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
         check_empty_iterable(hashes, self._update_index,
@@ -74,7 +74,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of numpy boolean hash vectors to remove from
             this index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         :raises ValueError: No data available in the given iterable.
         :raises KeyError: One or more UIDs provided do not match any stored
@@ -133,7 +133,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of descriptor elements to build index
             over.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
 
@@ -148,7 +148,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of numpy boolean hash vectors to add to this
             index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
 
@@ -160,7 +160,7 @@ class HashIndex (SmqtkAlgorithm):
 
         :param hashes: Iterable of numpy boolean hash vectors to remove from
             this index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         :raises KeyError: One or more hashes provided do not match any stored
             hashes.  The index should not be modified.

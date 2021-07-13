@@ -1,15 +1,13 @@
-from __future__ import (absolute_import, division, print_function)
-
 import base64
 import json
 import math
-import mock
+import unittest.mock as mock
 import os
 import unittest
 
 from six.moves import cPickle as pickle
 
-from smqtk.algorithms import Classifier
+from smqtk.algorithms import Classifier, RankRelevancy
 from smqtk.iqr import IqrSession
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
@@ -35,28 +33,35 @@ class TestClassifierService (unittest.TestCase):
         super(TestClassifierService, self).setUp()
         self.config = SmqtkClassifierService.get_default_config()
 
-        self.config['classification_factory']['type'] = \
-            'MemoryClassificationElement'
-        del self.config['classification_factory']['FileClassificationElement']
+        key_mce = "smqtk.representation.classification_element.memory.MemoryClassificationElement"
+        key_c_dummy = "tests.web.classifier_service.dummy_classifier.DummyClassifier"
+        key_dme = "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
+        key_dg_dummy = "tests.web.classifier_service.dummy_descriptor_generator.DummyDescriptorGenerator"
+        key_sc_dummy = "tests.web.classifier_service.dummy_classifier.DummySupervisedClassifier"
+
+        self.config['classification_factory']['type'] = key_mce
+        # del self.config['classification_factory'][
+        #     'smqtk.representation.classification_element.file'
+        #     '.FileClassificationElement'
+        # ]
 
         del self.config['classifier_collection']['__example_label__']
         self.dummy_label = 'dummy'
         self.config['classifier_collection'][self.dummy_label] = {
-            'DummyClassifier': {},
-            'type': 'DummyClassifier'
+            key_c_dummy: {},
+            'type': key_c_dummy
         }
         self.config['immutable_labels'] = [self.dummy_label]
 
-        self.config['descriptor_factory']['type'] = 'DescriptorMemoryElement'
-        del self.config['descriptor_factory']['DescriptorFileElement']
+        self.config['descriptor_factory']['type'] = key_dme
+        # del self.config['descriptor_factory']['DescriptorFileElement']
 
         self.config['descriptor_generator'] = {
-            'DummyDescriptorGenerator': {},
-            'type': 'DummyDescriptorGenerator'
+            key_dg_dummy: {},
+            'type': key_dg_dummy
         }
 
-        self.config['iqr_state_classifier_config']['type'] = \
-            'DummySupervisedClassifier'
+        self.config['iqr_state_classifier_config']['type'] = key_sc_dummy
 
         self.config['enable_classifier_removal'] = True
 
@@ -69,10 +74,10 @@ class TestClassifierService (unittest.TestCase):
         self.assertEqual(rv.status_code, code)
 
     def assertResponseMessageRegex(self, rv, regex):
-        self.assertRegexpMatches(json.loads(rv.data.decode())['message'], regex)
+        self.assertRegex(json.loads(rv.data.decode())['message'], regex)
 
     def assertMessage(self, resp_data, message):
-        self.assertEqual(resp_data['message'], message)
+        self.assertEqual(message, resp_data['message'])
 
     def test_server_alive(self):
         rv = self.app.test_client().get('/is_ready')
@@ -223,9 +228,7 @@ class TestClassifierService (unittest.TestCase):
         new_label = 'dummy2'
 
         with self.app.test_client() as cli:
-            rv = cli.get('/classifier', data={
-                'label': old_label,
-            })
+            rv = cli.get(f'/classifier?label={old_label}')
             self.assertStatus(rv, 200)
             enc_data = rv.data.decode()
 
@@ -391,13 +394,171 @@ class TestClassifierService (unittest.TestCase):
             self.assertMessage(json.loads(rv.data.decode()),
                                "No label provided.")
 
-            rv = cli.get('/classifier', data={'label': label})
+            rv = cli.get(f'/classifier?label={label}')
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
             self.assertMessage(resp_data,
                                "Label '%s' does not refer to a classifier"
                                " currently registered." % label)
             self.assertEqual(resp_data['label'], label)
+
+    def test_classify_uids_no_classifiers(self):
+        """ Test that an empty result response comes back when no classifiers
+        are registered in the service. """
+        # Empty out the classifier collection for the purpose of this test.
+        for la in self.app.classifier_collection.labels():
+            self.app.classifier_collection.remove_classifier(la)
+
+        with self.app.test_client() as cli:
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=[0, 1, 2],  # just some meaningless UIDs
+            ))
+            self.assertStatus(rv, 200)
+            resp_data = json.loads(rv.data)
+            self.assertMessage(resp_data,
+                               "No classifiers currently loaded.")
+            assert resp_data['result'] == {}
+
+    def test_classify_uids_no_uid_list(self):
+        """ Test the appropriate error is returned when no UID list is
+        provided."""
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids")
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json, "No UIDs provided.")
+
+    def test_classify_uids_empty_uid_list(self):
+        """ Test the appropriate error is returned when an empty list is
+        provided. """
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list='[]'
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json, "No UIDs provided.")
+
+    def test_classify_uids_bad_uid_json(self):
+        """ Test that the appropriate error is returned when invalid JSON is
+        provided. """
+        uid_list_json = 'not json'
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=uid_list_json
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json, "Failed to parse JSON list of UIDs.")
+
+    def test_classify_uids_invalid_label_json(self):
+        """ Test providing labels but with a value that is invalid json and
+        that the appropriate error occurs. """
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps(['a', 'b', 'c']),
+                label="[",
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json,
+                               "Invalid label(s) specified: "
+                               "Label is not a properly formatted JSON nor a "
+                               "simple string.")
+
+    def test_classify_uids_invalid_label_json_value(self):
+        """ Test providing labels that is a valid json but not an acceptable
+        type and that the appropriate error occurs. """
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps(['a', 'b', 'c']),
+                label="{}",
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json,
+                               "Invalid label(s) specified: "
+                               "Label must be a list of strings or a single "
+                               "string (given type: dict).")
+
+    def test_classify_uids_invalid_label_json_inner_value(self):
+        """ Test providing a valid json string but with an inner value that is
+        not a string and that the appropriate error is returned. """
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps(['a', 'b', 'c']),
+                label='["label", []]',
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json,
+                               "Invalid label(s) specified: "
+                               "Label must be a list of strings or a single "
+                               "string: give a list of more than just strings "
+                               "(found type: list).")
+
+    def test_classify_uids_missing_labels(self):
+        """ Test providing a label for a classifier that is not present in the
+        service and that the appropriate error is returned. This check is
+        expected to occur before attempting descriptor retrieval or
+        classification. """
+        missing_clfrs = ['not-present', 'dummy']
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps(['a', 'b', 'c']),
+                label=json.dumps(missing_clfrs),
+            ))
+            self.assertStatus(rv, 404)
+            rv_json = rv.json
+            # noinspection PyUnresolvedReferences
+            assert rv_json['message'].startswith(
+                "The following labels are not registered with any "
+                "classifiers: "
+            )
+            # noinspection PyUnresolvedReferences
+            assert set(rv_json['missing_labels']) == \
+                (set(missing_clfrs) - {"dummy"})
+
+    def test_classify_uids_missing_uids(self):
+        """ Test that the appropriate error occurs when requesting descriptor
+        UIDs that are not present in the configured descriptor set. """
+        # Default setup construction specifies a default, empty descriptor set
+        # so any UIDs will be "missing".
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps(['a', 'b', 'c']),
+            ))
+            self.assertStatus(rv, 400)
+            # noinspection PyTypeChecker
+            self.assertMessage(rv.json, "One or more input UIDs did not exist "
+                                        "in the configured descriptor set!")
+
+    def test_classify_uids(self):
+        """ Test a simple invocation. """
+        # Add a single descriptor to the default empty DescriptorSet.
+        self.app.descriptor_set.add_descriptor(
+            DescriptorMemoryElement('test', 0).set_vector([0]))
+        with self.app.test_client() as cli:
+            #: :type: requests.Response
+            rv = cli.post("classify_uids", data=dict(
+                uid_list=json.dumps([0]),
+            ))
+            self.assertStatus(rv, 200)
+            rv_json = rv.json
+            # DummyClassifier impl is known to just return 50/50
+            # classifications.
+            # noinspection PyUnresolvedReferences
+            assert rv_json['result'] == {
+                "dummy": [{"positive": 0.5, "negative": 0.5}]
+            }
 
     def test_classify_failures(self):
         content_type = 'text/plain'
@@ -411,6 +572,7 @@ class TestClassifierService (unittest.TestCase):
         missing_clfrs_4 = ['foo', 'bar']
 
         with self.app.test_client() as cli:
+            # When we provide no base-64 data
             rv = cli.post('/classify', data={
                 'content_type': content_type,
             })
@@ -418,6 +580,7 @@ class TestClassifierService (unittest.TestCase):
             self.assertMessage(json.loads(rv.data.decode()),
                                "No base-64 bytes provided.")
 
+            # When we provide no content type for the data provided.
             rv = cli.post('/classify', data={
                 'bytes_b64': bytes_b64,
             })
@@ -425,6 +588,7 @@ class TestClassifierService (unittest.TestCase):
             self.assertMessage(json.loads(rv.data.decode()),
                                "No content type provided.")
 
+            # When we provide invalid JSON for the labels.
             rv = cli.post('/classify', data={
                 'content_type': content_type,
                 'bytes_b64': bytes_b64,
@@ -432,8 +596,11 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 400)
             self.assertMessage(json.loads(rv.data.decode()),
-                               "Label(s) are not properly formatted JSON.")
+                               "Invalid label(s) specified: "
+                               "Label is not a properly formatted JSON nor a "
+                               "simple string.")
 
+            # When we provide valid json, but neither a string nor list
             rv = cli.post('/classify', data={
                 'content_type': content_type,
                 'bytes_b64': bytes_b64,
@@ -441,9 +608,11 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 400)
             self.assertMessage(json.loads(rv.data.decode()),
-                               "Label must be a list of strings or a single"
-                               " string.")
+                               "Invalid label(s) specified: "
+                               "Label must be a list of strings or a single "
+                               "string (given type: dict).")
 
+            # When one value of a list of labels is not a string.
             rv = cli.post('/classify', data={
                 'content_type': content_type,
                 'bytes_b64': bytes_b64,
@@ -451,9 +620,13 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 400)
             self.assertMessage(json.loads(rv.data.decode()),
-                               "Label must be a list of strings or a single"
-                               " string.")
+                               "Invalid label(s) specified: "
+                               "Label must be a list of strings or a "
+                               "single string: give a list of more "
+                               "than just strings (found type: dict).")
 
+            # When providing labels for classifiers not present in the service.
+            # 4 variations.
             rv = cli.post('/classify', data={
                 'content_type': content_type,
                 'bytes_b64': bytes_b64,
@@ -461,7 +634,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -474,7 +647,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -487,7 +660,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -500,7 +673,7 @@ class TestClassifierService (unittest.TestCase):
             })
             self.assertStatus(rv, 404)
             resp_data = json.loads(rv.data.decode())
-            self.assert_(resp_data['message'].startswith(
+            self.assertTrue(resp_data['message'].startswith(
                 "The following labels are not registered with any"
                 " classifiers:"))
             self.assertSetEqual(set(resp_data['missing_labels']),
@@ -637,7 +810,8 @@ class TestClassifierService (unittest.TestCase):
         serialization.
         """
         # Make a simple session with dummy adjudication descriptor elements
-        iqrs = IqrSession(session_uid=str("0"))
+        rank_relevancy = mock.MagicMock(spec=RankRelevancy)
+        iqrs = IqrSession(rank_relevancy, session_uid=str("0"))
         iqr_p1 = DescriptorMemoryElement('test', 0).set_vector([0])
         iqr_n1 = DescriptorMemoryElement('test', 1).set_vector([1])
         iqrs.adjudicate(

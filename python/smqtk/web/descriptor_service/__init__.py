@@ -6,7 +6,7 @@ import flask
 import requests
 
 from smqtk.algorithms import DescriptorGenerator
-from smqtk.representation import DescriptorElementFactory
+from smqtk.representation import DataElement, DescriptorElementFactory
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
@@ -120,10 +120,10 @@ class DescriptorServiceServer (SmqtkWebApp):
             # Mapping of configuration label to content types that generator
             # can handle
             r = {}
-            for l in self.generator_label_configs:
-                d = self.get_descriptor_inst(l)
+            for label in self.generator_label_configs:
+                d = self.get_descriptor_inst(label)
                 all_types.update(d.valid_content_types())
-                r[l] = sorted(d.valid_content_types())
+                r[label] = sorted(d.valid_content_types())
 
             return flask.jsonify({
                 "all": sorted(all_types),
@@ -162,19 +162,19 @@ class DescriptorServiceServer (SmqtkWebApp):
             descriptors = {}
             finished_loop = False
             if data_elem:
-                for l in self.generator_label_configs:
+                for label in self.generator_label_configs:
                     if data_elem.content_type() in \
-                            self.get_descriptor_inst(l).valid_content_types():
+                                self.get_descriptor_inst(label).valid_content_types():
                         d = None
                         try:
-                            d = self.generate_descriptor(data_elem, l)
+                            d = self.generate_descriptor(data_elem, label)
                         except RuntimeError as ex:
                             message = "Descriptor extraction failure: %s" \
                                       % str(ex)
                         except ValueError as ex:
                             message = "Data content type issue: %s" % str(ex)
 
-                        descriptors[l] = d and d.vector().tolist()
+                        descriptors[label] = d and d.vector().tolist()
                 if not descriptors:
                     message = "No descriptors can handle URI content type: %s" \
                               % data_elem.content_type
@@ -298,6 +298,7 @@ class DescriptorServiceServer (SmqtkWebApp):
 
         """
         # Resolve URI into appropriate DataElement instance
+        de: DataElement
         if uri[:7] == "file://":
             self._log.debug("Given local disk filepath")
             filepath = uri[7:]

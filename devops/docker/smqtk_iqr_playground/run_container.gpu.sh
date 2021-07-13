@@ -10,21 +10,13 @@
 #
 set -e
 
-CONTAINER_NAME="smqtk_iqr_gpu"
+# Container image to use
+IQR_CONTAINER=kitware/smqtk/iqr_playground
+IQR_CONTAINER_VERSION="latest-cuda9.2-cudnn7-runtime-ubuntu18.04"
+# Name for run container instance
+CONTAINER_NAME="smqtk-iqr-playground-gpu"
 IQR_GUI_PORT_PUBLISH=5000
 IQR_REST_PORT_PUBLISH=5001
-
-# Replace SOMETHING_HERE by the real version (probably a date)
-IMAGE_VERSION=`docker image ls | grep iqr | awk '{print $2}' | cut -d\- -f1`
-if [ -z "$IMAGE_VERSION" ]; then
-    echo "Unable to determine image version from Docker. Exiting."
-    exit 2
-fi
-
-GPU_SUFFIX=-gpu-cuda8-cudnn6
-
-IQR_CONTAINER=kitware/smqtk/iqr_playground
-IQR_CONTAINER_VERSION="${IMAGE_VERSION}${GPU_SUFFIX}"
 
 if [ -z "$( docker ps -a | grep "${CONTAINER_NAME}" 2>/dev/null )" ]
 then
@@ -36,7 +28,7 @@ then
     exit 1
   fi
   shift
-  nvidia-docker run -d \
+  docker run -d --gpus all \
     -p ${IQR_GUI_PORT_PUBLISH}:5000 \
     -p ${IQR_REST_PORT_PUBLISH}:5001 \
     -v "${IMAGE_DIR}":/images \

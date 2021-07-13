@@ -1,13 +1,13 @@
 import logging
 import multiprocessing
 import multiprocessing.queues
+import queue
 import sys
 import threading
 import time
+from typing import Type, Union
 
 import numpy
-from six import next
-from six.moves import queue
 
 from smqtk.utils import SmqtkObject
 
@@ -34,8 +34,8 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         into a matrix. Each element should contain descriptor vectors of the
         same size.
     :type descr_elements:
-        collections.Sequence[smqtk.representation.DescriptorElement] |
-        collections.Iterable[smqtk.representation.DescriptorElement]
+        collections.abc.Sequence[smqtk.representation.DescriptorElement] |
+        collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
     :param mat: Optionally a pre-constructed numpy matrix of the shape
         ``(nDescriptors, nFeatures)`` to load descriptor vectors into. We will
@@ -95,6 +95,9 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
 
     # Choose parallel types
     worker_kwds = {}
+    queue_t: Union[Type[multiprocessing.Queue], Type[queue.Queue]]
+    worker_t: Union[Type[_ElemVectorExtractorProcess],
+                    Type[_ElemVectorExtractorThread]]
     if use_multiprocessing:
         queue_t = multiprocessing.Queue
         worker_t = _ElemVectorExtractorProcess
@@ -107,11 +110,16 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             % thread_q_put_interval
         worker_kwds['q_put_interval'] = thread_q_put_interval
 
-    in_q = queue_t()
-    out_q = queue_t(int(procs * buffer_factor))
+    # Type ignoring these calls due to a mypy issue where it's deducing the
+    # type to `<nothing>` for some reason.
+    in_q = queue_t()  # type: ignore
+    out_q = queue_t(int(procs * buffer_factor))  # type: ignore
+    worker_kwds['in_q'] = in_q
+    worker_kwds['out_q'] = out_q
     # Workers for async extraction
     log.debug("constructing worker processes")
-    workers = [worker_t(i, in_q, out_q, **worker_kwds) for i in range(procs)]
+    workers = [worker_t(i=i, **worker_kwds)
+               for i in range(procs)]
 
     in_queue_t = _FeedQueueThread(descr_elements, in_q, mat, len(workers))
 
@@ -153,13 +161,13 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             # Try to get something from each queue, expecting an empty exception
             try:
                 in_q.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("In queue not empty")
             try:
                 out_q.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("Out queue not empty")
@@ -177,6 +185,10 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
             # Forcibly terminate worker processes if still alive
             log.debug("Joining/Terminating process workers")
             for w in workers:
+                assert isinstance(w, _ElemVectorExtractorProcess), (
+                    "When in multiprocessing mode, workers ought to be "
+                    "processes."
+                )
                 if w.is_alive():
                     w.terminate()
                 w.join()
@@ -188,6 +200,9 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         else:
             log.debug("Stopping/Joining threaded workers")
             for w in workers:
+                assert isinstance(w, _ElemVectorExtractorThread), (
+                    "When in threading mode, workers ought to be threads."
+                )
                 w.stop()
                 # w.join()
                 # Threads should exit fine from here
@@ -211,7 +226,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self._stop_event.set()
 
     def stopped(self):
-        return self._stop_event.isSet()
+        return self._stop_event.is_set()
 
     def run(self):
         try:
@@ -313,7 +328,7 @@ class _ElemVectorExtractorThread (SmqtkObject, threading.Thread):
         self._stop_event.set()
 
     def stopped(self):
-        return self._stop_event.isSet()
+        return self._stop_event.is_set()
 
     def run(self):
         try:

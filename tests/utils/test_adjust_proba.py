@@ -30,15 +30,15 @@ class TestAdjustProba (unittest.TestCase):
         dim = 3
 
         proba = np.zeros((num, dim))
-        self.assertRaisesRegexp(ValueError,
-                                "At least one probability must be positive",
-                                probability.adjust_proba, proba, [1, 2, 3])
+        self.assertRaisesRegex(ValueError,
+                               "At least one probability must be positive",
+                               probability.adjust_proba, proba, [1, 2, 3])
 
         proba[1] = -1.0
         proba[2] = 1.0
-        self.assertRaisesRegexp(ValueError,
-                                "Probabilities must be at least 0",
-                                probability.adjust_proba, proba, [1, 2, 3])
+        self.assertRaisesRegex(ValueError,
+                               "Probabilities must be at least 0",
+                               probability.adjust_proba, proba, [1, 2, 3])
 
     def test_shape_cases(self):
 
@@ -46,21 +46,21 @@ class TestAdjustProba (unittest.TestCase):
         dim = 3
 
         proba = np.random.rand(num, dim)
-        self.assertRaisesRegexp(ValueError,
-                                "The dimensions of probabilities and "
-                                "adjustments must be compatible.",
-                                probability.adjust_proba, proba, [1, 2])
+        self.assertRaisesRegex(ValueError,
+                               "The dimensions of probabilities and "
+                               "adjustments must be compatible.",
+                               probability.adjust_proba, proba, [1, 2])
 
         proba = np.random.rand(1, dim)
         proba /= proba.sum()
         self.assertTrue(
             np.allclose(proba, probability.adjust_proba(proba, [1, 1, 1])))
 
-        self.assertRaisesRegexp(ValueError,
-                                "The dimensions of probabilities and "
-                                "adjustments must be compatible.",
-                                probability.adjust_proba,
-                                np.ones((num, 1)), np.ones((1, num)))
+        self.assertRaisesRegex(ValueError,
+                               "The dimensions of probabilities and "
+                               "adjustments must be compatible.",
+                               probability.adjust_proba,
+                               np.ones((num, 1)), np.ones((1, num)))
 
     def test_adjust_constant(self):
 

@@ -1,11 +1,11 @@
 import itertools
 import logging
+from typing import Dict, Optional
 
 import numpy
 import PIL.Image
 import PIL.ImageFile
 from six import BytesIO
-from six.moves import zip
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
 from smqtk.representation import DataElement
@@ -15,7 +15,7 @@ from smqtk.utils.dict import merge_dict
 from smqtk.utils.parallel import parallel_map
 
 try:
-    import caffe
+    import caffe  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__).warning("Failed to import caffe module: %s",
                                         str(ex))
@@ -82,8 +82,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             config_dict['image_mean'] = \
                 from_config_dict(config_dict['image_mean'], data_elem_impl_set)
 
-        return super(CaffeDescriptorGenerator, cls)\
-            .from_config(config_dict, merge_default=False)
+        return super(CaffeDescriptorGenerator, cls).from_config(config_dict, merge_default=False)
 
     def __init__(self, network_prototxt, network_model,
                  image_mean=None, return_layer='fc7',
@@ -311,6 +310,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
         :rtype: dict
 
         """
+        image_mean_config: Optional[Dict]
         if self.image_mean is not None:
             image_mean_config = to_config_dict(self.image_mean)
         else:
@@ -353,15 +353,19 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[DataElement] data_iter:
+        :param collections.abc.Iterable[DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
+        assert self.network is not None, (
+            "A network should be initialized by now."
+        )
+
         self._set_caffe_mode()
         log_debug = self._log.debug
 
@@ -403,7 +407,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
             for v in descriptor_list:
                 if v.ndim > 1:
                     # In case caffe generates multidimensional array
-                    # (rows, 1, 1)
+                    # like (rows, 1, 1)
                     log_debug("- Raveling output array of shape {}"
                               .format(v.shape))
                     yield numpy.ravel(v)
@@ -411,7 +415,7 @@ class CaffeDescriptorGenerator (DescriptorGenerator):
                     yield v
 
             # Slice out the next batch
-            #: :type: list[(collections.Hashable, numpy.ndarray)]
+            #: :type: list[(collections.abc.Hashable, numpy.ndarray)]
             batch_img_arrays = \
                 list(itertools.islice(img_array_iter, self.batch_size))
             batch_i += 1
@@ -435,7 +439,7 @@ def _process_load_img_array(input_tuple):
         map function. See above for content details.
 
     :return: Input DataElement UUID and Pre-processed numpy array.
-    :rtype: (collections.Hashable, numpy.ndarray)
+    :rtype: (collections.abc.Hashable, numpy.ndarray)
 
     """
     # data_element: DataElement providing bytes

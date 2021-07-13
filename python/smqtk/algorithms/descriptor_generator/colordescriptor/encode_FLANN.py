@@ -17,12 +17,13 @@ import os
 import os.path as osp
 import numpy as np
 import csv
+from typing import TextIO
 
 
 # These functions should only be called by colordescriptor.py module, which is
 # only available if pyflann is available by the following check
 try:
-    import pyflann
+    import pyflann  # type: ignore
 except ImportError:
     pyflann = None
 
@@ -117,12 +118,13 @@ def flann_quantize_data(flann,
     assert not (fileout_gzipped and fileout_bzipped), \
         "Output file cannot be declared as both gzipped and bzipped."
 
+    fin: TextIO
     if filein_gzipped or os.path.splitext(filein_name)[1] == '.gz':
-        fin = gzip.open(filein_name, 'rb')
+        fin = gzip.open(filein_name, 'rt')
     elif filein_bzipped or os.path.splitext(filein_name)[1] == '.bz2':
-        fin = bz2.BZ2File(filein_name, 'rb')
+        fin = bz2.open(filein_name, 'rt')
     else:
-        fin = open(filein_name, 'rb')
+        fin = open(filein_name, 'r')
 
     # tracks how many lines are read from file
     count1 = 0
@@ -130,11 +132,11 @@ def flann_quantize_data(flann,
     count2 = 0
     lines = []
 
-    fout = None
+    fout: TextIO
     if fileout_gzipped or os.path.splitext(fileout_name)[1] == '.gz':
-        fout = gzip.open(fileout_name, 'w')
+        fout = gzip.open(fileout_name, 'wt')
     elif fileout_bzipped or os.path.splitext(fileout_name)[1] == '.bz2':
-        fout = bz2.BZ2File(fileout_name, 'w')
+        fout = bz2.open(fileout_name, 'wt')
     else:
         fout = open(fileout_name, 'w')
 

@@ -54,11 +54,11 @@ class TestContextualReadWriteLock (unittest.TestCase):
         """ Assert key in state """
         self.assertIn(k, self.state)
 
-    def assertLockFree(self, l):
-        self.assertEqual(l._semlock._get_value(), 1)
+    def assertLockFree(self, lock):
+        self.assertEqual(lock._semlock._get_value(), 1)
 
-    def assertLockAcquired(self, l):
-        self.assertEqual(l._semlock._get_value(), 0)
+    def assertLockAcquired(self, lock):
+        self.assertEqual(lock._semlock._get_value(), 0)
 
     # Unit Tests
 

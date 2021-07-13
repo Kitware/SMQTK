@@ -1,7 +1,5 @@
-from __future__ import division, print_function
 from math import sqrt
 import unittest
-import pytest
 
 import numpy
 import six
@@ -44,16 +42,16 @@ class TestItqFunctor (unittest.TestCase):
 
         new_parts = {
             'mean_vec_cache': {
-                'DataMemoryElement': {
+                'smqtk.representation.data_element.memory_element.DataMemoryElement': {
                     'bytes': expected_mean_vec_str
                 },
-                'type': 'DataMemoryElement'
+                'type': 'smqtk.representation.data_element.memory_element.DataMemoryElement'
             },
             'rotation_cache': {
-                'DataMemoryElement': {
+                'smqtk.representation.data_element.memory_element.DataMemoryElement': {
                     'bytes': expected_rotation_str
                 },
-                'type': 'DataMemoryElement'
+                'type': 'smqtk.representation.data_element.memory_element.DataMemoryElement'
             },
             'bit_length': 153,
             'itq_iterations': 7,
@@ -122,11 +120,14 @@ class TestItqFunctor (unittest.TestCase):
         self.assertEqual(c['itq_iterations'], 6)
         self.assertEqual(c['normalize'], 7)
         self.assertEqual(c['random_seed'], 8)
-        self.assertEqual(c['mean_vec_cache']['type'], "DataMemoryElement")
+        dme_key = ('smqtk.representation.data_element.memory_element'
+                   '.DataMemoryElement')
+        self.assertEqual(c['mean_vec_cache']['type'],
+                         dme_key)
         # Check using string encodings of set bytes (JSON compliant).
-        self.assertEqual(c['mean_vec_cache']['DataMemoryElement']['bytes'],
+        self.assertEqual(c['mean_vec_cache'][dme_key]['bytes'],
                          'cached vec bytes')
-        self.assertEqual(c['rotation_cache']['DataMemoryElement']['bytes'],
+        self.assertEqual(c['rotation_cache'][dme_key]['bytes'],
                          'cached rot bytes')
 
     def test_has_model(self):
@@ -220,7 +221,7 @@ class TestItqFunctor (unittest.TestCase):
         itq = ItqFunctor()
         itq.mean_vec = 'sim vec'
         itq.rotation = 'sim rot'
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "Model components have already been loaded.",
             itq.fit, []
@@ -237,7 +238,7 @@ class TestItqFunctor (unittest.TestCase):
             fit_descriptors.append(d)
 
         itq = ItqFunctor(bit_length=8)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Input descriptors have fewer features than requested bit encoding",
             itq.fit, fit_descriptors
@@ -246,7 +247,7 @@ class TestItqFunctor (unittest.TestCase):
         self.assertIsNone(itq.rotation)
 
         # Should behave the same when input is an iterable
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             "Input descriptors have fewer features than requested bit encoding",
             itq.fit, iter(fit_descriptors)

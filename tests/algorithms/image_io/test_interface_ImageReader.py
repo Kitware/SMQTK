@@ -1,4 +1,4 @@
-from six.moves import mock
+import unittest.mock as mock
 import numpy as np
 import pytest
 

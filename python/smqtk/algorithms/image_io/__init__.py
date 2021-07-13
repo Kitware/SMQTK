@@ -1,1 +1,1 @@
-from ._interface import ImageReader
+from ._interface import ImageReader  # noqa: F401

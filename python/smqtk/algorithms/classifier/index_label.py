@@ -31,7 +31,7 @@ class IndexLabelClassifier (Classifier):
 
         # load label vector
         self.index_to_label_uri = index_to_label_uri
-        self.label_vector = [l.strip() for l in
+        self.label_vector = [line.strip() for line in
                              from_uri(index_to_label_uri).to_buffered_reader()]
 
     def get_config(self):
@@ -54,7 +54,7 @@ class IndexLabelClassifier (Classifier):
         classify descriptors into.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[str]
+        :rtype: collections.abc.Sequence[str]
 
         """
         # copying container

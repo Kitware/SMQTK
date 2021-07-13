@@ -89,7 +89,7 @@ class FeatureMemory (object):
         :type id_vector: ndarray of int
         :param bg_clip_ids: Set of clip IDs that are to be treated as background
             clip IDs.
-        :type bg_clip_ids: set of int
+        :type bg_clip_ids: set[int]
         :param feature_mat: (numpy) Matrix of features for clip IDs. Features
             should be stored vertically, i.e. Each row is a feature for a
             particular clip ID (id_vector being the index-to-clipID map).
@@ -144,7 +144,7 @@ class FeatureMemory (object):
             self._rw_lock = ReadWriteLock()
 
         self._id_vector = id_vector
-        self._bg_clip_ids = bg_clip_ids
+        self._bg_clip_ids = set(bg_clip_ids)
         self._feature_mat = feature_mat
         self._kernel_mat = kernel_mat
 
@@ -271,9 +271,9 @@ class FeatureMemory (object):
             with SimpleTimer("Allocating return matrix", self._log.debug):
                 # noinspection PyUnresolvedReferences
                 # -> matrix class DOES have ``dtype`` property...
-                ret_mat = matrix(ndarray((len(clip_id_or_ids),
-                                          self._feature_mat.shape[1]),
-                                         self._feature_mat.dtype))
+                ret_mat = np.ndarray((len(clip_id_or_ids),
+                                      self._feature_mat.shape[1]),
+                                     self._feature_mat.dtype)
             for i, cid in enumerate(clip_id_or_ids):
                 feature_idx = self._cid2idx_map[cid]
                 ret_mat[i, :] = self._feature_mat[feature_idx, :]

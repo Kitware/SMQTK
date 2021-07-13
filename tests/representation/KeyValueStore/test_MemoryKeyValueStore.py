@@ -1,6 +1,6 @@
 import unittest
 
-import mock
+import unittest.mock as mock
 import six
 from six.moves import cPickle as pickle
 
@@ -58,11 +58,12 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             pickle.dumps(expected_table).decode(BYTES_CONFIG_ENCODING)
 
         # Test construction with memory data element.
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         config = {'cache_element': {
-            'DataMemoryElement': {
+            dme_key: {
                 'bytes': empty_dict_pickle_str,
             },
-            'type': 'DataMemoryElement'
+            'type': dme_key
         }}
         s = MemoryKeyValueStore.from_config(config)
         self.assertIsInstance(s._cache_element, DataMemoryElement)
@@ -153,13 +154,14 @@ class TestMemoryKeyValueStore (unittest.TestCase):
         s = MemoryKeyValueStore()
         s._cache_element = DataMemoryElement(b'someBytes', 'text/plain',
                                              readonly=False)
+        dme_key = 'smqtk.representation.data_element.memory_element.DataMemoryElement'
         expected_config = {'cache_element': {
-            "DataMemoryElement": {
+            dme_key: {
                 'bytes': 'someBytes',
                 'content_type': 'text/plain',
                 'readonly': False,
             },
-            'type': 'DataMemoryElement'
+            'type': dme_key
         }}
         self.assertEqual(s.get_config(), expected_config)
 
@@ -407,7 +409,7 @@ class TestMemoryKeyValueStore (unittest.TestCase):
             2: 2,
         }
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, 'a',
             s.remove_many, ['a']
         )
@@ -415,15 +417,15 @@ class TestMemoryKeyValueStore (unittest.TestCase):
 
         # Even if one of the keys is value, the table should not be modified if
         # one of the keys is invalid.
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError, '6',
             s.remove_many, [1, 6]
         )
         self.assertDictEqual(s._table, expected_table)
 
-        PY2_SET_KEY_ERROR_RE = "set\(\[(?:7|8), (?:7|8)\]\)"
+        PY2_SET_KEY_ERROR_RE = r"set\(\[(?:7|8), (?:7|8)\]\)"
         PY3_SET_KEY_ERROR_RE = "{(?:7|8), (?:7|8)}"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             # Should show a "set" that contains 7 and 8, regardless of order.
             '(?:{}|{})'.format(PY2_SET_KEY_ERROR_RE, PY3_SET_KEY_ERROR_RE),

@@ -4,12 +4,12 @@ Utilities for URLs
 import re
 
 
-PROTOCOL_HEADER = re.compile('\w+://')
+PROTOCOL_HEADER = re.compile(r'\w+://')
 URL_SEP = '/'
 
 
 def url_join(url, *urls):
-    """
+    r"""
     Join one or more URL components intelligently.
 
     The return is the concatenation of ``url`` and any members of ``*urls`` with

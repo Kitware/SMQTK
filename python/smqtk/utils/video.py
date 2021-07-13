@@ -47,12 +47,14 @@ def get_metadata_info(video_filepath, ffprobe_exe='ffprobe'):
 
     """
     log = logging.getLogger('.'.join([__name__, 'get_metadata_info']))
-    re_float_match = "[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
+    re_float_match = r"[+-]?(?:(?:\d+\.?\d*)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 
     log.debug("Using ffprobe: %s", ffprobe_exe)
     cmd = [ffprobe_exe, '-i', video_filepath]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE,
+                         # because we want str in `communicate`.
+                         universal_newlines=True)
     out, err = p.communicate()
     # ffprobe puts output to err stream
     if p.returncode:  # non-zero
@@ -60,7 +62,7 @@ def get_metadata_info(video_filepath, ffprobe_exe='ffprobe'):
                            % err)
 
     # WxH
-    m = re.search("Stream.*Video.* (\d+)x(\d+)", err)
+    m = re.search(r"Stream.*Video.* (\d+)x(\d+)", err)
     if m:
         width = int(m.group(1))
         height = int(m.group(2))
@@ -83,7 +85,7 @@ def get_metadata_info(video_filepath, ffprobe_exe='ffprobe'):
                                "video file '%s'" % video_filepath)
 
     # Duration
-    m = re.search("Duration: (\d+):(\d+):(%s)" % re_float_match, err)
+    m = re.search(r"Duration: (\d+):(\d+):(%s)" % re_float_match, err)
     if m:
         duration = (
             (60 * 60 * int(m.group(1)))     # hours
@@ -164,7 +166,7 @@ def ffmpeg_extract_frame_map(working_dir, video_filepath, second_offset=0,
         Providing explicit frames causes offset, interval and duration
         parameters to be ignored and only the frames specified here to be
         extracted and returned.
-    :type frames: collections.Iterable[int]
+    :type frames: collections.abc.Iterable[int]
 
     :param output_image_ext: Extension to use for output images.
     :type output_image_ext: str

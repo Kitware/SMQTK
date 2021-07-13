@@ -1,14 +1,15 @@
-import collections
+from collections.abc import Iterator
 import heapq
+from itertools import zip_longest
 import logging
 import multiprocessing
 import multiprocessing.queues
 import multiprocessing.synchronize
+import queue
 import sys
 import threading
 import traceback
-
-from six.moves import queue, range, zip, zip_longest
+from typing import Type, Optional, Union
 
 from smqtk.utils import SmqtkObject
 
@@ -32,7 +33,7 @@ def parallel_map(work_func, *sequences, **kwargs):
         - No set-up or clean-up needed
         - No performance loss compared to ``multiprocessing.pool`` classes
           for non-trivial work functions (like IO operations).
-        - We iterate results as they are ready (optionally in order of
+        - We can iterate results as they are ready (optionally in order of
           input)
         - Lambda or on-the-fly function can be provided as the work function
           when using multiprocessing.
@@ -47,6 +48,42 @@ def parallel_map(work_func, *sequences, **kwargs):
     Input data given to ``sequences`` must be picklable in order to transport
     to worker threads/processes.
 
+    Input Iteration and Results Buffering
+    -------------------------------------
+    The buffer factor, ``F``, operates with the number of utilized cores,
+    ``C``, to create an upper bound on the times the input sequences are
+    iterated and the number of work function outputs are held in memory at any
+    given time.
+
+    The maximum number of input sequence items loaded at a time is
+    ``floor(C * F) + C``.
+    This is due to the input work queue ``maxsize`` being set to ``floor(C*F)``
+    while there can be ``C`` workers could be utilizing their inputs to
+    complete their work instances.
+
+    The maximum number of results queued is ``floor(C * F) + C``.
+    This is similarly due to the output result queue maxsize being set to
+    ``floor(C * F)`` while there can be ``C`` workers blocked on putting values
+    into a full results queue.
+
+    Sometimes its important to know how much farther ahead the input
+    iterator(s) have yielded compared to the number of output results from the
+    ``ParallelResultsIterator``.
+    For some yielded result at index ``N``, the input iterator(s) next yielded
+    item should be their index ``N + (2 * floor(C * F) + C)``. This is
+    derived from the input work and output result queues maximally filled with
+    at most ``floor(C * F)`` items and there being ``C`` workers working on, or
+    attempting to queue results for, their current inputs.
+    For example, if we have use ``C=4`` and ``F=1.5``, if result index N has just
+    been yielded, then the input iterators are ready to yield their
+    ``N + 16``-th indexed item (``2 * floor(4*1.5) + 4 = 2 * 6 + 4 = 16``).
+
+    The above is only guaranteed no the ``ordered`` option is ``False``,
+    otherwise non-determinism in processing order can cause results for input
+    items to return out of order, causing additional buffering in the heap used
+    to ensure ordered output which, necessarily, has no size limits so as to
+    not dead-lock.
+
     :param work_func:
         Function that performs some work on input data, resulting in some
         returned value.
@@ -59,7 +96,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     :param sequences: Input data to apply to the given ``work_func`` function.
         If more than one sequence is given, the function is called with an
         argument list consisting of the corresponding item of each sequence.
-    :type sequences: collections.Iterable
+    :type sequences: collections.abc.Iterable
 
     :param kwargs: Optionally available keyword arguments are as follows:
 
@@ -73,7 +110,7 @@ def parallel_map(work_func, *sequences, **kwargs):
               as input elements. If False, we yield results as soon as they are
               collected.
             - type: bool
-            - default: False
+            - default: True
 
         - buffer_factor
             - Multiplier against the number of processes used to limit the
@@ -110,6 +147,12 @@ def parallel_map(work_func, *sequences, **kwargs):
             - type: str
             - default: None
 
+        - daemon
+            - Optional flag for if started threads/processes are flagged as
+              daemonic.
+            - type: bool
+            - default: True
+
     :return: A new parallel results iterator that starts work on the input
         iterable when iterated.
     :rtype: ParallelResultsIterator
@@ -124,14 +167,15 @@ def parallel_map(work_func, *sequences, **kwargs):
     [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
     """
     # kwargs
-    cores = kwargs.get('cores', None)
-    ordered = kwargs.get('ordered', False)
+    cores: Optional[int] = kwargs.get('cores', None)
+    ordered = kwargs.get('ordered', True)
     buffer_factor = kwargs.get('buffer_factor', 2.0)
     use_multiprocessing = kwargs.get('use_multiprocessing', False)
     heart_beat = kwargs.get('heart_beat', 0.001)
     fill_activate = 'fill_void' in kwargs
     fill_value = kwargs.get('fill_void', None)
     name = kwargs.get('name', None)
+    daemon = kwargs.get('daemon', True)
 
     if name:
         log = logging.getLogger(__name__ + '[%s]' % name)
@@ -148,6 +192,8 @@ def parallel_map(work_func, *sequences, **kwargs):
         log.debug("Only using %d cores", cores)
 
     # Choose parallel types
+    queue_t: Union[Type[multiprocessing.Queue], Type[queue.Queue]]
+    worker_t: Type[_Worker]
     if use_multiprocessing:
         queue_t = multiprocessing.Queue
         worker_t = _WorkerProcess
@@ -155,8 +201,10 @@ def parallel_map(work_func, *sequences, **kwargs):
         queue_t = queue.Queue
         worker_t = _WorkerThread
 
-    queue_work = queue_t(int(cores * buffer_factor))
-    queue_results = queue_t(int(cores * buffer_factor))
+    # Type ignoring these calls due to a mypy issue where it's deducing the
+    # type to `<nothing>` for some reason.
+    queue_work = queue_t(maxsize=int(cores * buffer_factor))  # type: ignore
+    queue_results = queue_t(maxsize=int(cores * buffer_factor))  # type: ignore
 
     log.log(1, "Constructing worker processes")
     workers = [worker_t(name, i, work_func, queue_work, queue_results,
@@ -170,7 +218,8 @@ def parallel_map(work_func, *sequences, **kwargs):
 
     return ParallelResultsIterator(name, ordered, use_multiprocessing,
                                    heart_beat, queue_work,
-                                   queue_results, feeder_thread, workers)
+                                   queue_results, feeder_thread, workers,
+                                   daemon)
 
 
 class _TerminalPacket (object):
@@ -193,11 +242,11 @@ def is_terminal(p):
     return isinstance(p, _TerminalPacket)
 
 
-class ParallelResultsIterator (SmqtkObject, collections.Iterator):
+class ParallelResultsIterator (SmqtkObject, Iterator):
 
     def __init__(self, name, ordered, is_multiprocessing, heart_beat,
                  work_queue, results_queue,
-                 feeder_thread, workers):
+                 feeder_thread, workers, daemon):
         """
         :type ordered: bool
         :type is_multiprocessing: bool
@@ -206,6 +255,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
         :type results_queue: Queue.Queue | multiprocessing.queues.Queue
         :type feeder_thread: _FeedQueueThread
         :type workers: list[_WorkerThread|_WorkerProcess]
+        :type daemon: bool
         """
         if name:
             self.name = '[' + name + ']'
@@ -214,8 +264,8 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
 
         self.ordered = ordered
         if self.ordered:
-            self._log.debug("Maintaining result iteration order based on input "
-                            "order")
+            self._log.debug("Maintaining result iteration order based on "
+                            "input order")
         self.heart_beat = heart_beat
         self.is_multiprocessing = is_multiprocessing
 
@@ -223,6 +273,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
         self.results_queue = results_queue
         self.feeder_thread = feeder_thread
         self.workers = workers
+        self.daemon = daemon
 
         self.has_started_workers = False
         self.has_cleaned_up = False
@@ -266,7 +317,7 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
                     self.found_terminals += 1
                 elif isinstance(packet[0], Exception):
                     ex, formatted_exc = packet
-                    self._log.warn('Received exception: {}\n{}'.format(
+                    self._log.warning('Received exception: {}\n{}'.format(
                             ex, formatted_exc))
                     raise ex
                 else:
@@ -312,10 +363,11 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
         """
         self._log.log(1, "Starting worker processes")
         for w in self.workers:
+            w.daemon = self.daemon
             w.start()
 
         self._log.log(1, "Starting feeder thread")
-        # self.feeder_thread.daemon = True
+        self.feeder_thread.daemon = self.daemon
         self.feeder_thread.start()
 
         self.has_started_workers = True
@@ -379,15 +431,16 @@ class ParallelResultsIterator (SmqtkObject, collections.Iterator):
             # multiprocessing.Queue.qsize doesn't work on OSX
             # - Try to get something from each queue, expecting an empty
             #   exception.
+            # - multiprocessing shares the same exception as the queue module.
             try:
                 self.work_queue.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("In queue not empty")
             try:
                 self.results_queue.get(block=False)
-            except multiprocessing.queues.Empty:
+            except queue.Empty:
                 pass
             else:
                 raise AssertionError("Out queue not empty")
@@ -404,8 +457,8 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
 
     """
 
-    def __init__(self, name, arg_sequences, q, num_terminal_packets, heart_beat,
-                 do_fill, fill_value):
+    def __init__(self, name, arg_sequences, q, num_terminal_packets,
+                 heart_beat, do_fill, fill_value):
         threading.Thread.__init__(self, name=name)
         SmqtkObject.__init__(self)
 
@@ -436,7 +489,7 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
         self._stop_event.set()
 
     def stopped(self):
-        return self._stop_event.isSet()
+        return self._stop_event.is_set()
 
     def run(self):
         self._log.log(1, "Starting")
@@ -445,7 +498,10 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
             _zip = zip_longest
             _zip_kwds = {'fillvalue': self.fill_value}
         else:
-            _zip = zip
+            # Ignoring that the callable here doesn't *exactly* match
+            # zip_longest based on stubs: They match in the way that we use it
+            # here.
+            _zip = zip  # type: ignore
             _zip_kwds = {}
 
         try:
@@ -458,8 +514,9 @@ class _FeedQueueThread (SmqtkObject, threading.Thread):
                 if self.stopped():
                     self._log.log(1, "Told to stop prematurely")
                     break
-        except Exception as ex:
-            self._log.warn("Caught exception %s", type(ex))
+        # Transport back any exceptions raised
+        except (Exception, KeyboardInterrupt) as ex:
+            self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
         else:
@@ -532,7 +589,7 @@ class _Worker (SmqtkObject):
     def stopped(self):
         return self._stop_event.is_set()
 
-    def run(self):
+    def run(self) -> None:
         try:
             packet = self.q_get()
             while not self.stopped():
@@ -550,8 +607,8 @@ class _Worker (SmqtkObject):
                     self.q_put((i, result))
                     packet = self.q_get()
         # Transport back any exceptions raised
-        except Exception as ex:
-            self._log.warn("Caught exception %s", type(ex))
+        except (Exception, KeyboardInterrupt) as ex:
+            self._log.warning("Caught exception %s", type(ex))
             self.q_put((ex, traceback.format_exc()))
             self.stop()
         finally:

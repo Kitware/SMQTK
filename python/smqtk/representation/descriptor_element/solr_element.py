@@ -7,7 +7,7 @@ from smqtk.representation import DescriptorElement
 
 # Try to import required module
 try:
-    import solr
+    import solr  # type: ignore
 except ImportError:
     solr = None
 
@@ -39,7 +39,7 @@ class SolrDescriptorElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param solr_conn_addr: HTTP(S) address for the Solr index to use
         :type solr_conn_addr: str

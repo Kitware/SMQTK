@@ -33,6 +33,8 @@ class GirderTokenManager (SmqtkObject):
         self._api_key = api_key
         self._token = None
         self._expiration = None
+        # Baseline expiration time of, ya know, forever ago.
+        self.token_expiration = datetime.datetime(1, 1, 1)
 
     @property
     def api_root(self):

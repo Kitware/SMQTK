@@ -1,7 +1,6 @@
 import unittest
 
 import numpy
-from six.moves import zip
 
 from smqtk.algorithms.classifier.sklearn_logistic_regression import \
     SkLearnLogisticRegression
@@ -23,7 +22,7 @@ class TestSklearnLogisticRegressionClassifier (unittest.TestCase):
             random_state=456, solver='liblinear', max_iter=99,
             multi_class='multinomial', verbose=1, warm_start=True, n_jobs=2,
         )
-        for inst_i in configuration_test_helper(inst): # type: SkLearnLogisticRegression
+        for inst_i in configuration_test_helper(inst):  # type: SkLearnLogisticRegression
             assert inst.penalty == inst_i.penalty == 'l1'
             assert inst.dual is inst_i.dual is True
             assert inst.tol == inst_i.tol == 1e-6

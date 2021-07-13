@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 from unittest import TestCase
 
 import smqtk.exceptions

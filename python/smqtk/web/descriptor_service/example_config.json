@@ -18,8 +18,8 @@
     // descriptors for incoming data. This decides where computed descriptors
     // will temporarily/permanently live.
     "descriptor_factory": {
-        "DescriptorMemoryElement": {},
-        "type": "DescriptorMemoryElement"
+        "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement": {},
+        "type": "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
     },
     // Listing of descriptor generators available for descriptor computation.
     // These descriptors will need to already have models generated if they
@@ -29,18 +29,39 @@
     //      specified implementation type.
     "descriptor_generators": {
         "example_label": {
-            "type": "ColorDescriptor_Image_csift",
-            "ColorDescriptor_Image_csift": {
-                // The following paths should point to valid directories, with
-                // the model_directory having pre-trained model files in it.
-                "model_directory": "...data/example_image",
-                "work_directory": "...work/example_image",
-                "random_seed": 42,
-                "kmeans_k": 1024,
-                "flann_autotune": false,
-                "flann_sample_fraction": 0.75,
-                "flann_target_precision": 0.95,
-                "use_spatial_pyramid": false
+            "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator",
+            "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+                "network_model": {
+                    "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                    "smqtk.representation.data_element.file_element.DataFileElement": {
+                        "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                        "readonly":true
+                    }
+                },
+                "network_prototxt": {
+                    "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                    "smqtk.representation.data_element.file_element.DataFileElement": {
+                        "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+                        "readonly": true
+                    }
+                },
+                "image_mean": {
+                    "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                    "smqtk.representation.data_element.file_element.DataFileElement": {
+                        "filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+                        "readonly": true
+                    }
+                },
+                "return_layer": "fc7",
+                "batch_size": 256,
+                "use_gpu": false,
+                "gpu_device_id": 0,
+                "network_is_bgr": true,
+                "data_layer": "data",
+                "load_truncated_images": false,
+                "pixel_rescale": null,
+                "input_scale": null,
+                "threads": null
             }
         }
     }

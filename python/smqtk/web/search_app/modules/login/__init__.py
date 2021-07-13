@@ -1,1 +1,1 @@
-from .LoginMod import LoginMod
+from .LoginMod import LoginMod  # noqa: F401

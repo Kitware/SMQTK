@@ -6,7 +6,7 @@ from smqtk.representation import ClassificationElement
 
 # Try to import required modules
 try:
-    import psycopg2
+    import psycopg2  # type: ignore
 except ImportError:
     psycopg2 = None
 
@@ -101,7 +101,7 @@ class PostgresClassificationElement (ClassificationElement):
         :type type_name: str
 
         :param uuid: Unique ID reference of the classification
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param table_name: String label of the database table to use.
         :type table_name: str
@@ -254,7 +254,7 @@ class PostgresClassificationElement (ClassificationElement):
             set.
 
         :return: Label-to-confidence dictionary.
-        :rtype: dict[collections.Hashable, float]
+        :rtype: dict[collections.abc.Hashable, float]
 
         """
         q_select = self.SELECT_TMPL.format(**dict(
@@ -283,7 +283,7 @@ class PostgresClassificationElement (ClassificationElement):
                                             % (self.type_name, str(self.uuid)))
             else:
                 b = r[0]
-                c = cPickle.loads(str(b))
+                c = cPickle.loads(b)
                 return c
         except Exception:
             conn.rollback()
@@ -301,7 +301,7 @@ class PostgresClassificationElement (ClassificationElement):
         by providing a dictionary mapping labels to confidence values.
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable, float]
+        :type m: dict[collections.abc.Hashable, float]
 
         :raises ValueError: The given label-confidence map was empty.
 

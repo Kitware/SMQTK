@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import mock
+import unittest.mock as mock
 import unittest
 
 from smqtk.representation import DataSet
@@ -58,7 +58,7 @@ class TestDataSetAbstract (unittest.TestCase):
         ds = DummyDataSet()
         ds.get_data = mock.MagicMock(side_effect=expected_effect)
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             RuntimeError,
             "^not expected key$",
             ds.__getitem__, 'unexpectedKey'

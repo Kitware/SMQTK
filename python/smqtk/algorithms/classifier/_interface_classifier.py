@@ -1,11 +1,12 @@
 import abc
 from collections import deque
 import itertools
+from typing import Deque, List, Optional, Tuple
 
-from six.moves import zip
+import numpy as np
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.representation import DescriptorElement
+from smqtk.representation import ClassificationElement, DescriptorElement
 
 from ._defaults import DFLT_CLASSIFIER_FACTORY
 
@@ -24,7 +25,7 @@ class Classifier (SmqtkAlgorithm):
         classifier embodies such a concept.
 
         :return: Sequence of possible classifier labels.
-        :rtype: collections.Sequence[collections.Hashable]
+        :rtype: collections.abc.Sequence[collections.abc.Hashable]
 
         :raises RuntimeError: No model loaded.
 
@@ -46,13 +47,13 @@ class Classifier (SmqtkAlgorithm):
         manner whereby each label is given a confidence-like value in the
         [0, 1] range.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
+        :param collections.abc.Iterable[numpy.ndarray] array_iter:
             Iterable of arrays to be classified.
 
         :return: Iterable of dictionaries, parallel in association to the input
             descriptor vectors. Each dictionary should map labels to associated
             confidence values.
-        :rtype: collections.Iterable[dict[collections.Hashable, float]]
+        :rtype: collections.abc.Iterable[dict[collections.abc.Hashable, float]]
         """
 
     @staticmethod
@@ -65,27 +66,47 @@ class Classifier (SmqtkAlgorithm):
         of more than one dimension (i.e. 2D matries, etc.) will trigger a
         ValueError.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
+        Includes a short-cut where if the input is a non-object 2D ndarray,
+        dimensionality must already be consistent, so the ndarray (which is an
+        Iterable) is just returned. Otherwise, we return a generator that
+        checked dimensionality of the input iterable during iteration.
+
+        :param collections.abc.Iterable[numpy.ndarray] | np.ndarray array_iter:
             Iterable numpy arrays.
 
+        :raises AttributeError: Individual arrays are not numpy.ndarray-like.
         :raises ValueError: Not all input arrays were of consistent
             dimensionality.
 
         :return: Iterable of the same arrays in the same order, but validated
             to be of common dimensionality.
         """
-        dim = None
-        for a in array_iter:
-            if a.ndim > 1:
-                raise ValueError("Input vector had more than one dimension! "
-                                 "(ndim = {})".format(a.ndim))
-            elif dim is None:
-                dim = a.size
-            elif a.size != dim:
-                raise ValueError("Input vector violated dimension consistency "
-                                 "(basis == {}, violation == {})"
-                                 .format(dim, a.size))
-            yield a
+        try:
+            # If an ndarray is at least 2 dimensional and not made of just
+            # objects then its shape *will* be consistent.
+            if array_iter.ndim > 1 and array_iter.dtype != np.object:
+                return array_iter
+        except AttributeError:
+            # If we don't encounter numpy array-like syntax proceed with
+            # generic iterable fallback.
+            pass
+
+        # Fall-back: manually checking that iterated arrays are 1D and of
+        # consistent size.
+        def _inner():
+            dim = None
+            for a in array_iter:
+                if a.ndim > 1:
+                    raise ValueError("Input vector had more than one "
+                                     f"dimension! (ndim = {a.ndim})")
+                elif dim is None:
+                    dim = a.size
+                elif a.size != dim:
+                    raise ValueError("Input vector violated dimension "
+                                     f"consistency (basis == {dim}, "
+                                     f"violation == {a.size})")
+                yield a
+        return _inner()
 
     def classify_arrays(self, array_iter):
         """
@@ -99,8 +120,8 @@ class Classifier (SmqtkAlgorithm):
         manner whereby each label is given a confidence-like value in the
         [0, 1] range.
 
-        :param collections.Iterable[numpy.ndarray] array_iter:
-            Iterable of DescriptorElement instances to be classified.
+        :param collections.abc.Iterable[numpy.ndarray] | np.ndarray array_iter:
+            Iterable of descriptor vectors, as numpy arrays, to be classified.
 
         :raises ValueError: Input arrays were not all of consistent
             dimensionality.
@@ -108,7 +129,7 @@ class Classifier (SmqtkAlgorithm):
         :return: Iterable of dictionaries, parallel in association to the input
             descriptor vectors. Each dictionary should map labels to associated
             confidence values.
-        :rtype: collections.Iterable[dict[collections.Hashable, float]]
+        :rtype: collections.abc.Iterable[dict[collections.abc.Hashable, float]]
         """
         return self._classify_arrays(
             self._assert_array_dim_consistency(array_iter)
@@ -156,7 +177,7 @@ class Classifier (SmqtkAlgorithm):
         all input descriptor elements and results are set to their respective
         classification elements regardless of existing result storage.
 
-        :param collections.Iterable[DescriptorElement] descr_iter:
+        :param collections.abc.Iterable[DescriptorElement] descr_iter:
             Iterable of DescriptorElement instances to be classified.
         :param smqtk.representation.ClassificationElementFactory factory:
             Classification element factory. The default factory yields
@@ -179,7 +200,7 @@ class Classifier (SmqtkAlgorithm):
         :return: Iterator of result ClassificationElement instances. UUIDs of
             generated ClassificationElement instances will reflect the UUID of
             the DescriptorElement it was computed from.
-        :rtype: collections.Iterator[smqtk.representation.ClassificationElement]
+        :rtype: collections.abc.Iterator[smqtk.representation.ClassificationElement]
         """
         log_debug = self._log.debug
 
@@ -195,15 +216,13 @@ class Classifier (SmqtkAlgorithm):
         #   for-loop. This way we do not retain elements and booleans for
         #   things we have yielded that would otherwise build up if this method
         #   iterated for a long time.
-        #: :type: deque[(smqtk.representation.ClassificationElement, bool)]
-        elem_and_status_q = deque()
+        elem_and_status_q: Deque[Tuple[ClassificationElement, bool]] = deque()
 
         # Flag for end of data iteration. When not None will be the index of
         # the last descriptor/classification element to be yielded. This will
         # NOT be the number of elements to be yielded, that would be
         # ``end_of_iter[0]+1``.
-        #: :type: list[int|None]
-        end_of_iter = [None]
+        end_of_iter: List[Optional[int]] = [None]
 
         # TODO: Make generator threadsafe?
         # See: https://anandology.com/blog/using-iterators-and-generators/

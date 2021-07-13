@@ -37,7 +37,7 @@ def main():
                                      default_config_valid=True)
 
     port = int(config['port'])
-    authkey = str(config['authkey'])
+    authkey = bytes(config['authkey'])
 
     mgr = ProxyManager(('', port), authkey)
     mgr.get_server().serve_forever()

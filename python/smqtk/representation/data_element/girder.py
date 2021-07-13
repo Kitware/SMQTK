@@ -5,7 +5,7 @@ from smqtk.exceptions import InvalidUriError, ReadOnlyError
 from smqtk.representation import DataElement
 
 try:
-    import girder_client
+    import girder_client  # type: ignore
 except ImportError:
     girder_client = None
 

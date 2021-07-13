@@ -1,5 +1,5 @@
 from __future__ import division, print_function
-import mock
+import unittest.mock as mock
 import os
 import six
 import unittest
@@ -130,9 +130,9 @@ class TestDataFileSet (unittest.TestCase):
         list(dfs)
         self.assertEqual(m_open.call_count, 3)
         self.assertEqual(m_pickle.load.call_count, 3)
-        m_open.assert_any_call('/a')
-        m_open.assert_any_call('/b')
-        m_open.assert_any_call('/d')
+        m_open.assert_any_call('/a', 'rb')
+        m_open.assert_any_call('/b', 'rb')
+        m_open.assert_any_call('/d', 'rb')
 
     def test_count(self):
         expected_file_tree_iter = ['/a', '/b', '/d']
@@ -168,7 +168,7 @@ class TestDataFileSet (unittest.TestCase):
 
     def test_add_data_not_dataelement(self):
         dfs = DataFileSet('/')
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             AssertionError,
             "^Not given a DataElement for addition:",
             dfs.add_data, 'not a dataElement'
@@ -334,7 +334,7 @@ class TestDataFileSet (unittest.TestCase):
         m_isfile.return_value = False
 
         dfs = DataFileSet(TEST_DATA_DIR, None)
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             KeyError,
             'no_exist_uuid',
             dfs.get_data, 'no_exist_uuid'

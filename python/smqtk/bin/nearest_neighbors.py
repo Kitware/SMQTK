@@ -10,7 +10,6 @@ do not have to be necessarily indexed in the configured "nn_index".
 import logging
 import os
 import sys
-from six.moves import zip
 
 from smqtk.utils.cli import (
     basic_cli_parser,
@@ -66,11 +65,9 @@ def main():
     log = logging.getLogger(__name__)
     log.debug('Showing debug messages.')
 
-    #: :type: smqtk.representation.DescriptorSet
     descriptor_set = from_config_dict(
         config['plugins']['descriptor_set'], DescriptorSet.get_impls()
     )
-    #: :type: smqtk.algorithms.NearestNeighborsIndex
     nearest_neighbor_index = from_config_dict(
         config['plugins']['nn_index'], NearestNeighborsIndex.get_impls()
     )

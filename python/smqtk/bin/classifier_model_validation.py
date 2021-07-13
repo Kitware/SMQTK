@@ -42,9 +42,10 @@ import collections
 import csv
 import json
 import logging
+from typing import Dict, Hashable, List, Union
 import warnings
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy
 import scipy.stats
 import six
@@ -56,6 +57,7 @@ from smqtk.algorithms import (
 )
 from smqtk.representation import (
     ClassificationElementFactory,
+    DescriptorElement,
     DescriptorSet,
 )
 from smqtk.utils import (
@@ -172,8 +174,7 @@ def main():
     )
 
     # Map of truth labels to descriptors of labeled data
-    #: :type: dict[str, list[smqtk.representation.DescriptorElement]]
-    tlabel2descriptors = {}
+    tlabel2descriptors: Dict[str, List[DescriptorElement]] = {}
     for tlabel, d in tlabel_element_iter:
         tlabel2descriptors.setdefault(tlabel, []).append(d)
 
@@ -196,8 +197,8 @@ def main():
             set(classifier.classify_elements(descriptors,
                                              classification_factory))
     log.info("Truth label counts:")
-    for l in sorted(tlabel2classifications):
-        log.info("  %s :: %d", l, len(tlabel2classifications[l]))
+    for tlabel in sorted(tlabel2classifications):
+        log.info("  %s :: %d", tlabel, len(tlabel2classifications[tlabel]))
 
     #
     # Confusion Matrix
@@ -213,16 +214,15 @@ def main():
         # Top dictionary keys are true labels, inner dictionary keys are UUID
         # predicted labels.
         log.info("Computing UUID Confusion Matrix")
-        #: :type: dict[str, dict[collections.Hashable, set]]
-        uuid_cm = {}
+        uuid_cm: Dict[str, Dict[Hashable, Union[List, List]]] = {}
         for tlabel in tlabel2classifications:
-            uuid_cm[tlabel] = collections.defaultdict(set)
+            tlabel_uuid_cm = collections.defaultdict(set)
             for c in tlabel2classifications[tlabel]:
-                uuid_cm[tlabel][c.max_label()].add(c.uuid)
-            # convert sets to lists for JSON output.
-            for plabel in uuid_cm[tlabel]:
-                # noinspection PyTypeChecker
-                uuid_cm[tlabel][plabel] = list(uuid_cm[tlabel][plabel])
+                tlabel_uuid_cm[c.max_label()].add(c.uuid)
+            # convert sets to lists for master JSON output.
+            uuid_cm[tlabel] = {}
+            for plabel in tlabel_uuid_cm:
+                uuid_cm[tlabel][plabel] = list(tlabel_uuid_cm[plabel])
         with open(output_uuid_cm, 'w') as f:
             log.info("Saving UUID Confusion Matrix: %s", output_uuid_cm)
             json.dump(uuid_cm, f, indent=2, separators=(',', ': '))
@@ -455,11 +455,10 @@ def make_pr_curves(label2classifications, output_filepath, plot_ci,
         y_l = numpy.min([y, y_l], 0)
         y_u = numpy.max([y, y_u], 0)
         # Add points to flush ends with plot border
-        poly_points = (
-            [(x[0], y_l[0])] + zip(x_l, y_l) + [(x[-1], y_l[-1])] +
-            [(x[-1], y_u[-1])] + list(reversed(zip(x_u, y_u))) +
-            [(x[0], y_u[0])]
-        )
+        poly_points = [
+            (x[0], y_l[0]), *zip(x_l, y_l), (x[-1], y_l[-1]),
+            (x[-1], y_u[-1]), *list(zip(x_u, y_u))[::-1], (x[0], y_u[0])
+        ]
         return plt.Polygon(poly_points, **poly_kwds)
 
     log = logging.getLogger(__name__)
@@ -478,11 +477,10 @@ def make_roc_curves(label2classifications, output_filepath, plot_ci,
         x_u = numpy.max([x, x_u], 0)
         y_l = numpy.min([y, y_l], 0)
         y_u = numpy.max([y, y_u], 0)
-        poly_points = (
-            [(x[0], y_u[0])] + zip(x_l, y_u) + [(x[-1], y_u[-1])] +
-            [(x[-1], y_l[-1])] + list(reversed(zip(x_u, y_l))) +
-            [(x[0], y_l[0])]
-        )
+        poly_points = [
+            (x[0], y_u[0]), *zip(x_l, y_u), (x[-1], y_u[-1]),
+            (x[-1], y_l[-1]), *list(zip(x_u, y_l))[::-1], (x[0], y_l[0])
+        ]
         return plt.Polygon(poly_points, **poly_kwds)
 
     log = logging.getLogger(__name__)

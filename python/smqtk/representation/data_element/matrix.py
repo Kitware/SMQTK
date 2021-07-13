@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 import numpy
 from six import BytesIO
 
@@ -45,7 +47,7 @@ class MatrixDataElement (DataElement):  # lgtm[py/missing-equals]
 
     def __init__(self, mat=None, readonly=False):
         """
-        :param None|collections.Sequence|numpy.ndarray mat:
+        :param None|collections.abc.Sequence|numpy.ndarray mat:
             Optional matrix to store at construction time.
         :param bool readonly:
             If the matrix stored should be considered read-only. This pertains
@@ -54,15 +56,17 @@ class MatrixDataElement (DataElement):  # lgtm[py/missing-equals]
             which should be controlled by setting flags on the ndarray instance.
         """
         super(MatrixDataElement, self).__init__()
-        self._matrix = None
+        self._matrix: Optional[numpy.ndarray] = None
         if mat is not None:
             self._matrix = numpy.asarray(mat)
         self._readonly = bool(readonly)
 
     def __repr__(self):
+        shape: Optional[Tuple] = None
+        if self._matrix is not None:
+            shape = self._matrix.shape
         return super(MatrixDataElement, self).__repr__() + \
-            "{{shape: {}}}" \
-            .format(self._matrix.shape,)
+            "{{shape: {}}}".format(shape)
 
     @property
     def matrix(self):

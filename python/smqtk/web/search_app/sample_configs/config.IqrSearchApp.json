@@ -16,18 +16,18 @@
         "LEEDS Butterflies": {
             "working_directory": "workdir",
             "data_set": {
-                "DataMemorySet": {
+                "smqtk.representation.data_set.memory_set.DataMemorySet": {
                     "cache_element": {
-                        "DataFileElement": {
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
                             "explicit_mimetype": null,
                             "filepath": "workdir/butterflies_alexnet_fc7/data.memorySet.cache",
                             "readonly": false
                         },
-                        "type": "DataFileElement"
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement"
                     },
                     "pickle_protocol": -1
                 },
-                "type": "DataMemorySet"
+                "type": "smqtk.representation.data_set.memory_set.DataMemorySet"
             },
             "iqr_service_url": "http://localhost:5001"
         }

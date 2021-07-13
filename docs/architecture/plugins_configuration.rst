@@ -1,29 +1,48 @@
 Plugins and Configuration
 -------------------------
-SMQTK provides generic plugin and introspective configuration mixin classes to
-support interface implementation discovery and their translation form/to JSON
-as a plain-text configuration format.
+SMQTK provides plugin and configuration utilities to support the creation of
+interface classes that have a convenient means of
+accessing implementing types, paired ability to dynamically instantiate
+interface implementations based on a configuration derived by constructor
+introspection.
 
-While these two mixins function independently and can be utilized on their own,
-their combination is symbiotic and allows for users of SMQTK algorithms and
-representations to create tools in terms of interfaces and leave the specific
-selection of implementations for configuration time.
+While these two primary mixin classes function independently and can be
+utilized on their own, their combination is symbiotic and allows for users of
+derivative interfaces to create tools in terms of the interfaces and leave the
+specific selection of implementations for configuration time.
 
 Later, we will introduce the two categories of configurable and
 (usually) pluggable class classes found within SMQTK.
 
 
-Plugins
-^^^^^^^
+The :class:`~smqtk.utils.plugin.Pluggable` Mixin
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 **Motivation:**
 We want to be able to define interfaces to generic concepts and structures
-around which higher order tools can be defined without strictly catering
+that higher level tools can be defined around without strictly catering
 themselves to any particular implementation, while additionally allowing
-freedom in implementation variety without overly restricting implementation
-location.
+freedom in implementation variety without overly restricting implementations.
 
-In SMQTK, this is addressed via the :meth:`~smqtk.utils.plugin.get_plugins`
-function and the :class:`~smqtk.utils.plugin.Pluggable` abstract mixin class.
+In SMQTK, this is addressed via the :class:`~smqtk.utils.plugin.Pluggable`
+abstract mixin class:
+
+.. code-block:: python
+
+   import abc
+   from smqtk.utils.plugin import Pluggable
+
+   class MyInterface(Pluggable):
+
+       @abc.abstractmethod
+       def my_behavior(self, x: str) -> int:
+           """My fancy behavior."""
+
+   if __name__ == "__main__":
+       # Discover currently available implementations and print out their names
+       impl_types = MyInterface.get_impls()
+       print("MyInterface implementations:")
+       for t in impl_types:
+           print(f"- {t.__name__}")
 
 
 Interfaces and Implementations
@@ -47,20 +66,21 @@ minimally impacting standard class development.
 
 SMQTK provides the :class:`~smqtk.utils.configuration.Configurable` mixin class
 as well as other helper utility functions in :mod:`smqtk.utils.configuration`
-for generating, and producing class instances from, configurations.
-These use python's :mod:`introspect` module to determine default
-configurations.
+for generating class instances from configurations.
+These use python's :mod:`inspect` module to determine constructor
+parameterization and default configurations.
 
-Currently this module deals in JSON for input and output configuration.
-Python dictionaries are used as a medium in between serialization and class
-input/output.
+Currently this module uses the JSON-serializable format as the basis for input
+and output configuration dictionaries as a means of defining a relatively
+simple playing field for communication.
+Serialization and deserialization is detached from these configuration
+utilities so tools may make their own decisions there.
+Python dictionaries are used as a medium in between serialization and
+configuration input/output.
 
 Classes that inherit from :class:`~smqtk.utils.configuration.Configurable` *do*
 need to at a minimum implement the
 :meth:`~smqtk.utils.configuration.Configurable.get_config` instance method.
-This does detract from the "minimal impact" intent of this mixin, but other
-methods of allowing introspection of internal parameters require additional
-structural components in the parent/implementing class.
 
 
 Algorithms and Representations - The Combination
@@ -95,26 +115,36 @@ Implementing a Pluggable Interface
 The following are examples of how to add and expose new plugin implementations
 for existing algorithm and representation interfaces.
 
-SMQTK's plugin discovery allows for exposure of plugin implementations in 3
-ways:
-  * Parallel in location to parent interface.
-  * Python module path of implementation model included in the
-    ``SMQTK_PLUGIN_PATH`` environment variable (see reference for formatting).
-  * An entrypoint in a python package's ``setup.py``.
+SMQTK's plugin discovery via the :meth:`~smqtk.utils.plugin.Pluggable.get_impls`
+method currently allows for finding a plugin implementations in 3 ways:
+
+* sub-classes of an interface type defined in the current runtime.
+
+* within python modules listed in the environment variable specified by
+  ``YourInterface.PLUGIN_ENV_VAR``. (default SMQTK environment variable name
+  is ``SMQTK_PLUGIN_PATH``, which is defined in
+  :attr:`Pluggable.PLUGIN_ENV_VAR`).
+
+* within python modules specified under the entry point extensions namespace
+  defined by ``YourInterface.PLUGIN_NAMESPACE`` (default SMQTK extension
+  namespace is ``smqtk_plugins``, which is defined in
+  :attr:`Pluggable.PLUGIN_NAMESPACE`).
 
 Within SMQTK
 """"""""""""
 A new interface implementation within the SMQTK source-tree is generally
 implemented or exposed parallel to where the parent interface is defined.
+This has been purely for organizational purposes.
+Once we define our implementation, we will then expose that type in an existing
+module that is already referenced in SMQTK's list of entry point extensions.
 
-As an example, we will show how to create a new implementation for the
+In this example, we will show how to create a new implementation for the
 :class:`~smqtk.algorithms.classifier.Classifier` algorithm
 interface.
 This interface is defined within SMQTK at, from the root of the source tree,
 :file:`python/smqtk/algorithms/classifier/_interface_classifier.py`.
 We will create a new file, :file:`some_impl.py`, that will be placed in the
-same directory with the intention that our new plugin will be picked up based
-on parallel locality to the parent interface class.
+same directory.
 
 We'll define our new class, lets call it ``SomeImpl``, in a file
 :file:`some_impl.py`::
@@ -123,9 +153,9 @@ We'll define our new class, lets call it ``SomeImpl``, in a file
     └── smqtk/
         └── algorithms/
             └── classifier/
-                ├── ...
                 ├── _interface_classifier.py
                 ├── some_impl.py     # new
+                └── ...
 
 In this file we will need to define the :class:`SomeImpl` class and all parent
 class abstract methods in order for the class to satisfy the definition of an
@@ -140,12 +170,6 @@ class abstract methods in order for the class to satisfy the definition of an
         Some documentation for this specific implementation.
         """
 
-        # Abstract methods from Pluggable.
-        # (Classifier -> SmqtkAlgorithm -> Pluggable)
-        @classmethod
-        def is_usable(cls):
-            ...
-
         # Our implementation-specific constructor.
         def __init__(self, paramA=1, paramB=2):
             ...
@@ -153,6 +177,8 @@ class abstract methods in order for the class to satisfy the definition of an
         # Abstract methods from Configurable.
         # (Classifier -> SmqtkAlgorithm -> Configurable)
         def get_config(self):
+            # As per Configurable documentation, this returns the same non-self
+            # keys as the constructor.
             return {
                 "paramA": ...,
                 "paramB": ...,
@@ -165,7 +191,16 @@ class abstract methods in order for the class to satisfy the definition of an
         def _classify_arrays(self, array_iter):
             ...
 
-With all abstract methods defined, this implementation should now be included
+The final step to making this implementation discoverable is to add an
+import of this class to the existing hub of classifier plugins in
+:file:`python/smqtk/algorithms/classifier/_plugins.py`:
+
+.. code-block:: python
+
+   ...
+   from .some_impl import SomeImpl
+
+With all abstract methods defined, this implementation will now be included
 in the returned set of implementation types for the parent
 :class:`~smqtk.algorithms.classifier.Classifier` interface:
 
@@ -173,47 +208,29 @@ in the returned set of implementation types for the parent
 
     >>> from smqtk.algorithms import Classifier
     >>> Classifier.get_impls()
-    set([..., SomeImpl, ...])
+    set([..., smqtk.algorithms.classifier.some_impl.SomeImpl, ...])
 
-:class:`SomeImpl` above should also be all set for configuration because of it
-defining :meth:`~smqtk.utils.configuration.Configurable.get_config` and because
-it's constructor is only anticipating JSON-conpliant types.
+:class:`SomeImpl` above should also be all set for configuration because it
+defines the one required abstract method
+:meth:`~smqtk.utils.configuration.Configurable.get_config` and because
+its constructor is only anticipating JSON-compliant types.
 If more complicated types are desired by the constructor the additional methods
-would need to be overriden/extended as defined in the
+would need to be overridden/extended as defined in the
 :mod:`smqtk.utils.configuration` module.
-
-More Complicated Implementations
-''''''''''''''''''''''''''''''''
-Interface-parallel implementation discovery also allows for nested sub-modules.
-This is useful when an implementation requires specific or extensive support
-utilities.
-The :file:`__init__.py` file of the sub-module should at least expose concrete
-implementation classes that should be exported as attributes for the plugin
-discovery to find.
-For example, such a nested sub-module implementation might look like the
-following on the filesystem::
-
-    python/
-    └── smqtk/
-        └── algorithms/
-            └── classifier/
-                ├── ...
-                ├── some_impl.py     # from above
-                └── other_impl/      # new
-                    └── __init__.py  # new
 
 Within another python package
 """""""""""""""""""""""""""""
 When implementing a pluggable interface in another python package, the proper
-method of export is via a package's entrypoint specifications using the
-``smqtk_plugins`` key.
+method of export is via a package's entry point specifications using the
+namespace key defined by the parent interface (by default the ``smqtk_plugins``
+value is defined by :attr:`smqtk.utils.plugin.Pluggable.PLUGIN_NAMESPACE`).
 
 For example, let's assume that a separate python package, ``OtherPackage``
 we'll call it, defines a
 :class:`~smqtk.algorithms.classifier.Classifier`-implementing sub-class
 :class:`OtherClassifier` in the module :mod:`OtherPackage.other_classifier`.
 This module location can be exposed via the package's :file:`setup.py`
-entrypoints metadata, using the ``smqtk_plugins`` key, like the following:
+entry points metadata, using the ``smqtk_plugins`` key, like the following:
 
 .. code-block:: python
 
@@ -228,8 +245,8 @@ entrypoints metadata, using the ``smqtk_plugins`` key, like the following:
         }
     )
 
-If the other module had multiple sub-modules in which SMQTK plugins were
-defined the ``entry_points['smqtk_plugins']`` entry may instead be a list:
+If this other package had multiple sub-modules in which SMQTK plugins were
+defined, the ``smqtk_plugins`` entry value may instead be a list:
 
 .. code-block:: python
 
@@ -246,14 +263,15 @@ defined the ``entry_points['smqtk_plugins']`` entry may instead be a list:
 
 Reference
 ^^^^^^^^^
-:mod:`smqtk.utils.configuration`
-""""""""""""""""""""""""""""""""
-.. automodule:: smqtk.utils.configuration
-   :members:
 
 :mod:`smqtk.utils.plugin`
 """""""""""""""""""""""""
 .. automodule:: smqtk.utils.plugin
+   :members:
+
+:mod:`smqtk.utils.configuration`
+""""""""""""""""""""""""""""""""
+.. automodule:: smqtk.utils.configuration
    :members:
 
 

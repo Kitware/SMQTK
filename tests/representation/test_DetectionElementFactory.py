@@ -1,4 +1,4 @@
-import mock
+import unittest.mock as mock
 
 from smqtk.representation import DetectionElement
 from smqtk.representation.detection_element_factory \
@@ -30,22 +30,24 @@ def test_from_config_no_merge(m_de_get_impls, m_def_get_default_config,
     # Mock available implementations of DetectionElement
     T1 = mock.MagicMock(spec=DetectionElement)
     T1.__name__ = 'T1'
+    T1.__module__ = __name__
     T2 = mock.MagicMock(spec=DetectionElement)
     T2.__name__ = 'T2'
+    T2.__module__ = __name__
     expected_impls_set = {T1, T2}
     m_de_get_impls.return_value = expected_impls_set
 
     # Mock default configuration return from class method.
     expected_default_conf = {
         'type': None,
-        'T1': {'z': 'z'},
-        'T2': {'y': 'y'},
+        f'{__name__}.T1': {'z': 'z'},
+        f'{__name__}.T2': {'y': 'y'},
     }
     m_def_get_default_config.return_value = expected_default_conf
 
     # Test configuration we are passing to ``from_config``.
-    test_config = {'type': 'T2',
-                   'T2': {'a': 1, 'b': 'c'}}
+    test_config = {'type': f'{__name__}.T2',
+                   f'{__name__}.T2': {'a': 1, 'b': 'c'}}
 
     # Because we are not merging default config, we expect only the contents
     # of the passed config to reach the factory constructor.
@@ -72,24 +74,27 @@ def test_from_config_with_merge(m_de_get_impls, m_def_get_default_config,
     m_def_init.return_value = None
 
     # Mock available implementations of DetectionElement
+    # - Overriding class location to be "local" for testing.
     T1 = mock.MagicMock(spec=DetectionElement)
     T1.__name__ = 'T1'
+    T1.__module__ = __name__
     T2 = mock.MagicMock(spec=DetectionElement)
     T2.__name__ = 'T2'
+    T2.__module__ = __name__
     expected_impls_set = {T1, T2}
     m_de_get_impls.return_value = expected_impls_set
 
     # Mock default configuration return from class method.
     expected_default_conf = {
         'type': None,
-        'T1': {'z': 'z'},
-        'T2': {'y': 'y'},
+        f'{__name__}.T1': {'z': 'z'},
+        f'{__name__}.T2': {'y': 'y'},
     }
     m_def_get_default_config.return_value = expected_default_conf
 
     # Partial configuration to pass to ``from_config``.
-    test_config = {'type': 'T2',
-                   'T2': {'a': 1, 'b': 'c'}}
+    test_config = {'type': f'{__name__}.T2',
+                   f'{__name__}.T2': {'a': 1, 'b': 'c'}}
 
     # Expected construction values. Note that conf has default component(s)
     # merged into it.
@@ -109,11 +114,12 @@ def test_get_config():
     """
     test_type = mock.MagicMock(spec=DetectionElement)
     test_type.__name__ = 'T1'
+    test_type.__module__ = __name__
     test_conf = {'a': 1, 'b': 'c'}
 
     expected_config = {
-        "type": "T1",
-        "T1": {'a': 1, 'b': 'c'}
+        "type": f"{__name__}.T1",
+        f"{__name__}.T1": {'a': 1, 'b': 'c'}
     }
 
     # noinspection PyTypeChecker

@@ -1,8 +1,9 @@
 import abc
 from collections import deque
+from typing import Deque, List, Optional, Tuple
 
 from smqtk.algorithms import SmqtkAlgorithm
-from smqtk.representation import DescriptorElementFactory
+from smqtk.representation import DescriptorElement, DescriptorElementFactory
 from smqtk.representation.descriptor_element.local_elements import \
     DescriptorMemoryElement
 from smqtk.utils import ContentTypeValidator
@@ -26,14 +27,14 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
           - Data elements input to this method have been validated to be of at
             least one of this class's reported ``valid_content_types``.
 
-        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
+        :param collections.abc.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of data element instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
 
         :return: Iterable of numpy arrays in parallel association with the
             input data elements.
-        :rtype: collections.Iterable[numpy.ndarray]
+        :rtype: collections.abc.Iterable[numpy.ndarray]
         """
 
     def generate_arrays(self, data_iter):
@@ -55,7 +56,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         includes any functionality after the final ``yield`` statement in any
         of the underlying iterators.
 
-        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
+        :param collections.abc.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of DataElement instances to be described.
 
         :raises RuntimeError: Descriptor extraction failure of some kind.
@@ -63,7 +64,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
             with respect to this descriptor generator implementation.
 
         :return: Iterator of result numpy.ndarray instances.
-        :rtype: collections.Iterator[numpy.ndarray]
+        :rtype: collections.abc.Iterator[numpy.ndarray]
         """
         # Intermediate iterator for testing that content types are valid
         # TODO: Use an order-preserving call to parallel_map()?
@@ -107,7 +108,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         input data elements and are set to their respective descriptor elements
         regardless of existing vector storage.
 
-        :param collections.Iterable[smqtk.representation.DataElement] data_iter:
+        :param collections.abc.Iterable[smqtk.representation.DataElement] data_iter:
             Iterable of DataElement instances to be described.
         :param smqtk.representation.DescriptorElementFactory descr_factory:
             DescriptorElementFactory instance to drive the generation of
@@ -129,7 +130,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         :return: Iterator of result DescriptorElement instances. UUIDs of
             generated DescriptorElement instances will reflect the UUID of the
             DataElement it was generated from.
-        :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterator[smqtk.representation.DescriptorElement]
         """
         log_debug = self._log.debug
 
@@ -139,8 +140,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         #   for-loop. This way we do not retain elements and booleans for
         #   things we have yielded that would otherwise build up if this method
         #   iterated for a long time.
-        #: :type: deque[(smqtk.representation.DescriptorElement, bool)]
-        elem_and_status_q = deque()
+        elem_and_status_q: Deque[Tuple[DescriptorElement, bool]] = deque()
 
         # Flag for end of data iteration. When not None will be the index of
         # the last data/descriptor element to be yielded. This will NOT be the
@@ -149,8 +149,7 @@ class DescriptorGenerator (SmqtkAlgorithm, ContentTypeValidator):
         #       ``nonlocal end_of_iter`` statement within the
         #       ``iter_tocompute_data`` function instead of imitating a state
         #       object here.
-        #: :type: list[int|None]
-        end_of_iter = [None]
+        end_of_iter: List[Optional[int]] = [None]
 
         # TODO: Make generator threadsafe?
         # See: https://anandology.com/blog/using-iterators-and-generators/

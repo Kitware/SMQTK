@@ -8,14 +8,15 @@ Kitware, Inc., 28 Corporate Drive, Clifton Park, NY 12065.
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 from multiprocessing import current_process
-# noinspection PyProtectedMember
-from multiprocessing.managers import (
+# Incomplete typing in typeshed
+from multiprocessing.managers import (    # type: ignore
     all_methods,
     BaseProxy,
     SyncManager
 )
 import multiprocessing
-import multiprocessing.util
+# Incomplete typing in typeshed
+import multiprocessing.util  # type: ignore
 import six
 
 import numpy as np
@@ -80,8 +81,7 @@ class BaseProxy2 (BaseProxy):
 
     def __init__(self, token, serializer, manager=None, authkey=None,
                  exposed=None, incref=True):
-        super(BaseProxy2, self).__init__(token, serializer, manager, authkey,
-                                         exposed, incref)
+        super().__init__(token, serializer, manager, authkey, exposed, incref)
         # Keep a second manager reference around to survive the base class's
         # after-fork nuke of the _manager attribute.
         self._manager_copy = manager
@@ -93,7 +93,9 @@ class BaseProxy2 (BaseProxy):
 
     def __reduce__(self):
         ret = super(BaseProxy2, self).__reduce__()
-        ret[1][-1]['authkey'] = str(self._authkey)
+        # Not sure why type checking is missing the _authkey property...
+        # noinspection PyUnresolvedReferences
+        ret[1][-1]['authkey'] = str(self._authkey)  # type: ignore
         return ret
 
 

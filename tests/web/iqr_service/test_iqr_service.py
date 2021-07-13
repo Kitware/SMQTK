@@ -1,9 +1,10 @@
 import base64
 import json
-import mock
+import unittest.mock as mock
 import os
 import unittest
 
+from smqtk.algorithms import RankRelevancyWithFeedback
 from smqtk.iqr import IqrSession
 from smqtk.representation import DescriptorElement
 from smqtk.representation.classification_element.memory \
@@ -36,16 +37,22 @@ class TestIqrService (unittest.TestCase):
         plugin_config = config['iqr_service']['plugins']
 
         # Use basic in-memory representation types.
-        plugin_config['classification_factory']['type'] =\
-            'MemoryClassificationElement'
-        plugin_config['descriptor_factory']['type'] = \
-            'DescriptorMemoryElement'
-        plugin_config['descriptor_set']['type'] = 'StubDescriptorSet'
+        key_mce = "smqtk.representation.classification_element.memory.MemoryClassificationElement"
+        key_dme = "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
+        key_ds_stub = "tests.web.iqr_service.stubs.StubDescriptorSet"
+        plugin_config['classification_factory']['type'] = key_mce
+        plugin_config['descriptor_factory']['type'] = key_dme
+        plugin_config['descriptor_set']['type'] = key_ds_stub
 
         # Set up dummy algorithm types
-        plugin_config['classifier_config']['type'] = 'StubClassifier'
-        plugin_config['descriptor_generator']['type'] = 'StubDescrGenerator'
-        plugin_config['neighbor_index']['type'] = 'StubNearestNeighborIndex'
+        key_c_stub = "tests.web.iqr_service.stubs.StubClassifier"
+        key_dg_stub = "tests.web.iqr_service.stubs.StubDescrGenerator"
+        key_nn_stub = "tests.web.iqr_service.stubs.StubNearestNeighborIndex"
+        key_rr_stub = "tests.web.iqr_service.stubs.StubRankRelevancyWithFeedback"
+        plugin_config['classifier_config']['type'] = key_c_stub
+        plugin_config['descriptor_generator']['type'] = key_dg_stub
+        plugin_config['neighbor_index']['type'] = key_nn_stub
+        plugin_config['rank_relevancy_with_feedback']['type'] = key_rr_stub
 
         self.app = IqrService(config)
 
@@ -61,7 +68,7 @@ class TestIqrService (unittest.TestCase):
         :type r: flask.wrappers.Response
         :type regex: str
         """
-        self.assertRegexpMatches(json.loads(r.data.decode())['message'], regex)
+        self.assertRegex(json.loads(r.data.decode())['message'], regex)
 
     # Test Methods ############################################################
 
@@ -197,7 +204,7 @@ class TestIqrService (unittest.TestCase):
                                         ))
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Not all JSON list parts were hashable "
-                                       "values.")
+                                       r"values\.")
 
     def test_update_nn_index_uid_not_a_key(self):
         """
@@ -365,7 +372,7 @@ class TestIqrService (unittest.TestCase):
                           ))
             self.assertStatusCode(r, 400)
             self.assertJsonMessageRegex(r, 'Not all JSON list parts were '
-                                           'hashable values\.')
+                                           r'hashable values\.')
 
     def test_remove_from_nn_index_uid_not_a_key(self):
         """
@@ -523,43 +530,30 @@ class TestIqrService (unittest.TestCase):
 
     def test_uid_nearest_neighbors_no_k(self):
         """ Test not providing base64 """
-        data = dict(
-            uid='some-uid',
-            # k=10,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        r = self.app.test_client().get('/uid_nearest_neighbors?uid=some-uid')
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "No 'k' value provided")
 
     def test_uid_nearest_neighbors_bad_k_json(self):
         """ Test string for k """
-        data = dict(
-            uid='some-uid',
-            k="10.2",  # float string fails an int cast.
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        # float string fails an int cast.
+        r = self.app.test_client().get('/uid_nearest_neighbors?uid=some-uid&k=10.2')
         self.assertStatusCode(r, 400)
         self.assertJsonMessageRegex(r, "Failed to convert 'k' argument to an "
                                        "integer")
 
     def test_uid_nearest_neighbors_no_elem_for_uid(self):
+        # Simulate that any key we provide is not indexed.
         def raise_keyerror(*_):
             raise KeyError("invalid-key")
         self.app.descriptor_set.get_descriptor = mock.Mock(
             side_effect=raise_keyerror
         )
 
-        data = dict(
-            uid='some-uid',
-            k=3,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        data_uid = 'some-uid'
+        r = self.app.test_client().get(f'/uid_nearest_neighbors?uid={data_uid}&k=3')
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "Failed to get descriptor for UID "
-                                       "some-uid")
+        self.assertJsonMessageRegex(r, f"Failed to get descriptor for UID {data_uid}")
 
     def test_uid_nearest_neighbors(self):
         expected_uids = ['a', 'b', 'c']
@@ -575,17 +569,14 @@ class TestIqrService (unittest.TestCase):
             return_value=[expected_neighbors, expected_dists]
         )
 
-        data = dict(
-            uid='some-uid',
-            k=10,
-        )
-        r = self.app.test_client().get('/uid_nearest_neighbors',
-                                       data=data)
+        data_uid = 'some-uid'
+        data_k = 10
+        r = self.app.test_client().get(f'/uid_nearest_neighbors?uid={data_uid}&k={data_k}')
         self.app.descriptor_set.get_descriptor.assert_called_once_with(
-            data['uid']
+            data_uid
         )
         self.app.neighbor_index.nn.assert_called_once_with(
-            self.app.descriptor_set.get_descriptor(), data['k']
+            self.app.descriptor_set.get_descriptor(), data_k
         )
 
         self.assertStatusCode(r, 200)
@@ -607,7 +598,8 @@ class TestIqrService (unittest.TestCase):
         # There are no sessions on server initialization.
         self._test_getter_sid_not_found('session')
 
-        iqrs = IqrSession(session_uid='1')  # not '0', which is queried for.
+        rank_relevancy_with_feedback = mock.MagicMock(spec=RankRelevancyWithFeedback)
+        iqrs = IqrSession(rank_relevancy_with_feedback, session_uid='1')  # not '0', which is queried for.
         self.app.controller.add_session(iqrs)
         self._test_getter_sid_not_found('session')
 
@@ -615,7 +607,8 @@ class TestIqrService (unittest.TestCase):
         """
         Test a valid retrieval of a complex IQR session state.
         """
-        iqrs = IqrSession(session_uid='abc')
+        rank_relevancy_with_feedback = mock.MagicMock(spec=RankRelevancyWithFeedback)
+        iqrs = IqrSession(rank_relevancy_with_feedback, session_uid='abc')
 
         ep, en, p1, p2, p3, n1, n2, d1, d2, n3 = [
             DescriptorMemoryElement('test', uid) for uid in
@@ -665,7 +658,7 @@ class TestIqrService (unittest.TestCase):
         with self.app.test_client() as tc:
             r = tc.post('/refine')
             self.assertStatusCode(r, 400)
-            self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
+            self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
 
     def test_refine_invalid_session_id(self):
         with self.app.test_client() as tc:
@@ -737,6 +730,47 @@ class TestIqrService (unittest.TestCase):
             r_json = r.json
             assert r_json['total_results'] == 3
             assert r_json['results'] == [[0, 0.3], [2, 0.2], [1, 0.1]]
+
+        self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
+
+    def test_get_feedback_no_sid(self):
+        """
+        Test getting feedback results without providing a session ID.
+        """
+        self._test_getter_no_sid('get_feedback')
+
+    def test_get_feedback_sid_not_found(self):
+        """
+        Test that the expected error is returned when the given session ID is
+        not present in the controller.
+        """
+        self._test_getter_sid_not_found('get_feedback')
+
+    def test_get_feedback(self):
+        """
+        Test successfully getting feedback results from a requested session.
+        """
+        # Mock controller interaction to get a mock IqrSession instance.
+        self.app.controller.has_session_uuid = \
+            mock.MagicMock(return_value=True)
+        self.app.controller.get_session = mock.MagicMock()
+        # Mock IQR session instance to have
+        # Mock feedback_results return to be something valid.
+        d0 = DescriptorMemoryElement('', 0).set_vector([0])
+        d1 = DescriptorMemoryElement('', 1).set_vector([1])
+        d2 = DescriptorMemoryElement('', 2).set_vector([2])
+        self.app.controller.get_session().feedback_results.return_value = [
+            d0, d2, d1
+        ]
+
+        test_sid = '0000'
+        with self.app.test_client() as tc:
+            r = tc.get('/get_feedback?sid={}'.format(test_sid))
+            self.assertStatusCode(r, 200)
+            self.assertJsonMessageRegex(r, "Returning feedback uuids")
+            r_json = r.json
+            assert r_json['total_results'] == 3
+            assert r_json['results'] == [0, 2, 1]
 
         self.app.controller.has_session_uuid.assert_called_once_with(test_sid)
 
@@ -1025,7 +1059,7 @@ class TestIqrService (unittest.TestCase):
                                            state_base64='dummy'
                                        ))
         self.assertStatusCode(r, 400)
-        self.assertJsonMessageRegex(r, "No session id \(sid\) provided")
+        self.assertJsonMessageRegex(r, r"No session id \(sid\) provided")
 
     def test_set_iqr_state_no_b64(self):
         """
@@ -1086,5 +1120,67 @@ class TestIqrService (unittest.TestCase):
         )
         self.assertStatusCode(r, 200)
         r_json = json.loads(r.data.decode())
-        self.assertRegexpMatches(r_json['message'], 'Success')
-        self.assertRegexpMatches(r_json['sid'], expected_sid)
+        self.assertRegex(r_json['message'], 'Success')
+        self.assertRegex(r_json['sid'], expected_sid)
+
+    def test_get_random_uids(self):
+        """
+        Test getting random descriptor UIDs from the
+        """
+        expected = list(map(chr, range(97, 97+26)))
+        self.app.descriptor_set.iterkeys = mock.MagicMock(
+            return_value=list(map(chr, range(97, 97+26)))
+        )
+        with self.app.test_client() as tc:
+            r = tc.get('/random_uids')
+            self.assertStatusCode(r, 200)
+            r_json = r.json
+            assert r_json['total'] == 26
+            # The results should have the expected contents but not be in the
+            # same order, cause ya know, random.
+            assert sorted(r_json['results']) == expected
+            assert r_json['results'] != expected
+            result1 = r_json['results']
+
+            # A second call should return the same list due to caching
+            r2 = tc.get('/random_uids')
+            self.assertStatusCode(r, 200)
+            r2_json = r2.json
+            assert r2_json['results'] == result1
+
+            # Calling with refresh should re-query the descriptor set and
+            # reorder. Result (should) be different.
+            # - MAYBE fails on RARE occasions because shuffle resulted in a
+            #   duplicate ordering? I would hope not given pseudo-randomness
+            #   but I don't know.
+            r3 = tc.get('/random_uids?refresh=true')
+            self.assertStatusCode(r, 200)
+            r3_json = r3.json
+            assert r3_json['results'] != result1
+
+    def test_get_random_uids_paged(self):
+        """ Test pagination of random UIDs """
+        self.app.descriptor_set.iterkeys = mock.MagicMock(
+            return_value=list(map(chr, range(97, 97+26)))
+        )
+        with self.app.test_client() as tc:
+            # Lets get a baseline to test pagination
+            rbase = tc.get('/random_uids')
+            self.assertStatusCode(rbase, 200)
+            result_all = rbase.json['results']
+
+            r = tc.get('/random_uids?i=3')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[3:]
+
+            r = tc.get('/random_uids?j=-4')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[:-4]
+
+            r = tc.get('/random_uids?j=10')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[:10]
+
+            r = tc.get('/random_uids?i=7&j=10')
+            self.assertStatusCode(r, 200)
+            assert r.json['results'] == result_all[7:10]

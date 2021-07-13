@@ -15,8 +15,8 @@ from smqtk.utils.distance_kernel import (
 from smqtk.utils.metrics import histogram_intersection_distance
 
 try:
-    import svm
-    import svmutil
+    import svm  # type: ignore
+    import svmutil  # type: ignore
 except ImportError:
     svm = None
     svmutil = None
@@ -147,7 +147,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         :param descriptors:
             Iterable of descriptor elements to build index over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # ordered cache of descriptors in our index.
@@ -185,11 +185,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type pos: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type pos: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param neg: Iterable of negative exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type neg: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0
@@ -222,7 +222,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # example in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
         # Copy neg descriptors into a set for testing size.
-        if not isinstance(neg, collections.Sized):
+        if not isinstance(neg, collections.abc.Sized):
             #: :type: set[smqtk.representation.DescriptorElement]
             neg = set(neg)
         if not neg:
@@ -286,7 +286,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
             wgt_str = " ".join(["%s: %s" % wgt for wgt in wgt_pairs])
             self._log.debug("SVM model parsed weight parameters: %s", wgt_str)
 
-        if svm_model.l == 0:
+        if svm_model.l == 0:  # noqa: E741
             raise RuntimeError("SVM Model learning failed")
 
         #

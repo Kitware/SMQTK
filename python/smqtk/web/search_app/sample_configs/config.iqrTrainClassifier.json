@@ -1,6 +1,6 @@
 {
     "classifier": {
-        "LibSvmClassifier": {
+        "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
             "normalize": 2,
             "svm_label_map_uri": "workdir/iqr_classifier/label_map",
             "svm_model_uri": "workdir/iqr_classifier/model",
@@ -11,6 +11,6 @@
                 "-t": 0
             }
         }, 
-        "type": "LibSvmClassifier"
+        "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
     }
 }

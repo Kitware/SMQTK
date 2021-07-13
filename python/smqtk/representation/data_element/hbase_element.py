@@ -4,8 +4,8 @@ from smqtk.representation import DataElement
 
 # attempt to import required modules
 try:
-    import happybase
-    import tika
+    import happybase  # type: ignore
+    import tika  # type: ignore
     from tika import detector as tika_detector
 except ImportError:
     happybase = None

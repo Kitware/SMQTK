@@ -138,7 +138,7 @@ class MemoryKeyValueStore (KeyValueStore):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: __generator[collections.Hashable]
+        :rtype: __generator[collections.abc.Hashable]
         """
         return six.iterkeys(self._table)
 
@@ -160,7 +160,7 @@ class MemoryKeyValueStore (KeyValueStore):
         Check if this store has a value for the given key.
 
         :param key: Key to check for a value for.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :return: If this store has a value for the given key.
         :rtype: bool
@@ -173,7 +173,7 @@ class MemoryKeyValueStore (KeyValueStore):
         Add a key-value pair to this store.
 
         :param key: Key for the value. Must be hashable.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :param value: Python object to store.
         :type value: object
@@ -196,7 +196,7 @@ class MemoryKeyValueStore (KeyValueStore):
         the provided dictionary `d`.
 
         :param d: Dictionary of key-value pairs to add to this store.
-        :type d: dict[collections.Hashable, object]
+        :type d: dict[collections.abc.Hashable, object]
 
         :return: Self.
         :rtype: MemoryKeyValueStore
@@ -213,7 +213,7 @@ class MemoryKeyValueStore (KeyValueStore):
         Remove a single key-value entry.
 
         :param key: Key to remove.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :raises KeyError: The given key is not present in this store and no
             default value given.
@@ -234,7 +234,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
         :param keys: Iterable of keys to remove.  If this is empty this method
             does nothing.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: The given key is not present in this store and no
             default value given.  The store is not modified if any key is
@@ -264,7 +264,7 @@ class MemoryKeyValueStore (KeyValueStore):
         Get the value for the given key.
 
         :param key: Key to get the value of.
-        :type key: collections.Hashable
+        :type key: collections.abc.Hashable
 
         :param default: Optional default value if the given key is not present
             in this store. This may be any value except for the

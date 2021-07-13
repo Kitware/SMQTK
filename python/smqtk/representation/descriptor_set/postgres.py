@@ -17,7 +17,7 @@ from smqtk.utils.postgres \
     import norm_psql_cmd_string, PsqlConnectionHelper
 
 try:
-    import psycopg2
+    import psycopg2  # type: ignore
 except ImportError as ex:
     logging.getLogger(__name__)\
            .warning("Failed to import psycopg2: %s", str(ex))
@@ -276,7 +276,7 @@ class PostgresDescriptorSet (DescriptorSet):
         Check if a DescriptorElement with the given UUID exists in this set.
 
         :param uuid: UUID to query for
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if a DescriptorElement with the given UUID exists in this
             set, or False if not.
@@ -341,7 +341,7 @@ class PostgresDescriptorSet (DescriptorSet):
         :param descriptors: Iterable of descriptor instances to add to this
             set.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
@@ -375,7 +375,7 @@ class PostgresDescriptorSet (DescriptorSet):
         Get the descriptor in this set that is associated with the given UUID.
 
         :param uuid: UUID of the DescriptorElement to get.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -408,7 +408,7 @@ class PostgresDescriptorSet (DescriptorSet):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
@@ -465,7 +465,7 @@ class PostgresDescriptorSet (DescriptorSet):
         Remove a descriptor from this set by the given UUID.
 
         :param uuid: UUID of the DescriptorElement to remove.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :raises KeyError: The given UUID doesn't associate to a
             DescriptorElement in this set.
@@ -494,7 +494,7 @@ class PostgresDescriptorSet (DescriptorSet):
         Remove descriptors associated to given descriptor UUIDs from this set.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.abc.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this set.
@@ -524,7 +524,7 @@ class PostgresDescriptorSet (DescriptorSet):
     def iterkeys(self):
         """
         Return an iterator over set descriptor keys, which are their UUIDs.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterator[collections.abc.Hashable]
         """
         # Getting UUID through the element because the UUID might not be a
         # string type, and the true type is encoded with the DescriptorElement
@@ -535,7 +535,7 @@ class PostgresDescriptorSet (DescriptorSet):
     def iterdescriptors(self):
         """
         Return an iterator over set descriptor element instances.
-        :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterator[smqtk.representation.DescriptorElement]
         """
         def execute(c):
             c.execute(self.SELECT_TMPL.format(
@@ -554,8 +554,8 @@ class PostgresDescriptorSet (DescriptorSet):
     def iteritems(self):
         """
         Return an iterator over set descriptor key and instance pairs.
-        :rtype: collections.Iterator[(collections.Hashable,
-                                      smqtk.representation.DescriptorElement)]
+        :rtype: collections.abc.Iterator[(collections.abc.Hashable,
+                                          smqtk.representation.DescriptorElement)]
         """
         for d in self.iterdescriptors():
             yield d.uuid(), d

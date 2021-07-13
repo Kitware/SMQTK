@@ -18,11 +18,11 @@ import functools
 
 setting = ModelImporter.model('setting')
 
+
 class NearestNeighbors(Resource):
     def __init__(self):
         self.resourceName = 'smqtk_nearest_neighbors'
         self.route('GET', ('nn',), self.nearestNeighbors)
-
 
     @staticmethod
     def descriptorSetFromItem(item):
@@ -47,7 +47,6 @@ class NearestNeighbors(Resource):
                                      db_host=setting.get('smqtk_girder.db_host'),
                                      db_user=setting.get('smqtk_girder.db_user'),
                                      db_pass=setting.get('smqtk_girder.db_pass'))
-
 
     @staticmethod
     def nearestNeighborIndex(item, user, descriptorSet):
@@ -84,7 +83,6 @@ class NearestNeighbors(Resource):
 
         return LSHNearestNeighborIndex(functor, descriptorSet,
                                        hash2uuidsKV, read_only=True)
-
 
     @access.user
     @filtermodel('item', addFields=('smqtk_distance',))

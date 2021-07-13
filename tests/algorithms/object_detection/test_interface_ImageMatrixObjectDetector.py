@@ -1,4 +1,4 @@
-from six.moves import mock
+import unittest.mock as mock
 
 from smqtk.algorithms import ImageReader, ImageMatrixObjectDetector
 from smqtk.representation import DataElement

@@ -56,7 +56,7 @@ class DetectionElementFactory (SmqtkRepresentation):
         """
         Create a new DetectionElement instance o the configured implementation.
 
-        :param collections.Hashable uuid:
+        :param collections.abc.Hashable uuid:
             UUID to assign the element.
 
         :return: New DetectionElement instance.

@@ -3,7 +3,7 @@ Tests for DataElement abstract interface class methods that provide
 functionality.
 """
 import hashlib
-import mock
+import unittest.mock as mock
 import os.path as osp
 import tempfile
 import unittest

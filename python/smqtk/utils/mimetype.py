@@ -24,5 +24,8 @@ def get_mimetypes():
             # Remove weird extensions from map for getting extensions-by-type
             for jpg_ext in ['.jfif', '.jpe']:
                 if jpg_ext in MT_CACHE.types_map_inv[1]['image/jpeg']:
-                    MT_CACHE.types_map_inv[1]['image/jpeg'].remove(jpg_ext)
+                    # Incorrect stub for `.types_map_inv`. Actually contains
+                    # lists at the leaves.
+                    # noinspection PyUnresolvedReferences
+                    MT_CACHE.types_map_inv[1]['image/jpeg'].remove(jpg_ext)  # type: ignore
     return MT_CACHE

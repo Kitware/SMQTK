@@ -1,4 +1,3 @@
-import json
 import traceback
 
 from bson.objectid import ObjectId
@@ -6,7 +5,7 @@ from bson.objectid import ObjectId
 from girder import logger
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import Resource, getCurrentUser, filtermodel, loadmodel, RestException
+from girder.api.rest import Resource, getCurrentUser, filtermodel, RestException
 from girder.constants import AccessType
 from girder.utility.model_importer import ModelImporter
 
@@ -31,12 +30,12 @@ class Iqr(Resource):
 
         # Record of trained classifiers for a session. Session classifier
         # modifications locked under the parent session's global lock.
-        #: :type: dict[collections.Hashable, SupervisedClassifier | None]
+        #: :type: dict[collections.abc.Hashable, SupervisedClassifier | None]
         self.session_classifiers = {}
         # Control for knowing when a new classifier should be trained for a
         # session (True == train new classifier). Modification for specific
         # sessions under parent session's lock.
-        #: :type: dict[collections.Hashable, bool]
+        #: :type: dict[collections.abc.Hashable, bool]
         self.session_classifier_dirty = {}
         self.controller = IqrController(False)
 
@@ -64,7 +63,6 @@ class Iqr(Resource):
                                          db_host=setting.get('smqtk_girder.db_host'),
                                          db_user=setting.get('smqtk_girder.db_user'),
                                          db_pass=setting.get('smqtk_girder.db_pass'))
-
 
     @staticmethod
     def _nearestNeighborIndex(sid, descriptor_set):

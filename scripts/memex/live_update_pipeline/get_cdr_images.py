@@ -442,7 +442,7 @@ def main():
         http_auth = (config['stored_http_auth']['name'],
                      config['stored_http_auth']['pass'])
 
-    ts_re = re.compile('(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z')
+    ts_re = re.compile(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z')
     if crawled_after:
         m = ts_re.match(crawled_after)
         if m is None:

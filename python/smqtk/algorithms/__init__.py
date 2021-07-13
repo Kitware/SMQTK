@@ -1,11 +1,12 @@
-from ._interface import SmqtkAlgorithm
+from ._interface import SmqtkAlgorithm  # noqa: F401
 
 # Import module abstracts and plugin getter functions
-from .classifier import Classifier, SupervisedClassifier
-from .descriptor_generator import DescriptorGenerator
-from .image_io import ImageReader
-from .object_detection import ObjectDetector, ImageMatrixObjectDetector
-from .nn_index import NearestNeighborsIndex
-from .nn_index.hash_index import HashIndex
-from .nn_index.lsh.functors import LshFunctor
-from .relevancy_index import RelevancyIndex
+from .classifier import Classifier, SupervisedClassifier  # noqa: F401
+from .descriptor_generator import DescriptorGenerator  # noqa: F401
+from .image_io import ImageReader  # noqa: F401
+from .object_detection import ObjectDetector, ImageMatrixObjectDetector  # noqa: F401
+from .nn_index import NearestNeighborsIndex  # noqa: F401
+from .nn_index.hash_index import HashIndex  # noqa: F401
+from .nn_index.lsh.functors import LshFunctor  # noqa: F401
+from .rank_relevancy import RankRelevancy, RankRelevancyWithFeedback  # noqa: F401
+from .relevancy_index import RelevancyIndex  # noqa: F401

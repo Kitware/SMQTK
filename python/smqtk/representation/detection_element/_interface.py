@@ -34,7 +34,7 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
             a configuration.
         :type config_dict: dict
 
-        :param collections.Hashable uuid:
+        :param collections.abc.Hashable uuid:
             UUID to assign to the produced DetectionElement.
 
         :param merge_default: Merge the given configuration on top of the
@@ -62,14 +62,14 @@ class DetectionElement (SmqtkRepresentation, Pluggable):
         only specified at runtime. Implementing classes should not include
         ``uuid`` in ``get_config`` returns.
 
-        :param collections.Hashable uuid:
+        :param collections.abc.Hashable uuid:
             Unique ID reference of the detection.
 
         """
         super(DetectionElement, self).__init__()
         self._uuid = uuid
 
-    __hash__ = None
+    __hash__ = None  # type: ignore
 
     def __eq__(self, other):
         """

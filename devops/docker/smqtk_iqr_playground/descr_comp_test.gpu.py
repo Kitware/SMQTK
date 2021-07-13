@@ -1,17 +1,14 @@
 """
 Test computing a descriptor on something.
 """
-
-import os
 from smqtk.algorithms.descriptor_generator.caffe_descriptor \
     import CaffeDescriptorGenerator
 from smqtk.representation.data_element.file_element import DataFileElement
+from smqtk.representation.data_element.url_element import DataUrlElement
 
 
-data_filepath = "/usr/local/lib/python2.7/dist-packages/smqtk/tests/data/" \
-                "Lenna.png"
-assert os.path.isfile(data_filepath)
-e = DataFileElement(data_filepath)
+grace_hopper_img_url = "https://upload.wikimedia.org/wikipedia/commons/5/55/Grace_Hopper.jpg"
+e = DataUrlElement(grace_hopper_img_url)
 
 gen = CaffeDescriptorGenerator(
     DataFileElement("/home/smqtk/caffe/msra_resnet/ResNet-50-deploy.prototxt"),
@@ -25,3 +22,4 @@ gen = CaffeDescriptorGenerator(
 d = gen.generate_one_element(e)
 
 assert d.vector() is not None
+print(d.vector())

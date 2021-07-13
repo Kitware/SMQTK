@@ -1,12 +1,10 @@
 from girder.api import access
 from girder.api.describe import Description, autoDescribeRoute
-from girder.api.rest import filtermodel, getCurrentUser, Resource
+from girder.api.rest import getCurrentUser, Resource
 from girder.constants import AccessType, TokenScope, SortDir
 from girder.utility import setting_utilities
 from girder.utility.model_importer import ModelImporter
-from girder.plugins.worker.utils import getWorkerApiUrl, jobInfoSpec
-
-from girder import logger
+from girder.plugins.worker.utils import getWorkerApiUrl
 
 from .constants import PluginSettings
 
@@ -15,6 +13,7 @@ from smqtk_worker.tasks import process_images
 import itertools
 
 SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
+
 
 @setting_utilities.validator({
     PluginSettings.DB_HOST,
@@ -30,21 +29,26 @@ SMQTK_SETTING_READ = 'smqtk_girder.setting_read'
 def validateSettings(doc):
     pass
 
+
 @setting_utilities.default(PluginSettings.DB_HOST)
 def defaultDbHost():
     return 'localhost'
+
 
 @setting_utilities.default(PluginSettings.DB_NAME)
 def defaultDbName():
     return 'smqtk'
 
+
 @setting_utilities.default(PluginSettings.DB_USER)
 def defaultDbUser():
     return 'smqtk'
 
+
 @setting_utilities.default(PluginSettings.DB_DESCRIPTORS_TABLE)
 def defaultDbDescriptorsTable():
     return 'descriptors'
+
 
 @setting_utilities.default(PluginSettings.IMAGE_BATCH_SIZE)
 def defaultImageBatchSize():
@@ -75,7 +79,7 @@ class SmqtkAPI(Resource):
         """
         setting_results = list(ModelImporter.model('setting').find({
             'key': {
-                '$regex': '^smqtk_girder\.'
+                '$regex': r'^smqtk_girder\.'
             }
         }))
 

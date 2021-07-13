@@ -46,7 +46,7 @@ psql_element_factory = DescriptorElementFactory(
 )
 
 
-fname_re = re.compile('(\w+)\.(\w+)\.vector\.npy')
+fname_re = re.compile(r'(\w+)\.(\w+)\.vector\.npy')
 
 
 def transfer_vector(type_str, uuid_str):

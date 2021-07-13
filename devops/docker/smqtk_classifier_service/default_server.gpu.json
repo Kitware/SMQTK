@@ -1,50 +1,50 @@
 {
     "classification_factory": {
-        "MemoryClassificationElement": {},
-        "type": "MemoryClassificationElement"
+        "smqtk.representation.classification_element.memory.MemoryClassificationElement": {},
+        "type": "smqtk.representation.classification_element.memory.MemoryClassificationElement"
     },
     "classifier_collection": {},
     "descriptor_factory": {
-        "DescriptorMemoryElement": {},
-        "type": "DescriptorMemoryElement"
+        "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement": {},
+        "type": "smqtk.representation.descriptor_element.local_elements.DescriptorMemoryElement"
     },
     "descriptor_generator": {
-        "CaffeDescriptorGenerator": {
+        "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
             "batch_size": 10,
             "data_layer": "data",
             "gpu_device_id": 0,
             "image_mean": {
-                "DataFileElement": {
+                "smqtk.representation.data_element.file_element.DataFileElement": {
                     "explicit_mimetype": null,
                     "filepath": "/caffe/models/msra_resnet/ResNet_mean.binaryproto",
                     "readonly": true
                 },
-                "type": "DataFileElement"
+                "type": "smqtk.representation.data_element.file_element.DataFileElement"
             },
             "input_scale": null,
             "load_truncated_images": true,
             "network_is_bgr": true,
             "network_model": {
-                "DataFileElement": {
+                "smqtk.representation.data_element.file_element.DataFileElement": {
                     "explicit_mimetype": null,
                     "filepath": "/caffe/models/msra_resnet/ResNet-50-model.caffemodel",
                     "readonly": true
                 },
-                "type": "DataFileElement"
+                "type": "smqtk.representation.data_element.file_element.DataFileElement"
             },
             "network_prototxt": {
-                "DataFileElement": {
+                "smqtk.representation.data_element.file_element.DataFileElement": {
                     "explicit_mimetype": null,
                     "filepath": "/caffe/models/msra_resnet/ResNet-50-deploy.prototxt",
                     "readonly": true
                 },
-                "type": "DataFileElement"
+                "type": "smqtk.representation.data_element.file_element.DataFileElement"
             },
             "pixel_rescale": null,
             "return_layer": "pool5",
             "use_gpu": true
         },
-        "type": "CaffeDescriptorGenerator"
+        "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator"
     },
     "enable_classifier_removal": true,
     "flask_app": {
@@ -54,7 +54,7 @@
     },
     "immutable_labels": [],
     "iqr_state_classifier_config": {
-        "LibSvmClassifier": {
+        "smqtk.algorithms.classifier.libsvm.LibSvmClassifier": {
             "normalize": 2,
             "svm_label_map_uri": null,
             "svm_model_uri": null,
@@ -65,7 +65,7 @@
                 "-t": 0
             }
         },
-        "type": "LibSvmClassifier"
+        "type": "smqtk.algorithms.classifier.libsvm.LibSvmClassifier"
     },
     "server": {
         "host": "0.0.0.0",

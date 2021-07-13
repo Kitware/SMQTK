@@ -50,7 +50,7 @@ class IqrController (SmqtkObject):
 
         """
         # Map of uuid to the search state
-        #: :type: dict[collections.Hashable, IqrSession]
+        #: :type: dict[collections.abc.Hashable, IqrSession]
         self._iqr_sessions = {}
         # Map of sessions with timeout's enabled and the time out value in
         # seconds
@@ -149,7 +149,7 @@ class IqrController (SmqtkObject):
         expiration.
 
         :return: a tuple of all currently registered IqrSessions.
-        :rtype: tuple of collections.Hashable
+        :rtype: tuple of collections.abc.Hashable
 
         """
         with self._map_rlock:
@@ -166,7 +166,7 @@ class IqrController (SmqtkObject):
         expiration.
 
         :param session_uuid: Possible UUID of a session
-        :type session_uuid: collections.Hashable
+        :type session_uuid: collections.abc.Hashable
 
         :return: True of the given UUID references a session in this controller
             and false if not.
@@ -188,7 +188,7 @@ class IqrController (SmqtkObject):
         :type timeout: float
 
         :return: UUID of new IQR Session
-        :rtype: collections.Hashable
+        :rtype: collections.abc.Hashable
 
         """
         timeout = float(timeout)
@@ -212,7 +212,7 @@ class IqrController (SmqtkObject):
         :raises KeyError: The given UUID doesn't exist in this controller.
 
         :param session_uuid: UUID if the session to get
-        :type session_uuid: collections.Hashable
+        :type session_uuid: collections.abc.Hashable
 
         :return: IqrSession instance for the given UUID
         :rtype: smqtk.iqr.iqr_session.IqrSession
@@ -230,7 +230,7 @@ class IqrController (SmqtkObject):
         :raises KeyError: The given UUID doesn't exist in this controller.
 
         :param session_uuid: Session UUID
-        :type session_uuid: collections.Hashable
+        :type session_uuid: collections.abc.Hashable
 
         """
         with self._map_rlock:

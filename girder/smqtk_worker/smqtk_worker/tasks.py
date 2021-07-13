@@ -121,8 +121,10 @@ def compute_hash_codes(task, folderId, **kwargs):
 
     meanVecFileId = smqtkFileIdFromName(task.girder_client, smqtkFolder, 'mean_vec.npy')
     rotationFileId = smqtkFileIdFromName(task.girder_client, smqtkFolder, 'rotation.npy')
-    hash2uuidsFile = initializeItemWithFile(task.girder_client,
-                                            createOverwriteItem(task.girder_client, smqtkFolder['_id'], 'hash2uuids.pickle'))
+    hash2uuidsFile = initializeItemWithFile(
+        task.girder_client,
+        createOverwriteItem(task.girder_client, smqtkFolder['_id'], 'hash2uuids.pickle')
+    )
 
     functor = ItqFunctor(mean_vec_cache=GirderDataElement(meanVecFileId, api_root=task.request.girder_api_url,
                                                           token=task.girder_client.token),
@@ -167,7 +169,7 @@ def process_images(task, folderId, dataElementUris, **kwargs):
 
     batch_size = int(getSetting(task.girder_client, 'image_batch_size'))
     batches = [dataElementUris[x:x+batch_size]
-               for x in xrange(0, len(dataElementUris), batch_size)]
+               for x in range(0, len(dataElementUris), batch_size)]
 
     task_headers = {'jobInfoSpec': task.request.jobInfoSpec,
                     'girder_api_url': task.request.girder_api_url,

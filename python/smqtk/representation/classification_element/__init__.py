@@ -4,7 +4,6 @@ import six
 
 from smqtk.exceptions import NoClassificationError
 from smqtk.representation import SmqtkRepresentation
-from smqtk.utils.dict import merge_dict
 from smqtk.utils.plugin import Pluggable
 
 
@@ -46,7 +45,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :type type_name: str
 
         :param uuid: Unique ID reference of the classification
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         """
         super(ClassificationElement, self).__init__()
@@ -81,7 +80,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         Get the confidence value for a specific label
 
         :param label: Classification label to get the confidence value for.
-        :type label: collections.Hashable
+        :type label: collections.abc.Hashable
 
         :raises KeyError: The given label is not present in this
             classification.
@@ -156,7 +155,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :type type_name: str
 
         :param uuid: Unique ID reference of the classification
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param merge_default: Merge the given configuration on top of the
             default provided by ``get_default_config``.
@@ -181,11 +180,11 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         :raises NoClassificationError: No classification set.
 
         :return: The label with the highest confidence.
-        :rtype: collections.Hashable
+        :rtype: collections.abc.Hashable
 
         """
         # Temp (label, confidence) tuple
-        #: :type: (collections.Hashable, float)
+        #: :type: (collections.abc.Hashable, float)
         m = (None, NEG_INF)
         for i in six.iteritems(self.get_classification()):
             if i[1] > m[1]:
@@ -228,7 +227,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
             set.
 
         :return: Label-to-confidence dictionary.
-        :rtype: dict[collections.Hashable, float]
+        :rtype: dict[collections.abc.Hashable, float]
 
         """
 
@@ -248,7 +247,7 @@ class ClassificationElement(SmqtkRepresentation, Pluggable):
         Thus, a ``super`` call should be made, which will return a dictionary.
 
         :param m: New labels-to-confidence mapping to set.
-        :type m: dict[collections.Hashable, float]
+        :type m: dict[collections.abc.Hashable, float]
 
         :raises ValueError: The given label-confidence map was empty.
 

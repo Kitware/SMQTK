@@ -1,21 +1,22 @@
-from __future__ import division, print_function
-import inspect
 import os
 import pickle
 import unittest
 
 import PIL.Image
-import mock
+import unittest.mock as mock
 import numpy
 import pytest
 
 from smqtk.algorithms.descriptor_generator import DescriptorGenerator
-from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
-    caffe, CaffeDescriptorGenerator
+from smqtk.algorithms.descriptor_generator.caffe_descriptor import (
+    caffe,
+    CaffeDescriptorGenerator
+)
 # Testing protected helper function
 # noinspection PyProtectedMember
-from smqtk.algorithms.descriptor_generator.caffe_descriptor import \
+from smqtk.algorithms.descriptor_generator.caffe_descriptor import (
     _process_load_img_array
+)
 from smqtk.representation.data_element.file_element import DataFileElement
 from smqtk.representation.data_element.memory_element import DataMemoryElement
 from smqtk.representation.data_element.url_element import DataUrlElement
@@ -164,11 +165,11 @@ class TestCaffeDesctriptorGenerator (unittest.TestCase):
             assert inst.image_mean == self.dummy_img_mean_elem
             assert inst.return_layer == 'foobar'
             assert inst.batch_size == 9
-            assert inst.use_gpu == True
+            assert inst.use_gpu is True
             assert inst.gpu_device_id == 99
-            assert inst.network_is_bgr == False
+            assert inst.network_is_bgr is False
             assert inst.data_layer == 'maybe data'
-            assert inst.load_truncated_images == True
+            assert inst.load_truncated_images is True
             assert inst.pixel_rescale == (0.2, 0.3)
             assert inst.input_scale == 8.9
             assert inst.threads == 7

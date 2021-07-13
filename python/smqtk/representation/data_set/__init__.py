@@ -1,11 +1,11 @@
 import abc
-import collections
+from collections.abc import Set
 
 from smqtk.representation import SmqtkRepresentation
 from smqtk.utils.plugin import Pluggable
 
 
-class DataSet (collections.Set, SmqtkRepresentation, Pluggable):
+class DataSet (Set, SmqtkRepresentation, Pluggable):
     """
     Abstract interface for data sets, that contain an arbitrary number of
     ``DataElement`` instances of arbitrary implementation type, keyed on
@@ -69,7 +69,7 @@ class DataSet (collections.Set, SmqtkRepresentation, Pluggable):
 
         :param uuid: Unique ID to test for inclusion. This should match the
             type that the set implementation expects or cares about.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: True if the given uuid matches an element in this set, or
             False if it does not.
@@ -100,7 +100,7 @@ class DataSet (collections.Set, SmqtkRepresentation, Pluggable):
             this data set.
 
         :param uuid: The uuid of the element to retrieve.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :return: The data element instance for the given uuid.
         :rtype: smqtk.representation.DataElement

@@ -45,7 +45,7 @@ def uuids_for_processing(uuids, hash2uuids):
     :type hash2uuids: smqtk.representation.KeyValueStore
 
     :return: Iterator over UUIDs to process
-    :rtype: __generator[collections.Hashable]
+    :rtype: __generator[collections.abc.Hashable]
 
     """
     log = logging.getLogger(__name__)
@@ -67,11 +67,9 @@ def default_config():
             "use_multiprocessing": False,
         },
         "plugins": {
-            "descriptor_set":
-                make_default_config(DescriptorSet.get_impls()),
+            "descriptor_set": make_default_config(DescriptorSet.get_impls()),
             "lsh_functor": make_default_config(LshFunctor.get_impls()),
-            "hash2uuid_kvstore":
-                make_default_config(KeyValueStore.get_impls()),
+            "hash2uuid_kvstore": make_default_config(KeyValueStore.get_impls()),
         },
     }
 
@@ -113,19 +111,16 @@ def main():
     # Loading stuff
     #
     log.info("Loading descriptor index")
-    #: :type: smqtk.representation.DescriptorSet
     descriptor_set = from_config_dict(
         config['plugins']['descriptor_set'],
         DescriptorSet.get_impls()
     )
     log.info("Loading LSH functor")
-    #: :type: smqtk.algorithms.LshFunctor
     lsh_functor = from_config_dict(
         config['plugins']['lsh_functor'],
         LshFunctor.get_impls()
     )
     log.info("Loading Key/Value store")
-    #: :type: smqtk.representation.KeyValueStore
     hash2uuids_kvstore = from_config_dict(
         config['plugins']['hash2uuid_kvstore'],
         KeyValueStore.get_impls()
@@ -137,8 +132,8 @@ def main():
         if uuid_list_filepath:
             log.info("Using UUIDs list file")
             with open(uuid_list_filepath) as f:
-                for l in f:
-                    yield l.strip()
+                for line in f:
+                    yield line.strip()
         else:
             log.info("Using all UUIDs resent in descriptor index")
             for k in descriptor_set.keys():

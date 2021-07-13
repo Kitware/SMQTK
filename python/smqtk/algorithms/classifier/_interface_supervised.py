@@ -30,8 +30,8 @@ class SupervisedClassifier (Classifier):
 
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
-        :type class_examples: dict[collections.Hashable,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
+        :type class_examples: dict[collections.abc.Hashable,
+                 collections.abc.Iterable[smqtk.representation.DescriptorElement]]
 
         :param extra_params: Dictionary with extra parameters for training.
         :type extra_params: dict[basestring, object]
@@ -70,8 +70,8 @@ class SupervisedClassifier (Classifier):
 
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
-        :type class_examples: dict[collections.Hashable,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
+        :type class_examples: dict[collections.abc.Hashable,
+                 collections.abc.Iterable[smqtk.representation.DescriptorElement]]
 
         :param extra_params: Dictionary with extra parameters for training.
         :type extra_params: None | dict[basestring, object]

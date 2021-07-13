@@ -131,12 +131,12 @@ def main():
     #
     def iter_uuids():
         with open(uuids_list_filepath) as f:
-            for l in f:
-                yield l.strip()
+            for line in f:
+                yield line.strip()
 
     def descr_for_uuid(uuid):
         """
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
         :rtype: smqtk.representation.DescriptorElement
         """
         return descriptor_set.get_descriptor(uuid)
@@ -150,7 +150,7 @@ def main():
                                                classify_overwrite)
 
     log.info("Initializing uuid-to-descriptor parallel map")
-    #: :type: collections.Iterable[smqtk.representation.DescriptorElement]
+    #: :type: collections.abc.Iterable[smqtk.representation.DescriptorElement]
     element_iter = parallel.parallel_map(
         descr_for_uuid, iter_uuids(),
         use_multiprocessing=p_use_multiprocessing,
@@ -159,7 +159,7 @@ def main():
     )
 
     log.info("Initializing descriptor-to-classification parallel map")
-    #: :type: collections.Iterable[smqtk.representation.ClassificationElement]
+    #: :type: collections.abc.Iterable[smqtk.representation.ClassificationElement]
     classification_iter = parallel.parallel_map(
         classify_descr, element_iter,
         use_multiprocessing=p_use_multiprocessing,
@@ -178,12 +178,12 @@ def main():
         :type e: smqtk.representation.ClassificationElement
         """
         c_m = e.get_classification()
-        return [e.uuid] + [c_m[l] for l in c_labels]
+        return [e.uuid] + [c_m[label] for label in c_labels]
 
     # column labels file
     log.info("Writing CSV column header file: %s", output_csv_header_filepath)
     safe_create_dir(os.path.dirname(output_csv_header_filepath))
-    with open(output_csv_header_filepath, 'wb') as f_csv:
+    with open(output_csv_header_filepath, 'w') as f_csv:
         w = csv.writer(f_csv)
         w.writerow(['uuid'] + [str(cl) for cl in c_labels])
 
@@ -192,7 +192,7 @@ def main():
     safe_create_dir(os.path.dirname(output_csv_filepath))
     pr = cli.ProgressReporter(log.info, 1.0)
     pr.start()
-    with open(output_csv_filepath, 'wb') as f_csv:
+    with open(output_csv_filepath, 'w') as f_csv:
         w = csv.writer(f_csv)
         for c in classification_iter:
             w.writerow(make_row(c))

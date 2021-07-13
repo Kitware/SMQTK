@@ -1,6 +1,6 @@
 import unittest
 
-import mock
+import unittest.mock as mock
 import pytest
 
 from smqtk.representation.descriptor_element.solr_element import \

@@ -1,6 +1,6 @@
 import pickle
 
-import mock
+import unittest.mock as mock
 import pytest
 
 from smqtk.exceptions import NoDetectionError
@@ -241,8 +241,8 @@ def test_set_detection_invalid_bbox():
     c_elem.has_classifications.return_value = True
 
     with pytest.raises(ValueError, match="Provided an invalid "
-                                         "AxisAlignedBoundingBox instance. "
-                                         "Given 'not bbox' \(type=str\)\."):
+                                         r"AxisAlignedBoundingBox instance\. "
+                                         r"Given 'not bbox' \(type=str\)\."):
         # noinspection PyTypeChecker
         MemoryDetectionElement(0).set_detection(bbox, c_elem)
 
@@ -257,8 +257,8 @@ def test_set_detection_invalid_classification_element():
 
     with pytest.raises(ValueError,
                        match="Provided an invalid ClassificationElement "
-                             "instance. Given 'not a classification element' "
-                             "\(type=str\)\."):
+                             r"instance\. Given 'not a classification element' "
+                             r"\(type=str\)\."):
         # noinspection PyTypeChecker
         MemoryDetectionElement(0).set_detection(bbox, c_elem)
 

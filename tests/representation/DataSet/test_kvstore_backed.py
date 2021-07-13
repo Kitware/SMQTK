@@ -28,11 +28,12 @@ class TestKeyValueDataSet (unittest.TestCase):
     def test_get_default_config(self):
         # Default config should use a cache-less in-memory kvstore
         dflt = KVSDataSet.get_default_config()
+        mkvs_key = "smqtk.representation.key_value.memory.MemoryKeyValueStore"
         self.assertIn('kvstore', dflt)
-        self.assertEqual(dflt['kvstore']['type'], 'MemoryKeyValueStore')
+        self.assertEqual(dflt['kvstore']['type'], mkvs_key)
         # in-memory impl configuration should be the same as the default.
         self.assertEqual(
-            dflt['kvstore']['MemoryKeyValueStore'],
+            dflt['kvstore'][mkvs_key],
             DFLT_KVSTORE.get_config()
         )
 

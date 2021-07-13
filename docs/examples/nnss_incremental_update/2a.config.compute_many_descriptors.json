@@ -1,6 +1,6 @@
 {
     "descriptor_factory": {
-        "PostgresDescriptorElement": {
+        "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement": {
             "binary_col": "vector",
             "db_host": "/dev/shm",
             "db_name": "postgres",
@@ -11,26 +11,46 @@
             "type_col": "type_str",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorElement"
+        "type": "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement"
     },
     "descriptor_generator": {
-        "CaffeDescriptorGenerator": {
-            "batch_size": 256,
-            "data_layer": "data",
-            "gpu_device_id": 0,
-            "image_mean_filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
-            "load_truncated_images": false,
-            "network_is_bgr": true,
-            "network_model_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
-            "network_prototxt_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
-            "pixel_rescale": null,
+        "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+            "network_model": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                    "readonly":true
+                }
+            },
+            "network_prototxt": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+                    "readonly": true
+                }
+            },
+            "image_mean": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+                    "readonly": true
+                }
+            },
             "return_layer": "fc7",
-            "use_gpu": false
+            "batch_size": 256,
+            "use_gpu": false,
+            "gpu_device_id": 0,
+            "network_is_bgr": true,
+            "data_layer": "data",
+            "load_truncated_images": false,
+            "pixel_rescale": null,
+            "input_scale": null,
+            "threads": null
         },
-        "type": "CaffeDescriptorGenerator"
+        "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator"
     },
     "descriptor_set": {
-        "PostgresDescriptorSet": {
+        "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet": {
             "db_host": "/dev/shm",
             "db_name": "postgres",
             "db_pass": null,
@@ -43,6 +63,6 @@
             "table_name": "descriptor_set",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorSet"
+        "type": "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet"
     }
 }

@@ -85,7 +85,7 @@ class CachingDescriptorElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param wrapped_element_factory: DescriptorElementFactory to produce
             DescriptorElement instances of the wrapped type.

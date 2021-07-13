@@ -1,6 +1,6 @@
 {
     "descriptor_factory": {
-        "PostgresDescriptorElement": {
+        "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement": {
             "binary_col": "vector",
             "db_host": "/dev/shm",
             "db_name": "postgres",
@@ -11,23 +11,43 @@
             "type_col": "type_str",
             "uuid_col": "uid"
         },
-        "type": "PostgresDescriptorElement"
+        "type": "smqtk.representation.descriptor_element.postgres.PostgresDescriptorElement"
     },
     "descriptor_generator": {
-        "CaffeDescriptorGenerator": {
-            "batch_size": 256,
-            "data_layer": "data",
-            "gpu_device_id": 0,
-            "image_mean_filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
-            "load_truncated_images": false,
-            "network_is_bgr": true,
-            "network_model_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
-            "network_prototxt_filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
-            "pixel_rescale": null,
+        "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator": {
+            "network_model": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/bvlc_alexnet.caffemodel",
+                    "readonly":true
+                }
+            },
+            "network_prototxt": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/models/bvlc_alexnet/deploy.prototxt",
+                    "readonly": true
+                }
+            },
+            "image_mean": {
+                "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                "smqtk.representation.data_element.file_element.DataFileElement": {
+                    "filepath": "/home/purg/dev/caffe/source/data/ilsvrc12/imagenet_mean.binaryproto",
+                    "readonly": true
+                }
+            },
             "return_layer": "fc7",
-            "use_gpu": false
+            "batch_size": 256,
+            "use_gpu": false,
+            "gpu_device_id": 0,
+            "network_is_bgr": true,
+            "data_layer": "data",
+            "load_truncated_images": false,
+            "pixel_rescale": null,
+            "input_scale": null,
+            "threads": null
         },
-        "type": "CaffeDescriptorGenerator"
+        "type": "smqtk.algorithms.descriptor_generator.caffe_descriptor.CaffeDescriptorGenerator"
     },
     "flask_app": {
         "BASIC_AUTH_PASSWORD": "demo",
@@ -35,9 +55,32 @@
         "SECRET_KEY": "MySuperUltraSecret"
     },
     "nn_index": {
-        "LSHNearestNeighborIndex": {
+        "smqtk.algorithms.nn_index.lsh.LSHNearestNeighborIndex": {
+            "lsh_functor": {
+                "type": "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor",
+                "smqtk.algorithms.nn_index.lsh.functors.itq.ItqFunctor": {
+                    "mean_vec_cache": {
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "2b.itq.256bit.mean_vec.npy",
+                            "readonly":true
+                        }
+                    },
+                    "rotation_cache": {
+                    "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "2b.itq.256bit.rotation.npy",
+                            "readonly":true
+                        }
+                    },
+                    "bit_length": 256,
+                    "itq_iterations": 50,
+                    "normalize": null,
+                    "random_seed": 0
+                }
+            },
             "descriptor_set": {
-                "PostgresDescriptorSet": {
+                "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet": {
                     "db_host": "/dev/shm",
                     "db_name": "postgres",
                     "db_pass": null,
@@ -50,28 +93,24 @@
                     "table_name": "descriptor_set",
                     "uuid_col": "uid"
                 },
-                "type": "PostgresDescriptorSet"
+                "type": "smqtk.representation.descriptor_set.postgres.PostgresDescriptorSet"
             },
-            "distance_method": "hik",
-            "hash2uuid_cache_filepath": "2d.hash2uuids.pickle",
-            "hash_index": {
-                "type": null
+            "hash2uuids_kvstore": {
+                "type": "smqtk.representation.key_value.memory.MemoryKeyValueStore",
+                "smqtk.representation.key_value.memory.MemoryKeyValueStore":  {
+                    "cache_element": {
+                        "type": "smqtk.representation.data_element.file_element.DataFileElement",
+                        "smqtk.representation.data_element.file_element.DataFileElement": {
+                            "filepath": "2d.hash2uuids.pickle",
+                            "readonly": true
+                        }
+                    }
+                }
             },
             "hash_index_comment": "'hash_index' may also be null to default to a linear index built at query time.",
-            "live_reload": true,
-            "lsh_functor": {
-                "ItqFunctor": {
-                    "bit_length": 256,
-                    "itq_iterations": 50,
-                    "mean_vec_filepath": "2b.itq.256bit.mean_vec.npy",
-                    "random_seed": 0,
-                    "rotation_filepath": "2b.itq.256bit.rotation.npy"
-                },
-                "type": "ItqFunctor"
-            },
-            "read_only": true,
-            "reload_mon_interval": 0.1,
-            "reload_settle_window": 1.0
+            "hash_index": {"type": null},
+            "distance_method": "hik",
+            "read_only": true
         },
         "type": "LSHNearestNeighborIndex"
     },

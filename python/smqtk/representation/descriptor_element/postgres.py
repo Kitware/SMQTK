@@ -8,7 +8,7 @@ from smqtk.utils.postgres import norm_psql_cmd_string, PsqlConnectionHelper
 
 # Try to import required modules
 try:
-    import psycopg2
+    import psycopg2  # type: ignore
 except ImportError:
     psycopg2 = None
 
@@ -106,7 +106,7 @@ class PostgresDescriptorElement (DescriptorElement):
         :type type_str: str
 
         :param uuid: Unique ID reference of the descriptor.
-        :type uuid: collections.Hashable
+        :type uuid: collections.abc.Hashable
 
         :param table_name: String label of the database table to use.
         :type table_name: str
@@ -424,18 +424,18 @@ class PostgresDescriptorElement (DescriptorElement):
             of None for missing values.
 
         :param descriptors: Iterable of descriptors to query for.
-        :type descriptors: collections.Iterable[
+        :type descriptors: collections.abc.Iterable[
             smqtk.representation.descriptor_element.DescriptorElement]
 
         :return: Iterator of tuples containing the descriptor uuid and the
             vector associated with the given descriptors or None if the
             descriptor has no associated vector
-        :rtype: collections.Iterable[
-            tuple[collections.Hashable, Union[numpy.ndarray, None]]]
+        :rtype: collections.abc.Iterable[
+            tuple[collections.abc.Hashable, Union[numpy.ndarray, None]]]
         """
         batch_dictionary = defaultdict(list)
         # For each given descriptor...
-        for descriptor_ in descriptors:
+        for descriptor_ in descriptors:  # type: PostgresDescriptorElement
             # Extract options for constructing SQL query used to
             # retrieve descriptor vectors
             batch_dictionary[
@@ -444,8 +444,13 @@ class PostgresDescriptorElement (DescriptorElement):
 
         # For each unique set of SQL query options...
         for query_options, uuids in batch_dictionary.items():
-            psql_helper = cls._create_psql_helper(
-                *query_options[:-1], create_table=False)
+            helper_kwargs = dict(zip(
+                ['db_name', 'db_host', 'db_port', 'db_user', 'db_pass',
+                 'table_name', 'uuid_col', 'type_col', 'binary_col'],
+                query_options[:-1]
+            ))
+            helper_kwargs['create_table'] = False
+            psql_helper = cls._create_psql_helper(**helper_kwargs)
 
             sql_query = cls.SELECT_MANY_TMPL.format(
                 table_name=query_options[5],

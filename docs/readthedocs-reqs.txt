@@ -1,13 +1,8 @@
-# Base SMQTK requirements: ReadTheDocs installs the package.
--r ../requirements.txt
+# For some reason RTD really wants to install an old version of sphinx *just*
+# for smqtk, but not newer projects... Not what what I'm missing...
+sphinx ~= 3.2
+sphinx-rtd-theme ~= 0.5
 
-# Some of these deps are installed by ReadTheDocs implicitly so they are
-# "duplicate" here. However, listing them here is useful for a local
-# documentation build. Not pinning versions to allow specifically pinned
-# versions by ReadTheDocs to not be modified.
-sphinx
-sphinx_rtd_theme
-
-# SMQTK specific documentation depedencies
+# SMQTK specific documentation dependencies
 sphinx-argparse==0.2.5
 sphinx-prompt==1.3.0

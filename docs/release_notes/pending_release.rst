@@ -128,12 +128,15 @@ Algorithms
 
 CMake
 
-* Minor fix to set the appropriate working directory when fetching the vesion
+* Minor fix to set the appropriate working directory when fetching the version
   value.
 
 Docker
 
 * Fixed IQR Playground build.
+
+* Fixed IQR Playground runtime environment by specifically installing pinned
+  versions from ``requirements/runtime.txt``.
 
 General
 

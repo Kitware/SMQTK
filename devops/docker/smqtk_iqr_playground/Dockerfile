@@ -93,7 +93,9 @@ COPY src /smqtk/source/src
 COPY TPL /smqtk/source/TPL
 COPY CMakeLists.txt LICENSE.txt pytest.* README.md setup.* setup_env.* \
      /smqtk/source/
-RUN mkdir /smqtk/build \
+
+RUN pip3 install -r /smqtk/source/requirements/runtime.txt \
+ && mkdir /smqtk/build \
  && cd /smqtk/build \
  && cmake \
     -DCMAKE_BUILD_TYPE:STRING=Release \

@@ -95,7 +95,7 @@ class TestKeyValueStoreAbstract (unittest.TestCase):
         # far, and ``get`` method should not have been called yet.
         # called yet.
         v_iter = s.values()
-        self.assertIsInstance(v_iter, collections.Iterable)
+        self.assertIsInstance(v_iter, collections.abc.Iterable)
         self.assertEqual(s.keys.call_count, 1)
         self.assertEqual(s.get.call_count, 0)
 

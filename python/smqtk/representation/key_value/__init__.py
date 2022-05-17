@@ -62,14 +62,14 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterable[collections.Hashable]
         """
 
     def values(self):
         """
         :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: collections.Iterator[object]
+        :rtype: collections.abc.Iterable[object]
         """
         for k in self.keys():
             yield self.get(k)
@@ -164,7 +164,7 @@ class KeyValueStore (SmqtkRepresentation, Pluggable):
 
         :param keys: Iterable of keys to remove.  If this is empty this method
             does nothing.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.Hashable]
 
         :raises ReadOnlyError: If this instance is marked as read-only.
         :raises KeyError: The given key is not present in this store and no

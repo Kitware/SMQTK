@@ -7,11 +7,11 @@ def check_empty_iterable(iterable, callback, exception_inst):
     function with the reconstructed iterable when it is not empty.
 
     :param iterable: Iterable to check.
-    :type iterable: collections.Iterable
+    :type iterable: collections.abc.Iterable
 
     :param callback: Function to call with the reconstructed, not-empty
         iterable.
-    :type callback: (collections.Iterable) -> None
+    :type callback: (collections.abc.Iterable) -> None
 
     :param exception_inst: The exception to throw if the iterable is empty
     :type exception_inst: Exception

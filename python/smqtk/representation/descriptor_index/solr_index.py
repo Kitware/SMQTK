@@ -206,7 +206,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         :param descriptors: Iterable of descriptor instances to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         documents = []
@@ -246,7 +246,7 @@ class SolrDescriptorIndex (DescriptorIndex):
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated 1-to-1 to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # Chunk up query based on max clauses available to us
@@ -303,7 +303,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         Remove descriptors associated to given descriptor UUIDs from this index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -314,7 +314,7 @@ class SolrDescriptorIndex (DescriptorIndex):
         def batch_op(_batch):
             """
             :param _batch: UIDs to remove from index.
-            :type _batch: collections.Iterable[collections.Hashable]
+            :type _batch: collections.abc.Iterable[collections.Hashable]
             """
             uuid_query = ' OR '.join([self.d_uid_field + (':%s' % str(_uid))
                                       for _uid in _batch])

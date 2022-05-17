@@ -88,7 +88,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         :param descriptors: Iterable of descriptor instances to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
 
@@ -114,13 +114,13 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
 
         :return: Iterator of descriptors associated to given uuid values.
-        :rtype: collections.Iterable[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
 
@@ -143,7 +143,7 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
         Remove descriptors associated to given descriptor UUIDs from this index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -154,21 +154,21 @@ class DescriptorIndex (SmqtkRepresentation, plugin.Pluggable):
     def iterkeys(self):
         """
         Return an iterator over indexed descriptor keys, which are their UUIDs.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterable[collections.Hashable]
         """
 
     @abc.abstractmethod
     def iterdescriptors(self):
         """
         Return an iterator over indexed descriptor element instances.
-        :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
         """
 
     @abc.abstractmethod
     def iteritems(self):
         """
         Return an iterator over indexed descriptor key and instance pairs.
-        :rtype: collections.Iterator[(collections.Hashable,
+        :rtype: collections.abc.Iterable[(collections.Hashable,
                                       smqtk.representation.DescriptorElement)]
         """
 

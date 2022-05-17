@@ -346,7 +346,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         :param descriptors: Iterable of descriptor instances to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
@@ -416,7 +416,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -505,7 +505,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
         Remove descriptors associated to given descriptor UUIDs from this index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -535,7 +535,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
     def iterkeys(self):
         """
         Return an iterator over indexed descriptor keys, which are their UUIDs.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterable[collections.Hashable]
         """
         # Getting UUID through the element because the UUID might not be a
         # string type, and the true type is encoded with the DescriptorElement
@@ -546,7 +546,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
     def iterdescriptors(self):
         """
         Return an iterator over indexed descriptor element instances.
-        :rtype: collections.Iterator[smqtk.representation.DescriptorElement]
+        :rtype: collections.abc.Iterable[smqtk.representation.DescriptorElement]
         """
         def execute(c):
             c.execute(self.SELECT_TMPL.format(
@@ -568,7 +568,7 @@ class PostgresDescriptorIndex (DescriptorIndex):
     def iteritems(self):
         """
         Return an iterator over indexed descriptor key and instance pairs.
-        :rtype: collections.Iterator[(collections.Hashable,
+        :rtype: collections.abc.Iterable[(collections.Hashable,
                                       smqtk.representation.DescriptorElement)]
         """
         for d in self.iterdescriptors():

@@ -68,7 +68,7 @@ def parallel_map(work_func, *sequences, **kwargs):
     :param sequences: Input data to apply to the given ``work_func`` function.
         If more than one sequence is given, the function is called with an
         argument list consisting of the corresponding item of each sequence.
-    :type sequences: collections.Iterable
+    :type sequences: collections.abc.Iterable
 
     :param kwargs: Optionally available keyword arguments are as follows:
 
@@ -201,7 +201,7 @@ def is_terminal(p):
     return isinstance(p, _TerminalPacket)
 
 
-class ParallelResultsIterator (SmqtkObject, collections.Iterator):
+class ParallelResultsIterator (SmqtkObject, collections.abc.Iterable):
 
     def __init__(self, name, ordered, is_multiprocessing, heart_beat,
                  work_queue, results_queue,

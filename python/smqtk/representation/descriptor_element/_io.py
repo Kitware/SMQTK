@@ -37,7 +37,7 @@ def elements_to_matrix(descr_elements, mat=None, procs=None, buffer_factor=2,
         same size.
     :type descr_elements:
         collections.Sequence[smqtk.representation.DescriptorElement] |
-        collections.Iterable[smqtk.representation.DescriptorElement]
+        collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
     :param mat: Optionally a pre-constructed numpy matrix of the shape
         ``(nDescriptors, nFeatures)`` to load descriptor vectors into. We will

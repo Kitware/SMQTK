@@ -146,7 +146,7 @@ class LinearHashIndex (HashIndex):
 
         :param hashes: Iterable of descriptor elements to build index
             over.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
         with self._model_lock:
@@ -164,7 +164,7 @@ class LinearHashIndex (HashIndex):
 
         :param hashes: Iterable of numpy boolean hash vectors to add to this
             index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         """
         with self._model_lock:
@@ -178,7 +178,7 @@ class LinearHashIndex (HashIndex):
 
         :param hashes: Iterable of numpy boolean hash vectors to remove from
             this index.
-        :type hashes: collections.Iterable[numpy.ndarray[bool]]
+        :type hashes: collections.abc.Iterable[numpy.ndarray[bool]]
 
         :raises KeyError: One or more hashes provided do not match any stored
             hashes.  The index should not be modified.

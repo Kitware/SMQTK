@@ -402,7 +402,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to build index
             over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         if self.read_only:
@@ -473,7 +473,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         :param descriptors: Iterable of descriptor elements to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :raises RuntimeError: If a given descriptor is already present in this
             index.  Adding a duplicate descriptor would cause duplicates in
@@ -541,7 +541,7 @@ class FaissNearestNeighborsIndex (NearestNeighborsIndex):
         descriptors from this index associated with the given UIDs.
 
         :param uids: Iterable of UIDs of descriptors to remove from this index.
-        :type uids: collections.Iterable[collections.Hashable]
+        :type uids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: One or more UIDs provided do not match any stored
             descriptors.

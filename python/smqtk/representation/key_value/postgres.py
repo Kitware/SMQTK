@@ -283,7 +283,7 @@ class PostgresKeyValueStore (KeyValueStore):
     def keys(self):
         """
         :return: Iterator over keys in this store.
-        :rtype: collections.Iterator[collections.Hashable]
+        :rtype: collections.abc.Iterable[collections.Hashable]
         """
         def cb(cur):
             cur.execute(self.SqlTemplates.SELECT_TMPL.format(
@@ -301,7 +301,7 @@ class PostgresKeyValueStore (KeyValueStore):
         """
         :return: Iterator over values in this store. Values are not guaranteed
             to be in any particular order.
-        :rtype: collections.Iterator[object]
+        :rtype: collections.abc.Iterable[object]
         """
         def cb(cur):
             cur.execute(self.SqlTemplates.SELECT_TMPL.format(
@@ -486,7 +486,7 @@ class PostgresKeyValueStore (KeyValueStore):
 
         :param keys: Iterable of keys to remove.  If this is empty this method
             does nothing.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.Hashable]
 
         :raises ReadOnlyError: If this instance is marked as read-only.
         :raises KeyError: The given key is not present in this store and no

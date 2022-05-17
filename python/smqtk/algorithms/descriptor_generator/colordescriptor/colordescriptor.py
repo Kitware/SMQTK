@@ -290,7 +290,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -375,7 +375,7 @@ class ColorDescriptor_Base (DescriptorGenerator):
 
         :param data_set: Set of input data elements to generate the model
             with.
-        :type data_set: collections.Set[smqtk.representation.DataElement]
+        :type data_set: collections.abc.Set[smqtk.representation.DataElement]
 
         """
         if self.has_model:
@@ -758,7 +758,7 @@ class ColorDescriptor_Image (ColorDescriptor_Base):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int
@@ -922,7 +922,7 @@ class ColorDescriptor_Video (ColorDescriptor_Base):
 
         :param data_set: Iterable of data elements to generate combined info
             and descriptor matrices for.
-        :type item_iter: collections.Set[smqtk.representation.DataElement]
+        :type item_iter: collections.abc.Set[smqtk.representation.DataElement]
 
         :param limit: Limit the number of descriptor entries to this amount.
         :type limit: int

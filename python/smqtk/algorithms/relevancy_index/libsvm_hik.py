@@ -159,7 +159,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         :param descriptors:
             Iterable of descriptor elements to build index over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         # ordered cache of descriptors in our index.
@@ -274,11 +274,11 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type pos: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type pos: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param neg: Iterable of negative exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type neg: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :return: A tuple consisting of rank_pool and feedback_pool, where the
             rank pool is a map of indexed descriptor elements to a rank value

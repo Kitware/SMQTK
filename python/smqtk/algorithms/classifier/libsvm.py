@@ -256,7 +256,7 @@ class LibSvmClassifier (SupervisedClassifier):
         :param class_examples: Dictionary mapping class labels to iterables of
             DescriptorElement training examples.
         :type class_examples: dict[collections.Hashable,
-                 collections.Iterable[smqtk.representation.DescriptorElement]]
+                 collections.abc.Iterable[smqtk.representation.DescriptorElement]]
 
         :param extra_params: Dictionary with extra parameters for training.
             This is not used by this implementation.

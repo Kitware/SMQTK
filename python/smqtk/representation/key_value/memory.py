@@ -232,7 +232,7 @@ class MemoryKeyValueStore (KeyValueStore):
 
         :param keys: Iterable of keys to remove.  If this is empty this method
             does nothing.
-        :type keys: collections.Iterable[collections.Hashable]
+        :type keys: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: The given key is not present in this store and no
             default value given.  The store is not modified if any key is

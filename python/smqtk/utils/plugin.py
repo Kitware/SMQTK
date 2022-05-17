@@ -210,7 +210,7 @@ def get_plugins(base_module_str, internal_dir, dir_env_var, helper_var,
                 log.debug("[%s] Helper is None-valued, skipping module",
                           module_path)
                 classes = []
-            elif (isinstance(classes, collections.Iterable) and
+            elif (isinstance(classes, collections.abc.Iterable) and
                   not isinstance(classes, six.string_types)):
                 classes = list(classes)
                 log.debug("[%s] Loaded list of %d class types via helper",

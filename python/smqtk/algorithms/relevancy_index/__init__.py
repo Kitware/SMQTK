@@ -40,7 +40,7 @@ class RelevancyIndex (SmqtkAlgorithm):
 
         :param descriptors: Iterable of descriptor elements to build index over.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
 
@@ -52,11 +52,11 @@ class RelevancyIndex (SmqtkAlgorithm):
 
         :param pos: Iterable of positive exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type pos: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type pos: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param neg: Iterable of negative exemplar DescriptorElement instances.
             This may be optional for some implementations.
-        :type neg: collections.Iterable[smqtk.representation.DescriptorElement]
+        :type neg: collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :return: Map of indexed descriptor elements to a rank value between
             [0, 1] (inclusive) range, where a 1.0 means most relevant and 0.0

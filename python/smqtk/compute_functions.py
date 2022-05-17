@@ -31,7 +31,7 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
     :param data_elements: Iterable of DataElement instances of files to
         work on.
-    :type data_elements: collections.Iterable[smqtk.representation.DataElement]
+    :type data_elements: collections.abc.Iterable[smqtk.representation.DataElement]
 
     :param descr_generator: DescriptorGenerator implementation instance
         to use to generate descriptor vectors.
@@ -71,7 +71,7 @@ def compute_many_descriptors(data_elements, descr_generator, descr_factory,
 
     :return: Generator that yields (DataElement, DescriptorElement) for each
         data element given, in the order they were provided.
-    :rtype: collections.Iterable[(smqtk.representation.DataElement,
+    :rtype: collections.abc.Iterable[(smqtk.representation.DataElement,
                                   smqtk.representation.DescriptorElement)]
 
     """
@@ -166,7 +166,7 @@ def compute_hash_codes(uuids, index, functor, report_interval=1.0, use_mp=False,
     and convert to an integer, yielding (UUID, hash-int) pairs.
 
     :param uuids: Sequence of UUIDs to process
-    :type uuids: collections.Iterable[collections.Hashable]
+    :type uuids: collections.abc.Iterable[collections.Hashable]
 
     :param index: Descriptor index to pull from.
     :type index: smqtk.representation.descriptor_index.DescriptorIndex

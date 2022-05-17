@@ -69,7 +69,7 @@ class Classifier (SmqtkAlgorithm):
 
         :param d_iter: Iterable of DescriptorElements
         :type d_iter:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         :param factory: Classifier element factory to use for element
             generation. The default factory yields MemoryClassificationElement

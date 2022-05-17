@@ -93,7 +93,7 @@ class DescriptorGenerator (SmqtkAlgorithm):
         :param data_iter: Iterable of data elements to compute features for.
             These must have UIDs assigned for feature association in return
             value.
-        :type data_iter: collections.Iterable[smqtk.representation.DataElement]
+        :type data_iter: collections.abc.Iterable[smqtk.representation.DataElement]
 
         :param descr_factory: Factory instance to produce the wrapping
             descriptor element instance. The default factory produces

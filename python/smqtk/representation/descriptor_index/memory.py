@@ -185,7 +185,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         :param descriptors: Iterable of descriptor instances to add to this
             index.
         :type descriptors:
-            collections.Iterable[smqtk.representation.DescriptorElement]
+            collections.abc.Iterable[smqtk.representation.DescriptorElement]
 
         """
         added_something = False
@@ -217,7 +217,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         Get an iterator over descriptors associated to given descriptor UUIDs.
 
         :param uuids: Iterable of descriptor UUIDs to query for.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.
@@ -255,7 +255,7 @@ class MemoryDescriptorIndex (DescriptorIndex):
         index.
 
         :param uuids: Iterable of descriptor UUIDs to remove.
-        :type uuids: collections.Iterable[collections.Hashable]
+        :type uuids: collections.abc.Iterable[collections.Hashable]
 
         :raises KeyError: A given UUID doesn't associate with a
             DescriptorElement in this index.

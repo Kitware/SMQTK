@@ -1,10 +1,12 @@
-import collections
+from collections.abc import Iterator
+from itertools import zip_longest
 import heapq
 import logging
 import multiprocessing
 import multiprocessing.queues
 import multiprocessing.synchronize
 import sys
+import queue
 import threading
 import traceback
 
@@ -201,7 +203,7 @@ def is_terminal(p):
     return isinstance(p, _TerminalPacket)
 
 
-class ParallelResultsIterator (SmqtkObject, collections.abc.Iterable):
+class ParallelResultsIterator (SmqtkObject, Iterator):
 
     def __init__(self, name, ordered, is_multiprocessing, heart_beat,
                  work_queue, results_queue,

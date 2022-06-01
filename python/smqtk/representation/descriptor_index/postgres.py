@@ -12,9 +12,12 @@ import sys
 from six.moves import zip
 
 try:
-    from six.moves import cPickle as pickle
-except ImportError:
-    import pickle
+    import pickle5 as pickle
+except:
+    try:
+        from six.moves import cPickle as pickle
+    except ImportError:
+        import pickle
 
 from smqtk.representation import DescriptorIndex
 from smqtk.exceptions import ReadOnlyError

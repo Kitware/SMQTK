@@ -13,7 +13,7 @@ imageio==2.8.0
 jinja2==2.11.3
 jsmin==3.0.1
 matplotlib==3.2.1
-numpy==1.18.4
+numpy==1.22.0
 Pillow==8.4.0
 pymongo==3.10.1
 requests==2.23.0

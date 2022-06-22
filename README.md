@@ -8,17 +8,21 @@ As of Jan 2021, SMQTK v0.14.0 has been deprecated. The various interfaces and im
 
 * [SMQTK-Core](https://github.com/Kitware/SMQTK-Core) provides underlying tools used by other libraries.
 
-* [SMQTK-Classifier](https://github.com/Kitware/SMQTK-Classifier) provides interfaces and implementations around classification.
-
-* [SMQTK-Descriptors](https://github.com/Kitware/SMQTK-Descriptors) provides algorithms and data structures around computing descriptor vectors.
-
-* [SMQTK-Relevancy](https://github.com/Kitware/SMQTK-Relevancy) provides interfaces and implementations around providing search relevancy estimation.
+* [SMQTK-Dataprovider](https://github.com/Kitware/SMQTK-Dataprovider) provides data structure abstractions.
 
 * [SMQTK-Image-IO](https://github.com/Kitware/SMQTK-Image-IO) provides interfaces and implementations around image input/output.
 
+* [SMQTK-Descriptors](https://github.com/Kitware/SMQTK-Descriptors) provides algorithms and data structures around computing descriptor vectors.
+
+* [SMQTK-Classifier](https://github.com/Kitware/SMQTK-Classifier) provides interfaces and implementations around classification.
+
+* [SMQTK-Detection](https://github.com/Kitware/SMQTK-Detection) provides interfaces and support for black-box object detection.
+
 * [SMQTK-Indexing](https://github.com/Kitware/SMQTK-Indexing) provides interfaces and implementations around the k-nearest-neighbor algorithm.
 
-* [SMQTK-Dataprovider](https://github.com/Kitware/SMQTK-Dataprovider) provides data structure abstractions.
+* [SMQTK-Relevancy](https://github.com/Kitware/SMQTK-Relevancy) provides interfaces and implementations around providing search relevancy estimation.
+
+* [SMQTK-IQR](https://github.com/Kitware/SMQTK-IQR) provides classes and utilities to perform the Interactive Query Refinement (IQR) process.
 
 ## Intent
 Social Multimedia Query ToolKit aims to provide a simple and easy to use API for:

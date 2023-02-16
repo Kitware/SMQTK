@@ -23,4 +23,4 @@ scipy==1.4.1
 # Transitive deps that need downgrading relative to latest versions
 itsdangerous==2.0.1
 MarkupSafe==2.0.1
-werkzeug==2.0.3
+werkzeug==2.2.3

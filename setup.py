@@ -164,7 +164,7 @@ setuptools.setup(
             'file-magic',
         ],
         'postgres': [
-            'psycopg2',
+            'psycopg2<=2.9.6',
         ],
         'solr': [
             'solrpy',

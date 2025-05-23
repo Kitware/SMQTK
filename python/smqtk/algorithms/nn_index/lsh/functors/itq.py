@@ -288,7 +288,7 @@ class ItqFunctor (LshFunctor):
         #       rotation matrix computed.
         # TODO: Could move this step up one level and just return rotation mat?
         z = numpy.dot(v, r)
-        b = numpy.zeros(z.shape, dtype=numpy.bool)
+        b = numpy.zeros(z.shape, dtype=numpy.bool_)
         b[z >= 0] = True
 
         return b, r

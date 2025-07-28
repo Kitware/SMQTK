@@ -313,7 +313,7 @@ class LibSvmHikRelevancyIndex (RelevancyIndex):
         # example in our dataset, using HI metric, for each positive example
         neg_autoselect = set()
         # Copy neg descriptors into a set for testing size.
-        if not isinstance(neg, collections.Sized):
+        if not isinstance(neg, collections.abc.Sized):
             #: :type: set[smqtk.representation.DescriptorElement]
             neg = set(neg)
         if not neg:
